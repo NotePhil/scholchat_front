@@ -43,7 +43,7 @@ const AnimatedText = ({ texts }) => {
   }, [displayText, isWriting, currentTextIndex, texts]);
 
   return (
-    <h1 className="text-3xl leading-tight text-black font-semibold h-24 md:text-4xl lg:text-5xl">
+    <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold min-h-[96px] md:min-h-[128px] lg:min-h-[160px] leading-tight text-black">
       {displayText}
       <span className="animate-blink">|</span>
     </h1>
@@ -58,26 +58,28 @@ export const HomeContent = () => {
   ];
 
   return (
-    <section className="bg-secondary py-10 h-auto md:h-[92vh] lg:h-full">
-      <div className="container mx-auto px-4 md:px-8">
-        <div className="flex flex-col-reverse md:flex-row items-center justify-between">
-          <div className="left w-full md:w-1/2 text-black mt-10 md:mt-0">
-            <div>
-              <AnimatedText texts={texts} />
-            </div>
+    <section className="bg-secondary py-10 md:py-20 lg:py-24 min-h-screen">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8">
+        <div className="flex flex-col items-center space-y-8 md:space-y-12">
+          {/* Text Content - Always on top */}
+          <div className="w-full text-center max-w-2xl mx-auto">
+            <AnimatedText texts={texts} />
           </div>
-          <div className="right w-full md:w-1/2 relative mb-10 md:mb-0">
-            <div className="images relative w-full flex justify-center md:justify-end">
-              <img
+
+          {/* Image Content - Always below */}
+          <div className="relative w-full flex justify-center">
+            <div className="relative w-full max-w-md shake">
+              {/* <img
                 src={heroImgback}
-                alt=""
-                className="absolute top-10 left-10 w-72 md:w-96 lg:top-20 md:left-20"
-              />
-              <div className="img h-[45vh] md:h-[60vh] lg:h-[85vh] w-auto">
+                alt="Hero Background"
+                className="absolute top-0 left-1/2 transform -translate-x-1/2 w-4/5 md:w-full max-w-xs md:max-w-sm lg:max-w-md"
+                style={{ zIndex: 10 }}
+              /> */}
+              <div className="relative z-20 mt-16 md:mt-20">
                 <img
                   src={heroImg}
-                  alt=""
-                  className="h-full w-full object-contain z-20 relative shake"
+                  alt="Hero"
+                  className="w-4/5 md:w-full max-w-xs md:max-w-sm lg:max-w-md mx-auto object-contain"
                 />
               </div>
             </div>
