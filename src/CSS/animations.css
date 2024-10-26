@@ -1,0 +1,14 @@
+/* animations.css */
+
+@keyframes shakeUpDown {
+  0%, 100% {
+    transform: translateY(1); /* Start and end at the same position */
+  }
+  50% {
+    transform: translateY(-40px); /* Move up by 10px at the middle of the animation */
+  }
+}
+
+.shake {
+  animation: shakeUpDown 3.5s ease-in-out infinite; /* Infinite shaking */
+}
