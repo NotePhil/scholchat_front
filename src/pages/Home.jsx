@@ -43,7 +43,7 @@ const AnimatedText = ({ texts }) => {
   }, [displayText, isWriting, currentTextIndex, texts]);
 
   return (
-    <h1 className="text-4xl leading-tight text-black font-semibold h-24">
+    <h1 className="text-3xl leading-tight text-black font-semibold h-24 md:text-4xl lg:text-5xl">
       {displayText}
       <span className="animate-blink">|</span>
     </h1>
@@ -58,31 +58,33 @@ export const HomeContent = () => {
   ];
 
   return (
-    <section className="bg-secondary py-10 h-[92vh] md:h-full">
-      <div className="container">
-        <div className="flex items-center justify-center md:flex-col">
-          <div className="left w-1/2 text-black md:w-full">
-            <div style={{ marginTop: "-250px" }}>
+    <section className="bg-secondary py-10 h-auto md:h-[92vh] lg:h-full">
+      <div className="container mx-auto px-4 md:px-8">
+        <div className="flex flex-col-reverse md:flex-row items-center justify-between">
+          <div className="left w-full md:w-1/2 text-black mt-10 md:mt-0">
+            <div>
               <AnimatedText texts={texts} />
             </div>
             <div className="relative text-gray-600 focus-within:text-gray-400 mt-5">
               <span className="absolute inset-y-0 left-0 flex items-center pl-2">
-                <button
-                  type="submit"
-                  className="p-1 focus:outline-none focus:shadow-outline"
-                ></button>
+                <FiSearch className="text-xl text-gray-400" />
               </span>
+              <input
+                type="search"
+                className="py-3 text-sm bg-white rounded-md pl-10 focus:outline-none w-full md:w-[80%] lg:w-[60%]"
+                placeholder="Search..."
+                autoComplete="off"
+              />
             </div>
           </div>
-          <div className="right w-1/2 md:w-full relative">
-            <div className="images relative">
+          <div className="right w-full md:w-1/2 relative mb-10 md:mb-0">
+            <div className="images relative w-full flex justify-center md:justify-end">
               <img
                 src={heroImgback}
                 alt=""
-                className="absolute top-32 left-10 w-96 md:left-10"
+                className="absolute top-10 left-10 w-72 md:w-96 lg:top-20 md:left-20"
               />
-
-              <div className="img h-[85vh] w-full">
+              <div className="img h-[45vh] md:h-[60vh] lg:h-[85vh] w-auto">
                 <img
                   src={heroImg}
                   alt=""
@@ -93,13 +95,6 @@ export const HomeContent = () => {
           </div>
         </div>
       </div>
-      <input
-        type="search"
-        className="py-3 text-sm bg-white rounded-md pl-10 focus:outline-none w-full"
-        placeholder="Search..."
-        autoComplete="off"
-        style={{backgroundColor:"white"}}
-      />
     </section>
   );
 };
@@ -109,9 +104,6 @@ export const Home = () => {
     <>
       <HomeContent />
       <About />
-      <br />
-      <br />
-      <br />
       <Courses />
       <Instructor />
       <Blog />
