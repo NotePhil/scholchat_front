@@ -65,17 +65,6 @@ export const HomeContent = () => {
             <div>
               <AnimatedText texts={texts} />
             </div>
-            <div className="relative text-gray-600 focus-within:text-gray-400 mt-5">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-2">
-                <FiSearch className="text-xl text-gray-400" />
-              </span>
-              <input
-                type="search"
-                className="py-3 text-sm bg-white rounded-md pl-10 focus:outline-none w-full md:w-[80%] lg:w-[60%]"
-                placeholder="Search..."
-                autoComplete="off"
-              />
-            </div>
           </div>
           <div className="right w-full md:w-1/2 relative mb-10 md:mb-0">
             <div className="images relative w-full flex justify-center md:justify-end">

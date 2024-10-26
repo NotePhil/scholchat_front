@@ -13,9 +13,6 @@ export const Header = () => {
         <div className="container flex justify-between items-center">
           <div className="logo flex items-center gap-1">
             <img src={LogoImg} alt="logo" className="h-40 w-40" />
-            <div className="category flex items-center text-sm gap-3">
-              <span style={{ fontSize: "30px" }}>ScholChat</span>
-            </div>
           </div>
           <nav className={open ? "mobile-view" : "desktop-view"}>
             <ul className="flex items-center gap-6">
