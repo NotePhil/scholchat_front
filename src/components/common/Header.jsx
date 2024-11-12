@@ -34,23 +34,22 @@ export const Header = () => {
   }, [location.pathname]);
 
   return (
-    <header className="bg-white py-4 text-black sticky z-50 shadow-md top-0 left-0 w-full">
+    <header className="bg-white py-5 text-black sticky z-50 shadow-md top-0 left-0 w-full">
       <div className="container mx-auto px-4 flex justify-between items-center">
-        {/* Logo Only (No Text, Increased Logo Size) */}
+        {/* Logo Only (Increased Logo Size) */}
         <div className="flex items-center gap-1">
-          <img src={LogoImg} alt="Scholchat logo" className="h-30 w-20" />{" "}
-          {/* Increased logo size */}
+          <img src={LogoImg} alt="Scholchat logo" className="h-32 w-24" />
         </div>
 
         {/* Navigation Links */}
         <nav className={open ? "mobile-view" : "desktop-view"}>
-          <ul className="flex items-center gap-6">
+          <ul className="flex items-center gap-8">
             {LinkData.map((link) =>
               link.isSelect ? (
                 <li key={link.id} onClick={() => setOpen(null)}>
                   <select
                     value=""
-                    className="text-[15px] cursor-pointer bg-white border border-gray-300 rounded-md px-3 py-1 shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition duration-150 ease-in-out"
+                    className="text-[16px] cursor-pointer bg-white border border-gray-300 rounded-md px-4 py-2 shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition duration-150 ease-in-out"
                     onChange={handleSelectChange}
                   >
                     <option value="">{selectedProduct}</option>
@@ -66,8 +65,8 @@ export const Header = () => {
                   <NavLink
                     className={({ isActive }) =>
                       isActive
-                        ? "text-primary font-medium text-[15px]"
-                        : "text-gray-700 font-medium text-[15px]"
+                        ? "text-primary font-semibold text-[16px]"
+                        : "text-gray-700 font-semibold text-[16px]"
                     }
                     to={link.url}
                   >
@@ -80,12 +79,12 @@ export const Header = () => {
         </nav>
 
         {/* Connexion / Inscription Button and Language Selector at the Right */}
-        <div className="account flex items-center gap-5">
-          <div className="flex items-center bg-teal-500 text-white font-semibold px-3 py-1 rounded-full shadow-md hover:bg-teal-600 transition cursor-pointer">
+        <div className="account flex items-center gap-6">
+          <div className="flex items-center bg-teal-500 text-white font-semibold px-4 py-2 rounded-full shadow-md hover:bg-teal-600 transition cursor-pointer">
             {/* Connexion Button */}
             <span
               onClick={() => navigate("/login")}
-              className="cursor-pointer font-semibold text-sm"
+              className="cursor-pointer font-semibold text-md"
             >
               Connexion
             </span>
@@ -93,7 +92,7 @@ export const Header = () => {
             {/* Inscription Button */}
             <span
               onClick={() => navigate("/signup")}
-              className="cursor-pointer font-semibold text-sm"
+              className="cursor-pointer font-semibold text-md"
             >
               Inscription
             </span>
@@ -102,7 +101,7 @@ export const Header = () => {
           {/* Language Selector */}
           <div className="relative">
             <button
-              className="flex items-center bg-white border border-gray-300 rounded-full px-3 py-1 shadow-sm hover:border-gray-400 focus:outline-none"
+              className="flex items-center bg-white border border-gray-300 rounded-full px-4 py-2 shadow-sm hover:border-gray-400 focus:outline-none"
               onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
             >
               <img
@@ -112,16 +111,18 @@ export const Header = () => {
                     : require("../assets/images/en.jpeg")
                 }
                 alt={language}
-                className="w-5 h-5 mr-2"
+                className="w-6 h-6 mr-2"
               />
-              <span className="text-gray-700 font-medium">{language}</span>
+              <span className="text-gray-700 font-medium text-md">
+                {language}
+              </span>
             </button>
 
             {/* Language Dropdown */}
             {isLanguageDropdownOpen && (
               <div className="absolute top-10 right-0 bg-white border border-gray-300 rounded-md shadow-lg overflow-hidden z-50">
                 <button
-                  className="flex items-center w-full px-4 py-2 hover:bg-gray-100"
+                  className="flex items-center w-full px-4 py-2 hover:bg-gray-100 text-md"
                   onClick={() => {
                     setLanguage("Français");
                     setIsLanguageDropdownOpen(false);
@@ -135,7 +136,7 @@ export const Header = () => {
                   Français
                 </button>
                 <button
-                  className="flex items-center w-full px-4 py-2 hover:bg-gray-100"
+                  className="flex items-center w-full px-4 py-2 hover:bg-gray-100 text-md"
                   onClick={() => {
                     setLanguage("English");
                     setIsLanguageDropdownOpen(false);
@@ -153,7 +154,7 @@ export const Header = () => {
           </div>
 
           <button className="open-menu" onClick={() => setOpen(!open)}>
-            <HiOutlineMenuAlt1 size={25} className="text-gray-600" />
+            <HiOutlineMenuAlt1 size={28} className="text-gray-600" />
           </button>
         </div>
       </div>
