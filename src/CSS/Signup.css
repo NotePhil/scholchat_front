@@ -1,0 +1,107 @@
+/* Signup Page Background */
+.signup-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea, #764ba2); /* Background color */
+}
+
+/* Signup Container */
+.signup-container {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  position: relative;
+}
+
+/* Progress Bar */
+.progress-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.progress-step {
+  width: 45%;
+  padding: 5px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background-color: #f4f4f4;
+}
+
+.progress-step.active {
+  background-color: #667eea;
+  color: white;
+}
+
+/* Signup Form */
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.form-group {
+  text-align: left;
+  margin-bottom: 1rem;
+}
+
+.signup-label {
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+.signup-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  transition: border-color 0.3s;
+}
+
+.signup-input:focus {
+  border-color: #667eea;
+  outline: none;
+}
+
+.signup-button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #667eea;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.signup-button:hover {
+  background-color: #5a67d8;
+}
+
+/* Modal for Professeur */
+.professeur-modal {
+  margin-top: 20px;
+}
+
+/* Forgot Password Link */
+.forgot-password {
+  display: block;
+  margin-top: 1rem;
+  color: #5a67d8;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}

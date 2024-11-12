@@ -11,8 +11,15 @@ export const LinkData = [
   },
   {
     id: 3,
-    title: "courses",
-    url: "/courses",
+    title: "Nos produits",
+    isSelect: true,
+    options: [
+      { id: 1, title: "Nos tarifs", url: "/functionalities" },
+      { id: 2, title: "Crèches", url: "/courses" },
+      { id: 3, title: "écoles maternelles", url: "/courses" },
+      { id: 4, title: "écoles primaires", url: "/courses" },
+      { id: 5, title: "lycées", url: "/courses" },
+    ],
   },
   {
     id: 4,
@@ -25,35 +32,32 @@ export const LinkData = [
     url: "/blog",
   },
 ];
+
+// Updated product categories for the courses section
 export const courses = [
   {
     id: 1,
-    cover: "../images/course-2-1.jpg",
-    title: "The Power of Podcast for Storytelling",
+    cover: "../images/nos-tarifs.jpg",
+    title: "Nos tarifs",
   },
   {
     id: 2,
-    cover: "../images/course-4-1.jpg",
-    title: "Fashion and Luxury Fashion in a Changing",
+    cover: "../images/creches.jpg",
+    title: "Crèches",
   },
   {
     id: 3,
-    cover: "../images/course-5-1.jpg",
-    title: "Creative writing through Storytelling",
+    cover: "../images/ecoles-maternelles.jpg",
+    title: "Écoles maternelles",
   },
   {
     id: 4,
-    cover: "../images/course-6-1.jpg",
-    title: "Improving The Accessibility Of Your Markdown",
+    cover: "../images/ecoles-primaires.jpg",
+    title: "Écoles primaires",
   },
   {
     id: 5,
-    cover: "../images/course11.jpg",
-    title: "Product Manager Learn the Skills & job.",
+    cover: "../images/lycees.jpg",
+    title: "Lycées",
   },
-  {
-    id: 6,
-    cover: "../images/course12.jpg",
-    title: "The business Intelligence analyst Course 2022",
-  },
-]
+];
