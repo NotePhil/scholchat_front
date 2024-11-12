@@ -4,6 +4,7 @@ import LogoImg from "../assets/images/logoscholchat.png";
 import { LinkData } from "../assets/data/dummydata";
 import { NavLink } from "react-router-dom";
 import { HiOutlineMenuAlt1 } from "react-icons/hi";
+import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
 
 export const Header = () => {
   const [open, setOpen] = useState(false);
@@ -49,7 +50,7 @@ export const Header = () => {
                 <li key={link.id} onClick={() => setOpen(null)}>
                   <select
                     value=""
-                    className="text-[16px] cursor-pointer bg-white border border-gray-300 rounded-md px-4 py-2 shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition duration-150 ease-in-out"
+                    className="text-[16px] cursor-pointer bg-white px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary transition duration-150 ease-in-out"
                     onChange={handleSelectChange}
                   >
                     <option value="">{selectedProduct}</option>
@@ -101,7 +102,7 @@ export const Header = () => {
           {/* Language Selector */}
           <div className="relative">
             <button
-              className="flex items-center bg-white border border-gray-300 rounded-full px-4 py-2 shadow-sm hover:border-gray-400 focus:outline-none"
+              className="flex items-center bg-white rounded-full px-4 py-2 shadow-sm focus:outline-none"
               onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
             >
               <img
@@ -113,14 +114,19 @@ export const Header = () => {
                 alt={language}
                 className="w-6 h-6 mr-2"
               />
-              <span className="text-gray-700 font-medium text-md">
+              <span className="text-gray-700 font-medium text-md mr-1">
                 {language}
               </span>
+              {isLanguageDropdownOpen ? (
+                <IoIosArrowUp className="text-gray-700" />
+              ) : (
+                <IoIosArrowDown className="text-gray-700" />
+              )}
             </button>
 
             {/* Language Dropdown */}
             {isLanguageDropdownOpen && (
-              <div className="absolute top-10 right-0 bg-white border border-gray-300 rounded-md shadow-lg overflow-hidden z-50">
+              <div className="absolute top-12 right-0 bg-white rounded-md shadow-lg overflow-hidden z-50">
                 <button
                   className="flex items-center w-full px-4 py-2 hover:bg-gray-100 text-md"
                   onClick={() => {
