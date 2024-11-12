@@ -1,1 +1,1 @@
-this is scolchat app, let us build our children future.
+https://scholchat.onrender.com/
