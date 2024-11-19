@@ -80,12 +80,30 @@ export const Header = () => {
                 </li>
               )
             )}
+
+            {/* Connexion / Inscription (Mobile View) */}
+            <li className="lg:hidden">
+              <div className="flex flex-col items-center gap-2">
+                <span
+                  onClick={() => navigate("/login")}
+                  className="cursor-pointer text-teal-500 font-semibold text-md hover:text-teal-600"
+                >
+                  Connexion
+                </span>
+                <span
+                  onClick={() => navigate("/signup")}
+                  className="cursor-pointer text-teal-500 font-semibold text-md hover:text-teal-600"
+                >
+                  Inscription
+                </span>
+              </div>
+            </li>
           </ul>
         </nav>
 
         {/* Right-side Items */}
         <div className="account flex items-center gap-4">
-          {/* Connexion / Inscription */}
+          {/* Connexion / Inscription (Desktop View) */}
           <div className="hidden lg:flex items-center bg-teal-500 text-white font-semibold px-4 py-2 rounded-full shadow-md hover:bg-teal-600 transition cursor-pointer">
             <span
               onClick={() => navigate("/login")}
