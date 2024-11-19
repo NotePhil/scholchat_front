@@ -37,17 +37,21 @@ export const Header = () => {
   return (
     <header className="bg-white py-5 text-black sticky z-50 shadow-md top-0 left-0 w-full">
       <div className="container mx-auto px-4 flex justify-between items-center">
-        {/* Logo Only (Increased Logo Size) */}
-        <div className="flex items-center gap-1">
-          <img src={LogoImg} alt="Scholchat logo" className="h-32 w-24" />
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          <img src={LogoImg} alt="Scholchat logo" className="h-12 w-auto" />
         </div>
 
-        {/* Navigation Links */}
-        <nav className={open ? "mobile-view" : "desktop-view"}>
-          <ul className="flex items-center gap-8">
+        {/* Desktop Navigation */}
+        <nav
+          className={`${
+            open ? "block" : "hidden"
+          } absolute top-20 left-0 w-full bg-white shadow-md lg:static lg:flex lg:items-center lg:w-auto lg:shadow-none`}
+        >
+          <ul className="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-8 p-6 lg:p-0">
             {LinkData.map((link) =>
               link.isSelect ? (
-                <li key={link.id} onClick={() => setOpen(null)}>
+                <li key={link.id}>
                   <select
                     value=""
                     className="text-[16px] cursor-pointer bg-white px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary transition duration-150 ease-in-out"
@@ -62,7 +66,7 @@ export const Header = () => {
                   </select>
                 </li>
               ) : (
-                <li key={link.id} onClick={() => setOpen(null)}>
+                <li key={link.id}>
                   <NavLink
                     className={({ isActive }) =>
                       isActive
@@ -79,18 +83,17 @@ export const Header = () => {
           </ul>
         </nav>
 
-        {/* Connexion / Inscription Button and Language Selector at the Right */}
-        <div className="account flex items-center gap-6">
-          <div className="flex items-center bg-teal-500 text-white font-semibold px-4 py-2 rounded-full shadow-md hover:bg-teal-600 transition cursor-pointer">
-            {/* Connexion Button */}
+        {/* Right-side Items */}
+        <div className="account flex items-center gap-4">
+          {/* Connexion / Inscription */}
+          <div className="hidden lg:flex items-center bg-teal-500 text-white font-semibold px-4 py-2 rounded-full shadow-md hover:bg-teal-600 transition cursor-pointer">
             <span
               onClick={() => navigate("/login")}
               className="cursor-pointer font-semibold text-md"
             >
               Connexion
             </span>
-            <span className="text-gray-700 font-semibold mx-2">/</span>
-            {/* Inscription Button */}
+            <span className="text-gray-300 font-semibold mx-2">/</span>
             <span
               onClick={() => navigate("/signup")}
               className="cursor-pointer font-semibold text-md"
@@ -124,7 +127,6 @@ export const Header = () => {
               )}
             </button>
 
-            {/* Language Dropdown */}
             {isLanguageDropdownOpen && (
               <div className="absolute top-12 right-0 bg-white rounded-md shadow-lg overflow-hidden z-50">
                 <button
@@ -159,7 +161,11 @@ export const Header = () => {
             )}
           </div>
 
-          <button className="open-menu" onClick={() => setOpen(!open)}>
+          {/* Mobile Menu Toggle */}
+          <button
+            className="block lg:hidden open-menu"
+            onClick={() => setOpen(!open)}
+          >
             <HiOutlineMenuAlt1 size={28} className="text-gray-600" />
           </button>
         </div>
@@ -167,4 +173,3 @@ export const Header = () => {
     </header>
   );
 };
-

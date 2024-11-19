@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import "../CSS/Signup.css"; // Import CSS for additional styling
+import "../CSS/Signup.css";
 
 export const SignUp = () => {
-  const [currentStep, setCurrentStep] = useState(1); // Step tracking
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -11,30 +11,21 @@ export const SignUp = () => {
     userType: "",
     idCard: "",
     photo: null,
-    className: "",
-    classId: "",
   });
 
   const [showProfesseurModal, setShowProfesseurModal] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleFileChange = (e) => {
-    setFormData({
-      ...formData,
-      photo: e.target.files[0],
-    });
+    setFormData({ ...formData, photo: e.target.files[0] });
   };
 
   const handleNextStep = () => {
     if (currentStep === 1) {
-      // Validate Step 1
       if (
         formData.fullName &&
         formData.email &&
@@ -46,7 +37,6 @@ export const SignUp = () => {
         alert("Please fill in all fields.");
       }
     } else if (currentStep === 2) {
-      // Validate Step 2
       if (formData.userType === "Professeur" && !formData.idCard) {
         alert("Please fill in all professional details.");
       } else {
@@ -56,123 +46,113 @@ export const SignUp = () => {
   };
 
   const handleUserTypeChange = (e) => {
-    const selectedUserType = e.target.value;
-    setFormData({
-      ...formData,
-      userType: selectedUserType,
-    });
-    if (selectedUserType === "Professeur") {
-      setShowProfesseurModal(true);
-    } else {
-      setShowProfesseurModal(false);
-    }
+    const userType = e.target.value;
+    setFormData({ ...formData, userType });
+    setShowProfesseurModal(userType === "Professeur");
   };
 
   return (
     <div className="signup-page">
       <div className="signup-container">
         <div className="progress-bar">
-          <div className={`progress-step ${currentStep === 1 ? "active" : ""}`}>
+          <div
+            className={`progress-step ${currentStep === 1 ? "active" : ""}`}
+            onClick={() => setCurrentStep(1)}
+          >
             Step 1
           </div>
-          <div className={`progress-step ${currentStep === 2 ? "active" : ""}`}>
+          <div
+            className={`progress-step ${currentStep === 2 ? "active" : ""}`}
+            onClick={() => setCurrentStep(2)}
+          >
             Step 2
           </div>
         </div>
 
-        {/* Step 1: Personal Information */}
         {currentStep === 1 && (
-          <div className="signup-form">
-            <form>
-              <div className="form-group">
-                <label htmlFor="fullName" className="signup-label">
-                  Full Name:
-                </label>
-                <input
-                  type="text"
-                  id="fullName"
-                  name="fullName"
-                  placeholder="Enter your full name"
-                  className="signup-input"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+          <form className="signup-form">
+            <div className="form-group">
+              <label className="signup-label" htmlFor="fullName">
+                Full Name:
+              </label>
+              <input
+                type="text"
+                id="fullName"
+                name="fullName"
+                className="signup-input"
+                placeholder="Enter your full name"
+                value={formData.fullName}
+                onChange={handleInputChange}
+              />
+            </div>
 
-              <div className="form-group">
-                <label htmlFor="email" className="signup-label">
-                  Email:
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="Enter your email"
-                  className="signup-input"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+            <div className="form-group">
+              <label className="signup-label" htmlFor="email">
+                Email:
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                className="signup-input"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleInputChange}
+              />
+            </div>
 
-              <div className="form-group">
-                <label htmlFor="phoneNumber" className="signup-label">
-                  Phone Number:
-                </label>
-                <input
-                  type="text"
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  placeholder="Enter your phone number"
-                  className="signup-input"
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+            <div className="form-group">
+              <label className="signup-label" htmlFor="phoneNumber">
+                Phone Number:
+              </label>
+              <input
+                type="text"
+                id="phoneNumber"
+                name="phoneNumber"
+                className="signup-input"
+                placeholder="Enter your phone number"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+              />
+            </div>
 
-              <div className="form-group">
-                <label htmlFor="password" className="signup-label">
-                  Password:
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="Enter your password"
-                  className="signup-input"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+            <div className="form-group">
+              <label className="signup-label" htmlFor="password">
+                Password:
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                className="signup-input"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleInputChange}
+              />
+            </div>
 
-              <button
-                type="button"
-                className="signup-button"
-                onClick={handleNextStep}
-              >
-                Next Step
-              </button>
-            </form>
-          </div>
+            <button
+              type="button"
+              className="signup-button"
+              onClick={handleNextStep}
+            >
+              Next Step
+            </button>
+          </form>
         )}
 
-        {/* Step 2: User Type Information */}
         {currentStep === 2 && (
-          <div className="signup-form">
+          <form className="signup-form">
             <div className="form-group">
-              <label htmlFor="userType" className="signup-label">
+              <label className="signup-label" htmlFor="userType">
                 User Type:
               </label>
               <select
                 id="userType"
                 name="userType"
+                className="signup-input"
                 value={formData.userType}
                 onChange={handleUserTypeChange}
-                className="signup-input"
-                required
               >
                 <option value="">Select User Type</option>
                 <option value="Parent">Parent</option>
@@ -184,23 +164,22 @@ export const SignUp = () => {
             {showProfesseurModal && (
               <div className="professeur-modal">
                 <div className="form-group">
-                  <label htmlFor="idCard" className="signup-label">
+                  <label className="signup-label" htmlFor="idCard">
                     ID Card:
                   </label>
                   <input
                     type="text"
                     id="idCard"
                     name="idCard"
-                    placeholder="Enter ID card number"
                     className="signup-input"
+                    placeholder="Enter your ID card number"
                     value={formData.idCard}
                     onChange={handleInputChange}
-                    required
                   />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="photo" className="signup-label">
+                  <label className="signup-label" htmlFor="photo">
                     Upload Photo:
                   </label>
                   <input
@@ -209,39 +188,6 @@ export const SignUp = () => {
                     name="photo"
                     className="signup-input"
                     onChange={handleFileChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="className" className="signup-label">
-                    Class Name:
-                  </label>
-                  <input
-                    type="text"
-                    id="className"
-                    name="className"
-                    placeholder="Enter class name"
-                    className="signup-input"
-                    value={formData.className}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="classId" className="signup-label">
-                    Class ID:
-                  </label>
-                  <input
-                    type="text"
-                    id="classId"
-                    name="classId"
-                    placeholder="Enter class ID"
-                    className="signup-input"
-                    value={formData.classId}
-                    onChange={handleInputChange}
-                    required
                   />
                 </div>
               </div>
@@ -254,7 +200,7 @@ export const SignUp = () => {
             >
               Complete Sign Up
             </button>
-          </div>
+          </form>
         )}
       </div>
     </div>

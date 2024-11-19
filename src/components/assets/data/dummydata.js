@@ -15,16 +15,11 @@ export const LinkData = [
     isSelect: true,
     options: [
       { id: 1, title: "Nos tarifs", url: "/functionalities" },
-      { id: 2, title: "Crèches", url: "/courses" },
+      { id: 2, title: "Crèches", url: "/instructor" },
       { id: 3, title: "écoles maternelles", url: "/courses" },
       { id: 4, title: "écoles primaires", url: "/courses" },
       { id: 5, title: "lycées", url: "/courses" },
     ],
-  },
-  {
-    id: 4,
-    title: "Histoire",
-    url: "/instructor",
   },
   {
     id: 5,

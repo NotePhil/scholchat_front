@@ -14,20 +14,6 @@ export const Login = () => {
 
         <div className="login-form">
           <form>
-            {/* Username Field */}
-            <label htmlFor="username" className="login-label">
-              Username:
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              placeholder="Your username"
-              className="login-input"
-              required
-            />
-
-            {/* Email Field */}
             <label htmlFor="email" className="login-label">
               Email:
             </label>
@@ -39,8 +25,6 @@ export const Login = () => {
               className="login-input"
               required
             />
-
-            {/* Password Field */}
             <label htmlFor="password" className="login-label">
               Password:
             </label>
@@ -52,8 +36,6 @@ export const Login = () => {
               className="login-input"
               required
             />
-
-            {/* Remember Me Checkbox */}
             <div className="remember-me">
               <input
                 type="checkbox"
@@ -65,14 +47,10 @@ export const Login = () => {
                 Remember Me
               </label>
             </div>
-
-            {/* Sign In Button */}
             <button type="submit" className="login-button">
               Sign In
             </button>
           </form>
-
-          {/* Forgot Password Link */}
           <a href="/forgot-password" className="forgot-password">
             Forgot password?
           </a>
