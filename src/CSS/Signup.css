@@ -1,107 +1,300 @@
-/* Signup Page Background */
+/* Modern Gradient Background */
 .signup-page {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea, #764ba2); /* Background color */
+  background: linear-gradient(135deg, #1a365d, #2d3748);
+  padding: 2rem;
 }
 
-/* Signup Container */
+/* Enhanced Container Styling */
 .signup-container {
-  background: white;
+  background: rgba(255, 255, 255, 0.98);
   width: 100%;
-  max-width: 500px;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 600px;
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   text-align: center;
   position: relative;
+  backdrop-filter: blur(10px);
 }
 
-/* Progress Bar */
+/* Modern Progress Bar */
 .progress-bar {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  margin: 0 auto 2.5rem;
+  max-width: 300px;
 }
 
 .progress-step {
-  width: 45%;
-  padding: 5px;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  background-color: #f4f4f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
 }
 
-.progress-step.active {
-  background-color: #667eea;
+.step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #64748b;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.step-circle.active {
+  background: #3b82f6;
   color: white;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
 }
 
-/* Signup Form */
+.step-line {
+  flex: 1;
+  height: 3px;
+  background: #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.step-line.active {
+  background: #3b82f6;
+}
+
+/* Enhanced Form Styling */
 .signup-form {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  gap: 1.5rem;
 }
 
 .form-group {
   text-align: left;
-  margin-bottom: 1rem;
 }
 
-.signup-label {
-  font-weight: bold;
-  font-size: 1rem;
-  margin-bottom: 8px;
+label {
+  display: block;
+  font-weight: 500;
+  color: #1a365d;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
 }
 
-.signup-input {
+input,
+select {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
   font-size: 1rem;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  transition: border-color 0.3s;
+  transition: all 0.2s ease;
+  color: #2d3748;
+  background-color: #f8fafc;
 }
 
-.signup-input:focus {
-  border-color: #667eea;
+input:focus,
+select:focus {
+  border-color: #3b82f6;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   outline: none;
 }
 
-.signup-button {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: #667eea;
+/* Modern Button Styles */
+.next-button,
+.submit-button {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
+  padding: 1rem 2rem;
+  border-radius: 10px;
+  font-weight: 600;
   font-size: 1rem;
-  font-weight: bold;
   border: none;
-  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.signup-button:hover {
-  background-color: #5a67d8;
-}
-
-/* Modal for Professeur */
-.professeur-modal {
-  margin-top: 20px;
-}
-
-/* Forgot Password Link */
-.forgot-password {
-  display: block;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
   margin-top: 1rem;
-  color: #5a67d8;
-  font-size: 0.9rem;
-  text-decoration: none;
 }
 
-.forgot-password:hover {
-  text-decoration: underline;
+.next-button:hover,
+.submit-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+/* Professor Section Enhancements */
+.professor-details {
+  border-top: 2px solid #e2e8f0;
+  margin-top: 2rem;
+  padding-top: 2rem;
+}
+
+/* Classes Section Styling */
+.classes-section {
+  margin-top: 2rem;
+}
+
+.classes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.add-class-button {
+  background: #3b82f6;
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.add-class-button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Class Cards */
+.class-card {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+}
+
+.class-card:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.class-info h4 {
+  color: #1a365d;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.class-info p {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 0.25rem 0;
+}
+
+/* File Input Styling */
+input[type="file"] {
+  background: white;
+  padding: 0.75rem;
+  border: 2px dashed #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+input[type="file"]:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+/* Responsive Improvements */
+@media (max-width: 640px) {
+  .signup-container {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .class-card {
+    padding: 1rem;
+  }
+}
+
+/* Animation Effects */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.signup-form {
+  animation: fadeIn 0.5s ease-out;
+}
+.error {
+  border-color: #dc2626 !important;
+  background-color: #fef2f2 !important;
+}
+
+.error:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+}
+
+/* Clickable progress steps */
+.step-circle.clickable {
+  cursor: pointer;
+}
+
+.step-circle.clickable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+}
+
+/* Button group for step 2 */
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.prev-button {
+  background: #64748b;
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.prev-button:hover {
+  background: #475569;
+  transform: translateY(-1px);
+}
+
+.button-group .submit-button {
+  flex: 1;
+  margin-top: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .button-group {
+    flex-direction: column;
+  }
 }
