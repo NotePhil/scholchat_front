@@ -9,6 +9,7 @@ import { Instructor } from "./pages/Instructor";
 import FunctionalitiesSection from "./pages/FunctionalitiesSection";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import Dashboard from "./pages/Dashbaord/Dashboard";
 function App() {
   return (
     <>
@@ -86,6 +87,7 @@ function App() {
               </Layout>
             }
           />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </BrowserRouter>
     </>

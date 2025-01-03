@@ -1,19 +1,45 @@
-import React from "react";
-import "../CSS/Login.css"; // Import CSS for additional styling
-import img from "../components/assets/images/logo.png";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "../CSS/Login.css";
 
 export const Login = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    remember: false,
+  });
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (formData.email === "admin@gmail.com" && formData.password === "Admin") {
+      navigate("/dashboard");
+    } else {
+      setError("Invalid credentials");
+    }
+  };
+
   return (
     <div className="login-page">
       <div className="login-container">
-        <h2 className="login-title">Let’s get started now!</h2>
+        <h2 className="login-title">Let's get started now!</h2>
         <p className="login-subtitle">
           Or <span className="create-account">create an account</span> if not
           registered yet
         </p>
 
         <div className="login-form">
-          <form>
+          <form onSubmit={handleSubmit}>
+            {error && <div className="error-message">{error}</div>}
             <label htmlFor="email" className="login-label">
               Email:
             </label>
@@ -21,6 +47,8 @@ export const Login = () => {
               type="email"
               id="email"
               name="email"
+              value={formData.email}
+              onChange={handleChange}
               placeholder="mail@mail.com"
               className="login-input"
               required
@@ -32,6 +60,8 @@ export const Login = () => {
               type="password"
               id="password"
               name="password"
+              value={formData.password}
+              onChange={handleChange}
               placeholder="••••••••"
               className="login-input"
               required
@@ -41,6 +71,8 @@ export const Login = () => {
                 type="checkbox"
                 id="remember"
                 name="remember"
+                checked={formData.remember}
+                onChange={handleChange}
                 className="remember-checkbox"
               />
               <label htmlFor="remember" className="remember-label">

@@ -13,9 +13,9 @@ const api = axios.create({
 
 // Request interceptor to handle different content types
 api.interceptors.request.use((config) => {
-  // For FormData, let the browser set the Content-Type to include boundary
   if (config.data instanceof FormData) {
-    config.headers["Content-Type"] = "multipart/form-data";
+    // Let browser set the boundary for multipart/form-data
+    delete config.headers["Content-Type"];
   } else {
     config.headers["Content-Type"] = "application/json";
   }
@@ -52,29 +52,50 @@ class ScholchatService {
 
   createFormDataFromObject(data) {
     const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        // Handle arrays
-        if (Array.isArray(value)) {
-          value.forEach((item, index) => {
+
+    const appendToFormData = (key, value) => {
+      if (value === null || value === undefined) return;
+
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => {
+          if (typeof item === "object" && !(item instanceof File)) {
+            appendToFormData(`${key}[${index}]`, item);
+          } else {
             formData.append(`${key}[${index}]`, item);
-          });
-        }
-        // Handle files
-        else if (value instanceof File) {
-          formData.append(key, value);
-        }
-        // Handle objects
-        else if (typeof value === "object") {
-          formData.append(key, JSON.stringify(value));
-        }
-        // Handle primitive values
-        else {
-          formData.append(key, value);
-        }
+          }
+        });
+      } else if (value instanceof File) {
+        formData.append(key, value);
+      } else if (typeof value === "object" && value !== null) {
+        Object.entries(value).forEach(([subKey, subValue]) => {
+          appendToFormData(`${key}.${subKey}`, subValue);
+        });
+      } else {
+        formData.append(key, value.toString());
       }
+    };
+
+    Object.entries(data).forEach(([key, value]) => {
+      appendToFormData(key, value);
     });
+
     return formData;
+  }
+
+  async processFileUpload(file) {
+    if (!file) return null;
+    if (!(file instanceof File)) return file;
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      throw new Error("File size exceeds 5MB limit");
+    }
+
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Only image files are allowed");
+    }
+
+    return file;
   }
 
   // ============ User Management ============
@@ -144,16 +165,57 @@ class ScholchatService {
 
   async createProfessor(professorData) {
     try {
-      const formData = this.createFormDataFromObject({
-        ...this.createBaseUserPayload(professorData),
-        cniUrlRecto: professorData.cniUrlRecto,
-        cniUrlVerso: professorData.cniUrlVerso,
-        nomEtablissement: professorData.nomEtablissement,
-        nomClasse: professorData.nomClasse,
-        matriculeProfesseur: professorData.matriculeProfesseur,
+      // Validate required fields
+      if (!professorData.nom || !professorData.prenom || !professorData.email) {
+        throw new Error("Name, Surname, and Email are required");
+      }
+
+      // Convert image files to Base64 if present
+      const convertToBase64 = async (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result.split(",")[1]); // Extract Base64 string only
+          reader.onerror = (error) => reject(error);
+        });
+      };
+
+      let cniUrlRectoBase64 = null;
+      let cniUrlVersoBase64 = null;
+
+      if (professorData.cni_url_front) {
+        cniUrlRectoBase64 = await convertToBase64(professorData.cni_url_front);
+      }
+
+      if (professorData.cni_url_back) {
+        cniUrlVersoBase64 = await convertToBase64(professorData.cni_url_back);
+      }
+
+      // Create the payload based on backend requirements
+      const payload = {
+        nom: professorData.nom || "",
+        prenom: professorData.prenom || "",
+        email: professorData.email || "",
+        passeAccess: professorData.passeAccess || "",
+        telephone: professorData.telephone || "",
+        adresse: professorData.adresse || "",
+        etat: professorData.etat || "",
+        nomEtablissement: professorData.nom_etablissement || "",
+        matriculeProfesseur: professorData.matricule_professeur || "",
+        nomClasse: professorData.nom_classe || "",
+        cniUrlRecto: cniUrlRectoBase64,
+        cniUrlVerso: cniUrlVersoBase64,
+      };
+
+      console.log("📤 Payload being sent to /professeurs:", payload);
+
+      const response = await api.post("/professeurs", payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
-      const response = await api.post("/professeurs", formData);
+      console.log("✅ Professor created successfully:", response.data);
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -162,6 +224,18 @@ class ScholchatService {
 
   async updateProfessor(id, professorData) {
     try {
+      // Process and validate image files if present
+      if (professorData.cniUrlRecto) {
+        professorData.cniUrlRecto = await this.processFileUpload(
+          professorData.cniUrlRecto
+        );
+      }
+      if (professorData.cniUrlVerso) {
+        professorData.cniUrlVerso = await this.processFileUpload(
+          professorData.cniUrlVerso
+        );
+      }
+
       const formData = this.createFormDataFromObject(professorData);
       const response = await api.put(`/professeurs/${id}`, formData);
       return response.data;
@@ -298,11 +372,16 @@ class ScholchatService {
 
   async createTutor(tutorData) {
     try {
+      // Process and validate image files
+      const cniFront = await this.processFileUpload(tutorData.cniUrlFront);
+      const cniBack = await this.processFileUpload(tutorData.cniUrlBack);
+      const fullPic = await this.processFileUpload(tutorData.fullPicUrl);
+
       const formData = this.createFormDataFromObject({
         ...this.createBaseUserPayload(tutorData),
-        cniUrlFront: tutorData.cniUrlFront,
-        cniUrlBack: tutorData.cniUrlBack,
-        fullPicUrl: tutorData.fullPicUrl,
+        cniUrlFront: cniFront,
+        cniUrlBack: cniBack,
+        fullPicUrl: fullPic,
         nomClasse: tutorData.nomClasse,
       });
 
@@ -315,6 +394,23 @@ class ScholchatService {
 
   async updateTutor(id, tutorData) {
     try {
+      // Process and validate image files if present
+      if (tutorData.cniUrlFront) {
+        tutorData.cniUrlFront = await this.processFileUpload(
+          tutorData.cniUrlFront
+        );
+      }
+      if (tutorData.cniUrlBack) {
+        tutorData.cniUrlBack = await this.processFileUpload(
+          tutorData.cniUrlBack
+        );
+      }
+      if (tutorData.fullPicUrl) {
+        tutorData.fullPicUrl = await this.processFileUpload(
+          tutorData.fullPicUrl
+        );
+      }
+
       const formData = this.createFormDataFromObject(tutorData);
       const response = await api.put(`/repetiteurs/${id}`, formData);
       return response.data;
