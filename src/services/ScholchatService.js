@@ -165,59 +165,69 @@ class ScholchatService {
 
   async createProfessor(professorData) {
     try {
-      // Validate required fields
-      if (!professorData.nom || !professorData.prenom || !professorData.email) {
-        throw new Error("Name, Surname, and Email are required");
-      }
-
-      // Convert image files to Base64 if present
-      const convertToBase64 = async (file) => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result.split(",")[1]); // Extract Base64 string only
-          reader.onerror = (error) => reject(error);
-        });
-      };
-
-      let cniUrlRectoBase64 = null;
-      let cniUrlVersoBase64 = null;
-
-      if (professorData.cni_url_front) {
-        cniUrlRectoBase64 = await convertToBase64(professorData.cni_url_front);
-      }
-
-      if (professorData.cni_url_back) {
-        cniUrlVersoBase64 = await convertToBase64(professorData.cni_url_back);
-      }
-
-      // Create the payload based on backend requirements
+      // Extract base64 data and ensure proper JSON structure
       const payload = {
-        nom: professorData.nom || "",
-        prenom: professorData.prenom || "",
-        email: professorData.email || "",
-        passeAccess: professorData.passeAccess || "",
-        telephone: professorData.telephone || "",
-        adresse: professorData.adresse || "",
-        etat: professorData.etat || "",
-        nomEtablissement: professorData.nom_etablissement || "",
-        matriculeProfesseur: professorData.matricule_professeur || "",
-        nomClasse: professorData.nom_classe || "",
-        cniUrlRecto: cniUrlRectoBase64,
-        cniUrlVerso: cniUrlVersoBase64,
+        nom: professorData.nom?.trim(),
+        prenom: professorData.prenom?.trim(),
+        email: professorData.email?.trim(),
+        telephone: professorData.telephone?.trim(),
+        adresse: professorData.adresse?.trim(),
+        etat: professorData.etat || "active",
+        nomEtablissement: professorData.nomEtablissement?.trim(),
+        matriculeProfesseur: professorData.matriculeProfesseur?.trim(),
+        nomClasse: professorData.nomClasse?.trim() || "",
       };
 
-      console.log("📤 Payload being sent to /professeurs:", payload);
+      // Handle CNI URLs - convert URL to base64 if needed
+      if (professorData.cniUrlRecto) {
+        if (professorData.cniUrlRecto.startsWith("http")) {
+          try {
+            const response = await fetch(professorData.cniUrlRecto);
+            const blob = await response.blob();
+            payload.cniUrlRecto = await this.processFileUpload(blob);
+          } catch (error) {
+            console.error("Error fetching CNI front image:", error);
+            throw new Error("Failed to process CNI front image");
+          }
+        } else {
+          // If it's already base64, validate and process
+          payload.cniUrlRecto = professorData.cniUrlRecto;
+        }
+      }
 
-      const response = await api.post("/professeurs", payload, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      if (professorData.cniUrlVerso) {
+        if (professorData.cniUrlVerso.startsWith("http")) {
+          try {
+            const response = await fetch(professorData.cniUrlVerso);
+            const blob = await response.blob();
+            payload.cniUrlVerso = await this.processFileUpload(blob);
+          } catch (error) {
+            console.error("Error fetching CNI back image:", error);
+            throw new Error("Failed to process CNI back image");
+          }
+        } else {
+          payload.cniUrlVerso = professorData.cniUrlVerso;
+        }
+      }
 
-      console.log("✅ Professor created successfully:", response.data);
+      // Split base64 data if present
+      if (payload.cniUrlRecto?.includes("base64,")) {
+        payload.cniUrlRecto = payload.cniUrlRecto.split(",")[1];
+      }
+      if (payload.cniUrlVerso?.includes("base64,")) {
+        payload.cniUrlVerso = payload.cniUrlVerso.split(",")[1];
+      }
+
+      const response = await api.post("/professeurs", payload);
       return response.data;
     } catch (error) {
+      if (
+        error.response?.data?.message?.includes("Value too long for column")
+      ) {
+        throw new Error(
+          "Image file size is too large. Please use a smaller image or compress it further."
+        );
+      }
       this.handleError(error);
     }
   }

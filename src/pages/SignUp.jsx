@@ -1,23 +1,88 @@
 import React, { useState, useCallback } from "react";
-import { PlusCircle, X, Save, ArrowRight, ArrowLeft } from "lucide-react";
+import { X, Save, ArrowRight, ArrowLeft, Loader } from "lucide-react";
 import { useScholchat } from "../hooks/useScholchat";
 
 const SignUp = () => {
-  const {
-    createProfessor,
-    createParent,
-    createStudent,
-    createClass,
-    loading,
-    error,
-  } = useScholchat();
-
+  const { createProfessor, createParent, createStudent, loading, error } =
+    useScholchat();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [showClassForm, setShowClassForm] = useState(false);
-  const [classes, setClasses] = useState([]);
   const [errors, setErrors] = useState({});
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("");
+
+  const validateFileSize = async (file) => {
+    const maxSize = 500 * 1024; // Reduce to 500KB
+    if (file.size > maxSize) {
+      let quality = 0.7;
+      let compressedDataUrl = await compressImage(file, quality);
+      let compressedSize = atob(compressedDataUrl.split(",")[1]).length;
+
+      // Progressive compression until size is acceptable
+      while (compressedSize > maxSize && quality > 0.1) {
+        quality -= 0.1;
+        compressedDataUrl = await compressImage(file, quality);
+        compressedSize = atob(compressedDataUrl.split(",")[1]).length;
+      }
+
+      if (compressedSize > maxSize) {
+        showAlert("Image is too large. Please use a smaller image.");
+        return null;
+      }
+      return compressedDataUrl;
+    }
+    return await compressImage(file, 0.7);
+  };
+
+  const compressImage = async (file, quality) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          // Calculate dimensions to maintain aspect ratio
+          let width = img.width;
+          let height = img.height;
+
+          // Maximum dimensions for ID card images
+          const maxWidth = 800;
+          const maxHeight = 600;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#FFFFFF"; // White background
+          ctx.fillRect(0, 0, width, height);
+
+          // Enable image smoothing for better quality
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to JPEG with specified quality
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+          resolve(compressedDataUrl);
+        };
+      };
+    });
+  };
 
   const [formData, setFormData] = useState({
     nom: "",
@@ -86,13 +151,13 @@ const SignUp = () => {
     }
 
     if (formData.userType === "Professeur") {
-      if (!formData.cniUrlFront) {
+      if (!formData.cniUrlRecto) {
         showAlert("Front ID card image is required");
-        newErrors.cniUrlFront = true;
+        newErrors.cniUrlRecto = true;
       }
-      if (!formData.cniUrlBack) {
+      if (!formData.cniUrlVerso) {
         showAlert("Back ID card image is required");
-        newErrors.cniUrlBack = true;
+        newErrors.cniUrlVerso = true;
       }
       if (!formData.nomEtablissement.trim()) {
         showAlert("School name is required");
@@ -101,10 +166,6 @@ const SignUp = () => {
       if (!formData.matriculeProfesseur.trim()) {
         showAlert("Professor ID is required");
         newErrors.matriculeProfesseur = true;
-      }
-      if (classes.length === 0) {
-        showAlert("Please create at least one class");
-        newErrors.classes = true;
       }
     }
 
@@ -115,7 +176,7 @@ const SignUp = () => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, classes]);
+  }, [formData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -125,48 +186,56 @@ const SignUp = () => {
     }
   };
 
-  const handleFileChange = (e, fieldName) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        showAlert("Please upload an image file");
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        showAlert("File size should not exceed 5MB");
-        return;
-      }
-      setFormData((prev) => ({ ...prev, [fieldName]: file }));
-      if (errors[fieldName]) {
-        setErrors((prev) => ({ ...prev, [fieldName]: false }));
-      }
-    }
-  };
+ const handleFileChange = async (e, fieldName) => {
+   const file = e.target.files[0];
+   if (!file) return;
 
-  const handleAddClass = useCallback(
-    (classData) => {
-      const newClass = {
-        nom: classData.nom,
-        niveau: classData.niveau,
-        dateCreation: new Date().toISOString(),
-        codeActivation: classData.codeActivation,
-        etat: "ACTIF",
-        etablissement: {
-          nom: formData.nomEtablissement,
-        },
-        parents: [],
-        eleves: [],
-      };
+   if (!file.type.startsWith("image/")) {
+     showAlert("Please upload an image file (JPEG, PNG)");
+     e.target.value = "";
+     return;
+   }
 
-      setClasses((prev) => [...prev, newClass]);
-      setShowClassForm(false);
-    },
-    [formData.nomEtablissement]
-  );
+   try {
+     const compressedDataUrl = await validateFileSize(file);
+     if (!compressedDataUrl) {
+       e.target.value = "";
+       return;
+     }
 
-  const removeClass = useCallback((index) => {
-    setClasses((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+     // Verify base64 string length before setting state
+     const base64Length = atob(compressedDataUrl.split(",")[1]).length;
+     if (base64Length > 200000) {
+       // ~200KB after base64 encoding
+       showAlert(
+         "Image is still too large after compression. Please use a smaller image."
+       );
+       e.target.value = "";
+       return;
+     }
+
+     const fieldMapping = {
+       cniUrlFront: "cniUrlRecto",
+       cniUrlBack: "cniUrlVerso",
+     };
+
+     const backendFieldName = fieldMapping[fieldName] || fieldName;
+     setFormData((prev) => ({
+       ...prev,
+       [backendFieldName]: compressedDataUrl,
+     }));
+
+     setErrors((prev) => ({
+       ...prev,
+       [fieldName]: false,
+       [backendFieldName]: false,
+     }));
+   } catch (error) {
+     console.error("Error processing image:", error);
+     showAlert("Error processing image. Please try another image.");
+     e.target.value = "";
+   }
+ };
 
   const handleSubmit = async () => {
     try {
@@ -174,7 +243,8 @@ const SignUp = () => {
         return;
       }
 
-      let response;
+      setIsSubmitting(true);
+
       const baseUserData = {
         nom: formData.nom.trim(),
         prenom: formData.prenom.trim(),
@@ -185,66 +255,33 @@ const SignUp = () => {
         etat: "active",
       };
 
-      switch (formData.userType) {
-        case "Professeur": {
-          const professorData = new FormData();
+      if (formData.userType === "Professeur") {
+        const professorData = {
+          nom: formData.nom.trim(),
+          prenom: formData.prenom.trim(),
+          email: formData.email.trim(),
+          telephone: formData.telephone.trim(),
+          adresse: formData.adresse.trim(),
+          etat: "active",
+          nomEtablissement: formData.nomEtablissement,
+          matriculeProfesseur: formData.matriculeProfesseur,
+          nomClasse: formData.nomClasse || "",
+          cniUrlRecto: formData.cniUrlRecto?.split(",")[1] || null,
+          cniUrlVerso: formData.cniUrlVerso?.split(",")[1] || null,
+        };
 
-          Object.entries(baseUserData).forEach(([key, value]) => {
-            professorData.append(key, value);
-          });
-
-          professorData.append("cniUrlRecto", formData.cniUrlFront);
-          professorData.append("cniUrlVerso", formData.cniUrlBack);
-          professorData.append("nomEtablissement", formData.nomEtablissement);
-          professorData.append(
-            "matriculeProfesseur",
-            formData.matriculeProfesseur
-          );
-          professorData.append(
-            "nomClasse",
-            classes.map((c) => c.nom).join(",")
-          );
-
-          response = await createProfessor(professorData);
-
-          for (const classData of classes) {
-            const classPayload = {
-              nom: classData.nom,
-              niveau: classData.niveau,
-              dateCreation: classData.dateCreation,
-              codeActivation: classData.codeActivation,
-              etat: "ACTIF",
-              etablissement: {
-                nom: formData.nomEtablissement,
-              },
-              parents: [],
-              eleves: [],
-            };
-            await createClass(classPayload);
-          }
-          break;
-        }
-
-        case "Parent":
-          response = await createParent({
-            ...baseUserData,
-            classes: [],
-          });
-          break;
-
-        case "Eleve":
-          response = await createStudent({
-            ...baseUserData,
-            niveau: formData.niveau,
-            classes: [],
-          });
-          break;
-
-        default:
-          throw new Error("Invalid user type");
+        await createProfessor(professorData);
+      } else if (formData.userType === "Parent") {
+        await createParent(baseUserData);
+      } else if (formData.userType === "Eleve") {
+        await createStudent({
+          ...baseUserData,
+          niveau: formData.niveau,
+        });
       }
 
       showAlert("Registration successful! You can now login.", "success");
+
       setTimeout(() => {
         window.location.href = "/login";
       }, 2000);
@@ -252,6 +289,8 @@ const SignUp = () => {
       const errorMessage =
         err.response?.data?.message || "Registration failed. Please try again.";
       showAlert(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -268,93 +307,31 @@ const SignUp = () => {
     setErrors({});
   };
 
-  const ClassForm = () => {
-    const [classData, setClassData] = useState({
-      nom: "",
-      niveau: "",
-      codeActivation: "",
-    });
-
-    const handleClassSubmit = (e) => {
-      e.preventDefault();
-      if (!classData.nom.trim()) {
-        showAlert("Class name is required");
-        return;
-      }
-      if (!classData.niveau) {
-        showAlert("Class level is required");
-        return;
-      }
-      if (!classData.codeActivation.trim()) {
-        showAlert("Activation code is required");
-        return;
-      }
-      handleAddClass(classData);
-    };
-
-    return (
-      <div className="class-form-container">
-        <div className="class-form-header">
-          <h3>Create New Class</h3>
-          <button
-            onClick={() => setShowClassForm(false)}
-            className="icon-button"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleClassSubmit} className="class-form">
-          <div className="form-group">
-            <label>Class Name</label>
-            <input
-              type="text"
-              value={classData.nom}
-              onChange={(e) =>
-                setClassData((prev) => ({ ...prev, nom: e.target.value }))
-              }
-              placeholder="Enter class name"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Level</label>
-            <select
-              value={classData.niveau}
-              onChange={(e) =>
-                setClassData((prev) => ({ ...prev, niveau: e.target.value }))
-              }
-            >
-              <option value="">Select Level</option>
-              <option value="PRIMARY">Primary</option>
-              <option value="SECONDARY">Secondary</option>
-              <option value="HIGH_SCHOOL">High School</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Activation Code</label>
-            <input
-              type="text"
-              value={classData.codeActivation}
-              onChange={(e) =>
-                setClassData((prev) => ({
-                  ...prev,
-                  codeActivation: e.target.value,
-                }))
-              }
-              placeholder="Enter activation code"
-            />
-          </div>
-
-          <button type="submit" className="submit-button">
-            <Save size={16} />
-            Save Class
-          </button>
-        </form>
-      </div>
-    );
-  };
+  const renderActionButton = () => (
+    <button
+      type="button"
+      className="submit-button"
+      onClick={handleNextStep}
+      disabled={isSubmitting}
+    >
+      {isSubmitting ? (
+        <>
+          <Loader className="animate-spin" size={16} />
+          Processing...
+        </>
+      ) : currentStep === 1 ? (
+        <>
+          Next Step
+          <ArrowRight size={16} />
+        </>
+      ) : (
+        <>
+          Complete Sign Up
+          <ArrowRight size={16} />
+        </>
+      )}
+    </button>
+  );
 
   return (
     <div className="signup-page">
@@ -488,21 +465,20 @@ const SignUp = () => {
               <div className="professor-details">
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>ID Card Front</label>
+                    <label>ID Card Front (CNI Recto)</label>
                     <input
                       type="file"
                       onChange={(e) => handleFileChange(e, "cniUrlFront")}
-                      className={errors.cniUrlFront ? "error" : ""}
+                      className={errors.cniUrlRecto ? "error" : ""}
                       accept="image/*"
                     />
                   </div>
-
                   <div className="form-group">
-                    <label>ID Card Back</label>
+                    <label>ID Card Back (CNI Verso)</label>
                     <input
                       type="file"
                       onChange={(e) => handleFileChange(e, "cniUrlBack")}
-                      className={errors.cniUrlBack ? "error" : ""}
+                      className={errors.cniUrlVerso ? "error" : ""}
                       accept="image/*"
                     />
                   </div>
@@ -510,7 +486,7 @@ const SignUp = () => {
 
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>School Name</label>
+                    <label>School Name (Établissement)</label>
                     <input
                       type="text"
                       name="nomEtablissement"
@@ -521,7 +497,7 @@ const SignUp = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Professor ID</label>
+                    <label>Professor ID (Matricule)</label>
                     <input
                       type="text"
                       name="matriculeProfesseur"
@@ -531,50 +507,6 @@ const SignUp = () => {
                       placeholder="Enter professor ID"
                     />
                   </div>
-                </div>
-
-                <div className="classes-section">
-                  <div className="classes-header">
-                    <h3>Classes</h3>
-                    <button
-                      type="button"
-                      onClick={() => setShowClassForm(true)}
-                      className="add-class-button"
-                    >
-                      <PlusCircle size={16} />
-                      Add Class
-                    </button>
-                  </div>
-
-                  {classes.length > 0 && (
-                    <div className="classes-list">
-                      {classes.map((cls, index) => (
-                        <div key={index} className="class-card">
-                          <div className="class-info">
-                            <h4>{cls.nom}</h4>
-                            <p>Level: {cls.niveau}</p>
-                            <p>Code: {cls.codeActivation}</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeClass(index)}
-                            className="remove-button"
-                          >
-                            <X size={20} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {classes.length === 0 && !showClassForm && (
-                    <div className="empty-classes">
-                      No classes added yet. Click the "Add Class" button to
-                      create your first class.
-                    </div>
-                  )}
-
-                  {showClassForm && <ClassForm />}
                 </div>
               </div>
             )}
@@ -601,18 +533,12 @@ const SignUp = () => {
                 type="button"
                 className="prev-button"
                 onClick={handlePrevStep}
+                disabled={isSubmitting}
               >
                 <ArrowLeft size={16} />
                 Previous Step
               </button>
-              <button
-                type="button"
-                className="submit-button"
-                onClick={handleNextStep}
-              >
-                Complete Sign Up
-                <ArrowRight size={16} />
-              </button>
+              {renderActionButton()}
             </div>
           </div>
         )}
@@ -738,54 +664,6 @@ const SignUp = () => {
         .submit-button {
           background: #4caf50;
           color: white;
-        }
-
-        .add-class-button {
-          background: #2196f3;
-          color: white;
-        }
-
-        .remove-button {
-          background: #dc3545;
-          color: white;
-          padding: 0.5rem;
-        }
-
-        .class-form-container {
-          background: #f9f9f9;
-          padding: 1.5rem;
-          border-radius: 4px;
-          margin-top: 1rem;
-        }
-
-        .class-form-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1rem;
-        }
-
-        .classes-list {
-          display: grid;
-          gap: 1rem;
-          margin-top: 1rem;
-        }
-
-        .class-card {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: #f5f5f5;
-          padding: 1rem;
-          border-radius: 4px;
-        }
-
-        .empty-classes {
-          text-align: center;
-          color: #666;
-          padding: 2rem;
-          background: #f9f9f9;
-          border-radius: 4px;
         }
 
         .loading-overlay {
