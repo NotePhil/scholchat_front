@@ -9,7 +9,12 @@ import { Instructor } from "./pages/Instructor";
 import FunctionalitiesSection from "./pages/FunctionalitiesSection";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
-import Dashboard from "./pages/Dashbaord/Dashboard";
+import ProfessorPage from "./pages/Dashbaord/ProfessorPage";
+import StudentPage from "./pages/Dashbaord/StudentPage";
+import ParentPage from "./pages/Dashbaord/ParentPage";
+import ClassesPage from "./pages/Dashbaord/ClassesPage";
+import Layoute from "./pages/Dashbaord/Layout";
+
 function App() {
   return (
     <>
@@ -87,7 +92,11 @@ function App() {
               </Layout>
             }
           />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Layoute />} />
+          <Route path="/professors" element={<ProfessorPage />} />
+          <Route path="/students" element={<StudentPage />} />
+          <Route path="/parents" element={<ParentPage />} />
+          <Route path="/classes" element={<ClassesPage />} />
         </Routes>
       </BrowserRouter>
     </>

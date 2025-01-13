@@ -283,10 +283,18 @@ class ScholchatService {
 
   async createParent(parentData) {
     try {
+      // Ensure the payload matches the expected structure
       const payload = {
-        ...this.createBaseUserPayload(parentData),
+        type: "parent",
+        nom: parentData.nom?.trim(),
+        prenom: parentData.prenom?.trim(),
+        email: parentData.email?.trim(),
+        telephone: parentData.telephone?.trim(),
+        adresse: parentData.adresse?.trim(),
+        etat: parentData.etat || "active",
         classes: parentData.classes || [],
       };
+
       const response = await api.post("/parents", payload);
       return response.data;
     } catch (error) {
@@ -296,8 +304,28 @@ class ScholchatService {
 
   async updateParent(id, parentData) {
     try {
-      const response = await api.put(`/parents/${id}`, parentData);
+      // Ensure the payload matches the expected structure
+      const payload = {
+        type: "parent",
+        nom: parentData.nom?.trim(),
+        prenom: parentData.prenom?.trim(),
+        email: parentData.email?.trim(),
+        telephone: parentData.telephone?.trim(),
+        adresse: parentData.adresse?.trim(),
+        etat: parentData.etat || "active",
+        classes: parentData.classes || [],
+      };
+
+      const response = await api.put(`/parents/${id}`, payload);
       return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async deleteParent(id) {
+    try {
+      await api.delete(`/parents/${id}`);
     } catch (error) {
       this.handleError(error);
     }
@@ -333,10 +361,17 @@ class ScholchatService {
   async createStudent(studentData) {
     try {
       const payload = {
-        ...this.createBaseUserPayload(studentData),
-        niveau: studentData.niveau,
+        type: "eleve",
+        nom: studentData.nom?.trim(),
+        prenom: studentData.prenom?.trim(),
+        email: studentData.email?.trim(),
+        telephone: studentData.telephone?.trim(),
+        adresse: studentData.adresse?.trim(),
+        etat: studentData.etat || "active",
+        niveau: studentData.niveau?.trim(),
         classes: studentData.classes || [],
       };
+
       const response = await api.post("/profil-eleves", payload);
       return response.data;
     } catch (error) {
@@ -346,7 +381,19 @@ class ScholchatService {
 
   async updateStudent(id, studentData) {
     try {
-      const response = await api.put(`/profil-eleves/${id}`, studentData);
+      const payload = {
+        type: "eleve",
+        nom: studentData.nom?.trim(),
+        prenom: studentData.prenom?.trim(),
+        email: studentData.email?.trim(),
+        telephone: studentData.telephone?.trim(),
+        adresse: studentData.adresse?.trim(),
+        etat: studentData.etat || "active",
+        niveau: studentData.niveau?.trim(),
+        classes: studentData.classes || [],
+      };
+
+      const response = await api.put(`/profil-eleves/${id}`, payload);
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -438,6 +485,8 @@ class ScholchatService {
   }
 
   // ============ Class Management ============
+
+  // ============ Class Management ============
   async getAllClasses() {
     try {
       const response = await api.get("/classes");
@@ -458,16 +507,19 @@ class ScholchatService {
 
   async createClass(classData) {
     try {
+      // Transform the data to match backend expectations
       const payload = {
-        nom: classData.nom,
-        niveau: classData.niveau,
-        dateCreation: classData.dateCreation || new Date().toISOString(),
-        codeActivation: classData.codeActivation,
+        id: crypto.randomUUID(), // Generate UUID for new classes
+        nom: classData.nom?.trim(),
+        niveau: classData.niveau?.trim(),
+        dateCreation: classData.date_creation || new Date().toISOString(),
+        codeActivation: classData.code_activation || null,
         etat: classData.etat || "ACTIF",
-        etablissement: classData.etablissement,
-        parents: classData.parents || [],
-        eleves: classData.eleves || [],
+        etablissement: {
+          id: classData.etablissement_id || null,
+        },
       };
+
       const response = await api.post("/classes", payload);
       return response.data;
     } catch (error) {
@@ -477,7 +529,20 @@ class ScholchatService {
 
   async updateClass(id, classData) {
     try {
-      const response = await api.put(`/classes/${id}`, classData);
+      // Transform the data to match backend expectations
+      const payload = {
+        id: id,
+        nom: classData.nom?.trim(),
+        niveau: classData.niveau?.trim(),
+        dateCreation: classData.date_creation,
+        codeActivation: classData.code_activation || null,
+        etat: classData.etat,
+        etablissement: {
+          id: classData.etablissement_id || null,
+        },
+      };
+
+      const response = await api.put(`/classes/${id}`, payload);
       return response.data;
     } catch (error) {
       this.handleError(error);
