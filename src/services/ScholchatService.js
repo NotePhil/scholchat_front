@@ -46,7 +46,7 @@ class ScholchatService {
       telephone: userData.telephone,
       passeAccess: userData.passeAccess,
       adresse: userData.adresse,
-      etat: userData.etat || "active",
+      etat: userData.etat || "ACTIVE",
     };
   }
 
@@ -172,7 +172,7 @@ class ScholchatService {
         email: professorData.email?.trim(),
         telephone: professorData.telephone?.trim(),
         adresse: professorData.adresse?.trim(),
-        etat: professorData.etat || "active",
+        etat: professorData.etat || "ACTIVE",
         nomEtablissement: professorData.nomEtablissement?.trim(),
         matriculeProfesseur: professorData.matriculeProfesseur?.trim(),
         nomClasse: professorData.nomClasse?.trim() || "",
@@ -291,7 +291,7 @@ class ScholchatService {
         email: parentData.email?.trim(),
         telephone: parentData.telephone?.trim(),
         adresse: parentData.adresse?.trim(),
-        etat: parentData.etat || "active",
+        etat: parentData.etat || "ACTIVE",
         classes: parentData.classes || [],
       };
 
@@ -312,7 +312,7 @@ class ScholchatService {
         email: parentData.email?.trim(),
         telephone: parentData.telephone?.trim(),
         adresse: parentData.adresse?.trim(),
-        etat: parentData.etat || "active",
+        etat: parentData.etat || "ACTIVE",
         classes: parentData.classes || [],
       };
 
@@ -367,7 +367,7 @@ class ScholchatService {
         email: studentData.email?.trim(),
         telephone: studentData.telephone?.trim(),
         adresse: studentData.adresse?.trim(),
-        etat: studentData.etat || "active",
+        etat: studentData.etat || "ACTIVE",
         niveau: studentData.niveau?.trim(),
         classes: studentData.classes || [],
       };
@@ -388,7 +388,7 @@ class ScholchatService {
         email: studentData.email?.trim(),
         telephone: studentData.telephone?.trim(),
         adresse: studentData.adresse?.trim(),
-        etat: studentData.etat || "active",
+        etat: studentData.etat || "ACTIVE",
         niveau: studentData.niveau?.trim(),
         classes: studentData.classes || [],
       };

@@ -186,56 +186,56 @@ const SignUp = () => {
     }
   };
 
- const handleFileChange = async (e, fieldName) => {
-   const file = e.target.files[0];
-   if (!file) return;
+  const handleFileChange = async (e, fieldName) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-   if (!file.type.startsWith("image/")) {
-     showAlert("Please upload an image file (JPEG, PNG)");
-     e.target.value = "";
-     return;
-   }
+    if (!file.type.startsWith("image/")) {
+      showAlert("Please upload an image file (JPEG, PNG)");
+      e.target.value = "";
+      return;
+    }
 
-   try {
-     const compressedDataUrl = await validateFileSize(file);
-     if (!compressedDataUrl) {
-       e.target.value = "";
-       return;
-     }
+    try {
+      const compressedDataUrl = await validateFileSize(file);
+      if (!compressedDataUrl) {
+        e.target.value = "";
+        return;
+      }
 
-     // Verify base64 string length before setting state
-     const base64Length = atob(compressedDataUrl.split(",")[1]).length;
-     if (base64Length > 200000) {
-       // ~200KB after base64 encoding
-       showAlert(
-         "Image is still too large after compression. Please use a smaller image."
-       );
-       e.target.value = "";
-       return;
-     }
+      // Verify base64 string length before setting state
+      const base64Length = atob(compressedDataUrl.split(",")[1]).length;
+      if (base64Length > 200000) {
+        // ~200KB after base64 encoding
+        showAlert(
+          "Image is still too large after compression. Please use a smaller image."
+        );
+        e.target.value = "";
+        return;
+      }
 
-     const fieldMapping = {
-       cniUrlFront: "cniUrlRecto",
-       cniUrlBack: "cniUrlVerso",
-     };
+      const fieldMapping = {
+        cniUrlFront: "cniUrlRecto",
+        cniUrlBack: "cniUrlVerso",
+      };
 
-     const backendFieldName = fieldMapping[fieldName] || fieldName;
-     setFormData((prev) => ({
-       ...prev,
-       [backendFieldName]: compressedDataUrl,
-     }));
+      const backendFieldName = fieldMapping[fieldName] || fieldName;
+      setFormData((prev) => ({
+        ...prev,
+        [backendFieldName]: compressedDataUrl,
+      }));
 
-     setErrors((prev) => ({
-       ...prev,
-       [fieldName]: false,
-       [backendFieldName]: false,
-     }));
-   } catch (error) {
-     console.error("Error processing image:", error);
-     showAlert("Error processing image. Please try another image.");
-     e.target.value = "";
-   }
- };
+      setErrors((prev) => ({
+        ...prev,
+        [fieldName]: false,
+        [backendFieldName]: false,
+      }));
+    } catch (error) {
+      console.error("Error processing image:", error);
+      showAlert("Error processing image. Please try another image.");
+      e.target.value = "";
+    }
+  };
 
   const handleSubmit = async () => {
     try {
@@ -252,7 +252,7 @@ const SignUp = () => {
         telephone: formData.telephone.trim(),
         passeAccess: formData.password,
         adresse: formData.adresse.trim(),
-        etat: "active",
+        etat: "ACTIVE",
       };
 
       if (formData.userType === "Professeur") {
@@ -262,7 +262,7 @@ const SignUp = () => {
           email: formData.email.trim(),
           telephone: formData.telephone.trim(),
           adresse: formData.adresse.trim(),
-          etat: "active",
+          etat: "ACTIVE",
           nomEtablissement: formData.nomEtablissement,
           matriculeProfesseur: formData.matriculeProfesseur,
           nomClasse: formData.nomClasse || "",
@@ -344,11 +344,11 @@ const SignUp = () => {
       <div className="signup-container">
         <div className="progress-bar">
           <div className="step-circles">
-            <div className={`step-circle ${currentStep >= 1 ? "active" : ""}`}>
+            <div className={`step-circle ${currentStep >= 1 ? "ACTIVE" : ""}`}>
               1
             </div>
             <div className="step-line"></div>
-            <div className={`step-circle ${currentStep >= 2 ? "active" : ""}`}>
+            <div className={`step-circle ${currentStep >= 2 ? "ACTIVE" : ""}`}>
               2
             </div>
           </div>

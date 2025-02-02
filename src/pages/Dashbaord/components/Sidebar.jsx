@@ -8,6 +8,7 @@ import {
   Mail,
   Settings,
 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Sidebar({
   showSidebar,
@@ -18,16 +19,38 @@ export default function Sidebar({
   themes,
   colorSchemes,
 }) {
+  const navigate = useNavigate();
+
   const menuItems = [
-    { name: "Dashboard", icon: Menu },
-    { name: "Users", icon: Users },
-    { name: "Students", icon: Users },
-    { name: "Parents", icon: UserPlus },
-    { name: "Professors", icon: BookOpen },
-    { name: "Classes", icon: Building2 },
-    { name: "Messages", icon: Mail },
-    { name: "Settings", icon: Settings },
+    { name: "Dashboard", icon: Menu, tab: "dashboard", path: "/dashboard" },
+    { name: "Users", icon: Users, tab: "users", path: "/users" },
+    {
+      name: "Students",
+      icon: Users,
+      tab: "students",
+      path: "/students/dashboard",
+    },
+    {
+      name: "Parents",
+      icon: UserPlus,
+      tab: "parents",
+      path: "/parents/dashboard",
+    },
+    {
+      name: "Professors",
+      icon: BookOpen,
+      tab: "professors",
+      path: "/professors/dashboard",
+    },
+    { name: "Classes", icon: Building2, tab: "classes", path: "/classes" },
+    { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
+    { name: "Settings", icon: Settings, tab: "settings", path: "/settings" },
   ];
+
+  const handleNavigation = (path, tab) => {
+    setActiveTab(tab);
+    navigate(path);
+  };
 
   return (
     <aside
@@ -54,28 +77,73 @@ export default function Sidebar({
         {menuItems.map((item) => (
           <div
             key={item.name}
-            className={`flex items-center px-6 py-4 cursor-pointer transition-all duration-200 ${
-              activeTab === item.name.toLowerCase()
-                ? isDark
-                  ? `bg-gray-700 border-r-4`
-                  : `bg-opacity-10 border-r-4`
+            className={`relative flex items-center px-6 py-4 cursor-pointer transition-all duration-300 ${
+              activeTab === item.tab
+                ? `${
+                    isDark ? "text-white" : "text-gray-900"
+                  } font-medium transform scale-100`
                 : isDark
-                ? "text-gray-300 hover:bg-gray-700"
-                : "text-gray-700 hover:bg-gray-50"
+                ? "text-gray-300 hover:text-white"
+                : "text-gray-700 hover:text-gray-900"
             }`}
-            style={{
-              borderColor: colorSchemes[currentTheme].primary,
-              backgroundColor:
-                activeTab === item.name.toLowerCase()
-                  ? `${colorSchemes[currentTheme].light}`
-                  : "transparent",
-            }}
+            onClick={() => handleNavigation(item.path, item.tab)}
           >
-            <item.icon
-              className="w-6 h-6"
-              style={{ color: colorSchemes[currentTheme].primary }}
+            {/* Active state background effect */}
+            {activeTab === item.tab && (
+              <div
+                className="absolute inset-0 transition-all duration-300"
+                style={{
+                  backgroundColor: colorSchemes[currentTheme].light,
+                  opacity: isDark ? 0.2 : 0.15,
+                }}
+              />
+            )}
+
+            {/* Active state indicator line */}
+            {activeTab === item.tab && (
+              <div
+                className="absolute left-0 top-0 bottom-0 w-1 transition-all duration-300"
+                style={{
+                  backgroundColor: colorSchemes[currentTheme].primary,
+                }}
+              />
+            )}
+
+            {/* Icon and text container */}
+            <div className="relative flex items-center w-full group">
+              <item.icon
+                className={`w-6 h-6 transition-all duration-300 ${
+                  activeTab === item.tab ? "" : "group-hover:scale-110"
+                }`}
+                style={{
+                  color:
+                    activeTab === item.tab
+                      ? colorSchemes[currentTheme].primary
+                      : isDark
+                      ? "currentColor"
+                      : "currentColor",
+                }}
+              />
+              <span
+                className={`mx-4 transition-all duration-300 ${
+                  activeTab === item.tab
+                    ? "transform translate-x-1"
+                    : "group-hover:translate-x-1"
+                }`}
+              >
+                {item.name}
+              </span>
+            </div>
+
+            {/* Hover effect overlay */}
+            <div
+              className={`absolute inset-0 opacity-0 transition-opacity duration-300 ${
+                activeTab !== item.tab ? "hover:opacity-10" : ""
+              }`}
+              style={{
+                backgroundColor: colorSchemes[currentTheme].primary,
+              }}
             />
-            <span className="mx-4">{item.name}</span>
           </div>
         ))}
       </nav>

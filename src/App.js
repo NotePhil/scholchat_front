@@ -11,6 +11,9 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import ProfessorPage from "./pages/Dashbaord/ProfessorPage";
 import StudentPage from "./pages/Dashbaord/StudentPage";
+import ProfessorDashboard from "./pages/Dashbaord/components/ProfessorDashboard/ProfessorDashboard";
+import StudentDashboard from "./pages/Dashbaord/components/StudentDashboard/StudentDashboard";
+import ParentDashboard from "./pages/Dashbaord/components/ParentDashboard/ParentDashboard";
 import ParentPage from "./pages/Dashbaord/ParentPage";
 import ClassesPage from "./pages/Dashbaord/ClassesPage";
 import Layoute from "./pages/Dashbaord/Layout";
@@ -95,8 +98,14 @@ function App() {
           <Route path="/dashboard" element={<Layoute />} />
           <Route path="/professors" element={<ProfessorPage />} />
           <Route path="/students" element={<StudentPage />} />
+          <Route path="/students/dashboard" element={<StudentDashboard />} />
           <Route path="/parents" element={<ParentPage />} />
+          <Route path="/parents/dashboard" element={<ParentDashboard />} />
           <Route path="/classes" element={<ClassesPage />} />
+          <Route
+            path="/professors/dashboard"
+            element={<ProfessorDashboard />}
+          />
         </Routes>
       </BrowserRouter>
     </>
