@@ -7,6 +7,7 @@ import { Courses } from "./pages/Courses";
 import { Blog } from "./pages/Blog";
 import { Instructor } from "./pages/Instructor";
 import FunctionalitiesSection from "./pages/FunctionalitiesSection";
+import ClassSelectionWrapper from "./pages/Dashbaord/components/form/ClassSelectionWrapper";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import ProfessorPage from "./pages/Dashbaord/ProfessorPage";
@@ -16,8 +17,10 @@ import StudentDashboard from "./pages/Dashbaord/components/StudentDashboard/Stud
 import ParentDashboard from "./pages/Dashbaord/components/ParentDashboard/ParentDashboard";
 import ParentPage from "./pages/Dashbaord/ParentPage";
 import ClassesPage from "./pages/Dashbaord/ClassesPage";
+import PostLoginClassModal from "./pages/Dashbaord/components/form/ClassSelectionModal";
 import Layoute from "./pages/Dashbaord/Layout";
-
+import EmailDashboard from "./pages/Dashbaord/components/StudentDashboard/EmailDashboard";
+import ActivityFeed from "./pages/Dashbaord/components/StudentDashboard/ActivityFeed";
 function App() {
   return (
     <>
@@ -31,6 +34,23 @@ function App() {
               </Layout>
             }
           />
+          <Route
+            path="/activity"
+            element={
+              <Layout>
+                <ActivityFeed />
+              </Layout>
+            }
+          />
+          <Route
+            path="/postLogin/classModal"
+            element={
+              <Layout>
+                <PostLoginClassModal />
+              </Layout>
+            }
+          />
+
           <Route
             path="/about"
             element={
@@ -88,6 +108,10 @@ function App() {
             }
           />
           <Route
+            path="/postLogin/classModal"
+            element={<ClassSelectionWrapper />}
+          />
+          <Route
             path="/SignUp"
             element={
               <Layout>
@@ -95,13 +119,14 @@ function App() {
               </Layout>
             }
           />
-          <Route path="/dashboard" element={<Layoute />} />
+          <Route path="/admin/dashboard" element={<Layoute />} />
           <Route path="/professors" element={<ProfessorPage />} />
           <Route path="/students" element={<StudentPage />} />
           <Route path="/students/dashboard" element={<StudentDashboard />} />
           <Route path="/parents" element={<ParentPage />} />
           <Route path="/parents/dashboard" element={<ParentDashboard />} />
           <Route path="/classes" element={<ClassesPage />} />
+          <Route path="email-dashboard" element={<EmailDashboard />} />
           <Route
             path="/professors/dashboard"
             element={<ProfessorDashboard />}

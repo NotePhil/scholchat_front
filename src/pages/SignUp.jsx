@@ -1,24 +1,59 @@
 import React, { useState, useCallback } from "react";
-import { X, Save, ArrowRight, ArrowLeft, Loader } from "lucide-react";
-import { useScholchat } from "../hooks/useScholchat";
+import PhoneInput from "react-phone-number-input/input";
+import "react-phone-number-input/style.css";
+import {
+  X,
+  Save,
+  ArrowRight,
+  ArrowLeft,
+  Loader,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import PhoneInputs from "./PhoneInput";
 
 const SignUp = () => {
-  const { createProfessor, createParent, createStudent, loading, error } =
-    useScholchat();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState("CM");
+
+  const [formData, setFormData] = useState({
+    type: "",
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    passeaccess: "",
+    adresse: "",
+    etat: "INACTIVE",
+    niveau: "",
+    cniUrlRecto: "",
+    cniUrlVerso: "",
+    nomEtablissement: "",
+    matriculeProfesseur: "",
+    nomClasse: "",
+  });
+
+  const showAlert = (message, type = "error") => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setTimeout(() => {
+      setAlertMessage("");
+      setAlertType("");
+    }, 3000);
+  };
 
   const validateFileSize = async (file) => {
-    const maxSize = 500 * 1024; // Reduce to 500KB
+    const maxSize = 500 * 1024;
     if (file.size > maxSize) {
       let quality = 0.7;
       let compressedDataUrl = await compressImage(file, quality);
       let compressedSize = atob(compressedDataUrl.split(",")[1]).length;
 
-      // Progressive compression until size is acceptable
       while (compressedSize > maxSize && quality > 0.1) {
         quality -= 0.1;
         compressedDataUrl = await compressImage(file, quality);
@@ -43,11 +78,9 @@ const SignUp = () => {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement("canvas");
-          // Calculate dimensions to maintain aspect ratio
           let width = img.width;
           let height = img.height;
 
-          // Maximum dimensions for ID card images
           const maxWidth = 800;
           const maxHeight = 600;
 
@@ -67,45 +100,15 @@ const SignUp = () => {
           canvas.height = height;
 
           const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#FFFFFF"; // White background
+          ctx.fillStyle = "#FFFFFF";
           ctx.fillRect(0, 0, width, height);
-
-          // Enable image smoothing for better quality
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = "high";
-
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Convert to JPEG with specified quality
           const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
           resolve(compressedDataUrl);
         };
       };
     });
-  };
-
-  const [formData, setFormData] = useState({
-    nom: "",
-    prenom: "",
-    email: "",
-    telephone: "",
-    password: "",
-    adresse: "",
-    userType: "",
-    cniUrlFront: null,
-    cniUrlBack: null,
-    nomEtablissement: "",
-    matriculeProfesseur: "",
-    niveau: "",
-  });
-
-  const showAlert = (message, type = "error") => {
-    setAlertMessage(message);
-    setAlertType(type);
-    setTimeout(() => {
-      setAlertMessage("");
-      setAlertType("");
-    }, 3000);
   };
 
   const validateStep1 = useCallback(() => {
@@ -126,16 +129,16 @@ const SignUp = () => {
       showAlert("Please enter a valid email address");
       newErrors.email = true;
     }
-    if (!formData.telephone.trim()) {
+    if (!formData.telephone) {
       showAlert("Phone number is required");
       newErrors.telephone = true;
     }
-    if (!formData.password.trim()) {
+    if (!formData.passeaccess.trim()) {
       showAlert("Password is required");
-      newErrors.password = true;
-    } else if (formData.password.length < 6) {
+      newErrors.passeaccess = true;
+    } else if (formData.passeaccess.length < 6) {
       showAlert("Password must be at least 6 characters long");
-      newErrors.password = true;
+      newErrors.passeaccess = true;
     }
 
     setErrors(newErrors);
@@ -145,12 +148,12 @@ const SignUp = () => {
   const validateStep2 = useCallback(() => {
     const newErrors = {};
 
-    if (!formData.userType) {
+    if (!formData.type) {
       showAlert("Please select a user type");
-      newErrors.userType = true;
+      newErrors.type = true;
     }
 
-    if (formData.userType === "Professeur") {
+    if (formData.type === "professeur") {
       if (!formData.cniUrlRecto) {
         showAlert("Front ID card image is required");
         newErrors.cniUrlRecto = true;
@@ -169,11 +172,6 @@ const SignUp = () => {
       }
     }
 
-    if (formData.userType === "Eleve" && !formData.niveau) {
-      showAlert("Please select a level");
-      newErrors.niveau = true;
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
@@ -184,6 +182,20 @@ const SignUp = () => {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: false }));
     }
+  };
+
+  const handlePhoneChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      telephone: value || "",
+    }));
+    if (errors.telephone) {
+      setErrors((prev) => ({ ...prev, telephone: false }));
+    }
+  };
+
+  const handleCountryChange = (country) => {
+    setSelectedCountry(country);
   };
 
   const handleFileChange = async (e, fieldName) => {
@@ -203,17 +215,7 @@ const SignUp = () => {
         return;
       }
 
-      // Verify base64 string length before setting state
-      const base64Length = atob(compressedDataUrl.split(",")[1]).length;
-      if (base64Length > 200000) {
-        // ~200KB after base64 encoding
-        showAlert(
-          "Image is still too large after compression. Please use a smaller image."
-        );
-        e.target.value = "";
-        return;
-      }
-
+      const base64Data = compressedDataUrl.split(",")[1];
       const fieldMapping = {
         cniUrlFront: "cniUrlRecto",
         cniUrlBack: "cniUrlVerso",
@@ -222,7 +224,7 @@ const SignUp = () => {
       const backendFieldName = fieldMapping[fieldName] || fieldName;
       setFormData((prev) => ({
         ...prev,
-        [backendFieldName]: compressedDataUrl,
+        [backendFieldName]: base64Data,
       }));
 
       setErrors((prev) => ({
@@ -239,49 +241,24 @@ const SignUp = () => {
 
   const handleSubmit = async () => {
     try {
-      if (!validateStep2()) {
-        return;
-      }
+      if (!validateStep2()) return;
 
       setIsSubmitting(true);
 
-      const baseUserData = {
-        nom: formData.nom.trim(),
-        prenom: formData.prenom.trim(),
-        email: formData.email.trim(),
-        telephone: formData.telephone.trim(),
-        passeAccess: formData.password,
-        adresse: formData.adresse.trim(),
-        etat: "ACTIVE",
-      };
+      const apiUrl = "http://localhost:8486/scholchat/utilisateurs";
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-      if (formData.userType === "Professeur") {
-        const professorData = {
-          nom: formData.nom.trim(),
-          prenom: formData.prenom.trim(),
-          email: formData.email.trim(),
-          telephone: formData.telephone.trim(),
-          adresse: formData.adresse.trim(),
-          etat: "ACTIVE",
-          nomEtablissement: formData.nomEtablissement,
-          matriculeProfesseur: formData.matriculeProfesseur,
-          nomClasse: formData.nomClasse || "",
-          cniUrlRecto: formData.cniUrlRecto?.split(",")[1] || null,
-          cniUrlVerso: formData.cniUrlVerso?.split(",")[1] || null,
-        };
-
-        await createProfessor(professorData);
-      } else if (formData.userType === "Parent") {
-        await createParent(baseUserData);
-      } else if (formData.userType === "Eleve") {
-        await createStudent({
-          ...baseUserData,
-          niveau: formData.niveau,
-        });
+      if (!response.ok) {
+        throw new Error("Registration failed");
       }
 
-      showAlert("Registration successful! You can now login.", "success");
-
+      showAlert("Registration successful!", "success");
       setTimeout(() => {
         window.location.href = "/login";
       }, 2000);
@@ -307,36 +284,12 @@ const SignUp = () => {
     setErrors({});
   };
 
-  const renderActionButton = () => (
-    <button
-      type="button"
-      className="submit-button"
-      onClick={handleNextStep}
-      disabled={isSubmitting}
-    >
-      {isSubmitting ? (
-        <>
-          <Loader className="animate-spin" size={16} />
-          Processing...
-        </>
-      ) : currentStep === 1 ? (
-        <>
-          Next Step
-          <ArrowRight size={16} />
-        </>
-      ) : (
-        <>
-          Complete Sign Up
-          <ArrowRight size={16} />
-        </>
-      )}
-    </button>
-  );
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
   return (
     <div className="signup-page">
-      {loading && <div className="loading-overlay">Loading...</div>}
-
       {alertMessage && (
         <div className={`alert-message ${alertType}`}>{alertMessage}</div>
       )}
@@ -344,11 +297,11 @@ const SignUp = () => {
       <div className="signup-container">
         <div className="progress-bar">
           <div className="step-circles">
-            <div className={`step-circle ${currentStep >= 1 ? "ACTIVE" : ""}`}>
+            <div className={`step-circle ${currentStep >= 1 ? "active" : ""}`}>
               1
             </div>
             <div className="step-line"></div>
-            <div className={`step-circle ${currentStep >= 2 ? "ACTIVE" : ""}`}>
+            <div className={`step-circle ${currentStep >= 2 ? "active" : ""}`}>
               2
             </div>
           </div>
@@ -398,28 +351,35 @@ const SignUp = () => {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group phone-input">
               <label>Phone Number</label>
-              <input
-                type="tel"
-                name="telephone"
-                value={formData.telephone}
-                onChange={handleInputChange}
-                className={errors.telephone ? "error" : ""}
-                placeholder="Enter your phone number"
+              <PhoneInputs
+                value={formData.telephone || ""}
+                onChange={handlePhoneChange}
+                onCountryChange={handleCountryChange}
+                error={errors.telephone}
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group password-input">
               <label>Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                className={errors.password ? "error" : ""}
-                placeholder="Enter your password"
-              />
+              <div className="password-container">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="passeaccess"
+                  value={formData.passeaccess}
+                  onChange={handleInputChange}
+                  className={errors.passeaccess ? "error" : ""}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="password-toggle"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
             <div className="form-group">
@@ -449,19 +409,19 @@ const SignUp = () => {
             <div className="form-group">
               <label>User Type</label>
               <select
-                name="userType"
-                value={formData.userType}
+                name="type"
+                value={formData.type}
                 onChange={handleInputChange}
-                className={errors.userType ? "error" : ""}
+                className={errors.type ? "error" : ""}
               >
                 <option value="">Select User Type</option>
-                <option value="Parent">Parent</option>
-                <option value="Professeur">Professor</option>
-                <option value="Eleve">Student</option>
+                <option value="professeur">Professor</option>
+                <option value="eleve">Student</option>
+                <option value="parent">Parent</option>
               </select>
             </div>
 
-            {formData.userType === "Professeur" && (
+            {formData.type === "professeur" && (
               <div className="professor-details">
                 <div className="form-grid">
                   <div className="form-group">
@@ -511,23 +471,6 @@ const SignUp = () => {
               </div>
             )}
 
-            {formData.userType === "Eleve" && (
-              <div className="form-group">
-                <label>Level</label>
-                <select
-                  name="niveau"
-                  value={formData.niveau}
-                  onChange={handleInputChange}
-                  className={errors.niveau ? "error" : ""}
-                >
-                  <option value="">Select Level</option>
-                  <option value="PRIMARY">Primary</option>
-                  <option value="SECONDARY">Secondary</option>
-                  <option value="HIGH_SCHOOL">High School</option>
-                </select>
-              </div>
-            )}
-
             <div className="button-group">
               <button
                 type="button"
@@ -538,7 +481,24 @@ const SignUp = () => {
                 <ArrowLeft size={16} />
                 Previous Step
               </button>
-              {renderActionButton()}
+              <button
+                type="button"
+                className="submit-button"
+                onClick={handleNextStep}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader className="animate-spin" size={16} />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Complete Sign Up
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}
@@ -549,15 +509,18 @@ const SignUp = () => {
           min-height: 100vh;
           padding: 2rem;
           background: linear-gradient(135deg, #1a365d, #2d3748);
+          display: flex;
+          justify-content: center;
+          align-items: center;
         }
 
         .signup-container {
-          max-width: 800px;
-          margin: 0 auto;
+          width: 100%;
+          max-width: 600px;
           background: white;
           padding: 2rem;
           border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .progress-bar {
@@ -572,8 +535,8 @@ const SignUp = () => {
         }
 
         .step-circle {
-          width: 32px;
-          height: 32px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
           background: #e0e0e0;
           display: flex;
@@ -581,6 +544,7 @@ const SignUp = () => {
           justify-content: center;
           color: #666;
           font-weight: bold;
+          margin: 0 1rem;
         }
 
         .step-circle.active {
@@ -590,19 +554,15 @@ const SignUp = () => {
 
         .step-line {
           height: 2px;
-          flex-grow: 1;
+          width: 100px;
           background: #e0e0e0;
-          margin: 0 1rem;
         }
 
         .step-labels {
           display: flex;
           justify-content: space-between;
           color: #666;
-        }
-
-        .signup-form {
-          margin-top: 2rem;
+          font-size: 0.9rem;
         }
 
         .form-grid {
@@ -612,14 +572,14 @@ const SignUp = () => {
         }
 
         .form-group {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1rem;
         }
 
         label {
           display: block;
           margin-bottom: 0.5rem;
-          color: #333;
           font-weight: 500;
+          color: #333;
         }
 
         input,
@@ -632,9 +592,23 @@ const SignUp = () => {
           font-size: 1rem;
         }
 
-        input.error,
-        select.error {
+        .error {
           border-color: #dc3545;
+        }
+
+        .password-container {
+          position: relative;
+        }
+
+        .password-toggle {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #666;
         }
 
         .button-group {
@@ -643,7 +617,8 @@ const SignUp = () => {
           margin-top: 2rem;
         }
 
-        button {
+        .prev-button,
+        .submit-button {
           display: flex;
           align-items: center;
           gap: 0.5rem;
@@ -652,52 +627,52 @@ const SignUp = () => {
           border-radius: 4px;
           cursor: pointer;
           font-weight: 500;
-          transition: all 0.2s;
+          transition: background-color 0.3s ease;
         }
 
         .prev-button {
-          background: #f5f5f5;
-          color: #666;
+          background: #f0f0f0;
+          color: #333;
         }
 
-        .next-button,
+        .prev-button:hover {
+          background: #e0e0e0;
+        }
+
         .submit-button {
           background: #4caf50;
           color: white;
         }
 
-        .loading-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(255, 255, 255, 0.9);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          font-size: 1.2rem;
-          z-index: 1000;
+        .submit-button:hover {
+          background: #45a049;
+        }
+
+        .submit-button:disabled {
+          background: #cccccc;
+          cursor: not-allowed;
         }
 
         .alert-message {
           position: fixed;
           top: 20px;
           right: 20px;
-          padding: 1rem 1.5rem;
+          padding: 1rem;
           border-radius: 4px;
           z-index: 1001;
           animation: slideIn 0.3s ease-out;
         }
 
         .alert-message.error {
-          background: #fee;
-          color: #dc3545;
+          background: #ffebee;
+          color: #c62828;
+          border-left: 4px solid #c62828;
         }
 
         .alert-message.success {
-          background: #efe;
-          color: #4caf50;
+          background: #e8f5e9;
+          color: #2e7d32;
+          border-left: 4px solid #2e7d32;
         }
 
         @keyframes slideIn {
@@ -712,12 +687,13 @@ const SignUp = () => {
         }
 
         @media (max-width: 768px) {
-          .form-grid {
-            grid-template-columns: 1fr;
+          .signup-container {
+            margin: 1rem;
+            padding: 1rem;
           }
 
-          .signup-container {
-            padding: 1rem;
+          .form-grid {
+            grid-template-columns: 1fr;
           }
 
           .button-group {
@@ -726,10 +702,17 @@ const SignUp = () => {
           }
 
           .prev-button,
-          .next-button,
           .submit-button {
             width: 100%;
             justify-content: center;
+          }
+
+          .step-labels {
+            font-size: 0.8rem;
+          }
+
+          .step-line {
+            width: 60px;
           }
         }
       `}</style>

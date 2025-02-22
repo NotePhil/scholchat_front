@@ -8,7 +8,7 @@ import {
   Mail,
   Settings,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function Sidebar({
   showSidebar,
@@ -20,36 +20,162 @@ export default function Sidebar({
   colorSchemes,
 }) {
   const navigate = useNavigate();
+  const userRole = localStorage.getItem("userRole");
 
-  const menuItems = [
-    { name: "Dashboard", icon: Menu, tab: "dashboard", path: "/dashboard" },
-    { name: "Users", icon: Users, tab: "users", path: "/users" },
-    {
-      name: "Students",
-      icon: Users,
-      tab: "students",
-      path: "/students/dashboard",
-    },
-    {
-      name: "Parents",
-      icon: UserPlus,
-      tab: "parents",
-      path: "/parents/dashboard",
-    },
-    {
-      name: "Professors",
-      icon: BookOpen,
-      tab: "professors",
-      path: "/professors/dashboard",
-    },
-    { name: "Classes", icon: Building2, tab: "classes", path: "/classes" },
-    { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
-    { name: "Settings", icon: Settings, tab: "settings", path: "/settings" },
-  ];
+  // Define menu items based on user role
+  const getMenuItems = () => {
+    switch (userRole) {
+      case "admin":
+        return [
+          {
+            name: "Dashboard",
+            icon: Menu,
+            tab: "dashboard",
+            path: "/admin/dashboard",
+          },
+          { name: "Users", icon: Users, tab: "users", path: "/users" },
+          {
+            name: "Parents",
+            icon: UserPlus,
+            tab: "parents",
+            path: "/parents/dashboard",
+          },
+          {
+            name: "Professors",
+            icon: BookOpen,
+            tab: "professors",
+            path: "/professors/dashboard",
+          },
+          {
+            name: "Classes",
+            icon: Building2,
+            tab: "classes",
+            path: "/classes",
+          },
+          { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
+          {
+            name: "Settings",
+            icon: Settings,
+            tab: "settings",
+            path: "/settings",
+          },
+        ];
+
+      case "professor":
+      case "repetiteur":
+        return [
+          {
+            name: "Activities",
+            icon: Menu,
+            tab: "dashboard",
+            path: "/admin/dashboard",
+          },
+          {
+            name: "DashBoard",
+            icon: Users,
+            tab: "students",
+            path: "/professors/dashboard",
+          },
+          {
+            name: "Parents",
+            icon: UserPlus,
+            tab: "parents",
+            path: "/parents/dashboard",
+          },
+          {
+            name: "Professors",
+            icon: BookOpen,
+            tab: "professors",
+            path: "/professors/dashboard",
+          },
+          {
+            name: "Classes",
+            icon: Building2,
+            tab: "classes",
+            path: "/classes",
+          },
+          { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
+          {
+            name: "Settings",
+            icon: Settings,
+            tab: "settings",
+            path: "/settings",
+          },
+        ];
+
+      case "student":
+        return [
+          {
+            name: "Dashboard",
+            icon: Menu,
+            tab: "dashboard",
+            path: "/student/dashboard",
+          },
+          {
+            name: "Students",
+            icon: Users,
+            tab: "students",
+            path: "/students/dashboard",
+          },
+          {
+            name: "Classes",
+            icon: Building2,
+            tab: "classes",
+            path: "/classes",
+          },
+          { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
+          {
+            name: "Settings",
+            icon: Settings,
+            tab: "settings",
+            path: "/settings",
+          },
+        ];
+
+      case "parent":
+        return [
+          {
+            name: "Dashboard",
+            icon: Menu,
+            tab: "dashboard",
+            path: "/parent/dashboard",
+          },
+          {
+            name: "Students",
+            icon: Users,
+            tab: "students",
+            path: "/students/dashboard",
+          },
+          {
+            name: "Classes",
+            icon: Building2,
+            tab: "classes",
+            path: "/classes",
+          },
+          { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
+          {
+            name: "Settings",
+            icon: Settings,
+            tab: "settings",
+            path: "/settings",
+          },
+        ];
+
+      default:
+        return [];
+    }
+  };
+
+  const menuItems = getMenuItems();
 
   const handleNavigation = (path, tab) => {
     setActiveTab(tab);
-    navigate(path);
+
+    if (tab === "messages") {
+      window.location.href = "mailto:";
+    } else {
+      navigate(path);
+    }
   };
 
   return (

@@ -17,14 +17,45 @@ export const Login = () => {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+    // Clear error when user starts typing
+    if (error) setError("");
   };
 
-  const handleSubmit = (e) => {
+  const validateCredentials = (email, password) => {
+    const credentials = {
+      "admin@gmail.com": { password: "Admin", role: "admin" },
+      "professor@gmail.com": { password: "Professor", role: "professor" },
+      "repetiteur@gmail.com": { password: "Repetiteur", role: "repetiteur" },
+      "student@gmail.com": { password: "Student", role: "student" },
+      "parent@gmail.com": { password: "Parent", role: "parent" },
+    };
+
+    return credentials[email]?.password === password
+      ? credentials[email].role
+      : null;
+  };
+
+  // In Login.js
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.email === "admin@gmail.com" && formData.password === "Admin") {
-      navigate("/dashboard");
+    const { email, password } = formData;
+
+    const userRole = validateCredentials(email, password);
+
+    if (!userRole) {
+      setError("Invalid email or password. Please try again.");
+      return;
+    }
+
+    // Store user role in localStorage
+    localStorage.setItem("userRole", userRole);
+
+    // Handle navigation based on user role
+    if (userRole === "professor" || userRole === "repetiteur") {
+      // Pass state to indicate we need to show the modal
+      navigate("/postLogin/classModal", { state: { showClassModal: true } });
     } else {
-      setError("Invalid credentials");
+      navigate("/admin/dashboard");
     }
   };
 
@@ -39,7 +70,12 @@ export const Login = () => {
 
         <div className="login-form">
           <form onSubmit={handleSubmit}>
-            {error && <div className="error-message">{error}</div>}
+            {error && (
+              <div className="error-message bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                {error}
+              </div>
+            )}
+
             <label htmlFor="email" className="login-label">
               Email:
             </label>
@@ -53,6 +89,7 @@ export const Login = () => {
               className="login-input"
               required
             />
+
             <label htmlFor="password" className="login-label">
               Password:
             </label>
@@ -66,6 +103,7 @@ export const Login = () => {
               className="login-input"
               required
             />
+
             <div className="remember-me">
               <input
                 type="checkbox"
@@ -79,10 +117,15 @@ export const Login = () => {
                 Remember Me
               </label>
             </div>
-            <button type="submit" className="login-button">
+
+            <button
+              type="submit"
+              className="login-button hover:bg-blue-700 transition-colors"
+            >
               Sign In
             </button>
           </form>
+
           <a href="/forgot-password" className="forgot-password">
             Forgot password?
           </a>

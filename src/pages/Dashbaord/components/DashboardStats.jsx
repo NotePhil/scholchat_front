@@ -133,7 +133,7 @@ const DashboardStats = ({
         }
         tabName="users"
         isDark={isDark}
-        themes={themes}
+        themes={{}}
         currentTheme={currentTheme}
         colorSchemes={colorSchemes}
         setActiveTab={setActiveTab}
