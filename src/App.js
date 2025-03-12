@@ -21,6 +21,9 @@ import PostLoginClassModal from "./pages/Dashbaord/components/form/ClassSelectio
 import Layoute from "./pages/Dashbaord/Layout";
 import EmailDashboard from "./pages/Dashbaord/components/StudentDashboard/EmailDashboard";
 import ActivityFeed from "./pages/Dashbaord/components/StudentDashboard/ActivityFeed";
+import AccountActivation from "./pages/AccountActivation";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
 function App() {
   return (
     <>
@@ -50,7 +53,6 @@ function App() {
               </Layout>
             }
           />
-
           <Route
             path="/about"
             element={
@@ -127,6 +129,10 @@ function App() {
           <Route path="/parents/dashboard" element={<ParentDashboard />} />
           <Route path="/classes" element={<ClassesPage />} />
           <Route path="email-dashboard" element={<EmailDashboard />} />
+          <Route path="/AccountActivation" element={<AccountActivation />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+
           <Route
             path="/professors/dashboard"
             element={<ProfessorDashboard />}

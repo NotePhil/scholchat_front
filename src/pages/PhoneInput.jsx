@@ -4,11 +4,11 @@ const COUNTRY_CODES = {
   CM: {
     code: "+237",
     abbr: "CM",
-    regex: /^(6|2)\d{8}$/,
-    maxLength: 9,
-    format: [1, 2, 2, 2, 2],
-    example: "654139678",
-    description: "Must start with 6 (mobile) or 2 (fixed), total 9 digits",
+    regex: /^(6|2)\d{7}$/, // Changed to 8 digits total (first digit + 7 more)
+    maxLength: 8, // Changed from 9 to 8
+    format: [1, 3, 4], // Updated format pattern for 8 digits
+    example: "65413956", // Updated example with 8 digits
+    description: "Must start with 6 (mobile) or 2 (fixed), total 8 digits",
   },
   US: {
     code: "+1",
@@ -22,11 +22,11 @@ const COUNTRY_CODES = {
   FR: {
     code: "+33",
     abbr: "FR",
-    regex: /^[67]\d{8}$/,
+    regex: /^[1-9]\d{8}$/, // Updated to match backend: must start with 1-9 + 8 more digits
     maxLength: 9,
-    format: [2, 2, 2, 2],
-    example: "612345678",
-    description: "Must start with 6 or 7, total 9 digits",
+    format: [1, 2, 2, 2, 2],
+    example: "123456789", // Updated example
+    description: "Must start with 1-9, total 9 digits",
   },
   NG: {
     code: "+234",
@@ -76,6 +76,13 @@ const PhoneInputs = ({
       if (firstDigit !== "6" && firstDigit !== "2") {
         setIsValid(false);
         setHelper("Cameroon numbers must start with 6 (mobile) or 2 (fixed)");
+        return false;
+      }
+    } else if (country === "FR") {
+      const firstDigit = digitsOnly.charAt(0);
+      if (firstDigit === "0") {
+        setIsValid(false);
+        setHelper("Without country code, France numbers should start with 1-9");
         return false;
       }
     }
@@ -168,6 +175,13 @@ const PhoneInputs = ({
         <p className={`text-sm ${isValid ? "text-green-600" : "text-red-500"}`}>
           {helper}
         </p>
+      )}
+
+      {selectedCountry === "CM" && (
+        <p className="text-xs text-gray-500">Example: +237 6541 3956</p>
+      )}
+      {selectedCountry === "FR" && (
+        <p className="text-xs text-gray-500">Example: +33 1 23 45 67 89</p>
       )}
     </div>
   );

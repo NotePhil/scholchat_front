@@ -4,116 +4,250 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(
-    135deg,
-    #667eea,
-    #764ba2
-  ); /* Same as background color */
+  background: linear-gradient(135deg, #1a365d, #2d3748);
 }
 
 /* Login Container */
 .login-container {
-  background: white;
-  width: 100%; /* Set the container width to 100% */
-  max-width: 500px; /* Increased width */
-  padding: 2rem;
+  background: #ffffff;
+  width: 100%;
+  max-width: 500px;
+  padding: 2.5rem;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   text-align: center;
-  position: relative;
-  top: 10px; /* Reduced the top space to bring the login container closer */
 }
 
 /* Title and Subtitle */
 .login-title {
-  font-size: 1.75rem;
-  color: #333;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+  font-size: 2rem;
+  color: #1a365d;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
 }
 
 .login-subtitle {
-  color: #666;
-  font-size: 0.95rem;
+  color: #4a5568;
+  font-size: 1rem;
+  margin-bottom: 2rem;
 }
 
 .create-account {
   color: #5a67d8;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
+  transition: color 0.2s;
+}
+
+.create-account:hover {
+  color: #4c51bf;
+  text-decoration: underline;
 }
 
 /* Form */
+.login-form {
+  text-align: left;
+}
+
 .login-form form {
   display: flex;
   flex-direction: column;
-  align-items: center;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+  position: relative;
 }
 
 .login-label {
-  display: none; /* Hidden labels, placeholder will guide input */
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 0.5rem;
 }
 
 .login-input {
   width: 100%;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
   font-size: 1rem;
-  border: 2px solid #ddd;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  transition: border-color 0.3s;
+  transition: all 0.3s;
+  background-color: #f8fafc;
 }
 
 .login-input:focus {
-  border-color: #667eea;
+  border-color: #5a67d8;
+  box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.15);
   outline: none;
+  background-color: #fff;
 }
 
-/* Remember Me Checkbox - Aligned to the Left */
+/* Password input container */
+.password-input-container {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #5a67d8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Flex container for remember me and forgot password */
+.flex-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Update to Remember Me section */
 .remember-me {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
-  justify-content: flex-start; /* Align the checkbox to the left */
-  width: 100%; /* Ensures full width for left alignment */
+  white-space: nowrap; /* Prevent wrapping */
 }
 
 .remember-checkbox {
   margin-right: 8px;
+  cursor: pointer;
 }
 
 .remember-label {
-  font-size: 0.9rem;
-  color: #666;
+  font-size: 0.875rem;
+  color: #4a5568;
+  cursor: pointer;
+  display: inline-block; /* Change from flex to inline-block */
+  font-weight: 500; /* Add slightly more weight for professionalism */
+}
+
+/* Additional refinements for a more professional look */
+.flex-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Make the checkbox more consistent */
+input[type="checkbox"] {
+  accent-color: #5a67d8; /* Match brand color */
+  width: 16px;
+  height: 16px;
+}
+/* Forgot Password Link */
+.forgot-password {
+  color: #5a67d8;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.forgot-password:hover {
+  color: #4c51bf;
+  text-decoration: underline;
 }
 
 /* Button */
 .login-button {
   width: 100%;
-  padding: 0.75rem;
-  background-color: #667eea;
+  padding: 0.875rem;
+  background-color: #5a67d8;
   color: white;
   font-size: 1rem;
-  font-weight: bold;
+  font-weight: 600;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s, transform 0.1s;
+  box-shadow: 0 4px 6px rgba(90, 103, 216, 0.12);
 }
 
 .login-button:hover {
-  background-color: #5a67d8;
+  background-color: #4c51bf;
+  transform: translateY(-1px);
 }
 
-/* Forgot Password Link */
-.forgot-password {
-  display: block;
-  margin-top: 1rem;
+.login-button:active {
+  transform: translateY(1px);
+}
+
+.login-button:disabled {
+  background-color: #cbd5e0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Loading spinner */
+.loading-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error message */
+.error-message {
+  width: 100%;
+  text-align: center;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+/* Footer */
+.login-footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.login-footer a {
   color: #5a67d8;
-  font-size: 0.9rem;
   text-decoration: none;
 }
 
-.forgot-password:hover {
+.login-footer a:hover {
   text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .login-container {
+    padding: 1.5rem;
+    margin: 0 1rem;
+  }
+
+  .login-title {
+    font-size: 1.75rem;
+  }
 }

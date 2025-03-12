@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../CSS/Login.css";
 
@@ -10,6 +10,8 @@ export const Login = () => {
     remember: false,
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -21,51 +23,93 @@ export const Login = () => {
     if (error) setError("");
   };
 
-  const validateCredentials = (email, password) => {
-    const credentials = {
-      "admin@gmail.com": { password: "Admin", role: "admin" },
-      "professor@gmail.com": { password: "Professor", role: "professor" },
-      "repetiteur@gmail.com": { password: "Repetiteur", role: "repetiteur" },
-      "student@gmail.com": { password: "Student", role: "student" },
-      "parent@gmail.com": { password: "Parent", role: "parent" },
-    };
-
-    return credentials[email]?.password === password
-      ? credentials[email].role
-      : null;
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
-  // In Login.js
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { email, password } = formData;
+    setLoading(true);
+    setError("");
 
-    const userRole = validateCredentials(email, password);
+    try {
+      const response = await fetch(
+        "http://localhost:8486/scholchat/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        }
+      );
 
-    if (!userRole) {
-      setError("Invalid email or password. Please try again.");
-      return;
-    }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Échec de l'authentification");
+      }
 
-    // Store user role in localStorage
-    localStorage.setItem("userRole", userRole);
+      const authData = await response.json();
 
-    // Handle navigation based on user role
-    if (userRole === "professor" || userRole === "repetiteur") {
-      // Pass state to indicate we need to show the modal
-      navigate("/postLogin/classModal", { state: { showClassModal: true } });
-    } else {
-      navigate("/admin/dashboard");
+      // Store auth data in localStorage
+      localStorage.setItem("accessToken", authData.accessToken);
+      localStorage.setItem("refreshToken", authData.refreshToken);
+      localStorage.setItem("userRole", authData.userType);
+      localStorage.setItem("userId", authData.userId);
+      localStorage.setItem("userEmail", authData.userEmail);
+      localStorage.setItem("username", authData.username);
+
+      // Remember me functionality
+      if (formData.remember) {
+        localStorage.setItem("rememberedEmail", formData.email);
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
+
+      // Handle navigation based on user role
+      const userRole = authData.userType;
+      if (userRole === "professeurs" || userRole === "repetiteurs") {
+        navigate("/postLogin/classModal", { state: { showClassModal: true } });
+      } else {
+        navigate("/admin/dashboard");
+      }
+    } catch (err) {
+      console.error("Erreur de connexion:", err);
+      setError(
+        err.message || "Identifiants invalides. Veuillez vérifier et réessayer."
+      );
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Check for remembered email on component mount
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem("rememberedEmail");
+    if (rememberedEmail) {
+      setFormData((prev) => ({
+        ...prev,
+        email: rememberedEmail,
+        remember: true,
+      }));
+    }
+  }, []);
 
   return (
     <div className="login-page">
       <div className="login-container">
-        <h2 className="login-title">Let's get started now!</h2>
+        <h2 className="login-title">Bienvenue</h2>
         <p className="login-subtitle">
-          Or <span className="create-account">create an account</span> if not
-          registered yet
+          Connectez-vous à votre compte ou{" "}
+          <span
+            className="create-account"
+            onClick={() => navigate("/register")}
+          >
+            créez un compte
+          </span>
         </p>
 
         <div className="login-form">
@@ -76,59 +120,85 @@ export const Login = () => {
               </div>
             )}
 
-            <label htmlFor="email" className="login-label">
-              Email:
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="mail@mail.com"
-              className="login-input"
-              required
-            />
-
-            <label htmlFor="password" className="login-label">
-              Password:
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              className="login-input"
-              required
-            />
-
-            <div className="remember-me">
-              <input
-                type="checkbox"
-                id="remember"
-                name="remember"
-                checked={formData.remember}
-                onChange={handleChange}
-                className="remember-checkbox"
-              />
-              <label htmlFor="remember" className="remember-label">
-                Remember Me
+            <div className="input-group">
+              <label htmlFor="email" className="login-label">
+                Adresse e-mail
               </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Entrez votre adresse e-mail"
+                className="login-input"
+                required
+              />
             </div>
 
-            <button
-              type="submit"
-              className="login-button hover:bg-blue-700 transition-colors"
-            >
-              Sign In
+            <div className="input-group password-group">
+              <label htmlFor="password" className="login-label">
+                Mot de passe
+              </label>
+              <div className="password-input-container">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Entrez votre mot de passe"
+                  className="login-input"
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={togglePasswordVisibility}
+                >
+                  {showPassword ? "Masquer" : "Afficher"}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-container">
+              <div className="remember-me">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  name="remember"
+                  checked={formData.remember}
+                  onChange={handleChange}
+                  className="remember-checkbox"
+                />
+                <label htmlFor="remember" className="remember-label">
+                  Se souvenir de moi
+                </label>
+              </div>
+              <a href="/forgot-password" className="forgot-password">
+                Mot de passe oublié ?
+              </a>
+            </div>
+
+            <button type="submit" className="login-button" disabled={loading}>
+              {loading ? (
+                <span className="loading-text">
+                  <span className="loading-spinner"></span>
+                  Connexion en cours...
+                </span>
+              ) : (
+                "Se connecter"
+              )}
             </button>
           </form>
 
-          <a href="/forgot-password" className="forgot-password">
-            Forgot password?
-          </a>
+          <div className="login-footer">
+            <p>
+              En vous connectant, vous acceptez nos{" "}
+              <a href="/terms">Conditions d'utilisation</a> et notre{" "}
+              <a href="/privacy">Politique de confidentialité</a>
+            </p>
+          </div>
         </div>
       </div>
     </div>

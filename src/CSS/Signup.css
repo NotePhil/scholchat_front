@@ -1,300 +1,230 @@
-/* Modern Gradient Background */
 .signup-page {
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #1a365d, #2d3748);
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #1a365d, #2d3748);
-  padding: 2rem;
 }
 
-/* Enhanced Container Styling */
 .signup-container {
-  background: rgba(255, 255, 255, 0.98);
   width: 100%;
   max-width: 600px;
-  padding: 2.5rem;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  text-align: center;
-  position: relative;
-  backdrop-filter: blur(10px);
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
-/* Modern Progress Bar */
 .progress-bar {
-  margin: 0 auto 2.5rem;
-  max-width: 300px;
+  margin-bottom: 2rem;
 }
 
-.progress-step {
+.step-circles {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .step-circle {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: #e2e8f0;
+  background: #e0e0e0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  color: #64748b;
-  position: relative;
-  transition: all 0.3s ease;
+  color: #666;
+  font-weight: bold;
+  margin: 0 1rem;
 }
 
 .step-circle.active {
-  background: #3b82f6;
+  background: #4caf50;
   color: white;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
 }
 
 .step-line {
-  flex: 1;
-  height: 3px;
-  background: #e2e8f0;
-  transition: all 0.3s ease;
+  height: 2px;
+  width: 100px;
+  background: #e0e0e0;
 }
 
-.step-line.active {
-  background: #3b82f6;
-}
-
-/* Enhanced Form Styling */
-.signup-form {
+.step-labels {
   display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  justify-content: space-between;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
 
 .form-group {
-  text-align: left;
+  margin-bottom: 1rem;
 }
 
 label {
   display: block;
-  font-weight: 500;
-  color: #1a365d;
   margin-bottom: 0.5rem;
-  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.required {
+  color: #dc3545;
+  margin-left: 3px;
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
-  padding: 0.875rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   font-size: 1rem;
-  transition: all 0.2s ease;
-  color: #2d3748;
-  background-color: #f8fafc;
+  transition: border-color 0.3s ease;
 }
 
 input:focus,
-select:focus {
-  border-color: #3b82f6;
-  background-color: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+select:focus,
+textarea:focus {
   outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
-/* Modern Button Styles */
-.next-button,
-.submit-button {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
-  padding: 1rem 2rem;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 1rem;
+.error {
+  border-color: #dc3545;
+}
+
+.password-container {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  color: #666;
 }
 
-.next-button:hover,
-.submit-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-}
-
-/* Professor Section Enhancements */
-.professor-details {
-  border-top: 2px solid #e2e8f0;
-  margin-top: 2rem;
-  padding-top: 2rem;
-}
-
-/* Classes Section Styling */
-.classes-section {
-  margin-top: 2rem;
-}
-
-.classes-header {
+.button-group {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
+  margin-top: 2rem;
 }
 
-.add-class-button {
-  background: #3b82f6;
-  color: white;
-  padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 500;
+.prev-button,
+.submit-button,
+.next-button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.3s ease;
-}
-
-.add-class-button:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
-/* Class Cards */
-.class-card {
-  background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  transition: all 0.3s ease;
-}
-
-.class-card:hover {
-  border-color: #3b82f6;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.class-info h4 {
-  color: #1a365d;
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-}
-
-.class-info p {
-  color: #64748b;
-  font-size: 0.95rem;
-  margin: 0.25rem 0;
-}
-
-/* File Input Styling */
-input[type="file"] {
-  background: white;
-  padding: 0.75rem;
-  border: 2px dashed #e2e8f0;
-  border-radius: 10px;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  font-weight: 500;
+  transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-input[type="file"]:hover {
-  border-color: #3b82f6;
-  background: #f8fafc;
+.prev-button {
+  background: #f0f0f0;
+  color: #333;
 }
 
-/* Responsive Improvements */
-@media (max-width: 640px) {
+.prev-button:hover {
+  background: #e0e0e0;
+}
+
+.submit-button,
+.next-button {
+  background: #4caf50;
+  color: white;
+}
+
+.submit-button:hover,
+.next-button:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+}
+
+.submit-button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
+.alert-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 1rem;
+  border-radius: 4px;
+  z-index: 1001;
+  animation: slideIn 0.3s ease-out;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.alert-message.error {
+  background: #ffebee;
+  color: #c62828;
+  border-left: 4px solid #c62828;
+}
+
+.alert-message.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-left: 4px solid #2e7d32;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
   .signup-container {
-    padding: 1.5rem;
     margin: 1rem;
+    padding: 1rem;
   }
 
   .form-grid {
     grid-template-columns: 1fr;
   }
 
-  .class-card {
-    padding: 1rem;
-  }
-}
-
-/* Animation Effects */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.signup-form {
-  animation: fadeIn 0.5s ease-out;
-}
-.error {
-  border-color: #dc2626 !important;
-  background-color: #fef2f2 !important;
-}
-
-.error:focus {
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
-}
-
-/* Clickable progress steps */
-.step-circle.clickable {
-  cursor: pointer;
-}
-
-.step-circle.clickable:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
-}
-
-/* Button group for step 2 */
-.button-group {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.prev-button {
-  background: #64748b;
-  color: white;
-  padding: 1rem 2rem;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 1rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.prev-button:hover {
-  background: #475569;
-  transform: translateY(-1px);
-}
-
-.button-group .submit-button {
-  flex: 1;
-  margin-top: 0;
-}
-
-/* Responsive adjustments */
-@media (max-width: 640px) {
   .button-group {
     flex-direction: column;
+    gap: 1rem;
+  }
+
+  .prev-button,
+  .submit-button,
+  .next-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .step-labels {
+    font-size: 0.8rem;
+  }
+
+  .step-line {
+    width: 60px;
   }
 }

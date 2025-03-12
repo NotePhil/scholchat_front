@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from "react";
-import PhoneInput from "react-phone-number-input/input";
 import "react-phone-number-input/style.css";
 import {
   X,
@@ -11,8 +10,11 @@ import {
   EyeOff,
 } from "lucide-react";
 import PhoneInputs from "./PhoneInput";
+import { useNavigate } from "react-router-dom";
+import "../CSS/Signup.css"; // Import the separate CSS file
 
 const SignUp = () => {
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState({});
@@ -27,7 +29,7 @@ const SignUp = () => {
     prenom: "",
     email: "",
     telephone: "",
-    passeaccess: "",
+    passeAccess: "", // Correspond au champ du backend
     adresse: "",
     etat: "INACTIVE",
     niveau: "",
@@ -47,10 +49,11 @@ const SignUp = () => {
     }, 3000);
   };
 
+  // Improved image compression with better error handling
   const validateFileSize = async (file) => {
-    const maxSize = 500 * 1024;
+    const maxSize = 300 * 1024; // Reduced to 300KB for better handling
     if (file.size > maxSize) {
-      let quality = 0.7;
+      let quality = 0.5; // Start with lower quality
       let compressedDataUrl = await compressImage(file, quality);
       let compressedSize = atob(compressedDataUrl.split(",")[1]).length;
 
@@ -61,12 +64,14 @@ const SignUp = () => {
       }
 
       if (compressedSize > maxSize) {
-        showAlert("Image is too large. Please use a smaller image.");
+        showAlert(
+          "L'image est trop volumineuse. Veuillez utiliser une image plus petite."
+        );
         return null;
       }
       return compressedDataUrl;
     }
-    return await compressImage(file, 0.7);
+    return await compressImage(file, 0.5); // Use lower default quality
   };
 
   const compressImage = async (file, quality) => {
@@ -81,8 +86,8 @@ const SignUp = () => {
           let width = img.width;
           let height = img.height;
 
-          const maxWidth = 800;
-          const maxHeight = 600;
+          const maxWidth = 600; // Reduced from 800
+          const maxHeight = 400; // Reduced from 600
 
           if (width > height) {
             if (width > maxWidth) {
@@ -115,30 +120,44 @@ const SignUp = () => {
     const newErrors = {};
 
     if (!formData.nom.trim()) {
-      showAlert("Last name (Nom) is required");
+      showAlert("Le nom est requis");
       newErrors.nom = true;
     }
     if (!formData.prenom.trim()) {
-      showAlert("First name (Prénom) is required");
+      showAlert("Le prénom est requis");
       newErrors.prenom = true;
     }
     if (!formData.email.trim()) {
-      showAlert("Email is required");
+      showAlert("L'email est requis");
       newErrors.email = true;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      showAlert("Please enter a valid email address");
+      showAlert("Veuillez entrer une adresse email valide");
       newErrors.email = true;
     }
     if (!formData.telephone) {
-      showAlert("Phone number is required");
+      showAlert("Le numéro de téléphone est requis");
       newErrors.telephone = true;
     }
-    if (!formData.passeaccess.trim()) {
-      showAlert("Password is required");
-      newErrors.passeaccess = true;
-    } else if (formData.passeaccess.length < 6) {
-      showAlert("Password must be at least 6 characters long");
-      newErrors.passeaccess = true;
+    if (!formData.passeAccess.trim()) {
+      showAlert("Le mot de passe est requis");
+      newErrors.passeAccess = true;
+    } else if (formData.passeAccess.length < 8) {
+      showAlert("Le mot de passe doit contenir au moins 8 caractères");
+      newErrors.passeAccess = true;
+    } else if (!formData.passeAccess.match(/.*[A-Z].*/)) {
+      showAlert("Le mot de passe doit contenir au moins une majuscule");
+      newErrors.passeAccess = true;
+    } else if (!formData.passeAccess.match(/.*[a-z].*/)) {
+      showAlert("Le mot de passe doit contenir au moins une minuscule");
+      newErrors.passeAccess = true;
+    } else if (!formData.passeAccess.match(/.*\d.*/)) {
+      showAlert("Le mot de passe doit contenir au moins un chiffre");
+      newErrors.passeAccess = true;
+    } else if (
+      !formData.passeAccess.match(/.*[!@#$%^&*()_+\-=\[\]{};':"\\\|,.<>\/?].*/)
+    ) {
+      showAlert("Le mot de passe doit contenir au moins un caractère spécial");
+      newErrors.passeAccess = true;
     }
 
     setErrors(newErrors);
@@ -149,26 +168,46 @@ const SignUp = () => {
     const newErrors = {};
 
     if (!formData.type) {
-      showAlert("Please select a user type");
+      showAlert("Veuillez sélectionner un type d'utilisateur");
       newErrors.type = true;
+      return false;
     }
 
+    // Different validation based on user type
     if (formData.type === "professeur") {
-      if (!formData.cniUrlRecto) {
-        showAlert("Front ID card image is required");
-        newErrors.cniUrlRecto = true;
-      }
-      if (!formData.cniUrlVerso) {
-        showAlert("Back ID card image is required");
-        newErrors.cniUrlVerso = true;
-      }
       if (!formData.nomEtablissement.trim()) {
-        showAlert("School name is required");
+        showAlert("Le nom de l'établissement est requis");
         newErrors.nomEtablissement = true;
       }
       if (!formData.matriculeProfesseur.trim()) {
-        showAlert("Professor ID is required");
+        showAlert("Le matricule du professeur est requis");
         newErrors.matriculeProfesseur = true;
+      }
+      if (!formData.nomClasse.trim()) {
+        showAlert("Le nom de la classe est requis");
+        newErrors.nomClasse = true;
+      }
+      if (!formData.cniUrlRecto) {
+        showAlert("L'image recto de la CNI est requise");
+        newErrors.cniUrlRecto = true;
+      }
+      if (!formData.cniUrlVerso) {
+        showAlert("L'image verso de la CNI est requise");
+        newErrors.cniUrlVerso = true;
+      }
+    } else if (formData.type === "repetiteur") {
+      if (!formData.nomEtablissement.trim()) {
+        showAlert("Le nom de l'établissement est requis");
+        newErrors.nomEtablissement = true;
+      }
+      if (!formData.matriculeProfesseur.trim()) {
+        showAlert("Le matricule du répétiteur est requis");
+        newErrors.matriculeProfesseur = true;
+      }
+    } else if (formData.type === "eleve") {
+      if (!formData.niveau.trim()) {
+        showAlert("Le niveau d'éducation est requis");
+        newErrors.niveau = true;
       }
     }
 
@@ -198,12 +237,13 @@ const SignUp = () => {
     setSelectedCountry(country);
   };
 
+  // Updated file handling to generate URLs instead of base64 data
   const handleFileChange = async (e, fieldName) => {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      showAlert("Please upload an image file (JPEG, PNG)");
+      showAlert("Veuillez télécharger un fichier image (JPEG, PNG)");
       e.target.value = "";
       return;
     }
@@ -215,16 +255,22 @@ const SignUp = () => {
         return;
       }
 
-      const base64Data = compressedDataUrl.split(",")[1];
+      // Map frontend field names to backend field names
       const fieldMapping = {
         cniUrlFront: "cniUrlRecto",
         cniUrlBack: "cniUrlVerso",
       };
 
       const backendFieldName = fieldMapping[fieldName] || fieldName;
+
+      // Create a temporary URL for the compressed image
+      // In production, you would upload to a server and get a URL
+      // This is a simplified example
+      const mockUrl = `http://example.com/${file.name.replace(/\s+/g, "_")}`;
+
       setFormData((prev) => ({
         ...prev,
-        [backendFieldName]: base64Data,
+        [backendFieldName]: mockUrl,
       }));
 
       setErrors((prev) => ({
@@ -233,38 +279,95 @@ const SignUp = () => {
         [backendFieldName]: false,
       }));
     } catch (error) {
-      console.error("Error processing image:", error);
-      showAlert("Error processing image. Please try another image.");
+      console.error("Erreur lors du traitement de l'image:", error);
+      showAlert(
+        "Erreur lors du traitement de l'image. Veuillez essayer une autre image."
+      );
       e.target.value = "";
     }
   };
 
+  // Updated submit handler with improved error handling
   const handleSubmit = async () => {
     try {
       if (!validateStep2()) return;
 
       setIsSubmitting(true);
 
-      const apiUrl = "http://localhost:8486/scholchat/utilisateurs";
+      // Prepare payload based on user type
+      let payloadData = {
+        nom: formData.nom,
+        prenom: formData.prenom,
+        email: formData.email,
+        passeAccess: formData.passeAccess, // Correspond au champ du backend
+        telephone: formData.telephone,
+        adresse: formData.adresse,
+        type: formData.type,
+        etat: "INACTIVE",
+      };
+
+      // Add specific fields based on user type
+      if (formData.type === "professeur") {
+        payloadData = {
+          ...payloadData,
+          cniUrlRecto: formData.cniUrlRecto,
+          cniUrlVerso: formData.cniUrlVerso,
+          nomEtablissement: formData.nomEtablissement,
+          matriculeProfesseur: formData.matriculeProfesseur,
+          nomClasse: formData.nomClasse,
+        };
+      } else if (formData.type === "repetiteur") {
+        payloadData = {
+          ...payloadData,
+          nomEtablissement: formData.nomEtablissement,
+          matriculeProfesseur: formData.matriculeProfesseur,
+        };
+      } else if (formData.type === "eleve") {
+        payloadData = {
+          ...payloadData,
+          niveau: formData.niveau,
+        };
+      } else if (formData.type === "parent") {
+        // Default fields are already included
+      }
+
+      console.log("Sending data:", JSON.stringify(payloadData, null, 2));
+
+      const apiUrl = "http://localhost:8486/scholchat/auth/register";
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        credentials: "include", // Include credentials if needed
+        body: JSON.stringify(payloadData),
       });
 
+      // Log response details for debugging
+      console.log("Response status:", response.status);
+      console.log(
+        "Response headers:",
+        Object.fromEntries([...response.headers])
+      );
+
+      const responseData = await response.text();
+      console.log("Response data:", responseData);
+
       if (!response.ok) {
-        throw new Error("Registration failed");
+        throw new Error(
+          responseData || `Error ${response.status}: Registration failed`
+        );
       }
 
-      showAlert("Registration successful!", "success");
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
+      // Display the exact message from the backend
+      showAlert(responseData, "success");
+
+      // Navigate to verification page with email as a query parameter (using search params for React Router)
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (err) {
+      console.error("Detailed registration error:", err);
       const errorMessage =
-        err.response?.data?.message || "Registration failed. Please try again.";
+        err.message || "L'inscription a échoué. Veuillez réessayer.";
       showAlert(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -306,8 +409,8 @@ const SignUp = () => {
             </div>
           </div>
           <div className="step-labels">
-            <span>Personal Information</span>
-            <span>Account Details</span>
+            <span>Informations personnelles</span>
+            <span>Détails du compte</span>
           </div>
         </div>
 
@@ -315,26 +418,28 @@ const SignUp = () => {
           <form className="signup-form" onSubmit={(e) => e.preventDefault()}>
             <div className="form-grid">
               <div className="form-group">
-                <label>First Name (Prénom)</label>
+                <label>Prénom</label>
                 <input
                   type="text"
+                  name="prenom"
+                  valuetype="text"
                   name="prenom"
                   value={formData.prenom}
                   onChange={handleInputChange}
                   className={errors.prenom ? "error" : ""}
-                  placeholder="Enter your first name"
+                  placeholder="Entrez votre prénom"
                 />
               </div>
 
               <div className="form-group">
-                <label>Last Name (Nom)</label>
+                <label>Nom</label>
                 <input
                   type="text"
                   name="nom"
                   value={formData.nom}
                   onChange={handleInputChange}
                   className={errors.nom ? "error" : ""}
-                  placeholder="Enter your last name"
+                  placeholder="Entrez votre nom"
                 />
               </div>
             </div>
@@ -347,12 +452,12 @@ const SignUp = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 className={errors.email ? "error" : ""}
-                placeholder="Enter your email"
+                placeholder="Entrez votre email"
               />
             </div>
 
             <div className="form-group phone-input">
-              <label>Phone Number</label>
+              <label>Numéro de téléphone</label>
               <PhoneInputs
                 value={formData.telephone || ""}
                 onChange={handlePhoneChange}
@@ -362,15 +467,15 @@ const SignUp = () => {
             </div>
 
             <div className="form-group password-input">
-              <label>Password</label>
+              <label>Mot de passe</label>
               <div className="password-container">
                 <input
                   type={showPassword ? "text" : "password"}
-                  name="passeaccess"
-                  value={formData.passeaccess}
+                  name="passeAccess"
+                  value={formData.passeAccess}
                   onChange={handleInputChange}
-                  className={errors.passeaccess ? "error" : ""}
-                  placeholder="Enter your password"
+                  className={errors.passeAccess ? "error" : ""}
+                  placeholder="Entrez votre mot de passe"
                 />
                 <button
                   type="button"
@@ -383,12 +488,12 @@ const SignUp = () => {
             </div>
 
             <div className="form-group">
-              <label>Address (Optional)</label>
+              <label>Adresse (Optionnel)</label>
               <textarea
                 name="adresse"
                 value={formData.adresse}
                 onChange={handleInputChange}
-                placeholder="Enter your address"
+                placeholder="Entrez votre adresse"
                 rows="3"
               />
             </div>
@@ -398,7 +503,7 @@ const SignUp = () => {
               className="next-button"
               onClick={handleNextStep}
             >
-              Next Step
+              Étape suivante
               <ArrowRight size={16} />
             </button>
           </form>
@@ -407,16 +512,17 @@ const SignUp = () => {
         {currentStep === 2 && (
           <div className="signup-form">
             <div className="form-group">
-              <label>User Type</label>
+              <label>Type d'utilisateur</label>
               <select
                 name="type"
                 value={formData.type}
                 onChange={handleInputChange}
                 className={errors.type ? "error" : ""}
               >
-                <option value="">Select User Type</option>
-                <option value="professeur">Professor</option>
-                <option value="eleve">Student</option>
+                <option value="">Sélectionnez le type d'utilisateur</option>
+                <option value="professeur">Professeur</option>
+                <option value="repetiteur">Répétiteur</option>
+                <option value="eleve">Élève</option>
                 <option value="parent">Parent</option>
               </select>
             </div>
@@ -425,48 +531,137 @@ const SignUp = () => {
               <div className="professor-details">
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>ID Card Front (CNI Recto)</label>
+                    <label>
+                      CNI Recto <span className="required">*</span>
+                    </label>
                     <input
                       type="file"
                       onChange={(e) => handleFileChange(e, "cniUrlFront")}
                       className={errors.cniUrlRecto ? "error" : ""}
                       accept="image/*"
                     />
+                    {formData.cniUrlRecto && (
+                      <div className="image-preview-info">
+                        Image sélectionnée ✓
+                      </div>
+                    )}
                   </div>
                   <div className="form-group">
-                    <label>ID Card Back (CNI Verso)</label>
+                    <label>
+                      CNI Verso <span className="required">*</span>
+                    </label>
                     <input
                       type="file"
                       onChange={(e) => handleFileChange(e, "cniUrlBack")}
                       className={errors.cniUrlVerso ? "error" : ""}
                       accept="image/*"
                     />
+                    {formData.cniUrlVerso && (
+                      <div className="image-preview-info">
+                        Image sélectionnée ✓
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>School Name (Établissement)</label>
+                    <label>
+                      Nom de l'établissement <span className="required">*</span>
+                    </label>
                     <input
                       type="text"
                       name="nomEtablissement"
                       value={formData.nomEtablissement}
                       onChange={handleInputChange}
                       className={errors.nomEtablissement ? "error" : ""}
-                      placeholder="Enter school name"
+                      placeholder="Entrez le nom de l'établissement"
                     />
                   </div>
                   <div className="form-group">
-                    <label>Professor ID (Matricule)</label>
+                    <label>
+                      Matricule du professeur{" "}
+                      <span className="required">*</span>
+                    </label>
                     <input
                       type="text"
                       name="matriculeProfesseur"
                       value={formData.matriculeProfesseur}
                       onChange={handleInputChange}
                       className={errors.matriculeProfesseur ? "error" : ""}
-                      placeholder="Enter professor ID"
+                      placeholder="Entrez le matricule du professeur"
                     />
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    Nom de la classe <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="nomClasse"
+                    value={formData.nomClasse}
+                    onChange={handleInputChange}
+                    className={errors.nomClasse ? "error" : ""}
+                    placeholder="Entrez le nom de la classe"
+                  />
+                </div>
+              </div>
+            )}
+
+            {formData.type === "repetiteur" && (
+              <div className="tutor-details">
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>
+                      Nom de l'établissement <span className="required">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="nomEtablissement"
+                      value={formData.nomEtablissement}
+                      onChange={handleInputChange}
+                      className={errors.nomEtablissement ? "error" : ""}
+                      placeholder="Entrez le nom de l'établissement"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>
+                      Matricule du répétiteur{" "}
+                      <span className="required">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="matriculeProfesseur"
+                      value={formData.matriculeProfesseur}
+                      onChange={handleInputChange}
+                      className={errors.matriculeProfesseur ? "error" : ""}
+                      placeholder="Entrez le matricule du répétiteur"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.type === "eleve" && (
+              <div className="student-details">
+                <div className="form-group">
+                  <label>
+                    Niveau d'éducation <span className="required">*</span>
+                  </label>
+                  <select
+                    name="niveau"
+                    value={formData.niveau}
+                    onChange={handleInputChange}
+                    className={errors.niveau ? "error" : ""}
+                  >
+                    <option value="">Sélectionnez le niveau d'éducation</option>
+                    <option value="primaire">École primaire</option>
+                    <option value="college">Collège</option>
+                    <option value="lycee">Lycée</option>
+                    <option value="universite">Université</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -479,7 +674,7 @@ const SignUp = () => {
                 disabled={isSubmitting}
               >
                 <ArrowLeft size={16} />
-                Previous Step
+                Étape précédente
               </button>
               <button
                 type="button"
@@ -490,11 +685,11 @@ const SignUp = () => {
                 {isSubmitting ? (
                   <>
                     <Loader className="animate-spin" size={16} />
-                    Processing...
+                    Traitement en cours...
                   </>
                 ) : (
                   <>
-                    Complete Sign Up
+                    Terminer l'inscription
                     <ArrowRight size={16} />
                   </>
                 )}
@@ -503,219 +698,6 @@ const SignUp = () => {
           </div>
         )}
       </div>
-
-      <style jsx>{`
-        .signup-page {
-          min-height: 100vh;
-          padding: 2rem;
-          background: linear-gradient(135deg, #1a365d, #2d3748);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-
-        .signup-container {
-          width: 100%;
-          max-width: 600px;
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .progress-bar {
-          margin-bottom: 2rem;
-        }
-
-        .step-circles {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 1rem;
-        }
-
-        .step-circle {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          background: #e0e0e0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #666;
-          font-weight: bold;
-          margin: 0 1rem;
-        }
-
-        .step-circle.active {
-          background: #4caf50;
-          color: white;
-        }
-
-        .step-line {
-          height: 2px;
-          width: 100px;
-          background: #e0e0e0;
-        }
-
-        .step-labels {
-          display: flex;
-          justify-content: space-between;
-          color: #666;
-          font-size: 0.9rem;
-        }
-
-        .form-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-        }
-
-        .form-group {
-          margin-bottom: 1rem;
-        }
-
-        label {
-          display: block;
-          margin-bottom: 0.5rem;
-          font-weight: 500;
-          color: #333;
-        }
-
-        input,
-        select,
-        textarea {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          font-size: 1rem;
-        }
-
-        .error {
-          border-color: #dc3545;
-        }
-
-        .password-container {
-          position: relative;
-        }
-
-        .password-toggle {
-          position: absolute;
-          right: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #666;
-        }
-
-        .button-group {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 2rem;
-        }
-
-        .prev-button,
-        .submit-button {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.75rem 1.5rem;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-weight: 500;
-          transition: background-color 0.3s ease;
-        }
-
-        .prev-button {
-          background: #f0f0f0;
-          color: #333;
-        }
-
-        .prev-button:hover {
-          background: #e0e0e0;
-        }
-
-        .submit-button {
-          background: #4caf50;
-          color: white;
-        }
-
-        .submit-button:hover {
-          background: #45a049;
-        }
-
-        .submit-button:disabled {
-          background: #cccccc;
-          cursor: not-allowed;
-        }
-
-        .alert-message {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          padding: 1rem;
-          border-radius: 4px;
-          z-index: 1001;
-          animation: slideIn 0.3s ease-out;
-        }
-
-        .alert-message.error {
-          background: #ffebee;
-          color: #c62828;
-          border-left: 4px solid #c62828;
-        }
-
-        .alert-message.success {
-          background: #e8f5e9;
-          color: #2e7d32;
-          border-left: 4px solid #2e7d32;
-        }
-
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .signup-container {
-            margin: 1rem;
-            padding: 1rem;
-          }
-
-          .form-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .button-group {
-            flex-direction: column;
-            gap: 1rem;
-          }
-
-          .prev-button,
-          .submit-button {
-            width: 100%;
-            justify-content: center;
-          }
-
-          .step-labels {
-            font-size: 0.8rem;
-          }
-
-          .step-line {
-            width: 60px;
-          }
-        }
-      `}</style>
     </div>
   );
 };
