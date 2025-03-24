@@ -16,6 +16,7 @@ const AnimatedText = ({ texts }) => {
     const currentFullText = texts[currentTextIndex];
     let timer;
 
+    
     if (isWriting) {
       if (displayText.length < currentFullText.length) {
         timer = setTimeout(() => {
