@@ -57,7 +57,20 @@ export const Login = () => {
       // Store auth data in localStorage
       localStorage.setItem("accessToken", authData.accessToken);
       localStorage.setItem("refreshToken", authData.refreshToken);
-      localStorage.setItem("userRole", authData.userType);
+
+      // Normalize user type mapping
+      const userTypeMapping = {
+        utilisateurs: "student", // Default to student for utilisateurs
+        professeurs: "professor",
+        admin: "admin",
+        ROLE_ADMIN: "admin",
+        parents: "parent",
+      };
+
+      // Determine user role, defaulting to student if not explicitly mapped
+      const userRole = userTypeMapping[authData.userType] || "student";
+
+      localStorage.setItem("userRole", userRole);
       localStorage.setItem("userId", authData.userId);
       localStorage.setItem("userEmail", authData.userEmail);
       localStorage.setItem("username", authData.username);
@@ -70,13 +83,20 @@ export const Login = () => {
       }
 
       // Handle navigation based on user role
-      const userRole = authData.userType;
-      if (userRole === "professeurs" || userRole === "repetiteurs") {
-        navigate("/schoolchat/postLogin/classModal", {
-          state: { showClassModal: true },
-        });
-      } else {
-        navigate("/schoolchat/admin/dashboard");
+      switch (userRole) {
+        case "admin":
+          navigate("/schoolchat/admin/dashboard");
+          break;
+        case "professor":
+          navigate("/schoolchat/professor-dashboard");
+          break;
+        case "parent":
+          navigate("/schoolchat/parent-dashboard");
+          break;
+        case "student":
+        default:
+          navigate("/schoolchat/student-dashboard");
+          break;
       }
     } catch (err) {
       console.error("Erreur de connexion:", err);
