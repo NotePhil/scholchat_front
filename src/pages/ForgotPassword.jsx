@@ -131,7 +131,7 @@ const ForgotPassword = () => {
 
           <div className="forgot-password-footer">
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/schoolchat/login")}
               className="back-to-login-button"
             >
               Retour à la connexion

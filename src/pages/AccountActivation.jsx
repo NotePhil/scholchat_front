@@ -45,7 +45,7 @@ const AccountActivation = () => {
           setCountdown((prev) => {
             if (prev <= 1) {
               clearInterval(timer);
-              navigate("/login");
+              navigate("/schoolchat/PasswordPage");
               return 0;
             }
             return prev - 1;
@@ -93,7 +93,7 @@ const AccountActivation = () => {
               </p>
               <button
                 className="login-button"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/schoolchat/login")}
               >
                 Go to Login Now
               </button>
@@ -109,13 +109,13 @@ const AccountActivation = () => {
               <div className="button-group">
                 <button
                   className="login-button"
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/schoolchat/login")}
                 >
                   Go to Login
                 </button>
                 <button
                   className="support-button"
-                  onClick={() => navigate("/contact")}
+                  onClick={() => navigate("/schoolchat/contact")}
                 >
                   Contact Support
                 </button>

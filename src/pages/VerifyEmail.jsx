@@ -97,7 +97,7 @@ const VerifyEmail = () => {
           <button
             type="button"
             className="action-button login-button"
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/schoolchat/login")}
           >
             <span>Aller à la connexion</span>
             <ArrowRight className="button-icon" size={18} />

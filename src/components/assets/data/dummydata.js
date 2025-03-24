@@ -7,7 +7,7 @@ export const LinkData = [
   {
     id: 2,
     title: "À propos",
-    url: "/about",
+    url: "/schoolchat/about",
   },
   {
     id: 3,
@@ -24,7 +24,7 @@ export const LinkData = [
   {
     id: 5,
     title: "FAQ",
-    url: "/blog",
+    url: "/schoolchat/blog",
   },
 ];
 

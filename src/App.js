@@ -24,6 +24,8 @@ import ActivityFeed from "./pages/Dashbaord/components/StudentDashboard/Activity
 import AccountActivation from "./pages/AccountActivation";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
+import PasswordPage from "./pages/PasswordPage";
+
 function App() {
   return (
     <>
@@ -38,7 +40,7 @@ function App() {
             }
           />
           <Route
-            path="/activity"
+            path="/schoolchat/activity"
             element={
               <Layout>
                 <ActivityFeed />
@@ -46,7 +48,7 @@ function App() {
             }
           />
           <Route
-            path="/postLogin/classModal"
+            path="/schoolchat/postLogin/classModal"
             element={
               <Layout>
                 <PostLoginClassModal />
@@ -54,7 +56,7 @@ function App() {
             }
           />
           <Route
-            path="/about"
+            path="/schoolchat/about"
             element={
               <Layout>
                 <About />
@@ -62,7 +64,7 @@ function App() {
             }
           />
           <Route
-            path="/courses"
+            path="/schoolchat/courses"
             element={
               <Layout>
                 <Courses />
@@ -70,7 +72,7 @@ function App() {
             }
           />
           <Route
-            path="/instructor"
+            path="/schoolchat/instructor"
             element={
               <Layout>
                 <Instructor />
@@ -78,7 +80,7 @@ function App() {
             }
           />
           <Route
-            path="/blog"
+            path="/schoolchat/blog"
             element={
               <Layout>
                 <Blog />
@@ -86,7 +88,7 @@ function App() {
             }
           />
           <Route
-            path="/single-blog"
+            path="/schoolchat/single-blog"
             element={
               <Layout>
                 <BlogSinglePage />
@@ -94,7 +96,7 @@ function App() {
             }
           />
           <Route
-            path="/functionalities"
+            path="/schoolchat/functionalities"
             element={
               <Layout>
                 <FunctionalitiesSection />
@@ -102,7 +104,7 @@ function App() {
             }
           />
           <Route
-            path="/login"
+            path="/schoolchat/login"
             element={
               <Layout>
                 <Login />
@@ -110,31 +112,47 @@ function App() {
             }
           />
           <Route
-            path="/postLogin/classModal"
+            path="/schoolchat/postLogin/classModal"
             element={<ClassSelectionWrapper />}
           />
           <Route
-            path="/SignUp"
+            path="/schoolchat/signup"
             element={
               <Layout>
                 <SignUp />
               </Layout>
             }
           />
-          <Route path="/admin/dashboard" element={<Layoute />} />
-          <Route path="/professors" element={<ProfessorPage />} />
-          <Route path="/students" element={<StudentPage />} />
-          <Route path="/students/dashboard" element={<StudentDashboard />} />
-          <Route path="/parents" element={<ParentPage />} />
-          <Route path="/parents/dashboard" element={<ParentDashboard />} />
-          <Route path="/classes" element={<ClassesPage />} />
-          <Route path="email-dashboard" element={<EmailDashboard />} />
-          <Route path="/AccountActivation" element={<AccountActivation />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/schoolchat/admin/dashboard" element={<Layoute />} />
+          <Route path="/schoolchat/professors" element={<ProfessorPage />} />
+          <Route path="/schoolchat/students" element={<StudentPage />} />
+          <Route path="/schoolchat/PasswordPage" element={<PasswordPage />} />
 
           <Route
-            path="/professors/dashboard"
+            path="/schoolchat/students/dashboard"
+            element={<StudentDashboard />}
+          />
+          <Route path="/schoolchat/parents" element={<ParentPage />} />
+          <Route
+            path="/schoolchat/parents/dashboard"
+            element={<ParentDashboard />}
+          />
+          <Route path="/schoolchat/classes" element={<ClassesPage />} />
+          <Route
+            path="/schoolchat/email-dashboard"
+            element={<EmailDashboard />}
+          />
+          <Route
+            path="/schoolchat/account-activation"
+            element={<AccountActivation />}
+          />
+          <Route path="/schoolchat/verify-email" element={<VerifyEmail />} />
+          <Route
+            path="/schoolchat/forgot-password"
+            element={<ForgotPassword />}
+          />
+          <Route
+            path="/schoolchat/professors/dashboard"
             element={<ProfessorDashboard />}
           />
         </Routes>

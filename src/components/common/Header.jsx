@@ -85,13 +85,13 @@ export const Header = () => {
             <li className="lg:hidden">
               <div className="flex flex-col items-center gap-2">
                 <span
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/schoolchat/login")}
                   className="cursor-pointer text-teal-500 font-semibold text-md hover:text-teal-600"
                 >
                   Connexion
                 </span>
                 <span
-                  onClick={() => navigate("/signup")}
+                  onClick={() => navigate("/schoolchat/signup")}
                   className="cursor-pointer text-teal-500 font-semibold text-md hover:text-teal-600"
                 >
                   Inscription
@@ -106,14 +106,14 @@ export const Header = () => {
           {/* Connexion / Inscription (Desktop View) */}
           <div className="hidden lg:flex items-center bg-teal-500 text-white font-semibold px-4 py-2 rounded-full shadow-md hover:bg-teal-600 transition cursor-pointer">
             <span
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/schoolchat/login")}
               className="cursor-pointer font-semibold text-md"
             >
               Connexion
             </span>
             <span className="text-gray-300 font-semibold mx-2">/</span>
             <span
-              onClick={() => navigate("/signup")}
+              onClick={() => navigate("/schoolchat/signup")}
               className="cursor-pointer font-semibold text-md"
             >
               Inscription

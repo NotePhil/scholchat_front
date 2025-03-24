@@ -72,9 +72,11 @@ export const Login = () => {
       // Handle navigation based on user role
       const userRole = authData.userType;
       if (userRole === "professeurs" || userRole === "repetiteurs") {
-        navigate("/postLogin/classModal", { state: { showClassModal: true } });
+        navigate("/schoolchat/postLogin/classModal", {
+          state: { showClassModal: true },
+        });
       } else {
-        navigate("/admin/dashboard");
+        navigate("/schoolchat/admin/dashboard");
       }
     } catch (err) {
       console.error("Erreur de connexion:", err);
@@ -106,7 +108,7 @@ export const Login = () => {
           Connectez-vous à votre compte ou{" "}
           <span
             className="create-account"
-            onClick={() => navigate("/register")}
+            onClick={() => navigate("/schoolchat/register")}
           >
             créez un compte
           </span>
@@ -175,7 +177,7 @@ export const Login = () => {
                   Se souvenir de moi
                 </label>
               </div>
-              <a href="/forgot-password" className="forgot-password">
+              <a href="/schoolchat/forgot-password" className="forgot-password">
                 Mot de passe oublié ?
               </a>
             </div>
