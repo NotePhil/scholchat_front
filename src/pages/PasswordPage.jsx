@@ -1,13 +1,56 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Lock, KeyRound, Eye, EyeOff } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 const PasswordPage = () => {
-  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [passeAccess, setPasseAccess] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [activationToken, setActivationToken] = useState("");
+
+  // Extract token and email from URL or local storage
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const urlToken = searchParams.get("token");
+    const storedToken = localStorage.getItem("userActivationToken");
+    const storedEmail = localStorage.getItem("userEmail");
+
+    if (urlToken) {
+      try {
+        const decoded = jwtDecode(urlToken);
+        setUserEmail(decoded.sub || decoded.email);
+        setActivationToken(urlToken);
+        localStorage.setItem("userActivationToken", btoa(urlToken));
+        localStorage.setItem("userEmail", decoded.sub || decoded.email);
+      } catch (error) {
+        showAlert("Token invalide. Veuillez réessayer.");
+      }
+    } else if (storedToken && storedEmail) {
+      try {
+        const decoded = jwtDecode(atob(storedToken));
+        setUserEmail(storedEmail);
+        setActivationToken(atob(storedToken));
+      } catch (error) {
+        showAlert(
+          "Session expirée. Veuillez demander un nouveau lien d'activation."
+        );
+        localStorage.removeItem("userActivationToken");
+        localStorage.removeItem("userEmail");
+      }
+    } else {
+      showAlert(
+        "Aucun token d'activation trouvé. Veuillez utiliser le lien envoyé à votre email."
+      );
+    }
+  }, [location]);
 
   const showAlert = (message, type = "error") => {
     setAlertMessage(message);
@@ -18,38 +61,71 @@ const PasswordPage = () => {
     }, 3000);
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    // Basic validation
-    if (password.length < 8) {
+    // Validation
+    if (passeAccess.length < 8) {
       showAlert("Le mot de passe doit contenir au moins 8 caractères.");
+      setLoading(false);
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (passeAccess !== confirmPassword) {
       showAlert("Les mots de passe ne correspondent pas.");
+      setLoading(false);
       return;
     }
 
-    // Additional password strength checks
-    const hasUppercase = /[A-Z]/.test(password);
-    const hasLowercase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const hasUppercase = /[A-Z]/.test(passeAccess);
+    const hasLowercase = /[a-z]/.test(passeAccess);
+    const hasNumber = /[0-9]/.test(passeAccess);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(passeAccess);
 
     if (!(hasUppercase && hasLowercase && hasNumber && hasSpecialChar)) {
       showAlert("Mot de passe trop faible. Utilisez des caractères variés.");
+      setLoading(false);
       return;
     }
 
-    // If all validations pass, you would typically send this to your backend
     try {
-      // Placeholder for actual password submission logic
-      console.log("Password submission logic would go here");
+      const response = await fetch(
+        "http://localhost:8486/scholchat/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            passeAccess: passeAccess,
+            activationToken: activationToken,
+          }),
+        }
+      );
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          responseData.message || "Échec de la définition du mot de passe"
+        );
+      }
+
       showAlert("Mot de passe défini avec succès !", "success");
+      localStorage.removeItem("userActivationToken");
+      localStorage.removeItem("userEmail");
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (error) {
-      showAlert("Erreur lors de la définition du mot de passe.");
+      showAlert(
+        error.message || "Erreur lors de la définition du mot de passe"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -71,16 +147,17 @@ const PasswordPage = () => {
           <Lock size={64} strokeWidth={1.5} />
         </div>
         <h2>Définir un nouveau mot de passe</h2>
+        {userEmail && <p className="email-display">Pour: {userEmail}</p>}
         <form onSubmit={handlePasswordSubmit} className="password-form">
           <div className="input-group">
-            <label htmlFor="password">Mot de passe</label>
+            <label htmlFor="passeAccess">Mot de passe</label>
             <div className="input-wrapper">
               <KeyRound className="input-icon" size={20} />
               <input
                 type={showPassword ? "text" : "password"}
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                id="passeAccess"
+                value={passeAccess}
+                onChange={(e) => setPasseAccess(e.target.value)}
                 placeholder="Entrez votre mot de passe"
                 required
               />
@@ -92,6 +169,11 @@ const PasswordPage = () => {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            <p className="password-requirements">
+              Le mot de passe doit contenir:
+              <br />- Au moins 8 caractères - Une majuscule - Un chiffre - Un
+              caractère spécial
+            </p>
           </div>
           <div className="input-group">
             <label htmlFor="confirm-password">Confirmer le mot de passe</label>
@@ -115,8 +197,12 @@ const PasswordPage = () => {
             </div>
           </div>
           <div className="button-container">
-            <button type="submit" className="submit-button">
-              Définir le mot de passe
+            <button
+              type="submit"
+              className="submit-button"
+              disabled={loading || !userEmail}
+            >
+              {loading ? "Traitement en cours..." : "Définir le mot de passe"}
             </button>
           </div>
         </form>
@@ -153,9 +239,14 @@ const PasswordPage = () => {
         .password-container h2 {
           font-size: 1.8rem;
           color: #333;
-          margin-bottom: 1.5rem;
+          margin-bottom: 1rem;
           font-weight: 600;
           text-align: center;
+        }
+        .email-display {
+          color: #555;
+          margin-bottom: 1.5rem;
+          font-weight: 500;
         }
         .input-group {
           margin-bottom: 1.5rem;
@@ -194,6 +285,12 @@ const PasswordPage = () => {
           cursor: pointer;
           color: #888;
         }
+        .password-requirements {
+          font-size: 0.8rem;
+          color: #666;
+          margin-top: 0.5rem;
+          line-height: 1.4;
+        }
         .button-container {
           display: flex;
           justify-content: center;
@@ -210,9 +307,14 @@ const PasswordPage = () => {
           cursor: pointer;
           transition: background 0.3s ease;
           text-align: center;
+          width: 100%;
         }
         .submit-button:hover {
           background: #45a049;
+        }
+        .submit-button:disabled {
+          background: #a0a0a0;
+          cursor: not-allowed;
         }
         .alert-message {
           position: fixed;

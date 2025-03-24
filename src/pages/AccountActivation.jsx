@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Check, AlertTriangle, Loader } from "lucide-react";
+import { jwtDecode } from "jwt-decode";
+
 // Import the logo
 import logoImage from "../components/assets/images/logo.png";
 
@@ -10,60 +12,155 @@ const AccountActivation = () => {
 
   // Get the activation token from the URL query parameters
   const queryParams = new URLSearchParams(location.search);
-  const activationToken = queryParams.get("activationToken");
+  const urlActivationToken = queryParams.get("activationToken");
 
   const [activationStatus, setActivationStatus] = useState("loading"); // loading, success, error
   const [errorMessage, setErrorMessage] = useState("");
   const [countdown, setCountdown] = useState(5);
+  const [userEmail, setUserEmail] = useState("");
+  const [activationToken, setActivationToken] = useState("");
+  const [isTokenExpired, setIsTokenExpired] = useState(false);
 
-  useEffect(() => {
-    // Only proceed if we have the activation token from the URL
-    if (!activationToken) return;
+  const regenerateActivationToken = async () => {
+    try {
+      if (!userEmail) {
+        throw new Error("No email available to regenerate token");
+      }
 
-    const activateAccount = async () => {
-      try {
-        const apiUrl = `http://localhost:8486/scholchat/auth/activate?activationToken=${activationToken}`;
-        const response = await fetch(apiUrl, {
+      setActivationStatus("loading");
+      setErrorMessage("");
+
+      const response = await fetch(
+        "http://localhost:8486/scholchat/utilisateurs/regenerate-activation",
+        {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData?.message || "Activation failed. Please try again."
-          );
+          body: JSON.stringify({ email: userEmail }),
         }
+      );
 
-        setActivationStatus("success");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.message || "Failed to regenerate token");
+      }
 
-        // Start countdown for redirection
-        const timer = setInterval(() => {
-          setCountdown((prev) => {
-            if (prev <= 1) {
-              clearInterval(timer);
-              navigate("/schoolchat/PasswordPage");
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+      const data = await response.json();
+      setActivationToken(data.activationToken);
+      setUserEmail(data.email);
+      setIsTokenExpired(false);
 
-        return () => clearInterval(timer);
-      } catch (error) {
-        console.error("Activation error:", error);
-        setActivationStatus("error");
-        setErrorMessage(
-          error.message || "An error occurred during account activation."
+      // Update the URL without reloading the page
+      navigate(`?activationToken=${data.activationToken}`, { replace: true });
+
+      // Retry activation with the new token
+      await activateAccount(data.activationToken);
+    } catch (error) {
+      console.error("Token regeneration error:", error);
+      setActivationStatus("error");
+      setErrorMessage(error.message || "Failed to regenerate activation token");
+    }
+  };
+
+  // Function to decode and validate the token
+  const validateActivationToken = (token) => {
+    try {
+      // Decode the token
+      const decodedToken = jwtDecode(token);
+
+      // Check token expiration
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (decodedToken.exp && decodedToken.exp < currentTime) {
+        setIsTokenExpired(true);
+        throw new Error("Activation token has expired");
+      }
+
+      // Extract email from the token
+      const email = decodedToken.sub || decodedToken.email;
+      if (!email) {
+        throw new Error("No email found in the token");
+      }
+
+      return { email, decodedToken };
+    } catch (error) {
+      console.error("Token validation error:", error);
+      throw error;
+    }
+  };
+
+  // Main activation function
+  const activateAccount = async (token = urlActivationToken) => {
+    // Ensure we have an activation token
+    if (!token) {
+      setActivationStatus("error");
+      setErrorMessage("No activation token provided");
+      return;
+    }
+
+    try {
+      // Validate the token
+      const { email } = validateActivationToken(token);
+      setUserEmail(email);
+      setActivationToken(token);
+
+      // Send activation request to backend
+      const apiUrl = `http://localhost:8486/scholchat/auth/activate?activationToken=${token}`;
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData?.message || "Activation failed. Please try again."
         );
       }
-    };
 
-    activateAccount();
-  }, [activationToken, navigate]);
+      // Store activation details in local storage
+      localStorage.setItem("userActivationToken", token);
+      localStorage.setItem("userEmail", email);
+
+      // Set success status
+      setActivationStatus("success");
+
+      // Start countdown for redirection
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate("/schoolchat/PasswordPage", {
+              state: {
+                activationToken: token,
+                email: email,
+              },
+            });
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    } catch (error) {
+      console.error("Activation error:", error);
+      setActivationStatus("error");
+      setErrorMessage(
+        error.message || "An error occurred during account activation."
+      );
+    }
+  };
+
+  useEffect(() => {
+    // Call activation function
+    if (urlActivationToken) {
+      activateAccount(urlActivationToken);
+    }
+  }, [urlActivationToken]);
 
   return (
     <div className="activation-page">
@@ -88,14 +185,21 @@ const AccountActivation = () => {
               <h2>Account Successfully Activated!</h2>
               <p>Your account has been verified and activated.</p>
               <p>
-                You will be redirected to the login page in {countdown}{" "}
+                You will be redirected to the password page in {countdown}{" "}
                 seconds...
               </p>
               <button
                 className="login-button"
-                onClick={() => navigate("/schoolchat/login")}
+                onClick={() =>
+                  navigate("/schoolchat/PasswordPage", {
+                    state: {
+                      activationToken: activationToken,
+                      email: userEmail,
+                    },
+                  })
+                }
               >
-                Go to Login Now
+                Set Password Now
               </button>
             </div>
           )}
@@ -105,21 +209,35 @@ const AccountActivation = () => {
               <AlertTriangle className="icon" size={48} />
               <h2>Activation Failed</h2>
               <p>{errorMessage}</p>
-              <p>If this problem persists, please contact support.</p>
-              <div className="button-group">
-                <button
-                  className="login-button"
-                  onClick={() => navigate("/schoolchat/login")}
-                >
-                  Go to Login
-                </button>
-                <button
-                  className="support-button"
-                  onClick={() => navigate("/schoolchat/contact")}
-                >
-                  Contact Support
-                </button>
-              </div>
+              {isTokenExpired ? (
+                <>
+                  <p>Your activation link has expired.</p>
+                  <button
+                    className="regenerate-button"
+                    onClick={regenerateActivationToken}
+                  >
+                    Actualiser le token
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p>If this problem persists, please contact support.</p>
+                  <div className="button-group">
+                    <button
+                      className="login-button"
+                      onClick={() => navigate("/schoolchat/login")}
+                    >
+                      Go to Login
+                    </button>
+                    <button
+                      className="support-button"
+                      onClick={() => navigate("/schoolchat/contact")}
+                    >
+                      Contact Support
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -161,10 +279,10 @@ const AccountActivation = () => {
         }
 
         .logo {
-          height: 200px; /* Significantly increased from 80px */
+          height: 200px;
           width: auto;
-          max-width: 90%; /* Ensures logo doesn't overflow on smaller screens */
-          object-fit: contain; /* Maintains aspect ratio */
+          max-width: 90%;
+          object-fit: contain;
         }
 
         .activation-content {
@@ -175,7 +293,7 @@ const AccountActivation = () => {
           border-radius: 8px;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
           text-align: center;
-          margin-top: 1rem; /* Added to create more space after the larger logo */
+          margin-top: 1rem;
         }
 
         h1 {
@@ -218,7 +336,8 @@ const AccountActivation = () => {
         }
 
         .login-button,
-        .support-button {
+        .support-button,
+        .regenerate-button {
           padding: 0.75rem 1.5rem;
           border: none;
           border-radius: 4px;
@@ -245,6 +364,15 @@ const AccountActivation = () => {
 
         .support-button:hover {
           background: #e0e0e0;
+        }
+
+        .regenerate-button {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .regenerate-button:hover {
+          background: #2563eb;
         }
 
         .button-group {
@@ -307,7 +435,7 @@ const AccountActivation = () => {
           }
 
           .logo {
-            height: 150px; /* Slightly smaller on mobile but still very large */
+            height: 150px;
           }
         }
 
