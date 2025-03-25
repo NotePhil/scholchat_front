@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Lock, KeyRound, Eye, EyeOff } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
+import { useNavigate } from "react-router-dom";
 
 const PasswordPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [passeAccess, setPasseAccess] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -14,43 +12,15 @@ const PasswordPage = () => {
   const [alertType, setAlertType] = useState("");
   const [loading, setLoading] = useState(false);
   const [userEmail, setUserEmail] = useState("");
-  const [activationToken, setActivationToken] = useState("");
 
-  // Extract token and email from URL or local storage
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const urlToken = searchParams.get("token");
-    const storedToken = localStorage.getItem("userActivationToken");
     const storedEmail = localStorage.getItem("userEmail");
-
-    if (urlToken) {
-      try {
-        const decoded = jwtDecode(urlToken);
-        setUserEmail(decoded.sub || decoded.email);
-        setActivationToken(urlToken);
-        localStorage.setItem("userActivationToken", btoa(urlToken));
-        localStorage.setItem("userEmail", decoded.sub || decoded.email);
-      } catch (error) {
-        showAlert("Token invalide. Veuillez réessayer.");
-      }
-    } else if (storedToken && storedEmail) {
-      try {
-        const decoded = jwtDecode(atob(storedToken));
-        setUserEmail(storedEmail);
-        setActivationToken(atob(storedToken));
-      } catch (error) {
-        showAlert(
-          "Session expirée. Veuillez demander un nouveau lien d'activation."
-        );
-        localStorage.removeItem("userActivationToken");
-        localStorage.removeItem("userEmail");
-      }
+    if (storedEmail) {
+      setUserEmail(storedEmail);
     } else {
-      showAlert(
-        "Aucun token d'activation trouvé. Veuillez utiliser le lien envoyé à votre email."
-      );
+      showAlert("Aucun email trouvé. Veuillez vous réinscrire.");
     }
-  }, [location]);
+  }, []);
 
   const showAlert = (message, type = "error") => {
     setAlertMessage(message);
@@ -65,7 +35,6 @@ const PasswordPage = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Validation
     if (passeAccess.length < 8) {
       showAlert("Le mot de passe doit contenir au moins 8 caractères.");
       setLoading(false);
@@ -100,7 +69,6 @@ const PasswordPage = () => {
           body: JSON.stringify({
             email: userEmail,
             passeAccess: passeAccess,
-            activationToken: activationToken,
           }),
         }
       );
@@ -114,7 +82,6 @@ const PasswordPage = () => {
       }
 
       showAlert("Mot de passe défini avec succès !", "success");
-      localStorage.removeItem("userActivationToken");
       localStorage.removeItem("userEmail");
 
       setTimeout(() => {
@@ -197,11 +164,7 @@ const PasswordPage = () => {
             </div>
           </div>
           <div className="button-container">
-            <button
-              type="submit"
-              className="submit-button"
-              disabled={loading || !userEmail}
-            >
+            <button type="submit" className="submit-button">
               {loading ? "Traitement en cours..." : "Définir le mot de passe"}
             </button>
           </div>
@@ -311,10 +274,6 @@ const PasswordPage = () => {
         }
         .submit-button:hover {
           background: #45a049;
-        }
-        .submit-button:disabled {
-          background: #a0a0a0;
-          cursor: not-allowed;
         }
         .alert-message {
           position: fixed;

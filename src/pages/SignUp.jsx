@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import "react-phone-number-input/style.css";
-import { X, Save, ArrowRight, ArrowLeft, Loader, Camera } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader } from "lucide-react";
 import PhoneInputs from "./PhoneInput";
 import { useNavigate } from "react-router-dom";
 import "../CSS/Signup.css";
@@ -14,21 +14,32 @@ const SignUp = () => {
   const [alertType, setAlertType] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("CM");
 
-  const [formData, setFormData] = useState({
-    type: "",
-    nom: "",
-    prenom: "",
-    email: "",
-    telephone: "",
-    adresse: "",
-    etat: "INACTIVE",
-    niveau: "",
-    cniUrlRecto: "",
-    cniUrlVerso: "",
-    selfieUrl: "",
-    nomEtablissement: "", // Made optional
-    matriculeProfesseur: "", // Made optional
+  const [formData, setFormData] = useState(() => {
+    const storedData = localStorage.getItem("signupFormData");
+    const storedEmail = localStorage.getItem("signupEmail");
+
+    return storedData
+      ? JSON.parse(storedData)
+      : {
+          type: "",
+          nom: "",
+          prenom: "",
+          email: storedEmail || "",
+          telephone: "",
+          adresse: "",
+          etat: "INACTIVE",
+          niveau: "",
+          cniUrlRecto: "",
+          cniUrlVerso: "",
+          selfieUrl: "",
+          nomEtablissement: "",
+          matriculeProfesseur: "",
+        };
   });
+
+  useEffect(() => {
+    localStorage.setItem("signupFormData", JSON.stringify(formData));
+  }, [formData]);
 
   const showAlert = (message, type = "error") => {
     setAlertMessage(message);
@@ -39,7 +50,6 @@ const SignUp = () => {
     }, 3000);
   };
 
-  // Reused image compression logic from previous code
   const validateFileSize = async (file) => {
     const maxSize = 300 * 1024;
     if (file.size > maxSize) {
@@ -116,13 +126,6 @@ const SignUp = () => {
     if (!formData.prenom.trim()) {
       showAlert("Le prénom est requis");
       newErrors.prenom = true;
-    }
-    if (!formData.email.trim()) {
-      showAlert("L'email est requis");
-      newErrors.email = true;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      showAlert("Veuillez entrer une adresse email valide");
-      newErrors.email = true;
     }
     if (!formData.telephone) {
       showAlert("Le numéro de téléphone est requis");
@@ -266,8 +269,6 @@ const SignUp = () => {
         };
       }
 
-      console.log("Sending data:", JSON.stringify(payloadData, null, 2));
-
       const apiUrl = "http://localhost:8486/scholchat/auth/register";
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -278,20 +279,17 @@ const SignUp = () => {
         body: JSON.stringify(payloadData),
       });
 
-      console.log("Response status:", response.status);
-      console.log(
-        "Response headers:",
-        Object.fromEntries([...response.headers])
-      );
-
       const responseData = await response.text();
-      console.log("Response data:", responseData);
 
       if (!response.ok) {
         throw new Error(
           responseData || `Error ${response.status}: Registration failed`
         );
       }
+
+      localStorage.setItem("userEmail", formData.email);
+      localStorage.removeItem("signupFormData");
+      localStorage.removeItem("signupEmail");
 
       showAlert(responseData, "success");
 
@@ -346,6 +344,18 @@ const SignUp = () => {
 
         {currentStep === 1 && (
           <form className="signup-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                readOnly
+                className="read-only-input"
+                placeholder="Email"
+              />
+            </div>
+
             <div className="form-grid">
               <div className="form-group">
                 <label>Prénom</label>
@@ -370,18 +380,6 @@ const SignUp = () => {
                   placeholder="Entrez votre nom"
                 />
               </div>
-            </div>
-
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className={errors.email ? "error" : ""}
-                placeholder="Entrez votre email"
-              />
             </div>
 
             <div className="form-group phone-input">
