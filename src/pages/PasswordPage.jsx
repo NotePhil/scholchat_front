@@ -81,17 +81,24 @@ const PasswordPage = () => {
         );
       }
 
+      // Success case
       showAlert("Mot de passe défini avec succès !", "success");
+
+      // Clear email from local storage
       localStorage.removeItem("userEmail");
 
+      // Ensure we're handling the navigation properly
+      console.log("Redirecting to login page..."); // Add this for debugging
+
+      // Use a timeout to ensure the alert is visible before navigation
       setTimeout(() => {
-        navigate("/login");
+        navigate("/schoolchat/login", { replace: true });
       }, 2000);
     } catch (error) {
+      console.error("Registration error:", error);
       showAlert(
         error.message || "Erreur lors de la définition du mot de passe"
       );
-    } finally {
       setLoading(false);
     }
   };
@@ -164,7 +171,7 @@ const PasswordPage = () => {
             </div>
           </div>
           <div className="button-container">
-            <button type="submit" className="submit-button">
+            <button type="submit" className="submit-button" disabled={loading}>
               {loading ? "Traitement en cours..." : "Définir le mot de passe"}
             </button>
           </div>
@@ -274,6 +281,10 @@ const PasswordPage = () => {
         }
         .submit-button:hover {
           background: #45a049;
+        }
+        .submit-button:disabled {
+          background: #9e9e9e;
+          cursor: not-allowed;
         }
         .alert-message {
           position: fixed;
