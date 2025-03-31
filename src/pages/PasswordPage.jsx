@@ -82,16 +82,10 @@ const PasswordPage = () => {
         );
       }
 
-      // Success case
       showAlert("Mot de passe défini avec succès !", "success");
 
-      // Clear email from local storage
       localStorage.removeItem("userEmail");
 
-      // Ensure we're handling the navigation properly
-      console.log("Redirecting to login page..."); // Add this for debugging
-
-      // Use a timeout to ensure the alert is visible before navigation
       setTimeout(() => {
         navigate("/schoolchat/login", { replace: true });
       }, 2000);
