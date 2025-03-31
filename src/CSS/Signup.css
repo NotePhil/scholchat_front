@@ -9,7 +9,7 @@
 
 .signup-container {
   width: 100%;
-  max-width: 600px;
+  max-width: 800px; /* Increased to accommodate three columns */
   background: white;
   padding: 2rem;
   border-radius: 8px;
@@ -58,6 +58,15 @@
   font-size: 0.9rem;
 }
 
+/* Three-column layout for step 1 */
+.form-three-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Two-column layout for step 2 */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -66,6 +75,58 @@
 
 .form-group {
   margin-bottom: 1rem;
+}
+
+/* Phone input specific styles */
+.phone-input-container {
+  width: 100%;
+  position: relative;
+}
+
+.PhoneInput {
+  display: flex;
+  align-items: center;
+}
+
+.PhoneInputCountry {
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  margin-right: 0.5rem;
+}
+
+.PhoneInputCountrySelect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.PhoneInputCountryIcon {
+  width: 1.5em;
+  height: 1em;
+  border-radius: 2px;
+}
+
+.PhoneInputCountryIcon--square {
+  width: 1.5em;
+}
+
+.PhoneInputCountryIconImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.PhoneInputInput {
+  flex: 1;
+  min-width: 0;
 }
 
 label {
@@ -187,6 +248,29 @@ textarea:focus {
   border-left: 4px solid #2e7d32;
 }
 
+/* Image preview styles */
+.image-preview-info {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #4caf50;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Country flag dropdown styling */
+.PhoneInputCountrySelectArrow {
+  display: inline-block;
+  content: '';
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 4px 0 4px;
+  border-color: currentColor transparent transparent transparent;
+  margin-left: 0.25rem;
+  opacity: 0.5;
+}
+
 @keyframes slideIn {
   from {
     transform: translateX(100%);
@@ -202,10 +286,13 @@ textarea:focus {
   .signup-container {
     margin: 1rem;
     padding: 1rem;
+    max-width: 100%;
   }
 
+  .form-three-columns,
   .form-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .button-group {
@@ -226,5 +313,9 @@ textarea:focus {
 
   .step-line {
     width: 60px;
+  }
+
+  .PhoneInputCountry {
+    margin-right: 0.35rem;
   }
 }

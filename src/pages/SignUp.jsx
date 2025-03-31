@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
+import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { ArrowRight, ArrowLeft, Loader } from "lucide-react";
-import PhoneInputs from "./PhoneInput";
 import { useNavigate } from "react-router-dom";
 import "../CSS/Signup.css";
 
@@ -14,28 +14,56 @@ const SignUp = () => {
   const [alertType, setAlertType] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("CM");
 
-  const [formData, setFormData] = useState(() => {
-    const storedData = localStorage.getItem("signupFormData");
-    const storedEmail = localStorage.getItem("signupEmail");
-
-    return storedData
-      ? JSON.parse(storedData)
-      : {
-          type: "",
-          nom: "",
-          prenom: "",
-          email: storedEmail || "",
-          telephone: "",
-          adresse: "",
-          etat: "INACTIVE",
-          niveau: "",
-          cniUrlRecto: "",
-          cniUrlVerso: "",
-          selfieUrl: "",
-          nomEtablissement: "",
-          matriculeProfesseur: "",
-        };
+  const [formData, setFormData] = useState({
+    type: "",
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    adresse: "",
+    etat: "INACTIVE",
+    niveau: "",
+    cniUrlRecto: "",
+    cniUrlVerso: "",
+    selfieUrl: "",
+    nomEtablissement: "",
+    matriculeProfesseur: "",
   });
+
+  // When component mounts, check if page was refreshed
+  useEffect(() => {
+    const pageAccessedByReload =
+      (window.performance.navigation &&
+        window.performance.navigation.type === 1) ||
+      window.performance
+        .getEntriesByType("navigation")
+        .map((nav) => nav.type)
+        .includes("reload");
+
+    if (pageAccessedByReload) {
+      localStorage.removeItem("signupFormData");
+      localStorage.removeItem("signupEmail");
+      localStorage.removeItem("userEmail");
+    } else {
+      const storedData = localStorage.getItem("signupFormData");
+      const storedEmail = localStorage.getItem("signupEmail");
+
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        setFormData(parsedData);
+
+        if (parsedData.telephone && parsedData.telephone.startsWith("+")) {
+          if (parsedData.telephone.startsWith("+237")) {
+            setSelectedCountry("CM");
+          } else if (parsedData.telephone.startsWith("+33")) {
+            setSelectedCountry("FR");
+          }
+        }
+      } else if (storedEmail) {
+        setFormData((prev) => ({ ...prev, email: storedEmail }));
+      }
+    }
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("signupFormData", JSON.stringify(formData));
@@ -130,11 +158,40 @@ const SignUp = () => {
     if (!formData.telephone) {
       showAlert("Le numéro de téléphone est requis");
       newErrors.telephone = true;
+    } else {
+      const cleanedPhone = formData.telephone.replace(/\s+|-|\(|\)/g, "");
+
+      if (
+        selectedCountry === "CM" &&
+        !cleanedPhone.match(/^(\+237|00237)?[6-9]\d{8}$/)
+      ) {
+        showAlert("Format de téléphone camerounais invalide");
+        newErrors.telephone = true;
+      } else if (
+        selectedCountry === "FR" &&
+        !cleanedPhone.match(/^(\+33|0033)?[1-9]\d{8}$/)
+      ) {
+        showAlert("Format de téléphone français invalide");
+        newErrors.telephone = true;
+      }
+    }
+
+    if (!formData.email.trim()) {
+      showAlert("L'email est requis");
+      newErrors.email = true;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      showAlert("Adresse email invalide");
+      newErrors.email = true;
+    }
+
+    if (!formData.adresse.trim()) {
+      showAlert("L'adresse est requise");
+      newErrors.adresse = true;
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  }, [formData, selectedCountry]);
 
   const validateStep2 = useCallback(() => {
     const newErrors = {};
@@ -182,13 +239,53 @@ const SignUp = () => {
       ...prev,
       telephone: value || "",
     }));
+
+    if (value) {
+      if (value.startsWith("+237")) {
+        setSelectedCountry("CM");
+      } else if (value.startsWith("+33")) {
+        setSelectedCountry("FR");
+      }
+    }
+
     if (errors.telephone) {
       setErrors((prev) => ({ ...prev, telephone: false }));
     }
   };
 
-  const handleCountryChange = (country) => {
-    setSelectedCountry(country);
+  const CountrySelect = ({ value, onChange, options, ...props }) => {
+    const countryToFlag = (countryCode) => {
+      return countryCode
+        .toUpperCase()
+        .replace(/./g, (char) =>
+          String.fromCodePoint(127397 + char.charCodeAt())
+        );
+    };
+
+    return (
+      <select
+        {...props}
+        value={value}
+        onChange={(event) => onChange(event.target.value || undefined)}
+        style={{
+          width: "60px",
+          backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='feather feather-chevron-down'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 0.5rem center",
+          backgroundSize: "1rem",
+          appearance: "none",
+        }}
+      >
+        {options.map(({ value, label }) => (
+          <option key={value} value={value}>
+            {countryToFlag(value)} {label}
+          </option>
+        ))}
+        <option value={value} style={{ display: "none" }}>
+          {value ? countryToFlag(value) : ""}
+        </option>
+      </select>
+    );
   };
 
   const handleFileChange = async (e, fieldName) => {
@@ -269,21 +366,43 @@ const SignUp = () => {
         };
       }
 
-      const apiUrl = "http://localhost:8486/scholchat/auth/register";
+      console.log("Data being sent to backend:", payloadData);
+
+      const apiUrl = "http://localhost:8486/scholchat/utilisateurs";
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
         credentials: "include",
         body: JSON.stringify(payloadData),
       });
 
-      const responseData = await response.text();
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (e) {
+        responseData = await response.text();
+      }
 
       if (!response.ok) {
+        if (
+          response.status === 400 &&
+          typeof responseData === "object" &&
+          responseData.code === "INVALID_INPUT"
+        ) {
+          if (responseData.message.includes("Email already registered")) {
+            throw new Error(
+              "Cette adresse email est déjà utilisée. Veuillez utiliser une autre adresse ou récupérer votre mot de passe."
+            );
+          }
+        }
         throw new Error(
-          responseData || `Error ${response.status}: Registration failed`
+          typeof responseData === "string"
+            ? responseData
+            : responseData.message ||
+              `Error ${response.status}: Registration failed`
         );
       }
 
@@ -291,7 +410,12 @@ const SignUp = () => {
       localStorage.removeItem("signupFormData");
       localStorage.removeItem("signupEmail");
 
-      showAlert(responseData, "success");
+      showAlert(
+        typeof responseData === "string"
+          ? responseData
+          : "Inscription réussie! Veuillez vérifier votre email pour activer votre compte.",
+        "success"
+      );
 
       navigate(
         `/schoolchat/verify-email?email=${encodeURIComponent(formData.email)}`
@@ -344,19 +468,7 @@ const SignUp = () => {
 
         {currentStep === 1 && (
           <form className="signup-form" onSubmit={(e) => e.preventDefault()}>
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                readOnly
-                className="read-only-input"
-                placeholder="Email"
-              />
-            </div>
-
-            <div className="form-grid">
+            <div className="form-three-columns">
               <div className="form-group">
                 <label>Prénom</label>
                 <input
@@ -380,27 +492,53 @@ const SignUp = () => {
                   placeholder="Entrez votre nom"
                 />
               </div>
+
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className={errors.email ? "error" : ""}
+                  placeholder="Email"
+                />
+              </div>
             </div>
 
-            <div className="form-group phone-input">
-              <label>Numéro de téléphone</label>
-              <PhoneInputs
-                value={formData.telephone || ""}
-                onChange={handlePhoneChange}
-                onCountryChange={handleCountryChange}
-                error={errors.telephone}
-              />
-            </div>
+            <div className="form-three-columns">
+              <div className="form-group phone-group">
+                <label>Numéro de téléphone</label>
+                <div
+                  className={`phone-input-container ${
+                    errors.telephone ? "error" : ""
+                  }`}
+                >
+                  <PhoneInput
+                    defaultCountry={selectedCountry}
+                    value={formData.telephone}
+                    onChange={handlePhoneChange}
+                    countrySelectComponent={CountrySelect}
+                    placeholder="Entrez votre numéro"
+                    international
+                    countryCallingCodeEditable={false}
+                  />
+                </div>
+              </div>
 
-            <div className="form-group">
-              <label>Adresse (Optionnel)</label>
-              <textarea
-                name="adresse"
-                value={formData.adresse}
-                onChange={handleInputChange}
-                placeholder="Entrez votre adresse"
-                rows="3"
-              />
+              <div className="form-group">
+                <label>Adresse</label>
+                <input
+                  type="text"
+                  name="adresse"
+                  value={formData.adresse}
+                  onChange={handleInputChange}
+                  className={errors.adresse ? "error" : ""}
+                  placeholder="Entrez votre adresse"
+                />
+              </div>
+
+              <div className="form-group"></div>
             </div>
 
             <button

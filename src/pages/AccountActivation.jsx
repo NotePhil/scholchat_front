@@ -2,15 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Check, AlertTriangle, Loader, Mail } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
-
-// Import the logo
 import logoImage from "../components/assets/images/logo.png";
 
 const AccountActivation = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Get the activation token from the URL query parameters
   const queryParams = new URLSearchParams(location.search);
   const urlActivationToken = queryParams.get("activationToken");
 
@@ -24,17 +21,8 @@ const AccountActivation = () => {
   const [inputEmail, setInputEmail] = useState("");
   const [regenerationStatus, setRegenerationStatus] = useState("");
 
-  // Attempt to retrieve email from localStorage on component mount
-  useEffect(() => {
-    const storedEmail = localStorage.getItem("userEmail");
-    if (storedEmail) {
-      setUserEmail(storedEmail);
-      setInputEmail(storedEmail);
-    }
-  }, []);
-
   const regenerateActivationToken = async () => {
-    // If no email is retrieved from localStorage, show email input
+    // Always show email input for regeneration
     if (!inputEmail) {
       setShowEmailInput(true);
       return;
@@ -64,13 +52,8 @@ const AccountActivation = () => {
       }
 
       const data = await response.json();
-
-      // Store the new email in localStorage
-      localStorage.setItem("userEmail", data.email);
-
       setRegenerationStatus("success");
 
-      // Redirect to verify email page after a short delay
       setTimeout(() => {
         navigate("/schoolchat/verify-email");
       }, 2000);
@@ -84,20 +67,16 @@ const AccountActivation = () => {
     }
   };
 
-  // Function to decode and validate the token
   const validateActivationToken = (token) => {
     try {
-      // Decode the token
       const decodedToken = jwtDecode(token);
-
-      // Check token expiration
       const currentTime = Math.floor(Date.now() / 1000);
+
       if (decodedToken.exp && decodedToken.exp < currentTime) {
         setIsTokenExpired(true);
         throw new Error("Le token d'activation a expiré");
       }
 
-      // Extract email from the token
       const email = decodedToken.sub || decodedToken.email;
       if (!email) {
         throw new Error("Aucun email trouvé dans le token");
@@ -110,9 +89,7 @@ const AccountActivation = () => {
     }
   };
 
-  // Main activation function
   const activateAccount = async (token = urlActivationToken) => {
-    // Ensure we have an activation token
     if (!token) {
       setActivationStatus("error");
       setErrorMessage("Aucun token d'activation fourni");
@@ -120,12 +97,10 @@ const AccountActivation = () => {
     }
 
     try {
-      // Validate the token
       const { email } = validateActivationToken(token);
       setUserEmail(email);
       setActivationToken(token);
 
-      // Send activation request to backend
       const apiUrl = `http://localhost:8486/scholchat/auth/activate?activationToken=${token}`;
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -142,13 +117,8 @@ const AccountActivation = () => {
         );
       }
 
-      // Store email in localStorage
-      localStorage.setItem("userEmail", email);
-
-      // Set success status
       setActivationStatus("success");
 
-      // Start countdown for redirection
       const timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -177,7 +147,6 @@ const AccountActivation = () => {
   };
 
   useEffect(() => {
-    // Call activation function
     if (urlActivationToken) {
       activateAccount(urlActivationToken);
     }
@@ -232,74 +201,59 @@ const AccountActivation = () => {
               <AlertTriangle className="icon" size={48} />
               <h2>Échec de l'activation</h2>
 
-              {isTokenExpired && !showEmailInput ? (
-                <>
-                  <p>Votre lien d'activation a expiré.</p>
+              {isTokenExpired || showEmailInput ? (
+                <div className="email-regeneration">
+                  <p>
+                    Veuillez saisir votre adresse e-mail pour régénérer le token
+                  </p>
+                  <div className="input-group">
+                    <div className="input-wrapper">
+                      <Mail className="input-icon" size={20} />
+                      <input
+                        type="email"
+                        value={inputEmail}
+                        onChange={(e) => setInputEmail(e.target.value)}
+                        placeholder="Entrez votre email"
+                        required
+                      />
+                    </div>
+                  </div>
                   <button
                     className="regenerate-button"
                     onClick={regenerateActivationToken}
+                    disabled={!inputEmail}
                   >
-                    Actualiser le token
+                    Envoyer
                   </button>
-                </>
+
+                  {regenerationStatus === "success" && (
+                    <p className="success-message">
+                      Token régénéré avec succès. Redirection en cours...
+                    </p>
+                  )}
+                  {regenerationStatus === "error" && (
+                    <p className="error-message">
+                      Échec de la régénération du token
+                    </p>
+                  )}
+                </div>
               ) : (
                 <>
-                  {showEmailInput ? (
-                    <div className="email-regeneration">
-                      <p>
-                        Veuillez saisir votre adresse e-mail pour régénérer le
-                        token
-                      </p>
-                      <div className="input-group">
-                        <div className="input-wrapper">
-                          <Mail className="input-icon" size={20} />
-                          <input
-                            type="email"
-                            value={inputEmail}
-                            onChange={(e) => setInputEmail(e.target.value)}
-                            placeholder="Entrez votre email"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <button
-                        className="regenerate-button"
-                        onClick={regenerateActivationToken}
-                        disabled={!inputEmail}
-                      >
-                        Envoyer
-                      </button>
-
-                      {regenerationStatus === "success" && (
-                        <p className="success-message">
-                          Token régénéré avec succès. Redirection en cours...
-                        </p>
-                      )}
-                      {regenerationStatus === "error" && (
-                        <p className="error-message">
-                          Échec de la régénération du token
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <p>{errorMessage}</p>
-                      <div className="button-group">
-                        <button
-                          className="login-button"
-                          onClick={() => navigate("/schoolchat/login")}
-                        >
-                          Aller à la connexion
-                        </button>
-                        <button
-                          className="support-button"
-                          onClick={() => navigate("/schoolchat/contact")}
-                        >
-                          Contacter le support
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  <p>{errorMessage}</p>
+                  <div className="button-group">
+                    <button
+                      className="login-button"
+                      onClick={() => navigate("/schoolchat/login")}
+                    >
+                      Aller à la connexion
+                    </button>
+                    <button
+                      className="support-button"
+                      onClick={() => navigate("/schoolchat/contact")}
+                    >
+                      Contacter le support
+                    </button>
+                  </div>
                 </>
               )}
             </div>
@@ -318,6 +272,7 @@ const AccountActivation = () => {
         </div>
       </footer>
 
+      {/* CSS styles remain the same */}
       <style jsx>{`
         .activation-page {
           min-height: 100vh;
