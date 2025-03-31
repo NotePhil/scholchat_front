@@ -60,7 +60,7 @@ const PasswordPage = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:8486/scholchat/auth/register",
+        "http://localhost:8486/scholchat/auth/registerPassword",
         {
           method: "POST",
           headers: {
@@ -69,11 +69,12 @@ const PasswordPage = () => {
           body: JSON.stringify({
             email: userEmail,
             passeAccess: passeAccess,
+            type: "utilisateur"
           }),
         }
       );
 
-      const responseData = await response.json();
+      const responseData = await response;
 
       if (!response.ok) {
         throw new Error(
