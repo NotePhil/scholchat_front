@@ -2,6 +2,55 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../CSS/Login.css";
 
+// Function to decode JWT token with extensive logging
+const decodeJWT = (token) => {
+  try {
+    // Log the original token
+    console.log("Original JWT Token:", token);
+
+    // Split the token into parts
+    const parts = token.split(".");
+    console.log("Token parts:", parts);
+
+    if (parts.length !== 3) {
+      console.error("Invalid JWT format: Token does not have three parts");
+      return null;
+    }
+
+    // Get the payload (second part)
+    const base64Url = parts[1];
+    console.log("Base64Url payload:", base64Url);
+
+    // Convert base64url to base64
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    console.log("Converted base64:", base64);
+
+    // Decode base64
+    const rawPayload = atob(base64);
+    console.log("Raw decoded payload:", rawPayload);
+
+    // Convert to JSON
+    const jsonPayload = decodeURIComponent(
+      rawPayload
+        .split("")
+        .map((c) => {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+    console.log("JSON payload:", jsonPayload);
+
+    // Parse JSON
+    const decodedToken = JSON.parse(jsonPayload);
+    console.log("DECODED TOKEN FULL DATA:", decodedToken);
+
+    return decodedToken;
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    return null;
+  }
+};
+
 export const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -33,6 +82,8 @@ export const Login = () => {
     setError("");
 
     try {
+      console.log("Starting login process for email:", formData.email);
+
       const response = await fetch(
         "http://localhost:8486/scholchat/auth/login",
         {
@@ -53,27 +104,86 @@ export const Login = () => {
       }
 
       const authData = await response.json();
+      console.log("Auth response data:", authData);
 
-      // Store auth data in localStorage
-      localStorage.setItem("accessToken", authData.accessToken);
-      localStorage.setItem("refreshToken", authData.refreshToken);
+      const accessToken = authData.accessToken;
+      const refreshToken = authData.refreshToken;
+
+      // Store tokens in localStorage
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+
+      // Decode the access token to get user information
+      const decodedToken = decodeJWT(accessToken);
+      if (!decodedToken) {
+        throw new Error("Token invalide");
+      }
+
+      // Log all possible role fields to identify the correct field
+      console.log("Possible role fields in token:");
+      console.log("- role:", decodedToken.role);
+      console.log("- roles:", decodedToken.roles);
+      console.log("- userType:", decodedToken.userType);
+      console.log("- type:", decodedToken.type);
+      console.log("- userRole:", decodedToken.userRole);
+      console.log("- authorities:", decodedToken.authorities);
+      console.log("- scope:", decodedToken.scope);
+      console.log("- API response userType:", authData.userType);
+
+      // Extract user information from the decoded token
+      // Check all possible fields where the role might be stored
+      const userId = decodedToken.sub || decodedToken.userId || authData.userId;
+      const userEmail = decodedToken.email || authData.userEmail;
+      const username = decodedToken.username || authData.username;
+
+      // Check multiple possible fields for role/userType
+      const tokenUserRole =
+        decodedToken.role ||
+        (decodedToken.roles && decodedToken.roles[0]) ||
+        (decodedToken.authorities && decodedToken.authorities[0]) ||
+        decodedToken.userType ||
+        decodedToken.userRole ||
+        decodedToken.type ||
+        authData.userType;
+
+      console.log("Extracted raw user role from token:", tokenUserRole);
 
       // Normalize user type mapping
       const userTypeMapping = {
-        utilisateurs: "student", // Default to student for utilisateurs
+        utilisateurs: "student",
         professeurs: "professor",
         admin: "admin",
         ROLE_ADMIN: "admin",
+        ADMIN: "admin",
+        PROFESSOR: "professor",
+        PARENT: "parent",
+        STUDENT: "student",
         parents: "parent",
       };
 
-      // Determine user role, defaulting to student if not explicitly mapped
-      const userRole = userTypeMapping[authData.userType] || "student";
+      // Log the mapping result
+      console.log(
+        `Mapping "${tokenUserRole}" to:`,
+        userTypeMapping[tokenUserRole] || tokenUserRole
+      );
 
+      // Determine user role from token, falling back to response data if needed
+      const userRole =
+        userTypeMapping[tokenUserRole] ||
+        tokenUserRole ||
+        userTypeMapping[authData.userType] ||
+        "student";
+
+      console.log("Final determined user role:", userRole);
+
+      // Store user information from token
       localStorage.setItem("userRole", userRole);
-      localStorage.setItem("userId", authData.userId);
-      localStorage.setItem("userEmail", authData.userEmail);
-      localStorage.setItem("username", authData.username);
+      localStorage.setItem("userId", userId);
+      localStorage.setItem("userEmail", userEmail);
+      localStorage.setItem("username", username);
+
+      // Store the full decoded token for future reference
+      localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
 
       // Remember me functionality
       if (formData.remember) {
@@ -82,20 +192,29 @@ export const Login = () => {
         localStorage.removeItem("rememberedEmail");
       }
 
+      console.log(
+        "Authentication complete. Navigating based on role:",
+        userRole
+      );
+
       // Handle navigation based on user role
       switch (userRole) {
         case "admin":
-          navigate("/schoolchat/admin/dashboard");
+          console.log("Navigating to admin dashboard");
+          navigate("/schoolchat/Principal");
           break;
         case "professor":
-          navigate("/schoolchat/professor-dashboard");
+          console.log("Navigating to professor dashboard");
+          navigate("/schoolchat/Principal");
           break;
         case "parent":
-          navigate("/schoolchat/parent-dashboard");
+          console.log("Navigating to parent dashboard");
+          navigate("/schoolchat/Principal");
           break;
         case "student":
         default:
-          navigate("/schoolchat/student-dashboard");
+          console.log("Navigating to student dashboard");
+          navigate("/schoolchat/Principal");
           break;
       }
     } catch (err) {

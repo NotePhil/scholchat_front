@@ -25,6 +25,7 @@ import AccountActivation from "./pages/AccountActivation";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import PasswordPage from "./pages/PasswordPage";
+import Principal from "./pages/Dashbaord/principale/Principal";
 
 function App() {
   return (
@@ -103,6 +104,14 @@ function App() {
               </Layout>
             }
           />
+
+          {/* Updated Principal routes with dashboard type */}
+          <Route path="/schoolchat/Principal" element={<Principal />} />
+          <Route
+            path="/schoolchat/Principal/:dashboardType"
+            element={<Principal />}
+          />
+
           <Route
             path="/schoolchat/login"
             element={
@@ -123,20 +132,8 @@ function App() {
               </Layout>
             }
           />
-          <Route path="/schoolchat/admin/dashboard" element={<Layoute />} />
-          <Route path="/schoolchat/professors" element={<ProfessorPage />} />
-          <Route path="/schoolchat/students" element={<StudentPage />} />
           <Route path="/schoolchat/PasswordPage" element={<PasswordPage />} />
-
-          <Route
-            path="/schoolchat/students/dashboard"
-            element={<StudentDashboard />}
-          />
           <Route path="/schoolchat/parents" element={<ParentPage />} />
-          <Route
-            path="/schoolchat/parents/dashboard"
-            element={<ParentDashboard />}
-          />
           <Route path="/schoolchat/classes" element={<ClassesPage />} />
           <Route
             path="/schoolchat/email-dashboard"
@@ -150,10 +147,6 @@ function App() {
           <Route
             path="/schoolchat/forgot-password"
             element={<ForgotPassword />}
-          />
-          <Route
-            path="/schoolchat/professors/dashboard"
-            element={<ProfessorDashboard />}
           />
         </Routes>
       </BrowserRouter>
