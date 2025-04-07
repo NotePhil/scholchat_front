@@ -82,20 +82,20 @@ export const Login = () => {
         localStorage.removeItem("rememberedEmail");
       }
 
-      // Handle navigation based on user role
+      // Handle navigation based on user role - FIXED PATHS
       switch (userRole) {
         case "admin":
-          navigate("/schoolchat/admin/dashboard");
+          navigate("/schoolchat/dashboard");
           break;
         case "professor":
-          navigate("/schoolchat/professor-dashboard");
+          navigate("/schoolchat/dashboard");
           break;
         case "parent":
-          navigate("/schoolchat/parent-dashboard");
+          navigate("/schoolchat/dashboard");
           break;
         case "student":
         default:
-          navigate("/schoolchat/student-dashboard");
+          navigate("/schoolchat/dashboard");
           break;
       }
     } catch (err) {

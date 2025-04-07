@@ -40,7 +40,7 @@ const Layoute = () => {
   // Redirect if no user role is found
   useEffect(() => {
     if (!userRole) {
-      navigate("/login");
+      navigate("/schoolchat/login");
     }
   }, [userRole, navigate]);
 
@@ -352,7 +352,7 @@ const Layoute = () => {
 
   // If no user role is found, redirect to login
   if (!userRole) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/schoolchat/login" />;
   }
 
   return (
