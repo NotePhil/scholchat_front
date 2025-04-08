@@ -1,4 +1,3 @@
-// UserTable.jsx
 import React from "react";
 import { Edit, Trash, Eye } from "lucide-react";
 
@@ -7,17 +6,47 @@ const UserTable = ({ users, loading, onEdit, onDelete, onView }) => {
     const colors = {
       admin: "bg-purple-100 text-purple-800",
       professor: "bg-blue-100 text-blue-800",
+      professeur: "bg-blue-100 text-blue-800",
       parent: "bg-green-100 text-green-800",
       student: "bg-yellow-100 text-yellow-800",
+      eleve: "bg-yellow-100 text-yellow-800",
+      repetiteur: "bg-orange-100 text-orange-800",
     };
+
+    const lowerType = (type || "").toLowerCase();
+    return (
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-medium ${
+          colors[lowerType] || "bg-gray-100 text-gray-800"
+        }`}
+      >
+        {type?.charAt(0).toUpperCase() + type?.slice(1) || "Unknown"}
+      </span>
+    );
+  };
+
+  const getVerificationBadge = (status) => {
+    const colors = {
+      APPROVED: "bg-green-100 text-green-800",
+      REJECTED: "bg-red-100 text-red-800",
+      PENDING: "bg-yellow-100 text-yellow-800",
+    };
+
+    const statusText = {
+      APPROVED: "Approved",
+      REJECTED: "Rejected",
+      PENDING: "Not Verified",
+    };
+
+    const verificationStatus = status || "PENDING";
 
     return (
       <span
         className={`px-2 py-1 rounded-full text-xs font-medium ${
-          colors[type] || "bg-gray-100 text-gray-800"
+          colors[verificationStatus] || "bg-gray-100 text-gray-800"
         }`}
       >
-        {type.charAt(0).toUpperCase() + type.slice(1)}
+        {statusText[verificationStatus] || "Unknown"}
       </span>
     );
   };
@@ -51,6 +80,9 @@ const UserTable = ({ users, loading, onEdit, onDelete, onView }) => {
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Status
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Verification
             </th>
             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
               Actions
@@ -92,6 +124,9 @@ const UserTable = ({ users, loading, onEdit, onDelete, onView }) => {
                 >
                   {user.etat}
                 </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                {getVerificationBadge(user.verificationStatus)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button

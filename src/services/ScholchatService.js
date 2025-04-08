@@ -11,8 +11,14 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to handle different content types
+// Request interceptor to handle different content types and add authentication token
 api.interceptors.request.use((config) => {
+  // Add authentication token to all requests
+  const token = localStorage.getItem("authToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   if (config.data instanceof FormData) {
     // Let browser set the boundary for multipart/form-data
     delete config.headers["Content-Type"];
@@ -331,14 +337,6 @@ class ScholchatService {
     }
   }
 
-  async deleteParent(id) {
-    try {
-      await api.delete(`/parents/${id}`);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
   // ============ Student Management ============
   async getAllStudents() {
     try {
@@ -485,8 +483,6 @@ class ScholchatService {
   }
 
   // ============ Class Management ============
-
-  // ============ Class Management ============
   async getAllClasses() {
     try {
       const response = await api.get("/classes");
@@ -606,6 +602,166 @@ class ScholchatService {
     } catch (error) {
       this.handleError(error);
     }
+  }
+
+  // ============ Motif Management ============
+  async getAllMotifs() {
+    try {
+      const response = await api.get("/motifsRejets");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getMotifById(id) {
+    try {
+      const response = await api.get(`/motifsRejets/${id}`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async createMotif(motifData) {
+    try {
+      const response = await api.post("/motifsRejets", motifData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async updateMotif(id, motifData) {
+    try {
+      const response = await api.put(`/motifsRejets/${id}`, motifData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async deleteMotif(id) {
+    try {
+      await api.delete(`/motifsRejets/${id}`);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Professor Motif Assignment ============
+  async getProfessorMotifs(professorId) {
+    try {
+      const response = await api.get(`/professeurs/${professorId}/motifs`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async assignMotifToProfessor(professorId, motifId) {
+    try {
+      const response = await api.post(
+        `/professeurs/${professorId}/motifs/${motifId}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async removeMotifFromProfessor(professorId, motifId) {
+    try {
+      const response = await api.delete(
+        `/professeurs/${professorId}/motifs/${motifId}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ File Upload ============
+  async uploadFile(file) {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await api.post("/upload", formData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Professor Validation/Rejection ============
+  async validateProfessor(professorId) {
+    try {
+      const response = await api.post(
+        `/utilisateurs/professeurs/${professorId}/validate`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async rejectProfessor(professorId, rejectionData) {
+    try {
+      const formData = this.createFormDataFromObject(rejectionData);
+      const response = await api.post(
+        `/utilisateurs/professeurs/${professorId}/rejet`,
+        formData
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Pending Professors ============
+  async getPendingProfessors() {
+    try {
+      const response = await api.get("/utilisateurs/professeurs/pending");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Authentication ============
+  async login(credentials) {
+    try {
+      const response = await api.post("/auth/login", credentials);
+      // Store token in localStorage
+      if (response.data.token) {
+        localStorage.setItem("authToken", response.data.token);
+      }
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async logout() {
+    try {
+      const response = await api.post("/auth/logout");
+      // Remove token from localStorage
+      localStorage.removeItem("authToken");
+      return response.data;
+    } catch (error) {
+      // Still remove token even if server error
+      localStorage.removeItem("authToken");
+      this.handleError(error);
+    }
+  }
+
+  isAuthenticated() {
+    return !!localStorage.getItem("authToken");
+  }
+
+  getToken() {
+    return localStorage.getItem("authToken");
   }
 }
 

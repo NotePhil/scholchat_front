@@ -113,6 +113,9 @@ export const Login = () => {
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
 
+      // Also store as authToken for backward compatibility with any existing code
+      localStorage.setItem("authToken", accessToken);
+
       // Decode the access token to get user information
       const decodedToken = decodeJWT(accessToken);
       if (!decodedToken) {
@@ -133,8 +136,10 @@ export const Login = () => {
       // Extract user information from the decoded token
       // Check all possible fields where the role might be stored
       const userId = decodedToken.sub || decodedToken.userId || authData.userId;
-      const userEmail = decodedToken.email || authData.userEmail;
-      const username = decodedToken.username || authData.username;
+      const userEmail =
+        decodedToken.email || authData.userEmail || formData.email;
+      const username =
+        decodedToken.username || authData.username || userEmail.split("@")[0];
 
       // Check multiple possible fields for role/userType
       const tokenUserRole =

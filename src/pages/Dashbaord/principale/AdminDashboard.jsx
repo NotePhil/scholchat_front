@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Users, BookOpen, UserPlus, ClipboardList } from "lucide-react";
 import { scholchatService } from "../../../services/ScholchatService";
+import { userService } from "../../../services/userService";
 import UserTable from "./tables/UserTable";
 import UserModal from "./modals/UserModal";
+import UserViewModal from "./modals/UserViewModal";
 import StatsCard from "../components/common/StatsCard";
 
 const AdminDashboard = () => {
@@ -16,9 +18,11 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [modalType, setModalType] = useState("create");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+  const [notification, setNotification] = useState(null);
 
   // Role mapping configuration
   const roleConfig = {
@@ -67,7 +71,7 @@ const AdminDashboard = () => {
     try {
       const [usersRes, professorsRes, parentsRes, studentsRes, tutorsRes] =
         await Promise.all([
-          scholchatService.getAllUsers(),
+          userService.getAllUsers(),
           scholchatService.getAllProfessors(),
           scholchatService.getAllParents(),
           scholchatService.getAllStudents(),
@@ -83,6 +87,7 @@ const AdminDashboard = () => {
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
+      showNotification("Error fetching statistics", "error");
     }
   };
 
@@ -104,7 +109,7 @@ const AdminDashboard = () => {
       let response;
 
       if (type === "all") {
-        response = await scholchatService.getAllUsers();
+        response = await userService.getAllUsers();
         response = response.map((user) => {
           const roleInfo = normalizeUserRole(user);
           return {
@@ -130,9 +135,17 @@ const AdminDashboard = () => {
       setUsers(response);
     } catch (error) {
       console.error("Error fetching users:", error);
+      showNotification("Error fetching users", "error");
     } finally {
       setLoading(false);
     }
+  };
+
+  const showNotification = (message, type = "success") => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 5000);
   };
 
   const handleTabChange = (type) => {
@@ -160,8 +173,77 @@ const AdminDashboard = () => {
 
   const handleView = (user) => {
     setCurrentUser(user);
-    setModalType("view");
-    setIsModalOpen(true);
+    setIsViewModalOpen(true);
+  };
+
+  const handleApproveUser = async (user) => {
+    try {
+      // Check if user is a professor, as verification is currently only for professors
+      if (user.type.toLowerCase() === "professeur") {
+        // Call the verification service to approve the professor
+        await scholchatService.verifyProfessor(user.id, { status: "APPROVED" });
+
+        // Update the user in the local state
+        updateUserInState(user.id, { verificationStatus: "APPROVED" });
+
+        showNotification(`Successfully approved ${user.nom} ${user.prenom}`);
+      } else {
+        showNotification(
+          "Verification is only available for professors",
+          "warning"
+        );
+      }
+
+      setIsViewModalOpen(false);
+    } catch (error) {
+      console.error("Error approving user:", error);
+      showNotification("Error approving user", "error");
+    }
+  };
+
+  const handleRejectUser = async (rejectionData) => {
+    try {
+      // Check if user is a professor, as verification is currently only for professors
+      if (currentUser.type.toLowerCase() === "professeur") {
+        // Call the verification service to reject the professor
+        await scholchatService.verifyProfessor(currentUser.id, {
+          status: "REJECTED",
+          motifs: rejectionData.motifs,
+        });
+
+        // Format the rejection motifs for display
+        const motifDescriptions = rejectionData.motifs
+          .filter((motif) => typeof motif !== "string" && motif.descriptif)
+          .map((motif) => motif.descriptif)
+          .join("; ");
+
+        // Update the user in the local state
+        updateUserInState(currentUser.id, {
+          verificationStatus: "REJECTED",
+          motif: motifDescriptions,
+        });
+
+        showNotification(
+          `Successfully rejected ${currentUser.nom} ${currentUser.prenom}`
+        );
+      } else {
+        showNotification(
+          "Verification is only available for professors",
+          "warning"
+        );
+      }
+
+      setIsViewModalOpen(false);
+    } catch (error) {
+      console.error("Error rejecting user:", error);
+      showNotification("Error rejecting user", "error");
+    }
+  };
+
+  const updateUserInState = (userId, updates) => {
+    setUsers(
+      users.map((user) => (user.id === userId ? { ...user, ...updates } : user))
+    );
   };
 
   const handleSubmit = async (userData) => {
@@ -203,12 +285,15 @@ const AdminDashboard = () => {
       switch (modalType) {
         case "create":
           await methods.create(userData);
+          showNotification("User created successfully");
           break;
         case "edit":
           await methods.update(id, userData);
+          showNotification("User updated successfully");
           break;
         case "delete":
           await methods.delete(id);
+          showNotification("User deleted successfully");
           break;
         default:
           throw new Error("Invalid modal type");
@@ -219,17 +304,31 @@ const AdminDashboard = () => {
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error submitting user:", error);
-      // You might want to add error state handling here
+      showNotification("Error processing user data", "error");
     }
   };
 
   const filteredUsers = users.filter((user) => {
     if (activeTab === "all") return true;
-    return user.type === activeTab;
+    return user.type.toLowerCase() === activeTab.toLowerCase();
   });
 
   return (
     <div className="admin-dashboard">
+      {notification && (
+        <div
+          className={`fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg ${
+            notification.type === "error"
+              ? "bg-red-100 text-red-800 border-l-4 border-red-500"
+              : notification.type === "warning"
+              ? "bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500"
+              : "bg-green-100 text-green-800 border-l-4 border-green-500"
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         {Object.entries(roleConfig).map(([key, config]) => {
           if (!config.icon) return null; // Skip if no icon (like utilisateur)
@@ -281,6 +380,15 @@ const AdminDashboard = () => {
           type={modalType}
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleSubmit}
+        />
+      )}
+
+      {isViewModalOpen && (
+        <UserViewModal
+          user={currentUser}
+          onClose={() => setIsViewModalOpen(false)}
+          onApprove={handleApproveUser}
+          onReject={handleRejectUser}
         />
       )}
     </div>
