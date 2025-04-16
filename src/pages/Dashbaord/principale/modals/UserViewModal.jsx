@@ -14,6 +14,10 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Check if the user is pending validation
+  const isPendingValidation =
+    user?.verificationStatus === "PENDING" || !user?.verificationStatus;
+
   useEffect(() => {
     fetchRejectionMotifs();
     fetchUserDocuments();
@@ -71,6 +75,14 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
     );
   };
 
+  // Safe function to call onSuccess only if it's a function
+  const handleSuccess = () => {
+    if (typeof onSuccess === 'function') {
+      onSuccess(); // Only call if it's a function
+    }
+    onClose(); // Always close the modal
+  };
+
   const handleReject = async () => {
     try {
       setIsProcessing(true);
@@ -89,9 +101,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
       setSuccessMessage("Professor rejected successfully");
       setTimeout(() => {
-        setSuccessMessage("");
-        onSuccess(); // Refresh the parent component
-        onClose(); // Close the modal
+        handleSuccess(); // Use the safe function
       }, 2000);
     } catch (err) {
       console.error("Rejection failed:", err);
@@ -110,9 +120,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
       setSuccessMessage("Professor approved successfully");
       setTimeout(() => {
-        setSuccessMessage("");
-        onSuccess(); // Refresh the parent component
-        onClose(); // Close the modal
+        handleSuccess(); // Use the safe function
       }, 2000);
     } catch (err) {
       console.error("Approval failed:", err);
@@ -163,7 +171,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
               <button
                 type="button"
                 className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
-                onClick={onClose}
+                onClick={handleSuccess} // Use the safe function
               >
                 Close
               </button>
@@ -267,115 +275,119 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex-shrink-0 w-full lg:w-64">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-medium mb-4 text-gray-800">
-                  Actions
-                </h3>
+            {/* Actions - Only show for pending professors */}
+            {isPendingValidation && (
+              <div className="flex-shrink-0 w-full lg:w-64">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-medium mb-4 text-gray-800">
+                    Actions
+                  </h3>
 
-                <div className="space-y-3">
-                  <button
-                    onClick={handleApprove}
-                    disabled={isProcessing}
-                    className={`w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md flex items-center justify-center ${
-                      isProcessing ? "opacity-75 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    {isProcessing ? (
-                      <span className="animate-spin mr-2">↻</span>
-                    ) : (
-                      <Check className="w-5 h-5 mr-2" />
-                    )}
-                    Approve
-                  </button>
-
-                  <div className="relative">
+                  <div className="space-y-3">
                     <button
-                      onClick={() =>
-                        setShowRejectionOptions(!showRejectionOptions)
-                      }
+                      onClick={handleApprove}
                       disabled={isProcessing}
-                      className={`w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md flex items-center justify-center ${
+                      className={`w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md flex items-center justify-center ${
                         isProcessing ? "opacity-75 cursor-not-allowed" : ""
                       }`}
                     >
-                      <X className="w-5 h-5 mr-2" />
-                      Reject
-                      {showRejectionOptions ? (
-                        <ChevronUp className="w-5 h-5 ml-2" />
+                      {isProcessing ? (
+                        <span className="animate-spin mr-2">↻</span>
                       ) : (
-                        <ChevronDown className="w-5 h-5 ml-2" />
+                        <Check className="w-5 h-5 mr-2" />
                       )}
+                      Approve
                     </button>
 
-                    {showRejectionOptions && (
-                      <div className="mt-2 p-4 bg-white border border-gray-200 rounded-md shadow-lg">
-                        <h4 className="font-medium mb-2">Select Reasons:</h4>
-
-                        {isLoadingMotifs ? (
-                          <div className="py-2 text-gray-500 text-sm">
-                            Loading motifs...
-                          </div>
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setShowRejectionOptions(!showRejectionOptions)
+                        }
+                        disabled={isProcessing}
+                        className={`w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md flex items-center justify-center ${
+                          isProcessing ? "opacity-75 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        <X className="w-5 h-5 mr-2" />
+                        Reject
+                        {showRejectionOptions ? (
+                          <ChevronUp className="w-5 h-5 ml-2" />
                         ) : (
-                          <div className="max-h-40 overflow-y-auto mb-3">
-                            {rejectionMotifs.map((motif) => (
-                              <label
-                                key={motif.id}
-                                className="flex items-center mb-2"
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="mr-2"
-                                  checked={selectedMotifs.some(
-                                    (m) => m.id === motif.id
-                                  )}
-                                  onChange={() => toggleMotif(motif)}
-                                  disabled={isProcessing}
-                                />
-                                <span className="text-sm">
-                                  {motif.descriptif}
-                                </span>
-                              </label>
-                            ))}
-                          </div>
+                          <ChevronDown className="w-5 h-5 ml-2" />
                         )}
+                      </button>
 
-                        <div className="mb-3">
-                          <label className="block text-sm font-medium mb-1">
-                            Add Custom Reason:
-                          </label>
-                          <textarea
-                            value={customMotif}
-                            onChange={(e) => setCustomMotif(e.target.value)}
-                            className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                            rows="2"
-                            placeholder="Additional details..."
-                            disabled={isProcessing}
-                          ></textarea>
+                      {showRejectionOptions && (
+                        <div className="mt-2 p-4 bg-white border border-gray-200 rounded-md shadow-lg">
+                          <h4 className="font-medium mb-2">Select Reasons:</h4>
+
+                          {isLoadingMotifs ? (
+                            <div className="py-2 text-gray-500 text-sm">
+                              Loading motifs...
+                            </div>
+                          ) : (
+                            <div className="max-h-40 overflow-y-auto mb-3">
+                              {rejectionMotifs.map((motif) => (
+                                <label
+                                  key={motif.id}
+                                  className="flex items-center mb-2"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="mr-2"
+                                    checked={selectedMotifs.some(
+                                      (m) => m.id === motif.id
+                                    )}
+                                    onChange={() => toggleMotif(motif)}
+                                    disabled={isProcessing}
+                                  />
+                                  <span className="text-sm">
+                                    {motif.descriptif}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="mb-3">
+                            <label className="block text-sm font-medium mb-1">
+                              Add Custom Reason:
+                            </label>
+                            <textarea
+                              value={customMotif}
+                              onChange={(e) => setCustomMotif(e.target.value)}
+                              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                              rows="2"
+                              placeholder="Additional details..."
+                              disabled={isProcessing}
+                            ></textarea>
+                          </div>
+
+                          <button
+                            onClick={handleReject}
+                            disabled={
+                              (selectedMotifs.length === 0 && !customMotif) ||
+                              isProcessing
+                            }
+                            className={`w-full py-1 px-3 rounded-md text-white ${
+                              (selectedMotifs.length === 0 && !customMotif) ||
+                              isProcessing
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-red-600 hover:bg-red-700"
+                            }`}
+                          >
+                            {isProcessing
+                              ? "Processing..."
+                              : "Confirm Rejection"}
+                          </button>
                         </div>
-
-                        <button
-                          onClick={handleReject}
-                          disabled={
-                            (selectedMotifs.length === 0 && !customMotif) ||
-                            isProcessing
-                          }
-                          className={`w-full py-1 px-3 rounded-md text-white ${
-                            (selectedMotifs.length === 0 && !customMotif) ||
-                            isProcessing
-                              ? "bg-gray-400 cursor-not-allowed"
-                              : "bg-red-600 hover:bg-red-700"
-                          }`}
-                        >
-                          {isProcessing ? "Processing..." : "Confirm Rejection"}
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Documents section */}

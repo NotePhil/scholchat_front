@@ -34,7 +34,7 @@ const Sidebar = ({
           { name: "Dashboard", icon: Menu, tab: "dashboard" },
           { name: "Activities", icon: Users, tab: "students" },
           { name: "Parents", icon: UserPlus, tab: "parents" },
-          { name: "Professors", icon: BookOpen, tab: "professors" },
+          { name: "Motifs de Rejet", icon: BookOpen, tab: "professors" },
           { name: "Classes", icon: Building2, tab: "classes" },
           { name: "Messages", icon: Mail, tab: "messages" },
           { name: "Settings", icon: Settings, tab: "settings" },

@@ -257,11 +257,30 @@ textarea:focus {
   align-items: center;
   gap: 0.5rem;
 }
+.image-preview {
+  margin-top: 10px;
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  height: 180px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-color: #ffffff;
+  padding: 4px;
+}
 
 /* Country flag dropdown styling */
 .PhoneInputCountrySelectArrow {
   display: inline-block;
-  content: '';
+  content: "";
   width: 0;
   height: 0;
   border-style: solid;
@@ -269,6 +288,53 @@ textarea:focus {
   border-color: currentColor transparent transparent transparent;
   margin-left: 0.25rem;
   opacity: 0.5;
+}
+.remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(255, 255, 255, 0.8);
+  color: #e53935;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.remove-image-btn:hover {
+  background-color: #e53935;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.image-preview-info {
+  color: #4caf50;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.image-previews-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .image-preview {
+    max-width: 100%;
+    height: 160px;
+  }
 }
 
 @keyframes slideIn {
