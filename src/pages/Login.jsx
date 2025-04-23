@@ -134,22 +134,33 @@ export const Login = () => {
       console.log("- API response userType:", authData.userType);
 
       // Extract user information from the decoded token
-      // Check all possible fields where the role might be stored
       const userId = decodedToken.sub || decodedToken.userId || authData.userId;
       const userEmail =
         decodedToken.email || authData.userEmail || formData.email;
       const username =
         decodedToken.username || authData.username || userEmail.split("@")[0];
 
-      // Check multiple possible fields for role/userType
-      const tokenUserRole =
-        decodedToken.role ||
-        (decodedToken.roles && decodedToken.roles[0]) ||
-        (decodedToken.authorities && decodedToken.authorities[0]) ||
-        decodedToken.userType ||
-        decodedToken.userRole ||
-        decodedToken.type ||
-        authData.userType;
+      // Extract role information - handle array case
+      let tokenUserRole;
+
+      // Check if roles is an array and has at least one element
+      if (Array.isArray(decodedToken.roles) && decodedToken.roles.length > 0) {
+        // Get the most privileged role (usually the last one, like ROLE_ADMIN)
+        // In this case, we take the second element if it exists
+        tokenUserRole =
+          decodedToken.roles.length > 1
+            ? decodedToken.roles[1]
+            : decodedToken.roles[0];
+      } else {
+        // Fall back to other possible role fields
+        tokenUserRole =
+          decodedToken.role ||
+          (decodedToken.authorities && decodedToken.authorities[0]) ||
+          decodedToken.userType ||
+          decodedToken.userRole ||
+          decodedToken.type ||
+          authData.userType;
+      }
 
       console.log("Extracted raw user role from token:", tokenUserRole);
 
@@ -161,9 +172,13 @@ export const Login = () => {
         ROLE_ADMIN: "admin",
         ADMIN: "admin",
         PROFESSOR: "professor",
+        ROLE_PROFESSOR: "professor",
         PARENT: "parent",
         STUDENT: "student",
+        ROLE_STUDENT: "student",
+        ROLE_USER: "student", // Default basic user to student
         parents: "parent",
+        ROLE_PARENT: "parent",
       };
 
       // Log the mapping result
@@ -186,6 +201,11 @@ export const Login = () => {
       localStorage.setItem("userId", userId);
       localStorage.setItem("userEmail", userEmail);
       localStorage.setItem("username", username);
+
+      // Store the original roles array if available
+      if (Array.isArray(decodedToken.roles)) {
+        localStorage.setItem("userRoles", JSON.stringify(decodedToken.roles));
+      }
 
       // Store the full decoded token for future reference
       localStorage.setItem("decodedToken", JSON.stringify(decodedToken));

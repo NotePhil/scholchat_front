@@ -21,19 +21,21 @@ const ForgotPassword = () => {
     setMessage({ text: "", type: "" });
 
     try {
+      // Updated endpoint to match the backend API
       const response = await fetch(
-        "http://localhost:8486/scholchat/auth/reset-password-request",
+        "http://localhost:8486/auth/reset-password-request?email=" +
+          encodeURIComponent(email),
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email }),
+          // No body needed as we're using query parameter
         }
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Échec de la demande");
       }
 

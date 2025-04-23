@@ -48,7 +48,7 @@ class ScholchatService {
     return {
       nom: userData.nom,
       prenom: userData.prenom,
-      email: userData.email,
+      email: userData.email?.toLowerCase(), // Ensure email is lowercase
       telephone: userData.telephone,
       passeAccess: userData.passeAccess,
       adresse: userData.adresse,
@@ -62,6 +62,11 @@ class ScholchatService {
     const appendToFormData = (key, value) => {
       if (value === null || value === undefined) return;
 
+      // Convert email fields to lowercase
+      if (key === "email" && typeof value === "string") {
+        value = value.toLowerCase();
+      }
+
       if (Array.isArray(value)) {
         value.forEach((item, index) => {
           if (typeof item === "object" && !(item instanceof File)) {
@@ -74,7 +79,12 @@ class ScholchatService {
         formData.append(key, value);
       } else if (typeof value === "object" && value !== null) {
         Object.entries(value).forEach(([subKey, subValue]) => {
-          appendToFormData(`${key}.${subKey}`, subValue);
+          appendToFormData(
+            `${key}.${subKey}`,
+            subKey === "email" && typeof subValue === "string"
+              ? subValue.toLowerCase()
+              : subValue
+          );
         });
       } else {
         formData.append(key, value.toString());
@@ -125,7 +135,10 @@ class ScholchatService {
 
   async createUser(userData) {
     try {
-      const payload = this.createBaseUserPayload(userData);
+      const payload = this.createBaseUserPayload({
+        ...userData,
+        email: userData.email?.toLowerCase(), // Ensure email is lowercase
+      });
       const response = await api.post("/utilisateurs", payload);
       return response.data;
     } catch (error) {
@@ -135,6 +148,10 @@ class ScholchatService {
 
   async updateUser(id, userData) {
     try {
+      // Ensure email is lowercase if provided
+      if (userData.email) {
+        userData.email = userData.email.toLowerCase();
+      }
       const response = await api.put(`/utilisateurs/${id}`, userData);
       return response.data;
     } catch (error) {
@@ -175,7 +192,7 @@ class ScholchatService {
       const payload = {
         nom: professorData.nom?.trim(),
         prenom: professorData.prenom?.trim(),
-        email: professorData.email?.trim(),
+        email: professorData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: professorData.telephone?.trim(),
         adresse: professorData.adresse?.trim(),
         etat: professorData.etat || "ACTIVE",
@@ -240,6 +257,11 @@ class ScholchatService {
 
   async updateProfessor(id, professorData) {
     try {
+      // Ensure email is lowercase if provided
+      if (professorData.email) {
+        professorData.email = professorData.email.toLowerCase();
+      }
+
       // Process and validate image files if present
       if (professorData.cniUrlRecto) {
         professorData.cniUrlRecto = await this.processFileUpload(
@@ -294,7 +316,7 @@ class ScholchatService {
         type: "parent",
         nom: parentData.nom?.trim(),
         prenom: parentData.prenom?.trim(),
-        email: parentData.email?.trim(),
+        email: parentData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: parentData.telephone?.trim(),
         adresse: parentData.adresse?.trim(),
         etat: parentData.etat || "ACTIVE",
@@ -315,7 +337,7 @@ class ScholchatService {
         type: "parent",
         nom: parentData.nom?.trim(),
         prenom: parentData.prenom?.trim(),
-        email: parentData.email?.trim(),
+        email: parentData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: parentData.telephone?.trim(),
         adresse: parentData.adresse?.trim(),
         etat: parentData.etat || "ACTIVE",
@@ -362,7 +384,7 @@ class ScholchatService {
         type: "eleve",
         nom: studentData.nom?.trim(),
         prenom: studentData.prenom?.trim(),
-        email: studentData.email?.trim(),
+        email: studentData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: studentData.telephone?.trim(),
         adresse: studentData.adresse?.trim(),
         etat: studentData.etat || "ACTIVE",
@@ -383,7 +405,7 @@ class ScholchatService {
         type: "eleve",
         nom: studentData.nom?.trim(),
         prenom: studentData.prenom?.trim(),
-        email: studentData.email?.trim(),
+        email: studentData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: studentData.telephone?.trim(),
         adresse: studentData.adresse?.trim(),
         etat: studentData.etat || "ACTIVE",
@@ -427,6 +449,11 @@ class ScholchatService {
 
   async createTutor(tutorData) {
     try {
+      // Ensure email is lowercase
+      if (tutorData.email) {
+        tutorData.email = tutorData.email.toLowerCase();
+      }
+
       // Process and validate image files
       const cniFront = await this.processFileUpload(tutorData.cniUrlFront);
       const cniBack = await this.processFileUpload(tutorData.cniUrlBack);
@@ -449,6 +476,11 @@ class ScholchatService {
 
   async updateTutor(id, tutorData) {
     try {
+      // Ensure email is lowercase if provided
+      if (tutorData.email) {
+        tutorData.email = tutorData.email.toLowerCase();
+      }
+
       // Process and validate image files if present
       if (tutorData.cniUrlFront) {
         tutorData.cniUrlFront = await this.processFileUpload(
@@ -732,6 +764,11 @@ class ScholchatService {
   // ============ Authentication ============
   async login(credentials) {
     try {
+      // Ensure email is lowercase for login
+      if (credentials.email) {
+        credentials.email = credentials.email.toLowerCase();
+      }
+
       const response = await api.post("/auth/login", credentials);
       // Store token in localStorage
       if (response.data.token) {

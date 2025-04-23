@@ -37,6 +37,45 @@ class UserService {
     }
   }
 
+  // Get user by ID
+  async getUserById(id) {
+    try {
+      const response = await userApi.get(`/utilisateurs/${id}`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // Create a new user
+  async createUser(userData) {
+    try {
+      const response = await userApi.post("/utilisateurs", userData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // Update an existing user
+  async updateUser(id, userData) {
+    try {
+      const response = await userApi.put(`/utilisateurs/${id}`, userData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // Delete a user
+  async deleteUser(id) {
+    try {
+      await userApi.delete(`/utilisateurs/${id}`);
+      return true;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
 }
 
 export const userService = new UserService();

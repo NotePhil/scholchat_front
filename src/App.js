@@ -25,6 +25,7 @@ import AccountActivation from "./pages/AccountActivation";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import PasswordPage from "./pages/PasswordPage";
+import ResetPassword from "./pages/ResetPassword";
 import Principal from "./pages/Dashbaord/principale/Principal";
 
 function App() {
@@ -104,14 +105,12 @@ function App() {
               </Layout>
             }
           />
-
           {/* Updated Principal routes with dashboard type */}
           <Route path="/schoolchat/Principal" element={<Principal />} />
           <Route
             path="/schoolchat/Principal/:dashboardType"
             element={<Principal />}
           />
-
           <Route
             path="/schoolchat/login"
             element={
@@ -148,6 +147,7 @@ function App() {
             path="/schoolchat/forgot-password"
             element={<ForgotPassword />}
           />
+          <Route path="/schoolchat/ResetPassword" element={<ResetPassword />} />
         </Routes>
       </BrowserRouter>
     </>

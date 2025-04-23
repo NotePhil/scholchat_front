@@ -39,10 +39,30 @@ const Principal = () => {
   const [isDark, setIsDark] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("blue");
   const [userRole, setUserRole] = useState("admin");
+  const [userRoles, setUserRoles] = useState([]);
 
   useEffect(() => {
+    // Get user role from localStorage
     const role = localStorage.getItem("userRole") || "admin";
     setUserRole(role);
+
+    // Get all roles if available
+    try {
+      const rolesStr = localStorage.getItem("userRoles");
+      if (rolesStr) {
+        const roles = JSON.parse(rolesStr);
+        setUserRoles(roles);
+        console.log("All user roles:", roles);
+      }
+    } catch (error) {
+      console.error("Error parsing user roles:", error);
+    }
+
+    // Get username for display
+    const username = localStorage.getItem("username");
+    if (username) {
+      localStorage.setItem("userName", username);
+    }
 
     // If the dashboard type in URL doesn't match the user role, redirect
     const expectedDashboard = `${
@@ -51,7 +71,7 @@ const Principal = () => {
     if (!dashboardType) {
       navigate(`/schoolchat/Principal/${expectedDashboard}`);
     }
-  }, [dashboardType, navigate, userRole]);
+  }, [dashboardType, navigate]);
 
   // Function to handle tab changes and update the URL
   const handleTabChange = (tab) => {
@@ -71,6 +91,7 @@ const Principal = () => {
       currentTheme,
       colorSchemes,
       userRole,
+      userRoles,
     };
 
     switch (activeTab) {
@@ -93,6 +114,7 @@ const Principal = () => {
             setIsDark={setIsDark}
             currentTheme={currentTheme}
             setCurrentTheme={setCurrentTheme}
+            userRoles={userRoles}
           />
         );
       default:
@@ -125,6 +147,7 @@ const Principal = () => {
         themes={themes}
         colorSchemes={colorSchemes}
         userRole={userRole}
+        userRoles={userRoles}
       />
 
       <div className="main-content">
