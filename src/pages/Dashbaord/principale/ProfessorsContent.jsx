@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash2, AlertCircle } from "lucide-react";
 import { rejectionService } from "../../../services/RejectionService"; // Updated import
-import { themes, colorSchemes } from "../Theme";
+import { themes, colorSchemes } from "../theme";
 
 const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   const navigate = useNavigate();

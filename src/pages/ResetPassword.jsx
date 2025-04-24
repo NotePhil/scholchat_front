@@ -13,8 +13,6 @@ const ResetPassword = () => {
   });
   const [message, setMessage] = useState({ text: "", type: "" });
   const [loading, setLoading] = useState(false);
-  const [tokenValid, setTokenValid] = useState(true);
-  const [isValidating, setIsValidating] = useState(true);
 
   // Extract token from URL query parameters on component mount
   useEffect(() => {
@@ -23,39 +21,11 @@ const ResetPassword = () => {
 
     if (token) {
       setFormData((prev) => ({ ...prev, token }));
-
-      // Validate token
-      const validateToken = async () => {
-        setIsValidating(true);
-        try {
-          const result = await ForgotPasswordService.validateResetToken(token);
-          if (!result.success) {
-            setTokenValid(false);
-            setMessage({
-              text:
-                result.error || "Lien de réinitialisation invalide ou expiré.",
-              type: "error",
-            });
-          }
-        } catch (error) {
-          setTokenValid(false);
-          setMessage({
-            text: "Lien de réinitialisation invalide ou expiré.",
-            type: "error",
-          });
-        } finally {
-          setIsValidating(false);
-        }
-      };
-
-      validateToken();
     } else {
-      setTokenValid(false);
       setMessage({
-        text: "Lien de réinitialisation invalide ou expiré.",
+        text: "Lien de réinitialisation invalide (token manquant).",
         type: "error",
       });
-      setIsValidating(false);
     }
   }, [location.search]);
 
@@ -67,6 +37,13 @@ const ResetPassword = () => {
   };
 
   const validateForm = () => {
+    if (!formData.token) {
+      setMessage({
+        text: "Lien de réinitialisation invalide (token manquant).",
+        type: "error",
+      });
+      return false;
+    }
     if (formData.password.length < 8) {
       setMessage({
         text: "Le mot de passe doit contenir au moins 8 caractères.",
@@ -93,9 +70,9 @@ const ResetPassword = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const result = await ForgotPasswordService.resetPassword(formData);
+      const success = await ForgotPasswordService.resetPassword(formData);
 
-      if (result.success) {
+      if (success) {
         // Success
         setMessage({
           text: "Mot de passe réinitialisé avec succès!",
@@ -107,7 +84,7 @@ const ResetPassword = () => {
           navigate("/schoolchat/login");
         }, 3000);
       } else {
-        throw new Error(result.error);
+        throw new Error("Échec de la réinitialisation du mot de passe");
       }
     } catch (err) {
       console.error("Erreur lors de la réinitialisation:", err);
@@ -122,17 +99,6 @@ const ResetPassword = () => {
     }
   };
 
-  if (isValidating) {
-    return (
-      <div className="reset-password-page">
-        <div className="reset-password-container">
-          <h2 className="reset-password-title">Vérification du lien...</h2>
-          <div className="loading-spinner centered-spinner"></div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="reset-password-page">
       <div className="reset-password-container">
@@ -140,10 +106,10 @@ const ResetPassword = () => {
           Réinitialisation du mot de passe
         </h2>
 
-        {!tokenValid ? (
+        {!formData.token ? (
           <div className="invalid-token-message">
             <p>
-              {message.text || "Lien de réinitialisation invalide ou expiré."}
+              {message.text || "Lien de réinitialisation invalide (token manquant)."}
             </p>
             <button
               onClick={() => navigate("/schoolchat/forgot-password")}

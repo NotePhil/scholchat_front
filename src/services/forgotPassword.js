@@ -7,10 +7,8 @@ class ForgotPasswordService {
   async requestPasswordReset(email) {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/auth/reset-password-request?email=${encodeURIComponent(
-          email
-        )}`,
-        {}, // Empty body or null
+        `${API_BASE_URL}/auth/reset-password-request?email=${encodeURIComponent(email)}`,
+        {},
         {
           headers: {
             "Content-Type": "application/json",
@@ -20,45 +18,34 @@ class ForgotPasswordService {
       return response.data;
     } catch (error) {
       console.error("Password reset request error:", error);
-      // Propager l'erreur au composant
       throw error;
     }
   }
 
   // Reset password with token
-  async resetPassword(passwordResetData) {
+  async resetPassword({ token, password, confirmPassword }) {
     try {
       const response = await axios.post(
         `${API_BASE_URL}/auth/reset-password`,
         {
-          token: passwordResetData.token,
-          newPassword: passwordResetData.password,
-          confirmPassword: passwordResetData.confirmPassword,
+          token,
+          newPassword: password,
+          confirmPassword,
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
+          validateStatus: function (status) {
+            return status === 200; // Only consider status 200 as successful
+          },
         }
       );
-      return response.data;
+      
+      // If we get here, the request was successful (status 200)
+      return true;
     } catch (error) {
       console.error("Password reset error:", error);
-      throw error;
-    }
-  }
-
-  // Validate reset token
-  async validateResetToken(token) {
-    try {
-      const response = await axios.get(
-        `${API_BASE_URL}/auth/validate-reset-token?token=${encodeURIComponent(
-          token
-        )}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Token validation error:", error);
       throw error;
     }
   }
