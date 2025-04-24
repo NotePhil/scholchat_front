@@ -147,7 +147,10 @@ function App() {
             path="/schoolchat/forgot-password"
             element={<ForgotPassword />}
           />
-          <Route path="/schoolchat/ResetPassword" element={<ResetPassword />} />
+          <Route
+            path="/schoolchat/reset-password"
+            element={<ResetPassword />}
+          />
         </Routes>
       </BrowserRouter>
     </>

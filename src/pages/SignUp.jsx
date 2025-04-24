@@ -347,7 +347,8 @@ const SignUp = () => {
     }
   };
 
-  const CountrySelect = ({ value, onChange, options, ...props }) => {
+  // Fixed CountrySelect component to remove iconComponent warning
+  const CountrySelect = ({ value, onChange, options, ...restProps }) => {
     const countryToFlag = (countryCode) => {
       return countryCode
         .toUpperCase()
@@ -358,7 +359,7 @@ const SignUp = () => {
 
     return (
       <select
-        {...props}
+        {...restProps}
         value={value}
         onChange={(event) => onChange(event.target.value || undefined)}
         style={{
@@ -370,7 +371,7 @@ const SignUp = () => {
           appearance: "none",
         }}
       >
-        {options.map(({ value, label }) => (
+        {options?.map(({ value, label }) => (
           <option key={value} value={value}>
             {countryToFlag(value)} {label}
           </option>
@@ -407,7 +408,8 @@ const SignUp = () => {
 
       const backendFieldName = fieldMapping[fieldName] || fieldName;
 
-      // In a real app, you would upload this to your server and get a URL back
+      // In real app, this would upload the image and get a URL back
+      // For demo purposes, we're just creating a placeholder URL
       const mockUrl = `http://example.com/${file.name.replace(/\s+/g, "_")}`;
 
       // Set form data with the mock URL
@@ -463,11 +465,11 @@ const SignUp = () => {
       setIsSubmitting(true);
 
       let payloadData = {
-        nom: formData.nom,
-        prenom: formData.prenom,
-        email: formData.email,
+        nom: formData.nom.trim(),
+        prenom: formData.prenom.trim(),
+        email: formData.email.trim(),
         telephone: formData.telephone,
-        adresse: formData.adresse,
+        adresse: formData.adresse.trim(),
         type: formData.type,
         etat: "INACTIVE",
       };
@@ -478,8 +480,8 @@ const SignUp = () => {
           cniUrlRecto: formData.cniUrlRecto,
           cniUrlVerso: formData.cniUrlVerso,
           selfieUrl: formData.selfieUrl,
-          nomEtablissement: formData.nomEtablissement || null,
-          matriculeProfesseur: formData.matriculeProfesseur || null,
+          nomEtablissement: formData.nomEtablissement?.trim() || null,
+          matriculeProfesseur: formData.matriculeProfesseur?.trim() || null,
         };
       } else if (formData.type === "eleve") {
         payloadData = {
@@ -551,7 +553,7 @@ const SignUp = () => {
           "success"
         );
         setTimeout(() => {
-          navigate("/login");
+          navigate("/schoolchat/login");
         }, 2000);
       } else {
         localStorage.setItem("userEmail", formData.email);
@@ -919,5 +921,4 @@ const SignUp = () => {
     </div>
   );
 };
-
 export default SignUp;

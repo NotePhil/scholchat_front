@@ -1,34 +1,61 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../CSS/ResetPassword.css";
+import ForgotPasswordService from "../services/forgotPassword";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [formData, setFormData] = useState({
     token: "",
-    email: "",
     password: "",
     confirmPassword: "",
   });
   const [message, setMessage] = useState({ text: "", type: "" });
   const [loading, setLoading] = useState(false);
   const [tokenValid, setTokenValid] = useState(true);
+  const [isValidating, setIsValidating] = useState(true);
 
-  // Extract token and email from URL query parameters on component mount
+  // Extract token from URL query parameters on component mount
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const token = searchParams.get("token");
-    const email = searchParams.get("email");
 
-    if (token && email) {
-      setFormData((prev) => ({ ...prev, token, email }));
+    if (token) {
+      setFormData((prev) => ({ ...prev, token }));
+
+      // Validate token
+      const validateToken = async () => {
+        setIsValidating(true);
+        try {
+          const result = await ForgotPasswordService.validateResetToken(token);
+          if (!result.success) {
+            setTokenValid(false);
+            setMessage({
+              text:
+                result.error || "Lien de réinitialisation invalide ou expiré.",
+              type: "error",
+            });
+          }
+        } catch (error) {
+          setTokenValid(false);
+          setMessage({
+            text: "Lien de réinitialisation invalide ou expiré.",
+            type: "error",
+          });
+        } finally {
+          setIsValidating(false);
+        }
+      };
+
+      validateToken();
     } else {
       setTokenValid(false);
       setMessage({
         text: "Lien de réinitialisation invalide ou expiré.",
         type: "error",
       });
+      setIsValidating(false);
     }
   }, [location.search]);
 
@@ -66,38 +93,22 @@ const ResetPassword = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const response = await fetch(
-        "http://localhost:8486/auth/reset-password",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            token: formData.token,
-            email: formData.email,
-            newPassword: formData.password,
-          }),
-        }
-      );
+      const result = await ForgotPasswordService.resetPassword(formData);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || "Échec de la réinitialisation du mot de passe"
-        );
+      if (result.success) {
+        // Success
+        setMessage({
+          text: "Mot de passe réinitialisé avec succès!",
+          type: "success",
+        });
+
+        // Redirect to login after successful password reset
+        setTimeout(() => {
+          navigate("/schoolchat/login");
+        }, 3000);
+      } else {
+        throw new Error(result.error);
       }
-
-      // Success
-      setMessage({
-        text: "Mot de passe réinitialisé avec succès!",
-        type: "success",
-      });
-
-      // Redirect to login after successful password reset
-      setTimeout(() => {
-        navigate("/schoolchat/login");
-      }, 3000);
     } catch (err) {
       console.error("Erreur lors de la réinitialisation:", err);
       setMessage({
@@ -111,6 +122,17 @@ const ResetPassword = () => {
     }
   };
 
+  if (isValidating) {
+    return (
+      <div className="reset-password-page">
+        <div className="reset-password-container">
+          <h2 className="reset-password-title">Vérification du lien...</h2>
+          <div className="loading-spinner centered-spinner"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="reset-password-page">
       <div className="reset-password-container">
@@ -120,9 +142,11 @@ const ResetPassword = () => {
 
         {!tokenValid ? (
           <div className="invalid-token-message">
-            <p>Lien de réinitialisation invalide ou expiré.</p>
+            <p>
+              {message.text || "Lien de réinitialisation invalide ou expiré."}
+            </p>
             <button
-              onClick={() => navigate("/forgot-password")}
+              onClick={() => navigate("/schoolchat/forgot-password")}
               className="request-new-link-button"
             >
               Demander un nouveau lien
@@ -197,7 +221,7 @@ const ResetPassword = () => {
 
             <div className="reset-password-footer">
               <button
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/schoolchat/login")}
                 className="back-to-login-button"
               >
                 Retour à la connexion
@@ -211,4 +235,3 @@ const ResetPassword = () => {
 };
 
 export default ResetPassword;
-//
