@@ -15,7 +15,23 @@
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
+/* Add to your Signup.css */
+.professor-details .form-group {
+  margin-bottom: 1rem;
+}
 
+.professor-details label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.professor-details input[type="text"] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
 .progress-bar {
   margin-bottom: 2rem;
 }

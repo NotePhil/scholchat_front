@@ -41,116 +41,122 @@ const SignUp = () => {
     matriculeProfesseur: "",
   });
 
-  // Parse URL parameters to detect update mode
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const emailParam = urlParams.get("email");
-    const tokenParam = urlParams.get("token");
+    const fetchUserData = async (email, token) => {
+      try {
+        setIsSubmitting(true);
+        const response = await axios.get(
+          "http://localhost:8486/scholchat/auth/users/byEmail",
+          {
+            params: { email, token },
+          }
+        );
+
+        if (response.data) {
+          const userData = response.data;
+          
+          // Update form data with the fetched user data
+          setFormData((prev) => ({
+            ...prev,
+            type: userData.type || "",
+            nom: userData.nom || "",
+            prenom: userData.prenom || "",
+            email: userData.email || "",
+            telephone: userData.telephone || "",
+            adresse: userData.adresse || "",
+            etat: userData.etat || "INACTIVE",
+            cniUrlRecto: userData.cniUrlRecto || "",
+            cniUrlVerso: userData.cniUrlVerso || "",
+            selfieUrl: userData.selfieUrl || "",
+            nomEtablissement: userData.nomEtablissement || "",
+            matriculeProfesseur: userData.matriculeProfesseur || "",
+          }));
+
+          // Set country based on phone number
+          if (userData.telephone) {
+            if (userData.telephone.startsWith("+237")) {
+              setSelectedCountry("CM");
+            } else if (userData.telephone.startsWith("+33")) {
+              setSelectedCountry("FR");
+            }
+          }
+
+          // Set image previews if images exist
+          if (userData.cniUrlRecto) {
+            setImagePreviews((prev) => ({
+              ...prev,
+              cniUrlRecto: userData.cniUrlRecto,
+            }));
+          }
+          if (userData.cniUrlVerso) {
+            setImagePreviews((prev) => ({
+              ...prev,
+              cniUrlVerso: userData.cniUrlVerso,
+            }));
+          }
+          if (userData.selfieUrl) {
+            setImagePreviews((prev) => ({
+              ...prev,
+              selfieUrl: userData.selfieUrl,
+            }));
+          }
+
+          showAlert(
+            "Veuillez vérifier et mettre à jour vos informations",
+            "info"
+          );
+        }
+      } catch (err) {
+        showAlert(
+          err.response?.data?.message ||
+            "Erreur lors du chargement de vos informations",
+          "error"
+        );
+        // Clear URL parameters if there's an error
+        navigate("/schoolchat/signup", { replace: true });
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    // Check for email and token in URL parameters
+    const queryParams = new URLSearchParams(location.search);
+    const emailParam = queryParams.get("email");
+    const tokenParam = queryParams.get("token");
 
     if (emailParam && tokenParam) {
       setIsUpdateMode(true);
       setToken(tokenParam);
-
-      // Fetch existing user data for update mode
-      const fetchUserData = async () => {
-        try {
-          setIsSubmitting(true);
-          const response = await axios.get(`/auth/users/byEmail`, {
-            params: { email: emailParam, token: tokenParam },
-          });
-
-          if (response.data) {
-            const userData = response.data;
-            setFormData((prev) => ({
-              ...prev,
-              ...userData,
-              email: emailParam,
-            }));
-
-            // Set country based on phone number
-            if (userData.telephone) {
-              if (userData.telephone.startsWith("+237")) {
-                setSelectedCountry("CM");
-              } else if (userData.telephone.startsWith("+33")) {
-                setSelectedCountry("FR");
-              }
-            }
-
-            // Set image previews if images exist
-            if (userData.cniUrlRecto)
-              setImagePreviews((prev) => ({
-                ...prev,
-                cniUrlRecto: userData.cniUrlRecto,
-              }));
-            if (userData.cniUrlVerso)
-              setImagePreviews((prev) => ({
-                ...prev,
-                cniUrlVerso: userData.cniUrlVerso,
-              }));
-            if (userData.selfieUrl)
-              setImagePreviews((prev) => ({
-                ...prev,
-                selfieUrl: userData.selfieUrl,
-              }));
-
-            showAlert(
-              "Veuillez vérifier et mettre à jour vos informations",
-              "info"
-            );
-          }
-        } catch (err) {
-          showAlert(
-            err.response?.data?.message ||
-              "Erreur lors du chargement de vos informations",
-            "error"
-          );
-        } finally {
-          setIsSubmitting(false);
-        }
-      };
-
-      fetchUserData();
+      fetchUserData(emailParam, tokenParam);
+      
+      // Clear the URL parameters after fetching data
+      navigate("/schoolchat/signup", { replace: true });
     } else {
-      // Check for stored form data (normal signup flow)
-      const pageAccessedByReload =
-        (window.performance.navigation &&
-          window.performance.navigation.type === 1) ||
-        window.performance
-          .getEntriesByType("navigation")
-          .map((nav) => nav.type)
-          .includes("reload");
+      // Normal signup flow - check for stored form data
+      const storedData = localStorage.getItem("signupFormData");
+      const storedEmail = localStorage.getItem("signupEmail");
+      const storedPreviews = localStorage.getItem("imagePreviews");
 
-      if (pageAccessedByReload) {
-        localStorage.removeItem("signupFormData");
-        localStorage.removeItem("signupEmail");
-        localStorage.removeItem("userEmail");
-        localStorage.removeItem("imagePreviews");
-      } else {
-        const storedData = localStorage.getItem("signupFormData");
-        const storedEmail = localStorage.getItem("signupEmail");
-        const storedPreviews = localStorage.getItem("imagePreviews");
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        setFormData(parsedData);
 
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          setFormData(parsedData);
-
-          if (parsedData.telephone && parsedData.telephone.startsWith("+")) {
-            if (parsedData.telephone.startsWith("+237")) {
-              setSelectedCountry("CM");
-            } else if (parsedData.telephone.startsWith("+33")) {
-              setSelectedCountry("FR");
-            }
+        if (parsedData.telephone && parsedData.telephone.startsWith("+")) {
+          if (parsedData.telephone.startsWith("+237")) {
+            setSelectedCountry("CM");
+          } else if (parsedData.telephone.startsWith("+33")) {
+            setSelectedCountry("FR");
           }
-        } else if (storedEmail) {
-          setFormData((prev) => ({ ...prev, email: storedEmail }));
         }
+      } else if (storedEmail) {
+        setFormData((prev) => ({ ...prev, email: storedEmail }));
+      }
 
-        if (storedPreviews) {
-          setImagePreviews(JSON.parse(storedPreviews));
-        }
+      if (storedPreviews) {
+        setImagePreviews(JSON.parse(storedPreviews));
       }
     }
-  }, [location.search]);
+  }, [location.search, navigate]);
 
   // Save form data and image previews to localStorage for non-update mode
   useEffect(() => {
@@ -490,33 +496,42 @@ const SignUp = () => {
         };
       }
 
-      console.log(
-        `Data being sent to backend (${isUpdateMode ? "UPDATE" : "CREATE"})`,
-        payloadData
-      );
-
       let response;
 
       if (isUpdateMode) {
         // Update existing user
-        response = await axios.post("/auth/users/update", payloadData, {
-          params: {
-            email: formData.email,
-            token: token,
-          },
-        });
+        response = await axios.post(
+          "http://localhost:8486/scholchat/auth/users/update",
+          payloadData,
+          {
+            params: {
+              email: formData.email,
+              token: token,
+            },
+          }
+        );
+        
+        showAlert(
+          "Vos informations ont été mises à jour avec succès!",
+          "success"
+        );
+        setTimeout(() => {
+          navigate("/schoolchat/login");
+        }, 2000);
       } else {
         // Create new user
-        const apiUrl = "http://localhost:8486/scholchat/utilisateurs";
-        response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify(payloadData),
-        });
+        response = await fetch(
+          "http://localhost:8486/scholchat/utilisateurs",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify(payloadData),
+          }
+        );
 
         if (!response.ok) {
           let responseData;
@@ -541,21 +556,10 @@ const SignUp = () => {
             typeof responseData === "string"
               ? responseData
               : responseData.message ||
-                `Error ${response.status}: Registration failed`
+                  `Error ${response.status}: Registration failed`
           );
         }
-      }
 
-      // Handle success
-      if (isUpdateMode) {
-        showAlert(
-          "Vos informations ont été mises à jour avec succès!",
-          "success"
-        );
-        setTimeout(() => {
-          navigate("/schoolchat/login");
-        }, 2000);
-      } else {
         localStorage.setItem("userEmail", formData.email);
         localStorage.removeItem("signupFormData");
         localStorage.removeItem("signupEmail");
