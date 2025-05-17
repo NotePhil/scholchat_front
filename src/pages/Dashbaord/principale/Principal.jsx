@@ -7,6 +7,7 @@ import ParentsContent from "./ParentsContent";
 import ProfessorsContent from "./ProfessorsContent";
 import ClassesContent from "./ClassesContent";
 import SettingsContent from "./SettingsContent";
+import ManageClass from "./ManageClass/ManageClass";
 import "./Principal.css";
 
 const themes = {
@@ -40,7 +41,7 @@ const Principal = () => {
   const [currentTheme, setCurrentTheme] = useState("blue");
   const [userRole, setUserRole] = useState("admin");
   const [userRoles, setUserRoles] = useState([]);
-
+  const [showManageClass, setShowManageClass] = useState(false);
   useEffect(() => {
     // Get user role from localStorage
     const role = localStorage.getItem("userRole") || "admin";
@@ -76,11 +77,17 @@ const Principal = () => {
   // Function to handle tab changes and update the URL
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-
+    setShowManageClass(false);
     // Don't change URL for tab changes, only for the initial dashboard routing
     // If you want to include tab in the URL as well, you could add it here
   };
+  const handleManageClass = () => {
+    setShowManageClass(true);
+  };
 
+  const handleBackToClasses = () => {
+    setShowManageClass(false);
+  };
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
   };
@@ -92,7 +99,11 @@ const Principal = () => {
       colorSchemes,
       userRole,
       userRoles,
+      onManageClass: handleManageClass,
     };
+    if (showManageClass && activeTab === "classes") {
+      return <ManageClass onBack={handleBackToClasses} />;
+    }
 
     switch (activeTab) {
       case "dashboard":

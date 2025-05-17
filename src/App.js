@@ -27,7 +27,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import PasswordPage from "./pages/PasswordPage";
 import ResetPassword from "./pages/ResetPassword";
 import Principal from "./pages/Dashbaord/principale/Principal";
-
+import ManageClass from "./pages/Dashbaord/principale/ManageClass/ManageClass";
 function App() {
   return (
     <>
@@ -41,6 +41,7 @@ function App() {
               </Layout>
             }
           />
+
           <Route
             path="/schoolchat/activity"
             element={
@@ -150,6 +151,14 @@ function App() {
           <Route
             path="/schoolchat/reset-password"
             element={<ResetPassword />}
+          />
+          <Route
+            path="/schoolchat/manage-class"
+            element={
+              <Layout>
+                <ManageClass />
+              </Layout>
+            }
           />
         </Routes>
       </BrowserRouter>

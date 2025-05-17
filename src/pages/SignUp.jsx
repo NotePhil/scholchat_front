@@ -58,7 +58,7 @@ const SignUp = () => {
           // Use axios baseURL or provide the full URL here if needed
           const response = await axios.get(`/auth/users/byEmail`, {
             params: { email: emailParam, token: tokenParam },
-            baseURL: "http://localhost:8486/scholchat", // Add baseURL if not configured globally
+            baseURL: "http://localhost:8486/scholchat",
           });
 
           if (response.data) {
