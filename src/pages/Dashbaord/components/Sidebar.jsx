@@ -24,7 +24,7 @@ const Sidebar = ({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Get user role from localStorage
-  const userRole = localStorage.getItem("userRole") || "admin"; // Default to admin if not set
+  const userRole = localStorage.getItem("userRole") || "admin";
 
   // Define menu items based on user role
   const getMenuItems = () => {
@@ -79,14 +79,7 @@ const Sidebar = ({
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-
-    // Special case for messages
-    if (tab === "messages") {
-      window.location.href = "mailto:";
-      return;
-    }
-
-    // No need to change the URL path here since we're staying within the same dashboard type
+    // Remove the special case for messages - let it be handled like other tabs
   };
 
   // Show logout confirmation modal
@@ -208,5 +201,4 @@ const Sidebar = ({
     </>
   );
 };
-
 export default Sidebar;

@@ -20,121 +20,160 @@ import {
 
 const ClassesContent = ({ onManageClass }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [currentTab, setCurrentTab] = useState("active");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [userRole, setUserRole] = useState("professor"); // Options: professor, administrator, establishment
-  const [currentTab, setCurrentTab] = useState("active"); // active, inactive, pending
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState({
+    motifRejet: "Classe",
+    commentaire: "",
+  });
+  const [userRole, setUserRole] = useState("professeur");
+  const [accessToken, setAccessToken] = useState("");
 
-  // Sample classes data with expanded properties matching requirements
   const classes = [
     {
       id: 1,
-      name: "10A - Mathematics",
-      subject: "Mathematics",
+      name: "10A - Mathématiques",
+      subject: "Mathématiques",
       grade: "10",
       section: "A",
       professor: "Dr. Richard Martinez",
       students: 28,
-      schedule: "Mon, Wed, Fri 9:00 - 10:30 AM",
+      schedule: "Lun, Mer, Ven 9:00 - 10:30",
       room: "B-103",
       status: "active",
-      establishment: "Lincoln High School",
+      establishment: "Lycée Lincoln",
       token: "LHS-10A-MATH-2025",
-      createdAt: "2025-01-15",
+      createdAt: "15/01/2025",
+      activationHistory: [
+        {
+          date: "15/01/2025",
+          action: "activated",
+          by: "Dr. Richard Martinez",
+        },
+      ],
     },
     {
       id: 2,
-      name: "9B - Science",
-      subject: "Science",
+      name: "9B - Sciences",
+      subject: "Sciences",
       grade: "9",
       section: "B",
       professor: "Prof. Elizabeth Chen",
       students: 25,
-      schedule: "Tue, Thu 10:45 - 12:15 PM",
+      schedule: "Mar, Jeu 10:45 - 12:15",
       room: "Lab-201",
       status: "active",
-      establishment: "Lincoln High School",
+      establishment: "Lycée Lincoln",
       token: "LHS-9B-SCI-2025",
-      createdAt: "2025-02-01",
+      createdAt: "01/02/2025",
+      activationHistory: [
+        {
+          date: "01/02/2025",
+          action: "activated",
+          by: "Prof. Elizabeth Chen",
+        },
+      ],
     },
     {
       id: 3,
-      name: "11A - Literature",
-      subject: "English",
+      name: "11A - Littérature",
+      subject: "Français",
       grade: "11",
       section: "A",
       professor: "Mr. Thomas Wilson",
       students: 22,
-      schedule: "Mon, Wed 1:00 - 2:30 PM",
+      schedule: "Lun, Mer 13:00 - 14:30",
       room: "A-205",
       status: "inactive",
-      establishment: "Lincoln High School",
+      establishment: "Lycée Lincoln",
       token: "LHS-11A-LIT-2025",
-      createdAt: "2024-11-20",
+      createdAt: "20/11/2024",
       deactivationHistory: {
-        date: "2025-03-10",
+        date: "10/03/2025",
         motifRejet: "Autre",
-        comment: "Class suspended due to restructuring",
+        comment: "Classe suspendue pour restructuration",
       },
+      activationHistory: [
+        {
+          date: "20/11/2024",
+          action: "activated",
+          by: "Mr. Thomas Wilson",
+        },
+        {
+          date: "10/03/2025",
+          action: "deactivated",
+          by: "Admin",
+          motifRejet: "Autre",
+          comment: "Classe suspendue pour restructuration",
+        },
+      ],
     },
     {
       id: 4,
-      name: "10C - History",
-      subject: "History",
+      name: "10C - Histoire",
+      subject: "Histoire",
       grade: "10",
       section: "C",
-      professor: "Ms. Sarah Johnson",
+      professor: "Mme Sarah Johnson",
       students: 26,
-      schedule: "Tue, Thu 2:45 - 4:15 PM",
+      schedule: "Mar, Jeu 14:45 - 16:15",
       room: "C-107",
       status: "active",
       establishment: null,
       token: "INDP-10C-HIST-2025",
-      createdAt: "2025-02-15",
+      createdAt: "15/02/2025",
+      activationHistory: [
+        {
+          date: "15/02/2025",
+          action: "activated",
+          by: "Mme Sarah Johnson",
+        },
+      ],
     },
     {
       id: 5,
-      name: "12A - Advanced Mathematics",
-      subject: "Mathematics",
+      name: "12A - Mathématiques Avancées",
+      subject: "Mathématiques",
       grade: "12",
       section: "A",
       professor: "Dr. Richard Martinez",
       students: 20,
-      schedule: "Mon, Wed, Fri 11:00 - 12:30 PM",
+      schedule: "Lun, Mer, Ven 11:00 - 12:30",
       room: "B-205",
       status: "pending",
-      establishment: "Edison Academy",
+      establishment: "Académie Edison",
       token: null,
-      createdAt: "2025-05-01",
+      createdAt: "01/05/2025",
     },
   ];
 
-  // Sample establishments data
   const establishments = [
     {
       id: 1,
-      name: "Lincoln High School",
+      name: "Lycée Lincoln",
       optionEnvoiMailNewClasse: true,
       optionTokenGeneral: true,
       codeUnique: "LHS2025",
     },
     {
       id: 2,
-      name: "Edison Academy",
+      name: "Académie Edison",
       optionEnvoiMailNewClasse: true,
       optionTokenGeneral: false,
     },
     {
       id: 3,
-      name: "Washington Middle School",
+      name: "Collège Washington",
       optionEnvoiMailNewClasse: false,
       optionTokenGeneral: false,
     },
   ];
 
-  // New Class form state
   const [newClass, setNewClass] = useState({
     name: "",
     subject: "",
@@ -146,10 +185,6 @@ const ClassesContent = ({ onManageClass }) => {
     codeUnique: "",
   });
 
-  // Token request state
-  const [accessToken, setAccessToken] = useState("");
-
-  // Filter classes based on search term, status filter and user role
   const filteredClasses = classes.filter((cls) => {
     const matchesSearch =
       cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,72 +194,57 @@ const ClassesContent = ({ onManageClass }) => {
       (cls.establishment &&
         cls.establishment.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    // Filter based on tab selection
     let statusMatch = false;
     if (currentTab === "all") statusMatch = true;
     else if (currentTab === "active") statusMatch = cls.status === "active";
     else if (currentTab === "inactive") statusMatch = cls.status === "inactive";
     else if (currentTab === "pending") statusMatch = cls.status === "pending";
 
-    // Filter based on user role
     let roleMatch = true;
-    if (userRole === "professor") {
-      // In a real app, filter by the current professor's ID
-      roleMatch = true; // Simplified for demo
-    } else if (userRole === "establishment") {
-      // In a real app, filter by the current establishment's ID
-      roleMatch = cls.establishment !== null; // Simplified for demo
+    if (userRole === "professeur") {
+      roleMatch = true;
+    } else if (userRole === "etablissement") {
+      roleMatch = cls.establishment !== null;
+    } else if (userRole === "eleve") {
+      roleMatch = cls.status === "active";
+    } else if (userRole === "parent") {
+      roleMatch = cls.status === "active";
     }
-    // Administrators see all classes
 
     return matchesSearch && statusMatch && roleMatch;
   });
 
-  // Handle form submission for creating a new class
   const handleCreateClass = (e) => {
     e.preventDefault();
-
-    // Check if establishment is selected and requires a unique code
     const selectedEstablishment = establishments.find(
       (est) => est.name === newClass.establishment
     );
 
     if (selectedEstablishment) {
       if (selectedEstablishment.optionTokenGeneral && !newClass.codeUnique) {
-        alert("This establishment requires a unique code!");
+        alert("Cet établissement requiert un code unique !");
         return;
       }
 
-      // If code is correct, save class and show token
       if (
         selectedEstablishment.optionTokenGeneral &&
-        newClass.codeUnique === selectedEstablishment.codeUnique
+        newClass.codeUnique !== selectedEstablishment.codeUnique
       ) {
-        // Save class with pending status
-        setShowCreateModal(false);
-        setShowTokenModal(true);
+        alert("Code unique incorrect !");
+        return;
+      }
 
-        // If configured, send email to establishment
-        if (selectedEstablishment.optionEnvoiMailNewClasse) {
-          console.log("Sending verification email to establishment");
-        }
-      } else if (!selectedEstablishment.optionTokenGeneral) {
-        // No code needed, save class with pending status
-        setShowCreateModal(false);
-        setShowTokenModal(true);
+      setShowCreateModal(false);
+      setShowTokenModal(true);
 
-        // If configured, send email to establishment
-        if (selectedEstablishment.optionEnvoiMailNewClasse) {
-          console.log("Sending verification email to establishment");
-        }
+      if (selectedEstablishment.optionEnvoiMailNewClasse) {
+        console.log("Envoi d'email de vérification à l'établissement");
       }
     } else {
-      // No establishment selected, show payment modal
       setShowCreateModal(false);
       setShowPaymentModal(true);
     }
 
-    // Reset form
     setNewClass({
       name: "",
       subject: "",
@@ -237,100 +257,111 @@ const ClassesContent = ({ onManageClass }) => {
     });
   };
 
-  // Handle payment submission
   const handlePayment = (e) => {
     e.preventDefault();
     setShowPaymentModal(false);
     setShowTokenModal(true);
-    // In a real app, this would process payment and create the class with active status
   };
 
-  // Handle token access request
   const handleTokenAccess = () => {
     if (!accessToken.trim()) {
-      alert("Please enter a valid token");
+      alert("Veuillez entrer un token valide");
       return;
     }
 
-    // Check if token exists
     const foundClass = classes.find((cls) => cls.token === accessToken);
     if (foundClass) {
-      alert(
-        `Access request sent to class "${foundClass.name}". The moderator will be notified.`
-      );
-      // In a real app, this would send a notification to the class moderator
+      setSelectedClass(foundClass);
+      setShowAccessModal(true);
     } else {
-      alert("Invalid token. Please try again.");
+      alert("Token invalide. Veuillez réessayer.");
     }
 
     setAccessToken("");
   };
 
-  // Handle class approval/rejection (for establishment role)
   const handleClassApproval = (classId, approved) => {
-    alert(`Class ${approved ? "approved" : "rejected"}`);
-    // In a real app, this would update the class status and send notifications
+    if (approved) {
+      alert("Classe approuvée avec succès");
+    } else {
+      setSelectedClass(classes.find((cls) => cls.id === classId));
+      setShowRejectModal(true);
+    }
   };
 
-  // Handle class activation/deactivation
-  const handleToggleClassStatus = (classId) => {
-    alert(`Class status toggled`);
-    // In a real app, this would update the class status
+  const handleRejectClass = () => {
+    alert(
+      `Classe rejetée. Motif: ${rejectReason.motifRejet}, Commentaire: ${rejectReason.commentaire}`
+    );
+    setShowRejectModal(false);
+    setRejectReason({
+      motifRejet: "Classe",
+      commentaire: "",
+    });
+  };
+
+  const handleToggleClassStatus = (classId, action) => {
+    if (action === "deactivate") {
+      setSelectedClass(classes.find((cls) => cls.id === classId));
+      setShowRejectModal(true);
+    } else {
+      alert("Classe activée avec succès");
+    }
   };
 
   return (
-    <div className="p-6">
-      {/* Header with role selector (for demo purposes) */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Classes Management</h1>
+          <h1 className="text-2xl font-bold">Gestion des Classes</h1>
           <div className="mt-2">
             <select
               className="border rounded px-3 py-1 text-sm"
               value={userRole}
               onChange={(e) => setUserRole(e.target.value)}
             >
-              <option value="professor">View as: Professor</option>
-              <option value="administrator">View as: Administrator</option>
-              <option value="establishment">View as: Establishment</option>
+              <option value="professeur">Professeur</option>
+              <option value="administrateur">Administrateur</option>
+              <option value="etablissement">Établissement</option>
+              <option value="eleve">Élève</option>
+              <option value="parent">Parent</option>
             </select>
           </div>
         </div>
-        <div className="flex gap-2">
-          {/* Token Access Button */}
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <button
-            className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+            className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition w-full md:w-auto justify-center"
             onClick={() => setAccessToken("")}
           >
             <Key size={18} className="mr-2" />
-            Access Class
+            Accéder à une Classe
           </button>
 
-          {/* Create Class Button (only for professors and admins) */}
-          {(userRole === "professor" || userRole === "administrator") && (
+          {(userRole === "professeur" || userRole === "administrateur") && (
             <button
-              className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+              className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition w-full md:w-auto justify-center"
               onClick={() => setShowCreateModal(true)}
             >
               <Plus size={18} className="mr-2" />
-              Create New Class
+              Créer une Classe
             </button>
           )}
         </div>
       </div>
 
-      {/* Token Access Input */}
-      <div className="bg-green-50 rounded-lg p-4 mb-6 flex items-center">
-        <div className="flex-1">
-          <h3 className="text-lg font-medium text-green-800">Access a Class</h3>
+      <div className="bg-green-50 rounded-lg p-4 mb-6 flex flex-col md:flex-row items-center">
+        <div className="flex-1 w-full">
+          <h3 className="text-lg font-medium text-green-800">
+            Accéder à une Classe
+          </h3>
           <p className="text-green-600 text-sm mb-3">
-            Enter a valid class token to request access
+            Entrez un token valide pour demander l'accès
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-col md:flex-row gap-2">
             <input
               type="text"
               className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Enter class token..."
+              placeholder="Entrez le token de la classe..."
               value={accessToken}
               onChange={(e) => setAccessToken(e.target.value)}
             />
@@ -338,18 +369,17 @@ const ClassesContent = ({ onManageClass }) => {
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
               onClick={handleTokenAccess}
             >
-              Request Access
+              Demander l'Accès
             </button>
           </div>
         </div>
-        <div className="hidden md:block">
+        <div className="hidden md:block ml-4">
           <div className="bg-green-200 rounded-full p-3">
             <Key size={24} className="text-green-700" />
           </div>
         </div>
       </div>
 
-      {/* Tabs and Search & Filter Controls */}
       <div className="border-b mb-6">
         <div className="flex flex-wrap gap-2">
           <button
@@ -360,7 +390,7 @@ const ClassesContent = ({ onManageClass }) => {
             }`}
             onClick={() => setCurrentTab("all")}
           >
-            All Classes
+            Toutes les Classes
           </button>
           <button
             className={`px-4 py-2 font-medium ${
@@ -370,7 +400,7 @@ const ClassesContent = ({ onManageClass }) => {
             }`}
             onClick={() => setCurrentTab("active")}
           >
-            Active
+            Actives
           </button>
           <button
             className={`px-4 py-2 font-medium ${
@@ -380,11 +410,10 @@ const ClassesContent = ({ onManageClass }) => {
             }`}
             onClick={() => setCurrentTab("inactive")}
           >
-            Inactive
+            Inactives
           </button>
 
-          {/* Show pending tab only for establishment or admin */}
-          {(userRole === "establishment" || userRole === "administrator") && (
+          {(userRole === "etablissement" || userRole === "administrateur") && (
             <button
               className={`px-4 py-2 font-medium ${
                 currentTab === "pending"
@@ -393,7 +422,7 @@ const ClassesContent = ({ onManageClass }) => {
               }`}
               onClick={() => setCurrentTab("pending")}
             >
-              Pending Approval
+              En Attente
             </button>
           )}
         </div>
@@ -407,7 +436,7 @@ const ClassesContent = ({ onManageClass }) => {
           />
           <input
             type="text"
-            placeholder="Search classes..."
+            placeholder="Rechercher des classes..."
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -415,7 +444,6 @@ const ClassesContent = ({ onManageClass }) => {
         </div>
       </div>
 
-      {/* Classes Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredClasses.map((cls) => (
           <div
@@ -447,13 +475,13 @@ const ClassesContent = ({ onManageClass }) => {
                   {cls.status === "active"
                     ? "Active"
                     : cls.status === "pending"
-                    ? "Pending"
+                    ? "En Attente"
                     : "Inactive"}
                 </span>
               </div>
 
               <p className="text-gray-600 mt-1">
-                {cls.subject} • Grade {cls.grade}-{cls.section}
+                {cls.subject} • Niveau {cls.grade}-{cls.section}
               </p>
 
               <p className="text-sm text-gray-500 mt-2">{cls.professor}</p>
@@ -468,7 +496,7 @@ const ClassesContent = ({ onManageClass }) => {
               {cls.deactivationHistory && (
                 <div className="mt-2 text-xs text-red-600 flex items-center">
                   <AlertCircle size={14} className="mr-1" />
-                  <span>Deactivated: {cls.deactivationHistory.motifRejet}</span>
+                  <span>Désactivée: {cls.deactivationHistory.motifRejet}</span>
                 </div>
               )}
             </div>
@@ -477,7 +505,7 @@ const ClassesContent = ({ onManageClass }) => {
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center text-gray-600">
                   <Users size={16} className="mr-1" />
-                  <span>{cls.students} students</span>
+                  <span>{cls.students} élèves</span>
                 </div>
                 <div className="flex items-center text-gray-600">
                   <BookOpen size={16} className="mr-1" />
@@ -492,49 +520,45 @@ const ClassesContent = ({ onManageClass }) => {
 
               <div className="mt-3 flex items-center text-sm text-gray-600">
                 <Clock size={16} className="mr-1" />
-                <span>Created: {cls.createdAt}</span>
+                <span>Créée le: {cls.createdAt}</span>
               </div>
 
-              {/* Action buttons based on role and class status */}
               <div className="mt-4 flex justify-end gap-2">
-                {/* Professor actions */}
-                {userRole === "professor" && (
+                {userRole === "professeur" && (
                   <>
                     <button className="px-3 py-1 text-sm border rounded hover:bg-gray-50 transition">
-                      View
+                      Voir
                     </button>
                     {cls.status === "active" && (
                       <button
                         onClick={() => onManageClass(cls.id)}
-                        className="manage-button"
+                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
                       >
-                        Manage
+                        Gérer
                       </button>
                     )}
                   </>
                 )}
 
-                {/* Establishment actions */}
-                {userRole === "establishment" && cls.status === "pending" && (
+                {userRole === "etablissement" && cls.status === "pending" && (
                   <>
                     <button
                       className="px-3 py-1 text-sm border border-red-600 text-red-600 rounded hover:bg-red-50 transition"
                       onClick={() => handleClassApproval(cls.id, false)}
                     >
-                      Reject
+                      Rejeter
                     </button>
                     <button
                       className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition"
                       onClick={() => handleClassApproval(cls.id, true)}
                     >
-                      Approve
+                      Approuver
                     </button>
                   </>
                 )}
 
-                {/* Establishment/Admin can activate/deactivate */}
-                {(userRole === "establishment" ||
-                  userRole === "administrator") &&
+                {(userRole === "etablissement" ||
+                  userRole === "administrateur") &&
                   cls.status !== "pending" && (
                     <button
                       className={`px-3 py-1 text-sm rounded transition ${
@@ -542,14 +566,18 @@ const ClassesContent = ({ onManageClass }) => {
                           ? "border border-red-600 text-red-600 hover:bg-red-50"
                           : "bg-green-600 text-white hover:bg-green-700"
                       }`}
-                      onClick={() => handleToggleClassStatus(cls.id)}
+                      onClick={() =>
+                        handleToggleClassStatus(
+                          cls.id,
+                          cls.status === "active" ? "deactivate" : "activate"
+                        )
+                      }
                     >
-                      {cls.status === "active" ? "Deactivate" : "Activate"}
+                      {cls.status === "active" ? "Désactiver" : "Activer"}
                     </button>
                   )}
 
-                {/* Admin actions */}
-                {userRole === "administrator" && (
+                {userRole === "administrateur" && (
                   <>
                     <button className="px-3 py-1 text-sm border rounded hover:bg-gray-50 transition">
                       <Edit size={14} />
@@ -560,19 +588,67 @@ const ClassesContent = ({ onManageClass }) => {
                           className="px-3 py-1 text-sm border border-red-600 text-red-600 rounded hover:bg-red-50 transition"
                           onClick={() => handleClassApproval(cls.id, false)}
                         >
-                          Reject
+                          Rejeter
                         </button>
                         <button
                           className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition"
                           onClick={() => handleClassApproval(cls.id, true)}
                         >
-                          Approve
+                          Approuver
                         </button>
                       </>
                     )}
                   </>
                 )}
+
+                {(userRole === "eleve" || userRole === "parent") && (
+                  <button
+                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                    onClick={() => {
+                      setSelectedClass(cls);
+                      setShowAccessModal(true);
+                    }}
+                  >
+                    Demander l'Accès
+                  </button>
+                )}
               </div>
+
+              {cls.activationHistory && (
+                <div className="border-t mt-4 pt-4">
+                  <h4 className="text-sm font-medium mb-2">
+                    Historique d'Activation
+                  </h4>
+                  <div className="text-xs space-y-2">
+                    {cls.activationHistory.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-gray-50 p-2 rounded flex justify-between"
+                      >
+                        <div>
+                          <span
+                            className={`inline-block px-1.5 py-0.5 rounded ${
+                              item.action === "activated"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {item.action === "activated"
+                              ? "Activée"
+                              : "Désactivée"}
+                          </span>
+                          {item.motifRejet && (
+                            <span className="ml-2 text-gray-600">
+                              Motif: {item.motifRejet}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-gray-500">{item.date}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -580,16 +656,15 @@ const ClassesContent = ({ onManageClass }) => {
 
       {filteredClasses.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          No classes found matching your criteria
+          Aucune classe trouvée correspondant à vos critères
         </div>
       )}
 
-      {/* Create Class Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Create New Class</h2>
+              <h2 className="text-xl font-bold">Créer une Nouvelle Classe</h2>
               <button
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowCreateModal(false)}
@@ -602,12 +677,12 @@ const ClassesContent = ({ onManageClass }) => {
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Class Name
+                    Nom de la Classe
                   </label>
                   <input
                     type="text"
                     className="w-full border rounded-lg px-3 py-2"
-                    placeholder="e.g. 10A - Mathematics"
+                    placeholder="ex: 10A - Mathématiques"
                     value={newClass.name}
                     onChange={(e) =>
                       setNewClass({ ...newClass, name: e.target.value })
@@ -618,12 +693,12 @@ const ClassesContent = ({ onManageClass }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subject
+                    Matière
                   </label>
                   <input
                     type="text"
                     className="w-full border rounded-lg px-3 py-2"
-                    placeholder="e.g. Mathematics"
+                    placeholder="ex: Mathématiques"
                     value={newClass.subject}
                     onChange={(e) =>
                       setNewClass({ ...newClass, subject: e.target.value })
@@ -634,13 +709,13 @@ const ClassesContent = ({ onManageClass }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Grade & Section
+                    Niveau & Section
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       className="w-1/2 border rounded-lg px-3 py-2"
-                      placeholder="Grade"
+                      placeholder="Niveau"
                       value={newClass.grade}
                       onChange={(e) =>
                         setNewClass({ ...newClass, grade: e.target.value })
@@ -662,12 +737,12 @@ const ClassesContent = ({ onManageClass }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Schedule
+                    Emploi du Temps
                   </label>
                   <input
                     type="text"
                     className="w-full border rounded-lg px-3 py-2"
-                    placeholder="e.g. Mon, Wed 9:00-10:30"
+                    placeholder="ex: Lun, Mer 9:00-10:30"
                     value={newClass.schedule}
                     onChange={(e) =>
                       setNewClass({ ...newClass, schedule: e.target.value })
@@ -678,12 +753,12 @@ const ClassesContent = ({ onManageClass }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Room
+                    Salle
                   </label>
                   <input
                     type="text"
                     className="w-full border rounded-lg px-3 py-2"
-                    placeholder="e.g. B-103"
+                    placeholder="ex: B-103"
                     value={newClass.room}
                     onChange={(e) =>
                       setNewClass({ ...newClass, room: e.target.value })
@@ -694,7 +769,7 @@ const ClassesContent = ({ onManageClass }) => {
 
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Establishment (Optional)
+                    Établissement (Optionnel)
                   </label>
                   <select
                     className="w-full border rounded-lg px-3 py-2"
@@ -706,7 +781,7 @@ const ClassesContent = ({ onManageClass }) => {
                       })
                     }
                   >
-                    <option value="">None (Independent Class)</option>
+                    <option value="">Aucun (Classe Indépendante)</option>
                     {establishments.map((est) => (
                       <option key={est.id} value={est.name}>
                         {est.name}
@@ -718,13 +793,12 @@ const ClassesContent = ({ onManageClass }) => {
                     <Info size={14} className="mr-1" />
                     <span>
                       {newClass.establishment
-                        ? "This class will need approval from the establishment"
-                        : "Independent classes require payment for activation"}
+                        ? "Cette classe nécessitera l'approbation de l'établissement"
+                        : "Les classes indépendantes nécessitent un paiement pour activation"}
                     </span>
                   </div>
                 </div>
 
-                {/* Show unique code field only if selected establishment requires it */}
                 {newClass.establishment &&
                   establishments.find(
                     (est) =>
@@ -733,12 +807,12 @@ const ClassesContent = ({ onManageClass }) => {
                   ) && (
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Establishment Code
+                        Code de l'Établissement
                       </label>
                       <input
                         type="text"
                         className="w-full border rounded-lg px-3 py-2"
-                        placeholder="Enter the unique code provided by your establishment"
+                        placeholder="Entrez le code unique fourni par votre établissement"
                         value={newClass.codeUnique}
                         onChange={(e) =>
                           setNewClass({
@@ -746,6 +820,7 @@ const ClassesContent = ({ onManageClass }) => {
                             codeUnique: e.target.value,
                           })
                         }
+                        required
                       />
                     </div>
                   )}
@@ -757,13 +832,13 @@ const ClassesContent = ({ onManageClass }) => {
                   className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition"
                   onClick={() => setShowCreateModal(false)}
                 >
-                  Cancel
+                  Annuler
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  Create Class
+                  Créer la Classe
                 </button>
               </div>
             </form>
@@ -771,12 +846,11 @@ const ClassesContent = ({ onManageClass }) => {
         </div>
       )}
 
-      {/* Token Display Modal */}
       {showTokenModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Class Created Successfully</h2>
+              <h2 className="text-xl font-bold">Classe Créée avec Succès</h2>
               <button
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowTokenModal(false)}
@@ -790,15 +864,17 @@ const ClassesContent = ({ onManageClass }) => {
                 <CheckCircle size={32} className="text-green-600" />
               </div>
 
-              <h3 className="text-lg font-medium mb-2">Your class token is:</h3>
+              <h3 className="text-lg font-medium mb-2">
+                Votre token de classe est:
+              </h3>
               <div className="bg-gray-100 p-4 rounded-lg text-xl font-mono mb-4">
                 CLASS-12345-TOKEN
               </div>
 
               <p className="text-gray-600 text-sm mb-4">
                 {newClass.establishment
-                  ? "Your class is pending approval from the establishment. You can use this token once approved."
-                  : "Your class is now active. Share this token with students and parents to provide access."}
+                  ? "Votre classe est en attente d'approbation par l'établissement. Vous pourrez utiliser ce token une fois approuvée."
+                  : "Votre classe est maintenant active. Partagez ce token avec les élèves et parents pour leur donner accès."}
               </p>
             </div>
 
@@ -807,19 +883,18 @@ const ClassesContent = ({ onManageClass }) => {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 onClick={() => setShowTokenModal(false)}
               >
-                Got it
+                Compris
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Complete Payment</h2>
+              <h2 className="text-xl font-bold">Paiement Requis</h2>
               <button
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowPaymentModal(false)}
@@ -831,29 +906,32 @@ const ClassesContent = ({ onManageClass }) => {
             <form onSubmit={handlePayment}>
               <div className="mb-4">
                 <p className="text-gray-600 mb-4">
-                  Independent classes require a one-time payment for activation.
+                  Les classes indépendantes nécessitent un paiement unique pour
+                  activation.
                 </p>
 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Card Number
+                    Numéro de Carte
                   </label>
                   <input
                     type="text"
                     className="w-full border rounded-lg px-3 py-2"
                     placeholder="1234 5678 9012 3456"
+                    required
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Expiry Date
+                      Date d'Expiration
                     </label>
                     <input
                       type="text"
                       className="w-full border rounded-lg px-3 py-2"
-                      placeholder="MM/YY"
+                      placeholder="MM/AA"
+                      required
                     />
                   </div>
 
@@ -865,18 +943,20 @@ const ClassesContent = ({ onManageClass }) => {
                       type="text"
                       className="w-full border rounded-lg px-3 py-2"
                       placeholder="123"
+                      required
                     />
                   </div>
                 </div>
 
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name on Card
+                    Nom sur la Carte
                   </label>
                   <input
                     type="text"
                     className="w-full border rounded-lg px-3 py-2"
-                    placeholder="John Doe"
+                    placeholder="Jean Dupont"
+                    required
                   />
                 </div>
               </div>
@@ -887,13 +967,13 @@ const ClassesContent = ({ onManageClass }) => {
                   className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition"
                   onClick={() => setShowPaymentModal(false)}
                 >
-                  Cancel
+                  Annuler
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  Pay & Activate Class
+                  Payer & Activer
                 </button>
               </div>
             </form>
@@ -901,258 +981,162 @@ const ClassesContent = ({ onManageClass }) => {
         </div>
       )}
 
-      {/* Deactivation Modal */}
-      {userRole === "establishment" || userRole === "administrator" ? (
-        <DeactivationModal />
-      ) : null}
-    </div>
-  );
-};
+      {showAccessModal && selectedClass && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Demande d'Accès</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowAccessModal(false)}
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
 
-// DeactivationModal Component
-const DeactivationModal = ({ isOpen, onClose, classInfo, onSubmit }) => {
-  const [formData, setFormData] = useState({
-    motifRejet: "Classe",
-    commentaire: "",
-  });
-
-  if (!isOpen) return null;
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Deactivate Class</h2>
-          <button
-            className="text-gray-500 hover:text-gray-700"
-            onClick={onClose}
-          >
-            <XCircle size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <p className="text-gray-700 mb-2">
-              You are about to deactivate: <strong>{classInfo?.name}</strong>
-            </p>
+            <div className="mb-4">
+              <p className="text-gray-700">
+                Vous demandez l'accès à : <strong>{selectedClass.name}</strong>
+              </p>
+              <p className="text-gray-500 text-sm mt-1">
+                <span className="flex items-center">
+                  <Users size={14} className="mr-1" /> {selectedClass.professor}
+                </span>
+                {selectedClass.establishment && (
+                  <span className="flex items-center mt-1">
+                    <Building size={14} className="mr-1" />{" "}
+                    {selectedClass.establishment}
+                  </span>
+                )}
+              </p>
+            </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Reason for Deactivation
+                Demande en tant que
               </label>
-              <select
-                className="w-full border rounded-lg px-3 py-2"
-                value={formData.motifRejet}
-                onChange={(e) =>
-                  setFormData({ ...formData, motifRejet: e.target.value })
-                }
-                required
-              >
-                <option value="Classe">Class Issue</option>
-                <option value="Photo">Photo Related</option>
-                <option value="Autre">Other</option>
+              <select className="w-full border rounded-lg px-3 py-2">
+                <option value="eleve">Élève</option>
+                <option value="parent">Parent</option>
               </select>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Comments
-              </label>
-              <textarea
-                className="w-full border rounded-lg px-3 py-2 min-h-24"
-                placeholder="Provide additional information about the deactivation..."
-                value={formData.commentaire}
-                onChange={(e) =>
-                  setFormData({ ...formData, commentaire: e.target.value })
-                }
-                required
-              ></textarea>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              type="button"
-              className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-            >
-              Confirm Deactivation
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// Add a class activation history component
-const ClassActivationHistory = ({ history }) => {
-  if (!history || history.length === 0) return null;
-
-  return (
-    <div className="border-t mt-4 pt-4">
-      <h4 className="text-sm font-medium mb-2">Activation History</h4>
-      <div className="text-xs space-y-2">
-        {history.map((item, idx) => (
-          <div
-            key={idx}
-            className="bg-gray-50 p-2 rounded flex justify-between"
-          >
-            <div>
-              <span
-                className={`inline-block px-1.5 py-0.5 rounded ${
-                  item.action === "activated"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                }`}
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                type="button"
+                className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                onClick={() => setShowAccessModal(false)}
               >
-                {item.action === "activated" ? "Activated" : "Deactivated"}
-              </span>
-              {item.motifRejet && (
-                <span className="ml-2 text-gray-600">
-                  Reason: {item.motifRejet}
-                </span>
-              )}
-            </div>
-            <div className="text-gray-500">{item.date}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Add the ClassAccessRequestModal component
-const ClassAccessRequestModal = ({ isOpen, onClose, classInfo }) => {
-  const [role, setRole] = useState("student");
-  const [childInfo, setChildInfo] = useState({
-    name: "",
-    age: "",
-    isMinor: true,
-  });
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Access Request</h2>
-          <button
-            className="text-gray-500 hover:text-gray-700"
-            onClick={onClose}
-          >
-            <XCircle size={20} />
-          </button>
-        </div>
-
-        <div className="mb-4">
-          <p className="text-gray-700">
-            You are requesting access to: <strong>{classInfo?.name}</strong>
-          </p>
-          <p className="text-gray-500 text-sm mt-1">
-            <span className="flex items-center">
-              <Users size={14} className="mr-1" /> {classInfo?.professor}
-            </span>
-            {classInfo?.establishment && (
-              <span className="flex items-center mt-1">
-                <Building size={14} className="mr-1" />{" "}
-                {classInfo?.establishment}
-              </span>
-            )}
-          </p>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Request as
-          </label>
-          <select
-            className="w-full border rounded-lg px-3 py-2"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          >
-            <option value="student">Student</option>
-            <option value="parent">Parent</option>
-          </select>
-        </div>
-
-        {role === "parent" && (
-          <div className="border-t pt-4 mt-4">
-            <h3 className="text-md font-medium mb-2">Child Information</h3>
-
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Child's Name
-              </label>
-              <input
-                type="text"
-                className="w-full border rounded-lg px-3 py-2"
-                placeholder="Enter child's name"
-                value={childInfo.name}
-                onChange={(e) =>
-                  setChildInfo({ ...childInfo, name: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Child's Age
-              </label>
-              <input
-                type="number"
-                className="w-full border rounded-lg px-3 py-2"
-                placeholder="Enter child's age"
-                value={childInfo.age}
-                onChange={(e) => {
-                  const age = parseInt(e.target.value);
-                  setChildInfo({
-                    ...childInfo,
-                    age: e.target.value,
-                    isMinor: age < 18,
-                  });
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                onClick={() => {
+                  alert("Demande d'accès envoyée avec succès");
+                  setShowAccessModal(false);
                 }}
-              />
-            </div>
-
-            <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
-              {childInfo.isMinor
-                ? "Your child is a minor. Parent access will be granted upon approval."
-                : "Your child is an adult. They will need to confirm your access request."}
+              >
+                Envoyer la Demande
+              </button>
             </div>
           </div>
-        )}
-
-        <div className="flex justify-end gap-2 mt-6">
-          <button
-            type="button"
-            className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            Send Request
-          </button>
         </div>
-      </div>
+      )}
+
+      {showRejectModal && selectedClass && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {selectedClass.status === "pending"
+                  ? "Rejeter la Classe"
+                  : "Désactiver la Classe"}
+              </h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowRejectModal(false)}
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleRejectClass();
+              }}
+            >
+              <div className="mb-4">
+                <p className="text-gray-700 mb-2">
+                  Vous êtes sur le point de{" "}
+                  {selectedClass.status === "pending"
+                    ? "rejeter"
+                    : "désactiver"}{" "}
+                  : <strong>{selectedClass.name}</strong>
+                </p>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Motif du Rejet/Désactivation
+                  </label>
+                  <select
+                    className="w-full border rounded-lg px-3 py-2"
+                    value={rejectReason.motifRejet}
+                    onChange={(e) =>
+                      setRejectReason({
+                        ...rejectReason,
+                        motifRejet: e.target.value,
+                      })
+                    }
+                    required
+                  >
+                    <option value="Classe">Problème avec la Classe</option>
+                    <option value="Photo">Problème avec les Photos</option>
+                    <option value="Autre">Autre Raison</option>
+                  </select>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Commentaires
+                  </label>
+                  <textarea
+                    className="w-full border rounded-lg px-3 py-2 min-h-24"
+                    placeholder="Fournissez des informations supplémentaires..."
+                    value={rejectReason.commentaire}
+                    onChange={(e) =>
+                      setRejectReason({
+                        ...rejectReason,
+                        commentaire: e.target.value,
+                      })
+                    }
+                    required
+                  ></textarea>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  type="button"
+                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                  onClick={() => setShowRejectModal(false)}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  {selectedClass.status === "pending"
+                    ? "Confirmer le Rejet"
+                    : "Confirmer la Désactivation"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

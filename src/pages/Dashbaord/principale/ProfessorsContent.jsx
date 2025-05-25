@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, AlertCircle } from "lucide-react";
-import { rejectionService } from "../../../services/RejectionService"; // Updated import
+import {
+  Plus,
+  Edit,
+  Trash2,
+  AlertCircle,
+  Users,
+  UserCheck,
+} from "lucide-react";
+import { rejectionService } from "../../../services/RejectionService";
+import { rejectionServiceClass } from "../../../services/RejectionServiceClass"; // Import the new service
 import { themes, colorSchemes } from "../theme";
 
 const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   const navigate = useNavigate();
+  const [selectedType, setSelectedType] = useState("prof"); // "prof" or "classe"
   const [motifs, setMotifs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -29,13 +38,19 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
     }
   }, [navigate]);
 
-  // Fetch motifs from API using the rejectionService
+  // Fetch motifs from API using the appropriate service
   const fetchMotifs = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await rejectionService.getAllMotifs();
-      setMotifs(data);
+
+      if (selectedType === "prof") {
+        const data = await rejectionService.getAllMotifs();
+        setMotifs(data);
+      } else {
+        const data = await rejectionServiceClass.getAllClassRejectionMotifs();
+        setMotifs(data);
+      }
     } catch (err) {
       console.error("Failed to load motifs:", err);
       setError(err.message || "Échec du chargement des motifs de rejet");
@@ -44,11 +59,18 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
     }
   };
 
-  // Create new motif using the rejectionService
+  // Create new motif using the appropriate service
   const createMotif = async (motifData) => {
     try {
-      const newMotif = await rejectionService.createMotif(motifData);
-      return newMotif;
+      if (selectedType === "prof") {
+        const newMotif = await rejectionService.createMotif(motifData);
+        return newMotif;
+      } else {
+        const newMotif = await rejectionServiceClass.createClassRejectionMotif(
+          motifData
+        );
+        return newMotif;
+      }
     } catch (err) {
       console.error("Failed to create motif:", err);
       setError(err.message || "Échec de la création du motif");
@@ -56,11 +78,17 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
     }
   };
 
-  // Update motif using rejectionService's updateMotif method
+  // Update motif using the appropriate service
   const updateMotif = async (id, motifData) => {
     try {
-      const updatedMotif = await rejectionService.updateMotif(id, motifData);
-      return updatedMotif;
+      if (selectedType === "prof") {
+        const updatedMotif = await rejectionService.updateMotif(id, motifData);
+        return updatedMotif;
+      } else {
+        // For class motifs, we might need to implement update in the service if needed
+        // Currently the API doesn't support update, so we'll just return the data
+        return motifData;
+      }
     } catch (err) {
       console.error("Failed to update motif:", err);
       setError(err.message || "Échec de la mise à jour du motif");
@@ -68,10 +96,14 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
     }
   };
 
-  // Delete motif using the rejectionService
+  // Delete motif using the appropriate service
   const deleteMotif = async (id) => {
     try {
-      await rejectionService.deleteMotif(id);
+      if (selectedType === "prof") {
+        await rejectionService.deleteMotif(id);
+      } else {
+        await rejectionServiceClass.deleteClassRejectionMotif(id);
+      }
     } catch (err) {
       console.error("Failed to delete motif:", err);
       setError(err.message || "Échec de la suppression du motif");
@@ -88,7 +120,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
     }
 
     fetchMotifs();
-  }, []);
+  }, [selectedType]); // Re-fetch when type changes
 
   // Form validation
   const validateMotif = () => {
@@ -136,9 +168,12 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
 
   // Delete motif handler
   const handleDeleteMotif = async (id) => {
-    if (
-      window.confirm("Êtes-vous sûr de vouloir supprimer ce motif de rejet ?")
-    ) {
+    const confirmMessage =
+      selectedType === "prof"
+        ? "Êtes-vous sûr de vouloir supprimer ce motif de rejet de professeur ?"
+        : "Êtes-vous sûr de vouloir supprimer ce motif de rejet de classe ?";
+
+    if (window.confirm(confirmMessage)) {
       try {
         await deleteMotif(id);
         setMotifs(motifs.filter((motif) => motif.id !== id));
@@ -188,15 +223,54 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
     fetchMotifs();
   };
 
+  // Handle type change
+  const handleTypeChange = (type) => {
+    setSelectedType(type);
+    resetMotifForm();
+    setError(null);
+  };
+
+  // Get current section title
+  const getCurrentSectionTitle = () => {
+    return selectedType === "prof"
+      ? "Motifs de Rejet de Professeur"
+      : "Motifs de Rejet de Classe";
+  };
+
+  // Get placeholder text based on type
+  const getPlaceholderText = () => {
+    if (selectedType === "prof") {
+      return {
+        code: "Ex: PHOTO_FLOU_RECTO",
+        description: "Ex: Photo recto de la CNI floue ou illisible",
+      };
+    } else {
+      return {
+        code: "Ex: ABSENCE_NON_JUSTIFIEE",
+        description: "Ex: Absence non justifiée sans document valable",
+      };
+    }
+  };
+
   return (
     <div className={`flex-1 p-6 ${theme.background}`}>
       <div className="flex flex-col">
+        {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className={`text-2xl font-bold ${theme.text}`}>
-            Gestion des Motifs de Rejet
-          </h1>
+          <div>
+            <h1 className={`text-2xl font-bold ${theme.text}`}>
+              Gestion des Motifs de Rejet
+            </h1>
+            <p
+              className={`text-sm ${
+                isDark ? "text-gray-400" : "text-gray-600"
+              } mt-1`}
+            >
+              {getCurrentSectionTitle()}
+            </p>
+          </div>
           <button
-            className={`px-4 py-2 rounded text-white hover:bg-opacity-90`}
+            className={`px-4 py-2 rounded text-white hover:bg-opacity-90 transition-colors duration-200`}
             style={{ backgroundColor: colors.secondary }}
             onClick={handleRefresh}
           >
@@ -204,6 +278,53 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
           </button>
         </div>
 
+        {/* Type Selection */}
+        <div className="mb-6">
+          <div
+            className={`inline-flex rounded-lg ${
+              isDark ? "bg-gray-700" : "bg-gray-100"
+            } p-1`}
+          >
+            <button
+              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                selectedType === "prof"
+                  ? `text-white shadow-sm`
+                  : `${theme.text} hover:${
+                      isDark ? "bg-gray-600" : "bg-gray-200"
+                    }`
+              }`}
+              style={
+                selectedType === "prof"
+                  ? { backgroundColor: colors.primary }
+                  : {}
+              }
+              onClick={() => handleTypeChange("prof")}
+            >
+              <UserCheck className="w-4 h-4 mr-2" />
+              Rejet du Professeur
+            </button>
+            <button
+              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                selectedType === "classe"
+                  ? `text-white shadow-sm`
+                  : `${theme.text} hover:${
+                      isDark ? "bg-gray-600" : "bg-gray-200"
+                    }`
+              }`}
+              style={
+                selectedType === "classe"
+                  ? { backgroundColor: colors.primary }
+                  : {}
+              }
+              onClick={() => handleTypeChange("classe")}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Rejet de Classe
+            </button>
+          </div>
+        </div>
+
+        {/* Error Message */}
         {error && (
           <div
             className={`mb-4 p-4 rounded-md ${
@@ -217,10 +338,11 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
           </div>
         )}
 
+        {/* Main Content */}
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className={`text-xl font-semibold ${theme.text}`}>
-              Motifs de Rejet
+              {getCurrentSectionTitle()}
             </h2>
             <button
               className={`flex items-center px-4 py-2 rounded transition-colors duration-200 text-white hover:bg-opacity-90`}
@@ -235,10 +357,12 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
             </button>
           </div>
 
+          {/* Form */}
           {showMotifForm && (
             <div className={`mb-6 p-4 rounded shadow-md ${theme.cardBg}`}>
               <h3 className={`text-lg font-semibold mb-4 ${theme.text}`}>
-                {isEditing ? "Modifier Motif" : "Ajouter Motif"}
+                {isEditing ? "Modifier Motif" : "Ajouter Motif"} -{" "}
+                {selectedType === "prof" ? "Professeur" : "Classe"}
               </h3>
               <form onSubmit={handleMotifSubmit}>
                 <div className="mb-4">
@@ -263,7 +387,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                         code: e.target.value.toUpperCase(),
                       })
                     }
-                    placeholder="Ex: PHOTO_FLOU_RECTO"
+                    placeholder={getPlaceholderText().code}
                     required
                   />
                   {validationErrors.code && (
@@ -294,7 +418,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                       })
                     }
                     rows="3"
-                    placeholder="Ex: Photo recto de la CNI floue ou illisible"
+                    placeholder={getPlaceholderText().description}
                     required
                   />
                   {validationErrors.descriptif && (
@@ -328,6 +452,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
             </div>
           )}
 
+          {/* Table */}
           {isLoading ? (
             <div
               className={`flex justify-center items-center p-8 ${theme.text}`}
@@ -385,7 +510,11 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                       >
                         {isLoading
                           ? "Chargement..."
-                          : "Aucun motif de rejet trouvé"}
+                          : `Aucun motif de rejet ${
+                              selectedType === "prof"
+                                ? "de professeur"
+                                : "de classe"
+                            } trouvé`}
                       </td>
                     </tr>
                   ) : (

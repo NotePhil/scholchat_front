@@ -8,6 +8,7 @@ import ProfessorsContent from "./ProfessorsContent";
 import ClassesContent from "./ClassesContent";
 import SettingsContent from "./SettingsContent";
 import ManageClass from "./ManageClass/ManageClass";
+import MessagingInterface from "./Messsages/MessagingInterface";
 import "./Principal.css";
 
 const themes = {
@@ -42,6 +43,9 @@ const Principal = () => {
   const [userRole, setUserRole] = useState("admin");
   const [userRoles, setUserRoles] = useState([]);
   const [showManageClass, setShowManageClass] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+
   useEffect(() => {
     // Get user role from localStorage
     const role = localStorage.getItem("userRole") || "admin";
@@ -78,9 +82,15 @@ const Principal = () => {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setShowManageClass(false);
-    // Don't change URL for tab changes, only for the initial dashboard routing
-    // If you want to include tab in the URL as well, you could add it here
+
+    // Handle messages tab specially
+    if (tab === "messages") {
+      setShowMessaging(true);
+    } else {
+      setShowMessaging(false);
+    }
   };
+
   const handleManageClass = () => {
     setShowManageClass(true);
   };
@@ -88,8 +98,20 @@ const Principal = () => {
   const handleBackToClasses = () => {
     setShowManageClass(false);
   };
+
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
+  };
+
+  // Add messaging handlers
+  const handleShowMessaging = (conversation = null) => {
+    setShowMessaging(true);
+    setSelectedConversation(conversation);
+  };
+
+  const handleCloseMessaging = () => {
+    setShowMessaging(false);
+    setSelectedConversation(null);
   };
 
   const renderContent = () => {
@@ -100,7 +122,9 @@ const Principal = () => {
       userRole,
       userRoles,
       onManageClass: handleManageClass,
+      onShowMessaging: handleShowMessaging,
     };
+
     if (showManageClass && activeTab === "classes") {
       return <ManageClass onBack={handleBackToClasses} />;
     }
@@ -118,6 +142,8 @@ const Principal = () => {
         return <UsersContent {...contentProps} label="Students" />;
       case "classes":
         return <ClassesContent {...contentProps} />;
+      case "messages":
+        return <MessagingInterface {...contentProps} />;
       case "settings":
         return (
           <SettingsContent
@@ -140,6 +166,9 @@ const Principal = () => {
     ) {
       return "Activities";
     }
+    if (activeTab === "messages") {
+      return "Messages";
+    }
     return activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
   };
 
@@ -159,30 +188,40 @@ const Principal = () => {
         colorSchemes={colorSchemes}
         userRole={userRole}
         userRoles={userRoles}
+        onShowMessaging={handleShowMessaging}
       />
 
-      <div className="main-content">
+      <div
+        className={`main-content ${
+          showMessaging && activeTab !== "messages" ? "with-messaging" : ""
+        }`}
+      >
         <div className="content-header">
           <h1>{getTabDisplayName()}</h1>
-          <div className="user-info">
-            <span className="username">
-              {localStorage.getItem("userName") || "User"}
-            </span>
-            <div
-              className="avatar"
-              style={{ backgroundColor: colorSchemes[currentTheme].primary }}
-            >
-              {(localStorage.getItem("userName") || "U")[0]}
-            </div>
-          </div>
         </div>
 
         <div
-          className={`content-body ${isDark ? "bg-gray-900 text-white" : ""}`}
+          className={`content-body ${
+            isDark ? "bg-gray-900 text-white" : "bg-gray-50"
+          }`}
         >
           {renderContent()}
         </div>
       </div>
+
+      {/* Messaging Interface - appears on the right (only when not on messages tab) */}
+      {showMessaging && activeTab !== "messages" && (
+        <div className="messaging-sidebar">
+          <MessagingInterface
+            onClose={handleCloseMessaging}
+            selectedConversation={selectedConversation}
+            isDark={isDark}
+            currentTheme={currentTheme}
+            colorSchemes={colorSchemes}
+            userRole={userRole}
+          />
+        </div>
+      )}
     </div>
   );
 };
