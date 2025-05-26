@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/common/Layout";
 import { Home } from "./pages/Home";
+import { useState } from "react";
 import { BlogSinglePage } from "./components/common/BlogSinglePage";
 import { About } from "./pages/About";
 import { Courses } from "./pages/Courses";
@@ -29,6 +30,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Principal from "./pages/Dashbaord/principale/Principal";
 import ManageClass from "./pages/Dashbaord/principale/ManageClass/ManageClass";
 function App() {
+  const [theme, setTheme] = useState("default");
   return (
     <>
       <BrowserRouter>
@@ -36,8 +38,8 @@ function App() {
           <Route
             path="/"
             element={
-              <Layout>
-                <Home />
+              <Layout theme={theme} setTheme={setTheme}>
+                <Home theme={theme} />
               </Layout>
             }
           />
@@ -45,64 +47,64 @@ function App() {
           <Route
             path="/schoolchat/activity"
             element={
-              <Layout>
-                <ActivityFeed />
+              <Layout theme={theme} setTheme={setTheme}>
+                <ActivityFeed theme={theme} />
               </Layout>
             }
           />
           <Route
             path="/schoolchat/postLogin/classModal"
             element={
-              <Layout>
-                <PostLoginClassModal />
+              <Layout theme={theme} setTheme={setTheme}>
+                <PostLoginClassModal theme={theme} />
               </Layout>
             }
           />
           <Route
             path="/schoolchat/about"
             element={
-              <Layout>
-                <About />
+              <Layout theme={theme} setTheme={setTheme}>
+                <About theme={theme} />
               </Layout>
             }
           />
           <Route
             path="/schoolchat/courses"
             element={
-              <Layout>
-                <Courses />
+              <Layout theme={theme} setTheme={setTheme}>
+                <Courses theme={theme} />
               </Layout>
             }
           />
           <Route
             path="/schoolchat/instructor"
             element={
-              <Layout>
-                <Instructor />
+              <Layout theme={theme} setTheme={setTheme}>
+                <Instructor theme={theme} />
               </Layout>
             }
           />
           <Route
             path="/schoolchat/blog"
             element={
-              <Layout>
-                <Blog />
+              <Layout theme={theme} setTheme={setTheme}>
+                <Blog theme={theme} />
               </Layout>
             }
           />
           <Route
             path="/schoolchat/single-blog"
             element={
-              <Layout>
-                <BlogSinglePage />
+              <Layout theme={theme} setTheme={setTheme}>
+                <BlogSinglePage theme={theme} />
               </Layout>
             }
           />
           <Route
             path="/schoolchat/functionalities"
             element={
-              <Layout>
-                <FunctionalitiesSection />
+              <Layout theme={theme} setTheme={setTheme}>
+                <FunctionalitiesSection theme={theme} />
               </Layout>
             }
           />
@@ -115,8 +117,8 @@ function App() {
           <Route
             path="/schoolchat/login"
             element={
-              <Layout>
-                <Login />
+              <Layout theme={theme} setTheme={setTheme}>
+                <Login theme={theme} />
               </Layout>
             }
           />
@@ -127,8 +129,8 @@ function App() {
           <Route
             path="/schoolchat/signup"
             element={
-              <Layout>
-                <SignUp />
+              <Layout theme={theme} setTheme={setTheme}>
+                <SignUp theme={theme} />
               </Layout>
             }
           />
@@ -155,8 +157,8 @@ function App() {
           <Route
             path="/schoolchat/manage-class"
             element={
-              <Layout>
-                <ManageClass />
+              <Layout theme={theme} setTheme={setTheme}>
+                <ManageClass theme={theme} />
               </Layout>
             }
           />

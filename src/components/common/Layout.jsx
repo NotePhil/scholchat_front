@@ -1,13 +1,13 @@
-import React from "react"
-import { Header } from "./Header"
-import { Footer } from "./Footer"
+import React from "react";
+import { Header } from "./Header";
+import { Footer } from "./Footer";
 
-export const Layout = ({ children }) => {
+export const Layout = ({ children, theme, setTheme }) => {
   return (
     <>
-      <Header />
+      <Header theme={theme} setTheme={setTheme} />
       <main>{children}</main>
-      <Footer />
+      <Footer theme={theme} />
     </>
-  )
-}
+  );
+};
