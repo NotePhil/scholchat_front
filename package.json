@@ -15,15 +15,12 @@
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "country-list": "^2.3.0",
-    "force": "^0.0.3",
     "i": "^0.3.7",
-    "jwt-decode": "^4.0.0",
-    "lucide-react": "^0.510.0",
+    "lucide-react": "^0.469.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^4.8.0",
-    "react-phone-number-input": "^3.4.12",
+    "react-phone-number-input": "^3.4.11",
     "react-router-dom": "^6.11.1",
     "react-scripts": "5.0.1",
     "recharts": "^2.15.0",
@@ -57,8 +54,6 @@
   },
   "devDependencies": {
     "@shadcn/ui": "^0.0.4",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.31",
     "tailwindcss": "^3.3.2"
   }
 }
