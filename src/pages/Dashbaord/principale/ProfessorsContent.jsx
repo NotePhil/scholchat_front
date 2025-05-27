@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { rejectionService } from "../../../services/RejectionService";
 import { rejectionServiceClass } from "../../../services/RejectionServiceClass"; // Import the new service
-import { themes, colorSchemes } from "../Theme";
+import { themes, colorSchemes } from "../theme";
 
 const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   const navigate = useNavigate();

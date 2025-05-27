@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Navigate, useNavigate, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
-import { themes, colorSchemes } from "./Theme";
+import { themes, colorSchemes } from "./theme";
 import DashboardCharts from "./components/DashboardCharts";
 import DashboardStats from "./components/DashboardStats";
 import ActivityFeed from "./components/StudentDashboard/ActivityFeed";
