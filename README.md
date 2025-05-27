@@ -1,1 +1,1 @@
-https://scholchat.onrender.com/
+https://scholchat-front-1.onrender.com
