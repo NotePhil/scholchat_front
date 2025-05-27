@@ -53,7 +53,7 @@ const AnimatedText = ({ texts, theme }) => {
 
   return (
     <h1
-      className={`text-4xl md:text-5xl lg:text-6xl font-bold min-h-[80px] md:min-h-[100px] lg:min-h-[120px] leading-tight bg-gradient-to-r ${getTextGradient()} bg-clip-text text-transparent drop-shadow-2xl transform hover:scale-105 transition-transform duration-700`}
+      className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold min-h-[60px] sm:min-h-[70px] md:min-h-[80px] lg:min-h-[100px] xl:min-h-[120px] leading-tight bg-gradient-to-r ${getTextGradient()} bg-clip-text text-transparent drop-shadow-2xl transform hover:scale-105 transition-transform duration-700`}
     >
       {displayText}
       <span className="animate-blink text-cyan-400">|</span>
@@ -229,7 +229,7 @@ export const HomeContent = ({ theme }) => {
           >
             {/* Magical Badge */}
             <div
-              className={`inline-flex items-center gap-3 backdrop-blur-xl border rounded-full px-8 py-3 mb-8 hover:scale-105 transition-all duration-500 shadow-2xl ${
+              className={`inline-flex items-center gap-2 sm:gap-3 backdrop-blur-xl border rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 mb-6 sm:mb-8 hover:scale-105 transition-all duration-500 shadow-2xl ${
                 theme === "dark"
                   ? `bg-gradient-to-r ${getBadgeGradient()} border-white/20 shadow-blue-500/25`
                   : theme === "light"
@@ -238,7 +238,7 @@ export const HomeContent = ({ theme }) => {
               }`}
             >
               <div
-                className={`w-3 h-3 rounded-full animate-pulse ${
+                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full animate-pulse ${
                   theme === "dark"
                     ? "bg-gradient-to-r from-cyan-400 to-purple-400"
                     : theme === "light"
@@ -247,7 +247,7 @@ export const HomeContent = ({ theme }) => {
                 }`}
               ></div>
               <span
-                className={`font-semibold text-lg ${
+                className={`font-semibold text-sm sm:text-base md:text-lg ${
                   theme === "dark"
                     ? "text-white"
                     : theme === "light"
@@ -258,7 +258,7 @@ export const HomeContent = ({ theme }) => {
                 🌟 Plateforme Éducative Révolutionnaire
               </span>
               <div
-                className={`w-3 h-3 rounded-full animate-pulse ${
+                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full animate-pulse ${
                   theme === "dark"
                     ? "bg-gradient-to-r from-purple-400 to-pink-400"
                     : theme === "light"
@@ -271,7 +271,7 @@ export const HomeContent = ({ theme }) => {
             <AnimatedText texts={texts} theme={theme} />
 
             <p
-              className={`text-xl md:text-2xl mt-8 leading-relaxed font-light max-w-4xl mx-auto ${
+              className={`text-base sm:text-lg md:text-xl lg:text-2xl mt-6 sm:mt-8 leading-relaxed font-light max-w-4xl mx-auto px-4 ${
                 theme === "dark"
                   ? "text-gray-200"
                   : theme === "light"
@@ -284,7 +284,7 @@ export const HomeContent = ({ theme }) => {
             </p>
 
             {/* Animated Stats */}
-            <div className="flex justify-center gap-8 md:gap-12 mt-12">
+            <div className="flex justify-center gap-4 sm:gap-6 md:gap-8 lg:gap-12 mt-8 sm:mt-12">
               {[
                 { number: "98%", label: "Réussite", icon: "🏆" },
                 { number: "10K+", label: "Familles", icon: "👨‍👩‍👧‍👦" },
@@ -295,11 +295,11 @@ export const HomeContent = ({ theme }) => {
                   className="text-center group cursor-pointer transform hover:scale-110 transition-all duration-300"
                   style={{ animationDelay: `${i * 0.2}s` }}
                 >
-                  <div className="text-3xl mb-2 group-hover:scale-125 transition-transform duration-300">
+                  <div className="text-xl sm:text-2xl md:text-3xl mb-1 sm:mb-2 group-hover:scale-125 transition-transform duration-300">
                     {stat.icon}
                   </div>
                   <div
-                    className={`text-2xl md:text-3xl font-bold bg-clip-text text-transparent group-hover:from-purple-400 group-hover:to-pink-400 transition-all duration-300 ${
+                    className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold bg-clip-text text-transparent group-hover:from-purple-400 group-hover:to-pink-400 transition-all duration-300 ${
                       theme === "dark"
                         ? "bg-gradient-to-r from-cyan-400 to-purple-400"
                         : theme === "light"
@@ -310,7 +310,7 @@ export const HomeContent = ({ theme }) => {
                     {stat.number}
                   </div>
                   <div
-                    className={`text-sm font-medium ${
+                    className={`text-xs sm:text-sm font-medium ${
                       theme === "dark"
                         ? "text-gray-300"
                         : theme === "light"
@@ -356,7 +356,7 @@ export const HomeContent = ({ theme }) => {
 
               {/* Main Container */}
               <div
-                className={`relative z-20 backdrop-blur-2xl border rounded-3xl shadow-2xl p-8 group-hover:scale-105 group-hover:-translate-y-4 transition-all duration-700 ${
+                className={`relative z-20 backdrop-blur-2xl border rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 group-hover:scale-105 group-hover:-translate-y-4 transition-all duration-700 ${
                   theme === "dark"
                     ? "bg-black/20 border-white/20 shadow-cyan-500/25"
                     : theme === "light"
@@ -438,7 +438,7 @@ export const HomeContent = ({ theme }) => {
 
               {/* Floating Achievement Badges */}
               <div
-                className={`absolute -bottom-8 -left-8 backdrop-blur-xl border rounded-2xl p-4 group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-500 shadow-xl ${
+                className={`absolute -bottom-6 sm:-bottom-8 -left-4 sm:-left-8 backdrop-blur-xl border rounded-2xl p-2 sm:p-3 md:p-4 group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-500 shadow-xl ${
                   theme === "dark"
                     ? "bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border-white/20 shadow-emerald-500/25"
                     : theme === "light"
@@ -446,9 +446,9 @@ export const HomeContent = ({ theme }) => {
                     : "bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border-white/20 shadow-emerald-500/25"
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg ${
+                    className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shadow-lg ${
                       theme === "dark"
                         ? "bg-gradient-to-br from-emerald-400 to-cyan-500"
                         : theme === "light"
@@ -456,11 +456,13 @@ export const HomeContent = ({ theme }) => {
                         : "bg-gradient-to-br from-emerald-400 to-cyan-500"
                     }`}
                   >
-                    <span className="text-white text-xl">🚀</span>
+                    <span className="text-white text-sm sm:text-base md:text-xl">
+                      🚀
+                    </span>
                   </div>
                   <div>
                     <div
-                      className={`font-bold text-lg bg-clip-text text-transparent ${
+                      className={`font-bold text-sm sm:text-base md:text-lg bg-clip-text text-transparent ${
                         theme === "dark"
                           ? "bg-gradient-to-r from-emerald-400 to-cyan-400"
                           : theme === "light"
@@ -471,7 +473,7 @@ export const HomeContent = ({ theme }) => {
                       Innovation
                     </div>
                     <div
-                      className={`text-sm font-medium ${
+                      className={`text-xs sm:text-sm font-medium ${
                         theme === "dark"
                           ? "text-gray-300"
                           : theme === "light"
@@ -486,7 +488,7 @@ export const HomeContent = ({ theme }) => {
               </div>
 
               <div
-                className={`absolute -top-8 -right-8 backdrop-blur-xl border rounded-2xl p-4 group-hover:scale-110 group-hover:translate-y-2 transition-all duration-500 shadow-xl ${
+                className={`absolute -top-6 sm:-top-8 -right-4 sm:-right-8 backdrop-blur-xl border rounded-2xl p-2 sm:p-3 md:p-4 group-hover:scale-110 group-hover:translate-y-2 transition-all duration-500 shadow-xl ${
                   theme === "dark"
                     ? "bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-white/20 shadow-purple-500/25"
                     : theme === "light"
@@ -494,9 +496,9 @@ export const HomeContent = ({ theme }) => {
                     : "bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-white/20 shadow-purple-500/25"
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg ${
+                    className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shadow-lg ${
                       theme === "dark"
                         ? "bg-gradient-to-br from-purple-400 to-pink-500"
                         : theme === "light"
@@ -504,11 +506,13 @@ export const HomeContent = ({ theme }) => {
                         : "bg-gradient-to-br from-purple-400 to-pink-500"
                     }`}
                   >
-                    <span className="text-white text-xl">⭐</span>
+                    <span className="text-white text-sm sm:text-base md:text-xl">
+                      ⭐
+                    </span>
                   </div>
                   <div>
                     <div
-                      className={`font-bold text-lg bg-clip-text text-transparent ${
+                      className={`font-bold text-sm sm:text-base md:text-lg bg-clip-text text-transparent ${
                         theme === "dark"
                           ? "bg-gradient-to-r from-purple-400 to-pink-400"
                           : theme === "light"
@@ -519,7 +523,7 @@ export const HomeContent = ({ theme }) => {
                       Excellence
                     </div>
                     <div
-                      className={`text-sm font-medium ${
+                      className={`text-xs sm:text-sm font-medium ${
                         theme === "dark"
                           ? "text-gray-300"
                           : theme === "light"
@@ -544,7 +548,7 @@ export const HomeContent = ({ theme }) => {
             }`}
           >
             <button
-              className={`group relative text-white px-10 py-4 rounded-2xl font-bold text-lg hover:scale-110 hover:-translate-y-2 transition-all duration-500 shadow-2xl overflow-hidden ${
+              className={`group relative text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-2xl font-bold text-sm sm:text-base md:text-lg hover:scale-110 hover:-translate-y-2 transition-all duration-500 shadow-2xl overflow-hidden ${
                 theme === "dark"
                   ? "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 hover:shadow-cyan-500/50"
                   : theme === "light"
@@ -561,7 +565,7 @@ export const HomeContent = ({ theme }) => {
                     : "bg-gradient-to-r from-purple-600 via-pink-600 to-red-600"
                 }`}
               ></div>
-              <span className="relative flex items-center gap-3">
+              <span className="relative flex items-center gap-2 sm:gap-3">
                 🌟 Découvrir la plateforme
                 <span className="group-hover:translate-x-2 group-hover:scale-125 transition-all duration-300">
                   →

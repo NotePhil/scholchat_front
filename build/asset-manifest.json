@@ -1,8 +1,8 @@
 {
   "files": {
-    "main.css": "/static/css/main.cbcbd3d4.css",
-    "main.js": "/static/js/main.4dab5269.js",
-    "static/js/787.8383e9b9.chunk.js": "/static/js/787.8383e9b9.chunk.js",
+    "main.css": "/static/css/main.df2298ec.css",
+    "main.js": "/static/js/main.60b01a36.js",
+    "static/js/453.a7cc5beb.chunk.js": "/static/js/453.a7cc5beb.chunk.js",
     "static/media/heronew.png": "/static/media/heronew.376fba44593c9433cd4d.png",
     "static/media/hero.png": "/static/media/hero.be354c47b1b95853c62c.png",
     "static/media/about-banner.jpg": "/static/media/about-banner.b067014bb3db3a660123.jpg",
@@ -15,12 +15,12 @@
     "static/media/logoscholchat.png": "/static/media/logoscholchat.3425d310c023c6088ae2.png",
     "static/media/hero-shape-purple.png": "/static/media/hero-shape-purple.77f84f1d8433499cf9e3.png",
     "index.html": "/index.html",
-    "main.cbcbd3d4.css.map": "/static/css/main.cbcbd3d4.css.map",
-    "main.4dab5269.js.map": "/static/js/main.4dab5269.js.map",
-    "787.8383e9b9.chunk.js.map": "/static/js/787.8383e9b9.chunk.js.map"
+    "main.df2298ec.css.map": "/static/css/main.df2298ec.css.map",
+    "main.60b01a36.js.map": "/static/js/main.60b01a36.js.map",
+    "453.a7cc5beb.chunk.js.map": "/static/js/453.a7cc5beb.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.cbcbd3d4.css",
-    "static/js/main.4dab5269.js"
+    "static/css/main.df2298ec.css",
+    "static/js/main.60b01a36.js"
   ]
 }
