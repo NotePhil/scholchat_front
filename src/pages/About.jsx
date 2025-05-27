@@ -229,7 +229,7 @@ export const About = ({ theme = "default" }) => {
 
             <div className="relative">
               <div
-                className={`inline-flex items-center gap-3 backdrop-blur-xl border rounded-full px-6 md:px-8 py-2 md:py-3 mb-6 md:mb-8 hover:scale-105 transition-all duration-500 shadow-lg ${
+                className={`inline-flex items-center gap-3 backdrop-blur-xl border rounded-full px-4 md:px-8 py-1 md:py-3 mb-4 md:mb-8 hover:scale-105 transition-all duration-500 shadow-lg ${
                   theme === "dark"
                     ? "bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 border-white/20 shadow-blue-500/25"
                     : theme === "light"
@@ -239,10 +239,10 @@ export const About = ({ theme = "default" }) => {
               >
                 <FaRocket
                   className={`text-cyan-400 animate-bounce`}
-                  size={18}
+                  size={16}
                 />
                 <span
-                  className={`text-sm md:text-base font-semibold ${
+                  className={`text-xs md:text-base font-semibold ${
                     theme === "dark"
                       ? "text-white"
                       : theme === "light"
@@ -254,12 +254,12 @@ export const About = ({ theme = "default" }) => {
                 </span>
                 <FaInfinity
                   className={`text-purple-400 animate-spin`}
-                  size={16}
+                  size={14}
                   style={{ animationDuration: "3s" }}
                 />
               </div>
 
-              <h1 className="text-5xl sm:text-6xl lg:text-8xl font-black mb-6 md:mb-8 leading-none">
+              <h1 className="text-3xl sm:text-4xl lg:text-8xl font-black mb-4 md:mb-8 leading-none">
                 <span
                   className={`block bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400 bg-clip-text text-transparent drop-shadow-2xl transform hover:scale-105 transition-transform duration-700 ${
                     theme === "light" ? "text-shadow-sm" : ""
@@ -283,9 +283,9 @@ export const About = ({ theme = "default" }) => {
                 </span>
               </h1>
 
-              <div className="max-w-4xl mx-auto mb-8 md:mb-12">
+              <div className="max-w-4xl mx-auto mb-6 md:mb-12">
                 <p
-                  className={`text-lg md:text-2xl leading-relaxed font-light ${
+                  className={`text-sm md:text-2xl leading-relaxed font-light ${
                     theme === "dark"
                       ? "text-gray-200"
                       : theme === "light"
@@ -322,7 +322,7 @@ export const About = ({ theme = "default" }) => {
               </div>
 
               {/* Animated Stats */}
-              <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-12 mb-8 md:mb-12">
+              <div className="flex flex-wrap justify-center gap-2 md:gap-6 lg:gap-12 mb-6 md:mb-12">
                 {[
                   { number: "10K+", label: "Étudiants", icon: "👨‍🎓" },
                   { number: "98%", label: "Réussite", icon: "🏆" },
@@ -331,13 +331,13 @@ export const About = ({ theme = "default" }) => {
                 ].map((stat, i) => (
                   <div
                     key={i}
-                    className="text-center group cursor-pointer px-2"
+                    className="text-center group cursor-pointer px-1"
                   >
-                    <div className="text-3xl md:text-4xl mb-1 md:mb-2 group-hover:scale-125 transition-transform duration-300">
+                    <div className="text-2xl md:text-4xl mb-1 md:mb-2 group-hover:scale-125 transition-transform duration-300">
                       {stat.icon}
                     </div>
                     <div
-                      className={`text-2xl md:text-3xl font-bold ${
+                      className={`text-xl md:text-3xl font-bold ${
                         theme === "dark"
                           ? "text-white"
                           : theme === "light"
@@ -477,10 +477,10 @@ export const About = ({ theme = "default" }) => {
                       ></div>
 
                       <div
-                        className={`relative ${getCardBg()} backdrop-blur-2xl border ${getCardBorder()} rounded-3xl p-6 text-center overflow-hidden`}
+                        className={`relative ${getCardBg()} backdrop-blur-2xl border ${getCardBorder()} rounded-3xl p-4 text-center overflow-hidden`}
                       >
                         <div
-                          className={`absolute top-4 right-4 text-6xl opacity-10 ${
+                          className={`absolute top-4 right-4 text-4xl opacity-10 ${
                             theme === "light"
                               ? "text-gray-900/10"
                               : "text-white/10"
@@ -495,13 +495,13 @@ export const About = ({ theme = "default" }) => {
 
                         <div className="relative z-10">
                           <div
-                            className={`inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br ${card.gradient} rounded-3xl mb-6 shadow-2xl`}
+                            className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br ${card.gradient} rounded-3xl mb-4 shadow-2xl`}
                           >
                             <div className="text-white">{card.icon}</div>
                           </div>
 
                           <h3
-                            className={`text-2xl font-bold mb-4 ${
+                            className={`text-xl font-bold mb-3 ${
                               theme === "dark"
                                 ? "text-white"
                                 : theme === "light"
@@ -513,7 +513,7 @@ export const About = ({ theme = "default" }) => {
                           </h3>
 
                           <p
-                            className={`text-lg mb-6 leading-relaxed ${
+                            className={`text-sm mb-4 leading-relaxed ${
                               theme === "dark"
                                 ? "text-gray-200"
                                 : theme === "light"
@@ -525,7 +525,7 @@ export const About = ({ theme = "default" }) => {
                           </p>
 
                           <div
-                            className={`inline-block px-5 py-2 bg-gradient-to-r ${card.gradient} rounded-full text-white font-bold text-lg shadow-2xl`}
+                            className={`inline-block px-4 py-2 bg-gradient-to-r ${card.gradient} rounded-full text-white font-bold text-sm shadow-2xl`}
                           >
                             {card.stats}
                           </div>
@@ -537,7 +537,7 @@ export const About = ({ theme = "default" }) => {
               </div>
 
               {/* Enhanced Dots */}
-              <div className="flex justify-center mt-6 gap-3">
+              <div className="flex justify-center mt-4 gap-2">
                 {cards.map((card, index) => (
                   <button
                     key={index}
@@ -549,7 +549,7 @@ export const About = ({ theme = "default" }) => {
                     onClick={() => goToCard(index)}
                   >
                     <div
-                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
                         currentIndex === index
                           ? `bg-gradient-to-r ${card.gradient} shadow-lg ${card.shadowColor}`
                           : theme === "dark"
@@ -620,7 +620,7 @@ export const AboutContent = ({ theme }) => {
 
   return (
     <section ref={contentRef} className="relative">
-      <div className="flex flex-col lg:flex-row gap-10 lg:gap-20 items-center">
+      <div className="flex flex-col lg:flex-row gap-8 lg:gap-20 items-center">
         {/* Left Side - Revolutionary Media */}
         <div
           className={`w-full lg:w-1/2 relative transition-all duration-1000 ${
@@ -641,7 +641,7 @@ export const AboutContent = ({ theme }) => {
 
             {/* Main Container */}
             <div
-              className={`relative ${getCardBg()} backdrop-blur-2xl border ${getCardBorder()} rounded-3xl p-6 md:p-8 group-hover:scale-105 transition-all duration-700 shadow-xl ${
+              className={`relative ${getCardBg()} backdrop-blur-2xl border ${getCardBorder()} rounded-3xl p-4 md:p-8 group-hover:scale-105 transition-all duration-700 shadow-xl ${
                 theme === "dark"
                   ? "shadow-purple-500/25"
                   : theme === "light"
@@ -683,7 +683,7 @@ export const AboutContent = ({ theme }) => {
 
                       {/* Animated Elements */}
                       <div
-                        className={`absolute top-4 left-4 w-12 h-12 rounded-full animate-ping ${
+                        className={`absolute top-4 left-4 w-8 h-8 rounded-full animate-ping ${
                           theme === "dark"
                             ? "bg-cyan-400/20"
                             : theme === "light"
@@ -692,7 +692,7 @@ export const AboutContent = ({ theme }) => {
                         }`}
                       ></div>
                       <div
-                        className={`absolute bottom-4 right-4 w-8 h-8 rounded-full animate-pulse ${
+                        className={`absolute bottom-4 right-4 w-6 h-6 rounded-full animate-pulse ${
                           theme === "dark"
                             ? "bg-purple-400/20"
                             : theme === "light"
@@ -701,7 +701,7 @@ export const AboutContent = ({ theme }) => {
                         }`}
                       ></div>
                       <div
-                        className={`absolute top-1/2 left-8 w-6 h-6 rounded-full animate-bounce ${
+                        className={`absolute top-1/2 left-8 w-4 h-4 rounded-full animate-bounce ${
                           theme === "dark"
                             ? "bg-pink-400/20"
                             : theme === "light"
@@ -719,10 +719,10 @@ export const AboutContent = ({ theme }) => {
                           : theme === "light"
                           ? "bg-black/10 backdrop-blur-xl border-2 border-gray-300/30"
                           : "bg-white/10 backdrop-blur-xl border-2 border-white/30"
-                      } rounded-full p-6 md:p-8 hover:scale-125 hover:rotate-6 transition-all duration-500 hover:bg-white/20 shadow-2xl hover:shadow-cyan-500/50`}
+                      } rounded-full p-4 md:p-8 hover:scale-125 hover:rotate-6 transition-all duration-500 hover:bg-white/20 shadow-2xl hover:shadow-cyan-500/50`}
                     >
                       <FaPlay
-                        className={`text-3xl md:text-4xl ml-1 group-hover/play:text-cyan-400 transition-colors duration-300 ${
+                        className={`text-xl md:text-4xl ml-1 group-hover/play:text-cyan-400 transition-colors duration-300 ${
                           theme === "dark"
                             ? "text-white"
                             : theme === "light"
@@ -744,7 +744,7 @@ export const AboutContent = ({ theme }) => {
                     {/* Play Button Pulse Effect */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div
-                        className={`w-24 h-24 border-2 rounded-full animate-ping ${
+                        className={`w-16 h-16 border-2 rounded-full animate-ping ${
                           theme === "dark"
                             ? "border-cyan-400/30"
                             : theme === "light"
@@ -753,7 +753,7 @@ export const AboutContent = ({ theme }) => {
                         }`}
                       ></div>
                       <div
-                        className={`absolute w-32 h-32 border rounded-full animate-pulse ${
+                        className={`absolute w-20 h-20 border rounded-full animate-pulse ${
                           theme === "dark"
                             ? "border-purple-400/20"
                             : theme === "light"
@@ -775,7 +775,7 @@ export const AboutContent = ({ theme }) => {
                   >
                     <div className="text-center">
                       <FaMagic
-                        className={`text-5xl md:text-6xl mb-4 animate-bounce mx-auto ${
+                        className={`text-4xl md:text-6xl mb-3 animate-bounce mx-auto ${
                           theme === "dark"
                             ? "text-cyan-400"
                             : theme === "light"
@@ -784,7 +784,7 @@ export const AboutContent = ({ theme }) => {
                         }`}
                       />
                       <span
-                        className={`text-xl md:text-2xl font-bold ${
+                        className={`text-lg md:text-2xl font-bold ${
                           theme === "dark"
                             ? "text-white"
                             : theme === "light"
@@ -802,7 +802,7 @@ export const AboutContent = ({ theme }) => {
 
             {/* Floating Stats Cards */}
             <div
-              className={`absolute -bottom-6 -right-6 md:-bottom-12 md:-right-12 backdrop-blur-xl border rounded-2xl p-4 md:p-6 group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-500 shadow-xl ${
+              className={`absolute -bottom-4 -right-4 md:-bottom-12 md:-right-12 backdrop-blur-xl border rounded-xl p-3 md:p-6 group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-500 shadow-xl ${
                 theme === "dark"
                   ? "bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border-white/20 shadow-emerald-500/25"
                   : theme === "light"
@@ -810,21 +810,21 @@ export const AboutContent = ({ theme }) => {
                   : "bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border-white/20 shadow-emerald-500/25"
               }`}
             >
-              <div className="flex items-center gap-3 md:gap-4">
+              <div className="flex items-center gap-2 md:gap-4">
                 <div
-                  className={`w-12 h-12 md:w-16 md:h-16 ${
+                  className={`w-10 h-10 md:w-16 md:h-16 ${
                     theme === "dark"
                       ? "bg-gradient-to-br from-emerald-400 to-cyan-500"
                       : theme === "light"
                       ? "bg-gradient-to-br from-emerald-500 to-cyan-600"
                       : "bg-gradient-to-br from-emerald-400 to-cyan-500"
-                  } rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg`}
+                  } rounded-lg md:rounded-2xl flex items-center justify-center shadow-lg`}
                 >
-                  <FaUserFriends className="text-white text-lg md:text-2xl" />
+                  <FaUserFriends className="text-white text-sm md:text-2xl" />
                 </div>
                 <div>
                   <div
-                    className={`text-xl md:text-3xl font-bold ${
+                    className={`text-lg md:text-3xl font-bold ${
                       theme === "dark"
                         ? "bg-gradient-to-r from-emerald-400 to-cyan-400"
                         : theme === "light"
@@ -850,7 +850,7 @@ export const AboutContent = ({ theme }) => {
             </div>
 
             <div
-              className={`absolute -top-6 -left-6 md:-top-8 md:-left-8 backdrop-blur-xl border rounded-2xl p-3 md:p-4 group-hover:scale-110 group-hover:translate-y-2 transition-all duration-500 shadow-xl ${
+              className={`absolute -top-4 -left-4 md:-top-8 md:-left-8 backdrop-blur-xl border rounded-lg p-2 md:p-4 group-hover:scale-110 group-hover:translate-y-2 transition-all duration-500 shadow-xl ${
                 theme === "dark"
                   ? "bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-white/20 shadow-purple-500/25"
                   : theme === "light"
@@ -858,19 +858,19 @@ export const AboutContent = ({ theme }) => {
                   : "bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-white/20 shadow-purple-500/25"
               }`}
             >
-              <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex items-center gap-1 md:gap-3">
                 <div className="flex text-yellow-400">
                   {[...Array(5)].map((_, i) => (
                     <FaStar
                       key={i}
-                      size={12}
+                      size={10}
                       className="animate-pulse"
                       style={{ animationDelay: `${i * 0.2}s` }}
                     />
                   ))}
                 </div>
                 <span
-                  className={`text-sm md:text-base font-bold ${
+                  className={`text-xs md:text-base font-bold ${
                     theme === "dark"
                       ? "text-white"
                       : theme === "light"
@@ -891,10 +891,10 @@ export const AboutContent = ({ theme }) => {
             isInView ? "translate-x-0 opacity-100" : "translate-x-20 opacity-0"
           }`}
         >
-          <div className="space-y-6 md:space-y-10">
+          <div className="space-y-4 md:space-y-10">
             <div>
               <div
-                className={`inline-flex items-center gap-2 md:gap-3 backdrop-blur-xl border rounded-full px-4 py-2 md:px-6 md:py-3 mb-6 md:mb-8 hover:scale-105 transition-all duration-500 shadow-lg ${
+                className={`inline-flex items-center gap-2 md:gap-3 backdrop-blur-xl border rounded-full px-3 py-1 md:px-6 md:py-3 mb-4 md:mb-8 hover:scale-105 transition-all duration-500 shadow-lg ${
                   theme === "dark"
                     ? "bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-blue-500/20 border-white/20 shadow-emerald-500/25"
                     : theme === "light"
@@ -912,7 +912,7 @@ export const AboutContent = ({ theme }) => {
                   }`}
                 ></div>
                 <span
-                  className={`text-sm md:text-base font-semibold ${
+                  className={`text-xs md:text-base font-semibold ${
                     theme === "dark"
                       ? "text-white"
                       : theme === "light"
@@ -924,11 +924,11 @@ export const AboutContent = ({ theme }) => {
                 </span>
                 <FaRocket
                   className={`text-cyan-400 animate-bounce`}
-                  size={14}
+                  size={12}
                 />
               </div>
 
-              <h2 className="text-4xl md:text-5xl lg:text-7xl font-black mb-6 md:mb-8 leading-tight">
+              <h2 className="text-2xl md:text-5xl lg:text-7xl font-black mb-4 md:mb-8 leading-tight">
                 <span
                   className={`block bg-gradient-to-r from-emerald-300 via-cyan-400 to-blue-400 bg-clip-text text-transparent drop-shadow-xl hover:scale-105 transition-transform duration-500 ${
                     theme === "light" ? "text-shadow-sm" : ""
@@ -946,7 +946,7 @@ export const AboutContent = ({ theme }) => {
               </h2>
 
               <p
-                className={`text-lg md:text-xl leading-relaxed mb-6 md:mb-10 font-light ${
+                className={`text-sm md:text-xl leading-relaxed mb-4 md:mb-10 font-light ${
                   theme === "dark"
                     ? "text-gray-200"
                     : theme === "light"
@@ -995,7 +995,7 @@ export const AboutContent = ({ theme }) => {
             </div>
 
             {/* Revolutionary Features */}
-            <div className="space-y-4 md:space-y-6">
+            <div className="space-y-3 md:space-y-6">
               {[
                 {
                   text: "🚀 Développez vos compétences avec l'IA et des experts mondiaux",
@@ -1012,15 +1012,15 @@ export const AboutContent = ({ theme }) => {
               ].map((feature, index) => (
                 <div
                   key={index}
-                  className="group flex items-center gap-4 md:gap-6 hover:scale-105 transition-all duration-500"
+                  className="group flex items-center gap-3 md:gap-6 hover:scale-105 transition-all duration-500"
                 >
                   <div
-                    className={`w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r ${feature.gradient} rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 shadow-lg`}
+                    className={`w-5 h-5 md:w-8 md:h-8 bg-gradient-to-r ${feature.gradient} rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 shadow-lg`}
                   >
                     <AiOutlineCheck className="text-white text-xs md:text-lg font-bold" />
                   </div>
                   <span
-                    className={`text-base md:text-xl group-hover:text-white group-hover:font-semibold transition-all duration-300 ${
+                    className={`text-sm md:text-xl group-hover:text-white group-hover:font-semibold transition-all duration-300 ${
                       theme === "dark"
                         ? "text-gray-200"
                         : theme === "light"
@@ -1035,9 +1035,9 @@ export const AboutContent = ({ theme }) => {
             </div>
 
             {/* Revolutionary CTA */}
-            <div className="pt-6 md:pt-8">
+            <div className="pt-4 md:pt-8">
               <button
-                className={`group relative text-white px-8 py-4 md:px-12 md:py-6 rounded-xl md:rounded-2xl font-bold text-base md:text-xl hover:scale-110 hover:-translate-y-2 transition-all duration-500 shadow-xl md:shadow-2xl overflow-hidden ${
+                className={`group relative text-white px-6 py-3 md:px-12 md:py-6 rounded-lg md:rounded-2xl font-bold text-sm md:text-xl hover:scale-110 hover:-translate-y-2 transition-all duration-500 shadow-lg md:shadow-2xl overflow-hidden ${
                   theme === "dark"
                     ? "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 hover:shadow-cyan-500/50"
                     : theme === "light"
@@ -1055,14 +1055,16 @@ export const AboutContent = ({ theme }) => {
                   }`}
                 ></div>
                 <span className="relative flex items-center gap-2 md:gap-4">
-                  <FaRocket className="text-lg md:text-2xl group-hover:rotate-12 transition-transform duration-300" />
-                  COMMENCER LA TRANSFORMATION
+                  <FaRocket className="text-sm md:text-2xl group-hover:rotate-12 transition-transform duration-300" />
+                  <span className="text-xs md:text-base">
+                    COMMENCER LA TRANSFORMATION
+                  </span>
                   <FaArrowRight className="group-hover:translate-x-2 group-hover:scale-125 transition-all duration-300" />
                 </span>
 
                 {/* Button Glow Effect */}
                 <div
-                  className={`absolute -inset-1 rounded-xl md:rounded-2xl blur-md md:blur-lg opacity-50 group-hover:opacity-75 transition-opacity duration-500 -z-10 ${
+                  className={`absolute -inset-1 rounded-lg md:rounded-2xl blur-md md:blur-lg opacity-50 group-hover:opacity-75 transition-opacity duration-500 -z-10 ${
                     theme === "dark"
                       ? "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500"
                       : theme === "light"
@@ -1074,7 +1076,7 @@ export const AboutContent = ({ theme }) => {
             </div>
 
             {/* Enhanced Trust Indicators */}
-            <div className="pt-8 md:pt-10 grid grid-cols-3 gap-3 md:gap-6">
+            <div className="pt-6 md:pt-10 grid grid-cols-3 gap-2 md:gap-6">
               {[
                 { icon: "🏆", label: "100% Garanti", desc: "Ou remboursé" },
                 {
@@ -1092,11 +1094,11 @@ export const AboutContent = ({ theme }) => {
                   key={i}
                   className="text-center group hover:scale-110 transition-transform duration-300"
                 >
-                  <div className="text-2xl md:text-4xl mb-1 md:mb-2 group-hover:scale-125 transition-transform duration-300">
+                  <div className="text-xl md:text-4xl mb-1 md:mb-2 group-hover:scale-125 transition-transform duration-300">
                     {item.icon}
                   </div>
                   <div
-                    className={`text-sm md:text-lg font-bold group-hover:text-cyan-400 transition-colors duration-300 ${
+                    className={`text-xs md:text-lg font-bold group-hover:text-cyan-400 transition-colors duration-300 ${
                       theme === "dark"
                         ? "text-white"
                         : theme === "light"
@@ -1107,7 +1109,7 @@ export const AboutContent = ({ theme }) => {
                     {item.label}
                   </div>
                   <div
-                    className={`text-xs md:text-sm ${
+                    className={`text-xs ${
                       theme === "dark"
                         ? "text-gray-400"
                         : theme === "light"

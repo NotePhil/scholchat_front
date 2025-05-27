@@ -292,11 +292,75 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
         .bounce {
           animation: iconBounce 2s infinite;
         }
+
+        /* Mobile-specific styles */
+        @media (max-width: 640px) {
+          .mobile-text-sm {
+            font-size: 0.875rem !important;
+            line-height: 1.25rem !important;
+          }
+          .mobile-text-md {
+            font-size: 1rem !important;
+            line-height: 1.5rem !important;
+          }
+          .mobile-text-lg {
+            font-size: 1.125rem !important;
+            line-height: 1.75rem !important;
+          }
+          .mobile-text-xl {
+            font-size: 1.25rem !important;
+            line-height: 1.75rem !important;
+          }
+          .mobile-text-2xl {
+            font-size: 1.5rem !important;
+            line-height: 2rem !important;
+          }
+          .mobile-text-3xl {
+            font-size: 1.75rem !important;
+            line-height: 2.25rem !important;
+          }
+          .mobile-px-sm {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+          }
+          .mobile-py-sm {
+            padding-top: 0.75rem !important;
+            padding-bottom: 0.75rem !important;
+          }
+          .mobile-p-sm {
+            padding: 0.75rem !important;
+          }
+          .mobile-mb-sm {
+            margin-bottom: 0.75rem !important;
+          }
+          .mobile-gap-sm {
+            gap: 0.75rem !important;
+          }
+          .mobile-w-sm {
+            width: 2.5rem !important;
+            height: 2.5rem !important;
+          }
+          .mobile-icon-sm {
+            width: 1.25rem !important;
+            height: 1.25rem !important;
+          }
+          .mobile-badge-text {
+            font-size: 0.75rem !important;
+          }
+          .mobile-badge-px {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+          }
+          .mobile-badge-py {
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+          }
+        }
       `}</style>
 
       <section
         ref={sectionRef}
-        className="relative min-h-screen overflow-hidden py-20"
+        className="relative min-h-screen overflow-hidden py-12 sm:py-20"
         style={{
           background: themeStyles.background,
         }}
@@ -364,7 +428,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
         <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8">
           {/* Enhanced Header */}
           <div
-            className={`text-center mb-12 sm:mb-16 transform transition-all duration-1000 ${
+            className={`text-center mb-8 sm:mb-16 transform transition-all duration-1000 ${
               isVisible
                 ? "translate-y-0 opacity-100"
                 : "translate-y-10 opacity-0"
@@ -372,7 +436,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
           >
             {/* Magical Badge */}
             <div
-              className={`inline-flex items-center gap-3 backdrop-blur-xl border rounded-full px-6 py-2 sm:px-8 sm:py-3 mb-6 sm:mb-8 hover:scale-105 transition-all duration-500 shadow-2xl ${
+              className={`inline-flex items-center gap-2 sm:gap-3 backdrop-blur-xl border rounded-full mobile-badge-px mobile-badge-py sm:px-8 sm:py-3 mb-4 sm:mb-8 hover:scale-105 transition-all duration-500 shadow-2xl ${
                 theme === "dark"
                   ? "bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 border-white/20 shadow-blue-500/25"
                   : theme === "light"
@@ -390,7 +454,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                 }`}
               ></div>
               <span
-                className={`font-semibold text-sm sm:text-lg ${
+                className={`font-semibold mobile-badge-text sm:text-lg ${
                   theme === "dark"
                     ? "text-white"
                     : theme === "light"
@@ -398,7 +462,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                     : "text-white"
                 }`}
               >
-                🚀 Fonctionnalités Avancées
+                🚀 Fonctionnalités
               </span>
               <div
                 className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full animate-pulse ${
@@ -412,7 +476,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
             </div>
 
             <div
-              className={`relative inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-3xl mb-6 sm:mb-8 shadow-2xl glow-effect sparkle-effect ${
+              className={`relative inline-flex items-center justify-center mobile-w-sm sm:w-20 sm:h-20 rounded-3xl mb-4 sm:mb-8 shadow-2xl glow-effect sparkle-effect ${
                 theme === "dark"
                   ? "bg-gradient-to-br from-cyan-500 to-purple-600"
                   : theme === "light"
@@ -420,11 +484,11 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                   : "bg-gradient-to-br from-cyan-500 to-purple-600"
               }`}
             >
-              <Target className="w-8 h-8 sm:w-10 sm:h-10 text-white magic-icon" />
+              <Target className="mobile-icon-sm sm:w-10 sm:h-10 text-white magic-icon" />
             </div>
 
             <h2
-              className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-clip-text text-transparent mb-4 sm:mb-6 shimmer-text drop-shadow-2xl ${
+              className={`mobile-text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-clip-text text-transparent mb-3 sm:mb-6 shimmer-text drop-shadow-2xl ${
                 theme === "dark"
                   ? "bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400"
                   : theme === "light"
@@ -436,7 +500,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
             </h2>
 
             <p
-              className={`text-lg sm:text-xl lg:text-2xl max-w-3xl mx-auto leading-relaxed mb-4 sm:mb-6 font-light ${
+              className={`mobile-text-md sm:text-xl lg:text-2xl max-w-3xl mx-auto leading-relaxed mb-3 sm:mb-6 font-light ${
                 theme === "dark"
                   ? "text-gray-200"
                   : theme === "light"
@@ -449,7 +513,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
             </p>
 
             <div
-              className={`w-24 sm:w-32 h-1 mx-auto rounded-full opacity-80 ${
+              className={`w-16 sm:w-32 h-1 mx-auto rounded-full opacity-80 ${
                 theme === "dark"
                   ? "bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400"
                   : theme === "light"
@@ -459,14 +523,14 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
             ></div>
           </div>
 
-          {/* FIXED: Responsive Grid Layout - Mobile: 1 column, Large Mobile/Tablet: 2 columns, Desktop: 3 columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+          {/* Responsive Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {functionalities.map((func, index) => {
               const IconComponent = func.icon;
               return (
                 <div
                   key={index}
-                  className={`magic-card group relative backdrop-blur-2xl rounded-2xl sm:rounded-3xl p-6 lg:p-8 transition-all duration-500 transform hover:-translate-y-3 hover:scale-105 ${
+                  className={`magic-card group relative backdrop-blur-2xl rounded-xl sm:rounded-3xl mobile-p-sm sm:p-6 lg:p-8 transition-all duration-500 transform hover:-translate-y-3 hover:scale-105 ${
                     func.glowColor
                   } shadow-lg hover:shadow-xl ${
                     isVisible ? "fade-in-up" : ""
@@ -482,7 +546,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                 >
                   {/* Magical background overlay */}
                   <div
-                    className={`absolute inset-0 rounded-2xl sm:rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
+                    className={`absolute inset-0 rounded-xl sm:rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
                       theme === "dark"
                         ? "bg-gradient-to-br from-white/10 to-white/5"
                         : theme === "light"
@@ -517,21 +581,21 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
 
                   {/* Glowing border effect */}
                   <div
-                    className={`absolute -inset-1 bg-gradient-to-r ${func.color} rounded-2xl sm:rounded-3xl blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-500 -z-10`}
+                    className={`absolute -inset-1 bg-gradient-to-r ${func.color} rounded-xl sm:rounded-3xl blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-500 -z-10`}
                   ></div>
 
                   <div className="relative z-10">
                     <div
-                      className={`relative inline-flex items-center justify-center w-16 h-16 lg:w-20 lg:h-20 rounded-2xl sm:rounded-3xl mb-6 shadow-xl sparkle-effect bg-gradient-to-br ${func.color}`}
+                      className={`relative inline-flex items-center justify-center mobile-w-sm sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl sm:rounded-3xl mobile-mb-sm sm:mb-6 shadow-xl sparkle-effect bg-gradient-to-br ${func.color}`}
                     >
                       <IconComponent
-                        className="w-8 h-8 lg:w-10 lg:h-10 text-white magic-icon bounce"
+                        className="mobile-icon-sm sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white magic-icon bounce"
                         style={{ animationDelay: `${index * 0.3}s` }}
                       />
                     </div>
 
                     <h3
-                      className={`text-xl lg:text-2xl font-bold mb-3 lg:mb-4 group-hover:${
+                      className={`mobile-text-lg sm:text-xl lg:text-2xl font-bold mobile-mb-sm sm:mb-3 lg:mb-4 group-hover:${
                         theme === "dark"
                           ? "text-gray-100"
                           : theme === "light"
@@ -545,7 +609,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                     </h3>
 
                     <p
-                      className={`text-base leading-relaxed mb-4 lg:mb-6 group-hover:${
+                      className={`mobile-text-sm sm:text-base leading-relaxed mobile-mb-sm sm:mb-4 lg:mb-6 group-hover:${
                         theme === "dark"
                           ? "text-gray-200"
                           : theme === "light"
@@ -563,7 +627,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                     </p>
 
                     <div
-                      className={`flex items-center font-medium text-sm lg:text-base transition-all duration-300 ${
+                      className={`flex items-center font-medium mobile-text-sm sm:text-sm lg:text-base transition-all duration-300 ${
                         theme === "dark"
                           ? "text-cyan-400 group-hover:text-cyan-300"
                           : theme === "light"
@@ -573,7 +637,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                     >
                       <span>En savoir plus</span>
                       <ChevronRight
-                        className={`w-4 h-4 lg:w-5 lg:h-5 ml-2 group-hover:translate-x-2 transition-transform duration-300 ${
+                        className={`mobile-icon-sm sm:w-4 sm:h-4 lg:w-5 lg:h-5 ml-2 group-hover:translate-x-2 transition-transform duration-300 ${
                           theme === "dark"
                             ? "text-cyan-400"
                             : theme === "light"
@@ -586,7 +650,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
 
                   {/* Gradient overlay on hover */}
                   <div
-                    className={`absolute inset-0 bg-gradient-to-br ${func.color} rounded-2xl sm:rounded-3xl opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
+                    className={`absolute inset-0 bg-gradient-to-br ${func.color} rounded-xl sm:rounded-3xl opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
                   ></div>
                 </div>
               );

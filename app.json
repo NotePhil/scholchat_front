@@ -1,3 +1,30 @@
 {
-  "expo": {}
+  "expo": {
+    "name": "Scholchat",
+    "slug": "scholchat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logoscholchat.png",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "favicon": "./assets/logo.png"
+    }
+  }
 }

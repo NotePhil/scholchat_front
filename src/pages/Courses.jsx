@@ -333,7 +333,7 @@ export const Courses = ({ theme = "default" }) => {
         ></div>
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 md:px-6 lg:px-8">
+      <div className="relative z-10 container mx-auto px-4 sm:px-5 md:px-6 lg:px-8">
         {/* Enhanced Header Section */}
         <div
           className={`text-center mb-20 transform transition-all duration-1000 ${
@@ -543,7 +543,7 @@ export const Courses = ({ theme = "default" }) => {
                 </div>
 
                 {/* Content Section */}
-                <div className="relative p-6">
+                <div className="relative p-4 sm:p-5 md:p-6">
                   {/* Course Stats */}
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-4">
@@ -775,21 +775,21 @@ export const Courses = ({ theme = "default" }) => {
 
         {/* Call-to-Action Section */}
         <div
-          className={`text-center mt-16 transform transition-all duration-1000 delay-500 ${
+          className={`text-center mt-12 md:mt-16 transform transition-all duration-1000 delay-500 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
           <div
-            className={`${themeStyles.ctaBg} backdrop-blur-2xl border ${themeStyles.ctaBorder} rounded-3xl p-8 max-w-4xl mx-auto shadow-2xl`}
+            className={`${themeStyles.ctaBg} backdrop-blur-xl md:backdrop-blur-2xl border ${themeStyles.ctaBorder} rounded-2xl md:rounded-3xl p-4 md:p-8 max-w-4xl mx-auto shadow-xl md:shadow-2xl`}
           >
             <h3
-              className={`text-3xl font-bold bg-gradient-to-r ${
+              className={`text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r ${
                 theme === "dark"
                   ? "from-cyan-400 via-purple-400 to-pink-400"
                   : theme === "light"
                   ? "from-blue-500 via-purple-500 to-pink-500"
                   : "from-cyan-400 via-purple-400 to-pink-400"
-              } bg-clip-text text-transparent mb-4`}
+              } bg-clip-text text-transparent mb-3 md:mb-4`}
             >
               Prêt à transformer votre communication scolaire ?
             </h3>
@@ -800,13 +800,13 @@ export const Courses = ({ theme = "default" }) => {
                   : theme === "light"
                   ? "text-gray-600"
                   : "text-gray-300"
-              } text-lg mb-8`}
+              } text-sm md:text-lg mb-4 md:mb-6`}
             >
               Rejoignez plus de 1500 familles qui ont révolutionné leur suivi
               scolaire avec SchoolChat
             </p>
 
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-2 md:gap-4">
               <button
                 className={`group relative bg-gradient-to-r ${
                   theme === "dark"
@@ -814,7 +814,7 @@ export const Courses = ({ theme = "default" }) => {
                     : theme === "light"
                     ? "from-cyan-600 via-purple-600 to-pink-600 hover:shadow-cyan-400/50"
                     : "from-cyan-500 via-purple-500 to-pink-500 hover:shadow-cyan-500/50"
-                } text-white px-8 py-4 rounded-2xl font-bold text-lg hover:scale-105 hover:-translate-y-1 transition-all duration-500 shadow-2xl overflow-hidden`}
+                } text-white px-4 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:scale-105 hover:-translate-y-1 transition-all duration-500 shadow-md md:shadow-lg overflow-hidden`}
               >
                 <div
                   className={`absolute inset-0 bg-gradient-to-r ${
@@ -825,7 +825,7 @@ export const Courses = ({ theme = "default" }) => {
                       : "from-purple-600 via-pink-600 to-red-600"
                   } translate-y-full group-hover:translate-y-0 transition-transform duration-500`}
                 ></div>
-                <span className="relative flex items-center gap-3">
+                <span className="relative flex items-center justify-center gap-1 md:gap-2">
                   🚀 Commencer gratuitement
                 </span>
               </button>
@@ -837,7 +837,7 @@ export const Courses = ({ theme = "default" }) => {
                     : theme === "light"
                     ? "bg-black/10 border-gray-200 hover:bg-black/20"
                     : "bg-white/10 border-white/20 hover:bg-white/20"
-                } backdrop-blur-sm border px-8 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition-all duration-300 ${
+                } backdrop-blur-sm border px-4 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:scale-105 transition-all duration-300 ${
                   theme === "dark"
                     ? "text-white"
                     : theme === "light"
