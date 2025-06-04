@@ -18,11 +18,11 @@ const SignUp = () => {
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [token, setToken] = useState("");
 
-  // Image preview states
+  // Prévisualisation des images
   const [imagePreviews, setImagePreviews] = useState({
-    cniUrlRecto: null,
-    cniUrlVerso: null,
-    selfieUrl: null,
+    cniRecto: null,
+    cniVerso: null,
+    selfie: null,
   });
 
   const [formData, setFormData] = useState({
@@ -34,14 +34,13 @@ const SignUp = () => {
     adresse: "",
     etat: "INACTIVE",
     niveau: "",
-    cniUrlRecto: "",
-    cniUrlVerso: "",
-    selfieUrl: "",
-    nomEtablissement: "",
+    cniRecto: "",
+    cniVerso: "",
+    selfie: "",
     matriculeProfesseur: "",
   });
 
-  // Parse URL parameters to detect update mode
+  // Vérifier les paramètres URL pour le mode mise à jour
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const emailParam = urlParams.get("email");
@@ -51,23 +50,20 @@ const SignUp = () => {
       setIsUpdateMode(true);
       setToken(tokenParam);
 
-      // Fetch existing user data for update mode
       const fetchUserData = async () => {
         try {
           setIsSubmitting(true);
-          // Use axios baseURL or provide the full URL here if needed
-          const response = await axios.get(`/auth/users/byEmail`, {
-            params: { email: emailParam, token: tokenParam },
-            baseURL: "http://localhost:8486/scholchat",
-          });
+          const response = await axios.get(
+            `http://localhost:8486/scholchat/auth/users/byEmail`,
+            {
+              params: { email: emailParam, token: tokenParam },
+            }
+          );
 
           if (response.data) {
             const userData = response.data;
-
-            // Map all fields from the API response to the form
-            setFormData((prev) => ({
-              ...prev,
-              id: userData.id || "", // Make sure ID is included for update
+            setFormData({
+              id: userData.id || "",
               type: userData.type || "",
               nom: userData.nom || "",
               prenom: userData.prenom || "",
@@ -76,15 +72,12 @@ const SignUp = () => {
               adresse: userData.adresse || "",
               etat: userData.etat || "INACTIVE",
               niveau: userData.niveau || "",
-              cniUrlRecto: userData.cniUrlRecto || "",
-              cniUrlVerso: userData.cniUrlVerso || "",
-              selfieUrl: userData.selfieUrl || "",
-              nomEtablissement: userData.nomEtablissement || "",
-              nomClasse: userData.nomClasse || "",
+              cniRecto: userData.cniUrlRecto || "",
+              cniVerso: userData.cniUrlVerso || "",
+              selfie: userData.selfieUrl || "",
               matriculeProfesseur: userData.matriculeProfesseur || "",
-            }));
+            });
 
-            // Set country based on phone number
             if (userData.telephone) {
               if (userData.telephone.startsWith("+237")) {
                 setSelectedCountry("CM");
@@ -93,22 +86,11 @@ const SignUp = () => {
               }
             }
 
-            // Set image previews if images exist
-            if (userData.cniUrlRecto)
-              setImagePreviews((prev) => ({
-                ...prev,
-                cniUrlRecto: userData.cniUrlRecto,
-              }));
-            if (userData.cniUrlVerso)
-              setImagePreviews((prev) => ({
-                ...prev,
-                cniUrlVerso: userData.cniUrlVerso,
-              }));
-            if (userData.selfieUrl)
-              setImagePreviews((prev) => ({
-                ...prev,
-                selfieUrl: userData.selfieUrl,
-              }));
+            setImagePreviews({
+              cniRecto: userData.cniUrlRecto || null,
+              cniVerso: userData.cniUrlVerso || null,
+              selfie: userData.selfieUrl || null,
+            });
 
             showAlert(
               "Veuillez vérifier et mettre à jour vos informations",
@@ -116,7 +98,7 @@ const SignUp = () => {
             );
           }
         } catch (err) {
-          console.error("Error fetching user data:", err);
+          console.error("Erreur lors du chargement des données:", err);
           showAlert(
             err.response?.data?.message ||
               "Erreur lors du chargement de vos informations",
@@ -129,48 +111,28 @@ const SignUp = () => {
 
       fetchUserData();
     } else {
-      // Check for stored form data (normal signup flow)
-      const pageAccessedByReload =
-        (window.performance.navigation &&
-          window.performance.navigation.type === 1) ||
-        window.performance
-          .getEntriesByType("navigation")
-          .map((nav) => nav.type)
-          .includes("reload");
+      const storedData = localStorage.getItem("signupFormData");
+      const storedPreviews = localStorage.getItem("imagePreviews");
 
-      if (pageAccessedByReload) {
-        localStorage.removeItem("signupFormData");
-        localStorage.removeItem("signupEmail");
-        localStorage.removeItem("userEmail");
-        localStorage.removeItem("imagePreviews");
-      } else {
-        const storedData = localStorage.getItem("signupFormData");
-        const storedEmail = localStorage.getItem("signupEmail");
-        const storedPreviews = localStorage.getItem("imagePreviews");
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        setFormData(parsedData);
 
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          setFormData(parsedData);
-
-          if (parsedData.telephone && parsedData.telephone.startsWith("+")) {
-            if (parsedData.telephone.startsWith("+237")) {
-              setSelectedCountry("CM");
-            } else if (parsedData.telephone.startsWith("+33")) {
-              setSelectedCountry("FR");
-            }
+        if (parsedData.telephone && parsedData.telephone.startsWith("+")) {
+          if (parsedData.telephone.startsWith("+237")) {
+            setSelectedCountry("CM");
+          } else if (parsedData.telephone.startsWith("+33")) {
+            setSelectedCountry("FR");
           }
-        } else if (storedEmail) {
-          setFormData((prev) => ({ ...prev, email: storedEmail }));
         }
+      }
 
-        if (storedPreviews) {
-          setImagePreviews(JSON.parse(storedPreviews));
-        }
+      if (storedPreviews) {
+        setImagePreviews(JSON.parse(storedPreviews));
       }
     }
   }, [location.search]);
 
-  // Save form data and image previews to localStorage for non-update mode
   useEffect(() => {
     if (!isUpdateMode) {
       localStorage.setItem("signupFormData", JSON.stringify(formData));
@@ -187,31 +149,7 @@ const SignUp = () => {
     }, 5000);
   };
 
-  // const validateFileSize = async (file) => {
-  //   const maxSize = 300 * 1024;
-  //   if (file.size > maxSize) {
-  //     let quality = 0.5;
-  //     let compressedDataUrl = await compressImage(file, quality);
-  //     let compressedSize = atob(compressedDataUrl.split(",")[1]).length;
-
-  //     while (compressedSize > maxSize && quality > 0.1) {
-  //       quality -= 0.1;
-  //       compressedDataUrl = await compressImage(file, quality);
-  //       compressedSize = atob(compressedDataUrl.split(",")[1]).length;
-  //     }
-
-  //     if (compressedSize > maxSize) {
-  //       showAlert(
-  //         "L'image est trop volumineuse. Veuillez utiliser une image plus petite."
-  //       );
-  //       return null;
-  //     }
-  //     return compressedDataUrl;
-  //   }
-  //   return await compressImage(file, 0.5);
-  // };
-
-  const compressImage = async (file, quality) => {
+  const compressImage = async (file, quality = 0.7) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -220,34 +158,28 @@ const SignUp = () => {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement("canvas");
+          const maxWidth = 800;
+          const maxHeight = 800;
           let width = img.width;
           let height = img.height;
 
-          const maxWidth = 600;
-          const maxHeight = 400;
-
           if (width > height) {
             if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
+              height *= maxWidth / width;
               width = maxWidth;
             }
           } else {
             if (height > maxHeight) {
-              width = Math.round((width * maxHeight) / height);
+              width *= maxHeight / height;
               height = maxHeight;
             }
           }
 
           canvas.width = width;
           canvas.height = height;
-
           const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
-
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
-          resolve(compressedDataUrl);
+          resolve(canvas.toDataURL("image/jpeg", quality));
         };
       };
     });
@@ -312,19 +244,18 @@ const SignUp = () => {
     }
 
     if (formData.type === "professeur") {
-      // In update mode, we don't force the user to reupload images if they already exist
       if (!isUpdateMode) {
-        if (!formData.cniUrlRecto) {
-          showAlert("L'image recto de la CNI est requise");
-          newErrors.cniUrlRecto = true;
+        if (!formData.cniRecto) {
+          showAlert("La photo recto de la CNI est requise");
+          newErrors.cniRecto = true;
         }
-        if (!formData.cniUrlVerso) {
-          showAlert("L'image verso de la CNI est requise");
-          newErrors.cniUrlVerso = true;
+        if (!formData.cniVerso) {
+          showAlert("La photo verso de la CNI est requise");
+          newErrors.cniVerso = true;
         }
-        if (!formData.selfieUrl) {
+        if (!formData.selfie) {
           showAlert("Une photo de profil est requise");
-          newErrors.selfieUrl = true;
+          newErrors.selfie = true;
         }
       }
     } else if (formData.type === "eleve") {
@@ -365,7 +296,6 @@ const SignUp = () => {
     }
   };
 
-  // Fixed CountrySelect component to remove iconComponent warning
   const CountrySelect = ({ value, onChange, options, ...restProps }) => {
     const countryToFlag = (countryCode) => {
       return countryCode
@@ -412,131 +342,87 @@ const SignUp = () => {
     }
 
     try {
-      // Validate and possibly compress the file first
-      const compressedDataUrl = await validateFileSize(file);
-      if (!compressedDataUrl) {
-        e.target.value = "";
-        return;
-      }
+      const compressedDataUrl = await compressImage(file);
+      setImagePreviews((prev) => ({
+        ...prev,
+        [fieldName]: compressedDataUrl,
+      }));
 
-      // Field name mapping
-      const fieldMapping = {
-        cniUrlFront: "cniUrlRecto",
-        cniUrlBack: "cniUrlVerso",
-        selfiePhoto: "selfieUrl",
-      };
-      const backendFieldName = fieldMapping[fieldName] || fieldName;
+      setFormData((prev) => ({
+        ...prev,
+        [fieldName]: file,
+      }));
 
-      // Get the owner ID if user is registered (will be null/empty for anonymous)
-      const ownerId = formData.id || "";
+      setErrors((prev) => ({
+        ...prev,
+        [fieldName]: false,
+      }));
+    } catch (error) {
+      console.error("Erreur lors du traitement de l'image:", error);
+      showAlert("Erreur lors du traitement de l'image. Veuillez réessayer.");
+      e.target.value = "";
+    }
+  };
 
-      // 1. Get presigned URL from backend (works for both anonymous and registered users)
+  const handleRemoveImage = (fieldName) => {
+    setImagePreviews((prev) => ({
+      ...prev,
+      [fieldName]: null,
+    }));
+
+    setFormData((prev) => ({
+      ...prev,
+      [fieldName]: "",
+    }));
+  };
+
+  const uploadFileToS3 = async (file, userId, documentType) => {
+    try {
+      // Generate a unique filename
+      const fileName = `${userId}_${documentType}_${Date.now()}.${file.name
+        .split(".")
+        .pop()}`;
+
+      // Get presigned URL from backend
       const presignedResponse = await axios.post(
         "http://localhost:8486/scholchat/media/presigned-url",
         {
-          fileName: file.name,
+          fileName: fileName,
           contentType: file.type,
           mediaType: "IMAGE",
-          ownerId: ownerId, // This can be empty for anonymous users
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
+          ownerId: userId === "temp" ? null : userId,
+          documentType: documentType,
         }
       );
 
-      const { url, filePath, mediaId } = presignedResponse.data;
+      const { url } = presignedResponse.data;
 
-      // 2. Upload file directly to MinIO
+      // Convert data URL to Blob if needed
+      let fileToUpload = file;
+      if (typeof file === "string" && file.startsWith("data:")) {
+        const res = await fetch(file);
+        fileToUpload = await res.blob();
+      }
+
+      // Upload the file directly to S3 using the presigned URL
       const uploadResponse = await fetch(url, {
         method: "PUT",
-        body: file,
+        body: fileToUpload,
         headers: {
           "Content-Type": file.type,
         },
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Upload failed");
+        throw new Error(`Upload failed with status ${uploadResponse.status}`);
       }
 
-      // 3. Update form state with the file path
-      setFormData((prev) => ({
-        ...prev,
-        [backendFieldName]: filePath,
-        // Store mediaId if you need it for registered users
-        [`${backendFieldName}MediaId`]: mediaId,
-      }));
-
-      // 4. Create preview for UI display
-      setImagePreviews((prev) => ({
-        ...prev,
-        [backendFieldName]: compressedDataUrl,
-      }));
-
-      // Clear any errors for this field
-      setErrors((prev) => ({
-        ...prev,
-        [fieldName]: false,
-        [backendFieldName]: false,
-      }));
+      // Return the file name that was used for upload
+      return fileName;
     } catch (error) {
-      console.error("Upload error details:", error.response?.data);
-      console.error("Status code:", error.response?.status);
-      console.error("Full error:", error);
-      showAlert("Erreur lors du téléchargement. Veuillez réessayer.");
-      e.target.value = "";
+      console.error("Upload error:", error);
+      throw error;
     }
-  };
-
-  const handleRemoveImage = async (fieldName) => {
-    const fieldMapping = {
-      cniUrlFront: "cniUrlRecto",
-      cniUrlBack: "cniUrlVerso",
-      selfiePhoto: "selfieUrl",
-    };
-
-    const backendFieldName = fieldMapping[fieldName] || fieldName;
-    const filePath = formData[backendFieldName];
-    const mediaId = formData[`${backendFieldName}MediaId`];
-
-    try {
-      if (filePath) {
-        // If we have a mediaId, use that for deletion
-        if (mediaId) {
-          await axios.delete(
-            `http://localhost:8486/scholchat/media/${mediaId}`,
-            {
-              withCredentials: true,
-            }
-          );
-        } else {
-          // Otherwise use the filePath
-          await axios.delete(`http://localhost:8486/scholchat/media`, {
-            params: { filePath },
-            withCredentials: true,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Delete error:", error);
-      // Continue with UI updates even if delete fails
-    }
-
-    // Update form data to remove the image reference
-    setFormData((prev) => ({
-      ...prev,
-      [backendFieldName]: "",
-      [`${backendFieldName}MediaId`]: "",
-    }));
-
-    // Remove the preview
-    setImagePreviews((prev) => ({
-      ...prev,
-      [backendFieldName]: null,
-    }));
   };
 
   const handleSubmit = async () => {
@@ -546,40 +432,58 @@ const SignUp = () => {
       setIsSubmitting(true);
 
       let payloadData = {
+        type: formData.type,
         nom: formData.nom.trim(),
         prenom: formData.prenom.trim(),
         email: formData.email.trim(),
         telephone: formData.telephone,
         adresse: formData.adresse.trim(),
-        type: formData.type,
         etat: formData.etat || "INACTIVE",
       };
 
-      // Include id for update requests
       if (isUpdateMode && formData.id) {
         payloadData.id = formData.id;
       }
 
       if (formData.type === "professeur") {
-        // For existing images in update mode, keep the paths
         payloadData = {
           ...payloadData,
-          cniUrlRecto:
-            formData.cniUrlRecto && formData.cniUrlRecto !== "pending"
-              ? formData.cniUrlRecto
-              : null,
-          cniUrlVerso:
-            formData.cniUrlVerso && formData.cniUrlVerso !== "pending"
-              ? formData.cniUrlVerso
-              : null,
-          selfieUrl:
-            formData.selfieUrl && formData.selfieUrl !== "pending"
-              ? formData.selfieUrl
-              : null,
-          nomEtablissement: formData.nomEtablissement?.trim() || null,
           matriculeProfesseur: formData.matriculeProfesseur?.trim() || null,
-          nomClasse: formData.nomClasse?.trim() || null,
         };
+
+        // Upload files for professors
+        if (
+          formData.cniRecto instanceof File ||
+          typeof formData.cniRecto === "string"
+        ) {
+          payloadData.cniUrlRecto = await uploadFileToS3(
+            formData.cniRecto,
+            isUpdateMode ? formData.id : "temp",
+            "cni-recto"
+          );
+        }
+
+        if (
+          formData.cniVerso instanceof File ||
+          typeof formData.cniVerso === "string"
+        ) {
+          payloadData.cniUrlVerso = await uploadFileToS3(
+            formData.cniVerso,
+            isUpdateMode ? formData.id : "temp",
+            "cni-verso"
+          );
+        }
+
+        if (
+          formData.selfie instanceof File ||
+          typeof formData.selfie === "string"
+        ) {
+          payloadData.selfieUrl = await uploadFileToS3(
+            formData.selfie,
+            isUpdateMode ? formData.id : "temp",
+            "selfie"
+          );
+        }
       } else if (formData.type === "eleve") {
         payloadData = {
           ...payloadData,
@@ -587,16 +491,10 @@ const SignUp = () => {
         };
       }
 
-      console.log(
-        `Data being sent to backend (${isUpdateMode ? "UPDATE" : "CREATE"})`,
-        payloadData
-      );
-
       let response;
       let newUserId;
 
       if (isUpdateMode) {
-        // Update existing user
         response = await axios.post(
           "http://localhost:8486/scholchat/auth/users/update",
           payloadData,
@@ -605,64 +503,18 @@ const SignUp = () => {
               email: formData.email,
               token: token,
             },
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
           }
         );
         newUserId = formData.id;
       } else {
-        // Create new user
-        const apiUrl = "http://localhost:8486/scholchat/utilisateurs";
-        response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify(payloadData),
-        });
-
-        if (!response.ok) {
-          let responseData;
-          try {
-            responseData = await response.json();
-          } catch (e) {
-            responseData = await response.text();
-          }
-
-          if (
-            response.status === 400 &&
-            typeof responseData === "object" &&
-            responseData.code === "INVALID_INPUT"
-          ) {
-            if (responseData.message.includes("Email already registered")) {
-              throw new Error(
-                "Cette adresse email est déjà utilisée. Veuillez utiliser une autre adresse ou récupérer votre mot de passe."
-              );
-            }
-          }
-          throw new Error(
-            typeof responseData === "string"
-              ? responseData
-              : responseData.message ||
-                `Error ${response.status}: Registration failed`
-          );
-        }
-
-        const userData = await response.json();
-        newUserId = userData.id; // Get the new user ID from response
+        response = await axios.post(
+          "http://localhost:8486/scholchat/utilisateurs",
+          payloadData
+        );
+        newUserId = response.data.id;
       }
 
-      // For new users or if files need uploading in update mode
-      if (formData.type === "professeur" && !isUpdateMode) {
-        // If there are uploaded files for an anonymous user, update their ownership
-        await updateMediaOwnership(newUserId);
-      }
-
-      // Handle success
+      // Handle success immediately
       if (isUpdateMode) {
         showAlert(
           "Vos informations ont été mises à jour avec succès!",
@@ -674,7 +526,6 @@ const SignUp = () => {
       } else {
         localStorage.setItem("userEmail", formData.email);
         localStorage.removeItem("signupFormData");
-        localStorage.removeItem("signupEmail");
         localStorage.removeItem("imagePreviews");
 
         showAlert(
@@ -686,8 +537,64 @@ const SignUp = () => {
           `/schoolchat/verify-email?email=${encodeURIComponent(formData.email)}`
         );
       }
+
+      // Perform the PUT request in the background without waiting for it
+      if (!isUpdateMode && formData.type === "professeur") {
+        const updatePayload = {};
+
+        try {
+          if (
+            formData.cniRecto instanceof File ||
+            typeof formData.cniRecto === "string"
+          ) {
+            updatePayload.cniUrlRecto = await uploadFileToS3(
+              formData.cniRecto,
+              newUserId,
+              "cni-recto"
+            );
+          }
+
+          if (
+            formData.cniVerso instanceof File ||
+            typeof formData.cniVerso === "string"
+          ) {
+            updatePayload.cniUrlVerso = await uploadFileToS3(
+              formData.cniVerso,
+              newUserId,
+              "cni-verso"
+            );
+          }
+
+          if (
+            formData.selfie instanceof File ||
+            typeof formData.selfie === "string"
+          ) {
+            updatePayload.selfieUrl = await uploadFileToS3(
+              formData.selfie,
+              newUserId,
+              "selfie"
+            );
+          }
+
+          if (Object.keys(updatePayload).length > 0) {
+            // Don't await this request - let it happen in the background
+            axios
+              .put(
+                `http://localhost:8486/scholchat/utilisateurs/${newUserId}`,
+                updatePayload
+              )
+              .catch((error) => {
+                console.error("Background update failed:", error);
+                // You might want to log this error to your backend for monitoring
+              });
+          }
+        } catch (error) {
+          console.error("Error in background file updates:", error);
+          // This won't affect the user experience since we're not awaiting it
+        }
+      }
     } catch (err) {
-      console.error("Detailed error:", err);
+      console.error("Erreur détaillée:", err);
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
@@ -698,59 +605,6 @@ const SignUp = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // Helper function to update media ownership after user creation
-  const updateMediaOwnership = async (newUserId) => {
-    try {
-      // Check if we have media IDs to update
-      const mediaIds = [
-        formData.cniUrlRectoMediaId,
-        formData.cniUrlVersoMediaId,
-        formData.selfieUrlMediaId,
-      ].filter((id) => id);
-
-      if (mediaIds.length === 0) return;
-
-      // Call an endpoint to update media ownership
-      await axios.post(
-        "http://localhost:8486/scholchat/media/update-ownership",
-        {
-          mediaIds: mediaIds,
-          newOwnerId: newUserId,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
-    } catch (error) {
-      console.error("Failed to update media ownership:", error);
-      // Continue execution even if this fails
-    }
-  };
-
-  // Sample implementation of validateFileSize function if needed
-  const validateFileSize = async (file) => {
-    return new Promise((resolve, reject) => {
-      if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
-        showAlert("L'image est trop grande. La taille maximale est de 5MB.");
-        resolve(null);
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        resolve(event.target.result);
-      };
-      reader.onerror = (error) => {
-        reject(error);
-      };
-      reader.readAsDataURL(file);
-    });
   };
 
   const handleNextStep = () => {
@@ -779,7 +633,6 @@ const SignUp = () => {
       : "Terminer l'inscription";
   };
 
-  // Image Preview Component
   const ImagePreview = ({ src, alt, onRemove }) => {
     if (!src) return null;
 
@@ -827,7 +680,9 @@ const SignUp = () => {
           <form className="signup-form" onSubmit={(e) => e.preventDefault()}>
             <div className="form-three-columns">
               <div className="form-group">
-                <label>Prénom</label>
+                <label>
+                  Prénom <span className="required">*</span>
+                </label>
                 <input
                   type="text"
                   name="prenom"
@@ -835,11 +690,14 @@ const SignUp = () => {
                   onChange={handleInputChange}
                   className={errors.prenom ? "error" : ""}
                   placeholder="Entrez votre prénom"
+                  required
                 />
               </div>
 
               <div className="form-group">
-                <label>Nom</label>
+                <label>
+                  Nom <span className="required">*</span>
+                </label>
                 <input
                   type="text"
                   name="nom"
@@ -847,11 +705,14 @@ const SignUp = () => {
                   onChange={handleInputChange}
                   className={errors.nom ? "error" : ""}
                   placeholder="Entrez votre nom"
+                  required
                 />
               </div>
 
               <div className="form-group">
-                <label>Email</label>
+                <label>
+                  Email <span className="required">*</span>
+                </label>
                 <input
                   type="email"
                   name="email"
@@ -859,14 +720,17 @@ const SignUp = () => {
                   onChange={handleInputChange}
                   className={errors.email ? "error" : ""}
                   placeholder="Email"
-                  disabled={isUpdateMode} // Email cannot be changed in update mode
+                  disabled={isUpdateMode}
+                  required
                 />
               </div>
             </div>
 
             <div className="form-three-columns">
               <div className="form-group phone-group">
-                <label>Numéro de téléphone</label>
+                <label>
+                  Numéro de téléphone <span className="required">*</span>
+                </label>
                 <div
                   className={`phone-input-container ${
                     errors.telephone ? "error" : ""
@@ -880,12 +744,15 @@ const SignUp = () => {
                     placeholder="Entrez votre numéro"
                     international
                     countryCallingCodeEditable={false}
+                    required
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Adresse</label>
+                <label>
+                  Adresse <span className="required">*</span>
+                </label>
                 <input
                   type="text"
                   name="adresse"
@@ -893,6 +760,7 @@ const SignUp = () => {
                   onChange={handleInputChange}
                   className={errors.adresse ? "error" : ""}
                   placeholder="Entrez votre adresse"
+                  required
                 />
               </div>
 
@@ -913,13 +781,16 @@ const SignUp = () => {
         {currentStep === 2 && (
           <div className="signup-form">
             <div className="form-group">
-              <label>Type d'utilisateur</label>
+              <label>
+                Type d'utilisateur <span className="required">*</span>
+              </label>
               <select
                 name="type"
                 value={formData.type}
                 onChange={handleInputChange}
                 className={errors.type ? "error" : ""}
-                disabled={isUpdateMode} // Cannot change user type in update mode
+                disabled={isUpdateMode}
+                required
               >
                 <option value="">Sélectionnez le type d'utilisateur</option>
                 <option value="professeur">Professeur</option>
@@ -938,23 +809,16 @@ const SignUp = () => {
                     </label>
                     <input
                       type="file"
-                      onChange={(e) => handleFileChange(e, "cniUrlFront")}
-                      className={errors.cniUrlRecto ? "error" : ""}
+                      onChange={(e) => handleFileChange(e, "cniRecto")}
+                      className={errors.cniRecto ? "error" : ""}
                       accept="image/*"
+                      required={!isUpdateMode}
                     />
-                    {imagePreviews.cniUrlRecto ? (
-                      <ImagePreview
-                        src={imagePreviews.cniUrlRecto}
-                        alt="CNI Recto"
-                        onRemove={() => handleRemoveImage("cniUrlFront")}
-                      />
-                    ) : (
-                      formData.cniUrlRecto && (
-                        <div className="image-preview-info">
-                          Image sélectionnée ✓
-                        </div>
-                      )
-                    )}
+                    <ImagePreview
+                      src={imagePreviews.cniRecto}
+                      alt="CNI Recto"
+                      onRemove={() => handleRemoveImage("cniRecto")}
+                    />
                   </div>
                   <div className="form-group">
                     <label>
@@ -963,23 +827,16 @@ const SignUp = () => {
                     </label>
                     <input
                       type="file"
-                      onChange={(e) => handleFileChange(e, "cniUrlBack")}
-                      className={errors.cniUrlVerso ? "error" : ""}
+                      onChange={(e) => handleFileChange(e, "cniVerso")}
+                      className={errors.cniVerso ? "error" : ""}
                       accept="image/*"
+                      required={!isUpdateMode}
                     />
-                    {imagePreviews.cniUrlVerso ? (
-                      <ImagePreview
-                        src={imagePreviews.cniUrlVerso}
-                        alt="CNI Verso"
-                        onRemove={() => handleRemoveImage("cniUrlBack")}
-                      />
-                    ) : (
-                      formData.cniUrlVerso && (
-                        <div className="image-preview-info">
-                          Image sélectionnée ✓
-                        </div>
-                      )
-                    )}
+                    <ImagePreview
+                      src={imagePreviews.cniVerso}
+                      alt="CNI Verso"
+                      onRemove={() => handleRemoveImage("cniVerso")}
+                    />
                   </div>
                 </div>
 
@@ -990,46 +847,27 @@ const SignUp = () => {
                   </label>
                   <input
                     type="file"
-                    onChange={(e) => handleFileChange(e, "selfiePhoto")}
-                    className={errors.selfieUrl ? "error" : ""}
+                    onChange={(e) => handleFileChange(e, "selfie")}
+                    className={errors.selfie ? "error" : ""}
                     accept="image/*"
+                    required={!isUpdateMode}
                   />
-                  {imagePreviews.selfieUrl ? (
-                    <ImagePreview
-                      src={imagePreviews.selfieUrl}
-                      alt="Photo de profil"
-                      onRemove={() => handleRemoveImage("selfiePhoto")}
-                    />
-                  ) : (
-                    formData.selfieUrl && (
-                      <div className="image-preview-info">
-                        Photo sélectionnée ✓
-                      </div>
-                    )
-                  )}
+                  <ImagePreview
+                    src={imagePreviews.selfie}
+                    alt="Photo de profil"
+                    onRemove={() => handleRemoveImage("selfie")}
+                  />
                 </div>
 
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Nom de l'établissement (Optionnel)</label>
-                    <input
-                      type="text"
-                      name="nomEtablissement"
-                      value={formData.nomEtablissement || ""}
-                      onChange={handleInputChange}
-                      placeholder="Entrez le nom de l'établissement"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Matricule du professeur (Optionnel)</label>
-                    <input
-                      type="text"
-                      name="matriculeProfesseur"
-                      value={formData.matriculeProfesseur || ""}
-                      onChange={handleInputChange}
-                      placeholder="Entrez votre matricule"
-                    />
-                  </div>
+                <div className="form-group">
+                  <label>Matricule du professeur (Optionnel)</label>
+                  <input
+                    type="text"
+                    name="matriculeProfesseur"
+                    value={formData.matriculeProfesseur || ""}
+                    onChange={handleInputChange}
+                    placeholder="Entrez votre matricule"
+                  />
                 </div>
               </div>
             )}
@@ -1045,6 +883,7 @@ const SignUp = () => {
                     value={formData.niveau}
                     onChange={handleInputChange}
                     className={errors.niveau ? "error" : ""}
+                    required
                   >
                     <option value="">Sélectionnez votre niveau</option>
                     <option value="primaire">Primaire</option>

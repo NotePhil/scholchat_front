@@ -29,34 +29,21 @@ import PasswordPage from "./pages/PasswordPage";
 import ResetPassword from "./pages/ResetPassword";
 import Principal from "./pages/Dashbaord/principale/Principal";
 import ManageClass from "./pages/Dashbaord/principale/ManageClass/ManageClass";
+import ProtectedRoute from "./context/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
 function App() {
   const [theme, setTheme] = useState("default");
+
   return (
-    <>
-      <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
         <Routes>
+          {/* Public Routes */}
           <Route
             path="/"
             element={
               <Layout theme={theme} setTheme={setTheme}>
                 <Home theme={theme} />
-              </Layout>
-            }
-          />
-
-          <Route
-            path="/schoolchat/activity"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <ActivityFeed theme={theme} />
-              </Layout>
-            }
-          />
-          <Route
-            path="/schoolchat/postLogin/classModal"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <PostLoginClassModal theme={theme} />
               </Layout>
             }
           />
@@ -108,12 +95,6 @@ function App() {
               </Layout>
             }
           />
-          {/* Updated Principal routes with dashboard type */}
-          <Route path="/schoolchat/Principal" element={<Principal />} />
-          <Route
-            path="/schoolchat/Principal/:dashboardType"
-            element={<Principal />}
-          />
           <Route
             path="/schoolchat/login"
             element={
@@ -121,10 +102,6 @@ function App() {
                 <Login theme={theme} />
               </Layout>
             }
-          />
-          <Route
-            path="/schoolchat/postLogin/classModal"
-            element={<ClassSelectionWrapper />}
           />
           <Route
             path="/schoolchat/signup"
@@ -135,12 +112,6 @@ function App() {
             }
           />
           <Route path="/schoolchat/PasswordPage" element={<PasswordPage />} />
-          <Route path="/schoolchat/parents" element={<ParentPage />} />
-          <Route path="/schoolchat/classes" element={<ClassesPage />} />
-          <Route
-            path="/schoolchat/email-dashboard"
-            element={<EmailDashboard />}
-          />
           <Route
             path="/schoolchat/account-activation"
             element={<AccountActivation />}
@@ -154,17 +125,66 @@ function App() {
             path="/schoolchat/reset-password"
             element={<ResetPassword />}
           />
-          <Route
-            path="/schoolchat/manage-class"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <ManageClass theme={theme} />
-              </Layout>
-            }
-          />
+
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path="/schoolchat/activity"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <ActivityFeed theme={theme} />
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/postLogin/classModal"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PostLoginClassModal theme={theme} />
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/postLogin/classModal"
+              element={<ClassSelectionWrapper />}
+            />
+            <Route path="/schoolchat/parents" element={<ParentPage />} />
+            <Route path="/schoolchat/classes" element={<ClassesPage />} />
+            <Route
+              path="/schoolchat/email-dashboard"
+              element={<EmailDashboard />}
+            />
+            <Route
+              path="/schoolchat/manage-class"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <ManageClass theme={theme} />
+                </Layout>
+              }
+            />
+
+            {/* Role-based routes */}
+            <Route path="/schoolchat/student" element={<StudentPage />}>
+              <Route index element={<StudentDashboard />} />
+            </Route>
+
+            <Route path="/schoolchat/professor" element={<ProfessorPage />}>
+              <Route index element={<ProfessorDashboard />} />
+            </Route>
+
+            <Route path="/schoolchat/parent" element={<ParentPage />}>
+              <Route index element={<ParentDashboard />} />
+            </Route>
+
+            <Route path="/schoolchat/principal" element={<Principal />} />
+            <Route
+              path="/schoolchat/principal/:dashboardType"
+              element={<Principal />}
+            />
+          </Route>
         </Routes>
-      </BrowserRouter>
-    </>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
