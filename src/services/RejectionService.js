@@ -175,7 +175,7 @@ class RejectionService {
   async validateProfessor(professorId) {
     try {
       const response = await rejectionApi.post(
-        `/professors/${professorId}/validate`, // Changed path
+        `/utilisateurs/professors/${professorId}/validate`, // Changed path
         null, // No body
         {
           params: {},
