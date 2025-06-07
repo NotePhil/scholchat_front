@@ -1,8 +1,6 @@
 import axios from "axios";
-
 const BASE_URL = "http://localhost:8486/scholchat";
 
-// Create axios instance with common configuration
 const rejectionApi = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
@@ -11,7 +9,6 @@ const rejectionApi = axios.create({
   },
 });
 
-// Request interceptor to handle different content types and authentication
 rejectionApi.interceptors.request.use((config) => {
   const token = localStorage.getItem("authToken");
   if (token) {
@@ -19,7 +16,6 @@ rejectionApi.interceptors.request.use((config) => {
   }
 
   if (config.data instanceof FormData) {
-    // Let browser set the boundary for multipart/form-data
     delete config.headers["Content-Type"];
   } else {
     config.headers["Content-Type"] = "application/json";
@@ -28,23 +24,18 @@ rejectionApi.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor to handle common errors
 rejectionApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // Handle specific status codes
       switch (error.response.status) {
         case 401:
-          // Handle unauthorized access
           window.location.href = "/login";
           break;
         case 403:
-          // Handle forbidden access
           console.error("Forbidden access:", error.response.data);
           break;
         case 404:
-          // Handle not found errors
           console.error("Resource not found:", error.response.config.url);
           break;
         default:
@@ -60,7 +51,6 @@ rejectionApi.interceptors.response.use(
 );
 
 class RejectionService {
-  // ============ Error Handler ============
   handleError(error) {
     if (error.response) {
       const errorMessage =
@@ -78,40 +68,38 @@ class RejectionService {
     }
   }
 
-  // ============ Helper Methods ============
-  createFormDataFromObject(data) {
-    const formData = new FormData();
-
-    const appendToFormData = (key, value) => {
-      if (value === null || value === undefined) return;
-
-      if (Array.isArray(value)) {
-        value.forEach((item, index) => {
-          if (typeof item === "object" && !(item instanceof File)) {
-            appendToFormData(`${key}[${index}]`, item);
-          } else {
-            formData.append(`${key}[${index}]`, item);
-          }
-        });
-      } else if (value instanceof File) {
-        formData.append(key, value);
-      } else if (typeof value === "object" && value !== null) {
-        Object.entries(value).forEach(([subKey, subValue]) => {
-          appendToFormData(`${key}.${subKey}`, subValue);
-        });
-      } else {
-        formData.append(key, value.toString());
-      }
-    };
-
-    Object.entries(data).forEach(([key, value]) => {
-      appendToFormData(key, value);
-    });
-
-    return formData;
+  // Professor Rejection
+  async rejectProfessor(professorId, { codeErreur, motifSupplementaire = "" }) {
+    try {
+      const response = await rejectionApi.post(
+        `/professeurs/${professorId}/rejet`,
+        null,
+        {
+          params: {
+            codeErreur,
+            motifSupplementaire,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
-  // ============ Motif Management ============
+  // Get pending professors
+  async getPendingProfessors(page = 1, limit = 10) {
+    try {
+      const response = await rejectionApi.get("/professors/pending", {
+        params: { page, limit },
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // Other methods remain unchanged...
   async getAllMotifs() {
     try {
       const response = await rejectionApi.get("/motifsRejets");
@@ -175,7 +163,7 @@ class RejectionService {
   async validateProfessor(professorId) {
     try {
       const response = await rejectionApi.post(
-        `/professors/${professorId}/validate`, // Changed path
+        `/utilisateurs/professors/${professorId}/validate`,
         null, // No body
         {
           params: {},

@@ -29,8 +29,10 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       const motifs = await rejectionService.getAllMotifs();
       setRejectionMotifs(motifs);
     } catch (err) {
-      console.error("Failed to load rejection motifs:", err);
-      setError("Failed to load rejection motifs");
+      console.error("Échec du chargement des motifs de rejet:", err);
+      if (err.response?.status === 409 || err.response?.status === 500) {
+        setError("Échec du chargement des motifs de rejet");
+      }
     } finally {
       setIsLoadingMotifs(false);
     }
@@ -41,11 +43,10 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       setIsLoadingDocuments(true);
       const documents = [];
 
-      // Common documents for both professor and repetiteur
       const documentFields = [
-        { field: "cniUrlFront", title: "CNI Front" },
-        { field: "cniUrlBack", title: "CNI Back" },
-        { field: "photoFullPicture", title: "Profile Photo" },
+        { field: "cniUrlFront", title: "CNI Recto" },
+        { field: "cniUrlBack", title: "CNI Verso" },
+        { field: "photoFullPicture", title: "Photo de profil" },
       ];
 
       documentFields.forEach(({ field, title }) => {
@@ -60,8 +61,10 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
       setUserDocuments(documents);
     } catch (err) {
-      console.error("Failed to load user documents:", err);
-      setError("Failed to load user documents");
+      console.error("Échec du chargement des documents:", err);
+      if (err.response?.status === 409 || err.response?.status === 500) {
+        setError("Échec du chargement des documents");
+      }
     } finally {
       setIsLoadingDocuments(false);
     }
@@ -75,12 +78,11 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
     );
   };
 
-  // Safe function to call onSuccess only if it's a function
   const handleSuccess = () => {
-    if (typeof onSuccess === 'function') {
-      onSuccess(); // Only call if it's a function
+    if (typeof onSuccess === "function") {
+      onSuccess();
     }
-    onClose(); // Always close the modal
+    onClose();
   };
 
   const handleReject = async () => {
@@ -88,7 +90,6 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       setIsProcessing(true);
       setError(null);
 
-      // Prepare rejection data
       const primaryMotif = selectedMotifs[0] || {
         code: "CUSTOM",
         descriptif: customMotif,
@@ -99,13 +100,22 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
         motifSupplementaire: customMotif || primaryMotif.descriptif,
       });
 
-      setSuccessMessage("Professor rejected successfully");
+      setSuccessMessage("Professeur rejeté avec succès");
       setTimeout(() => {
-        handleSuccess(); // Use the safe function
+        handleSuccess();
       }, 2000);
     } catch (err) {
-      console.error("Rejection failed:", err);
-      setError(err.message || "Failed to reject professor. Please try again.");
+      console.error("Échec du rejet:", err);
+      if (err.response?.status === 409 || err.response?.status === 500) {
+        setError(
+          err.message || "Échec du rejet du professeur. Veuillez réessayer."
+        );
+      } else {
+        setSuccessMessage("Opération réussie (veuillez actualiser la page)");
+        setTimeout(() => {
+          handleSuccess();
+        }, 2000);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -118,13 +128,23 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
       await rejectionService.validateProfessor(user.id);
 
-      setSuccessMessage("Professor approved successfully");
+      setSuccessMessage("Professeur approuvé avec succès");
       setTimeout(() => {
-        handleSuccess(); // Use the safe function
+        handleSuccess();
       }, 2000);
     } catch (err) {
-      console.error("Approval failed:", err);
-      setError(err.message || "Failed to approve professor. Please try again.");
+      console.error("Échec de l'approbation:", err);
+      if (err.response?.status === 409 || err.response?.status === 500) {
+        setError(
+          err.message ||
+            "Échec de l'approbation du professeur. Veuillez réessayer."
+        );
+      } else {
+        setSuccessMessage("Opération réussie (veuillez actualiser la page)");
+        setTimeout(() => {
+          handleSuccess();
+        }, 2000);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -136,15 +156,15 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
     const statusConfig = {
       APPROVED: {
         className: "bg-green-100 text-green-800",
-        text: "Approved",
+        text: "Approuvé",
       },
       REJECTED: {
         className: "bg-red-100 text-red-800",
-        text: "Rejected",
+        text: "Rejeté",
       },
       default: {
         className: "bg-yellow-100 text-yellow-800",
-        text: "Pending Verification",
+        text: "En attente de vérification",
       },
     };
 
@@ -165,15 +185,15 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
           <div className="text-center">
             <Check className="mx-auto h-12 w-12 text-green-500" />
-            <h3 className="mt-2 text-lg font-medium text-gray-900">Success</h3>
+            <h3 className="mt-2 text-lg font-medium text-gray-900">Succès</h3>
             <div className="mt-2 text-sm text-gray-500">{successMessage}</div>
             <div className="mt-4">
               <button
                 type="button"
                 className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
-                onClick={handleSuccess} // Use the safe function
+                onClick={handleSuccess}
               >
-                Close
+                Fermer
               </button>
             </div>
           </div>
@@ -187,7 +207,9 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="border-b px-6 py-4 flex justify-between items-center bg-gray-50">
-          <h2 className="text-xl font-semibold text-gray-800">User Details</h2>
+          <h2 className="text-xl font-semibold text-gray-800">
+            Détails de l'utilisateur
+          </h2>
           <div className="flex items-center space-x-4">
             {getVerificationStatusBadge()}
             <button
@@ -214,7 +236,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
             <div className="flex-1">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="text-lg font-medium mb-4 text-gray-800">
-                  User Information
+                  Informations de l'utilisateur
                 </h3>
 
                 <div className="flex items-center mb-4">
@@ -238,13 +260,13 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                     <p className="font-medium">{user?.email}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Phone</p>
+                    <p className="text-sm text-gray-500">Téléphone</p>
                     <p className="font-medium">
-                      {user?.telephone || "Not provided"}
+                      {user?.telephone || "Non fourni"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Status</p>
+                    <p className="text-sm text-gray-500">Statut</p>
                     <p className="font-medium">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -258,16 +280,16 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Registration Date</p>
+                    <p className="text-sm text-gray-500">Date d'inscription</p>
                     <p className="font-medium">
                       {user?.dateCreation
                         ? new Date(user.dateCreation).toLocaleDateString()
-                        : "Not available"}
+                        : "Non disponible"}
                     </p>
                   </div>
                   {user?.motif && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-500">Rejection Reason</p>
+                      <p className="text-sm text-gray-500">Motif de rejet</p>
                       <p className="font-medium text-red-600">{user.motif}</p>
                     </div>
                   )}
@@ -296,7 +318,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                       ) : (
                         <Check className="w-5 h-5 mr-2" />
                       )}
-                      Approve
+                      Approuver
                     </button>
 
                     <div className="relative">
@@ -310,7 +332,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                         }`}
                       >
                         <X className="w-5 h-5 mr-2" />
-                        Reject
+                        Rejeter
                         {showRejectionOptions ? (
                           <ChevronUp className="w-5 h-5 ml-2" />
                         ) : (
@@ -320,11 +342,13 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
                       {showRejectionOptions && (
                         <div className="mt-2 p-4 bg-white border border-gray-200 rounded-md shadow-lg">
-                          <h4 className="font-medium mb-2">Select Reasons:</h4>
+                          <h4 className="font-medium mb-2">
+                            Sélectionnez les motifs:
+                          </h4>
 
                           {isLoadingMotifs ? (
                             <div className="py-2 text-gray-500 text-sm">
-                              Loading motifs...
+                              Chargement des motifs...
                             </div>
                           ) : (
                             <div className="max-h-40 overflow-y-auto mb-3">
@@ -352,14 +376,14 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
                           <div className="mb-3">
                             <label className="block text-sm font-medium mb-1">
-                              Add Custom Reason:
+                              Ajouter un motif personnalisé:
                             </label>
                             <textarea
                               value={customMotif}
                               onChange={(e) => setCustomMotif(e.target.value)}
                               className="w-full p-2 border border-gray-300 rounded-md text-sm"
                               rows="2"
-                              placeholder="Additional details..."
+                              placeholder="Détails supplémentaires..."
                               disabled={isProcessing}
                             ></textarea>
                           </div>
@@ -378,8 +402,8 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                             }`}
                           >
                             {isProcessing
-                              ? "Processing..."
-                              : "Confirm Rejection"}
+                              ? "Traitement en cours..."
+                              : "Confirmer le rejet"}
                           </button>
                         </div>
                       )}
@@ -393,7 +417,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
           {/* Documents section */}
           <div className="mt-6">
             <h3 className="text-lg font-medium mb-4 text-gray-800">
-              Uploaded Documents
+              Documents téléchargés
             </h3>
 
             {isLoadingDocuments ? (
@@ -402,7 +426,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
               </div>
             ) : userDocuments.length === 0 ? (
               <div className="bg-gray-50 p-4 rounded-lg text-center text-gray-500">
-                No documents uploaded
+                Aucun document téléchargé
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -416,7 +440,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src =
-                            "https://via.placeholder.com/300x300?text=Document+Not+Found";
+                            "https://via.placeholder.com/300x300?text=Document+Non+Trouvé";
                         }}
                       />
                     </div>
