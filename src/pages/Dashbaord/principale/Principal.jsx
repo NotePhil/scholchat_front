@@ -2,14 +2,23 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import DashboardContent from "./DashboardContent";
-import UsersContent from "./UsersContent";
 import ParentsContent from "./ParentsContent";
+import MotifsDeRejet from "./MotifsDeRejet";
 import ProfessorsContent from "./ProfessorsContent";
 import ClassesContent from "./ClassesContent";
 import SettingsContent from "./SettingsContent";
 import ManageClass from "./ManageClass/ManageClass";
 import MessagingInterface from "./Messsages/MessagingInterface";
 import "./Principal.css";
+import AdminContent from "./AdminContent";
+import StudentsContent from "./StudentsContent";
+import OthersContent from "./OthersContent";
+import CreateClassContent from "./CreateClassContent";
+import ManageClassContent from "./ManageClassContent";
+import ClassesListContent from "./ClassesListContent";
+import CreateEstablishmentContent from "./CreateEstablishmentContent";
+import ManageEstablishmentContent from "./ManageEstablishmentContent";
+import ActivitiesContent from "./ActivitiesContent";
 
 const themes = {
   light: {
@@ -125,25 +134,45 @@ const Principal = () => {
       onShowMessaging: handleShowMessaging,
     };
 
-    if (showManageClass && activeTab === "classes") {
-      return <ManageClass onBack={handleBackToClasses} />;
-    }
-
     switch (activeTab) {
       case "dashboard":
         return <DashboardContent {...contentProps} />;
-      case "users":
-        return <UsersContent {...contentProps} />;
-      case "parents":
-        return <ParentsContent {...contentProps} />;
+      case "activities":
+        return <ActivitiesContent {...contentProps} />;
+      case "admin":
+        return <AdminContent {...contentProps} />;
       case "professors":
         return <ProfessorsContent {...contentProps} />;
+      case "motifs-de-rejet":
+        return <MotifsDeRejet {...contentProps} />;
+      case "parents":
+        return <ParentsContent {...contentProps} />;
       case "students":
-        return <UsersContent {...contentProps} label="Students" />;
+        return <StudentsContent {...contentProps} />;
+      case "others":
+        return <OthersContent {...contentProps} />;
       case "classes":
-        return <ClassesContent {...contentProps} />;
+        return showManageClass ? (
+          <ManageClass onBack={handleBackToClasses} />
+        ) : (
+          <ClassesContent {...contentProps} />
+        );
+      case "create-class":
+        return <CreateClassContent {...contentProps} />;
+      case "manage-class":
+        return <ManageClassContent {...contentProps} />;
+      case "classes-list":
+        return <ClassesListContent {...contentProps} />;
+      case "create-establishment":
+        return <CreateEstablishmentContent {...contentProps} />;
+      case "manage-establishment":
+        return <ManageEstablishmentContent {...contentProps} />;
       case "messages":
-        return <MessagingInterface {...contentProps} />;
+        return (
+          <div className="messages-content-container">
+            <MessagingInterface {...contentProps} />
+          </div>
+        );
       case "settings":
         return (
           <SettingsContent
@@ -169,11 +198,24 @@ const Principal = () => {
     if (activeTab === "messages") {
       return "Messages";
     }
+    if (activeTab === "admin") return "Gérer Administrateurs";
+    if (activeTab === "professors") return "Gérer Professeurs";
+    if (activeTab === "motifs-de-rejet") return "Motifs de Rejet";
+    if (activeTab === "parents") return "Gérer Parents";
+    if (activeTab === "students") return "Gérer Élèves";
+    if (activeTab === "others") return "Gérer Autres Utilisateurs";
+    if (activeTab === "activities") return "Activités";
+    if (activeTab === "create-class") return "Créer une Classe";
+    if (activeTab === "manage-class") return "Gérer une Classe";
+    if (activeTab === "classes-list") return "Liste des Classes";
+    if (activeTab === "create-establishment") return "Créer un Établissement";
+    if (activeTab === "manage-establishment") return "Gérer un Établissement";
+
     return activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
   };
 
   return (
-    <div className="principal-container">
+    <div className={`principal-container ${isDark ? "dark-mode" : ""}`}>
       <button className="mobile-menu-button" onClick={toggleSidebar}>
         ☰
       </button>
@@ -204,6 +246,11 @@ const Principal = () => {
           className={`content-body ${
             isDark ? "bg-gray-900 text-white" : "bg-gray-50"
           }`}
+          style={{
+            display:
+              showMessaging && activeTab !== "messages" ? "none" : "block",
+            width: showMessaging && activeTab !== "messages" ? "0" : "100%",
+          }}
         >
           {renderContent()}
         </div>

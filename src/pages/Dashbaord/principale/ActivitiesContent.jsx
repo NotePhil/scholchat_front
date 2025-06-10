@@ -25,7 +25,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { activityFeedService } from "../../../services/ActivityFeedService";
-const UsersContent = ({ label = "Users", userRole }) => {
+const ActivitiesContent = ({ label = "Users", userRole }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -1170,4 +1170,4 @@ const CommentSection = ({ comments, activityId }) => {
   );
 };
 
-export default UsersContent;
+export default ActivitiesContent;

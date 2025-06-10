@@ -9,6 +9,10 @@ import {
   Mail,
   Settings,
   LogOut,
+  ChevronDown,
+  ChevronUp,
+  Activity,
+  School,
 } from "lucide-react";
 
 const Sidebar = ({
@@ -19,85 +23,140 @@ const Sidebar = ({
   currentTheme,
   themes,
   colorSchemes,
+  userRole,
+  userRoles,
+  onShowMessaging,
 }) => {
   const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState({
+    users: false,
+    classes: false,
+    establishments: false,
+  });
 
-  // Get user role from localStorage
-  const userRole = localStorage.getItem("userRole") || "admin";
+  const toggleDropdown = (dropdown) => {
+    setOpenDropdown({
+      ...openDropdown,
+      [dropdown]: !openDropdown[dropdown],
+    });
+  };
 
   // Define menu items based on user role
   const getMenuItems = () => {
-    switch (userRole) {
-      case "admin":
-        return [
-          { name: "Dashboard", icon: Menu, tab: "dashboard" },
-          { name: "Activities", icon: Users, tab: "students" },
-          { name: "Parents", icon: UserPlus, tab: "parents" },
-          { name: "Motifs de Rejet", icon: BookOpen, tab: "professors" },
-          { name: "Classes", icon: Building2, tab: "classes" },
-          { name: "Messages", icon: Mail, tab: "messages" },
-          { name: "Settings", icon: Settings, tab: "settings" },
-        ];
+    const baseItems = [
+      { name: "Dashboard", icon: Menu, tab: "dashboard" },
+      { name: "Activités", icon: Activity, tab: "activities" },
+    ];
 
-      case "professor":
-      case "repetiteur":
-        return [
-          { name: "Activities", icon: Users, tab: "students" },
-          { name: "DashBoard", icon: Menu, tab: "dashboard" },
-          { name: "Parents", icon: UserPlus, tab: "parents" },
-          { name: "Professors", icon: BookOpen, tab: "professors" },
-          { name: "Classes", icon: Building2, tab: "classes" },
-          { name: "Messages", icon: Mail, tab: "messages" },
-          { name: "Settings", icon: Settings, tab: "settings" },
-        ];
-
-      case "student":
-        return [
-          { name: "Dashboard", icon: Menu, tab: "dashboard" },
-          { name: "Activities", icon: Users, tab: "students" },
-          { name: "Classes", icon: Building2, tab: "classes" },
-          { name: "Messages", icon: Mail, tab: "messages" },
-          { name: "Settings", icon: Settings, tab: "settings" },
-        ];
-
-      case "parent":
-        return [
-          { name: "Dashboard", icon: Menu, tab: "dashboard" },
-          { name: "Activities", icon: Users, tab: "students" },
-          { name: "Classes", icon: Building2, tab: "classes" },
-          { name: "Messages", icon: Mail, tab: "messages" },
-          { name: "Settings", icon: Settings, tab: "settings" },
-        ];
-
-      default:
-        return [];
+    // Role-specific items
+    let roleItems = [];
+    if (userRoles.includes("ROLE_ADMIN")) {
+      roleItems = [
+        {
+          name: "Gérer Utilisateur",
+          icon: Users,
+          dropdown: "users",
+          items: [
+            { name: "Admin", tab: "admin" },
+            { name: "Professeurs", tab: "professors" },
+            { name: "Parents", tab: "parents" },
+            { name: "Élèves", tab: "students" },
+            { name: "Autres", tab: "others" },
+          ],
+        },
+        {
+          name: "Motifs de Rejet",
+          icon: BookOpen,
+          tab: "motifs-de-rejet",
+        },
+        {
+          name: "Classes",
+          icon: Building2,
+          dropdown: "classes",
+          items: [
+            { name: "Créer une Classe", tab: "create-class" },
+            { name: "Gérer une Classe", tab: "manage-class" },
+            { name: "Liste des Classes", tab: "classes-list" },
+          ],
+        },
+        {
+          name: "Établissements",
+          icon: School,
+          dropdown: "establishments",
+          items: [
+            { name: "Créer un Établissement", tab: "create-establishment" },
+            { name: "Gérer un Établissement", tab: "manage-establishment" },
+          ],
+        },
+      ];
+    } else if (userRoles.includes("ROLE_PROFESSOR")) {
+      roleItems = [
+        {
+          name: "Gérer Utilisateur",
+          icon: Users,
+          dropdown: "users",
+          items: [
+            { name: "Professeurs", tab: "professors" },
+            { name: "Parents", tab: "parents" },
+            { name: "Élèves", tab: "students" },
+          ],
+        },
+        {
+          name: "Motifs de Rejet",
+          icon: BookOpen,
+          tab: "motifs-de-rejet",
+        },
+        {
+          name: "Classes",
+          icon: Building2,
+          dropdown: "classes",
+          items: [
+            { name: "Créer une Classe", tab: "create-class" },
+            { name: "Gérer une Classe", tab: "manage-class" },
+            { name: "Liste des Classes", tab: "classes-list" },
+          ],
+        },
+      ];
+    } else {
+      roleItems = [
+        { name: "Classes", icon: Building2, tab: "classes" },
+        { name: "Motifs de Rejet", icon: BookOpen, tab: "motifs-de-rejet" },
+      ];
     }
+
+    // Bottom items (always at the end)
+    const bottomItems = [
+      {
+        name: "Messages",
+        icon: Mail,
+        tab: "messages",
+        onClick: onShowMessaging,
+      },
+      { name: "Settings", icon: Settings, tab: "settings" },
+    ];
+
+    return [...baseItems, ...roleItems, ...bottomItems];
   };
 
   const menuItems = getMenuItems();
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    // Remove the special case for messages - let it be handled like other tabs
   };
 
-  // Show logout confirmation modal
   const openLogoutModal = () => {
     setShowLogoutModal(true);
   };
 
-  // Close the logout modal without logging out
   const cancelLogout = () => {
     setShowLogoutModal(false);
   };
 
-  // Handle the confirmed logout action and redirect to login page
   const confirmLogout = () => {
-    // Clear any stored user data
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
-    // Redirect to login page
+    localStorage.removeItem("userRoles");
     navigate("/schoolchat/login");
   };
 
@@ -125,35 +184,76 @@ const Sidebar = ({
         <nav className="sidebar-nav">
           <ul>
             {menuItems.map((item) => (
-              <li
-                key={item.name}
-                className={activeTab === item.tab ? "active" : ""}
-                onClick={() => handleTabChange(item.tab)}
-              >
-                <a href="#" onClick={(e) => e.preventDefault()}>
-                  <span className="icon">
-                    <item.icon
-                      style={{
-                        color:
-                          activeTab === item.tab
-                            ? colorSchemes?.[currentTheme]?.primary
-                            : "currentColor",
-                      }}
-                    />
-                  </span>
-                  {item.name}
-                </a>
-
-                {/* Active indicator */}
-                {activeTab === item.tab && (
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-1"
-                    style={{
-                      backgroundColor: colorSchemes?.[currentTheme]?.primary,
-                    }}
-                  />
+              <React.Fragment key={item.name}>
+                {item.dropdown ? (
+                  <li>
+                    <div
+                      className={`dropdown-header ${
+                        activeTab.startsWith(item.dropdown) ? "active" : ""
+                      }`}
+                      onClick={() => toggleDropdown(item.dropdown)}
+                    >
+                      <a href="#" onClick={(e) => e.preventDefault()}>
+                        <span className="icon">
+                          <item.icon
+                            style={{
+                              color: activeTab.startsWith(item.dropdown)
+                                ? colorSchemes?.[currentTheme]?.primary
+                                : "currentColor",
+                            }}
+                          />
+                        </span>
+                        {item.name}
+                        <span className="dropdown-icon">
+                          {openDropdown[item.dropdown] ? (
+                            <ChevronUp size={18} />
+                          ) : (
+                            <ChevronDown size={18} />
+                          )}
+                        </span>
+                      </a>
+                    </div>
+                    {openDropdown[item.dropdown] && (
+                      <ul className="dropdown-menu">
+                        {item.items.map((subItem) => (
+                          <li
+                            key={subItem.name}
+                            className={
+                              activeTab === subItem.tab ? "active-sub" : ""
+                            }
+                            onClick={() => handleTabChange(subItem.tab)}
+                          >
+                            <a href="#" onClick={(e) => e.preventDefault()}>
+                              {subItem.name}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ) : (
+                  <li
+                    className={activeTab === item.tab ? "active" : ""}
+                    onClick={() =>
+                      item.onClick ? item.onClick() : handleTabChange(item.tab)
+                    }
+                  >
+                    <a href="#" onClick={(e) => e.preventDefault()}>
+                      <span className="icon">
+                        <item.icon
+                          style={{
+                            color:
+                              activeTab === item.tab
+                                ? colorSchemes?.[currentTheme]?.primary
+                                : "currentColor",
+                          }}
+                        />
+                      </span>
+                      {item.name}
+                    </a>
+                  </li>
                 )}
-              </li>
+              </React.Fragment>
             ))}
           </ul>
         </nav>
@@ -168,7 +268,7 @@ const Sidebar = ({
         </div>
       </aside>
 
-      {/* French Logout Confirmation Modal */}
+      {/* Logout Confirmation Modal */}
       {showLogoutModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
           <div
@@ -201,4 +301,5 @@ const Sidebar = ({
     </>
   );
 };
+
 export default Sidebar;

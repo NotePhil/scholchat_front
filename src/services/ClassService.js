@@ -1,55 +1,155 @@
-// services/ClassService.js
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8486/scholchat/classes";
+export const EtatClasse = {
+  EN_ATTENTE_APPROBATION: "EN_ATTENTE_APPROBATION",
+  ACTIF: "ACTIF",
+  INACTIF: "INACTIF",
+};
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-  },
-});
+export const DroitPublication = {
+  TOUS: "TOUS",
+  MODERATEUR_SEULEMENT: "MODERATEUR_SEULEMENT",
+  PARENTS_ET_MODERATEUR: "PARENTS_ET_MODERATEUR",
+};
 
-// Response interceptor
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response) {
-      switch (error.response.status) {
-        case 401:
-          console.error("Unauthorized - Please login again");
-          // Redirect to login or refresh token
-          break;
-        case 403:
-          console.error("Forbidden - You don't have permission");
-          break;
-        case 404:
-          console.error("Resource not found");
-          break;
-        case 500:
-          console.error("Server error");
-          break;
-        default:
-          console.error("Unexpected error occurred");
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
+/**
+ * Service for managing Classes CRUD operations
+ */
 class ClassService {
-  // ============ Class CRUD Operations ============
+  constructor(baseUrl = null) {
+    // Default to your backend URL, but allow override
+    this.baseUrl =
+      baseUrl ||
+      process.env.REACT_APP_API_BASE_URL ||
+      "http://localhost:8486/scholchat";
+    this.apiUrl = `${this.baseUrl}/classes`;
+
+    // Configure axios defaults
+    this.axiosInstance = axios.create({
+      baseURL: this.baseUrl,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      timeout: 30000, // 30 second timeout for slower connections
+    });
+
+    // Add response interceptor for better error handling
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        console.error("API Error:", error);
+        if (error.response) {
+          // Server responded with error status
+          const message =
+            error.response.data?.message ||
+            error.response.statusText ||
+            `HTTP Error: ${error.response.status}`;
+          throw new Error(message);
+        } else if (error.request) {
+          // Request was made but no response received
+          throw new Error("Network error: No response from server");
+        } else {
+          // Something else happened
+          throw new Error(`Request error: ${error.message}`);
+        }
+      }
+    );
+  }
 
   /**
-   * Create a new class
-   * @param {Object} classData - Class data to create
-   * @returns {Promise} Created class data
+   * Generic fetch wrapper with improved error handling
+   * @param {string} url - The URL to fetch
+   * @param {Object} options - Fetch options
+   * @returns {Promise<any>} - The response data
    */
-  async createClass(classData) {
+  async fetchWithErrorHandling(url, options = {}) {
     try {
-      const response = await api.post("", classData);
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...options.headers,
+        },
+        ...options,
+      });
+
+      // Check if response is ok
+      if (!response.ok) {
+        let errorMessage = `HTTP Error: ${response.status} ${response.statusText}`;
+
+        // Try to get error details from response
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } else {
+            // If not JSON, get text content for debugging
+            const textResponse = await response.text();
+            console.error("Non-JSON response:", textResponse.substring(0, 200));
+            errorMessage = `Server returned non-JSON response. Status: ${response.status}`;
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // Handle empty responses (like DELETE operations)
+      if (
+        response.status === 204 ||
+        response.headers.get("content-length") === "0"
+      ) {
+        return null;
+      }
+
+      // Check content type before parsing
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const textResponse = await response.text();
+        console.error(
+          "Expected JSON but got:",
+          contentType,
+          textResponse.substring(0, 200)
+        );
+        throw new Error("Server returned non-JSON response");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("API Error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Alternative method using axios for better error handling
+   */
+  async axiosRequest(endpoint, options = {}) {
+    try {
+      const response = await this.axiosInstance({
+        url: endpoint,
+        ...options,
+      });
       return response.data;
+    } catch (error) {
+      throw error; // Error is already handled by interceptor
+    }
+  }
+
+  /**
+   * Creates a new class
+   * @param {Object} classe - The class data to create
+   * @returns {Promise<Object>} The created class
+   */
+  async creerClasse(classe) {
+    try {
+      return await this.axiosRequest("/classes", {
+        method: "POST",
+        data: classe,
+      });
     } catch (error) {
       console.error("Error creating class:", error);
       throw error;
@@ -57,331 +157,378 @@ class ClassService {
   }
 
   /**
-   * Get all classes based on filters
-   * @param {Object} filters - Filters for classes (status, establishmentId, etc.)
-   * @returns {Promise} List of classes
+   * Updates an existing class
+   * @param {string} idClasse - The class ID to update
+   * @param {Object} classeModifiee - The updated class data
+   * @returns {Promise<Object>} The updated class
    */
-  async getAllClasses(filters = {}) {
+  async modifierClasse(idClasse, classeModifiee) {
     try {
-      const response = await api.get("", { params: filters });
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching classes:", error);
-      throw error;
-    }
-  }
+      // Prepare the data to send to the backend
+      const dataToSend = {
+        ...classeModifiee,
+        // Send only the ID for relationships
+        etablissement: classeModifiee.etablissement
+          ? { id: classeModifiee.etablissement.id }
+          : null,
+        // Send moderator as just the ID string (not an object)
+        moderator: classeModifiee.moderator,
+        parents: classeModifiee.parents.map((p) => ({ id: p.id })),
+        eleves: classeModifiee.eleves.map((e) => ({ id: e.id })),
+      };
 
-  /**
-   * Get class by ID
-   * @param {String} classId - ID of the class
-   * @returns {Promise} Class data
-   */
-  async getClassById(classId) {
-    try {
-      const response = await api.get(`/${classId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching class ${classId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update class information
-   * @param {String} classId - ID of the class to update
-   * @param {Object} updateData - Data to update
-   * @returns {Promise} Updated class data
-   */
-  async updateClass(classId, updateData) {
-    try {
-      const response = await api.put(`/${classId}`, updateData);
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating class ${classId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete a class
-   * @param {String} classId - ID of the class to delete
-   * @returns {Promise} Deletion result
-   */
-  async deleteClass(classId) {
-    try {
-      await api.delete(`/${classId}`);
-      return { success: true, message: "Class deleted successfully" };
-    } catch (error) {
-      console.error(`Error deleting class ${classId}:`, error);
-      throw error;
-    }
-  }
-
-  // ============ Class Status Management ============
-
-  /**
-   * Approve a pending class
-   * @param {String} classId - ID of the class to approve
-   * @returns {Promise} Approval result
-   */
-  async approveClass(classId) {
-    try {
-      const response = await api.post(`/${classId}/approve`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error approving class ${classId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Reject a pending class
-   * @param {String} classId - ID of the class to reject
-   * @param {Object} rejectionData - Rejection reason and comment
-   * @returns {Promise} Rejection result
-   */
-  async rejectClass(classId, rejectionData) {
-    try {
-      const response = await api.post(`/${classId}/reject`, rejectionData);
-      return response.data;
-    } catch (error) {
-      console.error(`Error rejecting class ${classId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Activate an inactive class
-   * @param {String} classId - ID of the class to activate
-   * @returns {Promise} Activation result
-   */
-  async activateClass(classId) {
-    try {
-      const response = await api.post(`/${classId}/activate`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error activating class ${classId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Deactivate an active class
-   * @param {String} classId - ID of the class to deactivate
-   * @param {Object} deactivationData - Deactivation reason and comment
-   * @returns {Promise} Deactivation result
-   */
-  async deactivateClass(classId, deactivationData) {
-    try {
-      const response = await api.post(
-        `/${classId}/deactivate`,
-        deactivationData
-      );
-      return response.data;
-    } catch (error) {
-      console.error(`Error deactivating class ${classId}:`, error);
-      throw error;
-    }
-  }
-
-  // ============ Class Access Management ============
-
-  /**
-   * Request access to a class using token
-   * @param {String} token - Access token for the class
-   * @param {String} role - Role of the requester (student/parent)
-   * @returns {Promise} Access request result
-   */
-  async requestClassAccess(token, role) {
-    try {
-      const response = await api.post("/access/request", { token, role });
-      return response.data;
-    } catch (error) {
-      console.error("Error requesting class access:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get class by access token
-   * @param {String} token - Access token for the class
-   * @returns {Promise} Class information
-   */
-  async getClassByToken(token) {
-    try {
-      const response = await api.get(`/token/${token}`);
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching class by token:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Approve student/parent access to class
-   * @param {String} classId - ID of the class
-   * @param {String} userId - ID of the user to approve
-   * @returns {Promise} Approval result
-   */
-  async approveClassAccess(classId, userId) {
-    try {
-      const response = await api.post(`/${classId}/access/approve/${userId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error approving access for user ${userId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Reject student/parent access to class
-   * @param {String} classId - ID of the class
-   * @param {String} userId - ID of the user to reject
-   * @param {String} reason - Reason for rejection
-   * @returns {Promise} Rejection result
-   */
-  async rejectClassAccess(classId, userId, reason) {
-    try {
-      const response = await api.post(`/${classId}/access/reject/${userId}`, {
-        reason,
+      return await this.axiosRequest(`/classes/${idClasse}`, {
+        method: "PUT",
+        data: dataToSend,
       });
-      return response.data;
     } catch (error) {
-      console.error(`Error rejecting access for user ${userId}:`, error);
-      throw error;
-    }
-  }
-
-  // ============ Class Members Management ============
-
-  /**
-   * Add students to class
-   * @param {String} classId - ID of the class
-   * @param {Array} studentIds - Array of student IDs to add
-   * @returns {Promise} Addition result
-   */
-  async addStudentsToClass(classId, studentIds) {
-    try {
-      const response = await api.post(`/${classId}/students`, { studentIds });
-      return response.data;
-    } catch (error) {
-      console.error(`Error adding students to class ${classId}:`, error);
+      console.error("Error updating class:", error);
       throw error;
     }
   }
 
   /**
-   * Remove students from class
-   * @param {String} classId - ID of the class
-   * @param {Array} studentIds - Array of student IDs to remove
-   * @returns {Promise} Removal result
+   * Approves a pending class (changes status to ACTIF)
+   * @param {string} idClasse - The class ID to approve
+   * @returns {Promise<Object>} The approved class
    */
-  async removeStudentsFromClass(classId, studentIds) {
+  async approuverClasse(idClasse) {
     try {
-      const response = await api.delete(`/${classId}/students`, {
-        data: { studentIds },
+      return await this.axiosRequest(`/classes/${idClasse}/approve`, {
+        method: "PATCH",
       });
-      return response.data;
     } catch (error) {
-      console.error(`Error removing students from class ${classId}:`, error);
+      console.error("Error approving class:", error);
       throw error;
     }
   }
 
   /**
-   * Add parents to class
-   * @param {String} classId - ID of the class
-   * @param {Array} parentIds - Array of parent IDs to add
-   * @returns {Promise} Addition result
+   * Rejects a pending class (changes status to INACTIF)
+   * @param {string} idClasse - The class ID to reject
+   * @param {string} motif - The reason for rejection
+   * @returns {Promise<Object>} The rejected class
    */
-  async addParentsToClass(classId, parentIds) {
+  async rejeterClasse(idClasse, motif) {
     try {
-      const response = await api.post(`/${classId}/parents`, { parentIds });
-      return response.data;
-    } catch (error) {
-      console.error(`Error adding parents to class ${classId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Remove parents from class
-   * @param {String} classId - ID of the class
-   * @param {Array} parentIds - Array of parent IDs to remove
-   * @returns {Promise} Removal result
-   */
-  async removeParentsFromClass(classId, parentIds) {
-    try {
-      const response = await api.delete(`/${classId}/parents`, {
-        data: { parentIds },
+      return await this.axiosRequest(`/classes/${idClasse}/reject`, {
+        method: "PATCH",
+        params: { motif },
       });
-      return response.data;
     } catch (error) {
-      console.error(`Error removing parents from class ${classId}:`, error);
+      console.error("Error rejecting class:", error);
       throw error;
     }
   }
 
-  // ============ Class History ============
-
   /**
-   * Get activation history for a class
-   * @param {String} classId - ID of the class
-   * @returns {Promise} Activation history
+   * Gets all classes with a specific status
+   * @param {string} etat - The status to filter by
+   * @returns {Promise<Array>} List of classes with the specified status
    */
-  async getClassActivationHistory(classId) {
+  async obtenirClassesParEtat(etat) {
     try {
-      const response = await api.get(`/${classId}/history`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching history for class ${classId}:`, error);
-      throw error;
-    }
-  }
-
-  // ============ Establishment Related ============
-
-  /**
-   * Get classes by establishment
-   * @param {String} establishmentId - ID of the establishment
-   * @param {Object} filters - Additional filters
-   * @returns {Promise} List of classes
-   */
-  async getClassesByEstablishment(establishmentId, filters = {}) {
-    try {
-      const response = await api.get(`/establishment/${establishmentId}`, {
-        params: filters,
+      return await this.axiosRequest("/classes/by-status", {
+        method: "GET",
+        params: { etat },
       });
-      return response.data;
     } catch (error) {
-      console.error(
-        `Error fetching classes for establishment ${establishmentId}:`,
-        error
-      );
+      console.error("Error getting classes by status:", error);
       throw error;
     }
   }
 
   /**
-   * Get pending classes for establishment approval
-   * @param {String} establishmentId - ID of the establishment
-   * @returns {Promise} List of pending classes
+   * Deletes a class by ID
+   * @param {string} idClasse - The class ID to delete
+   * @returns {Promise<void>}
    */
-  async getPendingClassesForEstablishment(establishmentId) {
+  async supprimerClasse(idClasse) {
     try {
-      const response = await api.get(
-        `/establishment/${establishmentId}/pending`
-      );
-      return response.data;
+      return await this.axiosRequest(`/classes/${idClasse}`, {
+        method: "DELETE",
+      });
     } catch (error) {
-      console.error(
-        `Error fetching pending classes for establishment ${establishmentId}:`,
-        error
-      );
+      console.error("Error deleting class:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Gets a single class by ID
+   * @param {string} idClasse - The class ID to retrieve
+   * @returns {Promise<Object>} The class data
+   */
+  async obtenirClasseParId(idClasse) {
+    try {
+      return await this.axiosRequest(`/classes/${idClasse}`, {
+        method: "GET",
+      });
+    } catch (error) {
+      console.error("Error getting class by ID:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets all classes
+   * @returns {Promise<Array>} List of all classes
+   */
+  async obtenirToutesLesClasses() {
+    try {
+      return await this.axiosRequest("/classes", {
+        method: "GET",
+      });
+    } catch (error) {
+      console.error("Error getting all classes:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Updates publication rights for a class
+   * @param {string} idClasse - The class ID
+   * @param {string} droitPublication - The new publication rights
+   * @returns {Promise<Object>} The updated class
+   */
+  async modifierDroitPublication(idClasse, droitPublication) {
+    try {
+      return await this.axiosRequest(
+        `/classes/${idClasse}/publication-rights`,
+        {
+          method: "PATCH",
+          params: { droitPublication },
+        }
+      );
+    } catch (error) {
+      console.error("Error updating publication rights:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets activation history for a class
+   * @param {string} idClasse - The class ID
+   * @returns {Promise<Array>} List of activation history records
+   */
+  async obtenirHistoriqueActivation(idClasse) {
+    try {
+      return await this.axiosRequest(
+        `/classes/${idClasse}/activation-history`,
+        {
+          method: "GET",
+        }
+      );
+    } catch (error) {
+      console.error("Error getting activation history:", error);
+      throw error;
+    }
+  }
+
+  // Additional utility methods
+
+  /**
+   * Gets classes pending approval
+   * @returns {Promise<Array>} List of classes waiting for approval
+   */
+  async obtenirClassesEnAttente() {
+    return await this.obtenirClassesParEtat(EtatClasse.EN_ATTENTE_APPROBATION);
+  }
+
+  /**
+   * Gets active classes
+   * @returns {Promise<Array>} List of active classes
+   */
+  async obtenirClassesActives() {
+    return await this.obtenirClassesParEtat(EtatClasse.ACTIF);
+  }
+
+  /**
+   * Gets inactive classes
+   * @returns {Promise<Array>} List of inactive classes
+   */
+  async obtenirClassesInactives() {
+    return await this.obtenirClassesParEtat(EtatClasse.INACTIF);
+  }
+
+  /**
+   * Checks if a class is pending approval
+   * @param {Object} classe - The class to check
+   * @returns {boolean} True if class is pending approval
+   */
+  estEnAttenteApprobation(classe) {
+    return classe.etat === EtatClasse.EN_ATTENTE_APPROBATION;
+  }
+
+  /**
+   * Checks if a class is active
+   * @param {Object} classe - The class to check
+   * @returns {boolean} True if class is active
+   */
+  estActif(classe) {
+    return classe.etat === EtatClasse.ACTIF;
+  }
+
+  /**
+   * Checks if a class is inactive
+   * @param {Object} classe - The class to check
+   * @returns {boolean} True if class is inactive
+   */
+  estInactif(classe) {
+    return classe.etat === EtatClasse.INACTIF;
+  }
+
+  /**
+   * Gets the display name for a class status
+   * @param {string} etat - The class status
+   * @returns {string} The display name
+   */
+  getEtatDisplayName(etat) {
+    switch (etat) {
+      case EtatClasse.EN_ATTENTE_APPROBATION:
+        return "En attente d'approbation";
+      case EtatClasse.ACTIF:
+        return "Actif";
+      case EtatClasse.INACTIF:
+        return "Inactif";
+      default:
+        return "Inconnu";
+    }
+  }
+
+  /**
+   * Gets the display name for publication rights
+   * @param {string} droit - The publication rights
+   * @returns {string} The display name
+   */
+  getDroitPublicationDisplayName(droit) {
+    switch (droit) {
+      case DroitPublication.TOUS:
+        return "Tous";
+      case DroitPublication.MODERATEUR_SEULEMENT:
+        return "Modérateur seulement";
+      case DroitPublication.PARENTS_ET_MODERATEUR:
+        return "Parents et modérateur";
+      default:
+        return "Non défini";
+    }
+  }
+
+  /**
+   * Creates a new class with default values
+   * @param {string} nom - Class name
+   * @param {string} niveau - Class level
+   * @param {string} etablissementId - School ID (optional)
+   * @returns {Object} A new class object with defaults
+   */
+  creerNouvelleClasse(nom, niveau, etablissementId = null) {
+    return {
+      nom,
+      niveau,
+      dateCreation: new Date().toISOString(),
+      etat: EtatClasse.EN_ATTENTE_APPROBATION,
+      etablissement: etablissementId ? { id: etablissementId } : null,
+      parents: [],
+      eleves: [],
+    };
+  }
+
+  /**
+   * Bulk operations for multiple classes
+   */
+
+  /**
+   * Creates multiple classes
+   * @param {Array} classes - Array of class objects
+   * @returns {Promise<Array>} Array of created classes
+   */
+  async creerPlusieursClasses(classes) {
+    const promises = classes.map((classe) => this.creerClasse(classe));
+    return await Promise.allSettled(promises);
+  }
+
+  /**
+   * Approves multiple classes
+   * @param {Array} idClasses - Array of class IDs
+   * @returns {Promise<Array>} Array of approved classes
+   */
+  async approuverPlusieursClasses(idClasses) {
+    const promises = idClasses.map((id) => this.approuverClasse(id));
+    return await Promise.allSettled(promises);
+  }
+
+  /**
+   * Deletes multiple classes
+   * @param {Array} idClasses - Array of class IDs
+   * @returns {Promise<void>}
+   */
+  async supprimerPlusieursClasses(idClasses) {
+    const promises = idClasses.map((id) => this.supprimerClasse(id));
+    await Promise.allSettled(promises);
+  }
+
+  /**
+   * Gets classes statistics
+   * @returns {Promise<Object>} Statistics about classes
+   */
+  async obtenirStatistiquesClasses() {
+    try {
+      const toutesLesClasses = await this.obtenirToutesLesClasses();
+
+      const stats = {
+        total: toutesLesClasses.length,
+        enAttente: toutesLesClasses.filter(
+          (c) => c.etat === EtatClasse.EN_ATTENTE_APPROBATION
+        ).length,
+        actives: toutesLesClasses.filter((c) => c.etat === EtatClasse.ACTIF)
+          .length,
+        inactives: toutesLesClasses.filter((c) => c.etat === EtatClasse.INACTIF)
+          .length,
+      };
+
+      return stats;
+    } catch (error) {
+      console.error("Error calculating statistics:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Searches classes by name or level
+   * @param {string} searchTerm - The search term
+   * @returns {Promise<Array>} Filtered classes
+   */
+  async rechercherClasses(searchTerm) {
+    try {
+      const toutesLesClasses = await this.obtenirToutesLesClasses();
+      const terme = searchTerm.toLowerCase();
+
+      return toutesLesClasses.filter(
+        (classe) =>
+          classe.nom.toLowerCase().includes(terme) ||
+          classe.niveau.toLowerCase().includes(terme)
+      );
+    } catch (error) {
+      console.error("Error searching classes:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Test API connection
+   * @returns {Promise<boolean>} True if API is accessible
+   */
+  async testConnection() {
+    try {
+      await this.axiosRequest("/classes", { method: "GET" });
+      return true;
+    } catch (error) {
+      console.error("API connection test failed:", error);
+      return false;
     }
   }
 }
 
-const classService = new ClassService();
-export default classService;
+export default ClassService;
+
+export const classService = new ClassService();
