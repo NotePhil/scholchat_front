@@ -146,9 +146,22 @@ class ClassService {
    */
   async creerClasse(classe) {
     try {
+      // Prepare moderator data - send only ID if exists
+      const classData = {
+        ...classe,
+        moderator: classe.moderator ? classe.moderator.id : null,
+        etablissement: classe.etablissement
+          ? { id: classe.etablissement.id }
+          : null,
+        parents: classe.parents
+          ? classe.parents.map((p) => ({ id: p.id }))
+          : [],
+        eleves: classe.eleves ? classe.eleves.map((e) => ({ id: e.id })) : [],
+      };
+
       return await this.axiosRequest("/classes", {
         method: "POST",
-        data: classe,
+        data: classData,
       });
     } catch (error) {
       console.error("Error creating class:", error);

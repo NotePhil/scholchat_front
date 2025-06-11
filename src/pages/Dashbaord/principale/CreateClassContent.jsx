@@ -140,8 +140,8 @@ const CreateClassContent = ({ onNavigateToManage }) => {
         ...(formData.etablissement && {
           etablissement: { id: formData.etablissement },
         }),
-        ...(formData.moderator.trim() && {
-          moderator: formData.moderator.trim(), // Already contains the ID
+        ...(formData.moderator && {
+          moderator: { id: formData.moderator }, // Send as object with id
         }),
         parents: [],
         eleves: [],
@@ -164,7 +164,6 @@ const CreateClassContent = ({ onNavigateToManage }) => {
       setLoading(false);
     }
   };
-
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
