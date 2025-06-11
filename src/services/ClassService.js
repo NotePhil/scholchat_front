@@ -540,6 +540,7 @@ class ClassService {
       return false;
     }
   }
+  
 }
 
 export default ClassService;

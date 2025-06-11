@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Menu,
@@ -34,6 +34,34 @@ const Sidebar = ({
     classes: false,
     establishments: false,
   });
+
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (window.innerWidth <= 768 && showSidebar) {
+        const sidebar = document.querySelector(".sidebar");
+        const mobileButton = document.querySelector(".mobile-menu-button");
+
+        if (
+          sidebar &&
+          !sidebar.contains(event.target) &&
+          mobileButton &&
+          !mobileButton.contains(event.target)
+        ) {
+          // Close sidebar by triggering the toggle
+          const toggleButton = document.querySelector(".mobile-menu-button");
+          if (toggleButton) {
+            toggleButton.click();
+          }
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSidebar]);
 
   const toggleDropdown = (dropdown) => {
     setOpenDropdown({
@@ -143,6 +171,14 @@ const Sidebar = ({
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+
+    // Close sidebar on mobile after selection
+    if (window.innerWidth <= 768) {
+      const toggleButton = document.querySelector(".mobile-menu-button");
+      if (toggleButton && showSidebar) {
+        setTimeout(() => toggleButton.click(), 150);
+      }
+    }
   };
 
   const openLogoutModal = () => {
@@ -189,7 +225,13 @@ const Sidebar = ({
                   <li>
                     <div
                       className={`dropdown-header ${
-                        activeTab.startsWith(item.dropdown) ? "active" : ""
+                        activeTab.startsWith(item.dropdown) ||
+                        (item.items &&
+                          item.items.some(
+                            (subItem) => subItem.tab === activeTab
+                          ))
+                          ? "active"
+                          : ""
                       }`}
                       onClick={() => toggleDropdown(item.dropdown)}
                     >
@@ -197,9 +239,14 @@ const Sidebar = ({
                         <span className="icon">
                           <item.icon
                             style={{
-                              color: activeTab.startsWith(item.dropdown)
-                                ? colorSchemes?.[currentTheme]?.primary
-                                : "currentColor",
+                              color:
+                                activeTab.startsWith(item.dropdown) ||
+                                (item.items &&
+                                  item.items.some(
+                                    (subItem) => subItem.tab === activeTab
+                                  ))
+                                  ? colorSchemes?.[currentTheme]?.primary
+                                  : "currentColor",
                             }}
                           />
                         </span>
@@ -270,9 +317,9 @@ const Sidebar = ({
 
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+        <div className="fixed inset-0 flex items-center justify-center z-[1002] bg-black bg-opacity-50">
           <div
-            className={`modal p-6 rounded-lg shadow-lg max-w-md w-full ${
+            className={`modal p-6 rounded-lg shadow-lg max-w-md w-full mx-4 ${
               isDark ? "bg-gray-800 text-white" : "bg-white text-gray-800"
             }`}
           >

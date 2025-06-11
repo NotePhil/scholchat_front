@@ -1,56 +1,52 @@
 import React, { useState, useEffect } from "react";
 import {
-  Table,
-  Button,
-  Modal,
   Form,
+  message,
+  Modal,
   Input,
   Select,
-  message,
-  Tabs,
+  Button,
   Tag,
-  Popconfirm,
-  Space,
+  Divider,
+  Typography,
   Card,
-  Row,
-  Col,
-  Descriptions,
+  Space,
   Alert,
   Spin,
-  Empty,
-  List,
-  Avatar,
-  Divider,
+  Table,
+  Tabs,
+  Popconfirm,
 } from "antd";
 import {
+  ArrowLeftOutlined,
+  ReloadOutlined,
   CheckOutlined,
   CloseOutlined,
   DeleteOutlined,
   HistoryOutlined,
   UserAddOutlined,
   UserDeleteOutlined,
-  FileTextOutlined,
-  ArrowLeftOutlined,
-  ReloadOutlined,
-  EyeOutlined,
-  TeamOutlined,
-  UserOutlined,
-  CalendarOutlined,
-  SettingOutlined,
+  EditOutlined,
+  ExclamationCircleOutlined,
+  ClockCircleOutlined,
   BookOutlined,
-  BankOutlined,
+  TeamOutlined,
+  SafetyCertificateOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
-import {
-  classService,
-  DroitPublication,
-  EtatClasse,
-} from "../../../services/ClassService";
-const { TabPane } = Tabs;
+import { classService } from "../../../services/ClassService";
+import { rejectionServiceClass } from "../../../services/RejectionServiceClass";
+import { scholchatService } from "../../../services/ScholchatService";
+import ManageClassList from "./ManageClassList";
+import ManageClassDetails from "./ManageClassDetails";
+
+const { Text, Title } = Typography;
 const { Option } = Select;
-const { TextArea } = Input;
+const { confirm } = Modal;
+const { TabPane } = Tabs;
 
 const ManageClassContent = ({ onBack }) => {
-  // States pour la liste des classes
+  // States for class list and details
   const [classes, setClasses] = useState([]);
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [classData, setClassData] = useState(null);
@@ -65,14 +61,43 @@ const ManageClassContent = ({ onBack }) => {
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [publicationRightsModalVisible, setPublicationRightsModalVisible] =
     useState(false);
+  const [rejectionMotifs, setRejectionMotifs] = useState([]);
 
   // Form and data states
   const [form] = Form.useForm();
   const [history, setHistory] = useState([]);
   const [professors, setProfessors] = useState([]);
-  const [rejectReason, setRejectReason] = useState("");
+  const [rejectReason, setRejectReason] = useState({
+    codeErreur: "",
+    motifSupplementaire: "",
+  });
   const [selectedPublicationRight, setSelectedPublicationRight] = useState("");
   const [actionLoading, setActionLoading] = useState(null);
+
+  // New states for class members
+  const [classProfessors, setClassProfessors] = useState([]);
+  const [classStudents, setClassStudents] = useState([]);
+  const [classParents, setClassParents] = useState([]);
+  const [professorsLoading, setProfessorsLoading] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [parentsLoading, setParentsLoading] = useState(false);
+
+  // Pagination states
+  const [professorsPagination, setProfessorsPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
+  const [studentsPagination, setStudentsPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
+  const [parentsPagination, setParentsPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
   // Auto-clear messages
   useEffect(() => {
@@ -89,16 +114,18 @@ const ManageClassContent = ({ onBack }) => {
     }
   }, [error]);
 
-  // Charger toutes les classes au début
+  // Load all classes, professors and rejection motifs on mount
   useEffect(() => {
     fetchAllClasses();
     fetchProfessors();
+    fetchRejectionMotifs();
   }, []);
 
-  // Charger les détails quand une classe est sélectionnée
+  // Load class details when selected
   useEffect(() => {
     if (selectedClassId) {
       fetchClassDetails(selectedClassId);
+      fetchClassMembers(selectedClassId);
     }
   }, [selectedClassId]);
 
@@ -123,7 +150,7 @@ const ManageClassContent = ({ onBack }) => {
       const data = await classService.obtenirClasseParId(classId);
       setClassData(data);
       setSelectedPublicationRight(
-        data.droitPublication || DroitPublication.PROFESSEURS_SEULEMENT
+        data.droitPublication || "PROFESSEURS_SEULEMENT"
       );
     } catch (error) {
       console.error("Error fetching class details:", error);
@@ -131,6 +158,79 @@ const ManageClassContent = ({ onBack }) => {
       setClassData(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchClassMembers = async (classId) => {
+    await Promise.all([
+      fetchClassProfessors(classId),
+      fetchClassStudents(classId),
+      fetchClassParents(classId),
+    ]);
+  };
+
+  const fetchClassProfessors = async (classId) => {
+    try {
+      setProfessorsLoading(true);
+      const allProfessors = await scholchatService.getAllProfessors();
+      // Filter professors by class (you may need to adjust this based on your data structure)
+      const classProfessors = allProfessors.filter(
+        (prof) => prof.classes && prof.classes.some((cls) => cls.id === classId)
+      );
+      setClassProfessors(classProfessors);
+      setProfessorsPagination((prev) => ({
+        ...prev,
+        total: classProfessors.length,
+      }));
+    } catch (error) {
+      console.error("Error fetching class professors:", error);
+      setError("Erreur lors du chargement des professeurs");
+    } finally {
+      setProfessorsLoading(false);
+    }
+  };
+
+  const fetchClassStudents = async (classId) => {
+    try {
+      setStudentsLoading(true);
+      const allStudents = await scholchatService.getAllStudents();
+      // Filter students by class
+      const classStudents = allStudents.filter(
+        (student) =>
+          student.classes && student.classes.some((cls) => cls.id === classId)
+      );
+      setClassStudents(classStudents);
+      setStudentsPagination((prev) => ({
+        ...prev,
+        total: classStudents.length,
+      }));
+    } catch (error) {
+      console.error("Error fetching class students:", error);
+      setError("Erreur lors du chargement des étudiants");
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  const fetchClassParents = async (classId) => {
+    try {
+      setParentsLoading(true);
+      const allParents = await scholchatService.getAllParents();
+      // Filter parents by class
+      const classParents = allParents.filter(
+        (parent) =>
+          parent.classes && parent.classes.some((cls) => cls.id === classId)
+      );
+      setClassParents(classParents);
+      setParentsPagination((prev) => ({
+        ...prev,
+        total: classParents.length,
+      }));
+    } catch (error) {
+      console.error("Error fetching class parents:", error);
+      setError("Erreur lors du chargement des parents");
+    } finally {
+      setParentsLoading(false);
     }
   };
 
@@ -143,11 +243,21 @@ const ManageClassContent = ({ onBack }) => {
     }
   };
 
+  const fetchRejectionMotifs = async () => {
+    try {
+      const motifs = await rejectionServiceClass.getAllClassRejectionMotifs();
+      setRejectionMotifs(motifs || []);
+    } catch (error) {
+      console.error("Error fetching rejection motifs:", error);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchAllClasses();
     if (selectedClassId) {
       await fetchClassDetails(selectedClassId);
+      await fetchClassMembers(selectedClassId);
     }
     setRefreshing(false);
     setSuccessMessage("Données actualisées avec succès");
@@ -174,7 +284,7 @@ const ManageClassContent = ({ onBack }) => {
       await classService.approuverClasse(selectedClassId);
       setSuccessMessage("Classe approuvée avec succès");
       await fetchClassDetails(selectedClassId);
-      await fetchAllClasses(); // Refresh la liste aussi
+      await fetchAllClasses();
     } catch (error) {
       console.error("Error approving class:", error);
       setError("Erreur lors de l'approbation de la classe");
@@ -183,18 +293,64 @@ const ManageClassContent = ({ onBack }) => {
     }
   };
 
+  const showRejectConfirm = () => {
+    confirm({
+      title: "Confirmer le rejet de la classe",
+      icon: <ExclamationCircleOutlined />,
+      content: (
+        <div>
+          <p>Êtes-vous sûr de vouloir rejeter cette classe ?</p>
+          <Form layout="vertical">
+            <Form.Item label="Motif de rejet" required>
+              <Select
+                placeholder="Sélectionner un motif"
+                onChange={(value) =>
+                  setRejectReason({ ...rejectReason, codeErreur: value })
+                }
+              >
+                {rejectionMotifs.map((motif) => (
+                  <Option key={motif.code} value={motif.code}>
+                    {motif.descriptif}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item label="Commentaire supplémentaire">
+              <Input.TextArea
+                rows={3}
+                placeholder="Détails supplémentaires (optionnel)"
+                onChange={(e) =>
+                  setRejectReason({
+                    ...rejectReason,
+                    motifSupplementaire: e.target.value,
+                  })
+                }
+              />
+            </Form.Item>
+          </Form>
+        </div>
+      ),
+      okText: "Confirmer",
+      okType: "danger",
+      cancelText: "Annuler",
+      onOk: handleReject,
+      onCancel: () => {
+        setRejectReason({ codeErreur: "", motifSupplementaire: "" });
+      },
+    });
+  };
+
   const handleReject = async () => {
-    if (!selectedClassId || !rejectReason.trim()) {
-      setError("Veuillez fournir une raison pour le rejet");
+    if (!selectedClassId || !rejectReason.codeErreur) {
+      setError("Veuillez sélectionner un motif de rejet");
       return;
     }
 
     try {
       setActionLoading("reject");
-      await classService.rejeterClasse(selectedClassId, rejectReason);
+      await rejectionServiceClass.rejectClass(selectedClassId, rejectReason);
       setSuccessMessage("Classe rejetée avec succès");
-      setRejectModalVisible(false);
-      setRejectReason("");
+      setRejectReason({ codeErreur: "", motifSupplementaire: "" });
       await fetchClassDetails(selectedClassId);
       await fetchAllClasses();
     } catch (error) {
@@ -203,6 +359,19 @@ const ManageClassContent = ({ onBack }) => {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const showDeleteConfirm = () => {
+    confirm({
+      title: "Confirmer la suppression de la classe",
+      icon: <ExclamationCircleOutlined />,
+      content:
+        "Êtes-vous sûr de vouloir supprimer définitivement cette classe ? Cette action est irréversible.",
+      okText: "Supprimer",
+      okType: "danger",
+      cancelText: "Annuler",
+      onOk: handleDelete,
+    });
   };
 
   const handleDelete = async () => {
@@ -299,576 +468,791 @@ const ManageClassContent = ({ onBack }) => {
     }
   };
 
-  const getStatusColor = (etat) => {
+  // Handle member deletion
+  const handleDeleteProfessor = async (professorId) => {
+    try {
+      await scholchatService.deleteProfessor(professorId);
+      setSuccessMessage("Professeur supprimé avec succès");
+      await fetchClassProfessors(selectedClassId);
+    } catch (error) {
+      console.error("Error deleting professor:", error);
+      setError("Erreur lors de la suppression du professeur");
+    }
+  };
+
+  const handleDeleteStudent = async (studentId) => {
+    try {
+      await scholchatService.deleteStudent(studentId);
+      setSuccessMessage("Étudiant supprimé avec succès");
+      await fetchClassStudents(selectedClassId);
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      setError("Erreur lors de la suppression de l'étudiant");
+    }
+  };
+
+  const handleDeleteParent = async (parentId) => {
+    try {
+      await scholchatService.deleteParent(parentId);
+      setSuccessMessage("Parent supprimé avec succès");
+      await fetchClassParents(selectedClassId);
+    } catch (error) {
+      console.error("Error deleting parent:", error);
+      setError("Erreur lors de la suppression du parent");
+    }
+  };
+
+  const renderStatusTag = (etat) => {
+    let color, icon, text;
     switch (etat) {
-      case EtatClasse.ACTIF:
-        return "success";
-      case EtatClasse.EN_ATTENTE_APPROBATION:
-        return "warning";
-      case EtatClasse.INACTIF:
-        return "error";
+      case "ACTIF":
+        color = "#52c41a";
+        icon = <CheckOutlined />;
+        text = "Actif";
+        break;
+      case "EN_ATTENTE_APPROBATION":
+        color = "#faad14";
+        icon = <ClockCircleOutlined />;
+        text = "En attente";
+        break;
+      case "INACTIF":
+        color = "#f5222d";
+        icon = <CloseOutlined />;
+        text = "Inactif";
+        break;
       default:
-        return "default";
+        color = "#d9d9d9";
+        text = etat;
     }
-  };
 
-  const getPublicationRightLabel = (droit) => {
-    switch (droit) {
-      case DroitPublication.PROFESSEURS_SEULEMENT:
-        return "Professeurs seulement";
-      case DroitPublication.TOUS:
-        return "Tous";
-      case DroitPublication.MODERATEUR_SEULEMENT:
-        return "Modérateur seulement";
-      case DroitPublication.PARENTS_ET_MODERATEUR:
-        return "Parents et Modérateur";
-      default:
-        return "Non défini";
-    }
-  };
-
-  const historyColumns = [
-    {
-      title: "Date",
-      dataIndex: "dateActivation",
-      key: "dateActivation",
-      render: (date) => new Date(date).toLocaleString(),
-    },
-    {
-      title: "Professeur",
-      dataIndex: "professeur",
-      key: "professeur",
-      render: (prof) => (prof ? `${prof.nom} ${prof.prenom}` : "N/A"),
-    },
-    {
-      title: "État",
-      dataIndex: "isActive",
-      key: "isActive",
-      render: (active) => (
-        <Tag color={active ? "green" : "red"}>
-          {active ? "Activé" : "Désactivé"}
-        </Tag>
-      ),
-    },
-  ];
-
-  // Loading state global
-  if (loading && !classes.length) {
     return (
-      <div className="flex justify-center items-center min-h-96">
-        <Spin size="large" />
-        <span className="ml-3">Chargement des classes...</span>
-      </div>
+      <Tag
+        icon={icon}
+        color={color}
+        style={{
+          fontWeight: 600,
+          fontSize: "12px",
+          padding: "4px 12px",
+          borderRadius: "16px",
+          border: "none",
+        }}
+      >
+        {text}
+      </Tag>
     );
-  }
+  };
 
-  // Si aucune classe sélectionnée, afficher la liste
-  if (!selectedClassId) {
+  // Streamlined action buttons
+  const renderActionButtons = () => {
+    if (!classData) return null;
+
     return (
-      <div className="p-6 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            {onBack && (
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={onBack}
-                type="text"
-              />
-            )}
-            <div>
-              <h2 className="text-2xl font-bold m-0">Gestion des Classes</h2>
-              <p className="text-gray-500 m-0">
-                Sélectionnez une classe à gérer ({classes.length} classe
-                {classes.length !== 1 ? "s" : ""})
-              </p>
-            </div>
-          </div>
-
+      <Card
+        size="small"
+        style={{
+          marginBottom: 20,
+          background: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)",
+          border: "1px solid #e1e4e8",
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        }}
+      >
+        <Space wrap size={[8, 8]} style={{ width: "100%" }}>
           <Button
             icon={<ReloadOutlined />}
             onClick={handleRefresh}
             loading={refreshing}
-            type="default"
+            style={{ borderRadius: "8px" }}
           >
             Actualiser
           </Button>
-        </div>
 
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <Alert
-            message={successMessage}
-            type="success"
-            showIcon
-            closable
-            className="mb-4"
-          />
-        )}
-
-        {error && (
-          <Alert
-            message={error}
-            type="error"
-            showIcon
-            closable
-            className="mb-4"
-          />
-        )}
-
-        {/* Liste des classes */}
-        <Card title="Classes disponibles">
-          {classes.length === 0 ? (
-            <Empty
-              description="Aucune classe trouvée"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          ) : (
-            <List
-              dataSource={classes}
-              renderItem={(classe) => (
-                <List.Item
-                  className="hover:bg-gray-50 cursor-pointer rounded-lg p-4"
-                  onClick={() => handleSelectClass(classe.id)}
-                  actions={[
-                    <Button
-                      type="primary"
-                      icon={<SettingOutlined />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectClass(classe.id);
-                      }}
-                    >
-                      Gérer
-                    </Button>,
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={<Avatar icon={<BookOutlined />} />}
-                    title={
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{classe.nom}</span>
-                        <Tag color={getStatusColor(classe.etat)}>
-                          {classService.getEtatDisplayName
-                            ? classService.getEtatDisplayName(classe.etat)
-                            : classe.etat}
-                        </Tag>
-                      </div>
-                    }
-                    description={
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-4 text-sm">
-                          <span>
-                            <BankOutlined /> {classe.niveau}
-                          </span>
-                          <span>
-                            <TeamOutlined /> {classe.eleves?.length || 0} élèves
-                          </span>
-                          <span>
-                            <UserOutlined /> {classe.parents?.length || 0}{" "}
-                            parents
-                          </span>
-                        </div>
-                        {classe.dateCreation && (
-                          <div className="text-xs text-gray-500">
-                            <CalendarOutlined /> Créée le{" "}
-                            {new Date(classe.dateCreation).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          )}
-        </Card>
-      </div>
-    );
-  }
-
-  // Si une classe est sélectionnée mais en cours de chargement
-  if (loading && selectedClassId) {
-    return (
-      <div className="flex justify-center items-center min-h-96">
-        <Spin size="large" />
-        <span className="ml-3">Chargement des détails de la classe...</span>
-      </div>
-    );
-  }
-
-  // Si erreur lors du chargement des détails
-  if (!classData && selectedClassId) {
-    return (
-      <div className="p-6">
-        <Alert
-          message="Impossible de charger les détails de la classe"
-          description={error || "Une erreur est survenue lors du chargement"}
-          type="error"
-          showIcon
-          action={
-            <Space>
+          {classData.etat === "EN_ATTENTE_APPROBATION" && (
+            <>
               <Button
-                size="small"
-                onClick={() => fetchClassDetails(selectedClassId)}
+                type="primary"
+                icon={<CheckOutlined />}
+                onClick={handleApprove}
+                loading={actionLoading === "approve"}
+                style={{ borderRadius: "8px" }}
               >
-                Réessayer
+                Approuver
               </Button>
-              <Button size="small" type="primary" onClick={handleBackToList}>
-                Retour à la liste
+              <Button
+                danger
+                icon={<CloseOutlined />}
+                onClick={showRejectConfirm}
+                loading={actionLoading === "reject"}
+                style={{ borderRadius: "8px" }}
+              >
+                Rejeter
               </Button>
-            </Space>
-          }
-        />
-      </div>
-    );
-  }
+            </>
+          )}
 
-  // Interface de gestion d'une classe spécifique
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={handleBackToList}
-            type="text"
-          />
-          <div>
-            <h2 className="text-2xl font-bold m-0">Gestion de la classe</h2>
-            <p className="text-gray-500 m-0">{classData.nom}</p>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-            loading={refreshing}
-            type="default"
-          >
-            Actualiser
-          </Button>
-
-          {classService.estEnAttenteApprobation &&
-            classService.estEnAttenteApprobation(classData) && (
-              <>
-                <Button
-                  type="primary"
-                  icon={<CheckOutlined />}
-                  onClick={handleApprove}
-                  loading={actionLoading === "approve"}
-                >
-                  Approuver
-                </Button>
-                <Button
-                  danger
-                  icon={<CloseOutlined />}
-                  onClick={() => setRejectModalVisible(true)}
-                  loading={actionLoading === "reject"}
-                >
-                  Rejeter
-                </Button>
-              </>
-            )}
-
-          <Popconfirm
-            title="Êtes-vous sûr de vouloir supprimer cette classe ?"
-            description="Cette action est irréversible."
-            onConfirm={handleDelete}
-            okText="Oui"
-            cancelText="Non"
-            okButtonProps={{ danger: true }}
-          >
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              loading={actionLoading === "delete"}
-            >
-              Supprimer
-            </Button>
-          </Popconfirm>
-        </div>
-      </div>
-
-      {/* Success Message */}
-      {successMessage && (
-        <Alert
-          message={successMessage}
-          type="success"
-          showIcon
-          closable
-          className="mb-4"
-        />
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <Alert
-          message={error}
-          type="error"
-          showIcon
-          closable
-          className="mb-4"
-        />
-      )}
-
-      {/* Action Buttons */}
-      <div className="mb-6">
-        <Space wrap>
           <Button
             icon={<HistoryOutlined />}
             onClick={fetchActivationHistory}
             loading={actionLoading === "history"}
+            style={{ borderRadius: "8px" }}
           >
-            Historique d'activation
+            Historique
           </Button>
 
           <Button
-            icon={<FileTextOutlined />}
-            onClick={() => setPublicationRightsModalVisible(true)}
+            danger
+            icon={<DeleteOutlined />}
+            onClick={showDeleteConfirm}
+            loading={actionLoading === "delete"}
+            style={{ borderRadius: "8px" }}
           >
-            Droits de publication
+            Supprimer
           </Button>
-
-          <Button
-            type="dashed"
-            icon={<UserAddOutlined />}
-            onClick={() => setModeratorModalVisible(true)}
-            disabled={!professors.length}
-          >
-            Assigner un modérateur
-          </Button>
-
-          {classData.moderator && (
-            <Button
-              danger
-              icon={<UserDeleteOutlined />}
-              onClick={handleModeratorRemove}
-              loading={actionLoading === "removeModerator"}
-            >
-              Retirer le modérateur
-            </Button>
-          )}
         </Space>
-      </div>
-
-      {/* Class Information */}
-      <Card title="Informations de la classe" className="mb-6">
-        <Row gutter={[24, 16]}>
-          <Col xs={24} md={12}>
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="Nom">{classData.nom}</Descriptions.Item>
-              <Descriptions.Item label="Niveau">
-                {classData.niveau}
-              </Descriptions.Item>
-              <Descriptions.Item label="État">
-                <Tag color={getStatusColor(classData.etat)}>
-                  {classService.getEtatDisplayName
-                    ? classService.getEtatDisplayName(classData.etat)
-                    : classData.etat}
-                </Tag>
-              </Descriptions.Item>
-            </Descriptions>
-          </Col>
-          <Col xs={24} md={12}>
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="Date de création">
-                {classData.dateCreation
-                  ? new Date(classData.dateCreation).toLocaleString()
-                  : "Non définie"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Droits de publication">
-                {getPublicationRightLabel(classData.droitPublication)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Modérateur">
-                {classData.moderator
-                  ? `${classData.moderator.nom} ${classData.moderator.prenom}`
-                  : "Non assigné"}
-              </Descriptions.Item>
-            </Descriptions>
-          </Col>
-        </Row>
       </Card>
+    );
+  };
 
-      {/* Data Tabs */}
-      <Card>
-        <Tabs defaultActiveKey="1">
+  // Table columns for professors
+  const professorColumns = [
+    {
+      title: "Nom",
+      dataIndex: "nom",
+      key: "nom",
+      render: (text, record) => `${record.nom} ${record.prenom}`,
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+    },
+    {
+      title: "Téléphone",
+      dataIndex: "telephone",
+      key: "telephone",
+    },
+    {
+      title: "Établissement",
+      dataIndex: "nomEtablissement",
+      key: "nomEtablissement",
+    },
+    {
+      title: "Matricule",
+      dataIndex: "matriculeProfesseur",
+      key: "matriculeProfesseur",
+    },
+    {
+      title: "État",
+      dataIndex: "etat",
+      key: "etat",
+      render: (etat) => renderStatusTag(etat),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          <Popconfirm
+            title="Êtes-vous sûr de vouloir supprimer ce professeur ?"
+            onConfirm={() => handleDeleteProfessor(record.id)}
+            okText="Oui"
+            cancelText="Non"
+          >
+            <Button danger size="small" icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  // Table columns for students
+  const studentColumns = [
+    {
+      title: "Nom",
+      dataIndex: "nom",
+      key: "nom",
+      render: (text, record) => `${record.nom} ${record.prenom}`,
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+    },
+    {
+      title: "Téléphone",
+      dataIndex: "telephone",
+      key: "telephone",
+    },
+    {
+      title: "Niveau",
+      dataIndex: "niveau",
+      key: "niveau",
+    },
+    {
+      title: "État",
+      dataIndex: "etat",
+      key: "etat",
+      render: (etat) => renderStatusTag(etat),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          <Popconfirm
+            title="Êtes-vous sûr de vouloir supprimer cet étudiant ?"
+            onConfirm={() => handleDeleteStudent(record.id)}
+            okText="Oui"
+            cancelText="Non"
+          >
+            <Button danger size="small" icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  // Table columns for parents
+  const parentColumns = [
+    {
+      title: "Nom",
+      dataIndex: "nom",
+      key: "nom",
+      render: (text, record) => `${record.nom} ${record.prenom}`,
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+    },
+    {
+      title: "Téléphone",
+      dataIndex: "telephone",
+      key: "telephone",
+    },
+    {
+      title: "Adresse",
+      dataIndex: "adresse",
+      key: "adresse",
+    },
+    {
+      title: "État",
+      dataIndex: "etat",
+      key: "etat",
+      render: (etat) => renderStatusTag(etat),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          <Popconfirm
+            title="Êtes-vous sûr de vouloir supprimer ce parent ?"
+            onConfirm={() => handleDeleteParent(record.id)}
+            okText="Oui"
+            cancelText="Non"
+          >
+            <Button danger size="small" icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  const renderClassMembersTabs = () => {
+    return (
+      <Card
+        style={{
+          marginTop: 20,
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        }}
+      >
+        <Tabs defaultActiveKey="professors" size="large">
           <TabPane
             tab={
               <span>
                 <TeamOutlined />
-                Élèves ({classData.eleves?.length || 0})
+                Professeurs ({classProfessors.length})
               </span>
             }
-            key="1"
+            key="professors"
           >
-            {!classData.eleves || classData.eleves.length === 0 ? (
-              <Empty
-                description="Aucun élève dans cette classe"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-            ) : (
-              <Table
-                columns={[
-                  { title: "Nom", dataIndex: "nom", key: "nom" },
-                  { title: "Prénom", dataIndex: "prenom", key: "prenom" },
-                  { title: "Email", dataIndex: "email", key: "email" },
-                  { title: "Niveau", dataIndex: "niveau", key: "niveau" },
-                ]}
-                dataSource={classData.eleves}
-                rowKey="id"
-                pagination={{ pageSize: 10 }}
-                size="small"
-              />
-            )}
+            <div style={{ marginBottom: 16 }}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                style={{ borderRadius: "8px" }}
+              >
+                Ajouter Professeur
+              </Button>
+            </div>
+            <Table
+              columns={professorColumns}
+              dataSource={classProfessors}
+              loading={professorsLoading}
+              rowKey="id"
+              pagination={{
+                current: professorsPagination.current,
+                pageSize: professorsPagination.pageSize,
+                total: professorsPagination.total,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total) => `Total ${total} professeurs`,
+                onChange: (page, pageSize) => {
+                  setProfessorsPagination({
+                    ...professorsPagination,
+                    current: page,
+                    pageSize: pageSize,
+                  });
+                },
+              }}
+              scroll={{ x: 800 }}
+            />
           </TabPane>
 
           <TabPane
             tab={
               <span>
-                <UserOutlined />
-                Parents ({classData.parents?.length || 0})
+                <BookOutlined />
+                Étudiants ({classStudents.length})
               </span>
             }
-            key="2"
+            key="students"
           >
-            {!classData.parents || classData.parents.length === 0 ? (
-              <Empty
-                description="Aucun parent dans cette classe"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-            ) : (
-              <Table
-                columns={[
-                  { title: "Nom", dataIndex: "nom", key: "nom" },
-                  { title: "Prénom", dataIndex: "prenom", key: "prenom" },
-                  { title: "Email", dataIndex: "email", key: "email" },
-                  {
-                    title: "Téléphone",
-                    dataIndex: "telephone",
-                    key: "telephone",
-                  },
-                ]}
-                dataSource={classData.parents}
-                rowKey="id"
-                pagination={{ pageSize: 10 }}
-                size="small"
-              />
-            )}
+            <div style={{ marginBottom: 16 }}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                style={{ borderRadius: "8px" }}
+              >
+                Ajouter Étudiant
+              </Button>
+            </div>
+            <Table
+              columns={studentColumns}
+              dataSource={classStudents}
+              loading={studentsLoading}
+              rowKey="id"
+              pagination={{
+                current: studentsPagination.current,
+                pageSize: studentsPagination.pageSize,
+                total: studentsPagination.total,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total) => `Total ${total} étudiants`,
+                onChange: (page, pageSize) => {
+                  setStudentsPagination({
+                    ...studentsPagination,
+                    current: page,
+                    pageSize: pageSize,
+                  });
+                },
+              }}
+              scroll={{ x: 800 }}
+            />
+          </TabPane>
+
+          <TabPane
+            tab={
+              <span>
+                <UserAddOutlined />
+                Parents ({classParents.length})
+              </span>
+            }
+            key="parents"
+          >
+            <div style={{ marginBottom: 16 }}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                style={{ borderRadius: "8px" }}
+              >
+                Ajouter Parent
+              </Button>
+            </div>
+            <Table
+              columns={parentColumns}
+              dataSource={classParents}
+              loading={parentsLoading}
+              rowKey="id"
+              pagination={{
+                current: parentsPagination.current,
+                pageSize: parentsPagination.pageSize,
+                total: parentsPagination.total,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total) => `Total ${total} parents`,
+                onChange: (page, pageSize) => {
+                  setParentsPagination({
+                    ...parentsPagination,
+                    current: page,
+                    pageSize: pageSize,
+                  });
+                },
+              }}
+              scroll={{ x: 800 }}
+            />
           </TabPane>
         </Tabs>
       </Card>
+    );
+  };
 
-      {/* Modals */}
-
-      {/* Activation History Modal */}
-      <Modal
-        title="Historique d'activation"
-        open={historyModalVisible}
-        onCancel={() => setHistoryModalVisible(false)}
-        footer={null}
-        width={800}
+  return (
+    <div
+      style={{
+        background: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)",
+        minHeight: "100vh",
+        padding: "24px",
+      }}
+    >
+      <Card
+        style={{
+          background: "white",
+          borderRadius: "16px",
+          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.08)",
+          border: "1px solid #e1e4e8",
+          overflow: "hidden",
+        }}
       >
-        {history.length === 0 ? (
-          <Empty description="Aucun historique disponible" />
+        {!selectedClassId ? (
+          <div style={{ padding: "24px" }}>
+            <div style={{ marginBottom: "24px" }}>
+              <Space align="center" style={{ marginBottom: "16px" }}>
+                <BookOutlined style={{ fontSize: "24px", color: "#4a6da7" }} />
+                <Title level={2} style={{ margin: 0, color: "#2c3e50" }}>
+                  Gestion des Classes
+                </Title>
+              </Space>
+              <Text type="secondary" style={{ fontSize: "16px" }}>
+                Gérez et supervisez toutes les classes de votre établissement
+              </Text>
+            </div>
+
+            {/* Alert Messages */}
+            {error && (
+              <Alert
+                message={error}
+                type="error"
+                showIcon
+                closable
+                style={{ marginBottom: "16px", borderRadius: "8px" }}
+                onClose={() => setError("")}
+              />
+            )}
+
+            {successMessage && (
+              <Alert
+                message={successMessage}
+                type="success"
+                showIcon
+                closable
+                style={{ marginBottom: "16px", borderRadius: "8px" }}
+                onClose={() => setSuccessMessage("")}
+              />
+            )}
+
+            <ManageClassList
+              classes={classes}
+              loading={loading}
+              error={error}
+              successMessage={successMessage}
+              refreshing={refreshing}
+              onSelectClass={handleSelectClass}
+              onRefresh={handleRefresh}
+              onBack={onBack}
+            />
+          </div>
         ) : (
-          <Table
-            columns={historyColumns}
-            dataSource={history}
-            rowKey="id"
-            pagination={false}
-            size="small"
-          />
+          <div style={{ padding: "24px" }}>
+            {/* Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "24px",
+                paddingBottom: "16px",
+                borderBottom: "2px solid #f0f2f5",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Button
+                  icon={<ArrowLeftOutlined />}
+                  onClick={handleBackToList}
+                  style={{
+                    marginRight: "16px",
+                    borderRadius: "8px",
+                    background: "#f8f9fa",
+                    borderColor: "#e1e4e8",
+                  }}
+                />
+                <div>
+                  <Title level={3} style={{ margin: 0, color: "#2c3e50" }}>
+                    <BookOutlined
+                      style={{ marginRight: "8px", color: "#4a6da7" }}
+                    />
+                    Gestion de la classe
+                  </Title>
+                  <Text strong style={{ fontSize: "18px", color: "#4a6da7" }}>
+                    {classData?.nom}
+                  </Text>
+                </div>
+              </div>
+
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "12px" }}
+              >
+                {classData?.etat && renderStatusTag(classData.etat)}
+                <div
+                  style={{
+                    padding: "8px 16px",
+                    background:
+                      "linear-gradient(135deg, #4a6da7 0%, #3a5069 100%)",
+                    borderRadius: "20px",
+                    color: "white",
+                    fontWeight: 600,
+                    fontSize: "12px",
+                  }}
+                >
+                  <TeamOutlined style={{ marginRight: "6px" }} />
+                  {classData?.nombreEtudiants || 0} étudiants
+                </div>
+              </div>
+            </div>
+
+            {/* Alert Messages */}
+            {error && (
+              <Alert
+                message={error}
+                type="error"
+                showIcon
+                closable
+                style={{ marginBottom: "16px", borderRadius: "8px" }}
+                onClose={() => setError("")}
+              />
+            )}
+
+            {successMessage && (
+              <Alert
+                message={successMessage}
+                type="success"
+                showIcon
+                closable
+                style={{ marginBottom: "16px", borderRadius: "8px" }}
+                onClose={() => setSuccessMessage("")}
+              />
+            )}
+
+            {/* Loading Spinner */}
+            {loading && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  padding: "40px",
+                }}
+              >
+                <Spin size="large" />
+              </div>
+            )}
+
+            {/* Streamlined Action buttons */}
+            {!loading && renderActionButtons()}
+
+            {/* Class Details Card */}
+            {!loading && classData && (
+              <Card
+                style={{
+                  marginBottom: 20,
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                }}
+              >
+                <div style={{ padding: "16px" }}>
+                  <Title
+                    level={4}
+                    style={{ marginBottom: "16px", color: "#2c3e50" }}
+                  >
+                    Informations de la classe
+                  </Title>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(250px, 1fr))",
+                      gap: "16px",
+                    }}
+                  >
+                    <div>
+                      <Text strong>Nom:</Text>
+                      <div>{classData.nom}</div>
+                    </div>
+                    <div>
+                      <Text strong>Description:</Text>
+                      <div>{classData.description || "N/A"}</div>
+                    </div>
+                    <div>
+                      <Text strong>Établissement:</Text>
+                      <div>{classData.nomEtablissement || "N/A"}</div>
+                    </div>
+                    <div>
+                      <Text strong>Niveau:</Text>
+                      <div>{classData.niveau || "N/A"}</div>
+                    </div>
+                    <div>
+                      <Text strong>Modérateur:</Text>
+                      <div>
+                        {classData.moderator
+                          ? `${classData.moderator.nom} ${classData.moderator.prenom}`
+                          : "Aucun"}
+                      </div>
+                    </div>
+                    <div>
+                      <Text strong>Droits de publication:</Text>
+                      <div>
+                        {classData.droitPublication || "PROFESSEURS_SEULEMENT"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Class Members Tables */}
+            {!loading && classData && renderClassMembersTabs()}
+
+            {/* Modals */}
+            {/* History Modal */}
+            <Modal
+              title="Historique d'activation"
+              visible={historyModalVisible}
+              onCancel={() => setHistoryModalVisible(false)}
+              footer={null}
+              width={800}
+            >
+              <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+                {history.length === 0 ? (
+                  <Text type="secondary">Aucun historique disponible</Text>
+                ) : (
+                  history.map((item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        padding: "12px",
+                        borderBottom: "1px solid #f0f0f0",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Text strong>{item.action}</Text>
+                        <Text type="secondary">{item.date}</Text>
+                      </div>
+                      <Text>{item.description}</Text>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Modal>
+
+            {/* Moderator Assignment Modal */}
+            <Modal
+              title="Assigner un modérateur"
+              visible={moderatorModalVisible}
+              onCancel={() => setModeratorModalVisible(false)}
+              footer={null}
+            >
+              <Form
+                form={form}
+                onFinish={handleModeratorAssign}
+                layout="vertical"
+              >
+                <Form.Item
+                  name="moderatorId"
+                  label="Sélectionner un professeur"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Veuillez sélectionner un professeur",
+                    },
+                  ]}
+                >
+                  <Select placeholder="Choisir un professeur">
+                    {professors.map((prof) => (
+                      <Option key={prof.id} value={prof.id}>
+                        {prof.nom} {prof.prenom} - {prof.email}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item>
+                  <Space>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={actionLoading === "moderator"}
+                    >
+                      Assigner
+                    </Button>
+                    <Button onClick={() => setModeratorModalVisible(false)}>
+                      Annuler
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Form>
+            </Modal>
+
+            {/* Publication Rights Modal */}
+            <Modal
+              title="Modifier les droits de publication"
+              visible={publicationRightsModalVisible}
+              onCancel={() => setPublicationRightsModalVisible(false)}
+              footer={null}
+            >
+              <Form layout="vertical">
+                <Form.Item label="Droits de publication">
+                  <Select
+                    value={selectedPublicationRight}
+                    onChange={setSelectedPublicationRight}
+                    placeholder="Sélectionner les droits"
+                  >
+                    <Option value="PROFESSEURS_SEULEMENT">
+                      Professeurs seulement
+                    </Option>
+                    <Option value="TOUS">Tous les membres</Option>
+                    <Option value="MODERATEUR_SEULEMENT">
+                      Modérateur seulement
+                    </Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item>
+                  <Space>
+                    <Button
+                      type="primary"
+                      onClick={handlePublicationRightsUpdate}
+                      loading={actionLoading === "publicationRights"}
+                    >
+                      Mettre à jour
+                    </Button>
+                    <Button
+                      onClick={() => setPublicationRightsModalVisible(false)}
+                    >
+                      Annuler
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Form>
+            </Modal>
+          </div>
         )}
-      </Modal>
-
-      {/* Assign Moderator Modal */}
-      <Modal
-        title="Assigner un modérateur"
-        open={moderatorModalVisible}
-        onCancel={() => {
-          setModeratorModalVisible(false);
-          form.resetFields();
-        }}
-        onOk={() => form.submit()}
-        confirmLoading={actionLoading === "moderator"}
-      >
-        <Form form={form} layout="vertical" onFinish={handleModeratorAssign}>
-          <Form.Item
-            name="moderatorId"
-            label="Sélectionner un professeur"
-            rules={[
-              {
-                required: true,
-                message: "Veuillez sélectionner un professeur!",
-              },
-            ]}
-          >
-            <Select placeholder="Choisir un professeur" showSearch>
-              {professors.map((prof) => (
-                <Option key={prof.id} value={prof.id}>
-                  {prof.nom} {prof.prenom} - {prof.email}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* Reject Class Modal */}
-      <Modal
-        title="Rejeter la classe"
-        open={rejectModalVisible}
-        onCancel={() => {
-          setRejectModalVisible(false);
-          setRejectReason("");
-        }}
-        onOk={handleReject}
-        okText="Rejeter"
-        okButtonProps={{ danger: true }}
-        confirmLoading={actionLoading === "reject"}
-      >
-        <p>Veuillez fournir une raison pour le rejet de cette classe :</p>
-        <TextArea
-          rows={4}
-          value={rejectReason}
-          onChange={(e) => setRejectReason(e.target.value)}
-          placeholder="Entrez la raison du rejet..."
-        />
-      </Modal>
-
-      {/* Publication Rights Modal */}
-      <Modal
-        title="Modifier les droits de publication"
-        open={publicationRightsModalVisible}
-        onCancel={() => setPublicationRightsModalVisible(false)}
-        onOk={handlePublicationRightsUpdate}
-        okText="Mettre à jour"
-        confirmLoading={actionLoading === "publicationRights"}
-      >
-        <p className="mb-4">
-          Sélectionnez qui peut publier du contenu dans cette classe :
-        </p>
-        <Select
-          style={{ width: "100%" }}
-          value={selectedPublicationRight}
-          onChange={(value) => setSelectedPublicationRight(value)}
-          placeholder="Sélectionner les droits de publication"
-        >
-          <Option value={DroitPublication.PROFESSEURS_SEULEMENT}>
-            Professeurs seulement
-          </Option>
-          <Option value={DroitPublication.TOUS}>Tous</Option>
-          <Option value={DroitPublication.MODERATEUR_SEULEMENT}>
-            Modérateur seulement
-          </Option>
-          <Option value={DroitPublication.PARENTS_ET_MODERATEUR}>
-            Parents et modérateur
-          </Option>
-        </Select>
-      </Modal>
+      </Card>
     </div>
   );
 };

@@ -11,22 +11,26 @@ import {
   Phone,
   Settings,
   Eye,
-  X,
-  Check,
   AlertCircle,
   Loader,
 } from "lucide-react";
 import establishmentService from "../../../services/EstablishmentService";
+import EstablishmentModal from "./EstablishmentModal.jsx";
+
 const ManageEstablishmentContent = ({ onNavigateToCreate }) => {
   const [establishments, setEstablishments] = useState([]);
   const [filteredEstablishments, setFilteredEstablishments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEstablishment, setSelectedEstablishment] = useState(null);
-  const [editingEstablishment, setEditingEstablishment] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState("");
+
+  // Modal states
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState("view"); // "view", "edit", "create"
+  const [modalLoading, setModalLoading] = useState(false);
 
   // Load establishments
   useEffect(() => {
@@ -77,33 +81,51 @@ const ManageEstablishmentContent = ({ onNavigateToCreate }) => {
     }
   };
 
-  const handleEdit = (establishment) => {
-    setEditingEstablishment({ ...establishment });
+  const handleView = (establishment) => {
+    setSelectedEstablishment(establishment);
+    setModalMode("view");
+    setShowModal(true);
   };
 
-  const handleSaveEdit = async () => {
+  const handleEdit = (establishment) => {
+    setSelectedEstablishment(establishment);
+    setModalMode("edit");
+    setShowModal(true);
+  };
+
+  const handleCreate = () => {
+    setSelectedEstablishment(null);
+    setModalMode("create");
+    setShowModal(true);
+  };
+
+  const handleModalSave = async (establishmentData) => {
     try {
-      setActionLoading(editingEstablishment.id);
-      await establishmentService.updateEstablishment(
-        editingEstablishment.id,
-        editingEstablishment
-      );
+      setModalLoading(true);
+
+      if (modalMode === "create") {
+        await establishmentService.createEstablishment(establishmentData);
+      } else if (modalMode === "edit") {
+        await establishmentService.updateEstablishment(
+          selectedEstablishment.id,
+          establishmentData
+        );
+      }
+
       await loadEstablishments();
-      setEditingEstablishment(null);
+      setShowModal(false);
+      setSelectedEstablishment(null);
       setError("");
     } catch (error) {
-      console.error("Error updating establishment:", error);
-      setError("Erreur lors de la mise à jour");
+      console.error("Error saving establishment:", error);
+      setError(
+        modalMode === "create"
+          ? "Erreur lors de la création"
+          : "Erreur lors de la mise à jour"
+      );
     } finally {
-      setActionLoading(null);
+      setModalLoading(false);
     }
-  };
-
-  const handleInputChange = (field, value) => {
-    setEditingEstablishment((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
   };
 
   if (loading) {
@@ -140,7 +162,7 @@ const ManageEstablishmentContent = ({ onNavigateToCreate }) => {
                 </div>
               </div>
               <button
-                onClick={onNavigateToCreate}
+                onClick={handleCreate}
                 className="bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
@@ -186,7 +208,7 @@ const ManageEstablishmentContent = ({ onNavigateToCreate }) => {
             </p>
             {!searchTerm && (
               <button
-                onClick={onNavigateToCreate}
+                onClick={handleCreate}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center gap-2 mx-auto"
               >
                 <Plus className="w-5 h-5" />
@@ -262,7 +284,7 @@ const ManageEstablishmentContent = ({ onNavigateToCreate }) => {
                   {/* Actions */}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setSelectedEstablishment(establishment)}
+                      onClick={() => handleView(establishment)}
                       className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
                     >
                       <Eye className="w-4 h-4" />
@@ -288,266 +310,15 @@ const ManageEstablishmentContent = ({ onNavigateToCreate }) => {
           </div>
         )}
 
-        {/* View Modal */}
-        {selectedEstablishment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Détails de l'établissement
-                  </h2>
-                  <button
-                    onClick={() => setSelectedEstablishment(null)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nom
-                    </label>
-                    <p className="text-gray-900">{selectedEstablishment.nom}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Pays
-                    </label>
-                    <p className="text-gray-900">
-                      {selectedEstablishment.pays}
-                    </p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Localisation
-                    </label>
-                    <p className="text-gray-900">
-                      {selectedEstablishment.localisation}
-                    </p>
-                  </div>
-                  {selectedEstablishment.email && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email
-                      </label>
-                      <p className="text-gray-900">
-                        {selectedEstablishment.email}
-                      </p>
-                    </div>
-                  )}
-                  {selectedEstablishment.telephone && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Téléphone
-                      </label>
-                      <p className="text-gray-900">
-                        {selectedEstablishment.telephone}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Options configurées
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedEstablishment.optionEnvoiMailVersClasse && (
-                      <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                        Envoi email vers classes
-                      </span>
-                    )}
-                    {selectedEstablishment.optionTokenGeneral && (
-                      <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                        Token général
-                      </span>
-                    )}
-                    {selectedEstablishment.codeUnique && (
-                      <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full">
-                        Code unique
-                      </span>
-                    )}
-                    {!selectedEstablishment.optionEnvoiMailVersClasse &&
-                      !selectedEstablishment.optionTokenGeneral &&
-                      !selectedEstablishment.codeUnique && (
-                        <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                          Aucune option activée
-                        </span>
-                      )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Edit Modal */}
-        {editingEstablishment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Modifier l'établissement
-                  </h2>
-                  <button
-                    onClick={() => setEditingEstablishment(null)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nom *
-                    </label>
-                    <input
-                      type="text"
-                      value={editingEstablishment.nom}
-                      onChange={(e) => handleInputChange("nom", e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Pays *
-                    </label>
-                    <input
-                      type="text"
-                      value={editingEstablishment.pays}
-                      onChange={(e) =>
-                        handleInputChange("pays", e.target.value)
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Localisation *
-                    </label>
-                    <input
-                      type="text"
-                      value={editingEstablishment.localisation}
-                      onChange={(e) =>
-                        handleInputChange("localisation", e.target.value)
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={editingEstablishment.email || ""}
-                      onChange={(e) =>
-                        handleInputChange("email", e.target.value)
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Téléphone
-                    </label>
-                    <input
-                      type="tel"
-                      value={editingEstablishment.telephone || ""}
-                      onChange={(e) =>
-                        handleInputChange("telephone", e.target.value)
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-4">
-                    Options de configuration
-                  </h4>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={
-                          editingEstablishment.optionEnvoiMailVersClasse ||
-                          false
-                        }
-                        onChange={(e) =>
-                          handleInputChange(
-                            "optionEnvoiMailVersClasse",
-                            e.target.checked
-                          )
-                        }
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">
-                        Envoi d'email vers les classes
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={
-                          editingEstablishment.optionTokenGeneral || false
-                        }
-                        onChange={(e) =>
-                          handleInputChange(
-                            "optionTokenGeneral",
-                            e.target.checked
-                          )
-                        }
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">
-                        Token général
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={editingEstablishment.codeUnique || false}
-                        onChange={(e) =>
-                          handleInputChange("codeUnique", e.target.checked)
-                        }
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">Code unique</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mt-8 flex justify-end gap-4">
-                  <button
-                    onClick={() => setEditingEstablishment(null)}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleSaveEdit}
-                    disabled={actionLoading === editingEstablishment.id}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all flex items-center gap-2"
-                  >
-                    {actionLoading === editingEstablishment.id && (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    )}
-                    {actionLoading === editingEstablishment.id
-                      ? "Enregistrement..."
-                      : "Enregistrer"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Establishment Modal */}
+        <EstablishmentModal
+          showModal={showModal}
+          setShowModal={setShowModal}
+          modalMode={modalMode}
+          selectedEstablishment={selectedEstablishment}
+          onSave={handleModalSave}
+          loading={modalLoading}
+        />
 
         {/* Delete Modal */}
         {showDeleteModal && (
