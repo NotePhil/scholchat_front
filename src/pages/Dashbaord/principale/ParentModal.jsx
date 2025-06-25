@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { X, Save, User, Mail, Phone, MapPin, ChevronDown } from "lucide-react";
+import {
+  X,
+  Save,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  ChevronDown,
+  School,
+} from "lucide-react";
 import { scholchatService } from "../../../services/ScholchatService";
 import axios from "axios";
 import PhoneInput from "react-phone-number-input";
@@ -22,6 +31,7 @@ const ParentModal = ({
     email: "",
     telephone: "",
     adresse: "",
+    classes: [],
   });
 
   const [selectedCountry, setSelectedCountry] = useState("CM");
@@ -37,6 +47,7 @@ const ParentModal = ({
           email: "",
           telephone: "",
           adresse: "",
+          classes: [],
         });
       } else if (
         (modalMode === "edit" || modalMode === "view") &&
@@ -49,6 +60,7 @@ const ParentModal = ({
           email: selectedParent.email || "",
           telephone: selectedParent.telephone || "",
           adresse: selectedParent.adresse || "",
+          classes: selectedParent.classes || [],
         });
 
         // Set country based on phone number
@@ -119,6 +131,29 @@ const ParentModal = ({
     );
   };
 
+  const handleClassSelection = (e) => {
+    const classId = e.target.value;
+    if (!classId) return;
+
+    const selectedClass = classes.find((c) => c.id === classId);
+    if (!selectedClass) return;
+
+    // Check if class is already added
+    if (formData.classes.some((c) => c.id === classId)) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      classes: [...prev.classes, selectedClass],
+    }));
+  };
+
+  const removeClass = (classId) => {
+    setFormData((prev) => ({
+      ...prev,
+      classes: prev.classes.filter((c) => c.id !== classId),
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -131,6 +166,7 @@ const ParentModal = ({
         telephone: formData.telephone,
         adresse: formData.adresse.trim(),
         type: "parent",
+        classesIds: formData.classes.map((c) => c.id),
       };
 
       if (modalMode === "create") {
@@ -237,6 +273,35 @@ const ParentModal = ({
                       <p className="text-gray-900 font-medium">
                         {formData.adresse}
                       </p>
+                    </div>
+                  </div>
+
+                  {/* Classes Information */}
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-gray-900 flex items-center">
+                      <School className="mr-2 w-5 h-5" />
+                      Classes Associées
+                    </h4>
+                    <div className="space-y-2">
+                      {formData.classes.length > 0 ? (
+                        formData.classes.map((cls) => (
+                          <div
+                            key={cls.id}
+                            className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+                          >
+                            <div>
+                              <p className="font-medium">{cls.nom}</p>
+                              <p className="text-sm text-gray-600">
+                                {cls.niveau}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 py-2">
+                          Aucune classe associée
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -372,6 +437,65 @@ const ParentModal = ({
                     placeholder="Entrez l'adresse complète"
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
                   />
+                </div>
+
+                {/* Classes Information */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900 flex items-center">
+                    <School className="mr-2 w-5 h-5" />
+                    Classes Associées
+                  </h4>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Ajouter une classe
+                    </label>
+                    <select
+                      onChange={handleClassSelection}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Sélectionnez une classe</option>
+                      {classes
+                        .filter(
+                          (cls) =>
+                            !formData.classes.some((c) => c.id === cls.id)
+                        )
+                        .map((cls) => (
+                          <option key={cls.id} value={cls.id}>
+                            {cls.nom} - {cls.niveau}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    {formData.classes.length > 0 ? (
+                      formData.classes.map((cls) => (
+                        <div
+                          key={cls.id}
+                          className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+                        >
+                          <div>
+                            <p className="font-medium">{cls.nom}</p>
+                            <p className="text-sm text-gray-600">
+                              {cls.niveau}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeClass(cls.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500 py-2">
+                        Aucune classe associée
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

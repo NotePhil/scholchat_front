@@ -24,7 +24,7 @@ import { scholchatService } from "../../../services/ScholchatService";
 import { classService } from "../../../services/ClassService";
 import ProfessorModal from "./ProfessorModal";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
-import UserViewModalParentStudent from "./modals/UserViewModalParentStudent";
+import UserViewModal from "./modals/UserViewModal";
 
 const ProfessorsContent = () => {
   const [professors, setProfessors] = useState([]);
@@ -140,30 +140,9 @@ const ProfessorsContent = () => {
     setIsViewModalOpen(true);
   };
 
-  const handleApproveUser = async (userId) => {
-    try {
-      setLoading(true);
-      await scholchatService.validateProfessor(userId);
-      await loadData();
-      setIsViewModalOpen(false);
-    } catch (err) {
-      setError("Erreur lors de l'approbation: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRejectUser = async (userId, rejectionData) => {
-    try {
-      setLoading(true);
-      await scholchatService.rejectProfessor(userId, rejectionData);
-      await loadData();
-      setIsViewModalOpen(false);
-    } catch (err) {
-      setError("Erreur lors du rejet: " + err.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleSuccess = () => {
+    setIsViewModalOpen(false);
+    loadData();
   };
 
   const getInitials = (firstName, lastName) => {
@@ -190,6 +169,7 @@ const ProfessorsContent = () => {
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -773,11 +753,10 @@ const ProfessorsContent = () => {
       />
 
       {isViewModalOpen && (
-        <UserViewModalParentStudent
+        <UserViewModal
           user={currentUser}
           onClose={() => setIsViewModalOpen(false)}
-          onApprove={handleApproveUser}
-          onReject={handleRejectUser}
+          onSuccess={handleSuccess}
         />
       )}
     </div>

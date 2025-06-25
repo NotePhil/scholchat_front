@@ -32,7 +32,6 @@ const StudentModal = ({
     email: "",
     telephone: "",
     adresse: "",
-    etat: "INACTIVE",
     niveau: "",
     classes: [],
   });
@@ -50,7 +49,6 @@ const StudentModal = ({
           email: "",
           telephone: "",
           adresse: "",
-          etat: "INACTIVE",
           niveau: "",
           classes: [],
         });
@@ -65,7 +63,6 @@ const StudentModal = ({
           email: selectedStudent.email || "",
           telephone: selectedStudent.telephone || "",
           adresse: selectedStudent.adresse || "",
-          etat: selectedStudent.etat || "INACTIVE",
           niveau: selectedStudent.niveau || "",
           classes: selectedStudent.classes || [],
         });
@@ -174,10 +171,9 @@ const StudentModal = ({
         email: formData.email.trim(),
         telephone: formData.telephone,
         adresse: formData.adresse.trim(),
-        etat: formData.etat || "INACTIVE",
         niveau: formData.niveau.trim(),
         classesIds: formData.classes.map((c) => c.id),
-        type: "eleve", // Add type field
+        type: "eleve",
       };
 
       if (modalMode === "create") {
@@ -354,23 +350,6 @@ const StudentModal = ({
                       <option value="college">Collège</option>
                       <option value="lycee">Lycée</option>
                       <option value="superieur">Supérieur</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Statut
-                    </label>
-                    <select
-                      name="etat"
-                      value={formData.etat}
-                      onChange={handleInputChange}
-                      disabled={modalMode === "view"}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    >
-                      <option value="INACTIVE">Inactif</option>
-                      <option value="ACTIVE">Actif</option>
-                      <option value="PENDING">En attente</option>
                     </select>
                   </div>
                 </div>
