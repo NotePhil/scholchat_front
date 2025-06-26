@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { X, Send, RefreshCw, Check, Users } from "lucide-react";
 
 const ComposeModal = ({
@@ -6,7 +6,6 @@ const ComposeModal = ({
   themeColors,
   newMessage,
   setNewMessage,
-  handleSendMessage,
   loading,
   recipientSearch,
   setRecipientSearch,
@@ -20,11 +19,42 @@ const ComposeModal = ({
   isGeneralMessage,
   setIsGeneralMessage,
   currentUser,
-  classesList,
   ccRecipients,
   setCcRecipients,
   setShowRecipientSelector
 }) => {
+  const [classesList, setClassesList] = useState([]);
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const accessToken = localStorage.getItem('accessToken');
+        const userId = localStorage.getItem('userId');
+
+        if (!userId) {
+          throw new Error('User ID not found in localStorage');
+        }
+
+        const response = await fetch(`http://localhost:8486/scholchat/acceder/utilisateurs/${userId}/classes`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch classes');
+        }
+
+        const data = await response.json();
+        setClassesList(data);
+      } catch (error) {
+        console.error('Error fetching classes:', error);
+      }
+    };
+
+    fetchClasses();
+  }, []);
+
   const toggleClassSelection = (classeId) => {
     if (selectedClasses.includes(classeId)) {
       setSelectedClasses(selectedClasses.filter(id => id !== classeId));
@@ -45,6 +75,42 @@ const ComposeModal = ({
 
   const handleAddCcRecipients = () => {
     setShowRecipientSelector(true);
+  };
+
+  const handleSendMessage = async () => {
+    if (isGeneralMessage) {
+      const messageContent = `[${newMessage.objet}] ${newMessage.contenu}`;
+      const accessToken = localStorage.getItem('accessToken');
+      const senderId = localStorage.getItem('userId');
+
+      for (const classId of selectedClasses) {
+        try {
+          const response = await fetch('http://localhost:8486/scholchat/messages/group', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+              classId: classId,
+              content: messageContent,
+              senderId: senderId
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to send message');
+          }
+
+          console.log('Message sent successfully');
+        } catch (error) {
+          console.error('Error sending message:', error);
+        }
+      }
+    } else {
+      // Handle the case for non-general messages
+      // Your existing code for sending messages to individual recipients
+    }
   };
 
   return (
@@ -75,8 +141,8 @@ const ComposeModal = ({
                         selectedClasses.includes(classe.id)
                           ? "bg-blue-100 text-blue-800 border-blue-300"
                           : isDark
-                            ? "border-gray-500 text-gray-300 hover:bg-gray-600"
-                            : "border-gray-300 text-gray-700 hover:bg-gray-100"
+                          ? "border-gray-500 text-gray-300 hover:bg-gray-600"
+                          : "border-gray-300 text-gray-700 hover:bg-gray-100"
                       }`}
                     >
                       {selectedClasses.includes(classe.id) && <Check size={14} />}

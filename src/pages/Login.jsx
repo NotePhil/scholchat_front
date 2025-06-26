@@ -76,181 +76,135 @@ export const Login = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    try {
-      console.log("Starting login process for email:", formData.email);
+  try {
+    console.log("Starting login process for email:", formData.email);
 
-      const response = await fetch(
-        "http://localhost:8486/scholchat/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
-        }
-      );
+    const response = await fetch("http://localhost:8486/scholchat/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+      }),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Échec de l'authentification");
-      }
-
-      const authData = await response.json();
-      console.log("Auth response data:", authData);
-
-      const accessToken = authData.accessToken;
-      const refreshToken = authData.refreshToken;
-
-      // Store tokens in localStorage
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-
-      // Also store as authToken for backward compatibility with any existing code
-      localStorage.setItem("authToken", accessToken);
-
-      // Decode the access token to get user information
-      const decodedToken = decodeJWT(accessToken);
-      if (!decodedToken) {
-        throw new Error("Token invalide");
-      }
-
-      // Log all possible role fields to identify the correct field
-      console.log("Possible role fields in token:");
-      console.log("- role:", decodedToken.role);
-      console.log("- roles:", decodedToken.roles);
-      console.log("- userType:", decodedToken.userType);
-      console.log("- type:", decodedToken.type);
-      console.log("- userRole:", decodedToken.userRole);
-      console.log("- authorities:", decodedToken.authorities);
-      console.log("- scope:", decodedToken.scope);
-      console.log("- API response userType:", authData.userType);
-
-      // Extract user information from the decoded token
-      const userId = decodedToken.sub || decodedToken.userId || authData.userId;
-      const userEmail =
-        decodedToken.email || authData.userEmail || formData.email;
-      const username =
-        decodedToken.username || authData.username || userEmail.split("@")[0];
-
-      // Extract role information - handle array case
-      let tokenUserRole;
-
-      // Check if roles is an array and has at least one element
-      if (Array.isArray(decodedToken.roles) && decodedToken.roles.length > 0) {
-        // Get the most privileged role (usually the last one, like ROLE_ADMIN)
-        // In this case, we take the second element if it exists
-        tokenUserRole =
-          decodedToken.roles.length > 1
-            ? decodedToken.roles[1]
-            : decodedToken.roles[0];
-      } else {
-        // Fall back to other possible role fields
-        tokenUserRole =
-          decodedToken.role ||
-          (decodedToken.authorities && decodedToken.authorities[0]) ||
-          decodedToken.userType ||
-          decodedToken.userRole ||
-          decodedToken.type ||
-          authData.userType;
-      }
-
-      console.log("Extracted raw user role from token:", tokenUserRole);
-
-      // Normalize user type mapping
-      const userTypeMapping = {
-        utilisateurs: "student",
-        professeurs: "professor",
-        admin: "admin",
-        ROLE_ADMIN: "admin",
-        ADMIN: "admin",
-        PROFESSOR: "professor",
-        ROLE_PROFESSOR: "professor",
-        PARENT: "parent",
-        STUDENT: "student",
-        ROLE_STUDENT: "student",
-        ROLE_USER: "student", // Default basic user to student
-        parents: "parent",
-        ROLE_PARENT: "parent",
-      };
-
-      // Log the mapping result
-      console.log(
-        `Mapping "${tokenUserRole}" to:`,
-        userTypeMapping[tokenUserRole] || tokenUserRole
-      );
-
-      // Determine user role from token, falling back to response data if needed
-      const userRole =
-        userTypeMapping[tokenUserRole] ||
-        tokenUserRole ||
-        userTypeMapping[authData.userType] ||
-        "student";
-
-      console.log("Final determined user role:", userRole);
-
-      // Store user information from token
-      localStorage.setItem("userRole", userRole);
-      localStorage.setItem("userId", userId);
-      localStorage.setItem("userEmail", userEmail);
-      localStorage.setItem("username", username);
-
-      // Store the original roles array if available
-      if (Array.isArray(decodedToken.roles)) {
-        localStorage.setItem("userRoles", JSON.stringify(decodedToken.roles));
-      }
-
-      // Store the full decoded token for future reference
-      localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
-
-      // Remember me functionality
-      if (formData.remember) {
-        localStorage.setItem("rememberedEmail", formData.email);
-      } else {
-        localStorage.removeItem("rememberedEmail");
-      }
-
-      console.log(
-        "Authentication complete. Navigating based on role:",
-        userRole
-      );
-
-      // Handle navigation based on user role
-      switch (userRole) {
-        case "admin":
-          console.log("Navigating to admin dashboard");
-          navigate("/schoolchat/Principal");
-          break;
-        case "professor":
-          console.log("Navigating to professor dashboard");
-          navigate("/schoolchat/Principal");
-          break;
-        case "parent":
-          console.log("Navigating to parent dashboard");
-          navigate("/schoolchat/Principal");
-          break;
-        case "student":
-        default:
-          console.log("Navigating to student dashboard");
-          navigate("/schoolchat/Principal");
-          break;
-      }
-    } catch (err) {
-      console.error("Erreur de connexion:", err);
-      setError(
-        err.message || "Identifiants invalides. Veuillez vérifier et réessayer."
-      );
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Échec de l'authentification");
     }
-  };
+
+    const authData = await response.json();
+    console.log("Auth response data:", authData);
+
+    const accessToken = authData.accessToken;
+    const refreshToken = authData.refreshToken;
+
+    // Store tokens in localStorage
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("authToken", accessToken);
+
+    // Decode the access token to get user information
+    const decodedToken = decodeJWT(accessToken);
+    if (!decodedToken) {
+      throw new Error("Token invalide");
+    }
+
+    // Extract user information from the decoded token and authData
+    const userId = authData.userId || decodedToken.sub; // Use authData.userId if available, otherwise fall back to decodedToken.sub
+    const userEmail = authData.userEmail || decodedToken.email || formData.email;
+    const username = authData.username || decodedToken.username || userEmail.split("@")[0];
+
+    // Extract role information
+    let tokenUserRole;
+    if (Array.isArray(decodedToken.roles) && decodedToken.roles.length > 0) {
+      tokenUserRole = decodedToken.roles.length > 1 ? decodedToken.roles[1] : decodedToken.roles[0];
+    } else {
+      tokenUserRole = decodedToken.role || (decodedToken.authorities && decodedToken.authorities[0]) || decodedToken.userType || decodedToken.userRole || decodedToken.type || authData.userType;
+    }
+
+    console.log("Extracted raw user role from token:", tokenUserRole);
+
+    // Normalize user type mapping
+    const userTypeMapping = {
+      utilisateurs: "student",
+      professeurs: "professor",
+      admin: "admin",
+      ROLE_ADMIN: "admin",
+      ADMIN: "admin",
+      PROFESSOR: "professor",
+      ROLE_PROFESSOR: "professor",
+      PARENT: "parent",
+      STUDENT: "student",
+      ROLE_STUDENT: "student",
+      ROLE_USER: "student",
+      parents: "parent",
+      ROLE_PARENT: "parent",
+    };
+
+    console.log(`Mapping "${tokenUserRole}" to:`, userTypeMapping[tokenUserRole] || tokenUserRole);
+
+    // Determine user role from token, falling back to response data if needed
+    const userRole = userTypeMapping[tokenUserRole] || tokenUserRole || userTypeMapping[authData.userType] || "student";
+
+    // Store user information in localStorage
+    localStorage.setItem("userRole", userRole);
+    localStorage.setItem("userId", userId); // Ensure userId is correctly saved
+    localStorage.setItem("userEmail", userEmail);
+    localStorage.setItem("username", username);
+
+    // Store the original roles array if available
+    if (Array.isArray(decodedToken.roles)) {
+      localStorage.setItem("userRoles", JSON.stringify(decodedToken.roles));
+    }
+
+    // Store the full decoded token for future reference
+    localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
+
+    // Remember me functionality
+    if (formData.remember) {
+      localStorage.setItem("rememberedEmail", formData.email);
+    } else {
+      localStorage.removeItem("rememberedEmail");
+    }
+
+    console.log("Authentication complete. Navigating based on role:", userRole);
+
+    // Handle navigation based on user role
+    switch (userRole) {
+      case "admin":
+        console.log("Navigating to admin dashboard");
+        navigate("/schoolchat/Principal");
+        break;
+      case "professor":
+        console.log("Navigating to professor dashboard");
+        navigate("/schoolchat/Principal");
+        break;
+      case "parent":
+        console.log("Navigating to parent dashboard");
+        navigate("/schoolchat/Principal");
+        break;
+      case "student":
+      default:
+        console.log("Navigating to student dashboard");
+        navigate("/schoolchat/Principal");
+        break;
+    }
+  } catch (err) {
+    console.error("Erreur de connexion:", err);
+    setError(err.message || "Identifiants invalides. Veuillez vérifier et réessayer.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Check for remembered email on component mount
   useEffect(() => {
