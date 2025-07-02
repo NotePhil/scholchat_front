@@ -157,16 +157,17 @@ class RejectionServiceClass {
   }
 
   // ============ Class Rejection Operations ============
-  async rejectClass(classId, { codeErreur, motifSupplementaire = "" }) {
+  // In RejectionServiceClass
+  async rejectClass(classId, { codeErreur = "", motifSupplementaire = "" }) {
     try {
-      const response = await rejectionClassApi.post(
-        `/classes/${classId}/rejet`,
-        null, // No body
+      const response = await rejectionClassApi.patch(
+        `/classes/${classId}/reject`,
         {
-          params: {
-            codeErreur,
-            motifSupplementaire,
-          },
+          motif: codeErreur, // Send as string
+          motifSupplementaire,
+        },
+        {
+          params: { motif: codeErreur }, // Also pass as query parameter if needed
         }
       );
       return response.data;

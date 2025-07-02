@@ -133,12 +133,40 @@ export const Login = () => {
       console.log("- scope:", decodedToken.scope);
       console.log("- API response userType:", authData.userType);
 
-      // Extract user information from the decoded token
-      const userId = decodedToken.sub || decodedToken.userId || authData.userId;
+      // CRITICAL: Extract user information correctly
+      // The authData.userId contains the real UUID that should be used for API calls
+      // The decodedToken.sub contains the email (which is used for authentication)
+      console.log("=== USER ID EXTRACTION DEBUG ===");
+      console.log("Auth response userId (should be UUID):", authData.userId);
+      console.log("Auth response userEmail:", authData.userEmail);
+      console.log("Token sub (usually email):", decodedToken.sub);
+      console.log("Token userId:", decodedToken.userId);
+
+      // Use the UUID from authData, this is the real user ID for API calls
+      const userId = authData.userId;
       const userEmail =
-        decodedToken.email || authData.userEmail || formData.email;
+        authData.userEmail || decodedToken.email || formData.email;
       const username =
-        decodedToken.username || authData.username || userEmail.split("@")[0];
+        authData.username || decodedToken.username || userEmail.split("@")[0];
+
+      // Validation: Ensure we have a valid UUID, not an email
+      if (!userId) {
+        console.error("No userId found in auth response!");
+        throw new Error("Erreur d'authentification: ID utilisateur manquant");
+      }
+
+      if (userId.includes("@")) {
+        console.error(
+          "Invalid userId detected! Expected UUID but got email:",
+          userId
+        );
+        throw new Error("Erreur d'authentification: ID utilisateur invalide");
+      }
+
+      console.log("=== FINAL USER DATA TO STORE ===");
+      console.log("Final userId (UUID for API calls):", userId);
+      console.log("Final userEmail:", userEmail);
+      console.log("Final username:", username);
 
       // Extract role information - handle array case
       let tokenUserRole;
@@ -196,10 +224,10 @@ export const Login = () => {
 
       console.log("Final determined user role:", userRole);
 
-      // Store user information from token
+      // Store user information - CRITICAL: Store the UUID as userId
       localStorage.setItem("userRole", userRole);
-      localStorage.setItem("userId", userId);
-      localStorage.setItem("userEmail", userEmail);
+      localStorage.setItem("userId", userId); // This MUST be the UUID from authData.userId
+      localStorage.setItem("userEmail", userEmail); // This should be the email
       localStorage.setItem("username", username);
 
       // Store the original roles array if available
@@ -210,12 +238,21 @@ export const Login = () => {
       // Store the full decoded token for future reference
       localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
 
+      // Store the full auth response for debugging
+      localStorage.setItem("authResponse", JSON.stringify(authData));
+
       // Remember me functionality
       if (formData.remember) {
         localStorage.setItem("rememberedEmail", formData.email);
       } else {
         localStorage.removeItem("rememberedEmail");
       }
+
+      // Final verification log
+      console.log("=== VERIFICATION: WHAT WAS STORED ===");
+      console.log("Stored userId:", localStorage.getItem("userId"));
+      console.log("Stored userEmail:", localStorage.getItem("userEmail"));
+      console.log("Stored userRole:", localStorage.getItem("userRole"));
 
       console.log(
         "Authentication complete. Navigating based on role:",
@@ -238,7 +275,7 @@ export const Login = () => {
           break;
         case "student":
         default:
-          console.log("Navigating to student dashboard");
+          console.log("Navigating to student/default dashboard");
           navigate("/schoolchat/Principal");
           break;
       }

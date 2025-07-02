@@ -378,10 +378,13 @@ const SignUp = () => {
 
   const uploadFileToS3 = async (file, userId, documentType) => {
     try {
-      // Generate a unique filename
-      const fileName = `${userId}_${documentType}_${Date.now()}.${file.name
-        .split(".")
-        .pop()}`;
+      // Generate a unique filename with timestamp
+      const timestamp = Date.now();
+      const fileExtension = file.name.split(".").pop().toLowerCase();
+      const fileName = `temp_${documentType}_${timestamp}.${fileExtension}`;
+
+      // For temporary uploads (userId === "temp"), we'll use a temp folder
+      const ownerId = userId === "temp" ? null : userId;
 
       // Get presigned URL from backend
       const presignedResponse = await axios.post(
@@ -390,21 +393,23 @@ const SignUp = () => {
           fileName: fileName,
           contentType: file.type,
           mediaType: "IMAGE",
-          ownerId: userId === "temp" ? null : userId,
+          ownerId: ownerId,
           documentType: documentType,
         }
       );
 
       const { url } = presignedResponse.data;
 
-      // Convert data URL to Blob if needed
-      let fileToUpload = file;
+      // Convert file to Blob if it's a data URL (from compression)
+      let fileToUpload;
       if (typeof file === "string" && file.startsWith("data:")) {
         const res = await fetch(file);
         fileToUpload = await res.blob();
+      } else {
+        fileToUpload = file;
       }
 
-      // Upload the file directly to S3 using the presigned URL
+      // Upload the file to S3
       const uploadResponse = await fetch(url, {
         method: "PUT",
         body: fileToUpload,
@@ -414,14 +419,17 @@ const SignUp = () => {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error(`Upload failed with status ${uploadResponse.status}`);
+        const errorText = await uploadResponse.text();
+        throw new Error(
+          `Upload failed with status ${uploadResponse.status}: ${errorText}`
+        );
       }
 
-      // Return the file name that was used for upload
+      // Return the full path that was used for upload
       return fileName;
     } catch (error) {
       console.error("Upload error:", error);
-      throw error;
+      throw new Error(`Upload error: ${error.message}`);
     }
   };
 

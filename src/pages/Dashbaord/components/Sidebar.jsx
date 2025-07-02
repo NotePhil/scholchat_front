@@ -146,7 +146,16 @@ const Sidebar = ({
           ],
         },
       ];
+    } else if (
+      userRoles.includes("ROLE_PARENT") ||
+      userRoles.includes("ROLE_STUDENT")
+    ) {
+      roleItems = [
+        { name: "Classes", icon: Building2, tab: "classes" },
+        { name: "Messages", icon: Mail, tab: "messages" },
+      ];
     } else {
+      // Default items for other roles
       roleItems = [
         { name: "Classes", icon: Building2, tab: "classes" },
         { name: "Motifs de Rejet", icon: BookOpen, tab: "motifs-de-rejet" },
@@ -154,15 +163,15 @@ const Sidebar = ({
     }
 
     // Bottom items (always at the end)
-    const bottomItems = [
-      {
-        name: "Messages",
-        icon: Mail,
-        tab: "messages",
-        onClick: onShowMessaging,
-      },
-      { name: "Settings", icon: Settings, tab: "settings" },
-    ];
+    const bottomItems = [{ name: "Settings", icon: Settings, tab: "settings" }];
+
+    // For parents and students, we want the dashboard to be the first item
+    if (
+      userRoles.includes("ROLE_PARENT") ||
+      userRoles.includes("ROLE_STUDENT")
+    ) {
+      return [...baseItems, ...roleItems, ...bottomItems];
+    }
 
     return [...baseItems, ...roleItems, ...bottomItems];
   };

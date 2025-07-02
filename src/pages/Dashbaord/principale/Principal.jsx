@@ -19,7 +19,8 @@ import ClassesListContent from "./ClassesListContent";
 import CreateEstablishmentContent from "./CreateEstablishmentContent";
 import ManageEstablishmentContent from "./ManageEstablishmentContent";
 import ActivitiesContent from "./ActivitiesContent";
-
+import StudentParentStats from "./StudentParentStats";
+import ParentClassManagement from "./ParentSidebar/ParentClassManagement";
 const themes = {
   light: {
     cardBg: "bg-white",
@@ -123,20 +124,37 @@ const Principal = () => {
     setSelectedConversation(null);
   };
 
+  // Helper function to check if user is parent or student
+  const isParentOrStudent = () => {
+    return (
+      userRoles.includes("ROLE_PARENT") ||
+      userRoles.includes("ROLE_STUDENT") ||
+      userRole === "parent" ||
+      userRole === "student"
+    );
+  };
+
   const renderContent = () => {
     const contentProps = {
       isDark,
       currentTheme,
+      themes,
       colorSchemes,
       userRole,
       userRoles,
       onManageClass: handleManageClass,
       onShowMessaging: handleShowMessaging,
+      onNavigateToClassesList: () => setActiveTab("classes-list"),
     };
 
     switch (activeTab) {
       case "dashboard":
-        return <DashboardContent {...contentProps} />;
+        // Return StudentParentStats for parents and students, DashboardContent for others
+        return isParentOrStudent() ? (
+          <StudentParentStats {...contentProps} />
+        ) : (
+          <DashboardContent {...contentProps} />
+        );
       case "activities":
         return <ActivitiesContent {...contentProps} />;
       case "admin":
@@ -152,6 +170,10 @@ const Principal = () => {
       case "others":
         return <OthersContent {...contentProps} />;
       case "classes":
+        // Return ParentClassManagement for parents, regular ClassesContent for others
+        if (userRole === "parent" || userRoles.includes("ROLE_PARENT")) {
+          return <ParentClassManagement {...contentProps} />;
+        }
         return showManageClass ? (
           <ManageClass onBack={handleBackToClasses} />
         ) : (
@@ -184,7 +206,12 @@ const Principal = () => {
           />
         );
       default:
-        return <DashboardContent {...contentProps} />;
+        // Default case also uses the same logic as dashboard
+        return isParentOrStudent() ? (
+          <StudentParentStats {...contentProps} />
+        ) : (
+          <DashboardContent {...contentProps} />
+        );
     }
   };
 
@@ -194,6 +221,11 @@ const Principal = () => {
       (userRole === "professor" || userRole === "repetiteur")
     ) {
       return "Activities";
+    }
+    if (activeTab === "dashboard" && isParentOrStudent()) {
+      return userRole === "student"
+        ? "Mon Tableau de Bord"
+        : "Tableau de Bord Parent";
     }
     if (activeTab === "messages") {
       return "Messages";

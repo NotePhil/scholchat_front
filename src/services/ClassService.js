@@ -326,12 +326,9 @@ class ClassService {
    */
   async obtenirHistoriqueActivation(idClasse) {
     try {
-      return await this.axiosRequest(
-        `/classes/${idClasse}/activation-history`,
-        {
-          method: "GET",
-        }
-      );
+      return await this.axiosRequest(`/histo-activations/classe/${idClasse}`, {
+        method: "GET",
+      });
     } catch (error) {
       console.error("Error getting activation history:", error);
       throw error;
@@ -540,7 +537,6 @@ class ClassService {
       return false;
     }
   }
-  
 }
 
 export default ClassService;

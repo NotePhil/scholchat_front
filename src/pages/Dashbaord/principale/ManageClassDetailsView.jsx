@@ -39,6 +39,7 @@ import { classService } from "../../../services/ClassService";
 import { rejectionServiceClass } from "../../../services/RejectionServiceClass";
 import { scholchatService } from "../../../services/ScholchatService";
 import UserViewModalParentStudent from "./modals/UserViewModalParentStudent";
+import ClassAccessRequests from "./ClassAccessRequests";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -85,10 +86,6 @@ const ManageClassDetailsView = ({
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [parentsLoading, setParentsLoading] = useState(false);
 
-  // Inactive users states
-  const [inactiveUsers, setInactiveUsers] = useState([]);
-  const [inactiveUsersLoading, setInactiveUsersLoading] = useState(false);
-
   // Pagination states
   const [professorsPagination, setProfessorsPagination] = useState({
     current: 1,
@@ -105,11 +102,6 @@ const ManageClassDetailsView = ({
     pageSize: 10,
     total: 0,
   });
-  const [inactiveUsersPagination, setInactiveUsersPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
 
   useEffect(() => {
     if (classId) {
@@ -117,7 +109,6 @@ const ManageClassDetailsView = ({
       fetchClassMembers(classId);
       fetchProfessors();
       fetchRejectionMotifs();
-      fetchInactiveUsers();
     }
   }, [classId]);
 
@@ -227,24 +218,6 @@ const ManageClassDetailsView = ({
     }
   };
 
-  const fetchInactiveUsers = async () => {
-    try {
-      setInactiveUsersLoading(true);
-      const allUsers = await scholchatService.getAllUsers();
-      const inactive = allUsers.filter((user) => user.etat === "INACTIVE");
-      setInactiveUsers(inactive);
-      setInactiveUsersPagination((prev) => ({
-        ...prev,
-        total: inactive.length,
-      }));
-    } catch (error) {
-      console.error("Error fetching inactive users:", error);
-      onError("Erreur lors du chargement des utilisateurs inactifs");
-    } finally {
-      setInactiveUsersLoading(false);
-    }
-  };
-
   const fetchActivationHistory = async () => {
     if (!classId) return;
 
@@ -284,13 +257,20 @@ const ManageClassDetailsView = ({
       content: (
         <div>
           <p>Êtes-vous sûr de vouloir rejeter cette classe ?</p>
-          <Form layout="vertical">
-            <Form.Item label="Motif de rejet" required>
+          <Form layout="vertical" form={form}>
+            <Form.Item
+              label="Motifs de rejet"
+              name="codesErreur"
+              rules={[
+                {
+                  required: true,
+                  message: "Veuillez sélectionner au moins un motif",
+                },
+              ]}
+            >
               <Select
-                placeholder="Sélectionner un motif"
-                onChange={(value) =>
-                  setRejectReason({ ...rejectReason, codeErreur: value })
-                }
+                mode="multiple"
+                placeholder="Sélectionner un ou plusieurs motifs"
               >
                 {rejectionMotifs.map((motif) => (
                   <Option key={motif.code} value={motif.code}>
@@ -299,16 +279,13 @@ const ManageClassDetailsView = ({
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item label="Commentaire supplémentaire">
+            <Form.Item
+              label="Commentaire supplémentaire"
+              name="motifSupplementaire"
+            >
               <Input.TextArea
                 rows={3}
                 placeholder="Détails supplémentaires (optionnel)"
-                onChange={(e) =>
-                  setRejectReason({
-                    ...rejectReason,
-                    motifSupplementaire: e.target.value,
-                  })
-                }
               />
             </Form.Item>
           </Form>
@@ -317,24 +294,52 @@ const ManageClassDetailsView = ({
       okText: "Confirmer",
       okType: "danger",
       cancelText: "Annuler",
-      onOk: handleReject,
+      onOk: async () => {
+        try {
+          const values = await form.validateFields();
+          await handleReject(values); // Pass the form values to handleReject
+        } catch (error) {
+          console.error("Validation failed:", error);
+          return Promise.reject(error);
+        }
+      },
       onCancel: () => {
-        setRejectReason({ codeErreur: "", motifSupplementaire: "" });
+        form.resetFields();
       },
     });
   };
 
-  const handleReject = async () => {
-    if (!classId || !rejectReason.codeErreur) {
-      onError("Veuillez sélectionner un motif de rejet");
+  // Updated handleReject function to accept form values
+  const handleReject = async (formValues) => {
+    if (!classId) {
+      onError("ID de classe manquant");
+      return;
+    }
+
+    // Use form values if provided, otherwise fall back to state
+    const rejectionData = formValues || rejectReason;
+
+    if (!rejectionData.codesErreur || rejectionData.codesErreur.length === 0) {
+      onError("Veuillez sélectionner au moins un motif de rejet");
       return;
     }
 
     try {
       setActionLoading("reject");
-      await rejectionServiceClass.rejectClass(classId, rejectReason);
+
+      // Call the API with the rejection data
+      await rejectionServiceClass.rejectClass(classId, {
+        codesErreur: rejectionData.codesErreur,
+        motifSupplementaire: rejectionData.motifSupplementaire || "",
+      });
+
       onSuccess("Classe rejetée avec succès");
-      setRejectReason({ codeErreur: "", motifSupplementaire: "" });
+
+      // Reset form and state
+      form.resetFields();
+      setRejectReason({ codesErreur: [], motifSupplementaire: "" });
+
+      // Refresh class details
       await fetchClassDetails(classId);
     } catch (error) {
       console.error("Error rejecting class:", error);
@@ -459,34 +464,6 @@ const ManageClassDetailsView = ({
     } catch (error) {
       console.error("Error deleting parent:", error);
       onError("Erreur lors de la suppression du parent");
-    }
-  };
-
-  const handleApproveUser = async (userId) => {
-    try {
-      setActionLoading(`approve-${userId}`);
-      await scholchatService.updateUser(userId, { etat: "ACTIVE" });
-      onSuccess("Utilisateur approuvé avec succès");
-      await fetchInactiveUsers();
-    } catch (error) {
-      console.error("Error approving user:", error);
-      onError("Erreur lors de l'approbation de l'utilisateur");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleRejectUser = async (userId) => {
-    try {
-      setActionLoading(`reject-${userId}`);
-      await scholchatService.deleteUser(userId);
-      onSuccess("Utilisateur rejeté avec succès");
-      await fetchInactiveUsers();
-    } catch (error) {
-      console.error("Error rejecting user:", error);
-      onError("Erreur lors du rejet de l'utilisateur");
-    } finally {
-      setActionLoading(null);
     }
   };
 
@@ -749,76 +726,6 @@ const ManageClassDetailsView = ({
     },
   ];
 
-  const inactiveUserColumns = [
-    {
-      title: "Nom",
-      dataIndex: "nom",
-      key: "nom",
-      render: (text, record) => `${record.nom} ${record.prenom}`,
-    },
-    {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
-    },
-    {
-      title: "Type",
-      dataIndex: "type",
-      key: "type",
-      render: (type) => {
-        let displayText = type;
-        switch (type) {
-          case "professeur":
-            displayText = "Professeur";
-            break;
-          case "eleve":
-            displayText = "Étudiant";
-            break;
-          case "parent":
-            displayText = "Parent";
-            break;
-          default:
-            displayText = type;
-        }
-        return <Tag color="geekblue">{displayText}</Tag>;
-      },
-    },
-    {
-      title: "Date d'inscription",
-      dataIndex: "dateInscription",
-      key: "dateInscription",
-      render: (date) => new Date(date).toLocaleDateString(),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => handleApproveUser(record.id)}
-            loading={actionLoading === `approve-${record.id}`}
-            style={{
-              borderRadius: "8px",
-              background: "#52c41a",
-              borderColor: "#52c41a",
-            }}
-          >
-            Acceder
-          </Button>
-          <Button
-            danger
-            onClick={() => handleRejectUser(record.id)}
-            loading={actionLoading === `reject-${record.id}`}
-            style={{ borderRadius: "8px" }}
-          >
-            Refuser
-          </Button>
-        </Space>
-      ),
-    },
-  ];
-
   const renderClassMembersTabs = () => {
     return (
       <Card
@@ -838,19 +745,6 @@ const ManageClassDetailsView = ({
             }
             key="professors"
           >
-            <div style={{ marginBottom: 16 }}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                style={{
-                  borderRadius: "8px",
-                  background: "#52c41a",
-                  borderColor: "#52c41a",
-                }}
-              >
-                Ajouter Professeur
-              </Button>
-            </div>
             <Table
               columns={professorColumns}
               dataSource={classProfessors}
@@ -884,20 +778,6 @@ const ManageClassDetailsView = ({
             }
             key="students"
           >
-            <div style={{ marginBottom: 16 }}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setStudentModalVisible(true)}
-                style={{
-                  borderRadius: "8px",
-                  background: "#52c41a",
-                  borderColor: "#52c41a",
-                }}
-              >
-                Ajouter Étudiant
-              </Button>
-            </div>
             <Table
               columns={studentColumns}
               dataSource={classStudents}
@@ -931,20 +811,6 @@ const ManageClassDetailsView = ({
             }
             key="parents"
           >
-            <div style={{ marginBottom: 16 }}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setParentModalVisible(true)}
-                style={{
-                  borderRadius: "8px",
-                  background: "#52c41a",
-                  borderColor: "#52c41a",
-                }}
-              >
-                Ajouter Parent
-              </Button>
-            </div>
             <Table
               columns={parentColumns}
               dataSource={classParents}
@@ -973,32 +839,16 @@ const ManageClassDetailsView = ({
             tab={
               <span>
                 <ExclamationCircleOutlined />
-                Utilisateurs en attente ({inactiveUsers.length})
+                Demandes d'accès
               </span>
             }
-            key="inactiveUsers"
+            key="accessRequests"
           >
-            <Table
-              columns={inactiveUserColumns}
-              dataSource={inactiveUsers}
-              loading={inactiveUsersLoading}
-              rowKey="id"
-              pagination={{
-                current: inactiveUsersPagination.current,
-                pageSize: inactiveUsersPagination.pageSize,
-                total: inactiveUsersPagination.total,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total) => `Total ${total} utilisateurs en attente`,
-                onChange: (page, pageSize) => {
-                  setInactiveUsersPagination({
-                    ...inactiveUsersPagination,
-                    current: page,
-                    pageSize: pageSize,
-                  });
-                },
-              }}
-              scroll={{ x: 800 }}
+            <ClassAccessRequests
+              classId={classId}
+              onError={onError}
+              onSuccess={onSuccess}
+              onRefreshMembers={() => fetchClassMembers(classId)}
             />
           </TabPane>
         </Tabs>
@@ -1143,7 +993,7 @@ const ManageClassDetailsView = ({
           ) : (
             history.map((item, index) => (
               <div
-                key={index}
+                key={item.id}
                 style={{
                   padding: "12px",
                   borderBottom: "1px solid #f0f0f0",
@@ -1151,15 +1001,43 @@ const ManageClassDetailsView = ({
                 }}
               >
                 <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                  }}
+                  style={{ display: "flex", justifyContent: "space-between" }}
                 >
-                  <Text strong>{item.action}</Text>
-                  <Text type="secondary">{item.date}</Text>
+                  <Text strong>
+                    {item.active ? "Activation" : "Désactivation"} -{" "}
+                    {item.etatClasse}
+                  </Text>
+                  <Text type="secondary">
+                    {new Date(item.dateActivation).toLocaleString()}
+                  </Text>
                 </div>
-                <Text>{item.description}</Text>
+
+                <div style={{ marginTop: 8 }}>
+                  <Text>Utilisateur ID: {item.utilisateurId}</Text>
+                </div>
+
+                {item.dateDesactivation && (
+                  <div style={{ marginTop: 8 }}>
+                    <Text>Date de désactivation: </Text>
+                    <Text>
+                      {new Date(item.dateDesactivation).toLocaleString()}
+                    </Text>
+                  </div>
+                )}
+
+                {item.motifDesactivation && (
+                  <div style={{ marginTop: 8 }}>
+                    <Text>Motif: </Text>
+                    <Text>{item.motifDesactivation}</Text>
+                  </div>
+                )}
+
+                <div style={{ marginTop: 8 }}>
+                  <Text>Statut: </Text>
+                  <Tag color={item.active ? "green" : "red"}>
+                    {item.active ? "Actif" : "Inactif"}
+                  </Tag>
+                </div>
               </div>
             ))
           )}

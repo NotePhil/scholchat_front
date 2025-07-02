@@ -11,8 +11,8 @@ import {
 import { classService, EtatClasse } from "../../../services/ClassService";
 import establishmentService from "../../../services/EstablishmentService";
 import { scholchatService } from "../../../services/ScholchatService";
-
-const CreateClassContent = ({ onNavigateToManage }) => {
+import { useNavigate } from "react-router-dom";
+const CreateClassContent = ({ onNavigateToClassesList }) => {
   const [formData, setFormData] = useState({
     nom: "",
     niveau: "",
@@ -20,7 +20,7 @@ const CreateClassContent = ({ onNavigateToManage }) => {
     codeActivation: "",
     moderator: "", // Will store professor ID
   });
-
+  const navigate = useNavigate();
   const [selectedProfessorName, setSelectedProfessorName] = useState(""); // For displaying selected professor name
   const [establishments, setEstablishments] = useState([]);
   const [professors, setProfessors] = useState([]); // Store professors list
@@ -29,6 +29,7 @@ const CreateClassContent = ({ onNavigateToManage }) => {
   const [loadingProfessors, setLoadingProfessors] = useState(true);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(5); // Add countdown state
 
   // Load establishments and professors on component mount
   useEffect(() => {
@@ -68,6 +69,33 @@ const CreateClassContent = ({ onNavigateToManage }) => {
   useEffect(() => {
     generateActivationCode();
   }, []);
+
+  // Success countdown and redirect effect
+  useEffect(() => {
+    let timer;
+    if (success && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else if (success && countdown === 0) {
+      // Redirect when countdown reaches 0
+      if (
+        onNavigateToClassesList &&
+        typeof onNavigateToClassesList === "function"
+      ) {
+        onNavigateToClassesList();
+      } else {
+        // Fallback: try to navigate programmatically if the callback is not available
+        console.warn("onNavigateToClassesList callback not available");
+        // You could implement your own navigation logic here
+        // For example, using React Router: navigate('/classes-list');
+      }
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [success, countdown, onNavigateToClassesList]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -149,12 +177,7 @@ const CreateClassContent = ({ onNavigateToManage }) => {
 
       await classService.creerClasse(classData);
       setSuccess(true);
-
-      setTimeout(() => {
-        if (onNavigateToManage) {
-          onNavigateToManage();
-        }
-      }, 2000);
+      setCountdown(5); // Reset countdown to 5 seconds
     } catch (error) {
       console.error("Error creating class:", error);
       setErrors({
@@ -164,6 +187,27 @@ const CreateClassContent = ({ onNavigateToManage }) => {
       setLoading(false);
     }
   };
+
+  // Manual redirect function for the button
+  const handleManualRedirect = () => {
+    if (onNavigateToClassesList) {
+      onNavigateToClassesList();
+    } else {
+      navigate("/classes-list");
+    }
+  };
+  useEffect(() => {
+    let timer;
+    if (success && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else if (success && countdown === 0) {
+      handleManualRedirect();
+    }
+    return () => timer && clearTimeout(timer);
+  }, [success, countdown, onNavigateToClassesList, navigate]);
+
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
@@ -175,10 +219,30 @@ const CreateClassContent = ({ onNavigateToManage }) => {
             Classe créée avec succès!
           </h2>
           <p className="text-gray-600 mb-6">
-            Votre classe a été créée et est en attente d'approbation. Vous allez
-            être redirigé vers la page de gestion.
+            Votre classe a été créée et est en attente d'approbation.
+            Redirection automatique dans {countdown} seconde
+            {countdown !== 1 ? "s" : ""}.
           </p>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-1000 ease-linear"
+              style={{ width: `${((5 - countdown) / 5) * 100}%` }}
+            ></div>
+          </div>
+
+          {/* Manual redirect button */}
+          <button
+            onClick={handleManualRedirect}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 mb-4"
+          >
+            Aller à la liste maintenant
+          </button>
+
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
         </div>
       </div>
     );
