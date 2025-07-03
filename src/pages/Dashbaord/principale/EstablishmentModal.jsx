@@ -298,181 +298,187 @@ const EstablishmentModal = ({
             </div>
 
             {/* Form Content */}
-            <div className="px-6 py-6">
+            <form onSubmit={handleSubmit} className="px-6 py-6">
               <div className="space-y-6">
-                {/* Basic Information - 3 Columns */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                    Informations générales
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Nom de l'établissement{" "}
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="nom"
-                        value={formData.nom}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Nom de l'établissement"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      />
+                {/* Two-column layout for all sections */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-6">
+                    {/* Basic Information */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                        Informations générales
+                      </h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Nom de l'établissement{" "}
+                            <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="nom"
+                            value={formData.nom}
+                            onChange={handleInputChange}
+                            required
+                            placeholder="Nom de l'établissement"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Pays <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="pays"
+                            value={formData.pays}
+                            onChange={handleInputChange}
+                            required
+                            placeholder="Pays"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Localisation <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="localisation"
+                            value={formData.localisation}
+                            onChange={handleInputChange}
+                            required
+                            placeholder="Localisation"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Pays <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="pays"
-                        value={formData.pays}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Pays"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      />
-                    </div>
+                    {/* Contact Information */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                        Informations de contact
+                      </h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Adresse email
+                          </label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            placeholder="exemple@etablissement.com"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          />
+                        </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Localisation <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="localisation"
-                        value={formData.localisation}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Localisation"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      />
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Numéro de téléphone
+                          </label>
+                          <input
+                            type="tel"
+                            name="telephone"
+                            value={formData.telephone}
+                            onChange={handleInputChange}
+                            placeholder="+237 6XX XXX XXX"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Contact Information - 2 Columns */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                    Informations de contact
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Adresse email
+                  {/* Right Column - Configuration Options */}
+                  <div className="bg-gray-50 p-4 rounded-lg h-full">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                      Options de configuration
+                    </h4>
+                    <div className="space-y-4">
+                      <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border hover:border-blue-200 transition-colors">
+                        <input
+                          type="checkbox"
+                          name="optionEnvoiMailVersClasse"
+                          checked={formData.optionEnvoiMailVersClasse}
+                          onChange={handleInputChange}
+                          className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-900">
+                            Email vers classes
+                          </span>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Envoi automatique d'emails aux classes
+                          </p>
+                        </div>
                       </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="exemple@etablissement.com"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Numéro de téléphone
+                      <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border hover:border-blue-200 transition-colors">
+                        <input
+                          type="checkbox"
+                          name="optionTokenGeneral"
+                          checked={formData.optionTokenGeneral}
+                          onChange={handleInputChange}
+                          className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-900">
+                            Token général
+                          </span>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Utilisation d'un token général pour
+                            l'authentification
+                          </p>
+                        </div>
                       </label>
-                      <input
-                        type="tel"
-                        name="telephone"
-                        value={formData.telephone}
-                        onChange={handleInputChange}
-                        placeholder="+237 6XX XXX XXX"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      />
+
+                      <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border hover:border-blue-200 transition-colors">
+                        <input
+                          type="checkbox"
+                          name="codeUnique"
+                          checked={formData.codeUnique}
+                          onChange={handleInputChange}
+                          className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-900">
+                            Code unique
+                          </span>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Génération d'un code unique pour l'identification
+                          </p>
+                        </div>
+                      </label>
                     </div>
-                  </div>
-                </div>
-
-                {/* Configuration Options - 3 Columns */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                    Options de configuration
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border hover:border-blue-200 transition-colors">
-                      <input
-                        type="checkbox"
-                        name="optionEnvoiMailVersClasse"
-                        checked={formData.optionEnvoiMailVersClasse}
-                        onChange={handleInputChange}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          Email vers classes
-                        </span>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Envoi automatique d'emails
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border hover:border-blue-200 transition-colors">
-                      <input
-                        type="checkbox"
-                        name="optionTokenGeneral"
-                        checked={formData.optionTokenGeneral}
-                        onChange={handleInputChange}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          Token général
-                        </span>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Token d'authentification
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border hover:border-blue-200 transition-colors">
-                      <input
-                        type="checkbox"
-                        name="codeUnique"
-                        checked={formData.codeUnique}
-                        onChange={handleInputChange}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          Code unique
-                        </span>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Code d'identification
-                        </p>
-                      </div>
-                    </label>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row-reverse gap-3">
-              <button
-                type="submit"
-                disabled={loading}
-                onClick={handleSubmit}
-                className="flex-1 sm:flex-none inline-flex justify-center items-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-base font-semibold text-white hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                <Save className="mr-2 w-5 h-5" />
-                {loading ? "Enregistrement..." : "Enregistrer"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="flex-1 sm:flex-none inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-              >
-                Annuler
-              </button>
-            </div>
+              {/* Footer */}
+              <div className="bg-gray-50 px-6 py-4 -mx-6 -mb-6 mt-6 flex flex-col sm:flex-row-reverse gap-3">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 sm:flex-none inline-flex justify-center items-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-base font-semibold text-white hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <Save className="mr-2 w-5 h-5" />
+                  {loading ? "Enregistrement..." : "Enregistrer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 sm:flex-none inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
