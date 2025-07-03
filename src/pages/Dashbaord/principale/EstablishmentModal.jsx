@@ -33,7 +33,6 @@ const EstablishmentModal = ({
   useEffect(() => {
     if (showModal) {
       if (modalMode === "create") {
-        // Reset form for create mode
         setFormData({
           nom: "",
           pays: "",
@@ -48,7 +47,6 @@ const EstablishmentModal = ({
         (modalMode === "edit" || modalMode === "view") &&
         selectedEstablishment
       ) {
-        // Populate form with existing establishment data
         setFormData({
           nom: selectedEstablishment.nom || "",
           pays: selectedEstablishment.pays || "",
@@ -74,7 +72,6 @@ const EstablishmentModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const establishmentData = {
       ...formData,
       nom: formData.nom.trim(),
@@ -83,7 +80,6 @@ const EstablishmentModal = ({
       email: formData.email.trim(),
       telephone: formData.telephone.trim(),
     };
-
     await onSave(establishmentData);
   };
 
@@ -95,30 +91,26 @@ const EstablishmentModal = ({
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
             onClick={() => setShowModal(false)}
           ></div>
 
-          <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-white flex items-center">
-                  <Building2 className="mr-3 w-6 h-6" />
+          <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+            <div className="bg-white px-6 py-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                  <Building2 className="mr-3 w-5 h-5" />
                   Détails de l'Établissement
                 </h3>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="text-blue-100 hover:text-white transition-colors"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <X size={24} />
                 </button>
               </div>
-            </div>
 
-            {/* Content */}
-            <div className="px-6 py-6">
               <div className="space-y-6">
                 {/* Name Section */}
                 <div className="text-center pb-4 border-b border-gray-100">
@@ -191,7 +183,7 @@ const EstablishmentModal = ({
                   )}
                 </div>
 
-                {/* Options Section - 3 Columns */}
+                {/* Options Section */}
                 <div className="border-t border-gray-100 pt-6">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
@@ -251,12 +243,11 @@ const EstablishmentModal = ({
               </div>
             </div>
 
-            {/* Footer */}
             <div className="bg-gray-50 px-6 py-4">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2.5 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Fermer
               </button>
@@ -272,17 +263,16 @@ const EstablishmentModal = ({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
           onClick={() => setShowModal(false)}
         ></div>
 
-        <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
-          <div>
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-white flex items-center">
-                  <Building2 className="mr-3 w-6 h-6" />
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
+          <form onSubmit={handleSubmit}>
+            <div className="bg-white px-6 py-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                  <Building2 className="mr-3 w-5 h-5" />
                   {modalMode === "create"
                     ? "Nouvel Établissement"
                     : "Modifier l'Établissement"}
@@ -290,118 +280,114 @@ const EstablishmentModal = ({
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="text-blue-100 hover:text-white transition-colors"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <X size={24} />
                 </button>
               </div>
-            </div>
 
-            {/* Form Content */}
-            <form onSubmit={handleSubmit} className="px-6 py-6">
-              <div className="space-y-6">
-                {/* Two-column layout for all sections */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Left Column */}
-                  <div className="space-y-6">
-                    {/* Basic Information */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                        Informations générales
-                      </h4>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Nom de l'établissement{" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="nom"
-                            value={formData.nom}
-                            onChange={handleInputChange}
-                            required
-                            placeholder="Nom de l'établissement"
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Pays <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="pays"
-                            value={formData.pays}
-                            onChange={handleInputChange}
-                            required
-                            placeholder="Pays"
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Localisation <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="localisation"
-                            value={formData.localisation}
-                            onChange={handleInputChange}
-                            required
-                            placeholder="Localisation"
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          />
-                        </div>
+              <div className="flex flex-col md:flex-row gap-8">
+                {/* Left Column */}
+                <div className="w-full md:w-1/2 space-y-6">
+                  {/* General Information */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                      Informations générales
+                    </h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Nom de l'établissement{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="nom"
+                          value={formData.nom}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="Nom de l'établissement"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
                       </div>
-                    </div>
 
-                    {/* Contact Information */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                        Informations de contact
-                      </h4>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Adresse email
-                          </label>
-                          <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            placeholder="exemple@etablissement.com"
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          />
-                        </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Pays <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="pays"
+                          value={formData.pays}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="Pays"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
 
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Numéro de téléphone
-                          </label>
-                          <input
-                            type="tel"
-                            name="telephone"
-                            value={formData.telephone}
-                            onChange={handleInputChange}
-                            placeholder="+237 6XX XXX XXX"
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          />
-                        </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Localisation <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="localisation"
+                          value={formData.localisation}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="Localisation"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Column - Configuration Options */}
+                  {/* Contact Information */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                      Informations de contact
+                    </h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Adresse email
+                        </label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="exemple@etablissement.com"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Numéro de téléphone
+                        </label>
+                        <input
+                          type="tel"
+                          name="telephone"
+                          value={formData.telephone}
+                          onChange={handleInputChange}
+                          placeholder="+237 6XX XXX XXX"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="w-full md:w-1/2">
                   <div className="bg-gray-50 p-4 rounded-lg h-full">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">
                       Options de configuration
                     </h4>
                     <div className="space-y-4">
-                      <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border hover:border-blue-200 transition-colors">
+                      <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-200 transition-colors">
                         <input
                           type="checkbox"
                           name="optionEnvoiMailVersClasse"
@@ -419,7 +405,7 @@ const EstablishmentModal = ({
                         </div>
                       </label>
 
-                      <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border hover:border-blue-200 transition-colors">
+                      <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-200 transition-colors">
                         <input
                           type="checkbox"
                           name="optionTokenGeneral"
@@ -438,7 +424,7 @@ const EstablishmentModal = ({
                         </div>
                       </label>
 
-                      <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border hover:border-blue-200 transition-colors">
+                      <label className="flex items-start gap-3 cursor-pointer p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-200 transition-colors">
                         <input
                           type="checkbox"
                           name="codeUnique"
@@ -459,27 +445,26 @@ const EstablishmentModal = ({
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Footer */}
-              <div className="bg-gray-50 px-6 py-4 -mx-6 -mb-6 mt-6 flex flex-col sm:flex-row-reverse gap-3">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 sm:flex-none inline-flex justify-center items-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-base font-semibold text-white hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  <Save className="mr-2 w-5 h-5" />
-                  {loading ? "Enregistrement..." : "Enregistrer"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 sm:flex-none inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                >
-                  Annuler
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row-reverse gap-3">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full sm:w-auto inline-flex justify-center items-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-blue-600 text-base font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="mr-2 w-5 h-5" />
+                {loading ? "Enregistrement..." : "Enregistrer"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
