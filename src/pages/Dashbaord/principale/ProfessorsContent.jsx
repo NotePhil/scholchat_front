@@ -358,7 +358,7 @@ const ProfessorsContent = () => {
               </div>
 
               {/* Add Button */}
-              <button
+              {/* <button
                 onClick={() => {
                   setModalMode("create");
                   setSelectedProfessor(null);
@@ -368,7 +368,7 @@ const ProfessorsContent = () => {
               >
                 <Plus size={20} />
                 Nouveau Professeur
-              </button>
+              </button> */}
             </div>
           </div>
         </div>

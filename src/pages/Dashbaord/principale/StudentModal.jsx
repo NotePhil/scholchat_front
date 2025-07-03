@@ -180,8 +180,8 @@ const StudentModal = ({
         // Create new student
         await scholchatService.createStudent(studentData);
       } else {
-        // Update existing student
-        await scholchatService.updateStudent(selectedStudent.id, studentData);
+        // Update existing student using patchUser
+        await scholchatService.patchUser(selectedStudent.id, studentData);
       }
 
       await loadData();
@@ -246,7 +246,8 @@ const StudentModal = ({
                     Informations Personnelles
                   </h4>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* First Row */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Prénom <span className="text-red-500">*</span>
@@ -278,89 +279,92 @@ const StudentModal = ({
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                      disabled={modalMode === "view"}
-                      placeholder="Email"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Numéro de téléphone{" "}
-                      <span className="text-red-500">*</span>
-                    </label>
-                    <div className="phone-input-container">
-                      <PhoneInput
-                        defaultCountry={selectedCountry}
-                        value={formData.telephone}
-                        onChange={handlePhoneChange}
-                        countrySelectComponent={CountrySelect}
-                        placeholder="Entrez le numéro"
-                        international
-                        countryCallingCodeEditable={false}
-                        disabled={modalMode === "view"}
+                    {/* Second Row */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
                         required
+                        disabled={modalMode === "view"}
+                        placeholder="Email"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Adresse <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="adresse"
-                      value={formData.adresse}
-                      onChange={handleInputChange}
-                      required
-                      disabled={modalMode === "view"}
-                      placeholder="Entrez l'adresse"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Numéro de téléphone{" "}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <div className="phone-input-container">
+                        <PhoneInput
+                          defaultCountry={selectedCountry}
+                          value={formData.telephone}
+                          onChange={handlePhoneChange}
+                          countrySelectComponent={CountrySelect}
+                          placeholder="Entrez le numéro"
+                          international
+                          countryCallingCodeEditable={false}
+                          disabled={modalMode === "view"}
+                          required
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        />
+                      </div>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Niveau d'éducation <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="niveau"
-                      value={formData.niveau}
-                      onChange={handleInputChange}
-                      required
-                      disabled={modalMode === "view"}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    >
-                      <option value="">Sélectionnez un niveau</option>
-                      <option value="primaire">Primaire</option>
-                      <option value="college">Collège</option>
-                      <option value="lycee">Lycée</option>
-                      <option value="superieur">Supérieur</option>
-                    </select>
+                    {/* Third Row */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Adresse <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="adresse"
+                        value={formData.adresse}
+                        onChange={handleInputChange}
+                        required
+                        disabled={modalMode === "view"}
+                        placeholder="Entrez l'adresse"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Niveau d'éducation{" "}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="niveau"
+                        value={formData.niveau}
+                        onChange={handleInputChange}
+                        required
+                        disabled={modalMode === "view"}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      >
+                        <option value="">Sélectionnez un niveau</option>
+                        <option value="primaire">Primaire</option>
+                        <option value="college">Collège</option>
+                        <option value="lycee">Lycée</option>
+                        <option value="superieur">Supérieur</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
                 {/* Classes Information */}
                 <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900 flex items-center">
+                  {/* <h4 className="font-medium text-gray-900 flex items-center">
                     <School className="mr-2 w-5 h-5" />
                     Classes Associées
-                  </h4>
-
+                  </h4> */}
+                  {/* 
                   {modalMode !== "view" && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -384,9 +388,9 @@ const StudentModal = ({
                           ))}
                       </select>
                     </div>
-                  )}
+                  )} */}
 
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     {formData.classes.length > 0 ? (
                       formData.classes.map((cls) => (
                         <div
@@ -415,7 +419,7 @@ const StudentModal = ({
                         Aucune classe associée
                       </p>
                     )}
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>

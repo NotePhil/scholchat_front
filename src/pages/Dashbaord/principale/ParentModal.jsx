@@ -159,22 +159,22 @@ const ParentModal = ({
     try {
       setLoading(true);
 
+      // Prepare data according to the API requirements
       let parentData = {
+        type: "parent",
         nom: formData.nom.trim(),
         prenom: formData.prenom.trim(),
         email: formData.email.trim(),
         telephone: formData.telephone,
         adresse: formData.adresse.trim(),
-        type: "parent",
-        classesIds: formData.classes.map((c) => c.id),
       };
 
       if (modalMode === "create") {
         // Create new parent
         await scholchatService.createParent(parentData);
       } else {
-        // Update existing parent
-        await scholchatService.updateParent(selectedParent.id, parentData);
+        // Update existing parent using patchUser method
+        await scholchatService.patchUser(selectedParent.id, parentData);
       }
 
       await loadData();
@@ -203,7 +203,7 @@ const ParentModal = ({
             onClick={() => setShowModal(false)}
           ></div>
 
-          <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
               <div className="flex items-center justify-between">
@@ -221,7 +221,7 @@ const ParentModal = ({
               </div>
             </div>
 
-            {/* Content */}
+            {/* Content - 2 columns, 2 rows */}
             <div className="px-6 py-6">
               <div className="space-y-6">
                 {/* Name Section */}
@@ -234,15 +234,16 @@ const ParentModal = ({
                   </h2>
                 </div>
 
-                {/* Contact Information */}
-                <div className="space-y-4">
+                {/* Information Grid - 2 columns, 2 rows */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Row 1 */}
                   <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
                       <Mail className="w-5 h-5 text-blue-600" />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-500">Email</p>
-                      <p className="text-gray-900 font-medium">
+                      <p className="text-gray-900 font-medium text-sm">
                         {formData.email}
                       </p>
                     </div>
@@ -256,12 +257,13 @@ const ParentModal = ({
                       <p className="text-sm font-medium text-gray-500">
                         Téléphone
                       </p>
-                      <p className="text-gray-900 font-medium">
+                      <p className="text-gray-900 font-medium text-sm">
                         {formData.telephone}
                       </p>
                     </div>
                   </div>
 
+                  {/* Row 2 */}
                   <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                     <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
                       <MapPin className="w-5 h-5 text-purple-600" />
@@ -270,41 +272,46 @@ const ParentModal = ({
                       <p className="text-sm font-medium text-gray-500">
                         Adresse
                       </p>
-                      <p className="text-gray-900 font-medium">
+                      <p className="text-gray-900 font-medium text-sm">
                         {formData.adresse}
                       </p>
                     </div>
                   </div>
 
-                  {/* Classes Information */}
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-gray-900 flex items-center">
-                      <School className="mr-2 w-5 h-5" />
-                      Classes Associées
-                    </h4>
-                    <div className="space-y-2">
-                      {formData.classes.length > 0 ? (
-                        formData.classes.map((cls) => (
-                          <div
-                            key={cls.id}
-                            className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
-                          >
-                            <div>
-                              <p className="font-medium">{cls.nom}</p>
-                              <p className="text-sm text-gray-600">
-                                {cls.niveau}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-500 py-2">
-                          Aucune classe associée
-                        </p>
-                      )}
+                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
+                      <School className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-500">
+                        Classes
+                      </p>
+                      <p className="text-gray-900 font-medium text-sm">
+                        {formData.classes.length > 0
+                          ? `${formData.classes.length} classe(s)`
+                          : "Aucune"}
+                      </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Classes Details */}
+                {formData.classes.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-gray-900 flex items-center">
+                      <School className="mr-2 w-5 h-5" />
+                      Détails des Classes
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {formData.classes.map((cls) => (
+                        <div key={cls.id} className="bg-gray-50 p-3 rounded-lg">
+                          <p className="font-medium text-sm">{cls.nom}</p>
+                          <p className="text-xs text-gray-600">{cls.niveau}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -354,11 +361,12 @@ const ParentModal = ({
               </div>
             </div>
 
-            {/* Form Content */}
+            {/* Form Content - 2 columns, 2 rows */}
             <div className="px-6 py-6">
               <div className="space-y-6">
-                {/* Personal Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Personal Information Grid - 2 columns, 2 rows */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Row 1 */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Prénom <span className="text-red-500">*</span>
@@ -388,42 +396,45 @@ const ParentModal = ({
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Adresse email <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="exemple@email.com"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Numéro de téléphone <span className="text-red-500">*</span>
-                  </label>
-                  <div className="phone-input-container">
-                    <PhoneInput
-                      defaultCountry={selectedCountry}
-                      value={formData.telephone}
-                      onChange={handlePhoneChange}
-                      countrySelectComponent={CountrySelect}
-                      placeholder="Entrez le numéro"
-                      international
-                      countryCallingCodeEditable={false}
+                  {/* Row 2 */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Adresse email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
                       required
+                      placeholder="exemple@email.com"
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Numéro de téléphone{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <div className="phone-input-container">
+                      <PhoneInput
+                        defaultCountry={selectedCountry}
+                        value={formData.telephone}
+                        onChange={handlePhoneChange}
+                        countrySelectComponent={CountrySelect}
+                        placeholder="Entrez le numéro"
+                        international
+                        countryCallingCodeEditable={false}
+                        required
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
                 </div>
 
+                {/* Address (full width) */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Adresse complète <span className="text-red-500">*</span>
@@ -437,65 +448,6 @@ const ParentModal = ({
                     placeholder="Entrez l'adresse complète"
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
                   />
-                </div>
-
-                {/* Classes Information */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900 flex items-center">
-                    <School className="mr-2 w-5 h-5" />
-                    Classes Associées
-                  </h4>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ajouter une classe
-                    </label>
-                    <select
-                      onChange={handleClassSelection}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Sélectionnez une classe</option>
-                      {classes
-                        .filter(
-                          (cls) =>
-                            !formData.classes.some((c) => c.id === cls.id)
-                        )
-                        .map((cls) => (
-                          <option key={cls.id} value={cls.id}>
-                            {cls.nom} - {cls.niveau}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    {formData.classes.length > 0 ? (
-                      formData.classes.map((cls) => (
-                        <div
-                          key={cls.id}
-                          className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
-                        >
-                          <div>
-                            <p className="font-medium">{cls.nom}</p>
-                            <p className="text-sm text-gray-600">
-                              {cls.niveau}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeClass(cls.id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500 py-2">
-                        Aucune classe associée
-                      </p>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>

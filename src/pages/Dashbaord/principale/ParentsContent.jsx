@@ -351,7 +351,7 @@ const ParentsContent = () => {
               </div>
 
               {/* Add Button */}
-              <button
+              {/* <button
                 onClick={() => {
                   setModalMode("create");
                   setSelectedParent(null);
@@ -361,7 +361,7 @@ const ParentsContent = () => {
               >
                 <Plus size={20} />
                 Nouveau Parent
-              </button>
+              </button> */}
             </div>
           </div>
         </div>

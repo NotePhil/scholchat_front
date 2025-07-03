@@ -673,14 +673,20 @@ const SignUp = () => {
             <div className={`step-circle ${currentStep >= 1 ? "active" : ""}`}>
               1
             </div>
-            <div className="step-line"></div>
+            <div
+              className={`step-line ${currentStep >= 2 ? "active" : ""}`}
+            ></div>
             <div className={`step-circle ${currentStep >= 2 ? "active" : ""}`}>
               2
             </div>
           </div>
           <div className="step-labels">
-            <span>Informations personnelles</span>
-            <span>Détails du compte</span>
+            <span className={currentStep >= 1 ? "active" : ""}>
+              Informations personnelles
+            </span>
+            <span className={currentStep >= 2 ? "active" : ""}>
+              Détails du compte
+            </span>
           </div>
         </div>
 

@@ -14,12 +14,16 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Check if the user is pending validation
-  const isPendingValidation =
-    user?.verificationStatus === "PENDING" || !user?.verificationStatus;
+  // Fonction simplifiée pour déterminer si les actions doivent être affichées
+  const shouldShowActions = () => {
+    return user?.etat === "AWAITING_VALIDATION";
+  };
 
   useEffect(() => {
-    fetchRejectionMotifs();
+    // Only fetch rejection motifs if actions should be shown
+    if (shouldShowActions()) {
+      fetchRejectionMotifs();
+    }
     fetchUserDocuments();
   }, [user]);
 
@@ -151,32 +155,83 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
   };
 
   const getVerificationStatusBadge = () => {
-    const status = user.verificationStatus || "PENDING";
+    const verificationStatus = user?.verificationStatus;
+    const userState = user?.etat;
+    const hasRejectionMotif = user?.motif;
 
-    const statusConfig = {
-      APPROVED: {
-        className: "bg-green-100 text-green-800",
-        text: "Approuvé",
-      },
-      REJECTED: {
-        className: "bg-red-100 text-red-800",
-        text: "Rejeté",
-      },
-      default: {
-        className: "bg-yellow-100 text-yellow-800",
-        text: "En attente de vérification",
-      },
-    };
+    let status = "PENDING";
+    let statusText = "En attente de vérification";
+    let statusClass = "bg-yellow-100 text-yellow-800";
 
-    const config = statusConfig[status] || statusConfig.default;
+    if (userState === "ACTIVE") {
+      status = "APPROVED";
+      statusText = "Approuvé";
+      statusClass = "bg-green-100 text-green-800";
+    } else if (userState === "INACTIVE" && hasRejectionMotif) {
+      status = "REJECTED";
+      statusText = "Rejeté";
+      statusClass = "bg-red-100 text-red-800";
+    } else if (verificationStatus === "APPROVED") {
+      status = "APPROVED";
+      statusText = "Approuvé";
+      statusClass = "bg-green-100 text-green-800";
+    } else if (verificationStatus === "REJECTED") {
+      status = "REJECTED";
+      statusText = "Rejeté";
+      statusClass = "bg-red-100 text-red-800";
+    } else if (userState === "AWAITING_VALIDATION") {
+      status = "AWAITING_VALIDATION";
+      statusText = "En attente de validation";
+      statusClass = "bg-yellow-100 text-yellow-800";
+    }
 
     return (
       <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${config.className}`}
+        className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}
       >
-        {config.text}
+        {statusText}
       </span>
     );
+  };
+
+  const getProcessingStatusMessage = () => {
+    const verificationStatus = user?.verificationStatus;
+    const userState = user?.etat;
+    const hasRejectionMotif = user?.motif;
+
+    if (userState === "ACTIVE") {
+      return {
+        type: "success",
+        message: "Ce professeur a déjà été approuvé et validé.",
+      };
+    }
+
+    if (userState === "INACTIVE" && hasRejectionMotif) {
+      return {
+        type: "error",
+        message: `Ce professeur a déjà été rejeté pour le motif suivant: ${hasRejectionMotif}`,
+      };
+    }
+
+    if (verificationStatus === "APPROVED") {
+      return {
+        type: "success",
+        message: "Ce professeur a déjà été approuvé et validé.",
+      };
+    }
+
+    if (verificationStatus === "REJECTED") {
+      return {
+        type: "error",
+        message: `Ce professeur a déjà été rejeté${
+          hasRejectionMotif
+            ? ` pour le motif suivant: ${hasRejectionMotif}`
+            : "."
+        }`,
+      };
+    }
+
+    return null;
   };
 
   if (successMessage) {
@@ -201,6 +256,9 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       </div>
     );
   }
+
+  const statusMessage = getProcessingStatusMessage();
+  const showActions = shouldShowActions();
 
   return (
     <div className="fixed inset-0 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -230,7 +288,19 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
             </div>
           )}
 
-          {/* User info and actions */}
+          {statusMessage && (
+            <div
+              className={`mb-4 p-3 rounded-md flex items-center ${
+                statusMessage.type === "success"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-orange-100 text-orange-700"
+              }`}
+            >
+              <AlertCircle className="w-5 h-5 mr-2" />
+              <span>{statusMessage.message}</span>
+            </div>
+          )}
+
           <div className="flex flex-col lg:flex-row gap-6">
             {/* User details */}
             <div className="flex-1">
@@ -272,6 +342,9 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
                           user?.etat === "ACTIVE"
                             ? "bg-green-100 text-green-800"
+                            : user?.etat === "PENDING" ||
+                              user?.etat === "AWAITING_VALIDATION"
+                            ? "bg-yellow-100 text-yellow-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
@@ -297,8 +370,8 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
               </div>
             </div>
 
-            {/* Actions - Only show for pending professors */}
-            {isPendingValidation && (
+            {/* Actions - Only show for AWAITING_VALIDATION status */}
+            {showActions && (
               <div className="flex-shrink-0 w-full lg:w-64">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-medium mb-4 text-gray-800">

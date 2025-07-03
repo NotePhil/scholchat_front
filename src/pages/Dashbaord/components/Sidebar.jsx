@@ -73,7 +73,7 @@ const Sidebar = ({
   // Define menu items based on user role
   const getMenuItems = () => {
     const baseItems = [
-      { name: "Dashboard", icon: Menu, tab: "dashboard" },
+      { name: "Tableau de Bord", icon: Menu, tab: "dashboard" },
       { name: "Activités", icon: Activity, tab: "activities" },
     ];
 
@@ -117,6 +117,12 @@ const Sidebar = ({
             { name: "Gérer un Établissement", tab: "manage-establishment" },
           ],
         },
+        // Fixed Messages item - directly set tab instead of using onClick
+        {
+          name: "Messagerie",
+          icon: Mail,
+          tab: "messages",
+        },
       ];
     } else if (userRoles.includes("ROLE_PROFESSOR")) {
       roleItems = [
@@ -145,6 +151,12 @@ const Sidebar = ({
             { name: "Liste des Classes", tab: "classes-list" },
           ],
         },
+        // Fixed Messages item for professors
+        {
+          name: "Messagerie",
+          icon: Mail,
+          tab: "messages",
+        },
       ];
     } else if (
       userRoles.includes("ROLE_PARENT") ||
@@ -152,18 +164,30 @@ const Sidebar = ({
     ) {
       roleItems = [
         { name: "Classes", icon: Building2, tab: "classes" },
-        { name: "Messages", icon: Mail, tab: "messages" },
+        {
+          name: "Messagerie",
+          icon: Mail,
+          tab: "messages",
+        },
       ];
     } else {
       // Default items for other roles
       roleItems = [
         { name: "Classes", icon: Building2, tab: "classes" },
         { name: "Motifs de Rejet", icon: BookOpen, tab: "motifs-de-rejet" },
+        // Fixed Messages item for other roles
+        {
+          name: "Messagerie",
+          icon: Mail,
+          tab: "messages",
+        },
       ];
     }
 
     // Bottom items (always at the end)
-    const bottomItems = [{ name: "Settings", icon: Settings, tab: "settings" }];
+    const bottomItems = [
+      { name: "Paramètres", icon: Settings, tab: "settings" },
+    ];
 
     // For parents and students, we want the dashboard to be the first item
     if (
@@ -290,9 +314,7 @@ const Sidebar = ({
                 ) : (
                   <li
                     className={activeTab === item.tab ? "active" : ""}
-                    onClick={() =>
-                      item.onClick ? item.onClick() : handleTabChange(item.tab)
-                    }
+                    onClick={() => handleTabChange(item.tab)}
                   >
                     <a href="#" onClick={(e) => e.preventDefault()}>
                       <span className="icon">

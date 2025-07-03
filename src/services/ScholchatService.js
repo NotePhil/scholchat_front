@@ -800,6 +800,25 @@ class ScholchatService {
   getToken() {
     return localStorage.getItem("authToken");
   }
+  async patchUser(id, partialUpdate) {
+    try {
+      // Ensure email is lowercase if provided
+      if (partialUpdate.email) {
+        partialUpdate.email = partialUpdate.email.toLowerCase();
+      }
+
+      // Remove any file references since they're already uploaded to S3
+      const payload = { ...partialUpdate };
+      delete payload.cniUrlRecto;
+      delete payload.cniUrlVerso;
+      delete payload.selfieUrl;
+
+      const response = await api.patch(`/utilisateurs/${id}`, payload);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
 }
 
 export const scholchatService = new ScholchatService();

@@ -361,7 +361,7 @@ const StudentsContent = () => {
               </div>
 
               {/* Add Button */}
-              <button
+              {/* <button
                 onClick={() => {
                   setModalMode("create");
                   setSelectedStudent(null);
@@ -371,7 +371,7 @@ const StudentsContent = () => {
               >
                 <Plus size={20} />
                 Nouvel Élève
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
