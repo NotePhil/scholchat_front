@@ -2,263 +2,214 @@ import React, { useState, useEffect } from "react";
 import {
   X,
   Save,
-  Building2,
+  User,
   Mail,
   Phone,
   MapPin,
-  Globe,
-  Settings,
+  ChevronDown,
+  BookOpen,
+  School,
 } from "lucide-react";
+import { scholchatService } from "../../../services/ScholchatService";
+import axios from "axios";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
-const EstablishmentModal = ({
+const StudentModal = ({
   showModal,
   setShowModal,
   modalMode,
-  selectedEstablishment,
-  onSave,
+  selectedStudent,
+  classes,
+  loadData,
+  setError,
+  setLoading,
   loading,
 }) => {
   const [formData, setFormData] = useState({
     nom: "",
-    pays: "",
-    localisation: "",
+    prenom: "",
     email: "",
     telephone: "",
-    optionEnvoiMailVersClasse: false,
-    optionTokenGeneral: false,
-    codeUnique: false,
+    adresse: "",
+    niveau: "",
+    classes: [],
   });
 
-  // Initialize form data when modal opens or selectedEstablishment changes
+  const [selectedCountry, setSelectedCountry] = useState("CM");
+
+  // Initialize form data when modal opens or selectedStudent changes
   useEffect(() => {
     if (showModal) {
       if (modalMode === "create") {
+        // Reset form for create mode
         setFormData({
           nom: "",
-          pays: "",
-          localisation: "",
+          prenom: "",
           email: "",
           telephone: "",
-          optionEnvoiMailVersClasse: false,
-          optionTokenGeneral: false,
-          codeUnique: false,
+          adresse: "",
+          niveau: "",
+          classes: [],
         });
       } else if (
         (modalMode === "edit" || modalMode === "view") &&
-        selectedEstablishment
+        selectedStudent
       ) {
+        // Populate form with existing student data
         setFormData({
-          nom: selectedEstablishment.nom || "",
-          pays: selectedEstablishment.pays || "",
-          localisation: selectedEstablishment.localisation || "",
-          email: selectedEstablishment.email || "",
-          telephone: selectedEstablishment.telephone || "",
-          optionEnvoiMailVersClasse:
-            selectedEstablishment.optionEnvoiMailVersClasse || false,
-          optionTokenGeneral: selectedEstablishment.optionTokenGeneral || false,
-          codeUnique: selectedEstablishment.codeUnique || false,
+          nom: selectedStudent.nom || "",
+          prenom: selectedStudent.prenom || "",
+          email: selectedStudent.email || "",
+          telephone: selectedStudent.telephone || "",
+          adresse: selectedStudent.adresse || "",
+          niveau: selectedStudent.niveau || "",
+          classes: selectedStudent.classes || [],
         });
+
+        // Set country based on phone number
+        if (selectedStudent.telephone) {
+          if (selectedStudent.telephone.startsWith("+237")) {
+            setSelectedCountry("CM");
+          } else if (selectedStudent.telephone.startsWith("+33")) {
+            setSelectedCountry("FR");
+          }
+        }
       }
     }
-  }, [showModal, modalMode, selectedEstablishment]);
+  }, [showModal, modalMode, selectedStudent]);
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
+    }));
+  };
+
+  const handlePhoneChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      telephone: value || "",
+    }));
+
+    if (value) {
+      if (value.startsWith("+237")) {
+        setSelectedCountry("CM");
+      } else if (value.startsWith("+33")) {
+        setSelectedCountry("FR");
+      }
+    }
+  };
+
+  const CountrySelect = ({ value, onChange, options, ...restProps }) => {
+    const countryToFlag = (countryCode) => {
+      return countryCode
+        .toUpperCase()
+        .replace(/./g, (char) =>
+          String.fromCodePoint(127397 + char.charCodeAt())
+        );
+    };
+
+    return (
+      <select
+        {...restProps}
+        value={value}
+        onChange={(event) => onChange(event.target.value || undefined)}
+        style={{
+          width: "60px",
+          backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='feather feather-chevron-down'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 0.5rem center",
+          backgroundSize: "1rem",
+          appearance: "none",
+        }}
+      >
+        {options?.map(({ value, label }) => (
+          <option key={value} value={value}>
+            {countryToFlag(value)} {label}
+          </option>
+        ))}
+        <option value={value} style={{ display: "none" }}>
+          {value ? countryToFlag(value) : ""}
+        </option>
+      </select>
+    );
+  };
+
+  const handleClassSelection = (e) => {
+    const classId = e.target.value;
+    if (!classId) return;
+
+    const selectedClass = classes.find((c) => c.id === classId);
+    if (!selectedClass) return;
+
+    // Check if class is already added
+    if (formData.classes.some((c) => c.id === classId)) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      classes: [...prev.classes, selectedClass],
+    }));
+  };
+
+  const removeClass = (classId) => {
+    setFormData((prev) => ({
+      ...prev,
+      classes: prev.classes.filter((c) => c.id !== classId),
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const establishmentData = {
-      ...formData,
-      nom: formData.nom.trim(),
-      pays: formData.pays.trim(),
-      localisation: formData.localisation.trim(),
-      email: formData.email.trim(),
-      telephone: formData.telephone.trim(),
+    try {
+      setLoading(true);
+
+      let studentData = {
+        nom: formData.nom.trim(),
+        prenom: formData.prenom.trim(),
+        email: formData.email.trim(),
+        telephone: formData.telephone,
+        adresse: formData.adresse.trim(),
+        niveau: formData.niveau.trim(),
+        classesIds: formData.classes.map((c) => c.id),
+        type: "eleve",
+      };
+
+      if (modalMode === "create") {
+        // Create new student
+        await scholchatService.createStudent(studentData);
+      } else {
+        // Update existing student using patchUser
+        await scholchatService.patchUser(selectedStudent.id, studentData);
+      }
+
+      await loadData();
+      setShowModal(false);
+    } catch (err) {
+      console.error("Error details:", err);
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        "Erreur lors de l'enregistrement";
+      setError("Erreur lors de l'enregistrement: " + errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getLevelText = (level) => {
+    const levels = {
+      primaire: "Primaire",
+      college: "Collège",
+      lycee: "Lycée",
+      superieur: "Supérieur",
     };
-    await onSave(establishmentData);
+    return levels[level] || level;
   };
 
   if (!showModal) return null;
 
-  // View Mode Component
-  if (modalMode === "view") {
-    return (
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-          <div
-            className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-            onClick={() => setShowModal(false)}
-          ></div>
-
-          <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
-                  <Building2 className="mr-2 w-5 h-5" />
-                  Détails de l'Établissement
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Name Section */}
-                <div className="text-center pb-4 border-b border-gray-100">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Building2 className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {formData.nom}
-                  </h2>
-                </div>
-
-                {/* Location Information - 2 Columns */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-                      <MapPin className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-500">
-                        Localisation
-                      </p>
-                      <p className="text-gray-900 font-medium">
-                        {formData.localisation}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                      <Globe className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-500">Pays</p>
-                      <p className="text-gray-900 font-medium">
-                        {formData.pays}
-                      </p>
-                    </div>
-                  </div>
-
-                  {formData.email && (
-                    <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                        <Mail className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-500">
-                          Email
-                        </p>
-                        <p className="text-gray-900 font-medium">
-                          {formData.email}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {formData.telephone && (
-                    <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
-                        <Phone className="w-5 h-5 text-orange-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-500">
-                          Téléphone
-                        </p>
-                        <p className="text-gray-900 font-medium">
-                          {formData.telephone}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Options Section */}
-                <div className="border-t border-gray-100 pt-6">
-                  <div className="flex items-center mb-4">
-                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
-                      <Settings className="w-5 h-5 text-indigo-600" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      Options configurées
-                    </h4>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-700">
-                        Email vers classes
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          formData.optionEnvoiMailVersClasse
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {formData.optionEnvoiMailVersClasse
-                          ? "Activé"
-                          : "Désactivé"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-700">
-                        Token général
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          formData.optionTokenGeneral
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {formData.optionTokenGeneral ? "Activé" : "Désactivé"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-700">
-                        Code unique
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          formData.codeUnique
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {formData.codeUnique ? "Activé" : "Désactivé"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 px-4 py-3 sm:px-6">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Edit/Create Mode Component
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -271,11 +222,12 @@ const EstablishmentModal = ({
           <form onSubmit={handleSubmit}>
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
-                  <Building2 className="mr-2 w-5 h-5" />
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
                   {modalMode === "create"
-                    ? "Nouvel Établissement"
-                    : "Modifier l'Établissement"}
+                    ? "Nouvel Élève"
+                    : modalMode === "edit"
+                    ? "Modifier Élève"
+                    : "Détails Élève"}
                 </h3>
                 <button
                   type="button"
@@ -286,17 +238,35 @@ const EstablishmentModal = ({
                 </button>
               </div>
 
-              <div className="space-y-6">
-                {/* General Information */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">
-                    Informations générales
+              <div className="space-y-4">
+                {/* Personal Information */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900 flex items-center">
+                    <User className="mr-2 w-5 h-5" />
+                    Informations Personnelles
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* First Row */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nom de l'établissement{" "}
-                        <span className="text-red-500">*</span>
+                        Prénom <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="prenom"
+                        value={formData.prenom}
+                        onChange={handleInputChange}
+                        required
+                        disabled={modalMode === "view"}
+                        placeholder="Entrez le prénom"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nom <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -304,160 +274,175 @@ const EstablishmentModal = ({
                         value={formData.nom}
                         onChange={handleInputChange}
                         required
-                        placeholder="Nom de l'établissement"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        disabled={modalMode === "view"}
+                        placeholder="Entrez le nom"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
                     </div>
 
+                    {/* Second Row */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Pays <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="pays"
-                        value={formData.pays}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Pays"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Localisation <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="localisation"
-                        value={formData.localisation}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Localisation"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contact Information */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">
-                    Informations de contact
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Adresse email
+                        Email <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        placeholder="exemple@etablissement.com"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                        disabled={modalMode === "view"}
+                        placeholder="Email"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Numéro de téléphone
+                        Numéro de téléphone{" "}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <div className="phone-input-container">
+                        <PhoneInput
+                          defaultCountry={selectedCountry}
+                          value={formData.telephone}
+                          onChange={handlePhoneChange}
+                          countrySelectComponent={CountrySelect}
+                          placeholder="Entrez le numéro"
+                          international
+                          countryCallingCodeEditable={false}
+                          disabled={modalMode === "view"}
+                          required
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Third Row */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Adresse <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="tel"
-                        name="telephone"
-                        value={formData.telephone}
+                        type="text"
+                        name="adresse"
+                        value={formData.adresse}
                         onChange={handleInputChange}
-                        placeholder="+237 6XX XXX XXX"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                        disabled={modalMode === "view"}
+                        placeholder="Entrez l'adresse"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Niveau d'éducation{" "}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="niveau"
+                        value={formData.niveau}
+                        onChange={handleInputChange}
+                        required
+                        disabled={modalMode === "view"}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      >
+                        <option value="">Sélectionnez un niveau</option>
+                        <option value="primaire">Primaire</option>
+                        <option value="college">Collège</option>
+                        <option value="lycee">Lycée</option>
+                        <option value="superieur">Supérieur</option>
+                      </select>
                     </div>
                   </div>
                 </div>
 
-                {/* Configuration Options */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">
-                    Options de configuration
-                  </h4>
-                  <div className="space-y-3">
-                    <label className="flex items-start gap-3 cursor-pointer p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <input
-                        type="checkbox"
-                        name="optionEnvoiMailVersClasse"
-                        checked={formData.optionEnvoiMailVersClasse}
-                        onChange={handleInputChange}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          Email vers classes
-                        </span>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Envoi automatique d'emails aux classes
-                        </p>
-                      </div>
-                    </label>
+                {/* Classes Information */}
+                <div className="space-y-4">
+                  {/* <h4 className="font-medium text-gray-900 flex items-center">
+                    <School className="mr-2 w-5 h-5" />
+                    Classes Associées
+                  </h4> */}
+                  {/* 
+                  {modalMode !== "view" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ajouter une classe
+                      </label>
+                      <select
+                        onChange={handleClassSelection}
+                        disabled={modalMode === "view"}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      >
+                        <option value="">Sélectionnez une classe</option>
+                        {classes
+                          .filter(
+                            (cls) =>
+                              !formData.classes.some((c) => c.id === cls.id)
+                          )
+                          .map((cls) => (
+                            <option key={cls.id} value={cls.id}>
+                              {cls.nom} - {cls.niveau}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )} */}
 
-                    <label className="flex items-start gap-3 cursor-pointer p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <input
-                        type="checkbox"
-                        name="optionTokenGeneral"
-                        checked={formData.optionTokenGeneral}
-                        onChange={handleInputChange}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          Token général
-                        </span>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Utilisation d'un token général pour l'authentification
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-3 cursor-pointer p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <input
-                        type="checkbox"
-                        name="codeUnique"
-                        checked={formData.codeUnique}
-                        onChange={handleInputChange}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          Code unique
-                        </span>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Génération d'un code unique pour l'identification
-                        </p>
-                      </div>
-                    </label>
-                  </div>
+                  {/* <div className="space-y-2">
+                    {formData.classes.length > 0 ? (
+                      formData.classes.map((cls) => (
+                        <div
+                          key={cls.id}
+                          className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+                        >
+                          <div>
+                            <p className="font-medium">{cls.nom}</p>
+                            <p className="text-sm text-gray-600">
+                              {cls.niveau}
+                            </p>
+                          </div>
+                          {modalMode !== "view" && (
+                            <button
+                              type="button"
+                              onClick={() => removeClass(cls.id)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X size={16} />
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500 py-2">
+                        Aucune classe associée
+                      </p>
+                    )}
+                  </div> */}
                 </div>
               </div>
             </div>
 
-            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-              >
-                <Save className="mr-2 w-4 h-4" />
-                {loading ? "Enregistrement..." : "Enregistrer"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-              >
-                Annuler
-              </button>
-            </div>
+            {modalMode !== "view" && (
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                >
+                  <Save className="mr-2 w-4 h-4" />
+                  {loading ? "Enregistrement..." : "Enregistrer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Annuler
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>
@@ -465,4 +450,4 @@ const EstablishmentModal = ({
   );
 };
 
-export default EstablishmentModal;
+export default StudentModal;
