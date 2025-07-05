@@ -68,32 +68,14 @@ const VerifyEmail = () => {
         </div>
         <h2>Vérifiez votre e-mail</h2>
         <p className="verification-message">
-          Nous avons envoyé un e-mail de vérification à <strong>{email}</strong>
+          Nous avons envoyé un e-mail à <strong>{email}</strong>
         </p>
         <p className="verification-instructions">
-          Veuillez vérifier votre boîte de réception et cliquer sur le lien de
-          vérification pour activer votre compte. Si vous ne voyez pas l'e-mail,
-          veuillez vérifier votre dossier de spam.
+          Un mail vous a été envoyé. Veuillez suivre les instructions qui s'y
+          trouvent. Si vous ne voyez pas l'e-mail, veuillez vérifier votre
+          dossier de spam.
         </p>
         <div className="verification-actions">
-          <button
-            type="button"
-            className="action-button resend-button"
-            onClick={handleResendVerification}
-            disabled={isResendingEmail}
-          >
-            {isResendingEmail ? (
-              <>
-                <Loader className="button-icon animate-spin" size={18} />
-                <span>Envoi en cours...</span>
-              </>
-            ) : (
-              <>
-                <Mail className="button-icon" size={18} />
-                <span>Renvoyer l'e-mail</span>
-              </>
-            )}
-          </button>
           <button
             type="button"
             className="action-button login-button"
