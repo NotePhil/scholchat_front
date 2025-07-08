@@ -4,7 +4,7 @@ import MessageList from "./MessageList";
 import MessageDetailPanel from "./MessageDetailPanel";
 import ComposeModal from "./ComposeModal";
 import RecipientSelectorModal from "./RecipientSelectorModal";
-import { demoUsers, demoClasses, demoMessages } from "./demoData";
+import { useAuth } from "../../../../context/AuthContext"; // Import the useAuth hook
 
 const MessagingInterface = ({
   isDark = false,
@@ -17,13 +17,14 @@ const MessagingInterface = ({
   onClose,
   selectedConversation,
   userRole = "ADMIN",
-  currentUser = demoUsers[0] // Default to first user (teacher)
 }) => {
+  const { user: currentUser } = useAuth(); // Use the useAuth hook to retrieve the current user
   const [messages, setMessages] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState(demoUsers);
+  const [allMessages, setAllMessages] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [selectedMessages, setSelectedMessages] = useState(new Set());
@@ -35,9 +36,7 @@ const MessagingInterface = ({
   const [showRecipientSelector, setShowRecipientSelector] = useState(false);
   const [ccRecipients, setCcRecipients] = useState([]);
   const [classesList, setClassesList] = useState([]);
-
   const themeColors = colorSchemes[currentTheme] || colorSchemes.blue;
-
   const [newMessage, setNewMessage] = useState({
     destinataires: [],
     contenu: "",
@@ -45,79 +44,157 @@ const MessagingInterface = ({
     expediteur: currentUser,
   });
 
-  // Load user's classes based on their role
-  useEffect(() => {
-    if (currentUser.role === "TEACHER") {
-      // Teacher can publish to their classes
-      setClassesList(demoClasses.filter(c => currentUser.classes.includes(c.id)));
-    } else {
-      // Other users can access their classes
-      setClassesList(demoClasses.filter(c => currentUser.accessClasses.includes(c.id)));
+  const parseMessageContent = (contenu) => {
+    const subjectMatch = contenu.match(/\[([^\]]+)\]/);
+    if (subjectMatch) {
+      const subject = subjectMatch[1];
+      const messageBody = contenu.replace(subjectMatch[0], '').trim();
+      return { subject, messageBody };
     }
-  }, [currentUser]);
+    return { subject: "Sans objet", messageBody: contenu };
+  };
 
-  const loadMessages = useCallback(() => {
+  const fetchMessages = useCallback(async () => {
+    if (!currentUser?.id) return;
+
     setLoading(true);
     try {
-      // Filter messages based on current user
-      let userMessages = demoMessages.filter(msg => {
-        // Sent messages
-        if (msg.expediteur.id === currentUser.id) return true;
-
-        // Received messages
-        if (msg.destinataires.some(dest => dest.id === currentUser.id)) return true;
-
-        // General messages to user's classes
-        if (msg.isGeneral && msg.classes.some(c => currentUser.accessClasses.includes(c))) {
-          return true;
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch(`http://localhost:8486/scholchat/messages/utilisateur/${currentUser.id}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
         }
-
-        return false;
       });
 
-      // Apply filters
-      if (filterType === "sent") {
-        userMessages = userMessages.filter(msg => msg.expediteur.id === currentUser.id);
-      } else if (filterType === "unread") {
-        userMessages = userMessages.filter(msg => !msg.read);
-      } else if (filterType === "starred") {
-        userMessages = userMessages.filter(msg => msg.starred);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Apply search
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        userMessages = userMessages.filter(msg =>
-          msg.objet.toLowerCase().includes(term) ||
-          msg.contenu.toLowerCase().includes(term) ||
-          msg.expediteur.nom.toLowerCase().includes(term)
-        );
-      }
+      const data = await response.json();
 
-      setMessages(userMessages);
+      const transformedMessages = data.map(msg => {
+        const { subject, messageBody } = parseMessageContent(msg.contenu);
+        return {
+          id: msg.id,
+          objet: subject,
+          contenu: messageBody,
+          dateCreation: msg.dateCreation,
+          dateModification: msg.dateModification,
+          etat: msg.etat,
+          expediteur: {
+            id: msg.expediteur.id,
+            nom: msg.expediteur.nom,
+            prenom: msg.expediteur.prenom,
+            email: msg.expediteur.email,
+            telephone: msg.expediteur.telephone,
+            adresse: msg.expediteur.adresse,
+            role: msg.expediteur.admin ? "ADMIN" : "USER",
+            type: msg.expediteur.type
+          },
+          destinataires: msg.destinataires.map(dest => ({
+            id: dest.id,
+            nom: dest.nom,
+            prenom: dest.prenom,
+            email: dest.email,
+            telephone: dest.telephone,
+            adresse: dest.adresse,
+            role: dest.admin ? "ADMIN" : "USER",
+            type: dest.type
+          })),
+          read: msg.etat === "lu",
+          starred: false,
+          classes: [],
+          isGeneral: false
+        };
+      });
+
+      setAllMessages(transformedMessages);
       setError(null);
     } catch (err) {
-      setError("Failed to load messages");
+      console.error("Error fetching messages:", err);
+      setError("Erreur lors du chargement des messages");
     } finally {
       setLoading(false);
     }
-  }, [filterType, searchTerm, currentUser]);
+  }, [currentUser?.id]);
+
+  const filterMessages = useCallback(() => {
+    let filteredMessages = [...allMessages];
+    switch (filterType) {
+      case "all":
+        filteredMessages = filteredMessages.filter(msg =>
+          msg.destinataires.some(dest => dest.id === currentUser.id)
+        );
+        break;
+      case "sent":
+        filteredMessages = filteredMessages.filter(msg =>
+          msg.expediteur.id === currentUser.id
+        );
+        break;
+      case "unread":
+        filteredMessages = filteredMessages.filter(msg =>
+          !msg.read && msg.destinataires.some(dest => dest.id === currentUser.id)
+        );
+        break;
+      case "starred":
+        filteredMessages = filteredMessages.filter(msg => msg.starred);
+        break;
+      default:
+        break;
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filteredMessages = filteredMessages.filter(msg =>
+        msg.objet.toLowerCase().includes(term) ||
+        msg.contenu.toLowerCase().includes(term) ||
+        msg.expediteur.nom.toLowerCase().includes(term) ||
+        msg.expediteur.prenom.toLowerCase().includes(term)
+      );
+    }
+
+    filteredMessages.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+    setMessages(filteredMessages);
+  }, [allMessages, filterType, searchTerm, currentUser?.id]);
 
   useEffect(() => {
-    loadMessages();
-  }, [loadMessages]);
+    fetchMessages();
+  }, [fetchMessages]);
+
+  useEffect(() => {
+    filterMessages();
+  }, [filterMessages]);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadMessages();
-    setRefreshing(false);
+    fetchMessages().finally(() => {
+      setRefreshing(false);
+    });
+  };
+
+  const getMessageCounts = () => {
+    const receivedMessages = allMessages.filter(msg =>
+      msg.destinataires.some(dest => dest.id === currentUser.id)
+    );
+    const sentMessages = allMessages.filter(msg =>
+      msg.expediteur.id === currentUser.id
+    );
+    const unreadMessages = allMessages.filter(msg =>
+      !msg.read && msg.destinataires.some(dest => dest.id === currentUser.id)
+    );
+    const starredMessages = allMessages.filter(msg => msg.starred);
+    return {
+      all: receivedMessages.length,
+      sent: sentMessages.length,
+      unread: unreadMessages.length,
+      starred: starredMessages.length
+    };
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = (now - date) / (1000 * 60 * 60);
-
     if (diffInHours < 24) {
       return date.toLocaleTimeString("fr-FR", {
         hour: "2-digit",
@@ -135,15 +212,15 @@ const MessagingInterface = ({
 
   const getUserInitials = (user) => {
     if (!user?.nom) return "?";
-    return user.nom
-      .split(" ")
-      .map((name) => name[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
+    const nom = user.nom || "";
+    const prenom = user.prenom || "";
+    return `${nom.charAt(0)}${prenom.charAt(0)}`.toUpperCase();
   };
 
   const getUserDisplay = (user) => {
+    if (user?.nom && user?.prenom) {
+      return `${user.prenom} ${user.nom}`;
+    }
     return user?.email || user?.nom || "Unknown User";
   };
 
@@ -157,63 +234,13 @@ const MessagingInterface = ({
     setSelectedMessages(newSelected);
   };
 
-  const handleSendMessage = () => {
-    if (!newMessage.contenu.trim() || (selectedClasses.length === 0 && newMessage.destinataires.length === 0)) {
+  const handleSendMessage = async () => {
+    if (!newMessage.contenu.trim() || newMessage.destinataires.length === 0) {
       setError("Veuillez remplir tous les champs obligatoires");
       return;
     }
-
     setLoading(true);
-
     try {
-      // Determine recipients based on selected classes and general message setting
-      let finalRecipients = [...newMessage.destinataires];
-      let finalCcRecipients = [...ccRecipients];
-
-      if (isGeneralMessage && selectedClasses.length > 0) {
-        selectedClasses.forEach(classeId => {
-          const classe = demoClasses.find(c => c.id === classeId);
-          if (!classe) return;
-
-          if (currentUser.role === "TEACHER") {
-            // Send to all students/parents in class
-            const members = demoUsers.filter(u => classe.eleves.includes(u.id));
-            finalRecipients = [...finalRecipients, ...members];
-
-            // Add other teachers as CC
-            const otherTeachers = demoUsers.filter(u =>
-              u.role === "TEACHER" &&
-              u.id !== currentUser.id &&
-              classe.professeurs.includes(u.id)
-            );
-            finalCcRecipients = [...finalCcRecipients, ...otherTeachers];
-          } else {
-            // Send to all teachers in class
-            const teachers = demoUsers.filter(u => classe.professeurs.includes(u.id));
-            finalRecipients = [...finalRecipients, ...teachers];
-          }
-        });
-      }
-
-      // Create new message
-      const newMsg = {
-        id: Math.max(...demoMessages.map(m => m.id)) + 1,
-        objet: newMessage.objet,
-        contenu: newMessage.contenu,
-        dateCreation: new Date().toISOString(),
-        expediteur: currentUser,
-        destinataires: finalRecipients,
-        read: false,
-        starred: false,
-        classes: selectedClasses,
-        isGeneral: isGeneralMessage,
-        cc: finalCcRecipients
-      };
-
-      // Update state
-      setMessages([newMsg, ...messages]);
-
-      // Reset form
       setNewMessage({
         destinataires: [],
         contenu: "",
@@ -225,6 +252,8 @@ const MessagingInterface = ({
       setCcRecipients([]);
       setShowCompose(false);
       setError(null);
+
+      await fetchMessages();
     } catch (err) {
       setError("Erreur lors de l'envoi du message");
     } finally {
@@ -232,29 +261,44 @@ const MessagingInterface = ({
     }
   };
 
-  const handleMarkAsRead = (messageId, isRead) => {
+  const handleMarkAsRead = async (messageId, isRead) => {
     setMessages(prev =>
+      prev.map(msg =>
+        msg.id === messageId ? { ...msg, read: !isRead } : msg
+      )
+    );
+
+    setAllMessages(prev =>
       prev.map(msg =>
         msg.id === messageId ? { ...msg, read: !isRead } : msg
       )
     );
   };
 
-  const handleDeleteMessage = (messageId) => {
+  const handleDeleteMessage = async (messageId) => {
     setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    setAllMessages(prev => prev.filter(msg => msg.id !== messageId));
+
     if (selectedMessage?.id === messageId) {
       setSelectedMessage(null);
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     const messageIds = Array.from(selectedMessages);
     setMessages(prev => prev.filter(msg => !messageIds.includes(msg.id)));
+    setAllMessages(prev => prev.filter(msg => !messageIds.includes(msg.id)));
     setSelectedMessages(new Set());
   };
 
-  const toggleStarMessage = (messageId, isStarred) => {
+  const toggleStarMessage = async (messageId, isStarred) => {
     setMessages(prev =>
+      prev.map(msg =>
+        msg.id === messageId ? { ...msg, starred: !isStarred } : msg
+      )
+    );
+
+    setAllMessages(prev =>
       prev.map(msg =>
         msg.id === messageId ? { ...msg, starred: !isStarred } : msg
       )
@@ -287,7 +331,6 @@ const MessagingInterface = ({
         role: "EXTERNAL",
         type: "repetiteur",
       };
-
       setNewMessage(prev => ({
         ...prev,
         destinataires: [...prev.destinataires, emailUser],
@@ -297,6 +340,8 @@ const MessagingInterface = ({
     return false;
   };
 
+  const messageCounts = getMessageCounts();
+
   return (
     <div className={`flex h-full ${isDark ? "bg-gray-900" : "bg-white"}`}>
       <Sidebar
@@ -305,7 +350,7 @@ const MessagingInterface = ({
         setShowCompose={setShowCompose}
         filterType={filterType}
         setFilterType={setFilterType}
-        messages={messages}
+        messageCounts={messageCounts}
         currentUser={currentUser}
       />
       <MessageList
@@ -327,6 +372,9 @@ const MessagingInterface = ({
         refreshing={refreshing}
         error={error}
         setError={setError}
+        getUserInitials={getUserInitials}
+        getUserDisplay={getUserDisplay}
+        formatDate={formatDate}
       />
       {selectedMessage && (
         <MessageDetailPanel
@@ -336,6 +384,8 @@ const MessagingInterface = ({
           formatDate={formatDate}
           getUserInitials={getUserInitials}
           getUserDisplay={getUserDisplay}
+          currentUser={currentUser}
+          onRefreshMessages={handleRefresh}
         />
       )}
       {showCompose && (

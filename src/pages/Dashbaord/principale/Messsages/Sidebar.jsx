@@ -1,7 +1,42 @@
 import React from "react";
 import { Send, Inbox, Edit, Star, Circle } from "lucide-react";
 
-const Sidebar = ({ isDark, themeColors, setShowCompose, filterType, setFilterType, messages, currentUser }) => {
+const Sidebar = ({ 
+  isDark, 
+  themeColors, 
+  setShowCompose, 
+  filterType, 
+  setFilterType, 
+  messageCounts,
+  currentUser 
+}) => {
+  const sidebarItems = [
+    { 
+      key: "all", 
+      label: "Boîte de réception", 
+      icon: Inbox, 
+      count: messageCounts.all 
+    },
+    { 
+      key: "starred", 
+      label: "Messages suivis", 
+      icon: Star, 
+      count: messageCounts.starred 
+    },
+    { 
+      key: "sent", 
+      label: "Envoyés", 
+      icon: Send, 
+      count: messageCounts.sent 
+    },
+    { 
+      key: "unread", 
+      label: "Non lus", 
+      icon: Circle, 
+      count: messageCounts.unread 
+    },
+  ];
+
   return (
     <div className={`w-64 border-r ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-gray-50"}`}>
       <div className="p-4">
@@ -14,13 +49,9 @@ const Sidebar = ({ isDark, themeColors, setShowCompose, filterType, setFilterTyp
           Nouveau message
         </button>
       </div>
+
       <div className="px-2">
-        {[
-          { key: "all", label: "Boîte de réception", icon: Inbox, count: messages.length },
-          { key: "starred", label: "Messages suivis", icon: Star, count: messages.filter((m) => m.starred).length },
-          { key: "sent", label: "Envoyés", icon: Send, count: messages.filter((m) => m.expediteur?.id === currentUser.id).length },
-          { key: "unread", label: "Non lus", icon: Circle, count: messages.filter((m) => !m.read).length },
-        ].map(({ key, label, icon: Icon, count }) => (
+        {sidebarItems.map(({ key, label, icon: Icon, count }) => (
           <button
             key={key}
             className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm mb-1 transition-colors ${

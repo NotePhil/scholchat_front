@@ -20,41 +20,10 @@ const MessageList = ({
   refreshing,
   error,
   setError,
+  getUserInitials,
+  getUserDisplay,
+  formatDate,
 }) => {
-  const getUserInitials = (user) => {
-    if (!user?.nom) return "?";
-    return user.nom
-      .split(" ")
-      .map((name) => name[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
-  };
-
-  const getUserDisplay = (user) => {
-    return user?.email || user?.nom || "Unknown User";
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now - date) / (1000 * 60 * 60);
-
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } else if (diffInHours < 168) {
-      return date.toLocaleDateString("fr-FR", { weekday: "short" });
-    } else {
-      return date.toLocaleDateString("fr-FR", {
-        day: "numeric",
-        month: "short",
-      });
-    }
-  };
-
   return (
     <div className="flex-1 flex flex-col">
       <div className={`px-6 py-3 border-b flex items-center gap-4 ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}>
@@ -77,6 +46,7 @@ const MessageList = ({
             </div>
           )}
         </div>
+
         <div className="relative flex-1 max-w-2xl">
           <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 ${isDark ? "text-gray-400" : "text-gray-500"}`} size={18} />
           <input
@@ -89,6 +59,7 @@ const MessageList = ({
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
         <button
           className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
           onClick={handleRefresh}
@@ -97,6 +68,7 @@ const MessageList = ({
           <RefreshCw className={refreshing ? "animate-spin" : ""} size={18} />
         </button>
       </div>
+
       {error && (
         <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
           <AlertCircle size={16} />
@@ -106,6 +78,7 @@ const MessageList = ({
           </button>
         </div>
       )}
+
       <div className={`flex-1 overflow-y-auto ${isDark ? "bg-gray-900" : "bg-white"}`}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -146,6 +119,7 @@ const MessageList = ({
                     toggleMessageSelection(message.id);
                   }}
                 />
+
                 <button
                   className={`mr-4 p-1 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
                   onClick={(e) => {
@@ -159,6 +133,7 @@ const MessageList = ({
                     <StarOff size={16} className={isDark ? "text-gray-400" : "text-gray-400"} />
                   )}
                 </button>
+
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium mr-4 ${
                     isDark ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-700"
@@ -166,6 +141,7 @@ const MessageList = ({
                 >
                   {getUserInitials(message.expediteur)}
                 </div>
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
@@ -188,6 +164,7 @@ const MessageList = ({
                       {formatDate(message.dateCreation)}
                     </span>
                   </div>
+
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       className={`font-medium text-sm ${
@@ -197,9 +174,11 @@ const MessageList = ({
                       {message.objet || "Sans objet"}
                     </span>
                   </div>
+
                   <p className={`text-sm truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}>
                     {message.contenu}
                   </p>
+
                   {message.destinataires && message.destinataires.length > 0 && (
                     <div className="flex items-center gap-1 mt-1">
                       <Users size={12} className={isDark ? "text-gray-500" : "text-gray-400"} />
@@ -209,6 +188,7 @@ const MessageList = ({
                     </div>
                   )}
                 </div>
+
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
