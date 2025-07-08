@@ -40,7 +40,7 @@ const ProfessorsContent = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'table'
+  const [viewMode, setViewMode] = useState("grid");
 
   useEffect(() => {
     loadData();
@@ -358,7 +358,7 @@ const ProfessorsContent = () => {
               </div>
 
               {/* Add Button */}
-              {/* <button
+              <button
                 onClick={() => {
                   setModalMode("create");
                   setSelectedProfessor(null);
@@ -367,97 +367,103 @@ const ProfessorsContent = () => {
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
               >
                 <Plus size={20} />
-                Nouveau Professeur
-              </button> */}
+                <span className="hidden sm:inline">Nouveau Professeur</span>
+                <span className="sm:hidden">Ajouter</span>
+              </button>
             </div>
           </div>
         </div>
 
         {/* Content Area */}
         {viewMode === "grid" ? (
-          // Grid View
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          // Grid View - UPDATED WITH PROPER SPACING AND TEXT CONTAINMENT
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProfessors.map((professor) => (
               <div
                 key={professor.id}
-                className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
+                className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col h-full min-w-[280px] max-w-full overflow-hidden"
               >
                 {/* Card Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
-                        <span className="text-white font-bold text-lg">
-                          {getInitials(professor.prenom, professor.nom)}
+                <div className="p-5 pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-4 min-w-0">
+                      <div className="relative flex-shrink-0">
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
+                          <span className="text-white font-bold text-lg">
+                            {getInitials(professor.prenom, professor.nom)}
+                          </span>
+                        </div>
+                        <div className="absolute -bottom-1 -right-1">
+                          {getStatusIcon(professor.etat)}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-slate-900 break-words whitespace-normal text-sm line-clamp-2 mb-1">
+                          {professor.prenom} {professor.nom}
+                        </h3>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
+                            professor.etat
+                          )}`}
+                        >
+                          {getStatusText(professor.etat)}
                         </span>
                       </div>
-                      <div className="absolute -bottom-1 -right-1">
-                        {getStatusIcon(professor.etat)}
-                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-slate-900 truncate">
-                        {professor.prenom} {professor.nom}
-                      </h3>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                          professor.etat
-                        )} mt-1`}
-                      >
-                        {getStatusText(professor.etat)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Actions Dropdown */}
-                  <div className="relative group/actions">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                    <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                       <MoreVertical size={16} />
                     </button>
-                    {/* You can add a dropdown menu here */}
                   </div>
                 </div>
 
                 {/* Card Content */}
-                <div className="space-y-3">
+                <div className="px-5 pb-4 flex-grow space-y-3">
                   <div className="flex items-center text-sm text-slate-600">
-                    <Mail size={14} className="mr-2 text-slate-400" />
-                    <span className="truncate">{professor.email}</span>
+                    <Mail
+                      size={14}
+                      className="mr-3 text-slate-400 flex-shrink-0"
+                    />
+                    <span className="break-all whitespace-normal truncate">
+                      {professor.email}
+                    </span>
                   </div>
 
                   {professor.telephone && (
                     <div className="flex items-center text-sm text-slate-600">
-                      <Phone size={14} className="mr-2 text-slate-400" />
-                      <span>{professor.telephone}</span>
+                      <Phone
+                        size={14}
+                        className="mr-3 text-slate-400 flex-shrink-0"
+                      />
+                      <span className="break-all whitespace-normal">
+                        {professor.telephone}
+                      </span>
                     </div>
                   )}
 
                   {professor.adresse && (
                     <div className="flex items-center text-sm text-slate-600">
-                      <MapPin size={14} className="mr-2 text-slate-400" />
-                      <span className="truncate">{professor.adresse}</span>
-                    </div>
-                  )}
-
-                  {professor.matriculeProfesseur && (
-                    <div className="flex items-center text-sm text-slate-600">
-                      <Hash size={14} className="mr-2 text-slate-400" />
-                      <span>{professor.matriculeProfesseur}</span>
+                      <MapPin
+                        size={14}
+                        className="mr-3 text-slate-400 flex-shrink-0"
+                      />
+                      <span className="break-all whitespace-normal truncate">
+                        {professor.adresse}
+                      </span>
                     </div>
                   )}
 
                   {/* Classes */}
                   <div className="pt-2">
-                    <p className="text-xs font-medium text-slate-500 mb-2">
+                    <p className="text-xs font-medium text-slate-500 mb-2 pl-1">
                       Classes modérées
                     </p>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-2">
                       {professor.moderatedClasses?.length > 0 ? (
                         <>
                           {professor.moderatedClasses.slice(0, 2).map((cls) => (
                             <span
                               key={cls.id}
-                              className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                              className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 break-all whitespace-normal"
                             >
                               {cls.nom}
                             </span>
@@ -469,7 +475,7 @@ const ProfessorsContent = () => {
                           )}
                         </>
                       ) : (
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-slate-400 pl-1">
                           Aucune classe assignée
                         </span>
                       )}
@@ -478,35 +484,37 @@ const ProfessorsContent = () => {
                 </div>
 
                 {/* Card Actions */}
-                <div className="flex items-center justify-end space-x-2 mt-6 pt-4 border-t border-slate-100">
-                  <button
-                    onClick={() => handleViewUser(professor)}
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                    title="Voir les détails"
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setModalMode("edit");
-                      setSelectedProfessor(professor);
-                      setShowModal(true);
-                    }}
-                    className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
-                    title="Modifier"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedProfessor(professor);
-                      setShowDeleteConfirm(true);
-                    }}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                    title="Supprimer"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                <div className="px-5 py-3 border-t border-slate-100">
+                  <div className="flex items-center justify-end space-x-3">
+                    <button
+                      onClick={() => handleViewUser(professor)}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                      title="Voir les détails"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setModalMode("edit");
+                        setSelectedProfessor(professor);
+                        setShowModal(true);
+                      }}
+                      className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
+                      title="Modifier"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedProfessor(professor);
+                        setShowDeleteConfirm(true);
+                      }}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -556,13 +564,18 @@ const ProfessorsContent = () => {
                               {getStatusIcon(professor.etat)}
                             </div>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-semibold text-slate-900">
+                          <div className="ml-4 min-w-0">
+                            <div className="text-sm font-semibold text-slate-900 break-words whitespace-normal">
                               {professor.prenom} {professor.nom}
                             </div>
-                            <div className="text-sm text-slate-500 flex items-center">
-                              <MapPin size={12} className="mr-1" />
-                              {professor.adresse || "Non renseigné"}
+                            <div className="text-sm text-slate-500 flex items-center truncate">
+                              <MapPin
+                                size={12}
+                                className="mr-1 flex-shrink-0"
+                              />
+                              <span className="truncate">
+                                {professor.adresse || "Non renseigné"}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -570,24 +583,34 @@ const ProfessorsContent = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="space-y-1">
                           <div className="text-sm text-slate-900 flex items-center">
-                            <Mail size={12} className="mr-2 text-slate-400" />
-                            {professor.email}
+                            <Mail
+                              size={12}
+                              className="mr-2 text-slate-400 flex-shrink-0"
+                            />
+                            <span className="truncate">{professor.email}</span>
                           </div>
                           {professor.telephone && (
                             <div className="text-sm text-slate-500 flex items-center">
                               <Phone
                                 size={12}
-                                className="mr-2 text-slate-400"
+                                className="mr-2 text-slate-400 flex-shrink-0"
                               />
-                              {professor.telephone}
+                              <span className="truncate">
+                                {professor.telephone}
+                              </span>
                             </div>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-sm text-slate-900">
-                          <Hash size={12} className="mr-1 text-slate-400" />
-                          {professor.matriculeProfesseur || "-"}
+                          <Hash
+                            size={12}
+                            className="mr-1 text-slate-400 flex-shrink-0"
+                          />
+                          <span className="truncate">
+                            {professor.matriculeProfesseur || "-"}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -599,7 +622,7 @@ const ProfessorsContent = () => {
                                 .map((cls) => (
                                   <span
                                     key={cls.id}
-                                    className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                                    className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 break-all"
                                   >
                                     {cls.nom}
                                   </span>
