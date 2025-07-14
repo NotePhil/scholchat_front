@@ -37,18 +37,13 @@ const MessageDetailPanel = ({
       setReplyError("Veuillez saisir un message");
       return;
     }
-
     setIsReplying(true);
     setReplyError("");
-
     try {
       const accessToken = localStorage.getItem('accessToken');
       const senderId = localStorage.getItem('userId');
-
       const messageContent = `[${replySubject}] ${replyContent}`;
-
       const recipient = selectedMessage.expediteur;
-
       const response = await fetch('http://localhost:8486/scholchat/messages', {
         method: 'POST',
         headers: {
@@ -85,14 +80,11 @@ const MessageDetailPanel = ({
           }]
         })
       });
-
       if (!response.ok) {
         throw new Error('Failed to send reply');
       }
-
       console.log('Reply sent successfully');
       handleDiscardReply();
-
       if (onRefreshMessages) {
         onRefreshMessages();
       }
@@ -104,13 +96,22 @@ const MessageDetailPanel = ({
     }
   };
 
+  // Check if the current user is not the sender of the message
+  const isNotSender = selectedMessage?.expediteur?.id !== currentUser?.id;
+
   return (
     <div className={`w-96 border-l flex flex-col ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}>
       <div className={`p-6 border-b ${isDark ? "border-gray-700" : "border-gray-200"}`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
-            {selectedMessage.objet || "Sans objet"}
-          </h2>
+<div className={`p-6 flex-1 overflow-y-auto ${isDark ? "text-gray-300" : "text-gray-800"}`}>
+  <div className="whitespace-pre-wrap">
+    <h4 className={`font-medium text-lg mb-2 ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+      {selectedMessage?.objet || "Sans objet"}
+    </h4>
+    <p>{selectedMessage?.contenu}</p>
+  </div>
+</div>
+
           <button
             className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
             onClick={() => setSelectedMessage(null)}
@@ -120,26 +121,28 @@ const MessageDetailPanel = ({
         </div>
         <div className="flex items-center gap-3 mb-4">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center font-medium ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-700"}`}>
-            {getUserInitials(selectedMessage.expediteur)}
+            {selectedMessage?.expediteur && getUserInitials(selectedMessage.expediteur)}
           </div>
           <div>
             <div className={`font-medium ${isDark ? "text-white" : "text-gray-900"}`}>
-              {getUserDisplay(selectedMessage.expediteur)}
+              {selectedMessage?.expediteur && getUserDisplay(selectedMessage.expediteur)}
             </div>
             <div className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-              {formatDate(selectedMessage.dateCreation)}
+              {selectedMessage?.dateCreation && formatDate(selectedMessage.dateCreation)}
             </div>
           </div>
         </div>
         <div className="flex gap-2">
-          <button
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${isDark ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
-            onClick={handleReplyClick}
-            disabled={showReplyField}
-          >
-            <Reply size={16} />
-            Répondre
-          </button>
+          {isNotSender && (
+            <button
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${isDark ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+              onClick={handleReplyClick}
+              disabled={showReplyField}
+            >
+              <Reply size={16} />
+              Répondre
+            </button>
+          )}
           <button
             className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${isDark ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
           >
@@ -149,7 +152,7 @@ const MessageDetailPanel = ({
         </div>
       </div>
       <div className={`p-6 flex-1 overflow-y-auto ${isDark ? "text-gray-300" : "text-gray-800"}`}>
-        <div className="whitespace-pre-wrap">{selectedMessage.contenu}</div>
+        <div className="whitespace-pre-wrap">{selectedMessage?.contenu}</div>
       </div>
       {showReplyField && (
         <div className={`border-t p-4 ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-gray-50"}`}>

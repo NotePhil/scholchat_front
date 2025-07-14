@@ -141,53 +141,38 @@ const MessageList = ({
                 >
                   {getUserInitials(message.expediteur)}
                 </div>
+<div className="flex-1 min-w-0">
+  <div className="flex items-center justify-between mb-1">
+    <div className="flex items-center gap-2">
+      <span className={`font-medium truncate ${!message.read ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}>
+        {getUserDisplay(message.expediteur)}
+      </span>
+      <span className={`text-xs px-2 py-1 rounded-full ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}>
+        {message.expediteur?.role}
+      </span>
+    </div>
+    <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+      {formatDate(message.dateCreation)}
+    </span>
+  </div>
+  <div className="flex items-center gap-2 mb-1">
+    <span className={`font-medium text-sm ${!message.read ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+      {message.objet || "Sans objet"}
+    </span>
+  </div>
+  <p className={`text-sm truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+    {message.contenu}
+  </p>
+  {message.destinataires && message.destinataires.length > 0 && (
+    <div className="flex items-center gap-1 mt-1">
+      <Users size={12} className={isDark ? "text-gray-500" : "text-gray-400"} />
+      <span className={`text-xs ${isDark ? "text-gray-500" : "text-gray-500"}`}>
+        {message.destinataires.map((dest) => getUserDisplay(dest)).join(", ")}
+      </span>
+    </div>
+  )}
+</div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`font-medium truncate ${
-                          !message.read ? "font-bold" : ""
-                        } ${isDark ? "text-white" : "text-gray-900"}`}
-                      >
-                        {getUserDisplay(message.expediteur)}
-                      </span>
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full ${
-                          isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {message.expediteur?.role}
-                      </span>
-                    </div>
-                    <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                      {formatDate(message.dateCreation)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className={`font-medium text-sm ${
-                        !message.read ? "font-bold" : ""
-                      } ${isDark ? "text-gray-200" : "text-gray-800"}`}
-                    >
-                      {message.objet || "Sans objet"}
-                    </span>
-                  </div>
-
-                  <p className={`text-sm truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                    {message.contenu}
-                  </p>
-
-                  {message.destinataires && message.destinataires.length > 0 && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Users size={12} className={isDark ? "text-gray-500" : "text-gray-400"} />
-                      <span className={`text-xs ${isDark ? "text-gray-500" : "text-gray-500"}`}>
-                        {message.destinataires.map((dest) => getUserDisplay(dest)).join(", ")}
-                      </span>
-                    </div>
-                  )}
-                </div>
 
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
