@@ -10,8 +10,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Tabs,
-  Tab,
   Snackbar,
   Alert,
   Paper,
@@ -19,6 +17,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
 } from "@mui/material";
 import {
   School as SchoolIcon,
@@ -28,11 +27,11 @@ import {
   CheckCircle as CheckCircleIcon,
   AccountCircle as AccountCircleIcon,
   Refresh as RefreshIcon,
-  FilterList as FilterListIcon,
   ViewModule as ViewModuleIcon,
   HourglassEmpty as HourglassEmptyIcon,
   Login as LoginIcon,
   Pending as PendingIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import { classService } from "../../../../services/ClassService";
@@ -65,31 +64,6 @@ const GradientHeader = styled(Box)(({ theme }) => ({
   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
   padding: theme.spacing(4),
   color: "white",
-}));
-
-const FilterCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  borderRadius: "16px",
-  border: "1px solid rgba(0, 0, 0, 0.08)",
-  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-}));
-
-const StyledTabs = styled(Tabs)(({ theme }) => ({
-  "& .MuiTabs-indicator": {
-    height: 3,
-    borderRadius: "3px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-  },
-  "& .MuiTab-root": {
-    textTransform: "none",
-    fontWeight: 600,
-    fontSize: "0.95rem",
-    minHeight: 48,
-    color: theme.palette.text.secondary,
-    "&.Mui-selected": {
-      color: theme.palette.primary.main,
-    },
-  },
 }));
 
 const LevelChip = styled(Chip)(({ theme, level }) => {
@@ -214,17 +188,15 @@ const EmptyState = styled(Box)(({ theme }) => ({
 
 const ParentClassManagement = () => {
   const navigate = useNavigate();
-  const [classes, setClasses] = useState([]);
-  const [filteredClasses, setFilteredClasses] = useState([]);
-  const [approvedClasses, setApprovedClasses] = useState([]);
+  const [allClasses, setAllClasses] = useState([]);
+  const [userClasses, setUserClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState("ALL");
-  const [userAccessStatus, setUserAccessStatus] = useState({});
+  const [modalOpen, setModalOpen] = useState(false);
   const [isRequestMode, setIsRequestMode] = useState(false);
+  const [userAccessStatus, setUserAccessStatus] = useState({});
   const [pendingDialog, setPendingDialog] = useState({
     open: false,
     className: "",
@@ -234,8 +206,10 @@ const ParentClassManagement = () => {
     message: "",
     severity: "success",
   });
+  const [activationCode, setActivationCode] = useState("");
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [foundClass, setFoundClass] = useState(null);
 
-  // Get user data from localStorage
   const userId = localStorage.getItem("userId");
   const userEmail = localStorage.getItem("userEmail");
   const username = localStorage.getItem("username");
@@ -288,11 +262,7 @@ const ParentClassManagement = () => {
   };
 
   const hasApprovedAccess = (classId) => {
-    // Check both the local status and the approved classes list
-    return (
-      getAccessStatus(classId) === "APPROVED" ||
-      approvedClasses.some((c) => c.id === classId)
-    );
+    return getAccessStatus(classId) === "APPROVED";
   };
 
   const hasPendingRequest = (classId) => {
@@ -310,38 +280,48 @@ const ParentClassManagement = () => {
     try {
       setLoading(true);
 
-      // Get all classes
-      const classesData = await classService.obtenirToutesLesClasses();
-      const activeClasses = classesData.filter((c) => c.etat === "ACTIF");
-      setClasses(activeClasses);
-      setFilteredClasses(activeClasses);
+      // Get all classes first
+      const allClassesData = await classService.obtenirToutesLesClasses();
+      setAllClasses(allClassesData.filter((c) => c.etat === "ACTIF"));
 
-      // Get user's approved classes from the API
-      try {
-        const approvedClassesData =
-          await AccederService.obtenirClassesAccessibles(userId);
-        setApprovedClasses(approvedClassesData || []);
-      } catch (approvedError) {
-        console.warn("Failed to get approved classes:", approvedError);
-        setApprovedClasses([]);
-      }
+      // Get user's approved classes
+      const approvedClasses = await AccederService.obtenirClassesAccessibles(
+        userId
+      );
 
-      // Get access status for each class
-      try {
-        const accessStatusMap = {};
-        const accessData = await AccederService.obtenirStatutAccesUtilisateur(
-          userId
-        );
+      // Get user's access requests
+      const accessRequests = await Promise.all(
+        allClassesData.map((classe) =>
+          AccederService.obtenirDemandesAccesPourClasse(classe.id)
+        )
+      ).then((results) => results.flat());
 
-        if (accessData) {
-          Object.assign(accessStatusMap, accessData);
+      const userRequests = accessRequests.filter(
+        (request) => request.utilisateurId === userId
+      );
+
+      // Create access status map
+      const accessStatusMap = {};
+
+      approvedClasses.forEach((classe) => {
+        accessStatusMap[classe.id] = "APPROVED";
+      });
+
+      userRequests.forEach((request) => {
+        if (!accessStatusMap[request.classeId]) {
+          accessStatusMap[request.classeId] = request.statut;
         }
+      });
 
-        setUserAccessStatus(accessStatusMap);
-      } catch (accessError) {
-        console.warn("Failed to get access status:", accessError);
-        setUserAccessStatus({});
-      }
+      setUserAccessStatus(accessStatusMap);
+
+      // Get classes the user has access to or has requested
+      const userClassIds = Object.keys(accessStatusMap);
+      const userClassesData = allClassesData.filter(
+        (c) => userClassIds.includes(c.id) && c.etat === "ACTIF"
+      );
+
+      setUserClasses(userClassesData);
     } catch (err) {
       setError(err.message);
       showSnackbar(err.message, "error");
@@ -358,20 +338,10 @@ const ParentClassManagement = () => {
     fetchData();
   }, [userId, navigate]);
 
-  useEffect(() => {
-    if (activeTab === "ALL") {
-      setFilteredClasses(classes);
-    } else {
-      setFilteredClasses(
-        classes.filter((c) => getLevelFromNiveau(c.niveau) === activeTab)
-      );
-    }
-  }, [activeTab, classes]);
-
   const handleClassClick = (classe, isRequest = false) => {
     setSelectedClass(classe);
     setIsRequestMode(isRequest);
-    setOpenDialog(true);
+    setModalOpen(true);
   };
 
   const handleAccessClick = (classe) => {
@@ -385,13 +355,43 @@ const ParentClassManagement = () => {
     }
   };
 
-  const handleRequestAccess = async (classe, activationCode) => {
+  const handleSearchClass = async () => {
+    if (!activationCode) {
+      showSnackbar("Veuillez entrer un code d'activation", "error");
+      return;
+    }
+
+    try {
+      const matchedClass = allClasses.find(
+        (c) => c.codeActivation === activationCode
+      );
+
+      if (matchedClass) {
+        setFoundClass(matchedClass);
+        setSelectedClass(matchedClass);
+        setIsRequestMode(true);
+        setModalOpen(true);
+        setSearchDialogOpen(false);
+      } else {
+        showSnackbar(
+          "Aucune classe trouvée avec ce code d'activation",
+          "error"
+        );
+        setFoundClass(null);
+      }
+    } catch (err) {
+      showSnackbar(err.message, "error");
+    }
+  };
+
+  const handleRequestAccess = async (classe, code) => {
     try {
       await AccederService.demanderAcces({
         utilisateurId: userId,
         classeId: classe.id,
-        codeActivation: activationCode,
+        codeActivation: code,
       });
+
       showSnackbar("Demande d'accès envoyée avec succès", "success");
 
       setUserAccessStatus((prev) => ({
@@ -399,15 +399,29 @@ const ParentClassManagement = () => {
         [classe.id]: "PENDING",
       }));
 
+      setUserClasses((prev) => {
+        if (!prev.some((c) => c.id === classe.id)) {
+          return [...prev, classe];
+        }
+        return prev;
+      });
+
       return true;
     } catch (err) {
-      showSnackbar(err.message, "error");
+      console.error("Error requesting access:", err);
+      if (err.message.includes("Une demande d'accès est déjà en attente")) {
+        showSnackbar(
+          "Une demande d'accès est déjà en attente pour cette classe",
+          "error"
+        );
+      } else {
+        showSnackbar(
+          err.response?.data?.message || "Erreur lors de la demande d'accès",
+          "error"
+        );
+      }
       return false;
     }
-  };
-
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
   };
 
   if (loading) {
@@ -524,42 +538,60 @@ const ParentClassManagement = () => {
                     color="white"
                     gutterBottom
                   >
-                    Gestion des Classes
+                    Mes Classes
                   </Typography>
                   <Typography
                     variant="body1"
                     sx={{ color: "rgba(255, 255, 255, 0.9)" }}
                   >
-                    {filteredClasses.length} classe
-                    {filteredClasses.length !== 1 ? "s" : ""} disponible
-                    {filteredClasses.length !== 1 ? "s" : ""}
+                    {userClasses.length} classe
+                    {userClasses.length !== 1 ? "s" : ""} disponible
+                    {userClasses.length !== 1 ? "s" : ""}
                   </Typography>
                 </Box>
               </Box>
 
-              <ActionButton
-                variant="contained"
-                onClick={handleRefresh}
-                disabled={refreshing}
-                startIcon={
-                  refreshing ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <RefreshIcon />
-                  )
-                }
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  backdropFilter: "blur(10px)",
-                  border: "1px solid rgba(255, 255, 255, 0.3)",
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 255, 255, 0.3)",
-                  },
-                }}
-              >
-                {refreshing ? "Actualisation..." : "Actualiser"}
-              </ActionButton>
+              <Box display="flex" gap={2}>
+                <ActionButton
+                  variant="contained"
+                  onClick={() => setSearchDialogOpen(true)}
+                  startIcon={<SearchIcon />}
+                  sx={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    color: "white",
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 255, 255, 0.3)",
+                    },
+                  }}
+                >
+                  Rechercher une classe
+                </ActionButton>
+                <ActionButton
+                  variant="contained"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  startIcon={
+                    refreshing ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <RefreshIcon />
+                    )
+                  }
+                  sx={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    color: "white",
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 255, 255, 0.3)",
+                    },
+                  }}
+                >
+                  {refreshing ? "Actualisation..." : "Actualiser"}
+                </ActionButton>
+              </Box>
             </Box>
           </GradientHeader>
 
@@ -582,31 +614,6 @@ const ParentClassManagement = () => {
           </Box>
         </HeaderCard>
 
-        <FilterCard sx={{ mb: 4 }}>
-          <Box display="flex" alignItems="center" gap={2} mb={2}>
-            <FilterListIcon color="primary" />
-            <Typography variant="h6" fontWeight={600}>
-              Filtrer par niveau
-            </Typography>
-          </Box>
-
-          <StyledTabs
-            value={activeTab}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
-          >
-            <Tab label="Tous" value="ALL" />
-            <Tab label="Maternelle" value="MATERNELLE" />
-            <Tab label="Primaire" value="PRIMAIRE" />
-            <Tab label="Collège" value="COLLEGE" />
-            <Tab label="Lycée" value="LYCEE" />
-            <Tab label="Université" value="UNIVERSITE" />
-            <Tab label="Autres" value="AUTRES" />
-          </StyledTabs>
-        </FilterCard>
-
         {error && (
           <Alert
             severity="error"
@@ -617,7 +624,7 @@ const ParentClassManagement = () => {
           </Alert>
         )}
 
-        {filteredClasses.length === 0 ? (
+        {userClasses.length === 0 ? (
           <EmptyState>
             <SchoolIcon
               sx={{ fontSize: 80, color: "action.disabled", mb: 2 }}
@@ -631,21 +638,20 @@ const ParentClassManagement = () => {
               Aucune classe disponible
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-              {activeTab === "ALL"
-                ? "Il n'y a actuellement aucune classe active dans le système."
-                : `Aucune classe trouvée pour le niveau "${activeTab}".`}
+              Vous n'avez pas encore accès à des classes. Recherchez une classe
+              avec un code d'activation pour demander l'accès.
             </Typography>
             <ActionButton
-              variant="outlined"
-              onClick={() => setActiveTab("ALL")}
-              disabled={activeTab === "ALL"}
+              variant="contained"
+              onClick={() => setSearchDialogOpen(true)}
+              startIcon={<SearchIcon />}
             >
-              Voir toutes les classes
+              Rechercher une classe
             </ActionButton>
           </EmptyState>
         ) : (
           <Grid container spacing={3}>
-            {filteredClasses.map((classe) => {
+            {userClasses.map((classe) => {
               const accessStatus = getAccessStatus(classe.id);
               const isApproved = hasApprovedAccess(classe.id);
               const isPending = hasPendingRequest(classe.id);
@@ -744,11 +750,9 @@ const ParentClassManagement = () => {
                         )}
                       </Box>
 
-                      {accessStatus !== "NONE" && (
-                        <Box sx={{ mt: 2 }}>
-                          <AccessStatusChip status={accessStatus} />
-                        </Box>
-                      )}
+                      <Box sx={{ mt: 2 }}>
+                        <AccessStatusChip status={accessStatus} />
+                      </Box>
                     </CardContent>
 
                     <CardActions sx={{ p: 3, pt: 0, gap: 1 }}>
@@ -767,12 +771,10 @@ const ParentClassManagement = () => {
                           size="small"
                           variant="contained"
                           startIcon={<LoginIcon />}
-                          onClick={() =>
-                            navigate(`/parent/classes/${classe.id}`)
-                          }
+                          onClick={() => handleAccessClick(classe)}
                           sx={{ flexGrow: 1 }}
                         >
-                          Accéder à la classe
+                          Accéder
                         </ActionButton>
                       ) : isPending ? (
                         <ActionButton
@@ -791,17 +793,7 @@ const ParentClassManagement = () => {
                         >
                           En attente
                         </ActionButton>
-                      ) : (
-                        <ActionButton
-                          size="small"
-                          variant="contained"
-                          startIcon={<PersonAddIcon />}
-                          onClick={() => handleClassClick(classe, true)}
-                          sx={{ flexGrow: 1 }}
-                        >
-                          Demander Accès
-                        </ActionButton>
-                      )}
+                      ) : null}
                     </CardActions>
                   </StyledCard>
                 </Grid>
@@ -810,17 +802,79 @@ const ParentClassManagement = () => {
           </Grid>
         )}
 
+        {/* Search Dialog */}
+        <Dialog
+          open={searchDialogOpen}
+          onClose={() => {
+            setSearchDialogOpen(false);
+            setFoundClass(null);
+            setActivationCode("");
+          }}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box display="flex" alignItems="center" gap={2}>
+              <SearchIcon color="primary" />
+              <Typography variant="h6" fontWeight={600}>
+                Rechercher une classe
+              </Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body1" gutterBottom>
+                Entrez le code d'activation fourni par l'enseignant pour
+                rechercher une classe.
+              </Typography>
+              <TextField
+                fullWidth
+                label="Code d'activation"
+                variant="outlined"
+                value={activationCode}
+                onChange={(e) => setActivationCode(e.target.value)}
+                sx={{ mb: 3, mt: 2 }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <ActionButton
+              onClick={() => {
+                setSearchDialogOpen(false);
+                setFoundClass(null);
+                setActivationCode("");
+              }}
+              variant="outlined"
+            >
+              Annuler
+            </ActionButton>
+            <ActionButton
+              onClick={handleSearchClass}
+              variant="contained"
+              disabled={!activationCode}
+            >
+              Rechercher
+            </ActionButton>
+          </DialogActions>
+        </Dialog>
+
+        {/* Class Management Modal */}
         {selectedClass && (
           <ParentClassManagementModal
-            open={openDialog}
-            onClose={() => setOpenDialog(false)}
+            open={modalOpen}
+            onClose={() => {
+              setModalOpen(false);
+              setSelectedClass(null);
+            }}
             classe={selectedClass}
             hasAccess={hasApprovedAccess(selectedClass.id)}
             onRequestAccess={handleRequestAccess}
             isRequestMode={isRequestMode}
+            activationCode={activationCode}
           />
         )}
 
+        {/* Pending Request Dialog */}
         <Dialog
           open={pendingDialog.open}
           onClose={() => setPendingDialog({ open: false, className: "" })}

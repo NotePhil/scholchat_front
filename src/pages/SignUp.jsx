@@ -18,13 +18,14 @@ const SignUp = () => {
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [token, setToken] = useState("");
 
-  // Prévisualisation des images
+  // Image previews state
   const [imagePreviews, setImagePreviews] = useState({
     cniRecto: null,
     cniVerso: null,
     selfie: null,
   });
 
+  // Form data state
   const [formData, setFormData] = useState({
     type: "",
     nom: "",
@@ -40,7 +41,27 @@ const SignUp = () => {
     matriculeProfesseur: "",
   });
 
-  // Vérifier les paramètres URL pour le mode mise à jour
+  // Handle user type change and store in localStorage
+  const handleTypeChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    localStorage.setItem("userType", value); // Store user type in localStorage
+
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: false }));
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: false }));
+    }
+  };
+
+  // Check URL params for update mode and initialize form
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const emailParam = urlParams.get("email");
@@ -78,6 +99,11 @@ const SignUp = () => {
               matriculeProfesseur: userData.matriculeProfesseur || "",
             });
 
+            // Store user type in localStorage
+            if (userData.type) {
+              localStorage.setItem("userType", userData.type);
+            }
+
             if (userData.telephone) {
               if (userData.telephone.startsWith("+237")) {
                 setSelectedCountry("CM");
@@ -113,6 +139,7 @@ const SignUp = () => {
     } else {
       const storedData = localStorage.getItem("signupFormData");
       const storedPreviews = localStorage.getItem("imagePreviews");
+      const storedUserType = localStorage.getItem("userType");
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -130,9 +157,14 @@ const SignUp = () => {
       if (storedPreviews) {
         setImagePreviews(JSON.parse(storedPreviews));
       }
+
+      if (storedUserType) {
+        setFormData((prev) => ({ ...prev, type: storedUserType }));
+      }
     }
   }, [location.search]);
 
+  // Save form data to localStorage when it changes (except in update mode)
   useEffect(() => {
     if (!isUpdateMode) {
       localStorage.setItem("signupFormData", JSON.stringify(formData));
@@ -140,6 +172,7 @@ const SignUp = () => {
     }
   }, [formData, imagePreviews, isUpdateMode]);
 
+  // Show alert message
   const showAlert = (message, type = "error") => {
     setAlertMessage(message);
     setAlertType(type);
@@ -149,6 +182,7 @@ const SignUp = () => {
     }, 5000);
   };
 
+  // Compress image before upload
   const compressImage = async (file, quality = 0.7) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -185,6 +219,7 @@ const SignUp = () => {
     });
   };
 
+  // Validate step 1 fields
   const validateStep1 = useCallback(() => {
     const newErrors = {};
 
@@ -234,6 +269,7 @@ const SignUp = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData, selectedCountry]);
 
+  // Validate step 2 fields
   const validateStep2 = useCallback(() => {
     const newErrors = {};
 
@@ -269,14 +305,7 @@ const SignUp = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData, isUpdateMode]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: false }));
-    }
-  };
-
+  // Handle phone number change
   const handlePhoneChange = (value) => {
     setFormData((prev) => ({
       ...prev,
@@ -296,6 +325,7 @@ const SignUp = () => {
     }
   };
 
+  // Country select component for phone input
   const CountrySelect = ({ value, onChange, options, ...restProps }) => {
     const countryToFlag = (countryCode) => {
       return countryCode
@@ -331,6 +361,7 @@ const SignUp = () => {
     );
   };
 
+  // Handle file upload
   const handleFileChange = async (e, fieldName) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -364,6 +395,7 @@ const SignUp = () => {
     }
   };
 
+  // Remove uploaded image
   const handleRemoveImage = (fieldName) => {
     setImagePreviews((prev) => ({
       ...prev,
@@ -376,6 +408,7 @@ const SignUp = () => {
     }));
   };
 
+  // Upload file to S3
   const uploadFileToS3 = async (file, userId, documentType) => {
     try {
       // Generate a unique filename with timestamp
@@ -433,6 +466,7 @@ const SignUp = () => {
     }
   };
 
+  // Handle form submission
   const handleSubmit = async () => {
     try {
       if (!validateStep2()) return;
@@ -615,6 +649,7 @@ const SignUp = () => {
     }
   };
 
+  // Navigation between steps
   const handleNextStep = () => {
     if (currentStep === 1 && validateStep1()) {
       setCurrentStep(2);
@@ -628,6 +663,7 @@ const SignUp = () => {
     setErrors({});
   };
 
+  // Helper functions for UI
   const getPageTitle = () => {
     return isUpdateMode ? "Mise à jour des informations" : "Inscription";
   };
@@ -641,6 +677,7 @@ const SignUp = () => {
       : "Terminer l'inscription";
   };
 
+  // Image preview component
   const ImagePreview = ({ src, alt, onRemove }) => {
     if (!src) return null;
 
@@ -801,7 +838,7 @@ const SignUp = () => {
               <select
                 name="type"
                 value={formData.type}
-                onChange={handleInputChange}
+                onChange={handleTypeChange}
                 className={errors.type ? "error" : ""}
                 disabled={isUpdateMode}
                 required

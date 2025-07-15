@@ -1,15 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { Table, Tag, Button, Space, Spin, message, Empty, Tabs } from "antd";
+import {
+  Table,
+  Tag,
+  Button,
+  Space,
+  message,
+  Empty,
+  Tabs,
+  Typography,
+} from "antd";
 import {
   CheckOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
   TeamOutlined,
   DeleteOutlined,
+  UserOutlined,
+  SolutionOutlined,
+  SafetyCertificateOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import AccederService from "../../../services/accederService";
 
 const { TabPane } = Tabs;
+const { Text } = Typography;
 
 const ClassAccessRequests = ({
   classId,
@@ -19,7 +33,6 @@ const ClassAccessRequests = ({
 }) => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [approvedMembers, setApprovedMembers] = useState([]);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
@@ -36,34 +49,45 @@ const ClassAccessRequests = ({
       setLoading(true);
       setError(null);
 
-      // Fetch both requests and approved members in parallel
-      const [requests, members] = await Promise.all([
-        AccederService.obtenirDemandesAccesPourClasse(classId),
-        AccederService.obtenirUtilisateursAvecAcces(classId),
-      ]);
-
-      console.log("Fetched requests:", requests);
-      console.log("Fetched members:", members);
-
-      // Process requests to ensure all fields are properly defined
-      const processedRequests = (requests || []).map((request) => ({
-        ...request,
-        id: request.id || "",
-        utilisateurNom: request.utilisateurNom || "",
-        utilisateurPrenom: request.utilisateurPrenom || "",
-        utilisateurEmail: request.utilisateurEmail || "",
-        codeActivation: request.codeActivation || "",
-        etat: request.etat || "",
-        dateDemande: request.dateDemande || "",
-      }));
-
-      // Separate requests by status
-      const pending = processedRequests.filter(
-        (req) => req.etat === "EN_ATTENTE"
+      const requests = await AccederService.obtenirDemandesAccesPourClasse(
+        classId
+      );
+      const membersResponse = await fetch(
+        `http://localhost:8486/scholchat/acceder/classes/utilisateurs?classeIds=${classId}`
       );
 
-      setPendingRequests(pending);
-      setApprovedMembers(members || []);
+      if (!membersResponse.ok) {
+        throw new Error("Failed to fetch approved members");
+      }
+
+      const members = await membersResponse.json();
+
+      const processedRequests = (requests || [])
+        .filter((request) => request.etat === "EN_ATTENTE")
+        .map((request) => ({
+          ...request,
+          id: request.id || "",
+          utilisateurNom: request.utilisateurNom || "",
+          utilisateurPrenom: request.utilisateurPrenom || "",
+          utilisateurEmail: request.utilisateurEmail || "",
+          codeActivation: request.codeActivation || "",
+          etat: request.etat || "EN_ATTENTE",
+          dateDemande: request.dateDemande || "",
+          role: "REQUESTER",
+        }));
+
+      const processedMembers = (members || []).map((member) => ({
+        id: member.id || member.utilisateurId || "",
+        nom: member.nom || member.utilisateurNom || "",
+        prenom: member.prenom || member.utilisateurPrenom || "",
+        email: member.email || member.utilisateurEmail || "",
+        role: member.role || member.type || "MEMBER",
+        etat: "APPROUVEE",
+        dateApproval: member.dateApproval || member.dateDemande || "",
+      }));
+
+      setPendingRequests(processedRequests);
+      setApprovedMembers(processedMembers);
     } catch (err) {
       console.error("Error fetching access data:", err);
       setError(err.message || "Failed to load access data");
@@ -78,17 +102,11 @@ const ClassAccessRequests = ({
   const handleApproveAccessRequest = async (requestId) => {
     try {
       setActionLoading(`approve-${requestId}`);
-      console.log("Approving request with ID:", requestId);
-
-      const response = await AccederService.validerDemandeAcces(requestId);
-      console.log("Approval response:", response);
-
+      await AccederService.validerDemandeAcces(requestId);
       message.success("Access request approved successfully");
       if (onSuccess) {
         onSuccess("Access request approved successfully");
       }
-
-      // Refresh data after approval
       await fetchAccessData();
       if (onRefreshMembers) {
         await onRefreshMembers();
@@ -107,20 +125,14 @@ const ClassAccessRequests = ({
   const handleRejectAccessRequest = async (requestId) => {
     try {
       setActionLoading(`reject-${requestId}`);
-      console.log("Rejecting request with ID:", requestId);
-
-      const response = await AccederService.rejeterDemandeAcces(
+      await AccederService.rejeterDemandeAcces(
         requestId,
         "Rejected by administrator"
       );
-      console.log("Rejection response:", response);
-
       message.success("Access request rejected successfully");
       if (onSuccess) {
         onSuccess("Access request rejected successfully");
       }
-
-      // Refresh data after rejection
       await fetchAccessData();
     } catch (err) {
       console.error("Error rejecting access request:", err);
@@ -136,15 +148,11 @@ const ClassAccessRequests = ({
   const handleRemoveMember = async (userId) => {
     try {
       setActionLoading(`remove-${userId}`);
-      console.log("Removing member with ID:", userId);
-
       await AccederService.retirerAcces(userId, classId);
-
       message.success("Member removed successfully");
       if (onSuccess) {
         onSuccess("Member removed successfully");
       }
-
       await fetchAccessData();
       if (onRefreshMembers) {
         await onRefreshMembers();
@@ -170,7 +178,7 @@ const ClassAccessRequests = ({
         break;
       case "EN_ATTENTE":
         color = "#faad14";
-        icon = <ExclamationCircleOutlined />;
+        icon = <ClockCircleOutlined />;
         text = "Pending";
         break;
       case "REJETEE":
@@ -200,6 +208,55 @@ const ClassAccessRequests = ({
     );
   };
 
+  const renderRoleTag = (role) => {
+    let color, icon, text;
+    switch ((role || "").toUpperCase()) {
+      case "TEACHER":
+      case "PROFESSOR":
+      case "ENSEIGNANT":
+        color = "blue";
+        icon = <UserOutlined />;
+        text = "Teacher";
+        break;
+      case "STUDENT":
+      case "ELEVE":
+        color = "green";
+        icon = <SolutionOutlined />;
+        text = "Student";
+        break;
+      case "PARENT":
+        color = "orange";
+        icon = <SafetyCertificateOutlined />;
+        text = "Parent";
+        break;
+      case "ADMIN":
+      case "ADMINISTRATOR":
+        color = "red";
+        icon = <TeamOutlined />;
+        text = "Admin";
+        break;
+      default:
+        color = "gray";
+        text = role || "Member";
+    }
+
+    return (
+      <Tag
+        icon={icon}
+        color={color}
+        style={{
+          fontWeight: 600,
+          fontSize: "12px",
+          padding: "4px 12px",
+          borderRadius: "16px",
+          border: "none",
+        }}
+      >
+        {text}
+      </Tag>
+    );
+  };
+
   const pendingRequestColumns = [
     {
       title: "Name",
@@ -209,26 +266,43 @@ const ClassAccessRequests = ({
         const name = `${record.utilisateurNom || ""} ${
           record.utilisateurPrenom || ""
         }`.trim();
-        return name || "N/A";
+        return name || <Text type="secondary">N/A</Text>;
       },
     },
     {
       title: "Email",
       dataIndex: "utilisateurEmail",
       key: "email",
-      render: (email) => email || "N/A",
+      render: (email) => email || <Text type="secondary">N/A</Text>,
+    },
+    {
+      title: "Role",
+      dataIndex: "role",
+      key: "role",
+      render: (role) => renderRoleTag(role),
+    },
+    {
+      title: "Status",
+      dataIndex: "etat",
+      key: "status",
+      render: (etat) => renderStatusTag(etat),
     },
     {
       title: "Activation Code",
       dataIndex: "codeActivation",
       key: "code",
-      render: (code) => code || "N/A",
+      render: (code) => code || <Text type="secondary">N/A</Text>,
     },
     {
       title: "Request Date",
       dataIndex: "dateDemande",
       key: "date",
-      render: (date) => (date ? new Date(date).toLocaleString() : "N/A"),
+      render: (date) =>
+        date ? (
+          new Date(date).toLocaleString()
+        ) : (
+          <Text type="secondary">N/A</Text>
+        ),
     },
     {
       title: "Actions",
@@ -244,6 +318,7 @@ const ClassAccessRequests = ({
               background: "#52c41a",
               borderColor: "#52c41a",
             }}
+            icon={<CheckOutlined />}
           >
             Approve
           </Button>
@@ -252,6 +327,7 @@ const ClassAccessRequests = ({
             onClick={() => handleRejectAccessRequest(record.id)}
             loading={actionLoading === `reject-${record.id}`}
             style={{ borderRadius: "8px" }}
+            icon={<CloseOutlined />}
           >
             Reject
           </Button>
@@ -267,20 +343,31 @@ const ClassAccessRequests = ({
       key: "name",
       render: (text, record) => {
         const name = `${record.nom || ""} ${record.prenom || ""}`.trim();
-        return name || "N/A";
+        return name || <Text type="secondary">N/A</Text>;
       },
     },
     {
       title: "Email",
       dataIndex: "email",
       key: "email",
-      render: (email) => email || "N/A",
+      render: (email) => email || <Text type="secondary">N/A</Text>,
     },
     {
-      title: "Type",
-      dataIndex: "type",
-      key: "type",
-      render: (type) => <Tag color="geekblue">{type || "N/A"}</Tag>,
+      title: "Role",
+      dataIndex: "role",
+      key: "role",
+      render: (role) => renderRoleTag(role),
+    },
+    {
+      title: "Join Date",
+      dataIndex: "dateApproval",
+      key: "date",
+      render: (date) =>
+        date ? (
+          new Date(date).toLocaleString()
+        ) : (
+          <Text type="secondary">N/A</Text>
+        ),
     },
     {
       title: "Actions",
@@ -316,6 +403,7 @@ const ClassAccessRequests = ({
       defaultActiveKey="pending"
       activeKey={activeTab}
       onChange={setActiveTab}
+      style={{ background: "#fff", padding: "16px", borderRadius: "8px" }}
     >
       <TabPane
         tab={
@@ -339,7 +427,12 @@ const ClassAccessRequests = ({
               />
             ),
           }}
-          scroll={{ x: 800 }}
+          scroll={{ x: 1200 }}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `Total ${total} requests`,
+          }}
         />
       </TabPane>
       <TabPane
@@ -364,7 +457,12 @@ const ClassAccessRequests = ({
               />
             ),
           }}
-          scroll={{ x: 800 }}
+          scroll={{ x: 1000 }}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `Total ${total} members`,
+          }}
         />
       </TabPane>
     </Tabs>

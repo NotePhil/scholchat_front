@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Mail, Loader, ArrowRight } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -9,6 +9,15 @@ const VerifyEmail = () => {
   // Get email from URL query parameters
   const queryParams = new URLSearchParams(location.search);
   const email = queryParams.get("email");
+  const [userType, setUserType] = useState("");
+
+  useEffect(() => {
+    // Get user type from localStorage
+    const storedUserType = localStorage.getItem("userType");
+    if (storedUserType) {
+      setUserType(storedUserType);
+    }
+  }, []);
 
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
@@ -24,24 +33,29 @@ const VerifyEmail = () => {
   };
 
   const handleResendVerification = async () => {
-    if (isResendingEmail || !email) return;
+    if (isResendingEmail || !email || userType === "professeur") return;
+
     try {
       setIsResendingEmail(true);
-      const resendUrl =
-        "http://localhost:8486/scholchat/auth/resend-verification";
+
+      const resendUrl = `http://localhost:8486/scholchat/utilisateurs/regenerate-activation?email=${encodeURIComponent(
+        email
+      )}`;
+
       const response = await fetch(resendUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
       });
-      const responseData = await response.text();
+
       if (!response.ok) {
+        const errorData = await response.json();
         throw new Error(
-          responseData || "Échec de l'envoi de l'e-mail de vérification"
+          errorData.message || "Échec de l'envoi de l'e-mail de vérification"
         );
       }
+
       showAlert(
         "L'e-mail de vérification a été renvoyé. Veuillez vérifier votre boîte de réception.",
         "success"
@@ -57,6 +71,10 @@ const VerifyEmail = () => {
     }
   };
 
+  // Custom message for professors
+  const professorMessage =
+    "Un mail de confirmation de création de compte a été envoyé. Veuillez consulter votre boite mail pour plus d'informations.";
+
   return (
     <div className="verification-page">
       {alertMessage && (
@@ -71,11 +89,39 @@ const VerifyEmail = () => {
           Nous avons envoyé un e-mail à <strong>{email}</strong>
         </p>
         <p className="verification-instructions">
-          Un mail vous a été envoyé. Veuillez suivre les instructions qui s'y
-          trouvent. Si vous ne voyez pas l'e-mail, veuillez vérifier votre
-          dossier de spam.
+          {userType === "professeur" ? (
+            professorMessage
+          ) : (
+            <>
+              Un mail vous a été envoyé. Veuillez suivre les instructions qui
+              s'y trouvent. Si vous ne voyez pas l'e-mail, veuillez vérifier
+              votre dossier de spam.
+            </>
+          )}
         </p>
         <div className="verification-actions">
+          {userType !== "professeur" && (
+            <button
+              type="button"
+              className={`action-button resend-button ${
+                userType === "professeur" ? "disabled" : ""
+              }`}
+              onClick={handleResendVerification}
+              disabled={isResendingEmail || userType === "professeur"}
+            >
+              {isResendingEmail ? (
+                <>
+                  <Loader className="button-icon spinner" size={18} />
+                  <span>Envoi en cours...</span>
+                </>
+              ) : (
+                <>
+                  <span>Renvoyer l'email</span>
+                  <Mail className="button-icon" size={18} />
+                </>
+              )}
+            </button>
+          )}
           <button
             type="button"
             className="action-button login-button"
@@ -167,7 +213,8 @@ const VerifyEmail = () => {
           background: #e1e8f0;
           transform: translateY(-2px);
         }
-        .resend-button:disabled {
+        .resend-button:disabled,
+        .resend-button.disabled {
           background: #eaeaea;
           color: #999;
           cursor: not-allowed;
@@ -205,6 +252,17 @@ const VerifyEmail = () => {
           background: #f1f8e9;
           color: #2e7d32;
           border-left: 4px solid #2e7d32;
+        }
+        .spinner {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
         @keyframes slideIn {
           from {

@@ -309,7 +309,7 @@ export const Login = () => {
           Connectez-vous à votre compte ou{" "}
           <span
             className="create-account"
-            onClick={() => navigate("/schoolchat/register")}
+            onClick={() => navigate("/schoolchat/signup")}
           >
             créez un compte
           </span>

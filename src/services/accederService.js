@@ -138,11 +138,10 @@ class AccederService {
    * @param {string} codeActivation - Activation code for the class
    * @returns {Promise<Object>} - Response data
    */
+  // accederService.js
   async demanderAcces({ utilisateurId, classeId, codeActivation }) {
     try {
-      // Get the actual userId - use provided one or auto-retrieve
       const actualUserId = utilisateurId || this.getUserId();
-
       if (!actualUserId) {
         throw new Error("User ID not found. Please log in again.");
       }
@@ -255,7 +254,7 @@ class AccederService {
     try {
       console.log("Fetching users with access for class:", classeId);
       const response = await axios.get(
-        `${this.apiUrl}/classes/${classeId}/utilisateurs`
+        `${this.apiUrl}/classes/${classeId}/demandes`
       );
       console.log("Users with access response:", response.data);
       return response.data;

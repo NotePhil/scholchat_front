@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -18,6 +18,7 @@ import {
   Grid,
   Avatar,
   Paper,
+  Alert,
 } from "@mui/material";
 import {
   School as SchoolIcon,
@@ -31,6 +32,7 @@ import {
   Error as ErrorIcon,
   PersonAdd as PersonAddIcon,
   VpnKey as VpnKeyIcon,
+  Info as InfoIcon,
 } from "@mui/icons-material";
 
 const ParentClassManagementModal = ({
@@ -40,10 +42,18 @@ const ParentClassManagementModal = ({
   hasAccess,
   onRequestAccess,
   isRequestMode = false,
+  activationCode: initialActivationCode = "",
 }) => {
-  const [activationCode, setActivationCode] = useState("");
+  const [activationCode, setActivationCode] = useState(initialActivationCode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
+
+  useEffect(() => {
+    if (initialActivationCode) {
+      setActivationCode(initialActivationCode);
+    }
+  }, [initialActivationCode]);
 
   const handleSubmit = async () => {
     if (!activationCode.trim()) {
@@ -58,30 +68,17 @@ const ParentClassManagementModal = ({
       const success = await onRequestAccess(classe, activationCode);
 
       if (success) {
-        // Create the access request object
-        const accessRequest = {
-          utilisateur_id: localStorage.getItem("userId"),
-          classe_id: classe.id,
-          code_activation: activationCode,
-          etat: "EN_ATTENTE",
-          date_demande: new Date().toISOString(),
-        };
-
-        // Save to local storage
-        const existingRequests = JSON.parse(
-          localStorage.getItem("accessRequests") || "[]"
-        );
-        const updatedRequests = [...existingRequests, accessRequest];
-        localStorage.setItem("accessRequests", JSON.stringify(updatedRequests));
-
-        console.log("Access request saved to local storage:", accessRequest);
-        console.log("All access requests in local storage:", updatedRequests);
-
+        setHasPendingRequest(true);
         onClose();
       }
     } catch (err) {
       console.error("Error submitting access request:", err);
-      setError(err.message || "Une erreur est survenue");
+      if (err.message.includes("Une demande d'accès est déjà en attente")) {
+        setError("Une demande d'accès est déjà en attente pour cette classe");
+        setHasPendingRequest(true);
+      } else {
+        setError(err.message || "Une erreur est survenue");
+      }
     } finally {
       setLoading(false);
     }
@@ -102,6 +99,16 @@ const ParentClassManagementModal = ({
       </DialogTitle>
 
       <DialogContent dividers sx={{ py: 3 }}>
+        {hasPendingRequest && (
+          <Alert
+            severity="info"
+            icon={<InfoIcon />}
+            sx={{ mb: 3, borderRadius: 2 }}
+          >
+            Une demande d'accès est déjà en attente pour cette classe
+          </Alert>
+        )}
+
         <Grid container spacing={3}>
           {/* Class Information Section */}
           <Grid item xs={12} md={6}>
@@ -384,6 +391,7 @@ const ParentClassManagementModal = ({
               helperText={error}
               placeholder="Entrez le code d'activation"
               sx={{ mb: 2 }}
+              disabled={hasPendingRequest}
             />
           </Box>
         )}
@@ -405,12 +413,12 @@ const ParentClassManagementModal = ({
         >
           Fermer
         </Button>
-        {isRequestMode && !hasAccess && (
+        {isRequestMode && !hasAccess && !hasPendingRequest && (
           <Button
             onClick={handleSubmit}
             variant="contained"
             color="primary"
-            disabled={loading}
+            disabled={loading || hasPendingRequest}
             startIcon={
               loading ? <CircularProgress size={20} /> : <PersonAddIcon />
             }

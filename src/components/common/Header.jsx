@@ -189,6 +189,10 @@ export const Header = ({ theme, setTheme }) => {
     }
   };
 
+  // Check if current route is login or signup
+  const isLoginActive = location.pathname === "/schoolchat/login";
+  const isSignupActive = location.pathname === "/schoolchat/signup";
+
   return (
     <>
       {/* Logo positioned in front of header - Fixed positioning */}
@@ -199,7 +203,7 @@ export const Header = ({ theme, setTheme }) => {
         <img
           src={LogoImg}
           alt="Scholchat"
-          className={`h-12 sm:h-14 md:h-16 lg:h-20 xl:h-24 w-auto object-contain transition-all duration-300 ${themeClasses.logo} group-hover:scale-110 group-hover:brightness-110 drop-shadow-lg`}
+          className={`h-14 sm:h-16 md:h-20 lg:h-24 xl:h-28 w-auto object-contain transition-all duration-300 ${themeClasses.logo} group-hover:scale-110 group-hover:brightness-110 drop-shadow-lg`}
         />
       </div>
 
@@ -209,7 +213,7 @@ export const Header = ({ theme, setTheme }) => {
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex justify-between items-center h-16 sm:h-18 md:h-20 lg:h-24 xl:h-28">
             {/* Logo space - Responsive width */}
-            <div className="flex-shrink-0 w-12 sm:w-14 md:w-16 lg:w-20 xl:w-24"></div>
+            <div className="flex-shrink-0 w-14 sm:w-16 md:w-20 lg:w-24 xl:w-28"></div>
 
             {/* Desktop Navigation - Hidden on mobile and tablet */}
             <nav className="hidden xl:flex items-center space-x-2 2xl:space-x-4">
@@ -407,13 +411,21 @@ export const Header = ({ theme, setTheme }) => {
               <div className="hidden xl:flex items-center space-x-2 2xl:space-x-3">
                 <button
                   onClick={() => navigate("/schoolchat/login")}
-                  className={`px-4 2xl:px-5 py-2 2xl:py-2.5 ${themeClasses.text} ${themeClasses.textHover} font-medium text-sm 2xl:text-base transition-all duration-300 rounded-lg 2xl:rounded-xl ${themeClasses.button}`}
+                  className={`px-4 2xl:px-5 py-2 2xl:py-2.5 font-medium text-sm 2xl:text-base transition-all duration-300 rounded-lg 2xl:rounded-xl ${
+                    isLoginActive
+                      ? "bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg"
+                      : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
+                  }`}
                 >
                   Connexion
                 </button>
                 <button
                   onClick={() => navigate("/schoolchat/signup")}
-                  className="px-4 2xl:px-5 py-2 2xl:py-2.5 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white font-medium text-sm 2xl:text-base rounded-lg 2xl:rounded-xl hover:from-blue-700 hover:via-blue-800 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95"
+                  className={`px-4 2xl:px-5 py-2 2xl:py-2.5 font-medium text-sm 2xl:text-base transition-all duration-300 rounded-lg 2xl:rounded-xl ${
+                    isSignupActive
+                      ? "bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg"
+                      : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
+                  }`}
                 >
                   Inscription
                 </button>
@@ -512,7 +524,11 @@ export const Header = ({ theme, setTheme }) => {
                     navigate("/schoolchat/login");
                     setOpen(false);
                   }}
-                  className={`w-full px-3 sm:px-4 py-3 sm:py-4 ${themeClasses.text} ${themeClasses.textHover} font-medium text-sm sm:text-base text-left rounded-lg sm:rounded-xl ${themeClasses.button} transition-all duration-300 hover:scale-105 active:scale-95`}
+                  className={`w-full px-3 sm:px-4 py-3 sm:py-4 font-medium text-sm sm:text-base text-left rounded-lg sm:rounded-xl transition-all duration-300 ${
+                    isLoginActive
+                      ? "bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg"
+                      : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
+                  }`}
                 >
                   Connexion
                 </button>
@@ -521,7 +537,11 @@ export const Header = ({ theme, setTheme }) => {
                     navigate("/schoolchat/signup");
                     setOpen(false);
                   }}
-                  className="w-full px-3 sm:px-4 py-3 sm:py-4 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white font-medium text-sm sm:text-base rounded-lg sm:rounded-xl hover:from-blue-700 hover:via-blue-800 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95"
+                  className={`w-full px-3 sm:px-4 py-3 sm:py-4 font-medium text-sm sm:text-base rounded-lg sm:rounded-xl transition-all duration-300 ${
+                    isSignupActive
+                      ? "bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg"
+                      : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
+                  }`}
                 >
                   Inscription
                 </button>
