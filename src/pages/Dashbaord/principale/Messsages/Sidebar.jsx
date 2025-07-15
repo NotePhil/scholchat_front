@@ -1,39 +1,37 @@
 import React from "react";
 import { Send, Inbox, Edit, Star, Circle } from "lucide-react";
 
-const Sidebar = ({ 
-  isDark, 
-  themeColors, 
-  setShowCompose, 
-  filterType, 
-  setFilterType, 
+const Sidebar = ({
+  isDark,
+  themeColors,
+  setShowCompose,
+  filterType,
+  setFilterType,
   messageCounts,
-  currentUser 
+  currentUser
 }) => {
   const sidebarItems = [
-    { 
-      key: "all", 
-      label: "Boîte de réception", 
-      icon: Inbox, 
-      count: messageCounts.all 
+    {
+      key: "all",
+      label: "Boîte de réception",
+      icon: Inbox,
+      count: messageCounts.all
     },
-    { 
-      key: "starred", 
-      label: "Messages suivis", 
-      icon: Star, 
-      count: messageCounts.starred 
+    {
+      key: "starred",
+      label: "Messages suivis",
+      icon: Star,
+      count: messageCounts.starred
     },
-    { 
-      key: "sent", 
-      label: "Envoyés", 
-      icon: Send, 
-      count: messageCounts.sent 
+    {
+      key: "sent",
+      label: "Envoyés",
+      icon: Send,
     },
-    { 
-      key: "unread", 
-      label: "Non lus", 
-      icon: Circle, 
-      count: messageCounts.unread 
+    {
+      key: "unread",
+      label: "Non lus",
+      icon: Circle,
     },
   ];
 
@@ -49,7 +47,6 @@ const Sidebar = ({
           Nouveau message
         </button>
       </div>
-
       <div className="px-2">
         {sidebarItems.map(({ key, label, icon: Icon, count }) => (
           <button
@@ -69,7 +66,7 @@ const Sidebar = ({
               <Icon size={18} />
               {label}
             </div>
-            {count > 0 && (
+            {count !== undefined && (
               <span
                 className={`text-xs px-2 py-1 rounded-full ${
                   filterType === key

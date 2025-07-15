@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Send, RefreshCw, Check, Users } from "lucide-react";
+import { X, Send, RefreshCw, Check } from "lucide-react";
 
 const ComposeModal = ({
   isDark,
@@ -21,7 +21,10 @@ const ComposeModal = ({
   ccRecipients,
   setCcRecipients,
   setShowRecipientSelector,
-  onMessageSent, // Add this prop to refresh messages after sending
+  onMessageSent,
+  setError,
+  setLoading,
+  fetchMessages,
 }) => {
   const [classesList, setClassesList] = useState([]);
   const [classUsers, setClassUsers] = useState({});
@@ -102,15 +105,14 @@ const ComposeModal = ({
   const handleAddCcRecipients = () => {
     setShowRecipientSelector(true);
   };
-
 const handleSendMessage = async () => {
   setErrorMessage("");
-  if (isGeneralMessage) {
-    const messageContent = `[${newMessage.objet}] ${newMessage.contenu}`;
-    const accessToken = localStorage.getItem('accessToken');
-    const senderId = localStorage.getItem('userId');
+  setLoading(true); // Set loading to true when starting to send the message
 
-    try {
+  try {
+    if (isGeneralMessage) {
+      const accessToken = localStorage.getItem('accessToken');
+      const senderId = localStorage.getItem('userId');
       const response = await fetch('http://localhost:8486/scholchat/messages/group', {
         method: 'POST',
         headers: {
@@ -118,28 +120,19 @@ const handleSendMessage = async () => {
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          content: messageContent,
+          objet: newMessage.objet,
+          content: newMessage.contenu,
           senderId: senderId,
-          classIds: selectedClasses // Send an array of class IDs
+          classIds: selectedClasses
         })
       });
 
       if (!response.ok) {
         throw new Error('Failed to send message');
       }
-
-      console.log('Message sent successfully');
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setErrorMessage("Failed to send message to one or more classes.");
-      return;
-    }
-  } else {
-    const messageContent = `[${newMessage.objet}] ${newMessage.contenu}`;
-    const accessToken = localStorage.getItem('accessToken');
-    const senderId = localStorage.getItem('userId');
-
-    try {
+    } else {
+      const accessToken = localStorage.getItem('accessToken');
+      const senderId = localStorage.getItem('userId');
       const response = await fetch('http://localhost:8486/scholchat/messages', {
         method: 'POST',
         headers: {
@@ -147,8 +140,9 @@ const handleSendMessage = async () => {
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          contenu: messageContent,
-          dateCreation: new Date().toString(),
+          objet: newMessage.objet,
+          contenu: newMessage.contenu,
+          dateCreation: new Date().toISOString(),
           etat: "envoyé",
           expediteur: {
             type: "utilisateur",
@@ -180,18 +174,17 @@ const handleSendMessage = async () => {
       if (!response.ok) {
         throw new Error('Failed to send message');
       }
-
-      console.log('Message sent successfully');
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setErrorMessage("Failed to send message.");
-      return;
     }
-  }
 
-  setShowCompose(false);
-  if (onMessageSent) {
-    onMessageSent(); // Refresh messages after sending
+    setShowCompose(false);
+    if (onMessageSent) {
+      onMessageSent();
+    }
+  } catch (error) {
+    console.error('Error sending message:', error);
+    setError("Failed to send message.");
+  } finally {
+    setLoading(false); // Set loading to false after the message is sent
   }
 };
 
@@ -199,7 +192,7 @@ const handleSendMessage = async () => {
   const filteredUsers = Object.values(classUsers).flat().filter(user =>
     user.nom.toLowerCase().includes(recipientSearch.toLowerCase()) ||
     user.email.toLowerCase().includes(recipientSearch.toLowerCase())
-  ).filter(user => user.id !== currentUser.id); // Exclude the current user from the list
+  ).filter(user => user.id !== currentUser.id);
 
   const handleAddRecipient = (user) => {
     if (!newMessage.destinataires.some(dest => dest.id === user.id)) {
@@ -268,7 +261,6 @@ const handleSendMessage = async () => {
               </div>
             </div>
           </div>
-
           {currentUser.role === "TEACHER" && selectedClasses.length > 0 && (
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}>
@@ -298,7 +290,6 @@ const handleSendMessage = async () => {
               </div>
             </div>
           )}
-
           <div className={isGeneralMessage ? "opacity-50 pointer-events-none" : ""}>
             <label className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}>
               {isGeneralMessage ? "Destinataires (définis par les classes sélectionnées)" : "À"}
@@ -373,7 +364,6 @@ const handleSendMessage = async () => {
               )}
             </div>
           </div>
-
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}>Objet</label>
             <input
@@ -386,7 +376,6 @@ const handleSendMessage = async () => {
               onChange={(e) => setNewMessage((prev) => ({ ...prev, objet: e.target.value }))}
             />
           </div>
-
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}>Message</label>
             <textarea
@@ -400,7 +389,6 @@ const handleSendMessage = async () => {
             />
           </div>
         </div>
-
         <div className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between ${isDark ? "border-gray-700" : "border-gray-200"}`}>
           <button
             className={`px-4 py-2 rounded-lg border transition-colors mb-2 sm:mb-0 w-full sm:w-auto ${

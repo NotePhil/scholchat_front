@@ -388,32 +388,34 @@ const MessagingInterface = ({
           onRefreshMessages={handleRefresh}
         />
       )}
-      {showCompose && (
-        <ComposeModal
-          isDark={isDark}
-          themeColors={themeColors}
-          newMessage={newMessage}
-          setNewMessage={setNewMessage}
-          handleSendMessage={handleSendMessage}
-          loading={loading}
-          recipientSearch={recipientSearch}
-          setRecipientSearch={setRecipientSearch}
-          filteredUsers={filteredUsers}
-          addRecipient={addRecipient}
-          removeRecipient={removeRecipient}
-          handleEmailInput={handleEmailInput}
-          setShowCompose={setShowCompose}
-          selectedClasses={selectedClasses}
-          setSelectedClasses={setSelectedClasses}
-          isGeneralMessage={isGeneralMessage}
-          setIsGeneralMessage={setIsGeneralMessage}
-          currentUser={currentUser}
-          classesList={classesList}
-          ccRecipients={ccRecipients}
-          setCcRecipients={setCcRecipients}
-          setShowRecipientSelector={setShowRecipientSelector}
-        />
-      )}
+     {showCompose && (
+  <ComposeModal
+    isDark={isDark}
+    themeColors={themeColors}
+    newMessage={newMessage}
+    setNewMessage={setNewMessage}
+    loading={loading}
+    recipientSearch={recipientSearch}
+    setRecipientSearch={setRecipientSearch}
+    addRecipient={addRecipient}
+    removeRecipient={removeRecipient}
+    handleEmailInput={handleEmailInput}
+    setShowCompose={setShowCompose}
+    selectedClasses={selectedClasses}
+    setSelectedClasses={setSelectedClasses}
+    isGeneralMessage={isGeneralMessage}
+    setIsGeneralMessage={setIsGeneralMessage}
+    currentUser={currentUser}
+    ccRecipients={ccRecipients}
+    setCcRecipients={setCcRecipients}
+    setShowRecipientSelector={setShowRecipientSelector}
+    onMessageSent={fetchMessages}
+    setError={setError}
+    setLoading={setLoading}
+    fetchMessages={fetchMessages}
+  />
+)}
+
       {showRecipientSelector && (
         <RecipientSelectorModal
           isDark={isDark}
