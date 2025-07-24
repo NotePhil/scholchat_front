@@ -22,6 +22,7 @@ import {
   Filter,
   Download,
   RefreshCw,
+  Settings,
 } from "lucide-react";
 import { classService, EtatClasse } from "../../../services/ClassService";
 import ClassModals from "./ClassModals";
@@ -29,6 +30,7 @@ import ClassModals from "./ClassModals";
 const ClassesListContent = ({
   onNavigateToCreate,
   userRole = "professeur",
+  onSelectClass, // Add this prop to handle navigation to manage class
 }) => {
   // State Management
   const [classes, setClasses] = useState([]);
@@ -191,7 +193,6 @@ const ClassesListContent = ({
     setSuccessMessage("Liste des classes actualisée");
   };
 
-  // In your ClassesListContent component
   const handleEdit = (classe) => {
     setEditingClass(classe);
   };
@@ -356,17 +357,15 @@ const ClassesListContent = ({
     }
   };
 
-  // Show edit page if editing
-  //   if (showEditPage && editingClass) {
-  //     return (
-  //       <ClassEditPage
-  //         classe={editingClass}
-  //         onSave={handleEditSave}
-  //         onCancel={handleEditCancel}
-  //         loading={actionLoading === "edit"}
-  //       />
-  //     );
-  //   }
+  // Handle manage class click
+  const handleManageClass = (classe) => {
+    if (onSelectClass) {
+      onSelectClass(classe.id);
+    } else {
+      console.log("Managing class:", classe.id);
+      // Default behavior if onSelectClass is not provided
+    }
+  };
 
   if (loading) {
     return (
@@ -611,6 +610,15 @@ const ClassesListContent = ({
                       >
                         <Eye className="w-4 h-4" />
                         Voir
+                      </button>
+
+                      {/* Manage Button */}
+                      <button
+                        onClick={() => handleManageClass(classe)}
+                        className="flex-1 bg-indigo-50 text-indigo-600 py-2 px-3 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 text-sm"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Gérer
                       </button>
 
                       {/* Edit Button - Available for all roles */}

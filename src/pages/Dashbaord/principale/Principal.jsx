@@ -21,6 +21,13 @@ import ManageEstablishmentContent from "./ManageEstablishmentContent";
 import ActivitiesContent from "./ActivitiesContent";
 import StudentParentStats from "./StudentParentStats";
 import ParentClassManagement from "./ParentSidebar/ParentClassManagement";
+import ParentClassManagementClass from "./ParentSidebar/ParentClassManagementClass";
+import Modal from "react-modal";
+import NotificationIcon from "./modals/NotificationIcon";
+import { Bell, X } from "lucide-react";
+
+Modal.setAppElement("#root");
+
 const themes = {
   light: {
     cardBg: "bg-white",
@@ -55,45 +62,105 @@ const Principal = () => {
   const [showManageClass, setShowManageClass] = useState(false);
   const [showMessaging, setShowMessaging] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState(null);
+  const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
+  const [tokenChecked, setTokenChecked] = useState(false);
 
   useEffect(() => {
-    // Get user role from localStorage
+    const checkTokenExpiration = () => {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        setShowTokenExpiredModal(true);
+        setTokenChecked(true);
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const expirationTime = payload.exp * 1000;
+        const currentTime = Date.now();
+
+        if (currentTime > expirationTime) {
+          setShowTokenExpiredModal(true);
+        }
+        setTokenChecked(true);
+      } catch (error) {
+        setShowTokenExpiredModal(true);
+        setTokenChecked(true);
+      }
+    };
+
+    checkTokenExpiration();
+
+    const interval = setInterval(checkTokenExpiration, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const originalFetch = window.fetch;
+
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+
+      if (response.status === 401) {
+        setShowTokenExpiredModal(true);
+      }
+
+      return response;
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("username");
+    localStorage.removeItem("userRoles");
+    localStorage.removeItem("decodedToken");
+    localStorage.removeItem("authResponse");
+    navigate("/schoolchat/login");
+  };
+
+  useEffect(() => {
+    if (!tokenChecked) return;
+
     const role = localStorage.getItem("userRole") || "admin";
     setUserRole(role);
 
-    // Get all roles if available
     try {
       const rolesStr = localStorage.getItem("userRoles");
       if (rolesStr) {
         const roles = JSON.parse(rolesStr);
         setUserRoles(roles);
-        console.log("All user roles:", roles);
       }
     } catch (error) {
       console.error("Error parsing user roles:", error);
     }
 
-    // Get username for display
     const username = localStorage.getItem("username");
     if (username) {
       localStorage.setItem("userName", username);
     }
 
-    // If the dashboard type in URL doesn't match the user role, redirect
     const expectedDashboard = `${
       role.charAt(0).toUpperCase() + role.slice(1)
     }Dashboard`;
     if (!dashboardType) {
       navigate(`/schoolchat/Principal/${expectedDashboard}`);
     }
-  }, [dashboardType, navigate]);
+  }, [dashboardType, navigate, tokenChecked]);
 
-  // Function to handle tab changes and update the URL
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setShowManageClass(false);
 
-    // Handle messages tab specially
     if (tab === "messages") {
       setShowMessaging(true);
     } else {
@@ -113,7 +180,6 @@ const Principal = () => {
     setShowSidebar(!showSidebar);
   };
 
-  // Add messaging handlers
   const handleShowMessaging = (conversation = null) => {
     setShowMessaging(true);
     setSelectedConversation(conversation);
@@ -124,7 +190,6 @@ const Principal = () => {
     setSelectedConversation(null);
   };
 
-  // Helper function to check if user is parent or student
   const isParentOrStudent = () => {
     return (
       userRoles.includes("ROLE_PARENT") ||
@@ -149,7 +214,6 @@ const Principal = () => {
 
     switch (activeTab) {
       case "dashboard":
-        // Return StudentParentStats for parents and students, DashboardContent for others
         return isParentOrStudent() ? (
           <StudentParentStats {...contentProps} />
         ) : (
@@ -170,8 +234,12 @@ const Principal = () => {
       case "others":
         return <OthersContent {...contentProps} />;
       case "classes":
-        // Return ParentClassManagement for parents, regular ClassesContent for others
         if (userRole === "parent" || userRoles.includes("ROLE_PARENT")) {
+          return <ParentClassManagementClass {...contentProps} />;
+        } else if (
+          userRole === "student" ||
+          userRoles.includes("ROLE_STUDENT")
+        ) {
           return <ParentClassManagement {...contentProps} />;
         }
         return showManageClass ? (
@@ -206,7 +274,6 @@ const Principal = () => {
           />
         );
       default:
-        // Default case also uses the same logic as dashboard
         return isParentOrStudent() ? (
           <StudentParentStats {...contentProps} />
         ) : (
@@ -248,6 +315,29 @@ const Principal = () => {
 
   return (
     <div className={`principal-container ${isDark ? "dark-mode" : ""}`}>
+      <Modal
+        isOpen={showTokenExpiredModal}
+        onRequestClose={() => {}}
+        contentLabel="Session expirée"
+        className="modal"
+        overlayClassName="modal-overlay"
+        shouldCloseOnOverlayClick={false}
+      >
+        <div className={`modal-content ${isDark ? "dark-mode" : ""}`}>
+          <h2>Session expirée</h2>
+          <p>
+            Votre session a expiré en raison d'une inactivité prolongée ou d'un
+            problème d'authentification. Veuillez vous reconnecter pour
+            continuer.
+          </p>
+          <div className="modal-actions">
+            <button onClick={handleLogout} className="logout-button">
+              Se reconnecter
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <button className="mobile-menu-button" onClick={toggleSidebar}>
         ☰
       </button>
@@ -272,6 +362,9 @@ const Principal = () => {
       >
         <div className="content-header">
           <h1>{getTabDisplayName()}</h1>
+          <div className="header-actions">
+            <NotificationIcon />
+          </div>
         </div>
 
         <div
@@ -288,7 +381,6 @@ const Principal = () => {
         </div>
       </div>
 
-      {/* Messaging Interface - appears on the right (only when not on messages tab) */}
       {showMessaging && activeTab !== "messages" && (
         <div className="messaging-sidebar">
           <MessagingInterface

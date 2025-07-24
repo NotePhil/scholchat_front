@@ -427,3 +427,94 @@
 .sidebar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
 }
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 500px;
+  width: 90%;
+  outline: none;
+}
+
+.dark-mode .modal {
+  background: #2d3748;
+  color: white;
+}
+
+.modal h2 {
+  margin-top: 0;
+  color: #4a6da7;
+}
+
+.dark-mode .modal h2 {
+  color: #6889c3;
+}
+
+.modal p {
+  margin-bottom: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.logout-button {
+  background-color: #4a6da7;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.logout-button:hover {
+  background-color: #3a5a8f;
+}
+
+.dark-mode .logout-button {
+  background-color: #6889c3;
+}
+
+.dark-mode .logout-button:hover {
+  background-color: #5a79b3;
+}
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* Notification dropdown styling */
+.notification-dropdown {
+  right: 0;
+  margin-top: 0.5rem;
+}
+
+/* Dark mode adjustments */
+.dark-mode .content-header {
+  border-bottom-color: #374151;
+}

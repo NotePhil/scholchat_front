@@ -1,7 +1,7 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Layout } from "./components/common/Layout";
 import { Home } from "./pages/Home";
-import { useState } from "react";
 import { BlogSinglePage } from "./components/common/BlogSinglePage";
 import { About } from "./pages/About";
 import { Courses } from "./pages/Courses";
@@ -19,7 +19,6 @@ import ParentDashboard from "./pages/Dashbaord/components/ParentDashboard/Parent
 import ParentPage from "./pages/Dashbaord/ParentPage";
 import ClassesPage from "./pages/Dashbaord/ClassesPage";
 import PostLoginClassModal from "./pages/Dashbaord/components/form/ClassSelectionModal";
-import Layoute from "./pages/Dashbaord/Layout";
 import EmailDashboard from "./pages/Dashbaord/components/StudentDashboard/EmailDashboard";
 import ActivityFeed from "./pages/Dashbaord/components/StudentDashboard/ActivityFeed";
 import AccountActivation from "./pages/AccountActivation";
@@ -31,12 +30,25 @@ import Principal from "./pages/Dashbaord/principale/Principal";
 import ManageClass from "./pages/Dashbaord/principale/ManageClass/ManageClass";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+
+// Scroll to top on route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   const [theme, setTheme] = useState("default");
 
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ScrollToTop />
         <Routes>
           {/* Public Routes */}
           <Route
@@ -143,10 +155,6 @@ function App() {
                   <PostLoginClassModal theme={theme} />
                 </Layout>
               }
-            />
-            <Route
-              path="/schoolchat/postLogin/classModal"
-              element={<ClassSelectionWrapper />}
             />
             <Route path="/schoolchat/parents" element={<ParentPage />} />
             <Route path="/schoolchat/classes" element={<ClassesPage />} />

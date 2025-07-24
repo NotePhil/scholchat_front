@@ -34,11 +34,31 @@ const Sidebar = ({
     classes: false,
     establishments: false,
   });
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Handle window resize and mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+
+      // Automatically show sidebar when switching to larger screen if not mobile
+      if (!mobile && !showSidebar) {
+        const toggleButton = document.querySelector(".mobile-menu-button");
+        if (toggleButton) {
+          toggleButton.click(); // This would trigger the parent component to show sidebar
+        }
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [showSidebar]);
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (window.innerWidth <= 768 && showSidebar) {
+      if (isMobile && showSidebar) {
         const sidebar = document.querySelector(".sidebar");
         const mobileButton = document.querySelector(".mobile-menu-button");
 
@@ -61,7 +81,7 @@ const Sidebar = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showSidebar]);
+  }, [showSidebar, isMobile]);
 
   const toggleDropdown = (dropdown) => {
     setOpenDropdown({
@@ -70,7 +90,7 @@ const Sidebar = ({
     });
   };
 
-  // Define menu items based on user role
+  // Define menu items based on user role (same as before)
   const getMenuItems = () => {
     const baseItems = [
       { name: "Tableau de Bord", icon: Menu, tab: "dashboard" },
@@ -117,7 +137,6 @@ const Sidebar = ({
             { name: "Gérer un Établissement", tab: "manage-establishment" },
           ],
         },
-        // Fixed Messages item - directly set tab instead of using onClick
         {
           name: "Messagerie",
           icon: Mail,
@@ -151,7 +170,6 @@ const Sidebar = ({
             { name: "Liste des Classes", tab: "classes-list" },
           ],
         },
-        // Fixed Messages item for professors
         {
           name: "Messagerie",
           icon: Mail,
@@ -171,11 +189,9 @@ const Sidebar = ({
         },
       ];
     } else {
-      // Default items for other roles
       roleItems = [
         { name: "Classes", icon: Building2, tab: "classes" },
         { name: "Motifs de Rejet", icon: BookOpen, tab: "motifs-de-rejet" },
-        // Fixed Messages item for other roles
         {
           name: "Messagerie",
           icon: Mail,
@@ -184,12 +200,10 @@ const Sidebar = ({
       ];
     }
 
-    // Bottom items (always at the end)
     const bottomItems = [
       { name: "Paramètres", icon: Settings, tab: "settings" },
     ];
 
-    // For parents and students, we want the dashboard to be the first item
     if (
       userRoles.includes("ROLE_PARENT") ||
       userRoles.includes("ROLE_STUDENT")
@@ -206,7 +220,7 @@ const Sidebar = ({
     setActiveTab(tab);
 
     // Close sidebar on mobile after selection
-    if (window.innerWidth <= 768) {
+    if (isMobile) {
       const toggleButton = document.querySelector(".mobile-menu-button");
       if (toggleButton && showSidebar) {
         setTimeout(() => toggleButton.click(), 150);
@@ -239,15 +253,17 @@ const Sidebar = ({
         } transition-colors duration-300`}
       >
         <div className="sidebar-header">
-          <h2
-            className="text-2xl font-bold"
-            style={{ color: colorSchemes?.[currentTheme]?.primary }}
-          >
-            ScholChat
-          </h2>
-          <p className="user-role">
-            {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-          </p>
+          <div className="flex flex-col items-start">
+            <h2
+              className="text-2xl font-bold mb-1" // Added margin bottom
+              style={{ color: colorSchemes?.[currentTheme]?.primary }}
+            >
+              ScholChat
+            </h2>
+            <p className="user-role text-sm">
+              {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+            </p>
+          </div>
         </div>
 
         <nav className="sidebar-nav">
