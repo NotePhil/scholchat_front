@@ -154,7 +154,7 @@ const ParentClassManagementModalUpdate = ({
       }
 
       await axios.post(
-        "http://localhost:8486/scholchat/parent-access/acceder/demande",
+        "http://localhost:8486/scholchat/parent-access/demande",
         requestData
       );
 
