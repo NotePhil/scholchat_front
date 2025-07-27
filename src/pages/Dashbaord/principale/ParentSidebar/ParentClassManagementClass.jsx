@@ -424,11 +424,13 @@ const ParentClassManagementClass = () => {
 
       showSnackbar("Demande d'accès envoyée avec succès", "success");
 
+      // Update access status immediately
       setUserAccessStatus((prev) => ({
         ...prev,
         [classe.id]: "PENDING",
       }));
 
+      // Add the class to userClasses if not already present
       setUserClasses((prev) => {
         if (!prev.some((c) => c.id === classe.id)) {
           return [...prev, classe];
