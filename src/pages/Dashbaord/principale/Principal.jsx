@@ -15,7 +15,6 @@ import StudentsContent from "./StudentsContent";
 import OthersContent from "./OthersContent";
 import CreateClassContent from "./CreateClassContent";
 import ManageClassContent from "./ManageClassContent";
-import ClassesListContent from "./ClassesListContent";
 import CreateEstablishmentContent from "./CreateEstablishmentContent";
 import ManageEstablishmentContent from "./ManageEstablishmentContent";
 import ActivitiesContent from "./ActivitiesContent";
@@ -199,6 +198,11 @@ const Principal = () => {
     );
   };
 
+  // Function to navigate to classes list (if needed for backward compatibility)
+  const onNavigateToClassesList = () => {
+    setActiveTab("manage-class");
+  };
+
   const renderContent = () => {
     const contentProps = {
       isDark,
@@ -209,7 +213,6 @@ const Principal = () => {
       userRoles,
       onManageClass: handleManageClass,
       onShowMessaging: handleShowMessaging,
-      onNavigateToClassesList: () => setActiveTab("classes-list"),
     };
 
     switch (activeTab) {
@@ -248,11 +251,15 @@ const Principal = () => {
           <ClassesContent {...contentProps} />
         );
       case "create-class":
-        return <CreateClassContent {...contentProps} />;
+        return (
+          <CreateClassContent
+            {...contentProps}
+            setActiveTab={setActiveTab}
+            onNavigateToClassesList={onNavigateToClassesList}
+          />
+        );
       case "manage-class":
         return <ManageClassContent {...contentProps} />;
-      case "classes-list":
-        return <ClassesListContent {...contentProps} />;
       case "create-establishment":
         return <CreateEstablishmentContent {...contentProps} />;
       case "manage-establishment":
@@ -306,7 +313,6 @@ const Principal = () => {
     if (activeTab === "activities") return "Activités";
     if (activeTab === "create-class") return "Créer une Classe";
     if (activeTab === "manage-class") return "Gérer une Classe";
-    if (activeTab === "classes-list") return "Liste des Classes";
     if (activeTab === "create-establishment") return "Créer un Établissement";
     if (activeTab === "manage-establishment") return "Gérer un Établissement";
 

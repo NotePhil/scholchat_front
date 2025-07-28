@@ -32,18 +32,43 @@ const ManageClassContent = ({ onBack }) => {
 
   // Load all data on mount
   useEffect(() => {
-    fetchAllClasses();
+    fetchUserClasses();
   }, []);
 
-  const fetchAllClasses = async () => {
+  // Get user ID from localStorage/sessionStorage
+  const getUserId = () => {
+    // Try to get from localStorage first
+    const userId =
+      localStorage.getItem("userId") || sessionStorage.getItem("userId");
+
+    if (!userId) {
+      console.error("No user ID found in storage");
+      setError("Erreur: Utilisateur non authentifié");
+      return null;
+    }
+
+    console.log("Retrieved user ID:", userId);
+    return userId;
+  };
+
+  const fetchUserClasses = async () => {
     try {
       setLoading(true);
       setError("");
-      const data = await classService.obtenirToutesLesClasses();
+
+      const userId = getUserId();
+      if (!userId) {
+        return;
+      }
+
+      // Use the new endpoint to get classes for the specific user
+      const data = await classService.obtenirClassesUtilisateur(userId);
       setClasses(data || []);
+
+      console.log("Fetched user classes:", data);
     } catch (error) {
-      console.error("Error fetching classes:", error);
-      setError("Erreur lors du chargement de la liste des classes");
+      console.error("Error fetching user classes:", error);
+      setError("Erreur lors du chargement de vos classes");
     } finally {
       setLoading(false);
     }
@@ -51,7 +76,7 @@ const ManageClassContent = ({ onBack }) => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchAllClasses();
+    await fetchUserClasses();
     setRefreshing(false);
     setSuccessMessage("Données actualisées avec succès");
   };
@@ -91,11 +116,11 @@ const ManageClassContent = ({ onBack }) => {
               <Space align="center" style={{ marginBottom: "16px" }}>
                 <BookOutlined style={{ fontSize: "24px", color: "#4a6da7" }} />
                 <Title level={2} style={{ margin: 0, color: "#2c3e50" }}>
-                  Gestion des Classes
+                  Mes Classes
                 </Title>
               </Space>
               <Text type="secondary" style={{ fontSize: "16px" }}>
-                Gérez et supervisez toutes les classes de votre établissement
+                Gérez et supervisez les classes auxquelles vous avez accès
               </Text>
             </div>
 

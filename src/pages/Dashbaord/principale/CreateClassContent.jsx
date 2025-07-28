@@ -12,7 +12,8 @@ import { classService, EtatClasse } from "../../../services/ClassService";
 import establishmentService from "../../../services/EstablishmentService";
 import { scholchatService } from "../../../services/ScholchatService";
 import { useNavigate } from "react-router-dom";
-const CreateClassContent = ({ onNavigateToClassesList }) => {
+
+const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
   const [formData, setFormData] = useState({
     nom: "",
     niveau: "",
@@ -70,6 +71,20 @@ const CreateClassContent = ({ onNavigateToClassesList }) => {
     generateActivationCode();
   }, []);
 
+  // Manual redirect function for the button
+  const handleManualRedirect = () => {
+    if (setActiveTab) {
+      // If setActiveTab is available, use it to navigate to manage-class tab
+      setActiveTab("manage-class");
+    } else if (onNavigateToClassesList) {
+      // Fallback to the original callback
+      onNavigateToClassesList();
+    } else {
+      // Final fallback: navigate to manage-class route
+      navigate("/manage-class");
+    }
+  };
+
   // Success countdown and redirect effect
   useEffect(() => {
     let timer;
@@ -79,23 +94,13 @@ const CreateClassContent = ({ onNavigateToClassesList }) => {
       }, 1000);
     } else if (success && countdown === 0) {
       // Redirect when countdown reaches 0
-      if (
-        onNavigateToClassesList &&
-        typeof onNavigateToClassesList === "function"
-      ) {
-        onNavigateToClassesList();
-      } else {
-        // Fallback: try to navigate programmatically if the callback is not available
-        console.warn("onNavigateToClassesList callback not available");
-        // You could implement your own navigation logic here
-        // For example, using React Router: navigate('/classes-list');
-      }
+      handleManualRedirect();
     }
 
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [success, countdown, onNavigateToClassesList]);
+  }, [success, countdown, setActiveTab, onNavigateToClassesList, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -188,26 +193,6 @@ const CreateClassContent = ({ onNavigateToClassesList }) => {
     }
   };
 
-  // Manual redirect function for the button
-  const handleManualRedirect = () => {
-    if (onNavigateToClassesList) {
-      onNavigateToClassesList();
-    } else {
-      navigate("/classes-list");
-    }
-  };
-  useEffect(() => {
-    let timer;
-    if (success && countdown > 0) {
-      timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-    } else if (success && countdown === 0) {
-      handleManualRedirect();
-    }
-    return () => timer && clearTimeout(timer);
-  }, [success, countdown, onNavigateToClassesList, navigate]);
-
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
@@ -220,7 +205,8 @@ const CreateClassContent = ({ onNavigateToClassesList }) => {
           </h2>
           <p className="text-gray-600 mb-6">
             Votre classe a été créée et est en attente d'approbation.
-            Redirection automatique dans {countdown} seconde
+            Redirection automatique vers la gestion des classes dans {countdown}{" "}
+            seconde
             {countdown !== 1 ? "s" : ""}.
           </p>
 
@@ -237,7 +223,7 @@ const CreateClassContent = ({ onNavigateToClassesList }) => {
             onClick={handleManualRedirect}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 mb-4"
           >
-            Aller à la liste maintenant
+            Aller à la gestion des classes maintenant
           </button>
 
           <div className="flex justify-center">

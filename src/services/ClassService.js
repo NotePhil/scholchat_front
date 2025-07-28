@@ -55,6 +55,23 @@ class ClassService {
         }
       }
     );
+
+    // Add request interceptor to include auth token
+    this.axiosInstance.interceptors.request.use(
+      (config) => {
+        // Get auth token from localStorage or sessionStorage
+        const token =
+          localStorage.getItem("accessToken") ||
+          sessionStorage.getItem("accessToken");
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
   }
 
   /**
@@ -136,6 +153,26 @@ class ClassService {
       return response.data;
     } catch (error) {
       throw error; // Error is already handled by interceptor
+    }
+  }
+
+  /**
+   * Gets classes that the user has access to
+   * @param {string} userId - The user's UUID
+   * @returns {Promise<Array>} List of classes the user has access to
+   */
+  async obtenirClassesUtilisateur(userId) {
+    try {
+      console.log("Fetching classes for user:", userId);
+      return await this.axiosRequest(
+        `/droits-publication/utilisateurs/${userId}/classes`,
+        {
+          method: "GET",
+        }
+      );
+    } catch (error) {
+      console.error("Error getting user classes:", error);
+      throw error;
     }
   }
 

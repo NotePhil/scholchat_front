@@ -125,7 +125,6 @@ const Sidebar = ({
           items: [
             { name: "Créer une Classe", tab: "create-class" },
             { name: "Gérer une Classe", tab: "manage-class" },
-            { name: "Liste des Classes", tab: "classes-list" },
           ],
         },
         {
@@ -167,7 +166,7 @@ const Sidebar = ({
           items: [
             { name: "Créer une Classe", tab: "create-class" },
             { name: "Gérer une Classe", tab: "manage-class" },
-            { name: "Liste des Classes", tab: "classes-list" },
+            
           ],
         },
         {
