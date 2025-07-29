@@ -1,105 +1,117 @@
 import axios from "axios";
 const BASE_URL = "http://localhost:8486/scholchat";
 
+// Create axios instance with default config
 const rejectionApi = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
   headers: {
     Accept: "application/json",
+    "Content-Type": "application/json",
   },
 });
 
-rejectionApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Request interceptor for auth token injection
+rejectionApi.interceptors.request.use(
+  (config) => {
+    const token =
+      localStorage.getItem("authToken") ||
+      localStorage.getItem("cmr.notep.business.business.token");
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Special handling for FormData
+    if (config.data instanceof FormData) {
+      config.headers["Content-Type"] = "multipart/form-data";
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
+);
 
-  if (config.data instanceof FormData) {
-    delete config.headers["Content-Type"];
-  } else {
-    config.headers["Content-Type"] = "application/json";
-  }
-
-  return config;
-});
-
+// Response interceptor for error handling
 rejectionApi.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const newToken = await rejectionService.refreshToken();
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return rejectionApi(originalRequest);
+      } catch (refreshError) {
+        console.error("Token refresh failed:", refreshError);
+        window.location.href = "/login";
+        return Promise.reject(refreshError);
+      }
+    }
+
     if (error.response) {
+      const errorMessage =
+        error.response.data?.message ||
+        error.response.data?.error ||
+        "An error occurred";
+
       switch (error.response.status) {
-        case 401:
-          window.location.href = "/login";
+        case 400:
+          console.error("Bad Request:", errorMessage);
           break;
         case 403:
-          console.error("Forbidden access:", error.response.data);
+          console.error("Forbidden:", errorMessage);
           break;
         case 404:
-          console.error("Resource not found:", error.response.config.url);
+          console.error("Not Found:", errorMessage);
+          break;
+        case 500:
+          console.error("Server Error:", errorMessage);
           break;
         default:
-          console.error("Server error:", error.response.data);
+          console.error("Error:", errorMessage);
       }
     } else if (error.request) {
-      console.error("No response received:", error.request);
+      console.error("Network Error:", "No response received");
     } else {
-      console.error("Request setup error:", error.message);
+      console.error("Request Error:", error.message);
     }
+
     return Promise.reject(error);
   }
 );
 
 class RejectionService {
-  handleError(error) {
-    if (error.response) {
-      const errorMessage =
-        error.response.data?.message ||
-        error.response.data?.error ||
-        "Server error occurred";
-      console.error("Server Error:", errorMessage);
-      throw new Error(errorMessage);
-    } else if (error.request) {
-      console.error("Network Error:", error.request);
-      throw new Error("Network error occurred. Please check your connection.");
-    } else {
-      console.error("Request Error:", error.message);
-      throw new Error("Error setting up request");
-    }
-  }
-
-  // Professor Rejection
-  async rejectProfessor(professorId, { codeErreur, motifSupplementaire = "" }) {
+  // ============ Authentication & Token Management ============
+  async refreshToken() {
     try {
-      const response = await rejectionApi.post(
-        `/professeurs/${professorId}/rejet`,
-        null,
-        {
-          params: {
-            codeErreur,
-            motifSupplementaire,
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  // Get pending professors
-  async getPendingProfessors(page = 1, limit = 10) {
-    try {
-      const response = await rejectionApi.get("/professors/pending", {
-        params: { page, limit },
+      const response = await axios.post(`${BASE_URL}/auth/refresh-token`, {
+        refreshToken: localStorage.getItem("refreshToken"),
       });
-      return response.data;
+
+      const { token, refreshToken } = response.data;
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("refreshToken", refreshToken);
+
+      return token;
     } catch (error) {
-      this.handleError(error);
+      this.clearAuthData();
+      throw error;
     }
   }
 
-  // Other methods remain unchanged...
+  clearAuthData() {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("cmr.notep.business.business.token");
+  }
+
+  // ============ Rejection Motifs ============
   async getAllMotifs() {
     try {
       const response = await rejectionApi.get("/motifsRejets");
@@ -163,22 +175,19 @@ class RejectionService {
   async validateProfessor(professorId) {
     try {
       const response = await rejectionApi.post(
-        `/utilisateurs/professors/${professorId}/validate`,
-        null, // No body
-        {
-          params: {},
-        }
+        `/utilisateurs/professors/${professorId}/validate`
       );
       return response.data;
     } catch (error) {
       this.handleError(error);
     }
   }
+
   async rejectProfessor(professorId, { codeErreur, motifSupplementaire = "" }) {
     try {
       const response = await rejectionApi.post(
         `/utilisateurs/professeurs/${professorId}/rejet`,
-        null, // No body
+        null,
         {
           params: {
             codeErreur,
@@ -283,16 +292,19 @@ class RejectionService {
     }
   }
 
-  // ============ Email Related Services ============
-  async regenerateActivationEmail(email) {
-    try {
-      const response = await rejectionApi.post(
-        "/utilisateurs/regenerate-activation",
-        { email }
-      );
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
+  // ============ Error Handling ============
+  handleError(error) {
+    if (error.response) {
+      const errorMessage =
+        error.response.data?.message ||
+        error.response.data?.error ||
+        "Server error occurred";
+
+      throw new Error(errorMessage);
+    } else if (error.request) {
+      throw new Error("Network error occurred. Please check your connection.");
+    } else {
+      throw new Error("Error setting up request: " + error.message);
     }
   }
 }

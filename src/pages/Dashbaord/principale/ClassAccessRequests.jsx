@@ -67,13 +67,13 @@ const ClassAccessRequests = ({
         .map((request) => ({
           ...request,
           id: request.id || "",
-          utilisateurNom: request.utilisateurNom || "",
-          utilisateurPrenom: request.utilisateurPrenom || "",
-          utilisateurEmail: request.utilisateurEmail || "",
+          nom: request.utilisateurNom || "",
+          prenom: request.utilisateurPrenom || "",
+          email: request.utilisateurEmail || "",
           codeActivation: request.codeActivation || "",
           etat: request.etat || "EN_ATTENTE",
           dateDemande: request.dateDemande || "",
-          role: "REQUESTER",
+          type: request.type || "REQUESTER",
         }));
 
       const processedMembers = (members || []).map((member) => ({
@@ -81,7 +81,7 @@ const ClassAccessRequests = ({
         nom: member.nom || member.utilisateurNom || "",
         prenom: member.prenom || member.utilisateurPrenom || "",
         email: member.email || member.utilisateurEmail || "",
-        role: member.role || member.type || "MEMBER",
+        type: member.type || member.role || "MEMBER",
         etat: "APPROUVEE",
         dateApproval: member.dateApproval || member.dateDemande || "",
       }));
@@ -99,6 +99,7 @@ const ClassAccessRequests = ({
     }
   };
 
+  // Handler functions moved before they're used in column definitions
   const handleApproveAccessRequest = async (requestId) => {
     try {
       setActionLoading(`approve-${requestId}`);
@@ -208,36 +209,42 @@ const ClassAccessRequests = ({
     );
   };
 
-  const renderRoleTag = (role) => {
+  const renderRoleTag = (type) => {
     let color, icon, text;
-    switch ((role || "").toUpperCase()) {
-      case "TEACHER":
-      case "PROFESSOR":
-      case "ENSEIGNANT":
-        color = "blue";
-        icon = <UserOutlined />;
-        text = "Teacher";
-        break;
-      case "STUDENT":
-      case "ELEVE":
-        color = "green";
-        icon = <SolutionOutlined />;
-        text = "Student";
-        break;
-      case "PARENT":
-        color = "orange";
-        icon = <SafetyCertificateOutlined />;
-        text = "Parent";
-        break;
-      case "ADMIN":
-      case "ADMINISTRATOR":
+    switch ((type || "").toLowerCase()) {
+      case "admin":
+      case "administrator":
         color = "red";
         icon = <TeamOutlined />;
         text = "Admin";
         break;
+      case "enseignant":
+      case "teacher":
+      case "professor":
+        color = "blue";
+        icon = <UserOutlined />;
+        text = "Teacher";
+        break;
+      case "eleve":
+      case "student":
+        color = "green";
+        icon = <SolutionOutlined />;
+        text = "Student";
+        break;
+      case "parent":
+        color = "orange";
+        icon = <SafetyCertificateOutlined />;
+        text = "Parent";
+        break;
+      case "utilisateur":
+        color = "gray";
+        icon = <UserOutlined />;
+        text = "User";
+        break;
       default:
         color = "gray";
-        text = role || "Member";
+        icon = <UserOutlined />;
+        text = type || "Member";
     }
 
     return (
@@ -260,26 +267,24 @@ const ClassAccessRequests = ({
   const pendingRequestColumns = [
     {
       title: "Name",
-      dataIndex: "utilisateurNom",
+      dataIndex: "nom",
       key: "name",
       render: (text, record) => {
-        const name = `${record.utilisateurNom || ""} ${
-          record.utilisateurPrenom || ""
-        }`.trim();
+        const name = `${record.nom || ""} ${record.prenom || ""}`.trim();
         return name || <Text type="secondary">N/A</Text>;
       },
     },
     {
       title: "Email",
-      dataIndex: "utilisateurEmail",
+      dataIndex: "email",
       key: "email",
       render: (email) => email || <Text type="secondary">N/A</Text>,
     },
     {
       title: "Role",
-      dataIndex: "role",
-      key: "role",
-      render: (role) => renderRoleTag(role),
+      dataIndex: "type",
+      key: "type",
+      render: (type) => renderRoleTag(type),
     },
     {
       title: "Status",
@@ -354,9 +359,9 @@ const ClassAccessRequests = ({
     },
     {
       title: "Role",
-      dataIndex: "role",
-      key: "role",
-      render: (role) => renderRoleTag(role),
+      dataIndex: "type",
+      key: "type",
+      render: (type) => renderRoleTag(type),
     },
     {
       title: "Join Date",
