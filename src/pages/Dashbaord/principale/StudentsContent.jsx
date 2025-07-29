@@ -25,7 +25,7 @@ import { scholchatService } from "../../../services/ScholchatService";
 import { classService } from "../../../services/ClassService";
 import StudentModal from "./StudentModal";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
-import UserViewModalParentStudent from "./modals/UserViewModalParentStudent";
+import UserViewEleve from "./modals/UserViewEleve";
 
 const StudentsContent = () => {
   const [students, setStudents] = useState([]);
@@ -768,7 +768,7 @@ const StudentsContent = () => {
       />
 
       {isViewModalOpen && (
-        <UserViewModalParentStudent
+        <UserViewEleve
           user={currentUser}
           onClose={() => setIsViewModalOpen(false)}
           userType="student"

@@ -1,0 +1,763 @@
+import React, { useState, useEffect } from "react";
+import {
+  X,
+  AlertCircle,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  FileText,
+  Search,
+  Filter,
+  ChevronDown,
+  Download,
+  Eye,
+  Grid,
+  List,
+  Users,
+  School,
+  ChevronRight,
+} from "lucide-react";
+
+const UserViewEleve = ({ user, onClose, userType = "eleve" }) => {
+  const [userDocuments, setUserDocuments] = useState([]);
+  const [filteredDocuments, setFilteredDocuments] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [documentSearchTerm, setDocumentSearchTerm] = useState("");
+  const [documentFilter, setDocumentFilter] = useState("all");
+  const [documentViewMode, setDocumentViewMode] = useState("grid");
+  const [activeTab, setActiveTab] = useState("info");
+  const [students, setStudents] = useState([]);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [user]);
+
+  const fetchUserData = async () => {
+    try {
+      setIsLoading(true);
+
+      // Fetch documents
+      const documents = [];
+      const documentFields = [
+        { field: "cniUrlFront", title: "CNI recto", type: "identity" },
+        { field: "cniUrlBack", title: "CNI verso", type: "identity" },
+        {
+          field: "photoFullPicture",
+          title: "Photo de profil",
+          type: "profile",
+        },
+      ];
+
+      documentFields.forEach(({ field, title, type }) => {
+        if (user[field]) {
+          documents.push({
+            id: field,
+            title,
+            url: user[field],
+            type,
+            uploadedDate: user.dateCreation || new Date().toISOString(),
+          });
+        }
+      });
+
+      setUserDocuments(documents);
+      setFilteredDocuments(documents);
+
+      // Fetch students if eleve has classes
+      if (userType === "eleve" && user.classes && user.classes.length > 0) {
+        const allStudents = [];
+        for (const cls of user.classes) {
+          if (cls.eleves && cls.eleves.length > 0) {
+            allStudents.push(
+              ...cls.eleves.map((student) => ({
+                ...student,
+                className: cls.nom,
+                establishment: cls.etablissement,
+              }))
+            );
+          }
+        }
+        setStudents(allStudents);
+      }
+    } catch (err) {
+      console.error("Failed to load user data:", err);
+      setError("Failed to load user data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filterDocuments = () => {
+    let filtered = userDocuments;
+
+    if (documentSearchTerm) {
+      filtered = filtered.filter((doc) =>
+        doc.title.toLowerCase().includes(documentSearchTerm.toLowerCase())
+      );
+    }
+
+    if (documentFilter !== "all") {
+      filtered = filtered.filter((doc) => doc.type === documentFilter);
+    }
+
+    setFilteredDocuments(filtered);
+  };
+
+  useEffect(() => {
+    filterDocuments();
+  }, [documentSearchTerm, documentFilter]);
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      ACTIVE: {
+        className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        text: "Actif",
+      },
+      INACTIVE: {
+        className: "bg-red-50 text-red-700 border-red-200",
+        text: "Inactif",
+      },
+      PENDING: {
+        className: "bg-amber-50 text-amber-700 border-amber-200",
+        text: "En attente",
+      },
+      default: {
+        className: "bg-slate-50 text-slate-700 border-slate-200",
+        text: status || "Non défini",
+      },
+    };
+
+    const config = statusConfig[status] || statusConfig.default;
+
+    return (
+      <span
+        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${config.className}`}
+      >
+        <div
+          className={`w-1.5 h-1.5 rounded-full mr-2 ${
+            status === "ACTIVE"
+              ? "bg-emerald-500"
+              : status === "INACTIVE"
+              ? "bg-red-500"
+              : status === "PENDING"
+              ? "bg-amber-500"
+              : "bg-slate-500"
+          }`}
+        ></div>
+        {config.text}
+      </span>
+    );
+  };
+
+  const getDocumentTypeBadge = (type) => {
+    const typeConfig = {
+      identity: {
+        className: "bg-blue-50 text-blue-700 border-blue-200",
+        text: "Identité",
+      },
+      profile: {
+        className: "bg-purple-50 text-purple-700 border-purple-200",
+        text: "Profil",
+      },
+      academic: {
+        className: "bg-green-50 text-green-700 border-green-200",
+        text: "Académique",
+      },
+    };
+
+    const config = typeConfig[type] || {
+      className: "bg-slate-50 text-slate-700 border-slate-200",
+      text: "Autre",
+    };
+
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${config.className}`}
+      >
+        {type === "identity" ? (
+          <User className="w-4 h-4 mr-1" />
+        ) : type === "profile" ? (
+          <User className="w-4 h-4 mr-1" />
+        ) : (
+          <FileText className="w-4 h-4 mr-1" />
+        )}
+        {config.text}
+      </span>
+    );
+  };
+
+  const handleDocumentView = (document) => {
+    window.open(document.url, "_blank");
+  };
+
+  const handleDocumentDownload = (document) => {
+    const link = document.createElement("a");
+    link.href = document.url;
+    link.download = `${document.title}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-8 py-6 border-b border-slate-200">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                  Profil élève
+                </h2>
+                <p className="text-slate-600 mt-1">
+                  Informations détaillées et documents
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              {getStatusBadge(user?.etat)}
+              <button
+                onClick={onClose}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-slate-200 px-8">
+          <div className="flex space-x-6">
+            <button
+              onClick={() => setActiveTab("info")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
+                activeTab === "info"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              }`}
+            >
+              Informations
+            </button>
+            {userType === "eleve" && students.length > 0 && (
+              <button
+                onClick={() => setActiveTab("students")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
+                  activeTab === "students"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                Élèves ({students.length})
+              </button>
+            )}
+            <button
+              onClick={() => setActiveTab("documents")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
+                activeTab === "documents"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              }`}
+            >
+              Documents ({userDocuments.length})
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          {error && (
+            <div className="mx-8 mt-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-center border border-red-200">
+              <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="flex justify-center items-center p-12">
+              <div className="relative">
+                <div className="w-12 h-12 border-4 border-blue-200 rounded-full animate-spin"></div>
+                <div
+                  className="w-12 h-12 border-4 border-blue-600 rounded-full animate-spin absolute top-0 left-0"
+                  style={{
+                    clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)",
+                  }}
+                ></div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-8">
+              {/* Personal Info Tab */}
+              {activeTab === "info" && (
+                <div className="space-y-8">
+                  <div className="bg-gradient-to-r from-white to-slate-50 rounded-2xl p-8 shadow-lg border border-slate-200">
+                    <h3 className="text-xl font-semibold text-slate-900 mb-6 flex items-center">
+                      <User className="w-5 h-5 mr-2 text-blue-600" />
+                      Informations personnelles
+                    </h3>
+
+                    <div className="flex flex-col lg:flex-row gap-8">
+                      {/* Avatar and basic info */}
+                      <div className="flex-shrink-0">
+                        <div className="flex items-center space-x-6">
+                          <div className="relative">
+                            <div className="h-24 w-24 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center shadow-xl">
+                              <span className="text-white font-bold text-2xl">
+                                {user?.nom?.charAt(0)}
+                                {user?.prenom?.charAt(0)}
+                              </span>
+                            </div>
+                            <div className="absolute -bottom-2 -right-2">
+                              <div
+                                className={`w-6 h-6 rounded-full border-4 border-white ${
+                                  user?.etat === "ACTIVE"
+                                    ? "bg-emerald-500"
+                                    : user?.etat === "INACTIVE"
+                                    ? "bg-red-500"
+                                    : "bg-amber-500"
+                                }`}
+                              ></div>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-slate-900">
+                              {user?.nom} {user?.prenom}
+                            </div>
+                            <div className="text-slate-600 font-medium mt-1">
+                              Élève
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Details grid */}
+                      <div className="flex-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="p-2 bg-blue-50 rounded-lg">
+                                <Mail className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500 font-medium">
+                                  Email
+                                </p>
+                                <p className="text-slate-900">{user?.email}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-3">
+                              <div className="p-2 bg-green-50 rounded-lg">
+                                <Phone className="w-4 h-4 text-green-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500 font-medium">
+                                  Téléphone
+                                </p>
+                                <p className="text-slate-900">
+                                  {user?.telephone || "Non fourni"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="p-2 bg-purple-50 rounded-lg">
+                                <MapPin className="w-4 h-4 text-purple-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500 font-medium">
+                                  Adresse
+                                </p>
+                                <p className="text-slate-900">
+                                  {user?.adresse || "Non fournie"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-3">
+                              <div className="p-2 bg-amber-50 rounded-lg">
+                                <Calendar className="w-4 h-4 text-amber-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500 font-medium">
+                                  Date d'inscription
+                                </p>
+                                <p className="text-slate-900">
+                                  {user?.dateCreation
+                                    ? new Date(
+                                        user.dateCreation
+                                      ).toLocaleDateString("fr-FR")
+                                    : "Non disponible"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Classes and Establishments */}
+                    {userType === "eleve" &&
+                      user.classes &&
+                      user.classes.length > 0 && (
+                        <div className="mt-8 pt-6 border-t border-slate-200">
+                          <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                            <School className="w-5 h-5 mr-2 text-blue-600" />
+                            Établissements et classes
+                          </h4>
+
+                          <div className="space-y-4">
+                            {user.classes.map((cls) => (
+                              <div
+                                key={cls.id}
+                                className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <h5 className="font-medium text-slate-900">
+                                      {cls.nom} ({cls.niveau})
+                                    </h5>
+                                    {cls.etablissement && (
+                                      <div className="mt-2 space-y-2">
+                                        <div className="flex items-center text-sm text-slate-600">
+                                          <School className="w-4 h-4 mr-2 text-slate-400" />
+                                          <span>{cls.etablissement.nom}</span>
+                                        </div>
+                                        <div className="flex items-center text-sm text-slate-600">
+                                          <MapPin className="w-4 h-4 mr-2 text-slate-400" />
+                                          <span>
+                                            {cls.etablissement.localisation},{" "}
+                                            {cls.etablissement.pays}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center text-sm text-slate-600">
+                                          <Phone className="w-4 h-4 mr-2 text-slate-400" />
+                                          <span>
+                                            {cls.etablissement.telephone}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`text-xs px-2 py-1 rounded-full ${
+                                      cls.etat === "ACTIF"
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-amber-100 text-amber-800"
+                                    }`}
+                                  >
+                                    {cls.etat}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
+
+              {/* Students Tab */}
+              {activeTab === "students" && students.length > 0 && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-slate-900 flex items-center">
+                      <Users className="w-5 h-5 mr-2 text-blue-600" />
+                      Élèves associés ({students.length})
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    {students.map((student) => (
+                      <div
+                        key={student.id}
+                        className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="h-12 w-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
+                              <span className="text-white font-medium">
+                                {student.prenom?.charAt(0)}
+                                {student.nom?.charAt(0)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-slate-900">
+                              {student.prenom} {student.nom}
+                            </h4>
+                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-600">
+                              <div className="flex items-center">
+                                <School className="w-4 h-4 mr-2 text-slate-400" />
+                                <span>{student.className}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <Mail className="w-4 h-4 mr-2 text-slate-400" />
+                                <span className="truncate">
+                                  {student.email}
+                                </span>
+                              </div>
+                              {student.telephone && (
+                                <div className="flex items-center">
+                                  <Phone className="w-4 h-4 mr-2 text-slate-400" />
+                                  <span>{student.telephone}</span>
+                                </div>
+                              )}
+                              {student.establishment && (
+                                <div className="flex items-center">
+                                  <MapPin className="w-4 h-4 mr-2 text-slate-400" />
+                                  <span className="truncate">
+                                    {student.establishment.nom}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0">
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full ${
+                                student.etat === "ACTIVE"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : student.etat === "INACTIVE"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              {student.etat === "ACTIVE"
+                                ? "Actif"
+                                : student.etat === "INACTIVE"
+                                ? "Inactif"
+                                : student.etat}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Documents Tab */}
+              {activeTab === "documents" && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-slate-900 flex items-center">
+                      <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                      Documents ({filteredDocuments.length})
+                    </h3>
+
+                    {/* Document Controls */}
+                    <div className="flex items-center space-x-4">
+                      {/* Search */}
+                      <div className="relative">
+                        <Search
+                          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                          size={16}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Rechercher documents..."
+                          value={documentSearchTerm}
+                          onChange={(e) =>
+                            setDocumentSearchTerm(e.target.value)
+                          }
+                          className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm"
+                        />
+                      </div>
+
+                      {/* Filter */}
+                      <div className="relative">
+                        <Filter
+                          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                          size={16}
+                        />
+                        <select
+                          value={documentFilter}
+                          onChange={(e) => setDocumentFilter(e.target.value)}
+                          className="pl-10 pr-8 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm appearance-none cursor-pointer"
+                        >
+                          <option value="all">Tous les types</option>
+                          <option value="identity">Identité</option>
+                          <option value="profile">Profil</option>
+                        </select>
+                        <ChevronDown
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                          size={16}
+                        />
+                      </div>
+
+                      {/* View Mode Toggle */}
+                      <div className="flex bg-slate-100 rounded-lg p-1">
+                        <button
+                          onClick={() => setDocumentViewMode("grid")}
+                          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                            documentViewMode === "grid"
+                              ? "bg-white text-blue-600 shadow-sm"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          <Grid className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDocumentViewMode("list")}
+                          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                            documentViewMode === "list"
+                              ? "bg-white text-blue-600 shadow-sm"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          <List className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Documents Content */}
+                  {filteredDocuments.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                        <FileText className="w-8 h-8 text-slate-400" />
+                      </div>
+                      <h4 className="text-lg font-medium text-slate-900 mb-2">
+                        {documentSearchTerm || documentFilter !== "all"
+                          ? "Aucun document trouvé"
+                          : "Aucun document disponible"}
+                      </h4>
+                      <p className="text-slate-600">
+                        {documentSearchTerm || documentFilter !== "all"
+                          ? "Essayez de modifier vos critères de recherche."
+                          : "Aucun document n'a été téléchargé pour cet utilisateur."}
+                      </p>
+                    </div>
+                  ) : documentViewMode === "grid" ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredDocuments.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="bg-white rounded-xl p-4 shadow-md border border-slate-200 hover:shadow-lg transition-all duration-200"
+                        >
+                          <div className="aspect-square relative overflow-hidden rounded-lg mb-4 group">
+                            <img
+                              src={doc.url}
+                              alt={doc.title}
+                              className="object-cover w-full h-full transition-transform duration-200 group-hover:scale-105"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src =
+                                  "https://via.placeholder.com/300x300?text=Document+Non+Trouvé";
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center space-x-2">
+                              <button
+                                onClick={() => handleDocumentView(doc)}
+                                className="p-2 bg-white rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
+                                title="Voir le document"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDocumentDownload(doc)}
+                                className="p-2 bg-white rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
+                                title="Télécharger"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium text-slate-900 truncate">
+                                {doc.title}
+                              </h4>
+                              {getDocumentTypeBadge(doc.type)}
+                            </div>
+                            <p className="text-xs text-slate-500">
+                              Téléchargé le{" "}
+                              {new Date(doc.uploadedDate).toLocaleDateString(
+                                "fr-FR"
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredDocuments.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="bg-white rounded-lg p-4 shadow-md border border-slate-200 hover:shadow-lg transition-all duration-200"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="flex-shrink-0">
+                                <img
+                                  src={doc.url}
+                                  alt={doc.title}
+                                  className="w-12 h-12 object-cover rounded-lg"
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src =
+                                      "https://via.placeholder.com/48x48?text=Doc";
+                                  }}
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-slate-900">
+                                  {doc.title}
+                                </h4>
+                                <div className="flex items-center space-x-2 mt-1">
+                                  {getDocumentTypeBadge(doc.type)}
+                                  <span className="text-xs text-slate-500">
+                                    {new Date(
+                                      doc.uploadedDate
+                                    ).toLocaleDateString("fr-FR")}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => handleDocumentView(doc)}
+                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                                title="Voir le document"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDocumentDownload(doc)}
+                                className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
+                                title="Télécharger"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default UserViewEleve;
