@@ -24,6 +24,7 @@ import ParentClassManagementClass from "./ParentSidebar/ParentClassManagementCla
 import Modal from "react-modal";
 import NotificationIcon from "./modals/NotificationIcon";
 import { Bell, X } from "lucide-react";
+import ProfessorCoursesContent from "./ProfessorCoursesContent";
 
 Modal.setAppElement("#root");
 
@@ -148,15 +149,36 @@ const Principal = () => {
       localStorage.setItem("userName", username);
     }
 
-    const expectedDashboard = `${
-      role.charAt(0).toUpperCase() + role.slice(1)
-    }Dashboard`;
+    // Map roles to dashboard types - THIS IS THE FIX
+    let expectedDashboard;
+    if (role === "admin" || userRoles.includes("ROLE_ADMIN")) {
+      expectedDashboard = "AdminDashboard";
+    } else if (role === "professor" || userRoles.includes("ROLE_PROFESSOR")) {
+      expectedDashboard = "ProfessorDashboard";
+    } else if (role === "parent" || userRoles.includes("ROLE_PARENT")) {
+      expectedDashboard = "ParentDashboard";
+    } else if (role === "student" || userRoles.includes("ROLE_STUDENT")) {
+      expectedDashboard = "StudentDashboard";
+    } else {
+      expectedDashboard = `${
+        role.charAt(0).toUpperCase() + role.slice(1)
+      }Dashboard`;
+    }
+
     if (!dashboardType) {
       navigate(`/schoolchat/Principal/${expectedDashboard}`);
     }
-  }, [dashboardType, navigate, tokenChecked]);
+  }, [dashboardType, navigate, tokenChecked, userRoles]);
 
   const handleTabChange = (tab) => {
+    console.log(
+      "Principal: Changing tab to:",
+      tab,
+      "User role:",
+      userRole,
+      "User roles:",
+      userRoles
+    );
     setActiveTab(tab);
     setShowManageClass(false);
 
@@ -198,7 +220,6 @@ const Principal = () => {
     );
   };
 
-  // Function to navigate to classes list (if needed for backward compatibility)
   const onNavigateToClassesList = () => {
     setActiveTab("manage-class");
   };
@@ -215,6 +236,8 @@ const Principal = () => {
       onShowMessaging: handleShowMessaging,
     };
 
+    console.log("Rendering content for activeTab:", activeTab);
+
     switch (activeTab) {
       case "dashboard":
         return isParentOrStudent() ? (
@@ -229,6 +252,8 @@ const Principal = () => {
       case "professors":
         return <ProfessorsContent {...contentProps} />;
       case "motifs-de-rejet":
+        console.log("Rendering MotifsDeRejet for user:", userRole, userRoles);
+        // Ensure both admins and professors can access MotifsDeRejet
         return <MotifsDeRejet {...contentProps} />;
       case "parents":
         return <ParentsContent {...contentProps} />;
@@ -236,6 +261,8 @@ const Principal = () => {
         return <StudentsContent {...contentProps} />;
       case "others":
         return <OthersContent {...contentProps} />;
+      case "courses":
+        return <ProfessorCoursesContent {...contentProps} />;
       case "classes":
         if (userRole === "parent" || userRoles.includes("ROLE_PARENT")) {
           return <ParentClassManagementClass {...contentProps} />;
@@ -281,6 +308,7 @@ const Principal = () => {
           />
         );
       default:
+        console.log("Default case - rendering default content");
         return isParentOrStudent() ? (
           <StudentParentStats {...contentProps} />
         ) : (
@@ -311,6 +339,7 @@ const Principal = () => {
     if (activeTab === "students") return "Gérer Élèves";
     if (activeTab === "others") return "Gérer Autres Utilisateurs";
     if (activeTab === "activities") return "Activités";
+    if (activeTab === "courses") return "Mes Cours";
     if (activeTab === "create-class") return "Créer une Classe";
     if (activeTab === "manage-class") return "Gérer une Classe";
     if (activeTab === "create-establishment") return "Créer un Établissement";

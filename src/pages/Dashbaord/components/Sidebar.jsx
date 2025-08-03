@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Activity,
   School,
+  Book,
 } from "lucide-react";
 
 const Sidebar = ({
@@ -36,17 +37,15 @@ const Sidebar = ({
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // Handle window resize and mobile detection
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
 
-      // Automatically show sidebar when switching to larger screen if not mobile
       if (!mobile && !showSidebar) {
         const toggleButton = document.querySelector(".mobile-menu-button");
         if (toggleButton) {
-          toggleButton.click(); // This would trigger the parent component to show sidebar
+          toggleButton.click();
         }
       }
     };
@@ -55,7 +54,6 @@ const Sidebar = ({
     return () => window.removeEventListener("resize", handleResize);
   }, [showSidebar]);
 
-  // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (isMobile && showSidebar) {
@@ -68,7 +66,6 @@ const Sidebar = ({
           mobileButton &&
           !mobileButton.contains(event.target)
         ) {
-          // Close sidebar by triggering the toggle
           const toggleButton = document.querySelector(".mobile-menu-button");
           if (toggleButton) {
             toggleButton.click();
@@ -90,16 +87,39 @@ const Sidebar = ({
     });
   };
 
-  // Define menu items based on user role (same as before)
+  // Helper function to check if user is admin
+  const isAdmin = () => {
+    return userRoles.includes("ROLE_ADMIN") || userRole === "admin";
+  };
+
+  // Helper function to check if user is professor
+  const isProfessor = () => {
+    return (
+      userRoles.includes("ROLE_PROFESSOR") ||
+      userRole === "professor" ||
+      userRole === "repetiteur"
+    );
+  };
+
+  // Helper function to check if user is parent or student
+  const isParentOrStudent = () => {
+    return (
+      userRoles.includes("ROLE_PARENT") ||
+      userRoles.includes("ROLE_STUDENT") ||
+      userRole === "parent" ||
+      userRole === "student"
+    );
+  };
+
   const getMenuItems = () => {
     const baseItems = [
       { name: "Tableau de Bord", icon: Menu, tab: "dashboard" },
       { name: "Activités", icon: Activity, tab: "activities" },
     ];
 
-    // Role-specific items
     let roleItems = [];
-    if (userRoles.includes("ROLE_ADMIN")) {
+
+    if (isAdmin()) {
       roleItems = [
         {
           name: "Gérer Utilisateur",
@@ -142,8 +162,13 @@ const Sidebar = ({
           tab: "messages",
         },
       ];
-    } else if (userRoles.includes("ROLE_PROFESSOR")) {
+    } else if (isProfessor()) {
       roleItems = [
+        {
+          name: "Mes Cours",
+          icon: Book,
+          tab: "courses",
+        },
         {
           name: "Gérer Utilisateur",
           icon: Users,
@@ -154,11 +179,7 @@ const Sidebar = ({
             { name: "Élèves", tab: "students" },
           ],
         },
-        {
-          name: "Motifs de Rejet",
-          icon: BookOpen,
-          tab: "motifs-de-rejet",
-        },
+        // REMOVED: Motifs de Rejet for professors
         {
           name: "Classes",
           icon: Building2,
@@ -166,7 +187,6 @@ const Sidebar = ({
           items: [
             { name: "Créer une Classe", tab: "create-class" },
             { name: "Gérer une Classe", tab: "manage-class" },
-            
           ],
         },
         {
@@ -175,10 +195,7 @@ const Sidebar = ({
           tab: "messages",
         },
       ];
-    } else if (
-      userRoles.includes("ROLE_PARENT") ||
-      userRoles.includes("ROLE_STUDENT")
-    ) {
+    } else if (isParentOrStudent()) {
       roleItems = [
         { name: "Classes", icon: Building2, tab: "classes" },
         {
@@ -188,6 +205,7 @@ const Sidebar = ({
         },
       ];
     } else {
+      // Fallback for other roles
       roleItems = [
         { name: "Classes", icon: Building2, tab: "classes" },
         { name: "Motifs de Rejet", icon: BookOpen, tab: "motifs-de-rejet" },
@@ -203,22 +221,30 @@ const Sidebar = ({
       { name: "Paramètres", icon: Settings, tab: "settings" },
     ];
 
-    if (
-      userRoles.includes("ROLE_PARENT") ||
-      userRoles.includes("ROLE_STUDENT")
-    ) {
-      return [...baseItems, ...roleItems, ...bottomItems];
-    }
-
     return [...baseItems, ...roleItems, ...bottomItems];
   };
 
   const menuItems = getMenuItems();
 
   const handleTabChange = (tab) => {
+    console.log(
+      "Sidebar: Changing tab to:",
+      tab,
+      "User role:",
+      userRole,
+      "User roles:",
+      userRoles
+    );
+
+    // Ensure the tab change is properly handled
     setActiveTab(tab);
 
-    // Close sidebar on mobile after selection
+    // Special handling for messages tab
+    if (tab === "messages" && onShowMessaging) {
+      onShowMessaging();
+    }
+
+    // Close mobile sidebar after selection
     if (isMobile) {
       const toggleButton = document.querySelector(".mobile-menu-button");
       if (toggleButton && showSidebar) {
@@ -236,10 +262,32 @@ const Sidebar = ({
   };
 
   const confirmLogout = () => {
+    // Clear all localStorage items
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("authToken");
     localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("username");
     localStorage.removeItem("userName");
     localStorage.removeItem("userRoles");
+    localStorage.removeItem("decodedToken");
+    localStorage.removeItem("authResponse");
+
+    // Navigate to login
     navigate("/schoolchat/login");
+  };
+
+  const isActiveTab = (tab) => {
+    return activeTab === tab;
+  };
+
+  const isActiveDropdown = (dropdown, items) => {
+    return (
+      activeTab.startsWith(dropdown) ||
+      (items && items.some((subItem) => subItem.tab === activeTab))
+    );
   };
 
   return (
@@ -254,7 +302,7 @@ const Sidebar = ({
         <div className="sidebar-header">
           <div className="flex flex-col items-start">
             <h2
-              className="text-2xl font-bold mb-1" // Added margin bottom
+              className="text-2xl font-bold mb-1"
               style={{ color: colorSchemes?.[currentTheme]?.primary }}
             >
               ScholChat
@@ -273,11 +321,7 @@ const Sidebar = ({
                   <li>
                     <div
                       className={`dropdown-header ${
-                        activeTab.startsWith(item.dropdown) ||
-                        (item.items &&
-                          item.items.some(
-                            (subItem) => subItem.tab === activeTab
-                          ))
+                        isActiveDropdown(item.dropdown, item.items)
                           ? "active"
                           : ""
                       }`}
@@ -287,14 +331,9 @@ const Sidebar = ({
                         <span className="icon">
                           <item.icon
                             style={{
-                              color:
-                                activeTab.startsWith(item.dropdown) ||
-                                (item.items &&
-                                  item.items.some(
-                                    (subItem) => subItem.tab === activeTab
-                                  ))
-                                  ? colorSchemes?.[currentTheme]?.primary
-                                  : "currentColor",
+                              color: isActiveDropdown(item.dropdown, item.items)
+                                ? colorSchemes?.[currentTheme]?.primary
+                                : "currentColor",
                             }}
                           />
                         </span>
@@ -314,7 +353,7 @@ const Sidebar = ({
                           <li
                             key={subItem.name}
                             className={
-                              activeTab === subItem.tab ? "active-sub" : ""
+                              isActiveTab(subItem.tab) ? "active-sub" : ""
                             }
                             onClick={() => handleTabChange(subItem.tab)}
                           >
@@ -328,17 +367,16 @@ const Sidebar = ({
                   </li>
                 ) : (
                   <li
-                    className={activeTab === item.tab ? "active" : ""}
+                    className={isActiveTab(item.tab) ? "active" : ""}
                     onClick={() => handleTabChange(item.tab)}
                   >
                     <a href="#" onClick={(e) => e.preventDefault()}>
                       <span className="icon">
                         <item.icon
                           style={{
-                            color:
-                              activeTab === item.tab
-                                ? colorSchemes?.[currentTheme]?.primary
-                                : "currentColor",
+                            color: isActiveTab(item.tab)
+                              ? colorSchemes?.[currentTheme]?.primary
+                              : "currentColor",
                           }}
                         />
                       </span>
@@ -361,7 +399,6 @@ const Sidebar = ({
         </div>
       </aside>
 
-      {/* Logout Confirmation Modal */}
       {showLogoutModal && (
         <div className="fixed inset-0 flex items-center justify-center z-[1002] bg-black bg-opacity-50">
           <div
