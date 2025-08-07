@@ -34,6 +34,7 @@ const Sidebar = ({
     users: false,
     classes: false,
     establishments: false,
+    courses: false,
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -79,6 +80,22 @@ const Sidebar = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showSidebar, isMobile]);
+
+  // Auto-open dropdown if active tab is within it
+  useEffect(() => {
+    const coursesTabs = ["create-course", "schedule-course"];
+    const usersTabs = ["admin", "professors", "parents", "students", "others"];
+    const classesTabs = ["create-class", "manage-class"];
+    const establishmentsTabs = ["create-establishment", "manage-establishment"];
+
+    setOpenDropdown((prev) => ({
+      ...prev,
+      courses: coursesTabs.includes(activeTab),
+      users: usersTabs.includes(activeTab),
+      classes: classesTabs.includes(activeTab),
+      establishments: establishmentsTabs.includes(activeTab),
+    }));
+  }, [activeTab]);
 
   const toggleDropdown = (dropdown) => {
     setOpenDropdown({
@@ -165,9 +182,13 @@ const Sidebar = ({
     } else if (isProfessor()) {
       roleItems = [
         {
-          name: "Mes Cours",
+          name: "Gérer les Cours",
           icon: Book,
-          tab: "courses",
+          dropdown: "courses",
+          items: [
+            { name: "Créer un Cours", tab: "create-course" },
+            { name: "Programmer le Cours", tab: "schedule-course" },
+          ],
         },
         {
           name: "Gérer Utilisateur",
@@ -179,7 +200,11 @@ const Sidebar = ({
             { name: "Élèves", tab: "students" },
           ],
         },
-        // REMOVED: Motifs de Rejet for professors
+        {
+          name: "Motifs de Rejet",
+          icon: BookOpen,
+          tab: "motifs-de-rejet",
+        },
         {
           name: "Classes",
           icon: Building2,

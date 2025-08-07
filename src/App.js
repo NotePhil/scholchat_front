@@ -13,13 +13,13 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import ProfessorPage from "./pages/Dashbaord/ProfessorPage";
 import StudentPage from "./pages/Dashbaord/StudentPage";
-import ProfessorDashboard from "./pages/Dashbaord/components/ProfessorDashboard/ProfessorDashboard";
-import StudentDashboard from "./pages/Dashbaord/components/StudentDashboard/StudentDashboard";
-import ParentDashboard from "./pages/Dashbaord/components/ParentDashboard/ParentDashboard";
+// import ProfessorDashboard from "./pages/Dashbaord/components/ProfessorDashboard/ProfessorDashboard";
+// import StudentDashboard from "./pages/Dashbaord/components/StudentDashboard/StudentDashboard";
+// import ParentDashboard from "./pages/Dashbaord/components/ParentDashboard/ParentDashboard";
 import ParentPage from "./pages/Dashbaord/ParentPage";
 import ClassesPage from "./pages/Dashbaord/ClassesPage";
 import PostLoginClassModal from "./pages/Dashbaord/components/form/ClassSelectionModal";
-import EmailDashboard from "./pages/Dashbaord/components/StudentDashboard/EmailDashboard";
+// import EmailDashboard from "./pages/Dashbaord/components/StudentDashboard/EmailDashboard";
 import ActivityFeed from "./pages/Dashbaord/components/StudentDashboard/ActivityFeed";
 import AccountActivation from "./pages/AccountActivation";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -158,10 +158,10 @@ function App() {
             />
             <Route path="/schoolchat/parents" element={<ParentPage />} />
             <Route path="/schoolchat/classes" element={<ClassesPage />} />
-            <Route
+            {/* <Route
               path="/schoolchat/email-dashboard"
               element={<EmailDashboard />}
-            />
+            /> */}
             <Route
               path="/schoolchat/manage-class"
               element={
@@ -172,17 +172,17 @@ function App() {
             />
 
             {/* Role-based routes */}
-            <Route path="/schoolchat/student" element={<StudentPage />}>
+            {/* <Route path="/schoolchat/student" element={<StudentPage />}>
               <Route index element={<StudentDashboard />} />
-            </Route>
+            </Route> */}
 
-            <Route path="/schoolchat/professor" element={<ProfessorPage />}>
+            {/* <Route path="/schoolchat/professor" element={<ProfessorPage />}>
               <Route index element={<ProfessorDashboard />} />
-            </Route>
+            </Route> */}
 
-            <Route path="/schoolchat/parent" element={<ParentPage />}>
+            {/* <Route path="/schoolchat/parent" element={<ParentPage />}>
               <Route index element={<ParentDashboard />} />
-            </Route>
+            </Route> */}
 
             <Route path="/schoolchat/principal" element={<Principal />} />
             <Route

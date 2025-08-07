@@ -33,6 +33,7 @@ import { matiereService } from "../../../services/MatiereService";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import CourseViewModal from "./modals/CourseViewModal";
 
 const COURSE_STATES = {
   BROUILLON: "BROUILLON",
@@ -54,7 +55,6 @@ const courseSchema = yup.object().shape({
   lieu: yup.string().required("Le lieu est requis"),
 });
 
-// Multi-select dropdown component
 const MultiSelectDropdown = ({
   options,
   selected,
@@ -127,7 +127,6 @@ const MultiSelectDropdown = ({
         </div>
       )}
 
-      {/* Selected items display */}
       {selected.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
           {options
@@ -167,6 +166,8 @@ const ProfessorCoursesContent = () => {
   const [modalMode, setModalMode] = useState("create");
   const [subjects, setSubjects] = useState([]);
   const [selectedMatiereIds, setSelectedMatiereIds] = useState([]);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewingCourse, setViewingCourse] = useState(null);
 
   const {
     register,
@@ -182,7 +183,6 @@ const ProfessorCoursesContent = () => {
     },
   });
 
-  // Watch matiereIds to sync with local state
   const watchedMatiereIds = watch("matiereIds");
 
   useEffect(() => {
@@ -194,7 +194,6 @@ const ProfessorCoursesContent = () => {
     filterCourses();
   }, [courses, searchTerm, filterStatus]);
 
-  // Sync selectedMatiereIds with form
   useEffect(() => {
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
@@ -278,7 +277,6 @@ const ProfessorCoursesContent = () => {
         console.log("Course update result:", result);
       }
 
-      // Handle scheduling if dates and location are provided
       if (data.dateHeureDebut && data.dateHeureFin && data.lieu) {
         try {
           const scheduleData = {
@@ -301,11 +299,9 @@ const ProfessorCoursesContent = () => {
             "Course created but scheduling failed:",
             scheduleError.message
           );
-          // Don't fail the entire operation if scheduling fails
         }
       }
 
-      // Update courses list
       if (modalMode === "create") {
         setCourses([result, ...courses]);
         setSuccess("Cours créé avec succès !");
@@ -402,7 +398,6 @@ const ProfessorCoursesContent = () => {
     setSelectedCourse(course);
     setShowCreateModal(true);
 
-    // Set form values
     reset({
       titre: course.titre,
       description: course.description,
@@ -413,8 +408,27 @@ const ProfessorCoursesContent = () => {
       lieu: course.lieu,
     });
 
-    // Set selected matiere IDs
     setSelectedMatiereIds(course.matiereIds || []);
+  };
+
+  const handleViewCourse = (course) => {
+    setViewingCourse(course);
+    setShowViewModal(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setShowViewModal(false);
+    setViewingCourse(null);
+  };
+
+  const handleViewModalSuccess = () => {
+    loadCourses();
+    handleCloseViewModal();
+  };
+
+  const handleViewModalEdit = (course) => {
+    handleCloseViewModal();
+    handleEditCourse(course);
   };
 
   const getInitials = (title) => {
@@ -428,7 +442,6 @@ const ProfessorCoursesContent = () => {
     );
   };
 
-  // Auto-hide success message after 5 seconds
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => {
@@ -438,7 +451,6 @@ const ProfessorCoursesContent = () => {
     }
   }, [success]);
 
-  // Auto-hide error message after 10 seconds
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
@@ -696,10 +708,10 @@ const ProfessorCoursesContent = () => {
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-slate-900 truncate">
+                      <h3 className="font-semibold text-slate-900 text-sm leading-tight break-words">
                         {course.titre}
                       </h3>
-                      <p className="text-sm text-slate-600 truncate">
+                      <p className="text-xs text-slate-600 truncate mt-1">
                         {course.matiere?.nom || "Matière non définie"}
                       </p>
                     </div>
@@ -744,6 +756,7 @@ const ProfessorCoursesContent = () => {
 
                 <div className="flex items-center justify-end space-x-2 pt-4 border-t border-slate-100">
                   <button
+                    onClick={() => handleViewCourse(course)}
                     className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
                     title="Voir les détails"
                   >
@@ -810,11 +823,11 @@ const ProfessorCoursesContent = () => {
                               </span>
                             </div>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-semibold text-slate-900">
+                          <div className="ml-4 flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-slate-900 break-words leading-tight">
                               {course.titre}
                             </div>
-                            <div className="text-sm text-slate-500 line-clamp-1">
+                            <div className="text-xs text-slate-500 line-clamp-1 mt-1">
                               {course.description || "Aucune description"}
                             </div>
                           </div>
@@ -848,6 +861,7 @@ const ProfessorCoursesContent = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex items-center justify-end space-x-1">
                           <button
+                            onClick={() => handleViewCourse(course)}
                             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
                             title="Voir les détails"
                           >
@@ -1161,6 +1175,16 @@ const ProfessorCoursesContent = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showViewModal && viewingCourse && (
+        <CourseViewModal
+          course={viewingCourse}
+          onClose={handleCloseViewModal}
+          onSuccess={handleViewModalSuccess}
+          onEdit={handleViewModalEdit}
+          theme="light"
+        />
       )}
     </div>
   );

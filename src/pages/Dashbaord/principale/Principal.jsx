@@ -25,6 +25,7 @@ import Modal from "react-modal";
 import NotificationIcon from "./modals/NotificationIcon";
 import { Bell, X } from "lucide-react";
 import ProfessorCoursesContent from "./ProfessorCoursesContent";
+import CoursProgrammerContent from "./CoursProgrammerContent";
 
 Modal.setAppElement("#root");
 
@@ -132,32 +133,35 @@ const Principal = () => {
     if (!tokenChecked) return;
 
     const role = localStorage.getItem("userRole") || "admin";
-    setUserRole(role);
+    const rolesStr = localStorage.getItem("userRoles");
+    let roles = [];
 
     try {
-      const rolesStr = localStorage.getItem("userRoles");
       if (rolesStr) {
-        const roles = JSON.parse(rolesStr);
-        setUserRoles(roles);
+        roles = JSON.parse(rolesStr);
       }
     } catch (error) {
       console.error("Error parsing user roles:", error);
     }
+
+    // Update both states at once to minimize re-renders
+    setUserRole(role);
+    setUserRoles(roles);
 
     const username = localStorage.getItem("username");
     if (username) {
       localStorage.setItem("userName", username);
     }
 
-    // Map roles to dashboard types - THIS IS THE FIX
+    // Determine dashboard based on current values, not state
     let expectedDashboard;
-    if (role === "admin" || userRoles.includes("ROLE_ADMIN")) {
+    if (role === "admin" || roles.includes("ROLE_ADMIN")) {
       expectedDashboard = "AdminDashboard";
-    } else if (role === "professor" || userRoles.includes("ROLE_PROFESSOR")) {
+    } else if (role === "professor" || roles.includes("ROLE_PROFESSOR")) {
       expectedDashboard = "ProfessorDashboard";
-    } else if (role === "parent" || userRoles.includes("ROLE_PARENT")) {
+    } else if (role === "parent" || roles.includes("ROLE_PARENT")) {
       expectedDashboard = "ParentDashboard";
-    } else if (role === "student" || userRoles.includes("ROLE_STUDENT")) {
+    } else if (role === "student" || roles.includes("ROLE_STUDENT")) {
       expectedDashboard = "StudentDashboard";
     } else {
       expectedDashboard = `${
@@ -168,7 +172,7 @@ const Principal = () => {
     if (!dashboardType) {
       navigate(`/schoolchat/Principal/${expectedDashboard}`);
     }
-  }, [dashboardType, navigate, tokenChecked, userRoles]);
+  }, [dashboardType, navigate, tokenChecked]);
 
   const handleTabChange = (tab) => {
     console.log(
@@ -179,9 +183,14 @@ const Principal = () => {
       "User roles:",
       userRoles
     );
-    setActiveTab(tab);
+
+    // Reset manage class state when changing tabs
     setShowManageClass(false);
 
+    // Set the active tab
+    setActiveTab(tab);
+
+    // Handle messaging
     if (tab === "messages") {
       setShowMessaging(true);
     } else {
@@ -253,7 +262,6 @@ const Principal = () => {
         return <ProfessorsContent {...contentProps} />;
       case "motifs-de-rejet":
         console.log("Rendering MotifsDeRejet for user:", userRole, userRoles);
-        // Ensure both admins and professors can access MotifsDeRejet
         return <MotifsDeRejet {...contentProps} />;
       case "parents":
         return <ParentsContent {...contentProps} />;
@@ -261,8 +269,12 @@ const Principal = () => {
         return <StudentsContent {...contentProps} />;
       case "others":
         return <OthersContent {...contentProps} />;
-      case "courses":
+      case "create-course":
+        console.log("Rendering ProfessorCoursesContent");
         return <ProfessorCoursesContent {...contentProps} />;
+      case "schedule-course":
+        console.log("Rendering CoursProgrammerContent");
+        return <CoursProgrammerContent {...contentProps} />;
       case "classes":
         if (userRole === "parent" || userRoles.includes("ROLE_PARENT")) {
           return <ParentClassManagementClass {...contentProps} />;
@@ -339,7 +351,8 @@ const Principal = () => {
     if (activeTab === "students") return "Gérer Élèves";
     if (activeTab === "others") return "Gérer Autres Utilisateurs";
     if (activeTab === "activities") return "Activités";
-    if (activeTab === "courses") return "Mes Cours";
+    if (activeTab === "create-course") return "Créer un Cours";
+    if (activeTab === "schedule-course") return "Programmer le Cours";
     if (activeTab === "create-class") return "Créer une Classe";
     if (activeTab === "manage-class") return "Gérer une Classe";
     if (activeTab === "create-establishment") return "Créer un Établissement";
