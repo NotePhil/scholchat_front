@@ -1,41 +1,29 @@
-// CoursProgrammerContent.jsx
 import React, { useState, useEffect } from "react";
 import {
-  BookOpen,
   Plus,
   Search,
   Filter,
   Eye,
   Edit2,
-  Trash2,
+  XCircle,
   Clock,
   Users,
   Calendar,
   CheckCircle,
-  XCircle,
+  X,
   AlertCircle,
   MoreVertical,
   ChevronDown,
   PlayCircle,
   PauseCircle,
-  FileText,
-  Star,
-  TrendingUp,
-  Activity,
   Grid,
   List,
-  Download,
-  Share2,
-  Archive,
-  X,
+  RefreshCw,
   MapPin,
   UserCheck,
   CalendarPlus,
-  Settings,
-  RefreshCw,
 } from "lucide-react";
 import { coursService } from "../../../services/CoursService";
-import { matiereService } from "../../../services/MatiereService";
 import { classService } from "../../../services/ClassService";
 import { coursProgrammerService } from "../../../services/coursProgrammerService";
 import { useForm } from "react-hook-form";
@@ -43,22 +31,97 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import accederService from "../../../services/accederService";
 import MultiSelectDropdown from "./MultiSelectDropdown";
-import {
-  SCHEDULED_COURSE_STATES,
-  schedulingSchema,
-  getStatusBadge,
-  getStatusText,
-  getStatusIcon,
-  formatDate,
-  getInitials,
-} from "./CoursProgrammerUtils";
+
+const SCHEDULED_COURSE_STATES = {
+  PLANIFIE: "PLANIFIE",
+  EN_COURS: "EN_COURS",
+  TERMINE: "TERMINE",
+  ANNULE: "ANNULE",
+};
+
+const schedulingSchema = yup.object().shape({
+  coursId: yup.string().required("Le cours est obligatoire"),
+  classeId: yup.string(),
+  dateCoursPrevue: yup.string().required("La date prévue est obligatoire"),
+  lieu: yup.string().required("Le lieu est obligatoire"),
+  description: yup.string(),
+  capaciteMax: yup.number().positive().integer(),
+  participantsIds: yup.array().of(yup.string()),
+});
+
+const getStatusBadge = (status) => {
+  switch (status) {
+    case SCHEDULED_COURSE_STATES.PLANIFIE:
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    case SCHEDULED_COURSE_STATES.EN_COURS:
+      return "bg-green-50 text-green-700 border-green-200";
+    case SCHEDULED_COURSE_STATES.TERMINE:
+      return "bg-gray-50 text-gray-700 border-gray-200";
+    case SCHEDULED_COURSE_STATES.ANNULE:
+      return "bg-red-50 text-red-700 border-red-200";
+    default:
+      return "bg-gray-50 text-gray-700 border-gray-200";
+  }
+};
+
+const getStatusText = (status) => {
+  switch (status) {
+    case SCHEDULED_COURSE_STATES.PLANIFIE:
+      return "Planifié";
+    case SCHEDULED_COURSE_STATES.EN_COURS:
+      return "En cours";
+    case SCHEDULED_COURSE_STATES.TERMINE:
+      return "Terminé";
+    case SCHEDULED_COURSE_STATES.ANNULE:
+      return "Annulé";
+    default:
+      return "Inconnu";
+  }
+};
+
+const getStatusIcon = (status) => {
+  const className = "w-4 h-4";
+  switch (status) {
+    case SCHEDULED_COURSE_STATES.PLANIFIE:
+      return <Clock className={className} />;
+    case SCHEDULED_COURSE_STATES.EN_COURS:
+      return <PlayCircle className={className} />;
+    case SCHEDULED_COURSE_STATES.TERMINE:
+      return <CheckCircle className={className} />;
+    case SCHEDULED_COURSE_STATES.ANNULE:
+      return <XCircle className={className} />;
+    default:
+      return <Clock className={className} />;
+  }
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return "Non défini";
+  const date = new Date(dateString);
+  return date.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getInitials = (name) => {
+  if (!name) return "??";
+  const words = name.split(" ");
+  return words
+    .map((word) => word[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
+};
 
 const CoursProgrammerContent = () => {
   const [scheduledCourses, setScheduledCourses] = useState([]);
   const [filteredScheduledCourses, setFilteredScheduledCourses] = useState([]);
   const [courses, setCourses] = useState([]);
   const [classes, setClasses] = useState([]);
-  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -117,7 +180,6 @@ const CoursProgrammerContent = () => {
           name: user.nomComplet || user.email || `User ${user.id}`,
         }));
         setClassParticipants(formattedParticipants);
-        setStudents(participants);
       } catch (error) {
         console.error("Error fetching class participants:", error);
         setError("Erreur lors du chargement des participants de la classe");
@@ -151,36 +213,27 @@ const CoursProgrammerContent = () => {
         throw new Error("ID du professeur non trouvé");
       }
 
-      const coursesData = await coursService.getCoursByProfesseur(professorId);
-      setCourses(coursesData || []);
+      const [coursesData, classesData] = await Promise.all([
+        coursService.getCoursByProfesseur(professorId),
+        classService.obtenirClassesUtilisateur(professorId),
+      ]);
 
-      const classesData = await classService.obtenirClassesUtilisateur(
-        professorId
-      );
+      setCourses(coursesData || []);
       setClasses(classesData || []);
 
-      const allScheduledCourses = [];
-      for (const course of coursesData || []) {
-        try {
-          const scheduledData =
-            await coursProgrammerService.obtenirProgrammationParCours(
-              course.id
-            );
-          if (scheduledData && Array.isArray(scheduledData)) {
-            allScheduledCourses.push(
-              ...scheduledData.map((scheduled) => ({
-                ...scheduled,
-                cours: course,
-              }))
-            );
-          }
-        } catch (scheduleError) {
-          console.warn(
-            `Could not load schedule for course ${course.id}:`,
-            scheduleError
-          );
-        }
-      }
+      const scheduledPromises = (coursesData || []).map((course) =>
+        coursProgrammerService.obtenirProgrammationParCours(course.id)
+      );
+      const scheduledResults = await Promise.allSettled(scheduledPromises);
+
+      const allScheduledCourses = scheduledResults
+        .filter((result) => result.status === "fulfilled" && result.value)
+        .flatMap((result, index) =>
+          result.value.map((scheduled) => ({
+            ...scheduled,
+            cours: coursesData[index],
+          }))
+        );
 
       setScheduledCourses(allScheduledCourses);
     } catch (err) {
@@ -226,14 +279,19 @@ const CoursProgrammerContent = () => {
         coursId: data.coursId,
         classeId: data.classeId || null,
         dateCoursPrevue: data.dateCoursPrevue,
-        dateDebutEffectif: data.dateDebutEffectif,
-        dateFinEffectif: data.dateFinEffectif,
         lieu: data.lieu,
         description: data.description || null,
-        capaciteMax: data.capaciteMax || null,
-        participantsIds: selectedParticipants,
-        etatCoursProgramme: "PLANIFIE",
+        capaciteMax: data.capaciteMax ? parseInt(data.capaciteMax) : null,
+        participantsIds: selectedParticipants.filter((id) => id),
       };
+
+      if (
+        !scheduleData.coursId ||
+        !scheduleData.dateCoursPrevue ||
+        !scheduleData.lieu
+      ) {
+        throw new Error("Cours, date prévue et lieu sont obligatoires");
+      }
 
       let result;
       if (modalMode === "create") {
@@ -252,7 +310,7 @@ const CoursProgrammerContent = () => {
       loadData();
     } catch (err) {
       console.error("Error in onSubmit:", err);
-      setError("Erreur lors de l'enregistrement: " + err.message);
+      setError(err.message || "Erreur lors de l'enregistrement");
     } finally {
       setLoading(false);
     }
@@ -263,8 +321,6 @@ const CoursProgrammerContent = () => {
       coursId: "",
       classeId: "",
       dateCoursPrevue: "",
-      dateDebutEffectif: "",
-      dateFinEffectif: "",
       lieu: "",
       description: "",
       capaciteMax: "",
@@ -296,8 +352,6 @@ const CoursProgrammerContent = () => {
       coursId: scheduledCourse.coursId,
       classeId: scheduledCourse.classeId || "",
       dateCoursPrevue: formatDateForInput(scheduledCourse.dateCoursPrevue),
-      dateDebutEffectif: formatDateForInput(scheduledCourse.dateDebutEffectif),
-      dateFinEffectif: formatDateForInput(scheduledCourse.dateFinEffectif),
       lieu: scheduledCourse.lieu,
       description: scheduledCourse.description || "",
       capaciteMax: scheduledCourse.capaciteMax || "",
@@ -634,18 +688,6 @@ const CoursProgrammerContent = () => {
                       Prévu: {formatDate(scheduledCourse.dateCoursPrevue)}
                     </span>
                   </div>
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Clock size={14} className="mr-2 text-slate-400" />
-                    <span>
-                      Début: {formatDate(scheduledCourse.dateDebutEffectif)}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Clock size={14} className="mr-2 text-slate-400" />
-                    <span>
-                      Fin: {formatDate(scheduledCourse.dateFinEffectif)}
-                    </span>
-                  </div>
                   {scheduledCourse.lieu && (
                     <div className="flex items-center text-sm text-slate-600">
                       <MapPin size={14} className="mr-2 text-slate-400" />
@@ -736,7 +778,7 @@ const CoursProgrammerContent = () => {
                       Classe
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Planning
+                      Date
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Lieu
@@ -782,13 +824,7 @@ const CoursProgrammerContent = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-slate-900">
-                          <div>
-                            Prévu: {formatDate(scheduledCourse.dateCoursPrevue)}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {formatDate(scheduledCourse.dateDebutEffectif)} -{" "}
-                            {formatDate(scheduledCourse.dateFinEffectif)}
-                          </div>
+                          {formatDate(scheduledCourse.dateCoursPrevue)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1041,55 +1077,6 @@ const CoursProgrammerContent = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label
-                      htmlFor="dateDebutEffectif"
-                      className="block text-sm font-medium text-slate-700 mb-1"
-                    >
-                      Heure de début *
-                    </label>
-                    <input
-                      id="dateDebutEffectif"
-                      type="datetime-local"
-                      {...register("dateDebutEffectif")}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                        errors.dateDebutEffectif
-                          ? "border-red-300"
-                          : "border-slate-200"
-                      }`}
-                    />
-                    {errors.dateDebutEffectif && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.dateDebutEffectif.message}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="dateFinEffectif"
-                      className="block text-sm font-medium text-slate-700 mb-1"
-                    >
-                      Heure de fin *
-                    </label>
-                    <input
-                      id="dateFinEffectif"
-                      type="datetime-local"
-                      {...register("dateFinEffectif")}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                        errors.dateFinEffectif
-                          ? "border-red-300"
-                          : "border-slate-200"
-                      }`}
-                    />
-                    {errors.dateFinEffectif && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.dateFinEffectif.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label
                       htmlFor="lieu"
                       className="block text-sm font-medium text-slate-700 mb-1"
                     >
@@ -1164,6 +1151,7 @@ const CoursProgrammerContent = () => {
                     placeholder="Sélectionnez un ou plusieurs participants..."
                     error={errors.participantsIds}
                     onSelectAll={handleSelectAllParticipants}
+                    disabled={!watchedClassId}
                   />
                   {errors.participantsIds && (
                     <p className="mt-1 text-sm text-red-600">
