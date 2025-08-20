@@ -11,13 +11,16 @@ import {
   List,
   RefreshCw,
   CalendarPlus,
+  Hash,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { classService } from "../../../../../services/ClassService";
 import { coursProgrammerService } from "../../../../../services/coursProgrammerService";
-import CoursProgrammerForm from "./CoursProgrammerForm";
+import CoursProgrammerForm from "./CoursProgrammerForm/CoursProgrammerForm";
 import CoursProgrammerList from "./CoursProgrammerList";
 import CoursProgrammerStats from "./CoursProgrammerStats";
+
+const PAGE_SIZE_OPTIONS = [5, 10, 15, 20, 25, 50, 100];
 
 const CoursProgrammerContent = () => {
   const [scheduledCourses, setScheduledCourses] = useState([]);
@@ -30,6 +33,7 @@ const CoursProgrammerContent = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
+  const [pageSize, setPageSize] = useState(10);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [selectedScheduledCourse, setSelectedScheduledCourse] = useState(null);
   const [modalMode, setModalMode] = useState("create");
@@ -93,8 +97,9 @@ const CoursProgrammerContent = () => {
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           scheduled.lieu?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          scheduled.classe?.nom
-            ?.toLowerCase()
+          classes
+            .find((c) => c.id === scheduled.classeId)
+            ?.nom?.toLowerCase()
             .includes(searchTerm.toLowerCase())
       );
     }
@@ -198,6 +203,10 @@ const CoursProgrammerContent = () => {
     }
   };
 
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(newSize);
+  };
+
   if (loading && scheduledCourses.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
@@ -284,44 +293,85 @@ const CoursProgrammerContent = () => {
 
         {/* Controls */}
         <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="relative flex-1 max-w-md">
-              <Search
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                size={20}
-              />
-              <input
-                type="text"
-                placeholder="Rechercher par cours, lieu, classe..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm"
-              />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Filter
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+            {/* Search and Filter Row */}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <Search
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                  size={16}
+                  size={20}
                 />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="pl-12 pr-8 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
-                >
-                  <option value="all">Tous les statuts</option>
-                  <option value="PLANIFIE">Planifié</option>
-                  <option value="EN_COURS">En cours</option>
-                  <option value="TERMINE">Terminé</option>
-                  <option value="ANNULE">Annulé</option>
-                </select>
-                <ChevronDown
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-                  size={16}
+                <input
+                  type="text"
+                  placeholder="Rechercher par cours, lieu, classe..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm"
                 />
               </div>
 
+              <div className="flex items-center gap-4">
+                {/* Status Filter */}
+                <div className="relative">
+                  <Filter
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
+                    size={16}
+                  />
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="pl-12 pr-8 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer min-w-[160px]"
+                  >
+                    <option value="all">Tous les statuts</option>
+                    <option value="PLANIFIE">Planifié</option>
+                    <option value="EN_COURS">En cours</option>
+                    <option value="TERMINE">Terminé</option>
+                    <option value="ANNULE">Annulé</option>
+                  </select>
+                  <ChevronDown
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                    size={16}
+                  />
+                </div>
+
+                {/* Page Size Selection */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-600 whitespace-nowrap">
+                    Afficher:
+                  </span>
+                  <div className="relative">
+                    <Hash
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                      size={16}
+                    />
+                    <select
+                      value={pageSize}
+                      onChange={(e) =>
+                        handlePageSizeChange(Number(e.target.value))
+                      }
+                      className="pl-10 pr-8 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer min-w-[100px]"
+                    >
+                      {PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400"
+                      size={16}
+                    />
+                  </div>
+                  <span className="text-sm text-slate-600 whitespace-nowrap">
+                    par page
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons Row */}
+            <div className="flex items-center gap-4">
+              {/* View Mode Toggle */}
               <div className="flex bg-slate-100 rounded-xl p-1">
                 <button
                   onClick={() => setViewMode("grid")}
@@ -330,6 +380,7 @@ const CoursProgrammerContent = () => {
                       ? "bg-white text-indigo-600 shadow-sm"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
+                  title="Vue en grille"
                 >
                   <Grid size={16} />
                 </button>
@@ -340,28 +391,65 @@ const CoursProgrammerContent = () => {
                       ? "bg-white text-indigo-600 shadow-sm"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
+                  title="Vue en tableau"
                 >
                   <List size={16} />
                 </button>
               </div>
 
+              {/* Refresh Button */}
               <button
                 onClick={() => loadData()}
                 className="p-3 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
-                title="Actualiser"
+                title="Actualiser les données"
               >
                 <RefreshCw size={20} />
               </button>
 
+              {/* Schedule Course Button */}
               <button
                 onClick={handleScheduleCourse}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
               >
                 <Plus size={20} />
-                Programmer un Cours
+                <span className="hidden sm:inline">Programmer un Cours</span>
+                <span className="sm:hidden">Programmer</span>
               </button>
             </div>
           </div>
+
+          {/* Results Summary */}
+          {filteredScheduledCourses.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <p className="text-sm text-slate-600">
+                <span className="font-medium text-slate-800">
+                  {filteredScheduledCourses.length}
+                </span>{" "}
+                {filteredScheduledCourses.length === 1
+                  ? "cours trouvé"
+                  : "cours trouvés"}
+                {searchTerm && (
+                  <span>
+                    {" "}
+                    pour "<span className="font-medium">{searchTerm}</span>"
+                  </span>
+                )}
+                {filterStatus !== "all" && (
+                  <span>
+                    {" "}
+                    avec le statut "
+                    <span className="font-medium">
+                      {filterStatus === "PLANIFIE" && "Planifié"}
+                      {filterStatus === "EN_COURS" && "En cours"}
+                      {filterStatus === "TERMINE" && "Terminé"}
+                      {filterStatus === "ANNULE" && "Annulé"}
+                    </span>
+                    "
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Course List */}
@@ -375,6 +463,9 @@ const CoursProgrammerContent = () => {
           onScheduleCourse={handleScheduleCourse}
           searchTerm={searchTerm}
           filterStatus={filterStatus}
+          classes={classes}
+          pageSize={pageSize}
+          onPageSizeChange={handlePageSizeChange}
         />
 
         {/* Loading Overlay */}

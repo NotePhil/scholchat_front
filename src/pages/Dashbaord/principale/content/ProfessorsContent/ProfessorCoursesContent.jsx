@@ -478,7 +478,7 @@ const ProfessorCoursesContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-4">
@@ -926,7 +926,7 @@ const ProfessorCoursesContent = () => {
         )}
 
         {loading && courses.length > 0 && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-40">
             <div className="bg-white rounded-2xl p-6 shadow-2xl">
               <div className="flex items-center space-x-4">
                 <div className="relative">
@@ -947,8 +947,9 @@ const ProfessorCoursesContent = () => {
         )}
       </div>
 
+      {/* Create/Edit Modal - Positioned within main content area */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -965,178 +966,182 @@ const ProfessorCoursesContent = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="titre"
-                    className="block text-sm font-medium text-slate-700 mb-1"
-                  >
-                    Titre du cours *
-                  </label>
-                  <input
-                    id="titre"
-                    type="text"
-                    {...register("titre")}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                      errors.titre ? "border-red-300" : "border-slate-200"
-                    }`}
-                    placeholder="Introduction à la programmation"
-                  />
-                  {errors.titre && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.titre.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="description"
-                    className="block text-sm font-medium text-slate-700 mb-1"
-                  >
-                    Description *
-                  </label>
-                  <textarea
-                    id="description"
-                    {...register("description")}
-                    rows={3}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                      errors.description ? "border-red-300" : "border-slate-200"
-                    }`}
-                    placeholder="Décrivez le contenu de ce cours..."
-                  />
-                  {errors.description && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.description.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="contenu"
-                    className="block text-sm font-medium text-slate-700 mb-1"
-                  >
-                    Contenu détaillé *
-                  </label>
-                  <textarea
-                    id="contenu"
-                    {...register("contenu")}
-                    rows={5}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                      errors.contenu ? "border-red-300" : "border-slate-200"
-                    }`}
-                    placeholder="Détaillez le contenu du cours..."
-                  />
-                  {errors.contenu && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.contenu.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Matières associées *
-                  </label>
-                  <MultiSelectDropdown
-                    options={subjects}
-                    selected={selectedMatiereIds}
-                    onChange={handleMatiereChange}
-                    placeholder="Sélectionnez une ou plusieurs matières..."
-                    error={errors.matiereIds}
-                  />
-                  {errors.matiereIds && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.matiereIds.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label
-                      htmlFor="dateHeureDebut"
-                      className="block text-sm font-medium text-slate-700 mb-1"
+                      htmlFor="titre"
+                      className="block text-sm font-medium text-slate-700 mb-2"
                     >
-                      Date et heure de début *
+                      Titre du cours *
                     </label>
                     <input
-                      id="dateHeureDebut"
-                      type="datetime-local"
-                      {...register("dateHeureDebut")}
+                      id="titre"
+                      type="text"
+                      {...register("titre")}
                       className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                        errors.dateHeureDebut
-                          ? "border-red-300"
-                          : "border-slate-200"
+                        errors.titre ? "border-red-300" : "border-slate-200"
                       }`}
+                      placeholder="Introduction à la programmation"
                     />
-                    {errors.dateHeureDebut && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.dateHeureDebut.message}
+                    {errors.titre && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {errors.titre.message}
                       </p>
                     )}
                   </div>
+
                   <div>
                     <label
-                      htmlFor="dateHeureFin"
-                      className="block text-sm font-medium text-slate-700 mb-1"
+                      htmlFor="description"
+                      className="block text-sm font-medium text-slate-700 mb-2"
                     >
-                      Date et heure de fin *
+                      Description *
                     </label>
-                    <input
-                      id="dateHeureFin"
-                      type="datetime-local"
-                      {...register("dateHeureFin")}
+                    <textarea
+                      id="description"
+                      {...register("description")}
+                      rows={3}
                       className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                        errors.dateHeureFin
+                        errors.description
                           ? "border-red-300"
                           : "border-slate-200"
                       }`}
+                      placeholder="Décrivez le contenu de ce cours..."
                     />
-                    {errors.dateHeureFin && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.dateHeureFin.message}
+                    {errors.description && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {errors.description.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="contenu"
+                      className="block text-sm font-medium text-slate-700 mb-2"
+                    >
+                      Contenu détaillé *
+                    </label>
+                    <textarea
+                      id="contenu"
+                      {...register("contenu")}
+                      rows={5}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
+                        errors.contenu ? "border-red-300" : "border-slate-200"
+                      }`}
+                      placeholder="Détaillez le contenu du cours..."
+                    />
+                    {errors.contenu && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {errors.contenu.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Matières associées *
+                    </label>
+                    <MultiSelectDropdown
+                      options={subjects}
+                      selected={selectedMatiereIds}
+                      onChange={handleMatiereChange}
+                      placeholder="Sélectionnez une ou plusieurs matières..."
+                      error={errors.matiereIds}
+                    />
+                    {errors.matiereIds && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {errors.matiereIds.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label
+                        htmlFor="dateHeureDebut"
+                        className="block text-sm font-medium text-slate-700 mb-2"
+                      >
+                        Date et heure de début *
+                      </label>
+                      <input
+                        id="dateHeureDebut"
+                        type="datetime-local"
+                        {...register("dateHeureDebut")}
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
+                          errors.dateHeureDebut
+                            ? "border-red-300"
+                            : "border-slate-200"
+                        }`}
+                      />
+                      {errors.dateHeureDebut && (
+                        <p className="mt-2 text-sm text-red-600">
+                          {errors.dateHeureDebut.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="dateHeureFin"
+                        className="block text-sm font-medium text-slate-700 mb-2"
+                      >
+                        Date et heure de fin *
+                      </label>
+                      <input
+                        id="dateHeureFin"
+                        type="datetime-local"
+                        {...register("dateHeureFin")}
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
+                          errors.dateHeureFin
+                            ? "border-red-300"
+                            : "border-slate-200"
+                        }`}
+                      />
+                      {errors.dateHeureFin && (
+                        <p className="mt-2 text-sm text-red-600">
+                          {errors.dateHeureFin.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="lieu"
+                      className="block text-sm font-medium text-slate-700 mb-2"
+                    >
+                      Lieu *
+                    </label>
+                    <input
+                      id="lieu"
+                      type="text"
+                      {...register("lieu")}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
+                        errors.lieu ? "border-red-300" : "border-slate-200"
+                      }`}
+                      placeholder="Salle 203, Bâtiment A"
+                    />
+                    {errors.lieu && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {errors.lieu.message}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="lieu"
-                    className="block text-sm font-medium text-slate-700 mb-1"
-                  >
-                    Lieu *
-                  </label>
-                  <input
-                    id="lieu"
-                    type="text"
-                    {...register("lieu")}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                      errors.lieu ? "border-red-300" : "border-slate-200"
-                    }`}
-                    placeholder="Salle 203, Bâtiment A"
-                  />
-                  {errors.lieu && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.lieu.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-6">
+                <div className="flex justify-end space-x-4 pt-6">
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="px-6 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors"
+                    className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-xl hover:bg-slate-50"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
                   >
                     {loading ? (
                       <span className="flex items-center">
@@ -1177,9 +1182,9 @@ const ProfessorCoursesContent = () => {
         </div>
       )}
 
-      {showViewModal && viewingCourse && (
+      {showViewModal && (
         <CourseViewModal
-          course={viewingCourse}
+          classe={viewingCourse} 
           onClose={handleCloseViewModal}
           onSuccess={handleViewModalSuccess}
           onEdit={handleViewModalEdit}
