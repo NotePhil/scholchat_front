@@ -8,18 +8,14 @@ import { Courses } from "./pages/Courses";
 import { Blog } from "./pages/Blog";
 import { Instructor } from "./pages/Instructor";
 import FunctionalitiesSection from "./pages/FunctionalitiesSection";
-import ClassSelectionWrapper from "./pages/Dashbaord/components/form/ClassSelectionWrapper";
+
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import ProfessorPage from "./pages/Dashbaord/ProfessorPage";
 import StudentPage from "./pages/Dashbaord/StudentPage";
-// import ProfessorDashboard from "./pages/Dashbaord/components/ProfessorDashboard/ProfessorDashboard";
-// import StudentDashboard from "./pages/Dashbaord/components/StudentDashboard/StudentDashboard";
-// import ParentDashboard from "./pages/Dashbaord/components/ParentDashboard/ParentDashboard";
 import ParentPage from "./pages/Dashbaord/ParentPage";
 import ClassesPage from "./pages/Dashbaord/ClassesPage";
-import PostLoginClassModal from "./pages/Dashbaord/components/form/ClassSelectionModal";
-// import EmailDashboard from "./pages/Dashbaord/components/StudentDashboard/EmailDashboard";
+
 import ActivityFeed from "./pages/Dashbaord/components/StudentDashboard/ActivityFeed";
 import AccountActivation from "./pages/AccountActivation";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -148,20 +144,10 @@ function App() {
                 </Layout>
               }
             />
-            <Route
-              path="/schoolchat/postLogin/classModal"
-              element={
-                <Layout theme={theme} setTheme={setTheme}>
-                  <PostLoginClassModal theme={theme} />
-                </Layout>
-              }
-            />
+
             <Route path="/schoolchat/parents" element={<ParentPage />} />
             <Route path="/schoolchat/classes" element={<ClassesPage />} />
-            {/* <Route
-              path="/schoolchat/email-dashboard"
-              element={<EmailDashboard />}
-            /> */}
+
             <Route
               path="/schoolchat/manage-class"
               element={

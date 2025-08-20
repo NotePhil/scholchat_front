@@ -200,11 +200,7 @@ const Sidebar = ({
             { name: "Élèves", tab: "students" },
           ],
         },
-        {
-          name: "Motifs de Rejet",
-          icon: BookOpen,
-          tab: "motifs-de-rejet",
-        },
+        // Removed "Motifs de Rejet" from professor menu
         {
           name: "Classes",
           icon: Building2,
@@ -233,7 +229,11 @@ const Sidebar = ({
       // Fallback for other roles
       roleItems = [
         { name: "Classes", icon: Building2, tab: "classes" },
-        { name: "Motifs de Rejet", icon: BookOpen, tab: "motifs-de-rejet" },
+        {
+          name: "Motifs de Rejet",
+          icon: BookOpen,
+          tab: "motifs-de-rejet",
+        },
         {
           name: "Messagerie",
           icon: Mail,

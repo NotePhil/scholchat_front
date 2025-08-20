@@ -199,22 +199,40 @@ class CoursProgrammerService {
         throw new Error("Scheduled course ID is required");
       }
 
+      const formattedUpdates = { ...updates };
+
+      if (updates.dateCoursPrevue) {
+        formattedUpdates.dateCoursPrevue = new Date(
+          updates.dateCoursPrevue
+        ).toISOString();
+      }
+      if (updates.dateDebutEffectif) {
+        formattedUpdates.dateDebutEffectif = new Date(
+          updates.dateDebutEffectif
+        ).toISOString();
+      }
+      if (updates.dateFinEffectif) {
+        formattedUpdates.dateFinEffectif = new Date(
+          updates.dateFinEffectif
+        ).toISOString();
+      }
+
       console.log(
-        "🔄 Updating scheduled course:",
+        " Updating scheduled course:",
         scheduledId,
         "with:",
-        updates
+        formattedUpdates
       );
 
       const response = await coursProgrammerApi.put(
         `/cours-programmes/${scheduledId}`,
-        updates
+        formattedUpdates
       );
 
-      console.log("✅ Updated scheduled course:", response.data);
+      console.log(" Updated scheduled course:", response.data);
       return response.data;
     } catch (error) {
-      console.error("❌ Error updating scheduled course:", error);
+      console.error(" Error updating scheduled course:", error);
       this.handleError(error);
     }
   }
