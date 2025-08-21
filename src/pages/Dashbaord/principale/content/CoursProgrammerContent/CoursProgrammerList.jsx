@@ -99,6 +99,7 @@ const CoursProgrammerList = ({
   scheduledCourses,
   viewMode,
   onEdit,
+  onView,
   onStart,
   onEnd,
   onCancel,
@@ -106,8 +107,8 @@ const CoursProgrammerList = ({
   searchTerm,
   filterStatus,
   classes = [],
-  pageSize = 10, // Receive pageSize from parent
-  onPageSizeChange, // Receive callback for page size changes
+  pageSize = 10,
+  onPageSizeChange,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -196,6 +197,7 @@ const CoursProgrammerList = ({
         </button>
       )}
       <button
+        onClick={() => onView(scheduledCourse)}
         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
         title="Voir les détails"
       >

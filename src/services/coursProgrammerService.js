@@ -28,7 +28,7 @@ coursProgrammerApi.interceptors.request.use(
 // Add response interceptor for debugging
 coursProgrammerApi.interceptors.response.use(
   (response) => {
-    console.log("✅ API Response:", {
+    console.log("API Response:", {
       url: response.config.url,
       method: response.config.method,
       status: response.status,
@@ -37,7 +37,7 @@ coursProgrammerApi.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error("❌ API Error:", {
+    console.error("API Error:", {
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
@@ -52,7 +52,7 @@ class CoursProgrammerService {
   async programmerCours(coursProgrammerData) {
     try {
       console.log(
-        "🚀 Starting programmerCours with raw data:",
+        "Starting programmerCours with raw data:",
         coursProgrammerData
       );
 
@@ -84,6 +84,10 @@ class CoursProgrammerService {
           ? parseInt(coursProgrammerData.capaciteMax, 10)
           : null,
         classeId: coursProgrammerData.classeId?.trim() || null,
+        etatCoursProgramme:
+          coursProgrammerData.etatCoursProgramme || "PLANIFIE",
+        dateDebutEffectif: coursProgrammerData.dateDebutEffectif || null,
+        dateFinEffectif: coursProgrammerData.dateFinEffectif || null,
         participantsIds: [],
       };
 
@@ -99,18 +103,9 @@ class CoursProgrammerService {
       }
 
       console.log(
-        "🔍 Cleaned data before sending:",
+        "Cleaned data before sending:",
         JSON.stringify(cleanedData, null, 2)
       );
-      console.log("📊 Data summary:", {
-        coursId: cleanedData.coursId,
-        classeId: cleanedData.classeId,
-        lieu: cleanedData.lieu,
-        participantsCount: cleanedData.participantsIds.length,
-        participantsIds: cleanedData.participantsIds,
-        capaciteMax: cleanedData.capaciteMax,
-        hasDescription: !!cleanedData.description,
-      });
 
       // Validate UUID format for coursId and classeId
       const uuidRegex =
@@ -131,22 +126,22 @@ class CoursProgrammerService {
         }
       }
 
-      console.log("📤 Sending request to:", `/cours-programmes`);
-      console.log("📤 Request payload:", JSON.stringify(cleanedData, null, 2));
+      console.log("Sending request to:", `/cours-programmes`);
+      console.log("Request payload:", JSON.stringify(cleanedData, null, 2));
 
       const response = await coursProgrammerApi.post(
         "/cours-programmes",
         cleanedData
       );
 
-      console.log("✅ Course scheduled successfully:", response.data);
+      console.log("Course scheduled successfully:", response.data);
       return response.data;
     } catch (error) {
-      console.error("❌ Error in programmerCours:", error);
+      console.error("Error in programmerCours:", error);
 
       let errorMessage = "An unexpected error occurred";
       if (error.response) {
-        console.error("❌ Response error details:", {
+        console.error("Response error details:", {
           status: error.response.status,
           statusText: error.response.statusText,
           data: error.response.data,
@@ -159,13 +154,10 @@ class CoursProgrammerService {
           error.response.statusText ||
           `Server error (${error.response.status})`;
       } else if (error.request) {
-        console.error(
-          "❌ Request error - no response received:",
-          error.request
-        );
+        console.error("Request error - no response received:", error.request);
         errorMessage = "No response from server. Please check your connection.";
       } else {
-        console.error("❌ Request setup error:", error.message);
+        console.error("Request setup error:", error.message);
         errorMessage = error.message;
       }
 
@@ -173,29 +165,9 @@ class CoursProgrammerService {
     }
   }
 
-  async obtenirProgrammationParCours(coursId) {
+  async mettreAJourCoursProgramme(id, updates) {
     try {
-      if (!coursId) {
-        throw new Error("Course ID is required");
-      }
-
-      console.log("📥 Fetching programming for course:", coursId);
-
-      const response = await coursProgrammerApi.get(
-        `/cours-programmes/by-cours/${coursId}`
-      );
-
-      console.log("✅ Fetched programming data:", response.data);
-      return response.data;
-    } catch (error) {
-      console.error("❌ Error fetching programming:", error);
-      this.handleError(error);
-    }
-  }
-
-  async updateScheduledCours(scheduledId, updates) {
-    try {
-      if (!scheduledId) {
+      if (!id) {
         throw new Error("Scheduled course ID is required");
       }
 
@@ -217,22 +189,126 @@ class CoursProgrammerService {
         ).toISOString();
       }
 
-      console.log(
-        " Updating scheduled course:",
-        scheduledId,
-        "with:",
-        formattedUpdates
-      );
+      console.log("Updating scheduled course:", id, "with:", formattedUpdates);
 
       const response = await coursProgrammerApi.put(
-        `/cours-programmes/${scheduledId}`,
+        `/cours-programmes/${id}`,
         formattedUpdates
       );
 
-      console.log(" Updated scheduled course:", response.data);
+      console.log("Updated scheduled course:", response.data);
       return response.data;
     } catch (error) {
-      console.error(" Error updating scheduled course:", error);
+      console.error("Error updating scheduled course:", error);
+      this.handleError(error);
+    }
+  }
+
+  async supprimerCoursProgramme(id) {
+    try {
+      if (!id) {
+        throw new Error("Scheduled course ID is required");
+      }
+
+      console.log("Deleting scheduled course:", id);
+
+      await coursProgrammerApi.delete(`/cours-programmes/${id}`);
+
+      console.log("Scheduled course deleted successfully:", id);
+    } catch (error) {
+      console.error("Error deleting scheduled course:", error);
+      this.handleError(error);
+    }
+  }
+
+  async obtenirCoursProgrammeParId(id) {
+    try {
+      if (!id) {
+        throw new Error("Scheduled course ID is required");
+      }
+
+      console.log("Fetching scheduled course:", id);
+
+      const response = await coursProgrammerApi.get(`/cours-programmes/${id}`);
+
+      console.log("Fetched scheduled course:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching scheduled course:", error);
+      this.handleError(error);
+    }
+  }
+
+  async obtenirTousLesCoursProgrammes() {
+    try {
+      console.log("Fetching all scheduled courses");
+
+      const response = await coursProgrammerApi.get("/cours-programmes");
+
+      console.log("Fetched all scheduled courses:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching all scheduled courses:", error);
+      this.handleError(error);
+    }
+  }
+
+  async obtenirProgrammationParCours(coursId) {
+    try {
+      if (!coursId) {
+        throw new Error("Course ID is required");
+      }
+
+      console.log("Fetching programming for course:", coursId);
+
+      const response = await coursProgrammerApi.get(
+        `/cours-programmes/by-cours/${coursId}`
+      );
+
+      console.log("Fetched programming data:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching programming:", error);
+      this.handleError(error);
+    }
+  }
+
+  async obtenirProgrammationParClasse(classeId) {
+    try {
+      if (!classeId) {
+        throw new Error("Class ID is required");
+      }
+
+      console.log("Fetching programming for class:", classeId);
+
+      const response = await coursProgrammerApi.get(
+        `/cours-programmes/by-classe/${classeId}`
+      );
+
+      console.log("Fetched programming data for class:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching programming for class:", error);
+      this.handleError(error);
+    }
+  }
+
+  async obtenirProgrammationParParticipant(participantId) {
+    try {
+      if (!participantId) {
+        throw new Error("Participant ID is required");
+      }
+
+      console.log("Fetching programming for participant:", participantId);
+
+      const response = await coursProgrammerApi.get(
+        `/cours-programmes/by-participant/${participantId}`
+      );
+
+      console.log("Fetched programming data for participant:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching programming for participant:", error);
       this.handleError(error);
     }
   }
@@ -245,20 +321,20 @@ class CoursProgrammerService {
 
       const updates = {
         etatCoursProgramme: "EN_COURS",
-        dateDebutCoursEffectif: new Date().toISOString(),
+        dateDebutEffectif: new Date().toISOString(),
       };
 
-      console.log("▶️ Starting course:", scheduledId, "with updates:", updates);
+      console.log("Starting course:", scheduledId, "with updates:", updates);
 
       const response = await coursProgrammerApi.put(
         `/cours-programmes/${scheduledId}`,
         updates
       );
 
-      console.log("✅ Course started:", response.data);
+      console.log("Course started:", response.data);
       return response.data;
     } catch (error) {
-      console.error("❌ Error starting course:", error);
+      console.error("Error starting course:", error);
       this.handleError(error);
     }
   }
@@ -271,20 +347,20 @@ class CoursProgrammerService {
 
       const updates = {
         etatCoursProgramme: "TERMINE",
-        dateFinCoursEffectif: new Date().toISOString(),
+        dateFinEffectif: new Date().toISOString(),
       };
 
-      console.log("⏹️ Ending course:", scheduledId, "with updates:", updates);
+      console.log("Ending course:", scheduledId, "with updates:", updates);
 
       const response = await coursProgrammerApi.put(
         `/cours-programmes/${scheduledId}`,
         updates
       );
 
-      console.log("✅ Course ended:", response.data);
+      console.log("Course ended:", response.data);
       return response.data;
     } catch (error) {
-      console.error("❌ Error ending course:", error);
+      console.error("Error ending course:", error);
       this.handleError(error);
     }
   }
@@ -297,26 +373,26 @@ class CoursProgrammerService {
 
       const updates = {
         etatCoursProgramme: "ANNULE",
-        raisonAnnulation: reason || "",
+        description: reason ? `Annulé: ${reason}` : "Cours annulé",
       };
 
-      console.log("❌ Canceling course:", scheduledId, "with reason:", reason);
+      console.log("Canceling course:", scheduledId, "with reason:", reason);
 
       const response = await coursProgrammerApi.put(
         `/cours-programmes/${scheduledId}`,
         updates
       );
 
-      console.log("✅ Course canceled:", response.data);
+      console.log("Course canceled:", response.data);
       return response.data;
     } catch (error) {
-      console.error("❌ Error canceling course:", error);
+      console.error("Error canceling course:", error);
       this.handleError(error);
     }
   }
 
   handleError(error) {
-    console.error("🔧 Handling error:", error);
+    console.error("Handling error:", error);
 
     if (error.response) {
       const errorMessage =

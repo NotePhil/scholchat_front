@@ -19,14 +19,6 @@ import {
   DialogActions,
   TextField,
   Badge,
-  Modal,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Divider,
-  Avatar,
-  IconButton,
 } from "@mui/material";
 import {
   School as SchoolIcon,
@@ -43,18 +35,13 @@ import {
   Search as SearchIcon,
   Assignment as AssignmentIcon,
   Schedule as ScheduleIcon,
-  Close as CloseIcon,
-  PlayArrow as PlayArrowIcon,
-  VideoCall as VideoCallIcon,
-  AccessTime as AccessTimeIcon,
-  LocationOn as LocationOnIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import { classService } from "../../../../services/ClassService";
 import { coursProgrammerService } from "../../../../services/coursProgrammerService";
 import AccederService from "../../../../services/accederService";
 import ParentClassManagementModal from "./ParentClassManagementModal";
-import VirtualClassroomModal from "./vitualClasse/VirtualClassroomPage";
+import VirtualClassroomPage from "./VirtualClassroomPage";
 
 const StyledCard = styled(Card)(({ theme }) => ({
   height: "100%",
@@ -225,18 +212,6 @@ const EmptyState = styled(Box)(({ theme }) => ({
   boxShadow: "0 10px 40px rgba(0, 0, 0, 0.05)",
 }));
 
-const CourseCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2.5),
-  borderRadius: "12px",
-  border: "1px solid rgba(0, 0, 0, 0.08)",
-  transition: "all 0.2s ease",
-  "&:hover": {
-    transform: "translateY(-2px)",
-    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
-    borderColor: theme.palette.primary.main,
-  },
-}));
-
 const ParentClassManagement = () => {
   const navigate = useNavigate();
   const [allClasses, setAllClasses] = useState([]);
@@ -248,6 +223,7 @@ const ParentClassManagement = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [isRequestMode, setIsRequestMode] = useState(false);
   const [userAccessStatus, setUserAccessStatus] = useState({});
+  const [courseCounts, setCourseCounts] = useState({});
   const [pendingDialog, setPendingDialog] = useState({
     open: false,
     className: "",
@@ -260,11 +236,8 @@ const ParentClassManagement = () => {
   const [activationCode, setActivationCode] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [foundClass, setFoundClass] = useState(null);
-  const [classroomModalOpen, setClassroomModalOpen] = useState(false);
-  const [virtualClassroomOpen, setVirtualClassroomOpen] = useState(false);
-  const [classCourses, setClassCourses] = useState([]);
-  const [courseLoading, setCourseLoading] = useState(false);
-  const [courseCounts, setCourseCounts] = useState({});
+  const [classroomView, setClassroomView] = useState(false);
+  const [selectedClassroom, setSelectedClassroom] = useState(null);
 
   const userId = localStorage.getItem("userId");
   const userEmail = localStorage.getItem("userEmail");
@@ -359,27 +332,6 @@ const ParentClassManagement = () => {
     }
   };
 
-  const fetchClassCourses = async (classId) => {
-    try {
-      setCourseLoading(true);
-      // Fetch all courses for this participant
-      const userCourses =
-        await coursProgrammerService.obtenirProgrammationParParticipant(userId);
-
-      // Filter courses for this specific class
-      const filteredCourses = userCourses.filter(
-        (course) => course.classeId === classId
-      );
-
-      setClassCourses(filteredCourses);
-    } catch (error) {
-      console.error("Error fetching class courses:", error);
-      setClassCourses([]);
-    } finally {
-      setCourseLoading(false);
-    }
-  };
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -452,18 +404,16 @@ const ParentClassManagement = () => {
   }, [userId, navigate]);
 
   const handleClassClick = (classe, isRequest = false) => {
-    if (classe) {
-      setSelectedClass(classe);
-      setIsRequestMode(isRequest);
-      setModalOpen(true);
-    }
+    setSelectedClass(classe);
+    setIsRequestMode(isRequest);
+    setModalOpen(true);
   };
 
-  const handleAccessClick = async (classe) => {
+  const handleAccessClick = (classe) => {
     if (hasApprovedAccess(classe.id)) {
-      // Open the virtual classroom directly
-      setSelectedClass(classe);
-      setVirtualClassroomOpen(true);
+      // Navigate to the classroom view
+      setSelectedClassroom(classe);
+      setClassroomView(true);
     } else if (hasPendingRequest(classe.id)) {
       setPendingDialog({
         open: true,
@@ -541,22 +491,15 @@ const ParentClassManagement = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const handleStartCourse = (courseId) => {
-    // This function is now handled inside the virtual classroom
-    showSnackbar("Redirection vers la classe virtuelle...", "info");
-  };
+  if (classroomView && selectedClassroom) {
+    return (
+      <VirtualClassroomPage
+        classData={selectedClassroom}
+        userId={userId}
+        onBack={() => setClassroomView(false)}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -878,9 +821,9 @@ const ParentClassManagement = () => {
                           variant="contained"
                           fullWidth
                           onClick={() => handleAccessClick(classe)}
-                          startIcon={<VideoCallIcon />}
+                          startIcon={<LoginIcon />}
                         >
-                          Entrer en classe virtuelle
+                          Accéder à la classe
                         </ActionButton>
                       ) : isPending ? (
                         <ActionButton
@@ -915,15 +858,6 @@ const ParentClassManagement = () => {
           classe={selectedClass}
           isRequestMode={isRequestMode}
           onRequestAccess={handleRequestAccess}
-        />
-
-        <VirtualClassroomModal
-          isOpen={virtualClassroomOpen}
-          onClose={() => setVirtualClassroomOpen(false)}
-          selectedClass={selectedClass}
-          userId={userId}
-          coursProgrammerService={coursProgrammerService}
-          classService={classService}
         />
 
         <Dialog

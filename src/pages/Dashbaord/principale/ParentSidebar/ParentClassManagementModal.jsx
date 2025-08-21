@@ -28,8 +28,6 @@ import {
   Phone as PhoneIcon,
   Home as HomeIcon,
   DateRange as DateRangeIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
   PersonAdd as PersonAddIcon,
   VpnKey as VpnKeyIcon,
   Info as InfoIcon,
@@ -44,6 +42,7 @@ const ParentClassManagementModal = ({
   isRequestMode = false,
   activationCode: initialActivationCode = "",
 }) => {
+  // All hooks must be called at the top level before any conditionals
   const [activationCode, setActivationCode] = useState(initialActivationCode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +53,11 @@ const ParentClassManagementModal = ({
       setActivationCode(initialActivationCode);
     }
   }, [initialActivationCode]);
+
+  // Early return after all hooks
+  if (!classe) {
+    return null;
+  }
 
   const handleSubmit = async () => {
     if (!activationCode.trim()) {

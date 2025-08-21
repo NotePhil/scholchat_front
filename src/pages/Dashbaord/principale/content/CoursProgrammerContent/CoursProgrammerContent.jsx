@@ -19,6 +19,7 @@ import { coursProgrammerService } from "../../../../../services/coursProgrammerS
 import CoursProgrammerForm from "./CoursProgrammerForm/CoursProgrammerForm";
 import CoursProgrammerList from "./CoursProgrammerList";
 import CoursProgrammerStats from "./CoursProgrammerStats";
+import CoursProgrammerViewModal from "../../modals/CoursProgrammerViewModal";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 15, 20, 25, 50, 100];
 
@@ -35,6 +36,7 @@ const CoursProgrammerContent = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [pageSize, setPageSize] = useState(10);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedScheduledCourse, setSelectedScheduledCourse] = useState(null);
   const [modalMode, setModalMode] = useState("create");
 
@@ -151,6 +153,11 @@ const CoursProgrammerContent = () => {
     setModalMode("edit");
     setSelectedScheduledCourse(scheduledCourse);
     setShowScheduleModal(true);
+  };
+
+  const handleViewSchedule = (scheduledCourse) => {
+    setSelectedScheduledCourse(scheduledCourse);
+    setShowViewModal(true);
   };
 
   const handleStartCourse = async (scheduledId) => {
@@ -457,6 +464,7 @@ const CoursProgrammerContent = () => {
           scheduledCourses={filteredScheduledCourses}
           viewMode={viewMode}
           onEdit={handleEditSchedule}
+          onView={handleViewSchedule}
           onStart={handleStartCourse}
           onEnd={handleEndCourse}
           onCancel={handleCancelCourse}
@@ -501,6 +509,19 @@ const CoursProgrammerContent = () => {
           classes={classes}
           loading={loading}
         />
+
+        {/* View Modal */}
+        {showViewModal && (
+          <CoursProgrammerViewModal
+            scheduledCourse={selectedScheduledCourse}
+            onClose={() => setShowViewModal(false)}
+            onEdit={handleEditSchedule}
+            onStart={handleStartCourse}
+            onEnd={handleEndCourse}
+            onCancel={handleCancelCourse}
+            classes={classes}
+          />
+        )}
       </div>
     </div>
   );

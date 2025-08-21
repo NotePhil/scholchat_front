@@ -16,24 +16,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import MultiSelectDropdown from "./MultiSelectDropdown";
-
-// Mock accederService
-const accederService = {
-  obtenirUtilisateursAvecAcces: async (classeId) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return [
-      {
-        id: "550e8400-e29b-41d4-a716-446655440300",
-        nomComplet: "Jean Eleve A",
-      },
-      {
-        id: "550e8400-e29b-41d4-a716-446655440302",
-        nomComplet: "Paul Eleve C",
-      },
-    ];
-  },
-};
+import AccederService from "../../../../../../services/accederService";
 
 const schedulingSchema = yup.object().shape({
   coursId: yup.string().required("Le cours est obligatoire"),
@@ -161,17 +144,46 @@ const CoursProgrammerForm = ({
 
       try {
         setLoadingParticipants(true);
-        const participants = await accederService.obtenirUtilisateursAvecAcces(
+        const participants = await AccederService.obtenirUtilisateursAvecAcces(
           classeId
         );
-        const formattedParticipants = participants.map((user) => ({
-          id: user.id,
-          name: user.nomComplet || user.email || `User ${user.id}`,
-        }));
-        setClassParticipants(formattedParticipants);
+
+        // Filter only approved students and format them professionally
+        const approvedStudents = participants
+          .filter((user) => user.etat === "APPROUVEE")
+          .map((user) => {
+            // Get the full name in a professional format
+            const firstName = user.prenom || "";
+            const lastName = user.nom || user.utilisateurNom || "";
+            const fullName = `${firstName} ${lastName}`.trim();
+
+            // Fallback to email or ID if no name is available
+            const displayName =
+              fullName ||
+              user.nomComplet ||
+              user.email ||
+              `User ${user.utilisateurId || user.id}`;
+
+            return {
+              id: user.utilisateurId || user.id,
+              name: displayName,
+              email: user.email || user.utilisateurEmail || "",
+              type: user.type || user.role || "MEMBER",
+              // Keep original data for reference
+              originalData: user,
+            };
+          })
+          // Sort participants alphabetically by name for better UX
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        console.log("Processed participants:", approvedStudents);
+        setClassParticipants(approvedStudents);
       } catch (error) {
         console.error("Error fetching class participants:", error);
         setClassParticipants([]);
+        setSubmitError(
+          "Erreur lors du chargement des participants de la classe"
+        );
       } finally {
         setLoadingParticipants(false);
       }
@@ -259,6 +271,7 @@ const CoursProgrammerForm = ({
   };
 
   const handleParticipantChange = (newSelectedIds) => {
+    console.log("Participant selection changed:", newSelectedIds);
     setSelectedParticipants(newSelectedIds);
     setValue("participantsIds", newSelectedIds, { shouldValidate: true });
   };
@@ -688,20 +701,31 @@ const CoursProgrammerForm = ({
               />
             </div>
 
-            {/* Participants */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                <div className="flex items-center">
-                  <Users2 size={16} className="mr-2 text-indigo-600" />
-                  Participants (optionnel)
-                </div>
-                {!watchedClassId && (
-                  <span className="block text-xs text-amber-600 font-medium mt-1 flex items-center">
-                    <AlertCircle size={12} className="mr-1" />
-                    Sélectionnez d'abord une classe
-                  </span>
+            {/* Participants - Enhanced Section */}
+            <div className="bg-slate-50 p-6 rounded-xl">
+              <div className="flex items-center justify-between mb-4">
+                <label className="block text-sm font-semibold text-slate-700">
+                  <div className="flex items-center">
+                    <Users2 size={16} className="mr-2 text-indigo-600" />
+                    Participants (optionnel)
+                  </div>
+                  {!watchedClassId && (
+                    <span className="block text-xs text-amber-600 font-medium mt-1 flex items-center">
+                      <AlertCircle size={12} className="mr-1" />
+                      Sélectionnez d'abord une classe
+                    </span>
+                  )}
+                </label>
+
+                {/* Participant count display */}
+                {classParticipants.length > 0 && (
+                  <div className="text-sm text-slate-600 bg-white px-3 py-1 rounded-full border">
+                    {selectedParticipants.length} / {classParticipants.length}{" "}
+                    sélectionnés
+                  </div>
                 )}
-              </label>
+              </div>
+
               <MultiSelectDropdown
                 options={classParticipants}
                 selected={selectedParticipants}
@@ -712,6 +736,68 @@ const CoursProgrammerForm = ({
                 disabled={!watchedClassId || loadingParticipants}
                 loading={loadingParticipants}
               />
+
+              {/* Show loading state for participants */}
+              {loadingParticipants && (
+                <div className="mt-2 text-sm text-indigo-600 flex items-center">
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-indigo-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Chargement des participants...
+                </div>
+              )}
+
+              {/* Show selected participants preview */}
+              {selectedParticipants.length > 0 &&
+                classParticipants.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-sm font-medium text-slate-700 mb-2">
+                      Participants sélectionnés :
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedParticipants
+                        .map((id) => classParticipants.find((p) => p.id === id))
+                        .filter(Boolean)
+                        .slice(0, 10) // Show max 10 participants to avoid overflow
+                        .map((participant) => (
+                          <span
+                            key={participant.id}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200"
+                          >
+                            {participant.name}
+                            {participant.email && (
+                              <span className="ml-1 text-indigo-600">
+                                ({participant.email.split("@")[0]})
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      {selectedParticipants.length > 10 && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                          +{selectedParticipants.length - 10} autres
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
               {errors.participantsIds && (
                 <p className="mt-1 text-sm text-red-600 flex items-center">
                   <AlertCircle size={14} className="mr-1" />
