@@ -186,7 +186,7 @@ const Sidebar = ({
           icon: Book,
           dropdown: "courses",
           items: [
-            { name: "Créer un Cours", tab: "create-course" },
+            { name: "Cours", tab: "create-course" },
             { name: "Programmer le Cours", tab: "schedule-course" },
           ],
         },
