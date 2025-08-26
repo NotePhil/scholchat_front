@@ -689,4 +689,5 @@ const CourseFormModal = ({
   );
 };
 
+
 export default CourseFormModal;
