@@ -48,9 +48,30 @@ class CoursService {
         coursData.restriction = "PRIVE";
       }
 
-      const response = await coursApi.post("/cours", coursData);
+      const formattedData = {
+        titre: coursData.titre,
+        description: coursData.description,
+        etat: coursData.etat,
+        restriction: coursData.restriction,
+        references: coursData.references || "",
+        redacteurId: coursData.redacteurId,
+        matieres: coursData.matieres.map((matiere) => ({
+          id: matiere.id,
+        })),
+        chapitres: coursData.chapitres.map((chapitre) => ({
+          titre: chapitre.titre,
+          description: chapitre.description || "",
+          ordre: chapitre.ordre,
+          contenu: chapitre.contenu,
+        })),
+      };
+
+      console.log("Sending to API:", JSON.stringify(formattedData, null, 2));
+
+      const response = await coursApi.post("/cours", formattedData);
       return response.data;
     } catch (error) {
+      console.error("Create course error:", error);
       this.handleError(error);
     }
   }
@@ -108,9 +129,31 @@ class CoursService {
       if (!coursId) {
         throw new Error("Course ID is required");
       }
-      const response = await coursApi.put(`/cours/${coursId}`, updates);
+
+      const formattedData = {
+        titre: updates.titre,
+        description: updates.description,
+        etat: updates.etat || "BROUILLON",
+        restriction: updates.restriction,
+        references: updates.references || "",
+        redacteurId: updates.redacteurId,
+        matieres: updates.matieres.map((matiere) => ({
+          id: matiere.id,
+        })),
+        chapitres: updates.chapitres.map((chapitre) => ({
+          titre: chapitre.titre,
+          description: chapitre.description || "",
+          ordre: chapitre.ordre,
+          contenu: chapitre.contenu,
+        })),
+      };
+
+      console.log("Updating course:", JSON.stringify(formattedData, null, 2));
+
+      const response = await coursApi.put(`/cours/${coursId}`, formattedData);
       return response.data;
     } catch (error) {
+      console.error("Update course error:", error);
       this.handleError(error);
     }
   }
@@ -207,11 +250,23 @@ class CoursService {
       const errorMessage =
         error.response.data?.message ||
         error.response.data?.error ||
-        "An error occurred";
+        `HTTP ${error.response.status}: ${error.response.statusText}`;
+
+      console.error("API Error Response:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers,
+      });
+
       throw new Error(errorMessage);
     } else if (error.request) {
-      throw new Error("Network error. Please check your connection.");
+      console.error("Network Error:", error.request);
+      throw new Error(
+        "Network error. Please check your connection and server status."
+      );
     } else {
+      console.error("Request Setup Error:", error.message);
       throw new Error("Request setup error: " + error.message);
     }
   }

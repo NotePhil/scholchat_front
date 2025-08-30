@@ -13,6 +13,7 @@ const activityFeedApi = axios.create({
 activityFeedApi.interceptors.request.use(
   (config) => {
     const token =
+      localStorage.getItem("accessToken") ||
       localStorage.getItem("authToken") ||
       localStorage.getItem("cmr.notep.business.business.token");
     if (token) {
@@ -26,68 +27,42 @@ activityFeedApi.interceptors.request.use(
 );
 
 class ActivityFeedService {
-  // Method to get current user - this was missing!
+  // Get current user with proper UUID
   getCurrentUser() {
     try {
-      // Get user data from localStorage - check multiple possible keys
-      const possibleKeys = ["userData", "currentUser", "user"];
-      let userData = null;
+      // Get the real user ID from localStorage (UUID from auth response)
+      const userId = localStorage.getItem("userId");
+      const userEmail = localStorage.getItem("userEmail");
+      const username = localStorage.getItem("username");
+      const userRole = localStorage.getItem("userRole");
 
-      for (const key of possibleKeys) {
-        const data = localStorage.getItem(key);
-        if (data) {
-          try {
-            userData = JSON.parse(data);
-            break;
-          } catch (e) {
-            continue;
-          }
-        }
-      }
+      // Fallback to decoded token if direct storage not available
+      const decodedToken = JSON.parse(
+        localStorage.getItem("decodedToken") || "{}"
+      );
+      const authResponse = JSON.parse(
+        localStorage.getItem("authResponse") || "{}"
+      );
 
-      // If no userData found, try to construct from individual localStorage items
-      if (!userData) {
-        const userId = localStorage.getItem("userId");
-        const userEmail =
-          localStorage.getItem("userEmail") || localStorage.getItem("email");
-        const username =
-          localStorage.getItem("username") || localStorage.getItem("name");
-        const userRole =
-          localStorage.getItem("userRole") || localStorage.getItem("role");
-
-        if (userId && userEmail) {
-          userData = {
-            id: userId,
-            email: userEmail,
-            name: username || "User",
-            role: userRole || "student",
-          };
-        }
-      }
-
-      if (userData) {
-        return {
-          id: userData.id,
-          name: userData.name || userData.username || "User",
-          email: userData.email,
-          role: userData.role || "student",
-          avatar: userData.avatar || "/api/placeholder/48/48",
-        };
-      }
-
-      // Return a default user if no user data found
       return {
-        id: "user_1",
-        name: "Current User",
-        email: "user@example.com",
-        role: "student",
+        id: userId || authResponse.userId || "unknown", // Use actual UUID
+        name:
+          username ||
+          authResponse.username ||
+          userEmail?.split("@")[0] ||
+          "Current User",
+        email:
+          userEmail ||
+          decodedToken.sub ||
+          authResponse.userEmail ||
+          "user@example.com",
+        role: userRole || authResponse.userType || "student",
         avatar: "/api/placeholder/48/48",
       };
     } catch (error) {
       console.error("Error getting current user:", error);
-      // Return default user on error
       return {
-        id: "user_1",
+        id: "unknown",
         name: "Current User",
         email: "user@example.com",
         role: "student",
@@ -96,342 +71,486 @@ class ActivityFeedService {
     }
   }
 
-  // Method to get a valid professor ID - referenced in CreateEventModal
-  getValidProfessorId() {
-    // Get the real user ID from localStorage
+  // Get valid user ID for API calls
+  getValidUserId() {
     const userId = localStorage.getItem("userId");
-    const userRole = localStorage.getItem("userRole");
-
-    if (userId && (userRole === "professor" || userRole === "admin")) {
-      console.log("Using real professor ID:", userId);
-      return userId;
-    }
-
-    const currentUser = this.getCurrentUser();
-
-    // If current user is a professor, use their ID
-    if (currentUser.role === "professor" || currentUser.role === "admin") {
-      console.log("Using current user ID:", currentUser.id);
-      return currentUser.id;
-    }
-
-    // Log warning and return the real user ID anyway (fallback)
-    console.warn(
-      "User role not professor, but using their ID anyway:",
-      userId || currentUser.id
+    const authResponse = JSON.parse(
+      localStorage.getItem("authResponse") || "{}"
     );
-    return userId || currentUser.id;
+
+    const finalUserId = userId || authResponse.userId;
+
+    // Validation: Ensure we have a valid UUID, not an email
+    if (!finalUserId || finalUserId.includes("@") || finalUserId === "user_1") {
+      console.error("Invalid or missing userId detected:", finalUserId);
+      throw new Error("Authentication error: Invalid user ID");
+    }
+
+    return finalUserId;
   }
 
-  // Method to get activities - referenced in ActivitiesContent
+  // Get all activities with proper data structure
   async getActivities(filter = "all") {
     try {
       console.log("Fetching activities with filter:", filter);
 
-      let endpoint = "/evenements";
+      const [eventsResponse, interactionsResponse] = await Promise.all([
+        activityFeedApi.get("/evenements").catch((err) => {
+          console.warn("Failed to fetch events:", err);
+          return { data: [] };
+        }),
+        activityFeedApi.get("/interactions").catch((err) => {
+          console.warn("Failed to fetch interactions:", err);
+          return { data: [] };
+        }),
+      ]);
 
-      // Apply filter if needed
-      if (filter !== "all") {
-        endpoint += `?type=${filter}`;
-      }
+      const events = eventsResponse.data || [];
+      const interactions = interactionsResponse.data || [];
 
-      const response = await activityFeedApi.get(endpoint);
-      console.log("Raw events response:", response.data);
+      console.log("Fetched events:", events.length);
+      console.log("Fetched interactions:", interactions.length);
 
-      const events = response.data;
+      // Transform events to activities
+      const eventActivities = events.map((event) =>
+        this.transformEventToActivity(event)
+      );
 
-      // Handle case where backend returns empty or null data
-      if (!events || (Array.isArray(events) && events.length === 0)) {
-        console.log("No events found, returning empty array");
-        return [];
-      }
+      // Transform interactions to activities
+      const interactionActivities = interactions.map((interaction) =>
+        this.transformInteractionToActivity(interaction)
+      );
 
-      // Transform events to activities format
-      const activities = this.transformEventsToActivities(events);
-      console.log("Transformed activities:", activities);
+      // Combine and sort by timestamp
+      const allActivities = [...eventActivities, ...interactionActivities].sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+      );
 
-      return activities;
+      console.log("Total activities before filter:", allActivities.length);
+
+      const filteredActivities = this.applyFilter(allActivities, filter);
+
+      console.log("Activities after filter:", filteredActivities.length);
+
+      return filteredActivities;
     } catch (error) {
       console.error("Failed to fetch activities:", error);
 
-      // If it's a network error, return empty array instead of throwing
-      if (error.code === "NETWORK_ERROR" || error.request) {
-        console.warn("Network error, returning empty activities list");
-        return [];
-      }
-
-      // For other errors, still throw so the UI can show an error message
-      this.handleError(error);
+      // Return mock data for development
+      return this.getMockActivities(filter);
     }
   }
 
-  // Transform events to activities format
-  transformEventsToActivities(events) {
-    if (!Array.isArray(events)) {
-      console.warn("Events is not an array:", events);
-      return [];
-    }
+  // Mock data for development/testing
+  getMockActivities(filter) {
+    const currentUser = this.getCurrentUser();
 
-    return events.map((event) => {
-      // Get creator info from localStorage or default
-      const currentUser = this.getCurrentUser();
-
-      return {
-        id: event.id,
+    const mockActivities = [
+      {
+        id: "event_1",
         type: "event",
         user: {
-          id: event.createurId || currentUser.id,
-          name: currentUser.name || "Event Creator",
-          role: currentUser.role || "professor",
+          id: "prof_1",
+          name: "Dr. Sarah Johnson",
+          role: "professor",
           avatar: "/api/placeholder/48/48",
         },
-        timestamp: this.formatTimestamp(event.heureDebut),
-        content: `New event: ${event.titre}`,
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+        content: "Physics Lab Session - Quantum Mechanics Experiments",
         eventDetails: {
-          title: event.titre,
-          description: event.description,
-          location: event.lieu,
-          status: event.etat,
-          startTime: event.heureDebut,
-          endTime: event.heureFin,
-          participantsCount: event.participantsIds?.length || 0,
+          title: "Advanced Physics Lab",
+          description:
+            "Hands-on experiments with quantum mechanics principles. Students will work with interferometry and wave-particle duality demonstrations.",
+          location: "Science Building - Lab 204",
+          status: "PLANIFIE",
+          startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // tomorrow
+          endTime: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
+          participantsCount: 24,
         },
-        media: event.medias || [],
-        likes: Math.floor(Math.random() * 10), // Mock data
-        comments: [], // Mock data
-        commentsCount: 0,
-      };
-    });
+        media: [
+          {
+            id: "1",
+            fileName: "lab-equipment.jpg",
+            filePath: "/api/placeholder/400/300",
+            type: "IMAGE",
+          },
+        ],
+        likes: 15,
+        comments: [
+          {
+            id: "c1",
+            content: "Can't wait for this session!",
+            user: {
+              id: "student_1",
+              name: "Alex Chen",
+              avatar: "/api/placeholder/32/32",
+            },
+            timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+          },
+        ],
+        shares: 3,
+        isLiked: false,
+        isShared: false,
+      },
+      {
+        id: "interaction_1",
+        type: "post",
+        user: {
+          id: currentUser.id,
+          name: currentUser.name,
+          role: currentUser.role,
+          avatar: currentUser.avatar,
+        },
+        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+        content:
+          "Just finished the machine learning assignment! The neural network architecture was fascinating. Looking forward to implementing it in real projects.",
+        likes: 28,
+        comments: [
+          {
+            id: "c2",
+            content: "Great work! Which framework did you use?",
+            user: {
+              id: "student_2",
+              name: "Emma Wilson",
+              avatar: "/api/placeholder/32/32",
+            },
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          },
+        ],
+        shares: 5,
+        isLiked: true,
+        isShared: false,
+      },
+      {
+        id: "event_2",
+        type: "event",
+        user: {
+          id: "prof_2",
+          name: "Prof. Michael Brown",
+          role: "professor",
+          avatar: "/api/placeholder/48/48",
+        },
+        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
+        content: "Annual Science Fair - Registration Open",
+        eventDetails: {
+          title: "Annual Science Fair 2025",
+          description:
+            "Present your innovative projects and compete for exciting prizes. Open to all students across all departments.",
+          location: "Main Auditorium",
+          status: "PLANIFIE",
+          startTime: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000
+          ).toISOString(), // next week
+          endTime: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000 + 8 * 60 * 60 * 1000
+          ).toISOString(),
+          participantsCount: 120,
+        },
+        media: [
+          {
+            id: "2",
+            fileName: "science-fair-poster.jpg",
+            filePath: "/api/placeholder/400/300",
+            type: "IMAGE",
+          },
+          {
+            id: "3",
+            fileName: "prizes.jpg",
+            filePath: "/api/placeholder/400/300",
+            type: "IMAGE",
+          },
+        ],
+        likes: 45,
+        comments: [],
+        shares: 12,
+        isLiked: false,
+        isShared: false,
+      },
+      {
+        id: "post_1",
+        type: "post",
+        user: {
+          id: "student_3",
+          name: "Maya Patel",
+          role: "student",
+          avatar: "/api/placeholder/48/48",
+        },
+        timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
+        content:
+          "Study group forming for the upcoming calculus exam! We're meeting at the library every Tuesday and Thursday at 6 PM. All levels welcome!",
+        likes: 22,
+        comments: [
+          {
+            id: "c3",
+            content:
+              "Count me in! I really need help with integration techniques.",
+            user: {
+              id: "student_4",
+              name: "James Rodriguez",
+              avatar: "/api/placeholder/32/32",
+            },
+            timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "c4",
+            content: "Perfect timing! I was looking for a study group.",
+            user: {
+              id: "student_5",
+              name: "Lily Zhang",
+              avatar: "/api/placeholder/32/32",
+            },
+            timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+          },
+        ],
+        shares: 7,
+        isLiked: false,
+        isShared: false,
+      },
+    ];
+
+    return this.applyFilter(mockActivities, filter);
   }
 
-  // Method to like an activity
+  // Transform event to activity
+  transformEventToActivity(event) {
+    const currentUser = this.getCurrentUser();
+
+    return {
+      id: event.id,
+      type: "event",
+      user: {
+        id: event.createurId || currentUser.id,
+        name: event.createurNom || "Event Creator",
+        role: "professor",
+        avatar: "/api/placeholder/48/48",
+      },
+      timestamp:
+        event.heureDebut || event.dateCreation || new Date().toISOString(),
+      content: `${event.titre}: ${event.description || "New event created"}`,
+      eventDetails: {
+        title: event.titre,
+        description: event.description,
+        location: event.lieu,
+        status: event.etat,
+        startTime: event.heureDebut,
+        endTime: event.heureFin,
+        participantsCount: event.participantsIds?.length || 0,
+      },
+      media: event.medias || [],
+      likes: event.likesCount || Math.floor(Math.random() * 50),
+      comments: event.comments || [],
+      shares: event.sharesCount || Math.floor(Math.random() * 20),
+      isLiked: false,
+      isShared: false,
+    };
+  }
+
+  // Transform interaction to activity
+  transformInteractionToActivity(interaction) {
+    const currentUser = this.getCurrentUser();
+
+    return {
+      id: interaction.id,
+      type: interaction.type === "COMMENT" ? "post" : "interaction",
+      user: {
+        id: interaction.createdById || currentUser.id,
+        name: interaction.createdByName || "User",
+        role: interaction.createdByRole || "user",
+        avatar: "/api/placeholder/48/48",
+      },
+      timestamp: interaction.creationDate || new Date().toISOString(),
+      content: interaction.content,
+      interactionType: interaction.type,
+      likes: interaction.likesCount || Math.floor(Math.random() * 30),
+      comments: interaction.comments || [],
+      shares: interaction.sharesCount || Math.floor(Math.random() * 10),
+      isLiked: false,
+      isShared: false,
+    };
+  }
+
+  // Apply filters with proper logic
+  applyFilter(activities, filter) {
+    switch (filter) {
+      case "events":
+        return activities.filter((activity) => activity.type === "event");
+      case "posts":
+        return activities.filter((activity) => activity.type === "post");
+      case "interactions":
+        return activities.filter(
+          (activity) =>
+            activity.type === "interaction" || activity.type === "post"
+        );
+      case "popular":
+        return activities.filter((activity) => activity.likes > 20);
+      case "recent":
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return activities.filter(
+          (activity) => new Date(activity.timestamp) > oneDayAgo
+        );
+      default:
+        return activities;
+    }
+  }
+
+  // Like an activity
   async likeActivity(activityId) {
     try {
-      // Since your API doesn't have a like endpoint, we'll mock this
-      console.log(`Liked activity ${activityId}`);
+      const interaction = {
+        type: "LIKE",
+        content: "liked this",
+        createdById: this.getValidUserId(), // Use real UUID
+        eventId: activityId,
+      };
+
+      console.log("Sending like interaction:", interaction);
+      await activityFeedApi.post("/interactions", interaction);
       return true;
     } catch (error) {
-      this.handleError(error);
+      console.error("Failed to like activity:", error);
+      return false;
     }
   }
 
-  // Method to share an activity
-  async shareActivity(activityId) {
-    try {
-      // Mock share functionality
-      console.log(`Shared activity ${activityId}`);
-      return true;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  // Method to join an event
-  async joinEvent(eventId) {
-    try {
-      // Mock join event functionality
-      console.log(`Joined event ${eventId}`);
-      return true;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  // Method to comment on activity
+  // Comment on activity
   async commentOnActivity(activityId, comment) {
     try {
-      // Mock comment functionality
-      console.log(`Comment on activity ${activityId}: ${comment}`);
-      return {
-        id: Date.now(),
+      const interaction = {
+        type: "COMMENT",
         content: comment,
-        user: this.getCurrentUser(),
-        timestamp: new Date().toLocaleString(),
+        createdById: this.getValidUserId(), // Use real UUID
+        eventId: activityId,
+      };
+
+      console.log("Sending comment interaction:", interaction);
+      const response = await activityFeedApi.post("/interactions", interaction);
+
+      const currentUser = this.getCurrentUser();
+      return {
+        id: response.data.id || Date.now().toString(),
+        content: comment,
+        user: currentUser,
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      this.handleError(error);
+      console.error("Failed to comment:", error);
+      throw new Error("Failed to post comment");
     }
   }
 
-  // Method to create event (alias for creerEvenement)
-  async createEvent(eventData) {
-    return this.creerEvenement(eventData);
+  // Share activity
+  async shareActivity(activityId) {
+    try {
+      const interaction = {
+        type: "SHARE",
+        content: "shared this",
+        createdById: this.getValidUserId(), // Use real UUID
+        eventId: activityId,
+      };
+
+      console.log("Sending share interaction:", interaction);
+      await activityFeedApi.post("/interactions", interaction);
+      return true;
+    } catch (error) {
+      console.error("Failed to share:", error);
+      return false;
+    }
   }
 
-  // Method to upload media
-  async uploadMedia(file, type = "IMAGE", context = "EVENT") {
+  // Join event
+  async joinEvent(eventId) {
+    try {
+      const interaction = {
+        type: "JOIN",
+        content: "joined this event",
+        createdById: this.getValidUserId(), // Use real UUID
+        eventId: eventId,
+      };
+
+      console.log("Sending join interaction:", interaction);
+      await activityFeedApi.post("/interactions", interaction);
+      return true;
+    } catch (error) {
+      console.error("Failed to join event:", error);
+      return false;
+    }
+  }
+
+  // Create event
+  async createEvent(eventData) {
+    try {
+      const eventPayload = {
+        ...eventData,
+        createurId: this.getValidUserId(), // Use real UUID
+      };
+
+      console.log("Creating event with payload:", eventPayload);
+      const response = await activityFeedApi.post("/evenements", eventPayload);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to create event:", error);
+      throw new Error("Failed to create event");
+    }
+  }
+
+  // Upload media
+  async uploadMedia(file, type = "IMAGE") {
     try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("type", type);
-      formData.append("context", context);
 
-      // Since your API might not have a media upload endpoint,
-      // we'll create a mock response with required fields
-      const mockMedia = {
+      // For now, return mock upload response
+      return {
         id: Date.now().toString(),
         fileName: file.name,
         contentType: file.type,
         fileSize: file.size,
-        filePath: URL.createObjectURL(file), // Create a temporary URL for preview
-        bucketName: "default-bucket", // Required field to avoid null constraint
+        filePath: URL.createObjectURL(file),
+        bucketName: "events-bucket",
         type: type,
-        context: context,
       };
-
-      console.log("Mock media upload:", mockMedia);
-      return mockMedia;
     } catch (error) {
-      this.handleError(error);
+      console.error("Failed to upload media:", error);
+      throw new Error("Failed to upload media");
     }
   }
 
-  // Utility methods for formatting
-  formatEventDateTime(dateTime) {
-    try {
-      return new Date(dateTime).toLocaleString();
-    } catch (error) {
-      return "Invalid date";
-    }
-  }
-
+  // Format timestamp
   formatTimestamp(dateTime) {
-    try {
-      const date = new Date(dateTime);
-      const now = new Date();
-      const diff = now - date;
+    const date = new Date(dateTime);
+    const now = new Date();
+    const diff = now - date;
 
-      if (diff < 60000) return "Just now";
-      if (diff < 3600000) return `${Math.floor(diff / 60000)} minutes ago`;
-      if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
-      return `${Math.floor(diff / 86400000)} days ago`;
-    } catch (error) {
-      return "Unknown time";
-    }
+    if (diff < 60000) return "Just now";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)}d`;
+    return date.toLocaleDateString();
   }
 
+  // Get status color
   getStatusColor(status) {
-    switch (status) {
-      case "A_VENIR":
-        return "bg-blue-100 text-blue-800";
-      case "EN_COURS":
-        return "bg-green-100 text-green-800";
-      case "TERMINE":
-        return "bg-gray-100 text-gray-800";
-      case "ANNULE":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+    const statusMap = {
+      PLANIFIE: "bg-blue-100 text-blue-800",
+      EN_COURS: "bg-green-100 text-green-800",
+      TERMINE: "bg-gray-100 text-gray-800",
+      ANNULE: "bg-red-100 text-red-800",
+      default: "bg-gray-100 text-gray-800",
+    };
+    return statusMap[status] || statusMap.default;
   }
 
+  // Get status label
   getStatusLabel(status) {
-    switch (status) {
-      case "A_VENIR":
-        return "Upcoming";
-      case "EN_COURS":
-        return "In Progress";
-      case "TERMINE":
-        return "Completed";
-      case "ANNULE":
-        return "Cancelled";
-      default:
-        return "Unknown";
-    }
-  }
-
-  // Existing methods
-  async creerEvenement(evenementData) {
-    try {
-      if (
-        !evenementData.titre ||
-        !evenementData.heureDebut ||
-        !evenementData.createurId
-      ) {
-        throw new Error(
-          "Missing required fields: titre, heureDebut, or createurId"
-        );
-      }
-      const response = await activityFeedApi.post("/evenements", evenementData);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async obtenirTousEvenements() {
-    try {
-      const response = await activityFeedApi.get("/evenements");
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async mettreAJourEvenement(id, evenementData) {
-    try {
-      if (!id) {
-        throw new Error("Event ID is required");
-      }
-      const response = await activityFeedApi.put(
-        `/evenements/${id}`,
-        evenementData
-      );
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async supprimerEvenement(id) {
-    try {
-      if (!id) {
-        throw new Error("Event ID is required");
-      }
-      await activityFeedApi.delete(`/evenements/${id}`);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async obtenirEvenementParId(id) {
-    try {
-      if (!id) {
-        throw new Error("Event ID is required");
-      }
-      const response = await activityFeedApi.get(`/evenements/${id}`);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async obtenirEvenementsParProfesseur(professeurId) {
-    try {
-      if (!professeurId) {
-        throw new Error("Professor ID is required");
-      }
-      const response = await activityFeedApi.get(
-        `/evenements/professeur/${professeurId}`
-      );
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  handleError(error) {
-    if (error.response) {
-      const errorMessage =
-        error.response.data?.message ||
-        error.response.data?.error ||
-        "An error occurred";
-      throw new Error(errorMessage);
-    } else if (error.request) {
-      throw new Error("Network error. Please check your connection.");
-    } else {
-      throw new Error("Request setup error: " + error.message);
-    }
+    const statusMap = {
+      PLANIFIE: "Scheduled",
+      EN_COURS: "Live",
+      TERMINE: "Completed",
+      ANNULE: "Cancelled",
+      default: "Scheduled",
+    };
+    return statusMap[status] || statusMap.default;
   }
 }
 

@@ -41,9 +41,7 @@ import CourseTableRow from "./CourseTableRow";
 
 const COURSE_STATES = {
   BROUILLON: "BROUILLON",
-  EN_ATTENTE_VALIDATION: "EN_ATTENTE_VALIDATION",
   PUBLIE: "PUBLIE",
-  ARCHIVE: "ARCHIVE",
 };
 
 const ProfessorCoursesContent = () => {
@@ -255,7 +253,7 @@ const ProfessorCoursesContent = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
@@ -291,27 +289,6 @@ const ProfessorCoursesContent = () => {
             <div className="mt-4 flex items-center">
               <Activity className="w-4 h-4 text-slate-400 mr-2" />
               <span className="text-slate-500 text-sm">Non publiés</span>
-            </div>
-          </div>
-
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-medium">En attente</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1">
-                  {
-                    courses.filter((c) => c.etat === "EN_ATTENTE_VALIDATION")
-                      .length
-                  }
-                </p>
-              </div>
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl">
-                <Clock className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center">
-              <Calendar className="w-4 h-4 text-slate-400 mr-2" />
-              <span className="text-slate-500 text-sm">En validation</span>
             </div>
           </div>
 
@@ -363,9 +340,7 @@ const ProfessorCoursesContent = () => {
                 >
                   <option value="all">Tous les statuts</option>
                   <option value="BROUILLON">Brouillon</option>
-                  <option value="EN_ATTENTE_VALIDATION">En attente</option>
                   <option value="PUBLIE">Publié</option>
-                  <option value="ARCHIVE">Archivé</option>
                 </select>
                 <ChevronDown
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
@@ -432,7 +407,7 @@ const ProfessorCoursesContent = () => {
                       Matière
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Planning
+                      Dates
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Statut

@@ -2,7 +2,16 @@ import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { X, Plus, Trash2, Move, ChevronUp, ChevronDown } from "lucide-react";
+import {
+  X,
+  Plus,
+  Trash2,
+  Edit3,
+  Save,
+  ChevronUp,
+  ChevronDown,
+  XCircle,
+} from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 
@@ -10,7 +19,6 @@ const chapterSchema = yup.object().shape({
   titre: yup.string().required("Le titre du chapitre est requis"),
   description: yup.string(),
   contenu: yup.string().required("Le contenu du chapitre est requis"),
-  matiereId: yup.string().required("La matière est requise"),
   ordre: yup.number().required(),
 });
 
@@ -29,33 +37,17 @@ const courseSchema = yup.object().shape({
     .min(1, "Au moins un chapitre est requis"),
 });
 
-// Rich Text Editor Component
 const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
   const editorRef = useRef(null);
 
-  // Convert HTML to display text and vice versa
-  const htmlToText = (html) => {
-    if (!html) return "";
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || tempDiv.innerText || "";
-  };
-
-  const textToHtml = (text) => {
-    return text.replace(/\n/g, "<br>");
-  };
-
-  // Handle formatting commands
   const execCommand = (command, value = null) => {
     document.execCommand(command, false, value);
     handleContentChange();
   };
 
-  // Handle content changes
   const handleContentChange = () => {
     if (editorRef.current) {
       const htmlContent = editorRef.current.innerHTML;
-      // Clean up the HTML and convert <div> to <br> for consistency
       const cleanedContent = htmlContent
         .replace(/<div>/g, "<br>")
         .replace(/<\/div>/g, "")
@@ -65,16 +57,13 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
     }
   };
 
-  // Initialize editor content
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
-      // Convert newlines back to <br> for display
       const displayContent = value.replace(/\n/g, "<br>");
       editorRef.current.innerHTML = displayContent;
     }
   }, [value]);
 
-  // Handle paste events to clean up pasted content
   const handlePaste = (e) => {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
@@ -83,13 +72,12 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
-      {/* Toolbar */}
       <div className="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap gap-1">
         <button
           type="button"
           onClick={() => execCommand("bold")}
           className="p-2 hover:bg-slate-200 rounded text-slate-600 font-bold"
-          title="Gras (Ctrl+B)"
+          title="Gras"
         >
           B
         </button>
@@ -97,7 +85,7 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
           type="button"
           onClick={() => execCommand("italic")}
           className="p-2 hover:bg-slate-200 rounded text-slate-600 italic"
-          title="Italique (Ctrl+I)"
+          title="Italique"
         >
           I
         </button>
@@ -105,7 +93,7 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
           type="button"
           onClick={() => execCommand("underline")}
           className="p-2 hover:bg-slate-200 rounded text-slate-600 underline"
-          title="Souligné (Ctrl+U)"
+          title="Souligné"
         >
           U
         </button>
@@ -141,7 +129,6 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
         </button>
       </div>
 
-      {/* Editor */}
       <div
         ref={editorRef}
         contentEditable
@@ -180,6 +167,517 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
   );
 };
 
+const ChapterCard = ({
+  chapter,
+  index,
+  isEditing,
+  editData,
+  onEdit,
+  onSave,
+  onCancel,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+  onEditDataChange,
+}) => {
+  const [errors, setErrors] = useState({});
+
+  const truncateText = (text, length) => {
+    if (text.length <= length) return text;
+    return text.substring(0, length) + "...";
+  };
+
+  const getPlainText = (html) => {
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    return div.textContent || div.innerText || "";
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!editData.titre.trim()) {
+      newErrors.titre = "Le titre est requis";
+    }
+    if (!editData.contenu.replace(/<[^>]*>/g, "").trim()) {
+      newErrors.contenu = "Le contenu est requis";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = () => {
+    if (validateForm()) {
+      onSave({
+        ...editData,
+        ordre: index + 1,
+      });
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="bg-white border-2 border-indigo-300 rounded-lg p-6 shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-lg font-semibold text-slate-900">
+            Modifier le Chapitre {index + 1}
+          </h4>
+          <button
+            onClick={onCancel}
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Annuler"
+          >
+            <XCircle size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Titre du chapitre *
+            </label>
+            <input
+              type="text"
+              value={editData.titre}
+              onChange={(e) =>
+                onEditDataChange({ ...editData, titre: e.target.value })
+              }
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                errors.titre ? "border-red-300" : "border-slate-200"
+              }`}
+              placeholder="Titre du chapitre"
+            />
+            {errors.titre && (
+              <p className="mt-1 text-sm text-red-600">{errors.titre}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Description du chapitre
+            </label>
+            <textarea
+              value={editData.description}
+              onChange={(e) =>
+                onEditDataChange({ ...editData, description: e.target.value })
+              }
+              rows={2}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Description du chapitre"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Contenu du chapitre *
+            </label>
+            <RichTextEditor
+              value={editData.contenu}
+              onChange={(content) =>
+                onEditDataChange({ ...editData, contenu: content })
+              }
+              placeholder="Contenu détaillé du chapitre..."
+              chapterIndex={index}
+            />
+            {errors.contenu && (
+              <p className="mt-1 text-sm text-red-600">{errors.contenu}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-3 mt-6">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            <Save size={16} />
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow relative group">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2 py-1 rounded-full">
+              Chapitre {index + 1}
+            </span>
+          </div>
+          <h4 className="font-semibold text-slate-900 text-sm mb-1">
+            {truncateText(chapter.titre, 40)}
+          </h4>
+          {chapter.description && (
+            <p className="text-slate-600 text-xs mb-2">
+              {truncateText(chapter.description, 60)}
+            </p>
+          )}
+          <p className="text-slate-500 text-xs">
+            {truncateText(getPlainText(chapter.contenu), 80)}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 ml-3">
+          {canMoveUp && (
+            <button
+              onClick={onMoveUp}
+              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+              title="Déplacer vers le haut"
+            >
+              <ChevronUp size={14} />
+            </button>
+          )}
+          {canMoveDown && (
+            <button
+              onClick={onMoveDown}
+              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+              title="Déplacer vers le bas"
+            >
+              <ChevronDown size={14} />
+            </button>
+          )}
+          <button
+            onClick={onEdit}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+            title="Modifier"
+          >
+            <Edit3 size={14} />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Supprimer"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ChapterForm = ({ onSave, onCancel, totalChapters }) => {
+  const [formData, setFormData] = useState({
+    titre: "",
+    description: "",
+    contenu: "",
+  });
+
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.titre.trim()) {
+      newErrors.titre = "Le titre est requis";
+    }
+    if (!formData.contenu.replace(/<[^>]*>/g, "").trim()) {
+      newErrors.contenu = "Le contenu est requis";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = () => {
+    if (validateForm()) {
+      onSave({
+        ...formData,
+        ordre: totalChapters + 1,
+      });
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl p-6 border-2 border-indigo-200 shadow-sm">
+      <div className="flex items-center justify-between mb-6">
+        <h4 className="text-lg font-semibold text-slate-900">
+          Nouveau Chapitre {totalChapters + 1}
+        </h4>
+        <button
+          onClick={onCancel}
+          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Annuler"
+        >
+          <XCircle size={18} />
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Titre du chapitre *
+          </label>
+          <input
+            type="text"
+            value={formData.titre}
+            onChange={(e) =>
+              setFormData({ ...formData, titre: e.target.value })
+            }
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.titre ? "border-red-300" : "border-slate-200"
+            }`}
+            placeholder="Titre du chapitre"
+          />
+          {errors.titre && (
+            <p className="mt-1 text-sm text-red-600">{errors.titre}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Description du chapitre
+          </label>
+          <textarea
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+            rows={2}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="Description du chapitre"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Contenu du chapitre *
+          </label>
+          <RichTextEditor
+            value={formData.contenu}
+            onChange={(content) =>
+              setFormData({ ...formData, contenu: content })
+            }
+            placeholder="Contenu détaillé du chapitre..."
+            chapterIndex={totalChapters}
+          />
+          {errors.contenu && (
+            <p className="mt-1 text-sm text-red-600">{errors.contenu}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-3 mt-6">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-lg hover:bg-slate-50"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+        >
+          <Save size={16} />
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const GeneralInfoSection = ({
+  register,
+  errors,
+  subjects,
+  selectedMatiereIds,
+  handleMatiereChange,
+  setValue,
+}) => {
+  return (
+    <div className="bg-slate-50 rounded-xl p-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-4">
+        Informations générales
+      </h3>
+
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <label
+            htmlFor="titre"
+            className="block text-sm font-medium text-slate-700 mb-2"
+          >
+            Titre du cours *
+          </label>
+          <input
+            id="titre"
+            type="text"
+            {...register("titre")}
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
+              errors.titre ? "border-red-300" : "border-slate-200"
+            }`}
+            placeholder="Introduction à la programmation"
+          />
+          {errors.titre && (
+            <p className="mt-2 text-sm text-red-600">{errors.titre.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="restriction"
+            className="block text-sm font-medium text-slate-700 mb-2"
+          >
+            Visibilité *
+          </label>
+          <select
+            id="restriction"
+            {...register("restriction")}
+            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+          >
+            <option value="PRIVE">Privé</option>
+            <option value="PUBLIC">Public</option>
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="description"
+            className="block text-sm font-medium text-slate-700 mb-2"
+          >
+            Description du cours *
+          </label>
+          <textarea
+            id="description"
+            {...register("description")}
+            rows={3}
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
+              errors.description ? "border-red-300" : "border-slate-200"
+            }`}
+            placeholder="Décrivez le contenu général de ce cours..."
+          />
+          {errors.description && (
+            <p className="mt-2 text-sm text-red-600">
+              {errors.description.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Matières associées *
+          </label>
+          <MultiSelectDropdown
+            options={subjects}
+            selected={selectedMatiereIds}
+            onChange={handleMatiereChange}
+            placeholder="Sélectionnez les matières..."
+            error={errors.matieres}
+          />
+          {errors.matieres && (
+            <p className="mt-2 text-sm text-red-600">
+              {errors.matieres.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="references"
+            className="block text-sm font-medium text-slate-700 mb-2"
+          >
+            Références
+          </label>
+          <textarea
+            id="references"
+            {...register("references")}
+            rows={2}
+            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+            placeholder="Livres, articles, liens utiles..."
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ChaptersSection = ({
+  savedChapters,
+  isCreatingChapter,
+  editingChapterIndex,
+  editingChapterData,
+  handleSaveChapter,
+  handleEditChapter,
+  handleEditChapterDataChange,
+  handleCancelEdit,
+  handleDeleteChapter,
+  moveChapter,
+  handleCancelChapterForm,
+  setIsCreatingChapter,
+}) => {
+  return (
+    <div className="bg-blue-50 rounded-xl p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-slate-900">
+          Chapitres du cours * ({savedChapters.length})
+        </h3>
+        {!isCreatingChapter && editingChapterIndex === null && (
+          <button
+            type="button"
+            onClick={() => setIsCreatingChapter(true)}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm"
+          >
+            <Plus size={16} />
+            Nouveau chapitre
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-4 max-h-[400px] overflow-y-auto mb-4">
+        {savedChapters.map((chapter, index) => (
+          <ChapterCard
+            key={index}
+            chapter={chapter}
+            index={index}
+            isEditing={editingChapterIndex === index}
+            editData={editingChapterData}
+            onEdit={() => handleEditChapter(index)}
+            onSave={handleSaveChapter}
+            onCancel={handleCancelEdit}
+            onDelete={() => handleDeleteChapter(index)}
+            onMoveUp={() => moveChapter(index, "up")}
+            onMoveDown={() => moveChapter(index, "down")}
+            canMoveUp={index > 0}
+            canMoveDown={index < savedChapters.length - 1}
+            onEditDataChange={handleEditChapterDataChange}
+          />
+        ))}
+
+        {savedChapters.length === 0 && !isCreatingChapter && (
+          <div className="text-center py-8 text-slate-500">
+            <p className="mb-4">Aucun chapitre ajouté</p>
+            <button
+              type="button"
+              onClick={() => setIsCreatingChapter(true)}
+              className="text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              Créer votre premier chapitre
+            </button>
+          </div>
+        )}
+      </div>
+
+      {isCreatingChapter && (
+        <ChapterForm
+          onSave={handleSaveChapter}
+          onCancel={handleCancelChapterForm}
+          totalChapters={savedChapters.length}
+        />
+      )}
+    </div>
+  );
+};
+
 const CourseFormModal = ({
   modalMode,
   selectedCourse,
@@ -192,16 +690,10 @@ const CourseFormModal = ({
   setLoading,
 }) => {
   const [selectedMatiereIds, setSelectedMatiereIds] = useState([]);
-  const [chapitres, setChapitres] = useState([
-    {
-      id: null,
-      titre: "",
-      description: "",
-      contenu: "",
-      matiereId: "",
-      ordre: 1,
-    },
-  ]);
+  const [savedChapters, setSavedChapters] = useState([]);
+  const [isCreatingChapter, setIsCreatingChapter] = useState(false);
+  const [editingChapterIndex, setEditingChapterIndex] = useState(null);
+  const [editingChapterData, setEditingChapterData] = useState(null);
 
   const {
     register,
@@ -233,13 +725,12 @@ const CourseFormModal = ({
       setSelectedMatiereIds(selectedCourse.matieres?.map((m) => m.id) || []);
 
       if (selectedCourse.chapitres && selectedCourse.chapitres.length > 0) {
-        setChapitres(
+        setSavedChapters(
           selectedCourse.chapitres.map((ch) => ({
             id: ch.id,
             titre: ch.titre,
             description: ch.description || "",
             contenu: ch.contenu,
-            matiereId: ch.matiereId,
             ordre: ch.ordre,
           }))
         );
@@ -253,53 +744,71 @@ const CourseFormModal = ({
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
 
-  const addChapter = () => {
-    const newChapter = {
-      id: null,
-      titre: "",
-      description: "",
-      contenu: "",
-      matiereId: "",
-      ordre: chapitres.length + 1,
-    };
-    setChapitres([...chapitres, newChapter]);
+  const handleSaveChapter = (chapterData) => {
+    if (editingChapterIndex !== null) {
+      // Update existing chapter
+      const updatedChapters = [...savedChapters];
+      updatedChapters[editingChapterIndex] = {
+        ...updatedChapters[editingChapterIndex],
+        ...chapterData,
+      };
+      setSavedChapters(updatedChapters);
+      setEditingChapterIndex(null);
+      setEditingChapterData(null);
+    } else {
+      // Add new chapter
+      const newChapter = {
+        id: null,
+        ...chapterData,
+        ordre: savedChapters.length + 1,
+      };
+      setSavedChapters([...savedChapters, newChapter]);
+      setIsCreatingChapter(false);
+    }
   };
 
-  const removeChapter = (index) => {
-    if (chapitres.length > 1) {
-      const updatedChapitres = chapitres.filter((_, i) => i !== index);
-      // Réorganiser les ordres
-      updatedChapitres.forEach((chapitre, i) => {
-        chapitre.ordre = i + 1;
-      });
-      setChapitres(updatedChapitres);
-    }
+  const handleEditChapter = (index) => {
+    setEditingChapterIndex(index);
+    setEditingChapterData({ ...savedChapters[index] });
+    setIsCreatingChapter(false);
+  };
+
+  const handleEditChapterDataChange = (newData) => {
+    setEditingChapterData(newData);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingChapterIndex(null);
+    setEditingChapterData(null);
+  };
+
+  const handleDeleteChapter = (index) => {
+    const updatedChapters = savedChapters.filter((_, i) => i !== index);
+    updatedChapters.forEach((chapter, i) => {
+      chapter.ordre = i + 1;
+    });
+    setSavedChapters(updatedChapters);
   };
 
   const moveChapter = (index, direction) => {
     const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex >= 0 && newIndex < chapitres.length) {
-      const updatedChapitres = [...chapitres];
-      [updatedChapitres[index], updatedChapitres[newIndex]] = [
-        updatedChapitres[newIndex],
-        updatedChapitres[index],
+    if (newIndex >= 0 && newIndex < savedChapters.length) {
+      const updatedChapters = [...savedChapters];
+      [updatedChapters[index], updatedChapters[newIndex]] = [
+        updatedChapters[newIndex],
+        updatedChapters[index],
       ];
-
-      // Réorganiser les ordres
-      updatedChapitres.forEach((chapitre, i) => {
-        chapitre.ordre = i + 1;
+      updatedChapters.forEach((chapter, i) => {
+        chapter.ordre = i + 1;
       });
-      setChapitres(updatedChapitres);
+      setSavedChapters(updatedChapters);
     }
   };
 
-  const updateChapter = (index, field, value) => {
-    const updatedChapitres = [...chapitres];
-    updatedChapitres[index] = {
-      ...updatedChapitres[index],
-      [field]: value,
-    };
-    setChapitres(updatedChapitres);
+  const handleCancelChapterForm = () => {
+    setIsCreatingChapter(false);
+    setEditingChapterIndex(null);
+    setEditingChapterData(null);
   };
 
   const onSubmit = async (data) => {
@@ -307,40 +816,27 @@ const CourseFormModal = ({
       setLoading(true);
       setError("");
 
+      if (savedChapters.length === 0) {
+        setError("Au moins un chapitre est requis");
+        return;
+      }
+
       const professorId = localStorage.getItem("userId");
       if (!professorId) {
         throw new Error("ID du professeur non trouvé");
       }
 
-      // Validation des chapitres
-      const chapitresData = chapitres.map((chapitre, index) => {
-        // Convert newlines to proper HTML for storage
+      const chapitresData = savedChapters.map((chapitre, index) => {
         const htmlContent = chapitre.contenu.replace(/\n/g, "<br>").trim();
 
         return {
           titre: chapitre.titre,
           description: chapitre.description || "",
           contenu: htmlContent,
-          matiereId: chapitre.matiereId,
           ordre: index + 1,
         };
       });
 
-      // Validation - tous les chapitres doivent avoir les champs requis
-      for (let i = 0; i < chapitresData.length; i++) {
-        const chapitre = chapitresData[i];
-        if (!chapitre.titre.trim()) {
-          throw new Error(`Le titre du chapitre ${i + 1} est requis`);
-        }
-        if (!chapitre.contenu.replace(/<[^>]*>/g, "").trim()) {
-          throw new Error(`Le contenu du chapitre ${i + 1} est requis`);
-        }
-        if (!chapitre.matiereId) {
-          throw new Error(`La matière du chapitre ${i + 1} est requise`);
-        }
-      }
-
-      // Préparation des matières
       const matieresData = selectedMatiereIds.map((id) => ({ id }));
 
       const courseData = {
@@ -383,16 +879,10 @@ const CourseFormModal = ({
       restriction: "PRIVE",
     });
     setSelectedMatiereIds([]);
-    setChapitres([
-      {
-        id: null,
-        titre: "",
-        description: "",
-        contenu: "",
-        matiereId: "",
-        ordre: 1,
-      },
-    ]);
+    setSavedChapters([]);
+    setIsCreatingChapter(false);
+    setEditingChapterIndex(null);
+    setEditingChapterData(null);
   };
 
   const handleMatiereChange = (newSelectedIds) => {
@@ -409,7 +899,7 @@ const CourseFormModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-slate-900">
@@ -424,248 +914,29 @@ const CourseFormModal = ({
           </div>
 
           <form onSubmit={handleFormSubmit} className="space-y-6">
-            {/* Informations générales */}
-            <div className="bg-slate-50 rounded-xl p-4">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                Informations générales
-              </h3>
+            <GeneralInfoSection
+              register={register}
+              errors={errors}
+              subjects={subjects}
+              selectedMatiereIds={selectedMatiereIds}
+              handleMatiereChange={handleMatiereChange}
+              setValue={setValue}
+            />
 
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label
-                    htmlFor="titre"
-                    className="block text-sm font-medium text-slate-700 mb-2"
-                  >
-                    Titre du cours *
-                  </label>
-                  <input
-                    id="titre"
-                    type="text"
-                    {...register("titre")}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                      errors.titre ? "border-red-300" : "border-slate-200"
-                    }`}
-                    placeholder="Introduction à la programmation"
-                  />
-                  {errors.titre && (
-                    <p className="mt-2 text-sm text-red-600">
-                      {errors.titre.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="description"
-                    className="block text-sm font-medium text-slate-700 mb-2"
-                  >
-                    Description du cours *
-                  </label>
-                  <textarea
-                    id="description"
-                    {...register("description")}
-                    rows={3}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-                      errors.description ? "border-red-300" : "border-slate-200"
-                    }`}
-                    placeholder="Décrivez le contenu général de ce cours..."
-                  />
-                  {errors.description && (
-                    <p className="mt-2 text-sm text-red-600">
-                      {errors.description.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Matières associées *
-                    </label>
-                    <MultiSelectDropdown
-                      options={subjects}
-                      selected={selectedMatiereIds}
-                      onChange={handleMatiereChange}
-                      placeholder="Sélectionnez les matières..."
-                      error={errors.matieres}
-                    />
-                    {errors.matieres && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {errors.matieres.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="restriction"
-                      className="block text-sm font-medium text-slate-700 mb-2"
-                    >
-                      Visibilité *
-                    </label>
-                    <select
-                      id="restriction"
-                      {...register("restriction")}
-                      className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                    >
-                      <option value="PRIVE">Privé</option>
-                      <option value="PUBLIC">Public</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="references"
-                    className="block text-sm font-medium text-slate-700 mb-2"
-                  >
-                    Références
-                  </label>
-                  <textarea
-                    id="references"
-                    {...register("references")}
-                    rows={2}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                    placeholder="Livres, articles, liens utiles..."
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Chapitres */}
-            <div className="bg-blue-50 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">
-                  Chapitres du cours *
-                </h3>
-                <button
-                  type="button"
-                  onClick={addChapter}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                >
-                  <Plus size={16} />
-                  Ajouter un chapitre
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {chapitres.map((chapitre, index) => (
-                  <div
-                    key={index}
-                    className="bg-white rounded-xl p-4 border border-slate-200"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-md font-medium text-slate-900">
-                        Chapitre {index + 1}
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        {index > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => moveChapter(index, "up")}
-                            className="p-1 text-slate-400 hover:text-slate-600"
-                            title="Déplacer vers le haut"
-                          >
-                            <ChevronUp size={16} />
-                          </button>
-                        )}
-                        {index < chapitres.length - 1 && (
-                          <button
-                            type="button"
-                            onClick={() => moveChapter(index, "down")}
-                            className="p-1 text-slate-400 hover:text-slate-600"
-                            title="Déplacer vers le bas"
-                          >
-                            <ChevronDown size={16} />
-                          </button>
-                        )}
-                        {chapitres.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeChapter(index)}
-                            className="p-1 text-red-400 hover:text-red-600"
-                            title="Supprimer le chapitre"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Titre du chapitre *
-                        </label>
-                        <input
-                          type="text"
-                          value={chapitre.titre}
-                          onChange={(e) =>
-                            updateChapter(index, "titre", e.target.value)
-                          }
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          placeholder={`Titre du chapitre ${index + 1}`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Matière du chapitre *
-                        </label>
-                        <select
-                          value={chapitre.matiereId}
-                          onChange={(e) =>
-                            updateChapter(index, "matiereId", e.target.value)
-                          }
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                          <option value="">Sélectionnez une matière</option>
-                          {subjects.map((matiere) => (
-                            <option key={matiere.id} value={matiere.id}>
-                              {matiere.nom}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Description du chapitre
-                        </label>
-                        <textarea
-                          value={chapitre.description}
-                          onChange={(e) =>
-                            updateChapter(index, "description", e.target.value)
-                          }
-                          rows={2}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          placeholder={`Description du chapitre ${index + 1}`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Contenu du chapitre *
-                        </label>
-                        <RichTextEditor
-                          value={chapitre.contenu}
-                          onChange={(content) =>
-                            updateChapter(index, "contenu", content)
-                          }
-                          placeholder="Contenu détaillé du chapitre..."
-                          chapterIndex={index}
-                        />
-                        <p className="mt-1 text-xs text-slate-500">
-                          Utilisez les outils de formatage pour structurer votre
-                          contenu. Le texte sera affiché avec le formatage
-                          appliqué.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ChaptersSection
+              savedChapters={savedChapters}
+              isCreatingChapter={isCreatingChapter}
+              editingChapterIndex={editingChapterIndex}
+              editingChapterData={editingChapterData}
+              handleSaveChapter={handleSaveChapter}
+              handleEditChapter={handleEditChapter}
+              handleEditChapterDataChange={handleEditChapterDataChange}
+              handleCancelEdit={handleCancelEdit}
+              handleDeleteChapter={handleDeleteChapter}
+              moveChapter={moveChapter}
+              handleCancelChapterForm={handleCancelChapterForm}
+              setIsCreatingChapter={setIsCreatingChapter}
+            />
 
             <div className="flex justify-end space-x-4 pt-6">
               <button
@@ -688,6 +959,5 @@ const CourseFormModal = ({
     </div>
   );
 };
-
 
 export default CourseFormModal;

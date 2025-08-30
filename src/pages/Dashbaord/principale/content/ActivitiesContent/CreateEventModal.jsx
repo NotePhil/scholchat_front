@@ -1,480 +1,419 @@
 import React, { useState } from "react";
+import { activityFeedService } from "../../../../../services/ActivityFeedService";
 import {
   X,
   Calendar,
+  MapPin,
+  Clock,
+  Users,
+  Image as ImageIcon,
   Upload,
-  ImageIcon,
-  FileText,
-  Loader2,
   AlertCircle,
+  Check,
 } from "lucide-react";
-import { activityFeedService } from "../../../../../services/ActivityFeedService";
 
-const CreateEventModal = ({
-  show,
-  onClose,
-  canPost,
-  onCreateEvent,
-  isDark,
-}) => {
-  const [eventForm, setEventForm] = useState({
+const CreateEventModal = ({ onClose, onSubmit }) => {
+  const [formData, setFormData] = useState({
     titre: "",
     description: "",
     lieu: "",
-    etat: "A_VENIR", // Use correct enum value
     heureDebut: "",
     heureFin: "",
-    medias: null,
-    mediaPreview: null,
+    etat: "PLANIFIE",
   });
-  const [postLoading, setPostLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [media, setMedia] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
 
-  // Fix: Use the correct enum values that match your backend EtatEvenement enum
-  const eventStatusOptions = [
-    { value: "A_VENIR", label: "Upcoming" },
-    { value: "EN_COURS", label: "In Progress" },
-    { value: "TERMINE", label: "Completed" },
-    { value: "ANNULE", label: "Cancelled" },
-  ];
-
-  const handleEventFormChange = (field, value) => {
-    setEventForm((prev) => ({
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
       ...prev,
-      [field]: value,
+      [name]: value,
     }));
   };
 
-  const handleMediaSelect = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleFiles = async (files) => {
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter((file) => {
+      const isValidType = file.type.startsWith("image/");
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+      return isValidType && isValidSize;
+    });
+
+    if (validFiles.length !== fileArray.length) {
+      setError("Some files were skipped. Only images under 10MB are allowed.");
+      setTimeout(() => setError(""), 3000);
+    }
 
     try {
-      const validTypes = ["image/jpeg", "image/png", "application/pdf"];
-      const maxSize = 5 * 1024 * 1024;
-
-      if (!validTypes.includes(file.type)) {
-        throw new Error("Only JPEG, PNG images or PDF files are allowed");
-      }
-
-      if (file.size > maxSize) {
-        throw new Error("File size must be less than 5MB");
-      }
-
-      let previewUrl = null;
-      if (file.type.startsWith("image/")) {
-        previewUrl = await createImagePreview(file);
-      }
-
-      setEventForm((prev) => ({
-        ...prev,
-        medias: file,
-        mediaPreview: previewUrl,
-      }));
-    } catch (error) {
-      setError(error.message);
-      event.target.value = "";
-    }
-  };
-
-  const createImagePreview = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removeMedia = () => {
-    setEventForm((prev) => ({
-      ...prev,
-      medias: null,
-      mediaPreview: null,
-    }));
-  };
-
-  const resetEventForm = () => {
-    setEventForm({
-      titre: "",
-      description: "",
-      lieu: "",
-      etat: "A_VENIR", // Use correct enum value
-      heureDebut: "",
-      heureFin: "",
-      medias: null,
-      mediaPreview: null,
-    });
-  };
-
-  const validateEventForm = () => {
-    const { titre, description, lieu, heureDebut, heureFin } = eventForm;
-
-    if (!titre.trim()) {
-      setError("Event title is required");
-      return false;
-    }
-
-    if (titre.trim().length < 5) {
-      setError("Event title must be at least 5 characters");
-      return false;
-    }
-
-    if (!description.trim()) {
-      setError("Event description is required");
-      return false;
-    }
-
-    if (description.trim().length < 10) {
-      setError("Event description must be at least 10 characters");
-      return false;
-    }
-
-    if (!lieu.trim()) {
-      setError("Event location is required");
-      return false;
-    }
-
-    if (!heureDebut) {
-      setError("Start time is required");
-      return false;
-    }
-
-    if (!heureFin) {
-      setError("End time is required");
-      return false;
-    }
-
-    if (new Date(heureDebut) >= new Date(heureFin)) {
-      setError("End time must be after start time");
-      return false;
-    }
-
-    return true;
-  };
-
-  const uploadMedia = async (file) => {
-    try {
-      const media = await activityFeedService.uploadMedia(
-        file,
-        file.type.startsWith("image/") ? "IMAGE" : "DOCUMENT",
-        "EVENT"
+      const uploadPromises = validFiles.map((file) =>
+        activityFeedService.uploadMedia(file, "IMAGE")
       );
-      return media;
-    } catch (error) {
-      console.error("❌ Failed to upload media:", error);
-      throw new Error("Failed to upload media. Please try again.");
+      const uploadedMedia = await Promise.all(uploadPromises);
+      setMedia((prev) => [...prev, ...uploadedMedia]);
+    } catch (err) {
+      setError("Failed to upload media");
     }
   };
 
-  const handleCreateEvent = async () => {
-    if (!canPost) {
-      setError("You don't have permission to create events");
+  const handleMediaUpload = async (e) => {
+    const files = e.target.files;
+    if (files) {
+      await handleFiles(files);
+    }
+  };
+
+  const removeMedia = (index) => {
+    setMedia((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    // Validation
+    if (!formData.titre.trim()) {
+      setError("Event title is required");
+      setLoading(false);
       return;
     }
 
-    if (!validateEventForm()) {
+    if (!formData.heureDebut) {
+      setError("Start time is required");
+      setLoading(false);
       return;
     }
 
-    setPostLoading(true);
-    setError(null);
+    // Check if end time is after start time
+    if (formData.heureFin && formData.heureDebut) {
+      const startTime = new Date(formData.heureDebut);
+      const endTime = new Date(formData.heureFin);
+
+      if (endTime <= startTime) {
+        setError("End time must be after start time");
+        setLoading(false);
+        return;
+      }
+    }
 
     try {
-      const validProfessorId = activityFeedService.getValidProfessorId();
-      let mediaData = null;
-
-      if (eventForm.medias) {
-        mediaData = await uploadMedia(eventForm.medias);
-      }
-
       const eventData = {
-        titre: eventForm.titre.trim(),
-        description: eventForm.description.trim(),
-        lieu: eventForm.lieu.trim(),
-        etat: eventForm.etat, // This will now be a valid enum value
-        heureDebut: new Date(eventForm.heureDebut).toISOString(),
-        heureFin: new Date(eventForm.heureFin).toISOString(),
-        createurId: validProfessorId,
+        ...formData,
+        createurId: activityFeedService.getValidUserId(),
+        medias: media,
         participantsIds: [],
-        medias: mediaData ? [mediaData] : [],
       };
 
-      console.log("Sending event data:", eventData);
-
-      const success = await onCreateEvent(eventData);
-      if (success) {
-        resetEventForm();
-        onClose();
-      }
-    } catch (error) {
-      console.error("Failed to create event:", error);
-      if (error.message.includes("expired") || error.response?.status === 401) {
-        setError("Your session has expired. Please log in again.");
-        localStorage.clear();
-        setTimeout(() => (window.location.href = "/login"), 2000);
-      } else if (error.message.includes("Professeur introuvable")) {
-        setError("Professor not found. Please check your login status.");
-      } else if (error.message.includes("enum")) {
-        setError("Invalid event status. Please try again.");
-      } else {
-        setError(error.message || "Failed to create event. Please try again.");
-      }
+      await onSubmit(eventData);
+    } catch (err) {
+      setError(err.message || "Failed to create event");
     } finally {
-      setPostLoading(false);
+      setLoading(false);
     }
   };
 
-  if (!show) return null;
+  const statusOptions = [
+    {
+      value: "PLANIFIE",
+      label: "Scheduled",
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+    },
+    {
+      value: "EN_COURS",
+      label: "Live",
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+    },
+    {
+      value: "TERMINE",
+      label: "Completed",
+      color: "text-gray-600",
+      bgColor: "bg-gray-50",
+    },
+    {
+      value: "ANNULE",
+      label: "Cancelled",
+      color: "text-red-600",
+      bgColor: "bg-red-50",
+    },
+  ];
+
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div
-        className={`rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto ${
-          isDark ? "bg-gray-800" : "bg-white"
-        }`}
-      >
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold">Create New Event</h3>
-          <button
-            onClick={() => {
-              onClose();
-              resetEventForm();
-              setError(null);
-            }}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <X className="w-6 h-6" />
-          </button>
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-white bg-opacity-20 p-2 rounded-xl">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">Create New Event</h2>
+                <p className="text-blue-100">
+                  Share something amazing with your community
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition-all duration-200"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
-        {error && (
-          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
-            <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 mr-2" />
-              {error}
-            </div>
-          </div>
-        )}
+        {/* Form */}
+        <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4 flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-red-800 font-medium">Error</p>
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              </div>
+            )}
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Event Title *
-            </label>
-            <input
-              type="text"
-              value={eventForm.titre}
-              onChange={(e) => handleEventFormChange("titre", e.target.value)}
-              placeholder="Enter event title (min 5 characters)"
-              className={`w-full px-4 py-2 border rounded-lg ${
-                isDark
-                  ? "bg-gray-700 text-white border-gray-600"
-                  : "bg-white text-gray-900 border-gray-300"
-              }`}
-              disabled={postLoading}
-              minLength={5}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Description *
-            </label>
-            <textarea
-              value={eventForm.description}
-              onChange={(e) =>
-                handleEventFormChange("description", e.target.value)
-              }
-              placeholder="Enter event description (min 10 characters)"
-              rows="4"
-              className={`w-full px-4 py-2 border rounded-lg resize-none ${
-                isDark
-                  ? "bg-gray-700 text-white border-gray-600"
-                  : "bg-white text-gray-900 border-gray-300"
-              }`}
-              disabled={postLoading}
-              minLength={10}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Location *</label>
-            <input
-              type="text"
-              value={eventForm.lieu}
-              onChange={(e) => handleEventFormChange("lieu", e.target.value)}
-              placeholder="Enter event location"
-              className={`w-full px-4 py-2 border rounded-lg ${
-                isDark
-                  ? "bg-gray-700 text-white border-gray-600"
-                  : "bg-white text-gray-900 border-gray-300"
-              }`}
-              disabled={postLoading}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Status</label>
-            <select
-              value={eventForm.etat}
-              onChange={(e) => handleEventFormChange("etat", e.target.value)}
-              className={`w-full px-4 py-2 border rounded-lg ${
-                isDark
-                  ? "bg-gray-700 text-white border-gray-600"
-                  : "bg-white text-gray-900 border-gray-300"
-              }`}
-              disabled={postLoading}
-            >
-              {eventStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Start Date & Time *
-              </label>
-              <input
-                type="datetime-local"
-                value={eventForm.heureDebut}
-                onChange={(e) =>
-                  handleEventFormChange("heureDebut", e.target.value)
-                }
-                className={`w-full px-4 py-2 border rounded-lg ${
-                  isDark
-                    ? "bg-gray-700 text-white border-gray-600"
-                    : "bg-white text-gray-900 border-gray-300"
-                }`}
-                disabled={postLoading}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                End Date & Time *
-              </label>
-              <input
-                type="datetime-local"
-                value={eventForm.heureFin}
-                onChange={(e) =>
-                  handleEventFormChange("heureFin", e.target.value)
-                }
-                className={`w-full px-4 py-2 border rounded-lg ${
-                  isDark
-                    ? "bg-gray-700 text-white border-gray-600"
-                    : "bg-white text-gray-900 border-gray-300"
-                }`}
-                disabled={postLoading}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Media (JPEG, PNG or PDF - max 5MB)
-            </label>
+            {/* Event Title */}
             <div className="space-y-2">
-              {!eventForm.medias ? (
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,application/pdf"
-                    onChange={handleMediaSelect}
-                    disabled={postLoading}
-                    className="hidden"
-                  />
-                  <div
-                    className={`flex items-center gap-2 p-4 border-2 border-dashed rounded-lg hover:bg-gray-50 transition-colors ${
-                      postLoading ? "opacity-50" : ""
-                    }`}
-                  >
-                    <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-gray-600">
-                      Click to upload file (JPEG, PNG or PDF)
-                    </span>
-                  </div>
+              <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                <Calendar className="w-4 h-4" />
+                <span>Event Title *</span>
+              </label>
+              <input
+                type="text"
+                name="titre"
+                value={formData.titre}
+                onChange={handleInputChange}
+                required
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                placeholder="Give your event an exciting title..."
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                <Users className="w-4 h-4" />
+                <span>Description</span>
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={4}
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+                placeholder="Tell people what makes this event special..."
+              />
+            </div>
+
+            {/* Location */}
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                <MapPin className="w-4 h-4" />
+                <span>Location</span>
+              </label>
+              <input
+                type="text"
+                name="lieu"
+                value={formData.lieu}
+                onChange={handleInputChange}
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                placeholder="Where will this event take place?"
+              />
+            </div>
+
+            {/* Date and Time */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                  <Clock className="w-4 h-4" />
+                  <span>Start Time *</span>
                 </label>
-              ) : (
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    {eventForm.medias.type.startsWith("image/") ? (
-                      <>
-                        <ImageIcon className="w-5 h-5 text-blue-500" />
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">
-                            {eventForm.medias.name}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            ({(eventForm.medias.size / 1024).toFixed(2)} KB)
-                          </span>
-                        </div>
-                        {eventForm.mediaPreview && (
-                          <img
-                            src={eventForm.mediaPreview}
-                            alt="Preview"
-                            className="w-8 h-8 object-cover rounded"
-                          />
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="w-5 h-5 text-red-500" />
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">
-                            {eventForm.medias.name}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            ({(eventForm.medias.size / 1024).toFixed(2)} KB)
-                          </span>
-                        </div>
-                      </>
-                    )}
+                <input
+                  type="datetime-local"
+                  name="heureDebut"
+                  value={formData.heureDebut}
+                  onChange={handleInputChange}
+                  min={getCurrentDateTime()}
+                  required
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                  <Clock className="w-4 h-4" />
+                  <span>End Time</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  name="heureFin"
+                  value={formData.heureFin}
+                  onChange={handleInputChange}
+                  min={formData.heureDebut || getCurrentDateTime()}
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+            </div>
+
+            {/* Status */}
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                <Check className="w-4 h-4" />
+                <span>Event Status</span>
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {statusOptions.map((option) => (
+                  <label key={option.value} className="cursor-pointer">
+                    <input
+                      type="radio"
+                      name="etat"
+                      value={option.value}
+                      checked={formData.etat === option.value}
+                      onChange={handleInputChange}
+                      className="sr-only"
+                    />
+                    <div
+                      className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                        formData.etat === option.value
+                          ? `${option.bgColor} border-current ${option.color} font-semibold`
+                          : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="text-sm">{option.label}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Media Upload */}
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                <ImageIcon className="w-4 h-4" />
+                <span>Event Photos</span>
+              </label>
+
+              <div
+                className={`border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-200 ${
+                  dragActive
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleMediaUpload}
+                  className="hidden"
+                  id="media-upload"
+                />
+                <div className="space-y-3">
+                  <div className="bg-gray-100 rounded-full p-4 w-16 h-16 flex items-center justify-center mx-auto">
+                    <Upload className="w-8 h-8 text-gray-400" />
                   </div>
-                  <button
-                    onClick={removeMedia}
-                    disabled={postLoading}
-                    className="text-red-500 hover:text-red-700 disabled:opacity-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div>
+                    <label
+                      htmlFor="media-upload"
+                      className="cursor-pointer text-blue-600 hover:text-blue-700 font-semibold"
+                    >
+                      Choose files
+                    </label>
+                    <span className="text-gray-500"> or drag and drop</span>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    PNG, JPG up to 10MB each
+                  </p>
+                </div>
+              </div>
+
+              {/* Media Preview */}
+              {media.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  {media.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={file.filePath}
+                        alt={file.fileName}
+                        className="w-full h-24 object-cover rounded-xl"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeMedia(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
-        </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-          <button
-            onClick={() => {
-              onClose();
-              resetEventForm();
-              setError(null);
-            }}
-            disabled={postLoading}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreateEvent}
-            disabled={postLoading}
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
-          >
-            {postLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Calendar className="w-4 h-4" />
-            )}
-            {postLoading ? "Creating..." : "Create Event"}
-          </button>
+            {/* Action Buttons */}
+            <div className="flex space-x-4 pt-6 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 border-2 border-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-50 font-semibold transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    <span>Creating...</span>
+                  </div>
+                ) : (
+                  "Create Event"
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
