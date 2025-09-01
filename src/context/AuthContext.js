@@ -1,4 +1,3 @@
-// src/context/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -9,27 +8,74 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const isTokenValid = (token) => {
+    if (!token) return false;
+
+    try {
+      const tokenPayload = JSON.parse(atob(token.split(".")[1]));
+      const currentTime = Date.now() / 1000;
+
+      return tokenPayload.exp && tokenPayload.exp > currentTime + 300;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const clearAuthData = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("username");
+    localStorage.removeItem("decodedToken");
+    localStorage.removeItem("userRoles");
+    localStorage.removeItem("authResponse");
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("loginTime");
+    setUser(null);
+  };
+
+  const loadUserFromStorage = () => {
+    try {
+      const isAuthenticated = localStorage.getItem("isAuthenticated");
+      const accessToken = localStorage.getItem("accessToken");
+      const userId = localStorage.getItem("userId");
+      const userRole = localStorage.getItem("userRole");
+      const userEmail = localStorage.getItem("userEmail");
+      const username = localStorage.getItem("username");
+
+      if (
+        isAuthenticated === "true" &&
+        accessToken &&
+        userId &&
+        isTokenValid(accessToken)
+      ) {
+        const userData = {
+          id: userId,
+          email: userEmail,
+          username,
+          role: userRole,
+          token: accessToken,
+        };
+
+        setUser(userData);
+        return true;
+      } else {
+        clearAuthData();
+        return false;
+      }
+    } catch (error) {
+      clearAuthData();
+      return false;
+    }
+  };
+
   useEffect(() => {
-    // Check for user data in localStorage when app starts
     const initializeAuth = async () => {
       try {
-        const accessToken = localStorage.getItem("accessToken");
-        const userRole = localStorage.getItem("userRole");
-        const userId = localStorage.getItem("userId");
-        const userEmail = localStorage.getItem("userEmail");
-        const username = localStorage.getItem("username");
-        const decodedToken = localStorage.getItem("decodedToken");
-
-        if (accessToken && userRole) {
-          setUser({
-            id: userId,
-            email: userEmail,
-            username,
-            role: userRole,
-            token: accessToken,
-            decodedToken: decodedToken ? JSON.parse(decodedToken) : null,
-          });
-        }
+        loadUserFromStorage();
       } catch (error) {
         console.error("Error initializing auth:", error);
       } finally {
@@ -40,42 +86,39 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (authData) => {
-    // This would be called after successful login
-    const accessToken = authData.accessToken;
-    const refreshToken = authData.refreshToken;
-    const decodedToken = JSON.parse(localStorage.getItem("decodedToken"));
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "isAuthenticated" || e.key === "accessToken") {
+        loadUserFromStorage();
+      }
+    };
 
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  const login = async (authData) => {
+    const accessToken = authData.accessToken;
     const userData = {
       id: localStorage.getItem("userId"),
       email: localStorage.getItem("userEmail"),
       username: localStorage.getItem("username"),
       role: localStorage.getItem("userRole"),
       token: accessToken,
-      decodedToken,
     };
 
     setUser(userData);
   };
 
   const logout = () => {
-    // Clear all auth-related data from localStorage
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("username");
-    localStorage.removeItem("decodedToken");
-    localStorage.removeItem("userRoles");
-
-    setUser(null);
+    clearAuthData();
     navigate("/schoolchat/login");
   };
 
   const isAuthenticated = () => {
-    return !!user?.token;
+    const token = localStorage.getItem("accessToken");
+    const authFlag = localStorage.getItem("isAuthenticated");
+    return authFlag === "true" && !!token && isTokenValid(token);
   };
 
   const hasRole = (requiredRole) => {
@@ -83,22 +126,22 @@ export const AuthProvider = ({ children }) => {
     return user.role === requiredRole;
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        isAuthenticated,
-        hasRole,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    loading,
+    login,
+    logout,
+    isAuthenticated,
+    hasRole,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 };
