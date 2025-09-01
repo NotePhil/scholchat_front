@@ -14,6 +14,7 @@ import {
   Activity,
   School,
   Book,
+  X,
 } from "lucide-react";
 
 const Sidebar = ({
@@ -27,6 +28,7 @@ const Sidebar = ({
   userRole,
   userRoles,
   onShowMessaging,
+  toggleSidebar,
 }) => {
   const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -36,52 +38,7 @@ const Sidebar = ({
     establishments: false,
     courses: false,
   });
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
-
-      if (!mobile && !showSidebar) {
-        const toggleButton = document.querySelector(".mobile-menu-button");
-        if (toggleButton) {
-          toggleButton.click();
-        }
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [showSidebar]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isMobile && showSidebar) {
-        const sidebar = document.querySelector(".sidebar");
-        const mobileButton = document.querySelector(".mobile-menu-button");
-
-        if (
-          sidebar &&
-          !sidebar.contains(event.target) &&
-          mobileButton &&
-          !mobileButton.contains(event.target)
-        ) {
-          const toggleButton = document.querySelector(".mobile-menu-button");
-          if (toggleButton) {
-            toggleButton.click();
-          }
-        }
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showSidebar, isMobile]);
-
-  // Auto-open dropdown if active tab is within it
   useEffect(() => {
     const coursesTabs = ["create-course", "schedule-course"];
     const usersTabs = ["admin", "professors", "parents", "students", "others"];
@@ -104,12 +61,10 @@ const Sidebar = ({
     });
   };
 
-  // Helper function to check if user is admin
   const isAdmin = () => {
     return userRoles.includes("ROLE_ADMIN") || userRole === "admin";
   };
 
-  // Helper function to check if user is professor
   const isProfessor = () => {
     return (
       userRoles.includes("ROLE_PROFESSOR") ||
@@ -118,7 +73,6 @@ const Sidebar = ({
     );
   };
 
-  // Helper function to check if user is parent or student
   const isParentOrStudent = () => {
     return (
       userRoles.includes("ROLE_PARENT") ||
@@ -200,7 +154,6 @@ const Sidebar = ({
             { name: "Élèves", tab: "students" },
           ],
         },
-        // Removed "Motifs de Rejet" from professor menu
         {
           name: "Classes",
           icon: Building2,
@@ -226,7 +179,6 @@ const Sidebar = ({
         },
       ];
     } else {
-      // Fallback for other roles
       roleItems = [
         { name: "Classes", icon: Building2, tab: "classes" },
         {
@@ -261,20 +213,10 @@ const Sidebar = ({
       userRoles
     );
 
-    // Ensure the tab change is properly handled
     setActiveTab(tab);
 
-    // Special handling for messages tab
     if (tab === "messages" && onShowMessaging) {
       onShowMessaging();
-    }
-
-    // Close mobile sidebar after selection
-    if (isMobile) {
-      const toggleButton = document.querySelector(".mobile-menu-button");
-      if (toggleButton && showSidebar) {
-        setTimeout(() => toggleButton.click(), 150);
-      }
     }
   };
 
@@ -287,7 +229,6 @@ const Sidebar = ({
   };
 
   const confirmLogout = () => {
-    // Clear all localStorage items
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("authToken");
@@ -300,7 +241,6 @@ const Sidebar = ({
     localStorage.removeItem("decodedToken");
     localStorage.removeItem("authResponse");
 
-    // Navigate to login
     navigate("/schoolchat/login");
   };
 
@@ -325,16 +265,25 @@ const Sidebar = ({
         } transition-colors duration-300`}
       >
         <div className="sidebar-header">
-          <div className="flex flex-col items-start">
-            <h2
-              className="text-2xl font-bold mb-1"
-              style={{ color: colorSchemes?.[currentTheme]?.primary }}
+          <div className="sidebar-header-content">
+            <div className="sidebar-brand">
+              <h2
+                className="text-2xl font-bold mb-1"
+                style={{ color: colorSchemes?.[currentTheme]?.primary }}
+              >
+                ScholChat
+              </h2>
+              <p className="user-role text-sm">
+                {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+              </p>
+            </div>
+            <button
+              className="sidebar-close-btn"
+              onClick={toggleSidebar}
+              aria-label="Close sidebar"
             >
-              ScholChat
-            </h2>
-            <p className="user-role text-sm">
-              {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-            </p>
+              <X size={20} />
+            </button>
           </div>
         </div>
 
@@ -362,7 +311,7 @@ const Sidebar = ({
                             }}
                           />
                         </span>
-                        {item.name}
+                        <span className="menu-text">{item.name}</span>
                         <span className="dropdown-icon">
                           {openDropdown[item.dropdown] ? (
                             <ChevronUp size={18} />
@@ -383,7 +332,7 @@ const Sidebar = ({
                             onClick={() => handleTabChange(subItem.tab)}
                           >
                             <a href="#" onClick={(e) => e.preventDefault()}>
-                              {subItem.name}
+                              <span className="menu-text">{subItem.name}</span>
                             </a>
                           </li>
                         ))}
@@ -405,7 +354,7 @@ const Sidebar = ({
                           }}
                         />
                       </span>
-                      {item.name}
+                      <span className="menu-text">{item.name}</span>
                     </a>
                   </li>
                 )}
@@ -419,15 +368,15 @@ const Sidebar = ({
             <span className="icon">
               <LogOut size={18} />
             </span>
-            Déconnexion
+            <span className="menu-text">Déconnexion</span>
           </button>
         </div>
       </aside>
 
       {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-[1002] bg-black bg-opacity-50">
+        <div className="modal-overlay-custom">
           <div
-            className={`modal p-6 rounded-lg shadow-lg max-w-md w-full mx-4 ${
+            className={`modal-custom ${
               isDark ? "bg-gray-800 text-white" : "bg-white text-gray-800"
             }`}
           >

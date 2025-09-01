@@ -37,40 +37,47 @@ const schedulingSchema = yup.object().shape({
   dateDebutEffectif: yup
     .string()
     .nullable()
-    .when(["dateCoursPrevue", "etatCoursProgramme"], {
-      is: (dateCoursPrevue, etatCoursProgramme) =>
-        dateCoursPrevue &&
-        (etatCoursProgramme === "EN_COURS" || etatCoursProgramme === "TERMINE"),
-      then: (schema) =>
-        schema.test(
-          "after-planned",
-          "La date de début ne peut pas être avant la date prévue",
-          function (value) {
-            const { dateCoursPrevue } = this.parent;
-            if (!value || !dateCoursPrevue) return true;
-            return new Date(value) >= new Date(dateCoursPrevue);
-          }
-        ),
-      otherwise: (schema) => schema,
-    }),
+    .test(
+      "required-for-status",
+      "La date de début effective est requise",
+      function (value) {
+        const { etatCoursProgramme } = this.parent;
+        // Le backend exige les dates effectives même pour PLANIFIE
+        return etatCoursProgramme !== "PLANIFIE" ? !!value : true;
+      }
+    )
+    .test(
+      "after-planned",
+      "La date de début ne peut pas être avant la date prévue",
+      function (value) {
+        const { dateCoursPrevue, etatCoursProgramme } = this.parent;
+        if (!value || !dateCoursPrevue || etatCoursProgramme === "PLANIFIE")
+          return true;
+        return new Date(value) >= new Date(dateCoursPrevue);
+      }
+    ),
   dateFinEffectif: yup
     .string()
     .nullable()
-    .when(["dateDebutEffectif", "etatCoursProgramme"], {
-      is: (dateDebutEffectif, etatCoursProgramme) =>
-        dateDebutEffectif && etatCoursProgramme === "TERMINE",
-      then: (schema) =>
-        schema.test(
-          "after-start",
-          "La date de fin ne peut pas être avant la date de début",
-          function (value) {
-            const { dateDebutEffectif } = this.parent;
-            if (!value || !dateDebutEffectif) return true;
-            return new Date(value) >= new Date(dateDebutEffectif);
-          }
-        ),
-      otherwise: (schema) => schema,
-    }),
+    .test(
+      "required-for-status",
+      "La date de fin effective est requise",
+      function (value) {
+        const { etatCoursProgramme } = this.parent;
+        // Le backend exige les dates effectives même pour PLANIFIE
+        return etatCoursProgramme !== "PLANIFIE" ? !!value : true;
+      }
+    )
+    .test(
+      "after-start",
+      "La date de fin ne peut pas être avant la date de début",
+      function (value) {
+        const { dateDebutEffectif, etatCoursProgramme } = this.parent;
+        if (!value || !dateDebutEffectif || etatCoursProgramme === "PLANIFIE")
+          return true;
+        return new Date(value) >= new Date(dateDebutEffectif);
+      }
+    ),
   lieu: yup.string().required("Le lieu est obligatoire"),
   description: yup.string().nullable(),
   capaciteMax: yup
@@ -311,12 +318,27 @@ const CoursProgrammerForm = ({
         return new Date(dateString).toISOString();
       };
 
+      // Fonction utilitaire pour calculer la date de fin
+      const calculateEndDate = (startDate, hoursToAdd = 2) => {
+        if (!startDate) return null;
+        const date = new Date(startDate);
+        date.setHours(date.getHours() + hoursToAdd);
+        return date.toISOString();
+      };
+
+      // Pour le statut PLANIFIE, utiliser la date prévue comme dates effectives
+      const isPlanifie = data.etatCoursProgramme === "PLANIFIE";
+
       const scheduleData = {
         coursId: data.coursId,
         classeId: data.classeId || null,
         dateCoursPrevue: formatDate(data.dateCoursPrevue),
-        dateDebutEffectif: formatDate(data.dateDebutEffectif),
-        dateFinEffectif: formatDate(data.dateFinEffectif),
+        dateDebutEffectif: isPlanifie
+          ? formatDate(data.dateCoursPrevue) // Utiliser date prévue pour début effectif
+          : formatDate(data.dateDebutEffectif),
+        dateFinEffectif: isPlanifie
+          ? calculateEndDate(data.dateCoursPrevue, 2) // Ajouter 2 heures par défaut
+          : formatDate(data.dateFinEffectif),
         etatCoursProgramme: data.etatCoursProgramme,
         lieu: data.lieu.trim(),
         description: data.description?.trim() || null,
@@ -332,6 +354,14 @@ const CoursProgrammerForm = ({
         error.message || "Une erreur est survenue lors de l'enregistrement"
       );
     }
+  };
+
+  // Fonction utilitaire pour calculer la date de fin
+  const calculateEndDate = (startDate, hoursToAdd = 2) => {
+    if (!startDate) return null;
+    const date = new Date(startDate);
+    date.setHours(date.getHours() + hoursToAdd);
+    return date.toISOString();
   };
 
   const handleClose = () => {
@@ -532,6 +562,7 @@ const CoursProgrammerForm = ({
             </div>
 
             {/* Date Controls with Better Alignment */}
+            {/* Date Controls with Better Alignment */}
             <div className="bg-slate-50 p-6 rounded-xl">
               <h3 className="text-lg font-semibold text-slate-800 mb-6 flex items-center">
                 <Clock className="mr-2 text-indigo-600" size={20} />
@@ -539,54 +570,44 @@ const CoursProgrammerForm = ({
               </h3>
 
               <div className="space-y-6">
-                {/* Planned Date - Always on top, full width on mobile */}
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label
-                      htmlFor="dateCoursPrevue"
-                      className="block text-sm font-semibold text-slate-700 mb-3 flex items-center"
-                    >
-                      <Calendar size={16} className="mr-2 text-blue-600" />
-                      Date prévue *
-                    </label>
-                    <input
-                      id="dateCoursPrevue"
-                      type="datetime-local"
-                      min={getCurrentDateTime()}
-                      {...register("dateCoursPrevue")}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white text-base ${
-                        errors.dateCoursPrevue
-                          ? "border-red-300 bg-red-50"
-                          : "border-slate-200"
-                      }`}
-                      style={{ minHeight: "48px" }}
-                    />
-                    {errors.dateCoursPrevue && (
-                      <p className="mt-2 text-sm text-red-600 flex items-center">
-                        <AlertCircle size={14} className="mr-1 flex-shrink-0" />
-                        {errors.dateCoursPrevue.message}
-                      </p>
-                    )}
-                  </div>
+                {/* Planned Date */}
+                <div>
+                  <label
+                    htmlFor="dateCoursPrevue"
+                    className="block text-sm font-semibold text-slate-700 mb-3 flex items-center"
+                  >
+                    <Calendar size={16} className="mr-2 text-blue-600" />
+                    Date prévue *
+                  </label>
+                  <input
+                    id="dateCoursPrevue"
+                    type="datetime-local"
+                    min={getCurrentDateTime()}
+                    {...register("dateCoursPrevue")}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white text-base ${
+                      errors.dateCoursPrevue
+                        ? "border-red-300 bg-red-50"
+                        : "border-slate-200"
+                    }`}
+                    style={{ minHeight: "48px" }}
+                  />
+                  {errors.dateCoursPrevue && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                      <AlertCircle size={14} className="mr-1 flex-shrink-0" />
+                      {errors.dateCoursPrevue.message}
+                    </p>
+                  )}
                 </div>
 
-                {/* Effective Dates - Side by side on larger screens */}
+                {/* Effective Dates */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <label
                       htmlFor="dateDebutEffectif"
-                      className="block text-sm font-semibold text-slate-700 mb-3"
+                      className="block text-sm font-semibold text-slate-700 mb-3 flex items-center"
                     >
-                      <div className="flex items-center mb-1">
-                        <Activity size={16} className="mr-2 text-green-600" />
-                        Date début effectif
-                      </div>
-                      {shouldDisableDateDebutEffectif && (
-                        <span className="text-xs text-amber-600 font-medium flex items-center">
-                          <AlertCircle size={12} className="mr-1" />
-                          État doit être "En cours" ou "Terminé"
-                        </span>
-                      )}
+                      <Activity size={16} className="mr-2 text-green-600" />
+                      Date début effectif *
                     </label>
                     <input
                       id="dateDebutEffectif"
@@ -597,13 +618,8 @@ const CoursProgrammerForm = ({
                         errors.dateDebutEffectif
                           ? "border-red-300 bg-red-50"
                           : "border-slate-200"
-                      } ${
-                        shouldDisableDateDebutEffectif
-                          ? "bg-slate-100 text-slate-500"
-                          : "bg-white"
                       }`}
                       style={{ minHeight: "48px" }}
-                      disabled={shouldDisableDateDebutEffectif}
                     />
                     {errors.dateDebutEffectif && (
                       <p className="mt-2 text-sm text-red-600 flex items-center">
@@ -616,18 +632,10 @@ const CoursProgrammerForm = ({
                   <div>
                     <label
                       htmlFor="dateFinEffectif"
-                      className="block text-sm font-semibold text-slate-700 mb-3"
+                      className="block text-sm font-semibold text-slate-700 mb-3 flex items-center"
                     >
-                      <div className="flex items-center mb-1">
-                        <BookOpen size={16} className="mr-2 text-gray-600" />
-                        Date fin effectif
-                      </div>
-                      {shouldDisableDateFinEffectif && (
-                        <span className="text-xs text-amber-600 font-medium flex items-center">
-                          <AlertCircle size={12} className="mr-1" />
-                          État doit être "Terminé"
-                        </span>
-                      )}
+                      <BookOpen size={16} className="mr-2 text-gray-600" />
+                      Date fin effectif *
                     </label>
                     <input
                       id="dateFinEffectif"
@@ -638,13 +646,8 @@ const CoursProgrammerForm = ({
                         errors.dateFinEffectif
                           ? "border-red-300 bg-red-50"
                           : "border-slate-200"
-                      } ${
-                        shouldDisableDateFinEffectif
-                          ? "bg-slate-100 text-slate-500"
-                          : "bg-white"
                       }`}
                       style={{ minHeight: "48px" }}
-                      disabled={shouldDisableDateFinEffectif}
                     />
                     {errors.dateFinEffectif && (
                       <p className="mt-2 text-sm text-red-600 flex items-center">

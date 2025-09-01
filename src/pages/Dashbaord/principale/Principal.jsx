@@ -23,7 +23,18 @@ import ParentClassManagement from "./ParentSidebar/ParentClassManagement";
 import ParentClassManagementClass from "./ParentSidebar/ParentClassManagementClass";
 import Modal from "react-modal";
 import NotificationIcon from "./modals/NotificationIcon";
-import { Bell, X } from "lucide-react";
+import {
+  Bell,
+  X,
+  Menu,
+  User,
+  Globe,
+  ChevronDown,
+  LogOut,
+  Settings,
+  Phone,
+  Mail,
+} from "lucide-react";
 import ProfessorCoursesContent from "./content/ProfessorsContent/ProfessorCoursesContent";
 import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgrammerContent";
 
@@ -51,6 +62,17 @@ const colorSchemes = {
   },
 };
 
+const languages = {
+  fr: {
+    name: "Français",
+    flag: "🇫🇷",
+  },
+  en: {
+    name: "English",
+    flag: "🇺🇸",
+  },
+};
+
 const Principal = () => {
   const navigate = useNavigate();
   const { dashboardType } = useParams();
@@ -65,6 +87,33 @@ const Principal = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
   const [tokenChecked, setTokenChecked] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [currentLanguage, setCurrentLanguage] = useState("fr");
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [userInfo, setUserInfo] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    username: "",
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+
+      if (mobile) {
+        setShowSidebar(false);
+      } else {
+        setShowSidebar(true);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const checkTokenExpiration = () => {
@@ -115,6 +164,58 @@ const Principal = () => {
     };
   }, []);
 
+  // Extract user info from token and localStorage
+  useEffect(() => {
+    if (tokenChecked) {
+      const email = localStorage.getItem("userEmail") || "";
+      const username = localStorage.getItem("username") || "";
+      const decodedTokenStr = localStorage.getItem("decodedToken");
+
+      let name = username;
+      let phone = "";
+
+      if (decodedTokenStr) {
+        try {
+          const decodedToken = JSON.parse(decodedTokenStr);
+          // Extract name from email if not available
+          if (!name && email) {
+            name = email.split("@")[0];
+          }
+          // You can add more fields here if they're available in your token
+          phone = decodedToken.phone || decodedToken.phoneNumber || "";
+        } catch (error) {
+          console.error("Error parsing decoded token:", error);
+        }
+      }
+
+      if (!name && email) {
+        name = email.split("@")[0];
+      }
+
+      setUserInfo({
+        name: name || "User",
+        email: email || "",
+        phone: phone || "",
+        username: username || "",
+      });
+    }
+  }, [tokenChecked]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest(".language-dropdown")) {
+        setShowLanguageDropdown(false);
+      }
+      if (!event.target.closest(".user-profile-dropdown")) {
+        setShowUserProfile(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
@@ -144,7 +245,6 @@ const Principal = () => {
       console.error("Error parsing user roles:", error);
     }
 
-    // Update both states at once to minimize re-renders
     setUserRole(role);
     setUserRoles(roles);
 
@@ -153,7 +253,6 @@ const Principal = () => {
       localStorage.setItem("userName", username);
     }
 
-    // Determine dashboard based on current values, not state
     let expectedDashboard;
     if (role === "admin" || roles.includes("ROLE_ADMIN")) {
       expectedDashboard = "AdminDashboard";
@@ -184,17 +283,17 @@ const Principal = () => {
       userRoles
     );
 
-    // Reset manage class state when changing tabs
     setShowManageClass(false);
-
-    // Set the active tab
     setActiveTab(tab);
 
-    // Handle messaging
     if (tab === "messages") {
       setShowMessaging(true);
     } else {
       setShowMessaging(false);
+    }
+
+    if (isMobile && showSidebar) {
+      setShowSidebar(false);
     }
   };
 
@@ -231,6 +330,13 @@ const Principal = () => {
 
   const onNavigateToClassesList = () => {
     setActiveTab("manage-class");
+  };
+
+  const handleLanguageChange = (lang) => {
+    setCurrentLanguage(lang);
+    setShowLanguageDropdown(false);
+    // Here you can implement actual language change logic
+    console.log("Language changed to:", lang);
   };
 
   const renderContent = () => {
@@ -351,7 +457,7 @@ const Principal = () => {
     if (activeTab === "students") return "Gérer Élèves";
     if (activeTab === "others") return "Gérer Autres Utilisateurs";
     if (activeTab === "activities") return "Activités";
-    if (activeTab === "create-course") return "Créer un Cours";
+    if (activeTab === "create-course") return "Gérer les Cours";
     if (activeTab === "schedule-course") return "Programmer le Cours";
     if (activeTab === "create-class") return "Créer une Classe";
     if (activeTab === "manage-class") return "Gérer une Classe";
@@ -363,6 +469,13 @@ const Principal = () => {
 
   return (
     <div className={`principal-container ${isDark ? "dark-mode" : ""}`}>
+      {showSidebar && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
       <Modal
         isOpen={showTokenExpiredModal}
         onRequestClose={() => {}}
@@ -386,10 +499,6 @@ const Principal = () => {
         </div>
       </Modal>
 
-      <button className="mobile-menu-button" onClick={toggleSidebar}>
-        ☰
-      </button>
-
       <Sidebar
         showSidebar={showSidebar}
         activeTab={activeTab}
@@ -401,17 +510,118 @@ const Principal = () => {
         userRole={userRole}
         userRoles={userRoles}
         onShowMessaging={handleShowMessaging}
+        toggleSidebar={toggleSidebar}
       />
 
-      <div
-        className={`main-content ${
-          showMessaging && activeTab !== "messages" ? "with-messaging" : ""
-        }`}
-      >
-        <div className="content-header">
-          <h1>{getTabDisplayName()}</h1>
+      <div className={`main-content ${showSidebar ? "with-sidebar" : ""}`}>
+        <div className="content-header fixed-header">
+          <div className="header-left">
+            <button
+              className="menu-toggle-btn"
+              onClick={toggleSidebar}
+              aria-label="Toggle sidebar"
+            >
+              <Menu size={24} />
+            </button>
+            <h1>{getTabDisplayName()}</h1>
+          </div>
           <div className="header-actions">
             <NotificationIcon />
+
+            {/* Language Switcher */}
+            <div className="language-dropdown">
+              <button
+                className="language-toggle-btn"
+                onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+              >
+                <span className="flag">{languages[currentLanguage].flag}</span>
+                <ChevronDown size={16} />
+              </button>
+              {showLanguageDropdown && (
+                <div className="language-dropdown-menu">
+                  {Object.entries(languages).map(([key, lang]) => (
+                    <button
+                      key={key}
+                      className={`language-option ${
+                        key === currentLanguage ? "active" : ""
+                      }`}
+                      onClick={() => handleLanguageChange(key)}
+                    >
+                      <span className="flag">{lang.flag}</span>
+                      <span>{lang.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* User Profile */}
+            <div className="user-profile-dropdown">
+              <button
+                className="user-profile-btn"
+                onClick={() => setShowUserProfile(!showUserProfile)}
+              >
+                <div className="user-avatar">
+                  <User size={20} />
+                </div>
+                <div className="user-info">
+                  <span className="user-name">{userInfo.name}</span>
+                </div>
+                <ChevronDown size={16} />
+              </button>
+              {showUserProfile && (
+                <div className="user-profile-menu">
+                  <div className="user-profile-header">
+                    <div className="user-avatar large">
+                      <User size={32} />
+                    </div>
+                    <div className="user-details">
+                      <h4>{userInfo.name}</h4>
+                      <p className="user-role-text">{userRole}</p>
+                    </div>
+                  </div>
+                  <div className="user-profile-info">
+                    {userInfo.email && (
+                      <div className="info-item">
+                        <Mail size={16} />
+                        <span>{userInfo.email}</span>
+                      </div>
+                    )}
+                    {userInfo.phone && (
+                      <div className="info-item">
+                        <Phone size={16} />
+                        <span>{userInfo.phone}</span>
+                      </div>
+                    )}
+                    {userInfo.username && (
+                      <div className="info-item">
+                        <User size={16} />
+                        <span>{userInfo.username}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="user-profile-actions">
+                    <button
+                      className="profile-action-btn"
+                      onClick={() => {
+                        setActiveTab("settings");
+                        setShowUserProfile(false);
+                      }}
+                    >
+                      <Settings size={16} />
+                      <span>Settings</span>
+                    </button>
+                    <button
+                      className="profile-action-btn logout"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={16} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -419,11 +629,7 @@ const Principal = () => {
           className={`content-body ${
             isDark ? "bg-gray-900 text-white" : "bg-gray-50"
           }`}
-          style={{
-            display:
-              showMessaging && activeTab !== "messages" ? "none" : "block",
-            width: showMessaging && activeTab !== "messages" ? "0" : "100%",
-          }}
+          style={{ paddingTop: "100px" }} // Added padding to account for fixed header
         >
           {renderContent()}
         </div>

@@ -25,7 +25,6 @@ coursProgrammerApi.interceptors.request.use(
   }
 );
 
-// Add response interceptor for debugging
 coursProgrammerApi.interceptors.response.use(
   (response) => {
     console.log("API Response:", {
@@ -52,154 +51,190 @@ class CoursProgrammerService {
   async programmerCours(coursProgrammerData) {
     try {
       console.log(
-        "Starting programmerCours with raw data:",
+        "Démarrage de programmerCours avec les données brutes:",
         coursProgrammerData
       );
 
-      // Validate required fields
+      // Validation des champs obligatoires
       if (!coursProgrammerData.coursId) {
-        throw new Error("Course ID is required");
+        throw new Error("L'ID du cours est requis");
+      }
+      if (!coursProgrammerData.professeurId) {
+        throw new Error("L'ID du professeur est requis");
       }
       if (!coursProgrammerData.dateCoursPrevue) {
-        throw new Error("Scheduled date is required");
+        throw new Error("La date prévue du cours est requise");
       }
       if (!coursProgrammerData.lieu) {
-        throw new Error("Location is required");
+        throw new Error("Le lieu est requis");
+      }
+      if (!coursProgrammerData.dateDebutEffectif) {
+        throw new Error("La date de début effective est requise");
+      }
+      if (!coursProgrammerData.dateFinEffectif) {
+        throw new Error("La date de fin effective est requise");
       }
 
       const token =
         localStorage.getItem("authToken") ||
         localStorage.getItem("cmr.notep.business.business.token");
       if (!token) {
-        throw new Error("Authentication token not found");
+        throw new Error("Token d'authentification non trouvé");
       }
 
-      // Clean and validate the data
+      // Format data exactly as expected by the API
       const cleanedData = {
-        coursId: coursProgrammerData.coursId?.trim(),
-        dateCoursPrevue: coursProgrammerData.dateCoursPrevue,
-        lieu: coursProgrammerData.lieu?.trim(),
+        coursId: coursProgrammerData.coursId.trim(),
+        professeurId: coursProgrammerData.professeurId.trim(),
+        dateCoursPrevue: this.formatDateToBackend(
+          coursProgrammerData.dateCoursPrevue
+        ),
+        dateDebutEffectif: this.formatDateToBackend(
+          coursProgrammerData.dateDebutEffectif
+        ),
+        dateFinEffectif: this.formatDateToBackend(
+          coursProgrammerData.dateFinEffectif
+        ),
+        lieu: coursProgrammerData.lieu.trim(),
         description: coursProgrammerData.description?.trim() || null,
-        capaciteMax: coursProgrammerData.capaciteMax
-          ? parseInt(coursProgrammerData.capaciteMax, 10)
-          : null,
-        classeId: coursProgrammerData.classeId?.trim() || null,
         etatCoursProgramme:
           coursProgrammerData.etatCoursProgramme || "PLANIFIE",
-        dateDebutEffectif: coursProgrammerData.dateDebutEffectif || null,
-        dateFinEffectif: coursProgrammerData.dateFinEffectif || null,
-        participantsIds: [],
+        classesIds: Array.isArray(coursProgrammerData.classesIds)
+          ? coursProgrammerData.classesIds.filter((id) => id && id.trim())
+          : [],
+        participantsIds: Array.isArray(coursProgrammerData.participantsIds)
+          ? coursProgrammerData.participantsIds.filter((id) => id && id.trim())
+          : [],
       };
 
-      // Clean and validate participantsIds
+      // Add capaciteMax only if provided
       if (
-        coursProgrammerData.participantsIds &&
-        Array.isArray(coursProgrammerData.participantsIds)
+        coursProgrammerData.capaciteMax &&
+        !isNaN(parseInt(coursProgrammerData.capaciteMax))
       ) {
-        cleanedData.participantsIds = coursProgrammerData.participantsIds
-          .filter((id) => id && typeof id === "string" && id.trim().length > 0)
-          .map((id) => id.trim())
-          .filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
+        cleanedData.capaciteMax = parseInt(coursProgrammerData.capaciteMax);
       }
 
       console.log(
-        "Cleaned data before sending:",
+        "Données nettoyées avant envoi:",
         JSON.stringify(cleanedData, null, 2)
       );
 
-      // Validate UUID format for coursId and classeId
+      // Validation des formats UUID
       const uuidRegex =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
       if (!uuidRegex.test(cleanedData.coursId)) {
-        throw new Error(`Invalid course ID format: ${cleanedData.coursId}`);
+        throw new Error(
+          `Format d'ID de cours invalide: ${cleanedData.coursId}`
+        );
       }
 
-      if (cleanedData.classeId && !uuidRegex.test(cleanedData.classeId)) {
-        throw new Error(`Invalid class ID format: ${cleanedData.classeId}`);
+      if (!uuidRegex.test(cleanedData.professeurId)) {
+        throw new Error(
+          `Format d'ID de professeur invalide: ${cleanedData.professeurId}`
+        );
       }
 
-      // Validate participant IDs
-      for (const participantId of cleanedData.participantsIds) {
-        if (!uuidRegex.test(participantId)) {
-          throw new Error(`Invalid participant ID format: ${participantId}`);
+      for (const classeId of cleanedData.classesIds) {
+        if (!uuidRegex.test(classeId)) {
+          throw new Error(`Format d'ID de classe invalide: ${classeId}`);
         }
       }
 
-      console.log("Sending request to:", `/cours-programmes`);
-      console.log("Request payload:", JSON.stringify(cleanedData, null, 2));
+      for (const participantId of cleanedData.participantsIds) {
+        if (!uuidRegex.test(participantId)) {
+          throw new Error(
+            `Format d'ID de participant invalide: ${participantId}`
+          );
+        }
+      }
+
+      console.log("Envoi de la requête vers:", `/cours-programmes`);
+      console.log(
+        "Payload de la requête:",
+        JSON.stringify(cleanedData, null, 2)
+      );
 
       const response = await coursProgrammerApi.post(
         "/cours-programmes",
         cleanedData
       );
 
-      console.log("Course scheduled successfully:", response.data);
+      console.log("Cours programmé avec succès:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error in programmerCours:", error);
-
-      let errorMessage = "An unexpected error occurred";
-      if (error.response) {
-        console.error("Response error details:", {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-        });
-
-        errorMessage =
-          error.response.data?.message ||
-          error.response.data?.error ||
-          error.response.statusText ||
-          `Server error (${error.response.status})`;
-      } else if (error.request) {
-        console.error("Request error - no response received:", error.request);
-        errorMessage = "No response from server. Please check your connection.";
-      } else {
-        console.error("Request setup error:", error.message);
-        errorMessage = error.message;
-      }
-
-      throw new Error(errorMessage);
+      console.error("Erreur dans programmerCours:", error);
+      this.handleError(error);
     }
   }
 
   async mettreAJourCoursProgramme(id, updates) {
     try {
       if (!id) {
-        throw new Error("Scheduled course ID is required");
+        throw new Error("L'ID du cours programmé est requis");
       }
 
-      const formattedUpdates = { ...updates };
+      // Format data exactly as expected by the API for updates
+      const formattedUpdates = {
+        coursId: updates.coursId?.trim(),
+        professeurId: updates.professeurId?.trim(),
+        lieu: updates.lieu?.trim(),
+        description: updates.description?.trim() || null,
+        etatCoursProgramme: updates.etatCoursProgramme || "PLANIFIE",
+        classesIds: Array.isArray(updates.classesIds)
+          ? updates.classesIds.filter((id) => id && id.trim())
+          : [],
+        participantsIds: Array.isArray(updates.participantsIds)
+          ? updates.participantsIds.filter((id) => id && id.trim())
+          : [],
+      };
 
+      // Format dates
       if (updates.dateCoursPrevue) {
-        formattedUpdates.dateCoursPrevue = new Date(
+        formattedUpdates.dateCoursPrevue = this.formatDateToBackend(
           updates.dateCoursPrevue
-        ).toISOString();
-      }
-      if (updates.dateDebutEffectif) {
-        formattedUpdates.dateDebutEffectif = new Date(
-          updates.dateDebutEffectif
-        ).toISOString();
-      }
-      if (updates.dateFinEffectif) {
-        formattedUpdates.dateFinEffectif = new Date(
-          updates.dateFinEffectif
-        ).toISOString();
+        );
       }
 
-      console.log("Updating scheduled course:", id, "with:", formattedUpdates);
+      // Only include effective dates if they are provided
+      if (updates.dateDebutEffectif) {
+        formattedUpdates.dateDebutEffectif = this.formatDateToBackend(
+          updates.dateDebutEffectif
+        );
+      } else {
+        formattedUpdates.dateDebutEffectif = null;
+      }
+
+      if (updates.dateFinEffectif) {
+        formattedUpdates.dateFinEffectif = this.formatDateToBackend(
+          updates.dateFinEffectif
+        );
+      } else {
+        formattedUpdates.dateFinEffectif = null;
+      }
+
+      // Add capaciteMax only if provided
+      if (updates.capaciteMax && !isNaN(parseInt(updates.capaciteMax))) {
+        formattedUpdates.capaciteMax = parseInt(updates.capaciteMax);
+      }
+
+      console.log(
+        "Mise à jour du cours programmé:",
+        id,
+        "avec:",
+        formattedUpdates
+      );
 
       const response = await coursProgrammerApi.put(
         `/cours-programmes/${id}`,
         formattedUpdates
       );
 
-      console.log("Updated scheduled course:", response.data);
+      console.log("Cours programmé mis à jour:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error updating scheduled course:", error);
+      console.error("Erreur lors de la mise à jour du cours programmé:", error);
       this.handleError(error);
     }
   }
@@ -207,16 +242,16 @@ class CoursProgrammerService {
   async supprimerCoursProgramme(id) {
     try {
       if (!id) {
-        throw new Error("Scheduled course ID is required");
+        throw new Error("L'ID du cours programmé est requis");
       }
 
-      console.log("Deleting scheduled course:", id);
+      console.log("Suppression du cours programmé:", id);
 
       await coursProgrammerApi.delete(`/cours-programmes/${id}`);
 
-      console.log("Scheduled course deleted successfully:", id);
+      console.log("Cours programmé supprimé avec succès:", id);
     } catch (error) {
-      console.error("Error deleting scheduled course:", error);
+      console.error("Erreur lors de la suppression du cours programmé:", error);
       this.handleError(error);
     }
   }
@@ -224,31 +259,37 @@ class CoursProgrammerService {
   async obtenirCoursProgrammeParId(id) {
     try {
       if (!id) {
-        throw new Error("Scheduled course ID is required");
+        throw new Error("L'ID du cours programmé est requis");
       }
 
-      console.log("Fetching scheduled course:", id);
+      console.log("Récupération du cours programmé:", id);
 
       const response = await coursProgrammerApi.get(`/cours-programmes/${id}`);
 
-      console.log("Fetched scheduled course:", response.data);
+      console.log("Cours programmé récupéré:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error fetching scheduled course:", error);
+      console.error(
+        "Erreur lors de la récupération du cours programmé:",
+        error
+      );
       this.handleError(error);
     }
   }
 
   async obtenirTousLesCoursProgrammes() {
     try {
-      console.log("Fetching all scheduled courses");
+      console.log("Récupération de tous les cours programmés");
 
       const response = await coursProgrammerApi.get("/cours-programmes");
 
-      console.log("Fetched all scheduled courses:", response.data);
+      console.log("Tous les cours programmés récupérés:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error fetching all scheduled courses:", error);
+      console.error(
+        "Erreur lors de la récupération de tous les cours programmés:",
+        error
+      );
       this.handleError(error);
     }
   }
@@ -256,19 +297,22 @@ class CoursProgrammerService {
   async obtenirProgrammationParCours(coursId) {
     try {
       if (!coursId) {
-        throw new Error("Course ID is required");
+        throw new Error("L'ID du cours est requis");
       }
 
-      console.log("Fetching programming for course:", coursId);
+      console.log("Récupération de la programmation pour le cours:", coursId);
 
       const response = await coursProgrammerApi.get(
         `/cours-programmes/by-cours/${coursId}`
       );
 
-      console.log("Fetched programming data:", response.data);
+      console.log("Données de programmation récupérées:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error fetching programming:", error);
+      console.error(
+        "Erreur lors de la récupération de la programmation:",
+        error
+      );
       this.handleError(error);
     }
   }
@@ -276,19 +320,54 @@ class CoursProgrammerService {
   async obtenirProgrammationParClasse(classeId) {
     try {
       if (!classeId) {
-        throw new Error("Class ID is required");
+        throw new Error("L'ID de la classe est requis");
       }
 
-      console.log("Fetching programming for class:", classeId);
+      console.log("Récupération de la programmation pour la classe:", classeId);
 
       const response = await coursProgrammerApi.get(
         `/cours-programmes/by-classe/${classeId}`
       );
 
-      console.log("Fetched programming data for class:", response.data);
+      console.log(
+        "Données de programmation récupérées pour la classe:",
+        response.data
+      );
       return response.data;
     } catch (error) {
-      console.error("Error fetching programming for class:", error);
+      console.error(
+        "Erreur lors de la récupération de la programmation pour la classe:",
+        error
+      );
+      this.handleError(error);
+    }
+  }
+
+  async obtenirProgrammationParProfesseur(professeurId) {
+    try {
+      if (!professeurId) {
+        throw new Error("L'ID du professeur est requis");
+      }
+
+      console.log(
+        "Récupération de la programmation pour le professeur:",
+        professeurId
+      );
+
+      const response = await coursProgrammerApi.get(
+        `/cours-programmes/by-professeur/${professeurId}`
+      );
+
+      console.log(
+        "Données de programmation récupérées pour le professeur:",
+        response.data
+      );
+      return response.data;
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération de la programmation pour le professeur:",
+        error
+      );
       this.handleError(error);
     }
   }
@@ -296,19 +375,57 @@ class CoursProgrammerService {
   async obtenirProgrammationParParticipant(participantId) {
     try {
       if (!participantId) {
-        throw new Error("Participant ID is required");
+        throw new Error("L'ID du participant est requis");
       }
 
-      console.log("Fetching programming for participant:", participantId);
+      console.log(
+        "Récupération de la programmation pour le participant:",
+        participantId
+      );
 
       const response = await coursProgrammerApi.get(
         `/cours-programmes/by-participant/${participantId}`
       );
 
-      console.log("Fetched programming data for participant:", response.data);
+      console.log(
+        "Données de programmation récupérées pour le participant:",
+        response.data
+      );
       return response.data;
     } catch (error) {
-      console.error("Error fetching programming for participant:", error);
+      console.error(
+        "Erreur lors de la récupération de la programmation pour le participant:",
+        error
+      );
+      this.handleError(error);
+    }
+  }
+
+  async obtenirProgrammationAccessible(userId) {
+    try {
+      if (!userId) {
+        throw new Error("L'ID de l'utilisateur est requis");
+      }
+
+      console.log(
+        "Récupération de la programmation accessible pour l'utilisateur:",
+        userId
+      );
+
+      const response = await coursProgrammerApi.get(
+        `/cours-programmes/accessible/${userId}`
+      );
+
+      console.log(
+        "Données de programmation accessible récupérées:",
+        response.data
+      );
+      return response.data;
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération de la programmation accessible:",
+        error
+      );
       this.handleError(error);
     }
   }
@@ -316,25 +433,31 @@ class CoursProgrammerService {
   async demarrerCours(scheduledId) {
     try {
       if (!scheduledId) {
-        throw new Error("Scheduled course ID is required");
+        throw new Error("L'ID du cours programmé est requis");
       }
 
       const updates = {
         etatCoursProgramme: "EN_COURS",
-        dateDebutEffectif: new Date().toISOString(),
+        dateDebutEffectif: this.formatDateToBackend(new Date().toISOString()),
+        dateFinEffectif: null, // Ensure end date is null when starting
       };
 
-      console.log("Starting course:", scheduledId, "with updates:", updates);
+      console.log(
+        "Démarrage du cours:",
+        scheduledId,
+        "avec les mises à jour:",
+        updates
+      );
 
       const response = await coursProgrammerApi.put(
         `/cours-programmes/${scheduledId}`,
         updates
       );
 
-      console.log("Course started:", response.data);
+      console.log("Cours démarré:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error starting course:", error);
+      console.error("Erreur lors du démarrage du cours:", error);
       this.handleError(error);
     }
   }
@@ -342,25 +465,30 @@ class CoursProgrammerService {
   async terminerCours(scheduledId) {
     try {
       if (!scheduledId) {
-        throw new Error("Scheduled course ID is required");
+        throw new Error("L'ID du cours programmé est requis");
       }
 
       const updates = {
         etatCoursProgramme: "TERMINE",
-        dateFinEffectif: new Date().toISOString(),
+        dateFinEffectif: this.formatDateToBackend(new Date().toISOString()),
       };
 
-      console.log("Ending course:", scheduledId, "with updates:", updates);
+      console.log(
+        "Fin du cours:",
+        scheduledId,
+        "avec les mises à jour:",
+        updates
+      );
 
       const response = await coursProgrammerApi.put(
         `/cours-programmes/${scheduledId}`,
         updates
       );
 
-      console.log("Course ended:", response.data);
+      console.log("Cours terminé:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error ending course:", error);
+      console.error("Erreur lors de la fin du cours:", error);
       this.handleError(error);
     }
   }
@@ -368,42 +496,82 @@ class CoursProgrammerService {
   async annulerCours(scheduledId, reason) {
     try {
       if (!scheduledId) {
-        throw new Error("Scheduled course ID is required");
+        throw new Error("L'ID du cours programmé est requis");
       }
 
       const updates = {
         etatCoursProgramme: "ANNULE",
         description: reason ? `Annulé: ${reason}` : "Cours annulé",
+        dateDebutEffectif: null, // Clear effective dates when cancelling
+        dateFinEffectif: null,
       };
 
-      console.log("Canceling course:", scheduledId, "with reason:", reason);
+      console.log(
+        "Annulation du cours:",
+        scheduledId,
+        "avec la raison:",
+        reason
+      );
 
       const response = await coursProgrammerApi.put(
         `/cours-programmes/${scheduledId}`,
         updates
       );
 
-      console.log("Course canceled:", response.data);
+      console.log("Cours annulé:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error canceling course:", error);
+      console.error("Erreur lors de l'annulation du cours:", error);
       this.handleError(error);
     }
   }
 
+  // Utility method to format dates exactly as expected by backend
+  formatDateToBackend(dateValue) {
+    if (!dateValue) return null;
+
+    try {
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) {
+        throw new Error("Date invalide");
+      }
+
+      // Format as: YYYY-MM-DDTHH:mm:ss (matching Postman examples)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
+
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    } catch (error) {
+      console.error("Erreur lors du formatage de la date:", error);
+      return null;
+    }
+  }
+
+  // Legacy method for backward compatibility
+  formatDateToISO(dateValue) {
+    return this.formatDateToBackend(dateValue);
+  }
+
   handleError(error) {
-    console.error("Handling error:", error);
+    console.error("Gestion de l'erreur:", error);
 
     if (error.response) {
       const errorMessage =
         error.response.data?.message ||
         error.response.data?.error ||
-        "An error occurred";
+        error.response.data?.details ||
+        `Erreur serveur (${error.response.status})`;
       throw new Error(errorMessage);
     } else if (error.request) {
-      throw new Error("Network error. Please check your connection.");
+      throw new Error("Erreur réseau. Veuillez vérifier votre connexion.");
     } else {
-      throw new Error("Request setup error: " + error.message);
+      throw new Error(
+        "Erreur de configuration de la requête: " + error.message
+      );
     }
   }
 }

@@ -112,19 +112,16 @@ const CoursProgrammerList = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Reset to first page when filters change or pageSize changes
   useEffect(() => {
     setCurrentPage(1);
   }, [scheduledCourses, searchTerm, filterStatus, pageSize]);
 
-  // Get class name by ID
   const getClassName = (classeId) => {
     if (!classeId || !classes.length) return "Classe non définie";
     const classe = classes.find((c) => c.id === classeId);
     return classe ? classe.nom : "Classe non définie";
   };
 
-  // Calculate pagination
   const totalItems = scheduledCourses.length;
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
@@ -135,25 +132,21 @@ const CoursProgrammerList = ({
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
-  // Generate page numbers for pagination display
   const getPageNumbers = () => {
     const maxVisiblePages = 5;
     const pages = [];
 
     if (totalPages <= maxVisiblePages) {
-      // Show all pages if total is small
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Show smart pagination
       const startPage = Math.max(
         1,
         currentPage - Math.floor(maxVisiblePages / 2)
       );
       const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
-      // Adjust start if we're near the end
       const adjustedStart = Math.max(1, endPage - maxVisiblePages + 1);
 
       for (let i = adjustedStart; i <= endPage; i++) {
@@ -215,7 +208,6 @@ const CoursProgrammerList = ({
 
   const PaginationControls = () => (
     <div className="flex items-center justify-center gap-2 mt-6">
-      {/* Previous page button */}
       <button
         onClick={() => handlePageChange(currentPage - 1)}
         disabled={currentPage === 1}
@@ -225,13 +217,12 @@ const CoursProgrammerList = ({
         <ChevronLeft size={16} />
       </button>
 
-      {/* Page numbers */}
       <div className="flex items-center gap-1">
         {getPageNumbers().map((page) => (
           <button
             key={page}
             onClick={() => handlePageChange(page)}
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`px-2 py-1 sm:px-3 sm:py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
               page === currentPage
                 ? "bg-indigo-600 text-white"
                 : "text-slate-600 hover:text-slate-800 hover:bg-slate-100"
@@ -242,7 +233,6 @@ const CoursProgrammerList = ({
         ))}
       </div>
 
-      {/* Next page button */}
       <button
         onClick={() => handlePageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
@@ -256,17 +246,17 @@ const CoursProgrammerList = ({
 
   if (scheduledCourses.length === 0) {
     return (
-      <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg p-12">
+      <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg p-8 sm:p-12">
         <div className="text-center">
-          <div className="mx-auto w-24 h-24 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-6">
-            <CalendarPlus className="w-12 h-12 text-slate-400" />
+          <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+            <CalendarPlus className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400" />
           </div>
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">
+          <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
             {searchTerm || filterStatus !== "all"
               ? "Aucune programmation trouvée"
               : "Aucun cours programmé"}
           </h3>
-          <p className="text-slate-600 mb-6 max-w-md mx-auto">
+          <p className="text-slate-600 mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base">
             {searchTerm || filterStatus !== "all"
               ? "Essayez de modifier vos critères de recherche ou de filtrage."
               : "Commencez par programmer vos premiers cours pour organiser vos sessions d'enseignement."}
@@ -274,9 +264,9 @@ const CoursProgrammerList = ({
           {!searchTerm && filterStatus === "all" && (
             <button
               onClick={onScheduleCourse}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto text-sm sm:text-base"
             >
-              <Plus size={20} />
+              <Plus size={18} />
               Programmer mon premier cours
             </button>
           )}
@@ -288,17 +278,17 @@ const CoursProgrammerList = ({
   if (viewMode === "grid") {
     return (
       <>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {currentItems.map((scheduledCourse) => (
             <div
               key={scheduledCourse.id}
-              className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
+              className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="flex items-center space-x-2 sm:space-x-3">
                   <div className="relative">
-                    <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
-                      <span className="text-white font-bold text-sm">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+                      <span className="text-white font-bold text-xs sm:text-sm">
                         {getInitials(scheduledCourse.cours?.titre)}
                       </span>
                     </div>
@@ -307,7 +297,7 @@ const CoursProgrammerList = ({
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900 text-sm leading-tight break-words">
+                    <h3 className="font-semibold text-slate-900 text-xs sm:text-sm leading-tight break-words">
                       {scheduledCourse.cours?.titre}
                     </h3>
                     <p className="text-xs text-slate-600 truncate mt-1">
@@ -316,15 +306,15 @@ const CoursProgrammerList = ({
                   </div>
                 </div>
                 <div className="relative group/actions">
-                  <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                    <MoreVertical size={16} />
+                  <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                    <MoreVertical size={14} />
                   </button>
                 </div>
               </div>
 
-              <div className="mb-4">
+              <div className="mb-3 sm:mb-4">
                 <span
-                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
                     scheduledCourse.etatCoursProgramme
                   )}`}
                 >
@@ -332,28 +322,40 @@ const CoursProgrammerList = ({
                 </span>
               </div>
 
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center text-sm text-slate-600">
-                  <Calendar size={14} className="mr-2 text-slate-400" />
-                  <span>
+              <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
+                <div className="flex items-center text-xs sm:text-sm text-slate-600">
+                  <Calendar
+                    size={12}
+                    className="mr-1.5 sm:mr-2 text-slate-400"
+                  />
+                  <span className="truncate">
                     Prévu: {formatDate(scheduledCourse.dateCoursPrevue)}
                   </span>
                 </div>
                 {scheduledCourse.lieu && (
-                  <div className="flex items-center text-sm text-slate-600">
-                    <MapPin size={14} className="mr-2 text-slate-400" />
+                  <div className="flex items-center text-xs sm:text-sm text-slate-600">
+                    <MapPin
+                      size={12}
+                      className="mr-1.5 sm:mr-2 text-slate-400"
+                    />
                     <span className="truncate">{scheduledCourse.lieu}</span>
                   </div>
                 )}
                 {scheduledCourse.capaciteMax && (
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Users size={14} className="mr-2 text-slate-400" />
+                  <div className="flex items-center text-xs sm:text-sm text-slate-600">
+                    <Users
+                      size={12}
+                      className="mr-1.5 sm:mr-2 text-slate-400"
+                    />
                     <span>Capacité: {scheduledCourse.capaciteMax}</span>
                   </div>
                 )}
                 {scheduledCourse.participantsIds?.length > 0 && (
-                  <div className="flex items-center text-sm text-slate-600">
-                    <UserCheck size={14} className="mr-2 text-slate-400" />
+                  <div className="flex items-center text-xs sm:text-sm text-slate-600">
+                    <UserCheck
+                      size={12}
+                      className="mr-1.5 sm:mr-2 text-slate-400"
+                    />
                     <span>
                       Participants: {scheduledCourse.participantsIds.length}
                     </span>
@@ -361,8 +363,8 @@ const CoursProgrammerList = ({
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-slate-100">
+                <div className="flex items-center space-x-1">
                   <ActionButtons scheduledCourse={scheduledCourse} />
                 </div>
               </div>
@@ -381,22 +383,22 @@ const CoursProgrammerList = ({
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50/50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Cours
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Classe
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Lieu
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -407,37 +409,37 @@ const CoursProgrammerList = ({
                   key={scheduledCourse.id}
                   className="hover:bg-white/50 transition-colors duration-200"
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="h-10 w-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
-                          <span className="text-white font-medium text-sm">
+                        <div className="h-8 w-8 sm:h-10 sm:w-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
+                          <span className="text-white font-medium text-xs sm:text-sm">
                             {getInitials(scheduledCourse.cours?.titre)}
                           </span>
                         </div>
                       </div>
-                      <div className="ml-4 flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-slate-900 break-words leading-tight">
+                      <div className="ml-2 sm:ml-4 flex-1 min-w-0">
+                        <div className="text-xs sm:text-sm font-semibold text-slate-900 break-words leading-tight">
                           {scheduledCourse.cours?.titre}
                         </div>
-                        <div className="text-xs text-slate-500 line-clamp-1 mt-1">
+                        <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                           {scheduledCourse.description || "Aucune description"}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-slate-900">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                    <div className="text-xs sm:text-sm text-slate-900">
                       {getClassName(scheduledCourse.classeId)}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-slate-900">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
+                    <div className="text-xs sm:text-sm text-slate-900">
                       {formatDate(scheduledCourse.dateCoursPrevue)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-slate-900">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                    <div className="text-xs sm:text-sm text-slate-900">
                       {scheduledCourse.lieu || "Non défini"}
                     </div>
                     {scheduledCourse.capaciteMax && (
@@ -451,19 +453,19 @@ const CoursProgrammerList = ({
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
                         scheduledCourse.etatCoursProgramme
                       )}`}
                     >
-                      <div className="mr-2">
+                      <div className="mr-1">
                         {getStatusIcon(scheduledCourse.etatCoursProgramme)}
                       </div>
                       {getStatusText(scheduledCourse.etatCoursProgramme)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-xs sm:text-sm">
                     <div className="flex items-center justify-end space-x-1">
                       <ActionButtons scheduledCourse={scheduledCourse} />
                     </div>
