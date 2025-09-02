@@ -17,15 +17,14 @@ const SignUp = () => {
   const [selectedCountry, setSelectedCountry] = useState("CM");
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [token, setToken] = useState("");
+  const [createdUserId, setCreatedUserId] = useState(null);
 
-  // Image previews state
   const [imagePreviews, setImagePreviews] = useState({
     cniRecto: null,
     cniVerso: null,
     selfie: null,
   });
 
-  // Form data state
   const [formData, setFormData] = useState({
     type: "",
     nom: "",
@@ -41,18 +40,16 @@ const SignUp = () => {
     matriculeProfesseur: "",
   });
 
-  // Handle user type change and store in localStorage
   const handleTypeChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    localStorage.setItem("userType", value); // Store user type in localStorage
+    localStorage.setItem("userType", value);
 
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: false }));
     }
   };
 
-  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -61,7 +58,6 @@ const SignUp = () => {
     }
   };
 
-  // Check URL params for update mode and initialize form
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const emailParam = urlParams.get("email");
@@ -99,7 +95,6 @@ const SignUp = () => {
               matriculeProfesseur: userData.matriculeProfesseur || "",
             });
 
-            // Store user type in localStorage
             if (userData.type) {
               localStorage.setItem("userType", userData.type);
             }
@@ -117,6 +112,17 @@ const SignUp = () => {
               cniVerso: userData.cniUrlVerso || null,
               selfie: userData.selfieUrl || null,
             });
+
+            if (
+              userData.type === "professeur" &&
+              (userData.cniUrlRecto ||
+                userData.cniUrlVerso ||
+                userData.selfieUrl)
+            ) {
+              setCurrentStep(3);
+            } else if (userData.type) {
+              setCurrentStep(2);
+            }
 
             showAlert(
               "Veuillez vérifier et mettre à jour vos informations",
@@ -140,6 +146,7 @@ const SignUp = () => {
       const storedData = localStorage.getItem("signupFormData");
       const storedPreviews = localStorage.getItem("imagePreviews");
       const storedUserType = localStorage.getItem("userType");
+      const storedUserId = localStorage.getItem("createdUserId");
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -161,10 +168,13 @@ const SignUp = () => {
       if (storedUserType) {
         setFormData((prev) => ({ ...prev, type: storedUserType }));
       }
+
+      if (storedUserId) {
+        setCreatedUserId(storedUserId);
+      }
     }
   }, [location.search]);
 
-  // Save form data to localStorage when it changes (except in update mode)
   useEffect(() => {
     if (!isUpdateMode) {
       localStorage.setItem("signupFormData", JSON.stringify(formData));
@@ -172,7 +182,6 @@ const SignUp = () => {
     }
   }, [formData, imagePreviews, isUpdateMode]);
 
-  // Show alert message
   const showAlert = (message, type = "error") => {
     setAlertMessage(message);
     setAlertType(type);
@@ -182,7 +191,6 @@ const SignUp = () => {
     }, 5000);
   };
 
-  // Compress image before upload
   const compressImage = async (file, quality = 0.7) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -219,7 +227,6 @@ const SignUp = () => {
     });
   };
 
-  // Validate step 1 fields
   const validateStep1 = useCallback(() => {
     const newErrors = {};
 
@@ -269,7 +276,6 @@ const SignUp = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData, selectedCountry]);
 
-  // Validate step 2 fields
   const validateStep2 = useCallback(() => {
     const newErrors = {};
 
@@ -279,22 +285,7 @@ const SignUp = () => {
       return false;
     }
 
-    if (formData.type === "professeur") {
-      if (!isUpdateMode) {
-        if (!formData.cniRecto) {
-          showAlert("La photo recto de la CNI est requise");
-          newErrors.cniRecto = true;
-        }
-        if (!formData.cniVerso) {
-          showAlert("La photo verso de la CNI est requise");
-          newErrors.cniVerso = true;
-        }
-        if (!formData.selfie) {
-          showAlert("Une photo de profil est requise");
-          newErrors.selfie = true;
-        }
-      }
-    } else if (formData.type === "eleve") {
+    if (formData.type === "eleve") {
       if (!formData.niveau.trim()) {
         showAlert("Le niveau d'éducation est requis");
         newErrors.niveau = true;
@@ -303,9 +294,30 @@ const SignUp = () => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  const validateStep3 = useCallback(() => {
+    const newErrors = {};
+
+    if (formData.type === "professeur" && !isUpdateMode) {
+      if (!formData.cniRecto) {
+        showAlert("La photo recto de la CNI est requise");
+        newErrors.cniRecto = true;
+      }
+      if (!formData.cniVerso) {
+        showAlert("La photo verso de la CNI est requise");
+        newErrors.cniVerso = true;
+      }
+      if (!formData.selfie) {
+        showAlert("Une photo de profil est requise");
+        newErrors.selfie = true;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   }, [formData, isUpdateMode]);
 
-  // Handle phone number change
   const handlePhoneChange = (value) => {
     setFormData((prev) => ({
       ...prev,
@@ -325,7 +337,6 @@ const SignUp = () => {
     }
   };
 
-  // Country select component for phone input
   const CountrySelect = ({ value, onChange, options, ...restProps }) => {
     const countryToFlag = (countryCode) => {
       return countryCode
@@ -361,7 +372,6 @@ const SignUp = () => {
     );
   };
 
-  // Handle file upload
   const handleFileChange = async (e, fieldName) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -395,7 +405,6 @@ const SignUp = () => {
     }
   };
 
-  // Remove uploaded image
   const handleRemoveImage = (fieldName) => {
     setImagePreviews((prev) => ({
       ...prev,
@@ -408,32 +417,25 @@ const SignUp = () => {
     }));
   };
 
-  // Upload file to S3
   const uploadFileToS3 = async (file, userId, documentType) => {
     try {
-      // Generate a unique filename with timestamp
       const timestamp = Date.now();
       const fileExtension = file.name.split(".").pop().toLowerCase();
-      const fileName = `temp_${documentType}_${timestamp}.${fileExtension}`;
+      const fileName = `${documentType}_${timestamp}.${fileExtension}`;
 
-      // For temporary uploads (userId === "temp"), we'll use a temp folder
-      const ownerId = userId === "temp" ? null : userId;
-
-      // Get presigned URL from backend
       const presignedResponse = await axios.post(
         "http://localhost:8486/scholchat/media/presigned-url",
         {
           fileName: fileName,
           contentType: file.type,
           mediaType: "IMAGE",
-          ownerId: ownerId,
+          ownerId: userId,
           documentType: documentType,
         }
       );
 
       const { url } = presignedResponse.data;
 
-      // Convert file to Blob if it's a data URL (from compression)
       let fileToUpload;
       if (typeof file === "string" && file.startsWith("data:")) {
         const res = await fetch(file);
@@ -442,7 +444,6 @@ const SignUp = () => {
         fileToUpload = file;
       }
 
-      // Upload the file to S3
       const uploadResponse = await fetch(url, {
         method: "PUT",
         body: fileToUpload,
@@ -458,7 +459,6 @@ const SignUp = () => {
         );
       }
 
-      // Return the full path that was used for upload
       return fileName;
     } catch (error) {
       console.error("Upload error:", error);
@@ -466,80 +466,100 @@ const SignUp = () => {
     }
   };
 
-  // Handle form submission
-  const handleSubmit = async () => {
+  const createBasicProfile = async () => {
     try {
-      if (!validateStep2()) return;
-
       setIsSubmitting(true);
 
-      let payloadData = {
+      const payloadData = {
         type: formData.type,
         nom: formData.nom.trim(),
         prenom: formData.prenom.trim(),
         email: formData.email.trim(),
         telephone: formData.telephone,
         adresse: formData.adresse.trim(),
-        etat: formData.etat || "INACTIVE",
+        etat: "INACTIVE",
       };
 
-      if (isUpdateMode && formData.id) {
-        payloadData.id = formData.id;
+      if (formData.type === "eleve") {
+        payloadData.niveau = formData.niveau;
       }
+
+      const response = await axios.post(
+        "http://localhost:8486/scholchat/utilisateurs",
+        payloadData
+      );
+
+      const newUserId = response.data.id;
+      setCreatedUserId(newUserId);
+      localStorage.setItem("createdUserId", newUserId);
+
+      showAlert("Profil créé avec succès!", "success");
 
       if (formData.type === "professeur") {
-        payloadData = {
-          ...payloadData,
-          matriculeProfesseur: formData.matriculeProfesseur?.trim() || null,
-        };
+        setCurrentStep(3);
+      } else {
+        completeRegistration();
+      }
+    } catch (err) {
+      console.error("Erreur lors de la création du profil:", err);
+      showAlert(
+        err.response?.data?.message || "Erreur lors de la création du profil"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-        // Upload files for professors
-        if (
-          formData.cniRecto instanceof File ||
-          typeof formData.cniRecto === "string"
-        ) {
-          payloadData.cniUrlRecto = await uploadFileToS3(
-            formData.cniRecto,
-            isUpdateMode ? formData.id : "temp",
-            "cni-recto"
-          );
-        }
+  const handleDocumentSubmission = async () => {
+    try {
+      if (!validateStep3()) return;
 
-        if (
-          formData.cniVerso instanceof File ||
-          typeof formData.cniVerso === "string"
-        ) {
-          payloadData.cniUrlVerso = await uploadFileToS3(
-            formData.cniVerso,
-            isUpdateMode ? formData.id : "temp",
-            "cni-verso"
-          );
-        }
+      setIsSubmitting(true);
 
-        if (
-          formData.selfie instanceof File ||
-          typeof formData.selfie === "string"
-        ) {
-          payloadData.selfieUrl = await uploadFileToS3(
-            formData.selfie,
-            isUpdateMode ? formData.id : "temp",
-            "selfie"
-          );
-        }
-      } else if (formData.type === "eleve") {
-        payloadData = {
-          ...payloadData,
-          niveau: formData.niveau,
-        };
+      const userId = isUpdateMode ? formData.id : createdUserId;
+      const updatePayload = {};
+
+      if (formData.matriculeProfesseur?.trim()) {
+        updatePayload.matriculeProfesseur = formData.matriculeProfesseur.trim();
       }
 
-      let response;
-      let newUserId;
+      if (
+        formData.cniRecto instanceof File ||
+        typeof formData.cniRecto === "string"
+      ) {
+        updatePayload.cniUrlRecto = await uploadFileToS3(
+          formData.cniRecto,
+          userId,
+          "cni-recto"
+        );
+      }
+
+      if (
+        formData.cniVerso instanceof File ||
+        typeof formData.cniVerso === "string"
+      ) {
+        updatePayload.cniUrlVerso = await uploadFileToS3(
+          formData.cniVerso,
+          userId,
+          "cni-verso"
+        );
+      }
+
+      if (
+        formData.selfie instanceof File ||
+        typeof formData.selfie === "string"
+      ) {
+        updatePayload.selfieUrl = await uploadFileToS3(
+          formData.selfie,
+          userId,
+          "selfie"
+        );
+      }
 
       if (isUpdateMode) {
-        response = await axios.post(
+        await axios.post(
           "http://localhost:8486/scholchat/auth/users/update",
-          payloadData,
+          updatePayload,
           {
             params: {
               email: formData.email,
@@ -547,17 +567,7 @@ const SignUp = () => {
             },
           }
         );
-        newUserId = formData.id;
-      } else {
-        response = await axios.post(
-          "http://localhost:8486/scholchat/utilisateurs",
-          payloadData
-        );
-        newUserId = response.data.id;
-      }
 
-      // Handle success immediately
-      if (isUpdateMode) {
         showAlert(
           "Vos informations ont été mises à jour avec succès!",
           "success"
@@ -566,104 +576,58 @@ const SignUp = () => {
           navigate("/schoolchat/login");
         }, 2000);
       } else {
-        localStorage.setItem("userEmail", formData.email);
-        localStorage.removeItem("signupFormData");
-        localStorage.removeItem("imagePreviews");
-
-        showAlert(
-          "Inscription réussie! Veuillez vérifier votre email pour activer votre compte.",
-          "success"
+        await axios.put(
+          `http://localhost:8486/scholchat/utilisateurs/${userId}`,
+          updatePayload
         );
 
-        navigate(
-          `/schoolchat/verify-email?email=${encodeURIComponent(formData.email)}`
-        );
-      }
-
-      // Perform the PUT request in the background without waiting for it
-      if (!isUpdateMode && formData.type === "professeur") {
-        const updatePayload = {};
-
-        try {
-          if (
-            formData.cniRecto instanceof File ||
-            typeof formData.cniRecto === "string"
-          ) {
-            updatePayload.cniUrlRecto = await uploadFileToS3(
-              formData.cniRecto,
-              newUserId,
-              "cni-recto"
-            );
-          }
-
-          if (
-            formData.cniVerso instanceof File ||
-            typeof formData.cniVerso === "string"
-          ) {
-            updatePayload.cniUrlVerso = await uploadFileToS3(
-              formData.cniVerso,
-              newUserId,
-              "cni-verso"
-            );
-          }
-
-          if (
-            formData.selfie instanceof File ||
-            typeof formData.selfie === "string"
-          ) {
-            updatePayload.selfieUrl = await uploadFileToS3(
-              formData.selfie,
-              newUserId,
-              "selfie"
-            );
-          }
-
-          if (Object.keys(updatePayload).length > 0) {
-            // Don't await this request - let it happen in the background
-            axios
-              .put(
-                `http://localhost:8486/scholchat/utilisateurs/${newUserId}`,
-                updatePayload
-              )
-              .catch((error) => {
-                console.error("Background update failed:", error);
-                // You might want to log this error to your backend for monitoring
-              });
-          }
-        } catch (error) {
-          console.error("Error in background file updates:", error);
-          // This won't affect the user experience since we're not awaiting it
-        }
+        completeRegistration();
       }
     } catch (err) {
-      console.error("Erreur détaillée:", err);
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        (isUpdateMode
-          ? "La mise à jour a échoué."
-          : "L'inscription a échoué. Veuillez réessayer.");
-      showAlert(errorMessage);
+      console.error("Erreur lors du traitement des documents:", err);
+      showAlert(
+        err.response?.data?.message || "Erreur lors du traitement des documents"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Navigation between steps
+  const completeRegistration = () => {
+    localStorage.setItem("userEmail", formData.email);
+    localStorage.removeItem("signupFormData");
+    localStorage.removeItem("imagePreviews");
+    localStorage.removeItem("createdUserId");
+
+    showAlert(
+      "Inscription réussie! Veuillez vérifier votre email pour activer votre compte.",
+      "success"
+    );
+
+    navigate(
+      `/schoolchat/verify-email?email=${encodeURIComponent(formData.email)}`
+    );
+  };
+
   const handleNextStep = () => {
     if (currentStep === 1 && validateStep1()) {
       setCurrentStep(2);
-    } else if (currentStep === 2) {
-      handleSubmit();
+    } else if (currentStep === 2 && validateStep2()) {
+      createBasicProfile();
+    } else if (currentStep === 3) {
+      handleDocumentSubmission();
     }
   };
 
   const handlePrevStep = () => {
-    setCurrentStep(1);
+    if (currentStep === 3) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(1);
+    }
     setErrors({});
   };
 
-  // Helper functions for UI
   const getPageTitle = () => {
     return isUpdateMode ? "Mise à jour des informations" : "Inscription";
   };
@@ -672,12 +636,26 @@ const SignUp = () => {
     if (isSubmitting) {
       return "Traitement en cours...";
     }
-    return isUpdateMode
-      ? "Mettre à jour mes informations"
-      : "Terminer l'inscription";
+
+    if (currentStep === 1) {
+      return "Étape suivante";
+    } else if (currentStep === 2) {
+      return formData.type === "professeur"
+        ? "Créer le profil"
+        : "Terminer l'inscription";
+    } else if (currentStep === 3) {
+      return isUpdateMode
+        ? "Mettre à jour mes informations"
+        : "Terminer l'inscription";
+    }
   };
 
-  // Image preview component
+  const getStepTitle = () => {
+    if (currentStep === 1) return "Informations personnelles";
+    if (currentStep === 2) return "Type de compte";
+    if (currentStep === 3) return "Documents et photo";
+  };
+
   const ImagePreview = ({ src, alt, onRemove }) => {
     if (!src) return null;
 
@@ -716,14 +694,31 @@ const SignUp = () => {
             <div className={`step-circle ${currentStep >= 2 ? "active" : ""}`}>
               2
             </div>
+            {formData.type === "professeur" && (
+              <>
+                <div
+                  className={`step-line ${currentStep >= 3 ? "active" : ""}`}
+                ></div>
+                <div
+                  className={`step-circle ${currentStep >= 3 ? "active" : ""}`}
+                >
+                  3
+                </div>
+              </>
+            )}
           </div>
           <div className="step-labels">
             <span className={currentStep >= 1 ? "active" : ""}>
               Informations personnelles
             </span>
             <span className={currentStep >= 2 ? "active" : ""}>
-              Détails du compte
+              Type de compte
             </span>
+            {formData.type === "professeur" && (
+              <span className={currentStep >= 3 ? "active" : ""}>
+                Documents
+              </span>
+            )}
           </div>
         </div>
 
@@ -850,79 +845,6 @@ const SignUp = () => {
               </select>
             </div>
 
-            {formData.type === "professeur" && (
-              <div className="professor-details">
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>
-                      CNI Recto{" "}
-                      {!isUpdateMode && <span className="required">*</span>}
-                    </label>
-                    <input
-                      type="file"
-                      onChange={(e) => handleFileChange(e, "cniRecto")}
-                      className={errors.cniRecto ? "error" : ""}
-                      accept="image/*"
-                      required={!isUpdateMode}
-                    />
-                    <ImagePreview
-                      src={imagePreviews.cniRecto}
-                      alt="CNI Recto"
-                      onRemove={() => handleRemoveImage("cniRecto")}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>
-                      CNI Verso{" "}
-                      {!isUpdateMode && <span className="required">*</span>}
-                    </label>
-                    <input
-                      type="file"
-                      onChange={(e) => handleFileChange(e, "cniVerso")}
-                      className={errors.cniVerso ? "error" : ""}
-                      accept="image/*"
-                      required={!isUpdateMode}
-                    />
-                    <ImagePreview
-                      src={imagePreviews.cniVerso}
-                      alt="CNI Verso"
-                      onRemove={() => handleRemoveImage("cniVerso")}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>
-                    Photo de profil{" "}
-                    {!isUpdateMode && <span className="required">*</span>}
-                  </label>
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileChange(e, "selfie")}
-                    className={errors.selfie ? "error" : ""}
-                    accept="image/*"
-                    required={!isUpdateMode}
-                  />
-                  <ImagePreview
-                    src={imagePreviews.selfie}
-                    alt="Photo de profil"
-                    onRemove={() => handleRemoveImage("selfie")}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Matricule du professeur (Optionnel)</label>
-                  <input
-                    type="text"
-                    name="matriculeProfesseur"
-                    value={formData.matriculeProfesseur || ""}
-                    onChange={handleInputChange}
-                    placeholder="Entrez votre matricule"
-                  />
-                </div>
-              </div>
-            )}
-
             {formData.type === "eleve" && (
               <div className="student-details">
                 <div className="form-group">
@@ -957,8 +879,112 @@ const SignUp = () => {
               </button>
               <button
                 type="button"
+                className="next-button"
+                onClick={handleNextStep}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader size={16} className="spinner" /> Traitement...
+                  </>
+                ) : (
+                  <>
+                    {getSubmitButtonText()}
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 3 && formData.type === "professeur" && (
+          <div className="signup-form">
+            <div className="professor-details">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>
+                    CNI Recto{" "}
+                    {!isUpdateMode && <span className="required">*</span>}
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => handleFileChange(e, "cniRecto")}
+                    className={errors.cniRecto ? "error" : ""}
+                    accept="image/*"
+                    required={!isUpdateMode}
+                  />
+                  <ImagePreview
+                    src={imagePreviews.cniRecto}
+                    alt="CNI Recto"
+                    onRemove={() => handleRemoveImage("cniRecto")}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    CNI Verso{" "}
+                    {!isUpdateMode && <span className="required">*</span>}
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => handleFileChange(e, "cniVerso")}
+                    className={errors.cniVerso ? "error" : ""}
+                    accept="image/*"
+                    required={!isUpdateMode}
+                  />
+                  <ImagePreview
+                    src={imagePreviews.cniVerso}
+                    alt="CNI Verso"
+                    onRemove={() => handleRemoveImage("cniVerso")}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>
+                  Photo de profil{" "}
+                  {!isUpdateMode && <span className="required">*</span>}
+                </label>
+                <input
+                  type="file"
+                  onChange={(e) => handleFileChange(e, "selfie")}
+                  className={errors.selfie ? "error" : ""}
+                  accept="image/*"
+                  required={!isUpdateMode}
+                />
+                <ImagePreview
+                  src={imagePreviews.selfie}
+                  alt="Photo de profil"
+                  onRemove={() => handleRemoveImage("selfie")}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Matricule du professeur (Optionnel)</label>
+                <input
+                  type="text"
+                  name="matriculeProfesseur"
+                  value={formData.matriculeProfesseur || ""}
+                  onChange={handleInputChange}
+                  placeholder="Entrez votre matricule"
+                />
+              </div>
+            </div>
+
+            <div className="form-navigation">
+              <button
+                type="button"
+                className="prev-button"
+                onClick={handlePrevStep}
+              >
+                <ArrowLeft size={16} />
+                Retour
+              </button>
+              <button
+                type="button"
                 className="submit-button"
-                onClick={handleSubmit}
+                onClick={handleNextStep}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
