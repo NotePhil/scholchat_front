@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
+import { minioS3Service } from "../../../../../services/minioS3";
 import {
   X,
   Calendar,
@@ -25,6 +26,7 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -56,25 +58,63 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
 
   const handleFiles = async (files) => {
     const fileArray = Array.from(files);
-    const validFiles = fileArray.filter((file) => {
-      const isValidType = file.type.startsWith("image/");
-      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
-      return isValidType && isValidSize;
-    });
-
-    if (validFiles.length !== fileArray.length) {
-      setError("Some files were skipped. Only images under 10MB are allowed.");
-      setTimeout(() => setError(""), 3000);
-    }
+    setUploadingFiles(true);
+    setError("");
 
     try {
-      const uploadPromises = validFiles.map((file) =>
-        activityFeedService.uploadMedia(file, "IMAGE")
-      );
-      const uploadedMedia = await Promise.all(uploadPromises);
-      setMedia((prev) => [...prev, ...uploadedMedia]);
+      // Validate files before uploading
+      const validFiles = [];
+      const errors = [];
+
+      for (const file of fileArray) {
+        try {
+          minioS3Service.validateImageFile(file, 10 * 1024 * 1024); // 10MB limit
+          validFiles.push(file);
+        } catch (validationError) {
+          errors.push(`${file.name}: ${validationError.message}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        setError(`File validation errors: ${errors.join(", ")}`);
+      }
+
+      if (validFiles.length > 0) {
+        // Upload files to MinIO
+        const uploadResults = await minioS3Service.uploadMultipleFiles(
+          validFiles,
+          "IMAGE",
+          "event-images"
+        );
+
+        if (uploadResults.failed.length > 0) {
+          console.error("Some uploads failed:", uploadResults.failed);
+          setError(`Failed to upload ${uploadResults.failed.length} file(s)`);
+        }
+
+        // Add successfully uploaded files to media state
+        const newMediaItems = uploadResults.successful.map((result) => ({
+          id: `temp_${Date.now()}_${Math.random()}`,
+          fileName: result.fileName,
+          filePath: result.fileName, // Store the fileName for later retrieval
+          contentType: result.contentType,
+          fileSize: result.fileSize,
+          type: "IMAGE",
+        }));
+
+        setMedia((prev) => [...prev, ...newMediaItems]);
+
+        if (uploadResults.successful.length > 0) {
+          console.log(
+            `Successfully uploaded ${uploadResults.successful.length} files`
+          );
+        }
+      }
     } catch (err) {
-      setError("Failed to upload media");
+      console.error("Error handling files:", err);
+      setError(`Upload failed: ${err.message}`);
+    } finally {
+      setUploadingFiles(false);
     }
   };
 
@@ -83,9 +123,21 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
     if (files) {
       await handleFiles(files);
     }
+    // Clear the input so the same file can be selected again
+    e.target.value = "";
   };
 
-  const removeMedia = (index) => {
+  const removeMedia = async (index) => {
+    const mediaItem = media[index];
+
+    try {
+      // If the media has been uploaded to MinIO, we might want to delete it
+      // Note: This would require implementing a delete method or keeping track of media IDs
+      console.log("Removing media item:", mediaItem.fileName);
+    } catch (error) {
+      console.error("Error removing media:", error);
+    }
+
     setMedia((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -166,6 +218,19 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     return now.toISOString().slice(0, 16);
+  };
+
+  const getMediaPreviewUrl = async (mediaItem) => {
+    try {
+      // Generate a download URL for preview
+      const downloadData = await minioS3Service.generateDownloadUrlByPath(
+        mediaItem.filePath
+      );
+      return downloadData.downloadUrl;
+    } catch (error) {
+      console.error("Error generating preview URL:", error);
+      return "/api/placeholder/200/150";
+    }
   };
 
   return (
@@ -332,6 +397,8 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
                 className={`border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-200 ${
                   dragActive
                     ? "border-blue-400 bg-blue-50"
+                    : uploadingFiles
+                    ? "border-yellow-400 bg-yellow-50"
                     : "border-gray-300 hover:border-gray-400"
                 }`}
                 onDragEnter={handleDrag}
@@ -346,22 +413,35 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
                   onChange={handleMediaUpload}
                   className="hidden"
                   id="media-upload"
+                  disabled={uploadingFiles}
                 />
                 <div className="space-y-3">
                   <div className="bg-gray-100 rounded-full p-4 w-16 h-16 flex items-center justify-center mx-auto">
-                    <Upload className="w-8 h-8 text-gray-400" />
+                    {uploadingFiles ? (
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                    ) : (
+                      <Upload className="w-8 h-8 text-gray-400" />
+                    )}
                   </div>
                   <div>
-                    <label
-                      htmlFor="media-upload"
-                      className="cursor-pointer text-blue-600 hover:text-blue-700 font-semibold"
-                    >
-                      Choose files
-                    </label>
-                    <span className="text-gray-500"> or drag and drop</span>
+                    {uploadingFiles ? (
+                      <p className="text-blue-600 font-semibold">
+                        Uploading files...
+                      </p>
+                    ) : (
+                      <>
+                        <label
+                          htmlFor="media-upload"
+                          className="cursor-pointer text-blue-600 hover:text-blue-700 font-semibold"
+                        >
+                          Choose files
+                        </label>
+                        <span className="text-gray-500"> or drag and drop</span>
+                      </>
+                    )}
                   </div>
                   <p className="text-sm text-gray-500">
-                    PNG, JPG up to 10MB each
+                    PNG, JPG, WebP up to 10MB each
                   </p>
                 </div>
               </div>
@@ -369,21 +449,12 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
               {/* Media Preview */}
               {media.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                  {media.map((file, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={file.filePath}
-                        alt={file.fileName}
-                        className="w-full h-24 object-cover rounded-xl"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeMedia(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
+                  {media.map((mediaItem, index) => (
+                    <MediaPreview
+                      key={mediaItem.id || index}
+                      mediaItem={mediaItem}
+                      onRemove={() => removeMedia(index)}
+                    />
                   ))}
                 </div>
               )}
@@ -400,13 +471,18 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploadingFiles}
                 className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 {loading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
                     <span>Creating...</span>
+                  </div>
+                ) : uploadingFiles ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    <span>Uploading...</span>
                   </div>
                 ) : (
                   "Create Event"
@@ -415,6 +491,72 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
             </div>
           </form>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// Separate component for media preview to handle async URL generation
+const MediaPreview = ({ mediaItem, onRemove }) => {
+  const [previewUrl, setPreviewUrl] = useState("/api/placeholder/200/150");
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const loadPreviewUrl = async () => {
+      try {
+        setLoading(true);
+        const downloadData = await minioS3Service.generateDownloadUrlByPath(
+          mediaItem.filePath
+        );
+        setPreviewUrl(downloadData.downloadUrl);
+      } catch (error) {
+        console.error("Error loading preview:", error);
+        setPreviewUrl("/api/placeholder/200/150");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (mediaItem.filePath) {
+      loadPreviewUrl();
+    }
+  }, [mediaItem.filePath]);
+
+  return (
+    <div className="relative group">
+      <div className="relative w-full h-24 bg-gray-100 rounded-xl overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+          </div>
+        ) : (
+          <img
+            src={previewUrl}
+            alt={mediaItem.fileName}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.src = "/api/placeholder/200/150";
+            }}
+          />
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+      >
+        <X className="w-4 h-4" />
+      </button>
+      <div className="mt-1">
+        <p
+          className="text-xs text-gray-500 truncate"
+          title={mediaItem.fileName}
+        >
+          {mediaItem.fileName}
+        </p>
+        <p className="text-xs text-gray-400">
+          {minioS3Service.formatFileSize(mediaItem.fileSize)}
+        </p>
       </div>
     </div>
   );

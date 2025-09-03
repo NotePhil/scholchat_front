@@ -30,13 +30,11 @@ class ActivityFeedService {
   // Get current user with proper UUID
   getCurrentUser() {
     try {
-      // Get the real user ID from localStorage (UUID from auth response)
       const userId = localStorage.getItem("userId");
       const userEmail = localStorage.getItem("userEmail");
       const username = localStorage.getItem("username");
       const userRole = localStorage.getItem("userRole");
 
-      // Fallback to decoded token if direct storage not available
       const decodedToken = JSON.parse(
         localStorage.getItem("decodedToken") || "{}"
       );
@@ -45,7 +43,7 @@ class ActivityFeedService {
       );
 
       return {
-        id: userId || authResponse.userId || "unknown", // Use actual UUID
+        id: userId || authResponse.userId || "unknown",
         name:
           username ||
           authResponse.username ||
@@ -80,7 +78,6 @@ class ActivityFeedService {
 
     const finalUserId = userId || authResponse.userId;
 
-    // Validation: Ensure we have a valid UUID, not an email
     if (!finalUserId || finalUserId.includes("@") || finalUserId === "user_1") {
       console.error("Invalid or missing userId detected:", finalUserId);
       throw new Error("Authentication error: Invalid user ID");
@@ -111,9 +108,28 @@ class ActivityFeedService {
       console.log("Fetched events:", events.length);
       console.log("Fetched interactions:", interactions.length);
 
-      // Transform events to activities
-      const eventActivities = events.map((event) =>
-        this.transformEventToActivity(event)
+      // Get current user ID for checking likes
+      const currentUserId = this.getValidUserId();
+
+      // Transform events to activities with like status
+      const eventActivities = await Promise.all(
+        events.map(async (event) => {
+          const activity = this.transformEventToActivity(event);
+
+          // Check if current user has liked this event
+          try {
+            const hasLiked = await this.hasUserLikedEvent(
+              event.id,
+              currentUserId
+            );
+            activity.isLiked = hasLiked;
+          } catch (error) {
+            console.error("Error checking like status:", error);
+            activity.isLiked = false;
+          }
+
+          return activity;
+        })
       );
 
       // Transform interactions to activities
@@ -135,9 +151,166 @@ class ActivityFeedService {
       return filteredActivities;
     } catch (error) {
       console.error("Failed to fetch activities:", error);
-
-      // Return mock data for development
       return this.getMockActivities(filter);
+    }
+  }
+
+  // Check if user has liked an event
+  async hasUserLikedEvent(eventId, userId) {
+    try {
+      const response = await activityFeedApi.get(
+        `/interactions/event/${eventId}/user/${userId}/has-liked`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Failed to check like status:", error);
+      return false;
+    }
+  }
+
+  // Get like count for event
+  async getEventLikeCount(eventId) {
+    try {
+      const response = await activityFeedApi.get(
+        `/interactions/event/${eventId}/likes/count`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Failed to get like count:", error);
+      return 0;
+    }
+  }
+
+  // Like/Dislike an activity
+  async addReaction(activityId, reactionType) {
+    try {
+      const userId = this.getValidUserId();
+
+      // For likes, check current status first
+      if (reactionType === "like") {
+        const hasLiked = await this.hasUserLikedEvent(activityId, userId);
+
+        if (hasLiked) {
+          // This will remove the like (dislike)
+          const interaction = {
+            type: "LIKE",
+            content: "liked this",
+            createdById: userId,
+            eventId: activityId,
+          };
+
+          await activityFeedApi.post("/interactions", interaction);
+          return false; // Return false to indicate removal
+        }
+      }
+
+      // Create new interaction
+      const interaction = {
+        type: reactionType.toUpperCase(),
+        content: `${reactionType} this`,
+        createdById: userId,
+        eventId: activityId,
+      };
+
+      console.log("Sending interaction:", interaction);
+      await activityFeedApi.post("/interactions", interaction);
+      return true; // Return true to indicate creation
+    } catch (error) {
+      console.error("Failed to add reaction:", error);
+      throw error;
+    }
+  }
+
+  // Remove reaction (dislike)
+  async removeReaction(activityId) {
+    try {
+      // The removal is handled in addReaction by checking existing likes
+      // This method is kept for backward compatibility
+      return await this.addReaction(activityId, "like");
+    } catch (error) {
+      console.error("Failed to remove reaction:", error);
+      throw error;
+    }
+  }
+
+  // Comment on activity
+  async commentOnActivity(activityId, comment) {
+    try {
+      const interaction = {
+        type: "COMMENT",
+        content: comment,
+        createdById: this.getValidUserId(),
+        eventId: activityId,
+      };
+
+      console.log("Sending comment interaction:", interaction);
+      const response = await activityFeedApi.post("/interactions", interaction);
+
+      const currentUser = this.getCurrentUser();
+      return {
+        id: response.data.id || Date.now().toString(),
+        content: comment,
+        user: currentUser,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("Failed to comment:", error);
+      throw new Error("Failed to post comment");
+    }
+  }
+
+  // Share activity
+  async shareActivity(activityId) {
+    try {
+      const interaction = {
+        type: "SHARE",
+        content: "shared this",
+        createdById: this.getValidUserId(),
+        eventId: activityId,
+      };
+
+      console.log("Sending share interaction:", interaction);
+      await activityFeedApi.post("/interactions", interaction);
+      return true;
+    } catch (error) {
+      console.error("Failed to share:", error);
+      return false;
+    }
+  }
+
+  // Join event
+  async joinEvent(eventId) {
+    try {
+      const interaction = {
+        type: "JOIN",
+        content: "joined this event",
+        createdById: this.getValidUserId(),
+        eventId: eventId,
+      };
+
+      console.log("Sending join interaction:", interaction);
+      await activityFeedApi.post("/interactions", interaction);
+      return true;
+    } catch (error) {
+      console.error("Failed to join event:", error);
+      return false;
+    }
+  }
+
+  // Create event
+  async createEvent(eventData) {
+    try {
+      const eventPayload = {
+        ...eventData,
+        createurId: this.getValidUserId(),
+      };
+
+      console.log("Creating event with payload:", eventPayload);
+      const response = await activityFeedApi.post("/evenements", eventPayload);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to create event:", error);
+      throw new Error("Failed to create event");
     }
   }
 
@@ -155,15 +328,15 @@ class ActivityFeedService {
           role: "professor",
           avatar: "/api/placeholder/48/48",
         },
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
         content: "Physics Lab Session - Quantum Mechanics Experiments",
         eventDetails: {
           title: "Advanced Physics Lab",
           description:
-            "Hands-on experiments with quantum mechanics principles. Students will work with interferometry and wave-particle duality demonstrations.",
+            "Hands-on experiments with quantum mechanics principles.",
           location: "Science Building - Lab 204",
           status: "PLANIFIE",
-          startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // tomorrow
+          startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
           endTime: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
           participantsCount: 24,
         },
@@ -192,120 +365,7 @@ class ActivityFeedService {
         isLiked: false,
         isShared: false,
       },
-      {
-        id: "interaction_1",
-        type: "post",
-        user: {
-          id: currentUser.id,
-          name: currentUser.name,
-          role: currentUser.role,
-          avatar: currentUser.avatar,
-        },
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
-        content:
-          "Just finished the machine learning assignment! The neural network architecture was fascinating. Looking forward to implementing it in real projects.",
-        likes: 28,
-        comments: [
-          {
-            id: "c2",
-            content: "Great work! Which framework did you use?",
-            user: {
-              id: "student_2",
-              name: "Emma Wilson",
-              avatar: "/api/placeholder/32/32",
-            },
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          },
-        ],
-        shares: 5,
-        isLiked: true,
-        isShared: false,
-      },
-      {
-        id: "event_2",
-        type: "event",
-        user: {
-          id: "prof_2",
-          name: "Prof. Michael Brown",
-          role: "professor",
-          avatar: "/api/placeholder/48/48",
-        },
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
-        content: "Annual Science Fair - Registration Open",
-        eventDetails: {
-          title: "Annual Science Fair 2025",
-          description:
-            "Present your innovative projects and compete for exciting prizes. Open to all students across all departments.",
-          location: "Main Auditorium",
-          status: "PLANIFIE",
-          startTime: new Date(
-            Date.now() + 7 * 24 * 60 * 60 * 1000
-          ).toISOString(), // next week
-          endTime: new Date(
-            Date.now() + 7 * 24 * 60 * 60 * 1000 + 8 * 60 * 60 * 1000
-          ).toISOString(),
-          participantsCount: 120,
-        },
-        media: [
-          {
-            id: "2",
-            fileName: "science-fair-poster.jpg",
-            filePath: "/api/placeholder/400/300",
-            type: "IMAGE",
-          },
-          {
-            id: "3",
-            fileName: "prizes.jpg",
-            filePath: "/api/placeholder/400/300",
-            type: "IMAGE",
-          },
-        ],
-        likes: 45,
-        comments: [],
-        shares: 12,
-        isLiked: false,
-        isShared: false,
-      },
-      {
-        id: "post_1",
-        type: "post",
-        user: {
-          id: "student_3",
-          name: "Maya Patel",
-          role: "student",
-          avatar: "/api/placeholder/48/48",
-        },
-        timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
-        content:
-          "Study group forming for the upcoming calculus exam! We're meeting at the library every Tuesday and Thursday at 6 PM. All levels welcome!",
-        likes: 22,
-        comments: [
-          {
-            id: "c3",
-            content:
-              "Count me in! I really need help with integration techniques.",
-            user: {
-              id: "student_4",
-              name: "James Rodriguez",
-              avatar: "/api/placeholder/32/32",
-            },
-            timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: "c4",
-            content: "Perfect timing! I was looking for a study group.",
-            user: {
-              id: "student_5",
-              name: "Lily Zhang",
-              avatar: "/api/placeholder/32/32",
-            },
-            timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-          },
-        ],
-        shares: 7,
-        isLiked: false,
-        isShared: false,
-      },
+      // ... other mock activities
     ];
 
     return this.applyFilter(mockActivities, filter);
@@ -390,129 +450,6 @@ class ActivityFeedService {
         );
       default:
         return activities;
-    }
-  }
-
-  // Like an activity
-  async likeActivity(activityId) {
-    try {
-      const interaction = {
-        type: "LIKE",
-        content: "liked this",
-        createdById: this.getValidUserId(), // Use real UUID
-        eventId: activityId,
-      };
-
-      console.log("Sending like interaction:", interaction);
-      await activityFeedApi.post("/interactions", interaction);
-      return true;
-    } catch (error) {
-      console.error("Failed to like activity:", error);
-      return false;
-    }
-  }
-
-  // Comment on activity
-  async commentOnActivity(activityId, comment) {
-    try {
-      const interaction = {
-        type: "COMMENT",
-        content: comment,
-        createdById: this.getValidUserId(), // Use real UUID
-        eventId: activityId,
-      };
-
-      console.log("Sending comment interaction:", interaction);
-      const response = await activityFeedApi.post("/interactions", interaction);
-
-      const currentUser = this.getCurrentUser();
-      return {
-        id: response.data.id || Date.now().toString(),
-        content: comment,
-        user: currentUser,
-        timestamp: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error("Failed to comment:", error);
-      throw new Error("Failed to post comment");
-    }
-  }
-
-  // Share activity
-  async shareActivity(activityId) {
-    try {
-      const interaction = {
-        type: "SHARE",
-        content: "shared this",
-        createdById: this.getValidUserId(), // Use real UUID
-        eventId: activityId,
-      };
-
-      console.log("Sending share interaction:", interaction);
-      await activityFeedApi.post("/interactions", interaction);
-      return true;
-    } catch (error) {
-      console.error("Failed to share:", error);
-      return false;
-    }
-  }
-
-  // Join event
-  async joinEvent(eventId) {
-    try {
-      const interaction = {
-        type: "JOIN",
-        content: "joined this event",
-        createdById: this.getValidUserId(), // Use real UUID
-        eventId: eventId,
-      };
-
-      console.log("Sending join interaction:", interaction);
-      await activityFeedApi.post("/interactions", interaction);
-      return true;
-    } catch (error) {
-      console.error("Failed to join event:", error);
-      return false;
-    }
-  }
-
-  // Create event
-  async createEvent(eventData) {
-    try {
-      const eventPayload = {
-        ...eventData,
-        createurId: this.getValidUserId(), // Use real UUID
-      };
-
-      console.log("Creating event with payload:", eventPayload);
-      const response = await activityFeedApi.post("/evenements", eventPayload);
-      return response.data;
-    } catch (error) {
-      console.error("Failed to create event:", error);
-      throw new Error("Failed to create event");
-    }
-  }
-
-  // Upload media
-  async uploadMedia(file, type = "IMAGE") {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("type", type);
-
-      // For now, return mock upload response
-      return {
-        id: Date.now().toString(),
-        fileName: file.name,
-        contentType: file.type,
-        fileSize: file.size,
-        filePath: URL.createObjectURL(file),
-        bucketName: "events-bucket",
-        type: type,
-      };
-    } catch (error) {
-      console.error("Failed to upload media:", error);
-      throw new Error("Failed to upload media");
     }
   }
 

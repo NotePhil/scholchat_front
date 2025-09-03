@@ -41,20 +41,45 @@ const ActivitiesContent = () => {
         activityId,
         reactionType
       );
-      if (success) {
+
+      if (success !== undefined) {
         setActivities((prev) =>
-          prev.map((activity) =>
-            activity.id === activityId
-              ? {
+          prev.map((activity) => {
+            if (activity.id === activityId) {
+              // Initialize reactions object if it doesn't exist
+              const reactions = activity.reactions || {};
+
+              if (success) {
+                // Add reaction
+                return {
                   ...activity,
                   reactions: {
-                    ...activity.reactions,
-                    [reactionType]: (activity.reactions[reactionType] || 0) + 1,
+                    ...reactions,
+                    [reactionType]: (reactions[reactionType] || 0) + 1,
                   },
                   userReaction: reactionType,
+                  isLiked: reactionType === "like",
+                };
+              } else {
+                // Remove reaction (dislike)
+                const updatedReactions = { ...reactions };
+                if (updatedReactions[reactionType] > 0) {
+                  updatedReactions[reactionType] = Math.max(
+                    0,
+                    (updatedReactions[reactionType] || 0) - 1
+                  );
                 }
-              : activity
-          )
+
+                return {
+                  ...activity,
+                  reactions: updatedReactions,
+                  userReaction: null,
+                  isLiked: false,
+                };
+              }
+            }
+            return activity;
+          })
         );
       }
     } catch (err) {
@@ -65,23 +90,29 @@ const ActivitiesContent = () => {
   const handleRemoveReaction = async (activityId) => {
     try {
       const success = await activityFeedService.removeReaction(activityId);
-      if (success) {
+      if (success !== undefined) {
         setActivities((prev) =>
-          prev.map((activity) =>
-            activity.id === activityId
-              ? {
-                  ...activity,
-                  reactions: {
-                    ...activity.reactions,
-                    [activity.userReaction]: Math.max(
-                      0,
-                      (activity.reactions[activity.userReaction] || 0) - 1
-                    ),
-                  },
-                  userReaction: null,
-                }
-              : activity
-          )
+          prev.map((activity) => {
+            if (activity.id === activityId && activity.userReaction) {
+              const reactions = activity.reactions || {};
+              const updatedReactions = { ...reactions };
+
+              if (updatedReactions[activity.userReaction] > 0) {
+                updatedReactions[activity.userReaction] = Math.max(
+                  0,
+                  (updatedReactions[activity.userReaction] || 0) - 1
+                );
+              }
+
+              return {
+                ...activity,
+                reactions: updatedReactions,
+                userReaction: null,
+                isLiked: false,
+              };
+            }
+            return activity;
+          })
         );
       }
     } catch (err) {
