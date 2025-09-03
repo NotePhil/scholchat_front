@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Lock, KeyRound, Eye, EyeOff } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const PasswordPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [passeAccess, setPasseAccess] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -12,15 +13,21 @@ const PasswordPage = () => {
   const [alertType, setAlertType] = useState("");
   const [loading, setLoading] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [activationToken, setActivationToken] = useState("");
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem("userEmail");
-    if (storedEmail) {
-      setUserEmail(storedEmail);
+    if (location.state) {
+      const { email, activationToken } = location.state;
+      if (email) {
+        setUserEmail(email);
+      }
+      if (activationToken) {
+        setActivationToken(activationToken);
+      }
     } else {
-      showAlert("Aucun email trouvé. Veuillez vous réinscrire.");
+      showAlert("Aucun email ou token trouvé. Veuillez vous réinscrire.");
     }
-  }, []);
+  }, [location.state]);
 
   const showAlert = (message, type = "error") => {
     setAlertMessage(message);
@@ -65,27 +72,25 @@ const PasswordPage = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${activationToken}`,
           },
           body: JSON.stringify({
             email: userEmail,
             passeAccess: passeAccess,
-            type: "utilisateur"
+            type: "utilisateur",
           }),
         }
       );
 
-      const responseData = await response;
-
       if (!response.ok) {
+        const errorData = await response.json();
         throw new Error(
-          responseData.message || "Échec de la définition du mot de passe"
+          errorData.message || "Échec de la définition du mot de passe"
         );
       }
 
       showAlert("Mot de passe défini avec succès !", "success");
-
       localStorage.removeItem("userEmail");
-
       setTimeout(() => {
         navigate("/schoolchat/login", { replace: true });
       }, 2000);
@@ -166,7 +171,11 @@ const PasswordPage = () => {
             </div>
           </div>
           <div className="button-container">
-            <button type="submit" className="submit-button" disabled={loading}>
+            <button
+              type="submit"
+              className="submit-button"
+              disabled={loading}
+            >
               {loading ? "Traitement en cours..." : "Définir le mot de passe"}
             </button>
           </div>

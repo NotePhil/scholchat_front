@@ -89,62 +89,65 @@ const AccountActivation = () => {
     }
   };
 
-  const activateAccount = async (token = urlActivationToken) => {
-    if (!token) {
-      setActivationStatus("error");
-      setErrorMessage("Aucun token d'activation fourni");
-      return;
+const activateAccount = async (token = urlActivationToken) => {
+  if (!token) {
+    setActivationStatus("error");
+    setErrorMessage("Aucun token d'activation fourni");
+    return;
+  }
+  try {
+    const decodedToken = jwtDecode(token);
+    const email = decodedToken.sub || decodedToken.email;
+    if (!email) {
+      throw new Error("Aucun email trouvé dans le token");
     }
+    setUserEmail(email);
+    setActivationToken(token);
 
-    try {
-      const { email } = validateActivationToken(token);
-      setUserEmail(email);
-      setActivationToken(token);
+    const apiUrl = `http://localhost:8486/scholchat/auth/activate?activationToken=${token}`;
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
 
-      const apiUrl = `http://localhost:8486/scholchat/auth/activate?activationToken=${token}`;
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData?.message || "L'activation a échoué. Veuillez réessayer."
-        );
-      }
-
-      setActivationStatus("success");
-
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            navigate("/schoolchat/PasswordPage", {
-              state: {
-                activationToken: token,
-                email: email,
-              },
-            });
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    } catch (error) {
-      console.error("Erreur d'activation:", error);
-      setActivationStatus("error");
-      setErrorMessage(
-        error.message ||
-          "Une erreur s'est produite lors de l'activation du compte."
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData?.message || "L'activation a échoué. Veuillez réessayer."
       );
     }
-  };
+
+    setActivationStatus("success");
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate("/schoolchat/PasswordPage", {
+            state: {
+              activationToken: token,
+              email: email,
+            },
+          });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  } catch (error) {
+    console.error("Erreur d'activation:", error);
+    setActivationStatus("error");
+    setErrorMessage(
+      error.message ||
+        "Une erreur s'est produite lors de l'activation du compte."
+    );
+  }
+};
+
 
   useEffect(() => {
     if (urlActivationToken) {
