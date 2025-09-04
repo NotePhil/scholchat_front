@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Search,
-  Plus,
   Edit2,
   Trash2,
   Eye,
@@ -356,20 +355,6 @@ const ProfessorsContent = () => {
                   Table
                 </button>
               </div>
-
-              {/* Add Button */}
-              <button
-                onClick={() => {
-                  setModalMode("create");
-                  setSelectedProfessor(null);
-                  setShowModal(true);
-                }}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
-              >
-                <Plus size={20} />
-                <span className="hidden sm:inline">Nouveau Professeur</span>
-                <span className="sm:hidden">Ajouter</span>
-              </button>
             </div>
           </div>
         </div>
@@ -713,21 +698,8 @@ const ProfessorsContent = () => {
               <p className="text-slate-600 mb-6 max-w-md mx-auto">
                 {searchTerm || filterStatus !== "all"
                   ? "Essayez de modifier vos critères de recherche ou de filtrage pour voir plus de résultats."
-                  : "Commencez par ajouter votre premier professeur au système."}
+                  : "Il n'y a actuellement aucun professeur dans le système."}
               </p>
-              {!searchTerm && filterStatus === "all" && (
-                <button
-                  onClick={() => {
-                    setModalMode("create");
-                    setSelectedProfessor(null);
-                    setShowModal(true);
-                  }}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto"
-                >
-                  <Plus size={20} />
-                  Ajouter un professeur
-                </button>
-              )}
             </div>
           </div>
         )}

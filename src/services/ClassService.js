@@ -167,7 +167,7 @@ class ClassService {
       return await this.axiosRequest(
         `/droits-publication/utilisateurs/${userId}/classes`,
         {
-          method: "GET",
+          method: "get",
         }
       );
     } catch (error) {
@@ -197,7 +197,7 @@ class ClassService {
       };
 
       return await this.axiosRequest("/classes", {
-        method: "POST",
+        method: "post",
         data: classData,
       });
     } catch (error) {
@@ -228,7 +228,7 @@ class ClassService {
       };
 
       return await this.axiosRequest(`/classes/${idClasse}`, {
-        method: "PUT",
+        method: "put",
         data: dataToSend,
       });
     } catch (error) {
@@ -245,7 +245,7 @@ class ClassService {
   async approuverClasse(idClasse) {
     try {
       return await this.axiosRequest(`/classes/${idClasse}/approve`, {
-        method: "PATCH",
+        method: "patch",
       });
     } catch (error) {
       console.error("Error approving class:", error);
@@ -262,7 +262,7 @@ class ClassService {
   async rejeterClasse(idClasse, motif) {
     try {
       return await this.axiosRequest(`/classes/${idClasse}/reject`, {
-        method: "PATCH",
+        method: "patch",
         params: { motif },
       });
     } catch (error) {
@@ -279,7 +279,7 @@ class ClassService {
   async obtenirClassesParEtat(etat) {
     try {
       return await this.axiosRequest("/classes/by-status", {
-        method: "GET",
+        method: "get",
         params: { etat },
       });
     } catch (error) {
@@ -296,7 +296,7 @@ class ClassService {
   async supprimerClasse(idClasse) {
     try {
       return await this.axiosRequest(`/classes/${idClasse}`, {
-        method: "DELETE",
+        method: "delete",
       });
     } catch (error) {
       console.error("Error deleting class:", error);
@@ -312,7 +312,7 @@ class ClassService {
   async obtenirClasseParId(idClasse) {
     try {
       return await this.axiosRequest(`/classes/${idClasse}`, {
-        method: "GET",
+        method: "get",
       });
     } catch (error) {
       console.error("Error getting class by ID:", error);
@@ -327,7 +327,7 @@ class ClassService {
   async obtenirToutesLesClasses() {
     try {
       return await this.axiosRequest("/classes", {
-        method: "GET",
+        method: "get",
       });
     } catch (error) {
       console.error("Error getting all classes:", error);
@@ -346,7 +346,7 @@ class ClassService {
       return await this.axiosRequest(
         `/classes/${idClasse}/publication-rights`,
         {
-          method: "PATCH",
+          method: "patch",
           params: { droitPublication },
         }
       );
@@ -364,7 +364,7 @@ class ClassService {
   async obtenirHistoriqueActivation(idClasse) {
     try {
       return await this.axiosRequest(`/histo-activations/classe/${idClasse}`, {
-        method: "GET",
+        method: "get",
       });
     } catch (error) {
       console.error("Error getting activation history:", error);
@@ -567,7 +567,7 @@ class ClassService {
    */
   async testConnection() {
     try {
-      await this.axiosRequest("/classes", { method: "GET" });
+      await this.axiosRequest("/classes", { method: "get" });
       return true;
     } catch (error) {
       console.error("API connection test failed:", error);

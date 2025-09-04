@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -13,8 +19,10 @@ import {
   XCircle,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
+import { minioS3Service } from "../../../../../services/minioS3"; // Imported but not used in original code
 import MultiSelectDropdown from "./MultiSelectDropdown";
 
+// Validation schemas
 const chapterSchema = yup.object().shape({
   titre: yup.string().required("Le titre du chapitre est requis"),
   description: yup.string(),
@@ -37,15 +45,16 @@ const courseSchema = yup.object().shape({
     .min(1, "Au moins un chapitre est requis"),
 });
 
+// RichTextEditor Component
 const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
   const editorRef = useRef(null);
 
-  const execCommand = (command, value = null) => {
+  const execCommand = useCallback((command, value = null) => {
     document.execCommand(command, false, value);
     handleContentChange();
-  };
+  }, []);
 
-  const handleContentChange = () => {
+  const handleContentChange = useCallback(() => {
     if (editorRef.current) {
       const htmlContent = editorRef.current.innerHTML;
       const cleanedContent = htmlContent
@@ -55,7 +64,7 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
         .replace(/&nbsp;/g, " ");
       onChange(cleanedContent);
     }
-  };
+  }, [onChange]);
 
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
@@ -64,14 +73,15 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
     }
   }, [value]);
 
-  const handlePaste = (e) => {
+  const handlePaste = useCallback((e) => {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
     document.execCommand("insertText", false, text);
-  };
+  }, []);
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
+      {/* Toolbar */}
       <div className="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap gap-1">
         <button
           type="button"
@@ -129,6 +139,7 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
         </button>
       </div>
 
+      {/* Editable content area */}
       <div
         ref={editorRef}
         contentEditable
@@ -167,6 +178,7 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
   );
 };
 
+// ChapterCard Component
 const ChapterCard = ({
   chapter,
   index,
@@ -184,18 +196,20 @@ const ChapterCard = ({
 }) => {
   const [errors, setErrors] = useState({});
 
-  const truncateText = (text, length) => {
+  const truncateText = useCallback((text, length) => {
+    if (!text) return "";
     if (text.length <= length) return text;
     return text.substring(0, length) + "...";
-  };
+  }, []);
 
-  const getPlainText = (html) => {
+  const getPlainText = useCallback((html) => {
+    if (!html) return "";
     const div = document.createElement("div");
     div.innerHTML = html;
     return div.textContent || div.innerText || "";
-  };
+  }, []);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     if (!editData.titre.trim()) {
       newErrors.titre = "Le titre est requis";
@@ -205,16 +219,16 @@ const ChapterCard = ({
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [editData]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (validateForm()) {
       onSave({
         ...editData,
         ordre: index + 1,
       });
     }
-  };
+  }, [validateForm, onSave, editData, index]);
 
   if (isEditing) {
     return (
@@ -367,6 +381,7 @@ const ChapterCard = ({
   );
 };
 
+// ChapterForm Component
 const ChapterForm = ({ onSave, onCancel, totalChapters }) => {
   const [formData, setFormData] = useState({
     titre: "",
@@ -376,7 +391,7 @@ const ChapterForm = ({ onSave, onCancel, totalChapters }) => {
 
   const [errors, setErrors] = useState({});
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     if (!formData.titre.trim()) {
       newErrors.titre = "Le titre est requis";
@@ -386,16 +401,16 @@ const ChapterForm = ({ onSave, onCancel, totalChapters }) => {
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (validateForm()) {
       onSave({
         ...formData,
         ordre: totalChapters + 1,
       });
     }
-  };
+  }, [validateForm, onSave, formData, totalChapters]);
 
   return (
     <div className="bg-white rounded-xl p-6 border-2 border-indigo-200 shadow-sm">
@@ -487,6 +502,7 @@ const ChapterForm = ({ onSave, onCancel, totalChapters }) => {
   );
 };
 
+// GeneralInfoSection Component
 const GeneralInfoSection = ({
   register,
   errors,
@@ -601,6 +617,7 @@ const GeneralInfoSection = ({
   );
 };
 
+// ChaptersSection Component
 const ChaptersSection = ({
   savedChapters,
   isCreatingChapter,
@@ -678,6 +695,7 @@ const ChaptersSection = ({
   );
 };
 
+// Main CourseFormModal Component
 const CourseFormModal = ({
   modalMode,
   selectedCourse,
@@ -694,6 +712,7 @@ const CourseFormModal = ({
   const [isCreatingChapter, setIsCreatingChapter] = useState(false);
   const [editingChapterIndex, setEditingChapterIndex] = useState(null);
   const [editingChapterData, setEditingChapterData] = useState(null);
+  const [uploadingFiles, setUploadingFiles] = useState([]);
 
   const {
     register,
@@ -744,72 +763,139 @@ const CourseFormModal = ({
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
 
-  const handleSaveChapter = (chapterData) => {
-    if (editingChapterIndex !== null) {
-      // Update existing chapter
-      const updatedChapters = [...savedChapters];
-      updatedChapters[editingChapterIndex] = {
-        ...updatedChapters[editingChapterIndex],
-        ...chapterData,
-      };
-      setSavedChapters(updatedChapters);
-      setEditingChapterIndex(null);
-      setEditingChapterData(null);
-    } else {
-      // Add new chapter
-      const newChapter = {
-        id: null,
-        ...chapterData,
-        ordre: savedChapters.length + 1,
-      };
-      setSavedChapters([...savedChapters, newChapter]);
-      setIsCreatingChapter(false);
+  // NEW: Function to handle file uploads using minioS3Service
+  const handleFileUpload = async (file) => {
+    try {
+      setUploadingFiles((prev) => [...prev, file.name]);
+
+      // Validate file before upload
+      minioS3Service.validateDocumentFile(file);
+
+      // Upload file using the minioS3Service
+      const result = await minioS3Service.uploadFile(
+        file,
+        "DOCUMENT",
+        "course_materials"
+      );
+
+      setSuccess(`Fichier "${file.name}" téléchargé avec succès`);
+      return result.fileName; // Return the uploaded file name for reference
+    } catch (error) {
+      console.error("File upload error:", error);
+      setError(`Erreur lors du téléchargement: ${error.message}`);
+      throw error;
+    } finally {
+      setUploadingFiles((prev) => prev.filter((name) => name !== file.name));
     }
   };
 
-  const handleEditChapter = (index) => {
-    setEditingChapterIndex(index);
-    setEditingChapterData({ ...savedChapters[index] });
-    setIsCreatingChapter(false);
+  // NEW: Function to handle multiple file uploads
+  const handleMultipleFileUpload = async (files) => {
+    try {
+      const results = await minioS3Service.uploadMultipleFiles(
+        files,
+        "DOCUMENT",
+        "course_materials"
+      );
+
+      if (results.failed.length > 0) {
+        setError(
+          `${results.failed.length} fichier(s) n'ont pas pu être téléchargés`
+        );
+      }
+
+      if (results.successful.length > 0) {
+        setSuccess(
+          `${results.successful.length} fichier(s) téléchargés avec succès`
+        );
+      }
+
+      return results.successful.map((file) => file.fileName);
+    } catch (error) {
+      console.error("Multiple file upload error:", error);
+      setError(`Erreur lors du téléchargement: ${error.message}`);
+      throw error;
+    }
   };
 
-  const handleEditChapterDataChange = (newData) => {
+  const handleSaveChapter = useCallback(
+    (chapterData) => {
+      if (editingChapterIndex !== null) {
+        // Update existing chapter
+        const updatedChapters = [...savedChapters];
+        updatedChapters[editingChapterIndex] = {
+          ...updatedChapters[editingChapterIndex],
+          ...chapterData,
+        };
+        setSavedChapters(updatedChapters);
+        setEditingChapterIndex(null);
+        setEditingChapterData(null);
+      } else {
+        // Add new chapter
+        const newChapter = {
+          id: null,
+          ...chapterData,
+          ordre: savedChapters.length + 1,
+        };
+        setSavedChapters([...savedChapters, newChapter]);
+        setIsCreatingChapter(false);
+      }
+    },
+    [editingChapterIndex, savedChapters]
+  );
+
+  const handleEditChapter = useCallback(
+    (index) => {
+      setEditingChapterIndex(index);
+      setEditingChapterData({ ...savedChapters[index] });
+      setIsCreatingChapter(false);
+    },
+    [savedChapters]
+  );
+
+  const handleEditChapterDataChange = useCallback((newData) => {
     setEditingChapterData(newData);
-  };
+  }, []);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingChapterIndex(null);
     setEditingChapterData(null);
-  };
+  }, []);
 
-  const handleDeleteChapter = (index) => {
-    const updatedChapters = savedChapters.filter((_, i) => i !== index);
-    updatedChapters.forEach((chapter, i) => {
-      chapter.ordre = i + 1;
-    });
-    setSavedChapters(updatedChapters);
-  };
-
-  const moveChapter = (index, direction) => {
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex >= 0 && newIndex < savedChapters.length) {
-      const updatedChapters = [...savedChapters];
-      [updatedChapters[index], updatedChapters[newIndex]] = [
-        updatedChapters[newIndex],
-        updatedChapters[index],
-      ];
+  const handleDeleteChapter = useCallback(
+    (index) => {
+      const updatedChapters = savedChapters.filter((_, i) => i !== index);
       updatedChapters.forEach((chapter, i) => {
         chapter.ordre = i + 1;
       });
       setSavedChapters(updatedChapters);
-    }
-  };
+    },
+    [savedChapters]
+  );
 
-  const handleCancelChapterForm = () => {
+  const moveChapter = useCallback(
+    (index, direction) => {
+      const newIndex = direction === "up" ? index - 1 : index + 1;
+      if (newIndex >= 0 && newIndex < savedChapters.length) {
+        const updatedChapters = [...savedChapters];
+        [updatedChapters[index], updatedChapters[newIndex]] = [
+          updatedChapters[newIndex],
+          updatedChapters[index],
+        ];
+        updatedChapters.forEach((chapter, i) => {
+          chapter.ordre = i + 1;
+        });
+        setSavedChapters(updatedChapters);
+      }
+    },
+    [savedChapters]
+  );
+
+  const handleCancelChapterForm = useCallback(() => {
     setIsCreatingChapter(false);
     setEditingChapterIndex(null);
     setEditingChapterData(null);
-  };
+  }, []);
 
   const onSubmit = async (data) => {
     try {
@@ -870,7 +956,7 @@ const CourseFormModal = ({
     }
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     reset({
       titre: "",
       description: "",
@@ -883,16 +969,39 @@ const CourseFormModal = ({
     setIsCreatingChapter(false);
     setEditingChapterIndex(null);
     setEditingChapterData(null);
-  };
+    setUploadingFiles([]);
+  }, [reset]);
 
-  const handleMatiereChange = (newSelectedIds) => {
-    setSelectedMatiereIds(newSelectedIds);
-    setValue("matieres", newSelectedIds, { shouldValidate: true });
-  };
+  const handleMatiereChange = useCallback(
+    (newSelectedIds) => {
+      setSelectedMatiereIds(newSelectedIds);
+      setValue("matieres", newSelectedIds, { shouldValidate: true });
+    },
+    [setValue]
+  );
 
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    handleSubmit(onSubmit)(e);
+  const handleFormSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
+      handleSubmit(onSubmit)(e);
+    },
+    [handleSubmit, onSubmit]
+  );
+
+  // NEW: Add file input for course materials
+  const handleFileInputChange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      if (files.length === 1) {
+        await handleFileUpload(files[0]);
+      } else {
+        await handleMultipleFileUpload(files);
+      }
+    } catch (error) {
+      // Error already handled in the upload functions
+    }
   };
 
   if (!showCreateModal) return null;
@@ -922,6 +1031,53 @@ const CourseFormModal = ({
               handleMatiereChange={handleMatiereChange}
               setValue={setValue}
             />
+
+            {/* NEW: File upload section */}
+            <div className="bg-slate-50 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                Fichiers du cours
+              </h3>
+              <div className="flex items-center gap-4">
+                <label className="flex-1">
+                  <div className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors">
+                    <div className="text-center">
+                      <Plus className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                      <p className="text-sm text-slate-600">
+                        Ajouter des fichiers
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        PDF, Word, Excel, images (max 20MB)
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
+                    />
+                  </div>
+                </label>
+              </div>
+
+              {/* Uploading files indicator */}
+              {uploadingFiles.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-slate-600 mb-2">
+                    Téléchargement en cours:
+                  </p>
+                  {uploadingFiles.map((fileName, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center text-xs text-slate-500 mb-1"
+                    >
+                      <div className="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                      {fileName}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <ChaptersSection
               savedChapters={savedChapters}

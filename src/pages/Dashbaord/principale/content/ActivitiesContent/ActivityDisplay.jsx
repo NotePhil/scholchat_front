@@ -19,6 +19,8 @@ import {
   Eye,
   ZoomIn,
   X,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
 const ActivityDisplay = ({
@@ -35,6 +37,7 @@ const ActivityDisplay = ({
   const [isCommenting, setIsCommenting] = useState(false);
   const [mediaUrls, setMediaUrls] = useState(new Map());
   const [loadingMedia, setLoadingMedia] = useState(new Set());
+  const [failedMedia, setFailedMedia] = useState(new Set());
   const [selectedImage, setSelectedImage] = useState(null);
 
   const reactions = [
@@ -90,83 +93,143 @@ const ActivityDisplay = ({
 
   // Load media URLs when component mounts or activity changes
   useEffect(() => {
-    if (activity.media && activity.media.length > 0) {
+    if (activity?.media && activity.media.length > 0) {
       loadMediaUrls();
     }
-  }, [activity.media]);
+  }, [activity?.media]);
 
   const loadMediaUrls = async () => {
-    if (!activity.media || activity.media.length === 0) return;
+    if (!activity?.media || activity.media.length === 0) return;
 
     const newMediaUrls = new Map();
     const newLoadingMedia = new Set();
+    const newFailedMedia = new Set();
 
     for (const mediaItem of activity.media) {
       if (
-        mediaItem.filePath &&
+        mediaItem?.filePath &&
         !mediaUrls.has(mediaItem.id || mediaItem.filePath)
       ) {
-        newLoadingMedia.add(mediaItem.id || mediaItem.filePath);
+        const mediaKey = mediaItem.id || mediaItem.filePath;
+        newLoadingMedia.add(mediaKey);
 
         try {
           let downloadUrl;
 
-          // Try different methods to get the download URL
+          // Try different methods to get the download URL with proper error handling
           if (mediaItem.id) {
-            // If we have an ID, try to get download URL by ID
             try {
               const downloadData = await minioS3Service.generateDownloadUrl(
                 mediaItem.id
               );
-              downloadUrl = downloadData.downloadUrl;
-            } catch (error) {
-              console.warn("Failed to get URL by ID, trying by path:", error);
+              downloadUrl = downloadData?.downloadUrl;
+            } catch (idError) {
+              console.warn("Failed to get URL by ID, trying by path:", idError);
               // Fallback to path-based URL generation
-              const downloadData =
-                await minioS3Service.generateDownloadUrlByPath(
-                  mediaItem.filePath
-                );
-              downloadUrl = downloadData.downloadUrl;
+              try {
+                const downloadData =
+                  await minioS3Service.generateDownloadUrlByPath(
+                    mediaItem.filePath
+                  );
+                downloadUrl = downloadData?.downloadUrl;
+              } catch (pathError) {
+                console.error("Both ID and path methods failed:", pathError);
+                throw pathError;
+              }
             }
-          } else {
-            // Use path-based URL generation
+          } else if (mediaItem.filePath) {
             const downloadData = await minioS3Service.generateDownloadUrlByPath(
               mediaItem.filePath
             );
-            downloadUrl = downloadData.downloadUrl;
+            downloadUrl = downloadData?.downloadUrl;
           }
 
-          newMediaUrls.set(mediaItem.id || mediaItem.filePath, {
-            url: downloadUrl,
-            fileName: mediaItem.fileName,
-            contentType: mediaItem.contentType,
-          });
+          if (downloadUrl) {
+            newMediaUrls.set(mediaKey, {
+              url: downloadUrl,
+              fileName: mediaItem.fileName || "Image",
+              contentType: mediaItem.contentType || "image/jpeg",
+              fileSize: mediaItem.fileSize,
+              error: false,
+            });
+          } else {
+            throw new Error("No download URL generated");
+          }
         } catch (error) {
           console.error("Error loading media URL:", error);
+          newFailedMedia.add(mediaKey);
           // Set a placeholder for failed loads
-          newMediaUrls.set(mediaItem.id || mediaItem.filePath, {
+          newMediaUrls.set(mediaKey, {
             url: "/api/placeholder/400/300",
             fileName: mediaItem.fileName || "Image",
-            contentType: mediaItem.contentType,
+            contentType: mediaItem.contentType || "image/jpeg",
+            fileSize: mediaItem.fileSize,
             error: true,
           });
         }
 
-        newLoadingMedia.delete(mediaItem.id || mediaItem.filePath);
+        newLoadingMedia.delete(mediaKey);
       }
     }
 
     setMediaUrls((prev) => new Map([...prev, ...newMediaUrls]));
     setLoadingMedia(newLoadingMedia);
+    setFailedMedia((prev) => new Set([...prev, ...newFailedMedia]));
+  };
+
+  const retryLoadMedia = async (mediaItem) => {
+    const mediaKey = mediaItem.id || mediaItem.filePath;
+    setLoadingMedia((prev) => new Set([...prev, mediaKey]));
+    setFailedMedia((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(mediaKey);
+      return newSet;
+    });
+
+    try {
+      let downloadUrl;
+      if (mediaItem.id) {
+        const downloadData = await minioS3Service.generateDownloadUrl(
+          mediaItem.id
+        );
+        downloadUrl = downloadData?.downloadUrl;
+      } else {
+        const downloadData = await minioS3Service.generateDownloadUrlByPath(
+          mediaItem.filePath
+        );
+        downloadUrl = downloadData?.downloadUrl;
+      }
+
+      if (downloadUrl) {
+        setMediaUrls((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(mediaKey, {
+            url: downloadUrl,
+            fileName: mediaItem.fileName || "Image",
+            contentType: mediaItem.contentType || "image/jpeg",
+            fileSize: mediaItem.fileSize,
+            error: false,
+          });
+          return newMap;
+        });
+      }
+    } catch (error) {
+      console.error("Retry failed:", error);
+      setFailedMedia((prev) => new Set([...prev, mediaKey]));
+    } finally {
+      setLoadingMedia((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(mediaKey);
+        return newSet;
+      });
+    }
   };
 
   const handleReactionClick = async (reactionType) => {
     try {
       if (activity.userReaction === reactionType) {
-        // Remove reaction (dislike)
         await onRemoveReaction(activity.id);
       } else {
-        // Add new reaction
         await onReaction(activity.id, reactionType);
       }
       setShowReactionPicker(false);
@@ -210,7 +273,7 @@ const ActivityDisplay = ({
     try {
       if (mediaItem.id) {
         await minioS3Service.downloadFile(mediaItem.id);
-      } else {
+      } else if (mediaItem.filePath) {
         await minioS3Service.downloadFileByPath(mediaItem.filePath);
       }
     } catch (error) {
@@ -219,11 +282,15 @@ const ActivityDisplay = ({
   };
 
   const formatTime = (timestamp) => {
-    return activityFeedService.formatTimestamp(timestamp);
+    try {
+      return activityFeedService.formatTimestamp(timestamp);
+    } catch (error) {
+      return "Unknown time";
+    }
   };
 
   const getTotalReactions = () => {
-    if (!activity.reactions) return 0;
+    if (!activity?.reactions) return 0;
     return Object.values(activity.reactions).reduce(
       (sum, count) => sum + count,
       0
@@ -231,7 +298,7 @@ const ActivityDisplay = ({
   };
 
   const getTopReactions = () => {
-    if (!activity.reactions) return [];
+    if (!activity?.reactions) return [];
     return Object.entries(activity.reactions)
       .filter(([_, count]) => count > 0)
       .sort(([, a], [, b]) => b - a)
@@ -239,11 +306,11 @@ const ActivityDisplay = ({
   };
 
   const getUserReaction = () => {
-    return reactions.find((r) => r.type === activity.userReaction);
+    return reactions.find((r) => r.type === activity?.userReaction);
   };
 
   const renderEventDetails = () => {
-    if (activity.type !== "event") return null;
+    if (activity?.type !== "event" || !activity?.eventDetails) return null;
 
     const getStatusStyle = (status) => {
       const statusStyles = {
@@ -260,10 +327,10 @@ const ActivityDisplay = ({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <h3 className="font-bold text-xl text-gray-900 mb-2">
-              {activity.eventDetails.title}
+              {activity.eventDetails.title || "Untitled Event"}
             </h3>
             <p className="text-gray-600 leading-relaxed mb-4">
-              {activity.eventDetails.description}
+              {activity.eventDetails.description || "No description available"}
             </p>
           </div>
           <span
@@ -271,7 +338,9 @@ const ActivityDisplay = ({
               activity.eventDetails.status
             )}`}
           >
-            {activityFeedService.getStatusLabel(activity.eventDetails.status)}
+            {activityFeedService.getStatusLabel(
+              activity.eventDetails.status || "PLANIFIE"
+            )}
           </span>
         </div>
 
@@ -295,7 +364,7 @@ const ActivityDisplay = ({
             <div>
               <p className="text-sm text-gray-500">Participants</p>
               <p className="font-semibold">
-                {activity.eventDetails.participantsCount}
+                {activity.eventDetails.participantsCount || 0}
               </p>
             </div>
           </div>
@@ -307,15 +376,16 @@ const ActivityDisplay = ({
             <div>
               <p className="text-sm text-gray-500">Start Time</p>
               <p className="font-semibold">
-                {new Date(activity.eventDetails.startTime).toLocaleDateString(
-                  "en-US",
-                  {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  }
-                )}
+                {activity.eventDetails.startTime
+                  ? new Date(
+                      activity.eventDetails.startTime
+                    ).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "TBA"}
               </p>
             </div>
           </div>
@@ -337,7 +407,7 @@ const ActivityDisplay = ({
   };
 
   const renderMedia = () => {
-    if (!activity.media || activity.media.length === 0) return null;
+    if (!activity?.media || activity.media.length === 0) return null;
 
     return (
       <div className="mt-4">
@@ -346,8 +416,10 @@ const ActivityDisplay = ({
             mediaItem={activity.media[0]}
             mediaUrls={mediaUrls}
             loadingMedia={loadingMedia}
+            failedMedia={failedMedia}
             onDownload={handleDownloadMedia}
             onViewImage={setSelectedImage}
+            onRetry={retryLoadMedia}
           />
         ) : (
           <div
@@ -360,13 +432,15 @@ const ActivityDisplay = ({
             }`}
           >
             {activity.media.slice(0, 4).map((media, index) => (
-              <div key={media.id || index} className="relative">
+              <div key={media?.id || index} className="relative">
                 <MediaItem
                   mediaItem={media}
                   mediaUrls={mediaUrls}
                   loadingMedia={loadingMedia}
+                  failedMedia={failedMedia}
                   onDownload={handleDownloadMedia}
                   onViewImage={setSelectedImage}
+                  onRetry={retryLoadMedia}
                   isGrid={true}
                   showMoreCount={
                     index === 3 && activity.media.length > 4
@@ -382,6 +456,18 @@ const ActivityDisplay = ({
     );
   };
 
+  // Safe render with null checks
+  if (!activity) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center justify-center text-gray-500">
+          <AlertCircle className="w-5 h-5 mr-2" />
+          <span>Activity data not available</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
@@ -389,20 +475,25 @@ const ActivityDisplay = ({
         <div className="p-6 pb-4">
           <div className="flex items-start space-x-4">
             <img
-              src={activity.user.avatar || "/api/placeholder/48/48"}
-              alt={activity.user.name}
+              src={activity.user?.avatar || "/api/placeholder/48/48"}
+              alt={activity.user?.name || "User"}
               className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100"
+              onError={(e) => {
+                e.target.src = "/api/placeholder/48/48";
+              }}
             />
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-gray-900 text-lg">
-                    {activity.user.name}
+                    {activity.user?.name || "Unknown User"}
                   </h3>
                   <div className="flex items-center space-x-2 text-sm text-gray-500">
                     <span>{formatTime(activity.timestamp)}</span>
                     <span>•</span>
-                    <span className="capitalize">{activity.user.role}</span>
+                    <span className="capitalize">
+                      {activity.user?.role || "user"}
+                    </span>
                     {activity.type === "event" && (
                       <>
                         <span>•</span>
@@ -422,7 +513,7 @@ const ActivityDisplay = ({
         {/* Content */}
         <div className="px-6 pb-4">
           <p className="text-gray-800 text-lg leading-relaxed">
-            {activity.content}
+            {activity.content || ""}
           </p>
           {renderMedia()}
           {renderEventDetails()}
@@ -441,7 +532,7 @@ const ActivityDisplay = ({
                         key={type}
                         className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-sm border border-gray-200"
                       >
-                        {reaction?.emoji}
+                        {reaction?.emoji || "👍"}
                       </div>
                     );
                   })}
@@ -541,6 +632,9 @@ const ActivityDisplay = ({
                   src="/api/placeholder/40/40"
                   alt="You"
                   className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm"
+                  onError={(e) => {
+                    e.target.src = "/api/placeholder/40/40";
+                  }}
                 />
                 <div className="flex-1 relative">
                   <input
@@ -569,24 +663,27 @@ const ActivityDisplay = ({
             {activity.comments && activity.comments.length > 0 && (
               <div className="px-6 pb-6 space-y-4">
                 {activity.comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-3 group">
+                  <div key={comment?.id} className="flex space-x-3 group">
                     <img
-                      src={comment.user.avatar || "/api/placeholder/32/32"}
-                      alt={comment.user.name}
+                      src={comment?.user?.avatar || "/api/placeholder/32/32"}
+                      alt={comment?.user?.name || "User"}
                       className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0"
+                      onError={(e) => {
+                        e.target.src = "/api/placeholder/32/32";
+                      }}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-semibold text-sm text-gray-900 truncate">
-                            {comment.user.name}
+                            {comment?.user?.name || "Unknown User"}
                           </span>
                           <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                            {formatTime(comment.timestamp)}
+                            {formatTime(comment?.timestamp)}
                           </span>
                         </div>
                         <p className="text-gray-800 text-sm leading-relaxed break-words">
-                          {comment.content}
+                          {comment?.content || ""}
                         </p>
                       </div>
                       <div className="flex items-center space-x-4 mt-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -627,32 +724,52 @@ const ActivityDisplay = ({
   );
 };
 
-// Separate component for individual media items
+// Improved MediaItem component with better error handling
 const MediaItem = ({
   mediaItem,
   mediaUrls,
   loadingMedia,
+  failedMedia,
   onDownload,
   onViewImage,
+  onRetry,
   isGrid = false,
   showMoreCount = null,
 }) => {
-  const mediaKey = mediaItem.id || mediaItem.filePath;
+  const mediaKey = mediaItem?.id || mediaItem?.filePath;
   const mediaData = mediaUrls.get(mediaKey);
   const isLoading = loadingMedia.has(mediaKey);
+  const hasFailed = failedMedia.has(mediaKey);
 
   const imageUrl = mediaData?.url || "/api/placeholder/400/300";
-  const hasError = mediaData?.error;
+  const hasError = mediaData?.error || hasFailed;
 
   const handleImageClick = () => {
-    if (minioS3Service.isImageFile(mediaItem.contentType) && !hasError) {
+    if (
+      minioS3Service.isImageFile(mediaItem?.contentType) &&
+      !hasError &&
+      !isLoading
+    ) {
       onViewImage({
         ...mediaItem,
         url: imageUrl,
-        fileName: mediaData?.fileName || mediaItem.fileName,
+        fileName: mediaData?.fileName || mediaItem?.fileName,
       });
     }
   };
+
+  const handleRetryClick = (e) => {
+    e.stopPropagation();
+    onRetry(mediaItem);
+  };
+
+  if (!mediaItem) {
+    return (
+      <div className="w-full h-40 bg-gray-100 rounded-2xl flex items-center justify-center">
+        <AlertCircle className="w-8 h-8 text-gray-400" />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -663,6 +780,18 @@ const MediaItem = ({
       {isLoading ? (
         <div className="w-full h-full flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+        </div>
+      ) : hasError ? (
+        <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 p-4">
+          <AlertCircle className="w-8 h-8 mb-2" />
+          <span className="text-sm mb-2">Failed to load image</span>
+          <button
+            onClick={handleRetryClick}
+            className="flex items-center space-x-1 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span>Retry</span>
+          </button>
         </div>
       ) : (
         <>
@@ -739,9 +868,12 @@ const ImageLightbox = ({ image, onClose, onDownload }) => {
     >
       <div className="relative max-w-4xl max-h-full">
         <img
-          src={image.url}
-          alt={image.fileName}
+          src={image?.url || "/api/placeholder/800/600"}
+          alt={image?.fileName || "Image"}
           className="max-w-full max-h-full object-contain rounded-lg"
+          onError={(e) => {
+            e.target.src = "/api/placeholder/800/600";
+          }}
         />
 
         {/* Close button */}
@@ -762,8 +894,8 @@ const ImageLightbox = ({ image, onClose, onDownload }) => {
 
         {/* Image info */}
         <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white p-3 rounded-lg">
-          <p className="font-medium">{image.fileName}</p>
-          {image.fileSize && (
+          <p className="font-medium">{image?.fileName || "Image"}</p>
+          {image?.fileSize && (
             <p className="text-sm text-gray-300">
               {minioS3Service.formatFileSize(image.fileSize)}
             </p>
