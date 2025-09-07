@@ -120,7 +120,7 @@ const UserViewModalParentStudent = ({ user, onClose, userType = "parent" }) => {
         className: "bg-red-50 text-red-700 border-red-200",
         text: "Inactif",
       },
-      PENDING: {
+      EN_ATTENTE: {
         className: "bg-amber-50 text-amber-700 border-amber-200",
         text: "En attente",
       },
@@ -142,7 +142,7 @@ const UserViewModalParentStudent = ({ user, onClose, userType = "parent" }) => {
               ? "bg-emerald-500"
               : status === "INACTIVE"
               ? "bg-red-500"
-              : status === "PENDING"
+              : status === "EN_ATTENTE"
               ? "bg-amber-500"
               : "bg-slate-500"
           }`}

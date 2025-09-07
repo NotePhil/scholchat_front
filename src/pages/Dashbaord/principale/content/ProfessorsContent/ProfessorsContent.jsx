@@ -89,29 +89,29 @@ const ProfessorsContent = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      INACTIVE: "bg-red-50 text-red-700 border-red-200",
-      PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+      APPROUVEE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      REJETEE: "bg-red-50 text-red-700 border-red-200",
+      EN_ATTENTE: "bg-amber-50 text-amber-700 border-amber-200",
     };
     return badges[status] || "bg-gray-50 text-gray-700 border-gray-200";
   };
 
   const getStatusText = (status) => {
     const texts = {
-      ACTIVE: "Actif",
-      INACTIVE: "Inactif",
-      PENDING: "En attente",
+      APPROUVEE: "Actif",
+      REJETEE: "Inactif",
+      EN_ATTENTE: "En attente",
     };
     return texts[status] || status;
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "ACTIVE":
+      case "APPROUVEE":
         return <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>;
-      case "INACTIVE":
+      case "REJETEE":
         return <div className="w-2 h-2 bg-red-500 rounded-full"></div>;
-      case "PENDING":
+      case "EN_ATTENTE":
         return (
           <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
         );
@@ -241,7 +241,7 @@ const ProfessorsContent = () => {
               <div>
                 <p className="text-slate-600 text-sm font-medium">Actifs</p>
                 <p className="text-3xl font-bold text-emerald-600 mt-1">
-                  {professors.filter((p) => p.etat === "ACTIVE").length}
+                  {professors.filter((p) => p.etat === "APPROUVEE").length}
                 </p>
               </div>
               <div className="p-3 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl">
@@ -259,7 +259,7 @@ const ProfessorsContent = () => {
               <div>
                 <p className="text-slate-600 text-sm font-medium">En attente</p>
                 <p className="text-3xl font-bold text-amber-600 mt-1">
-                  {professors.filter((p) => p.etat === "PENDING").length}
+                  {professors.filter((p) => p.etat === "EN_ATTENTE").length}
                 </p>
               </div>
               <div className="p-3 bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl">
@@ -277,7 +277,7 @@ const ProfessorsContent = () => {
               <div>
                 <p className="text-slate-600 text-sm font-medium">Inactifs</p>
                 <p className="text-3xl font-bold text-red-600 mt-1">
-                  {professors.filter((p) => p.etat === "INACTIVE").length}
+                  {professors.filter((p) => p.etat === "REJETEE").length}
                 </p>
               </div>
               <div className="p-3 bg-gradient-to-r from-red-500 to-red-600 rounded-xl">
@@ -322,9 +322,9 @@ const ProfessorsContent = () => {
                   className="pl-12 pr-8 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
                 >
                   <option value="all">Tous les statuts</option>
-                  <option value="ACTIVE">Actifs</option>
-                  <option value="INACTIVE">Inactifs</option>
-                  <option value="PENDING">En attente</option>
+                  <option value="APPROUVEE">Actifs</option>
+                  <option value="REJETEE">Inactifs</option>
+                  <option value="EN_ATTENTE">En attente</option>
                 </select>
                 <ChevronDown
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
@@ -633,9 +633,9 @@ const ProfessorsContent = () => {
                         >
                           <div
                             className={`w-1.5 h-1.5 rounded-full mr-2 ${
-                              professor.etat === "ACTIVE"
+                              professor.etat === "APPROUVEE"
                                 ? "bg-emerald-500"
-                                : professor.etat === "PENDING"
+                                : professor.etat === "EN_ATTENTE"
                                 ? "bg-amber-500"
                                 : "bg-red-500"
                             }`}

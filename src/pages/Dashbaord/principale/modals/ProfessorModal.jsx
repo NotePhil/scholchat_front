@@ -21,7 +21,7 @@ const ProfessorModal = ({
     telephone: "",
     adresse: "",
     matriculeProfesseur: "",
-    statut: "PENDING", // Default status
+    statut: "EN_ATTENTE", // Default status
   });
 
   const [imagePreview, setImagePreview] = useState({
@@ -54,7 +54,7 @@ const ProfessorModal = ({
           telephone: "",
           adresse: "",
           matriculeProfesseur: "",
-          statut: "PENDING",
+          statut: "EN_ATTENTE",
         });
         setImagePreview({
           cniRecto: null,
@@ -83,7 +83,7 @@ const ProfessorModal = ({
           telephone: selectedProfessor.telephone || "",
           adresse: selectedProfessor.adresse || "",
           matriculeProfesseur: selectedProfessor.matriculeProfesseur || "",
-          statut: selectedProfessor.statut || "PENDING",
+          statut: selectedProfessor.statut || "EN_ATTENTE",
         });
 
         // Store existing image references
@@ -477,7 +477,7 @@ const ProfessorModal = ({
         return "bg-green-100 text-green-800";
       case "REJECTED":
         return "bg-red-100 text-red-800";
-      case "PENDING":
+      case "EN_ATTENTE":
         return "bg-yellow-100 text-yellow-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -490,7 +490,7 @@ const ProfessorModal = ({
         return "Approuvé";
       case "REJECTED":
         return "Rejeté";
-      case "PENDING":
+      case "EN_ATTENTE":
         return "En attente";
       default:
         return status;
@@ -576,7 +576,9 @@ const ProfessorModal = ({
 
   // Check if approve/reject buttons should be shown
   const shouldShowApprovalButtons =
-    modalMode === "view" && selectedProfessor && formData.statut == "PENDING";
+    modalMode === "view" &&
+    selectedProfessor &&
+    formData.statut == "EN_ATTENTE";
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -737,7 +739,7 @@ const ProfessorModal = ({
             </div>
 
             <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-              {/* Status Action Buttons - Only show when NOT PENDING */}
+              {/* Status Action Buttons - Only show when NOT EN_ATTENTE */}
               {shouldShowApprovalButtons && (
                 <>
                   <button
