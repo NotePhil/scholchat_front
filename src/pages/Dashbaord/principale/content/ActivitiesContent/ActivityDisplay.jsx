@@ -16,12 +16,10 @@ import {
   Calendar,
   Send,
   Download,
-  Eye,
-  ZoomIn,
-  X,
   AlertCircle,
   RefreshCw,
-  Image as ImageIcon,
+  ZoomIn,
+  X,
 } from "lucide-react";
 
 const ActivityDisplay = ({
@@ -40,6 +38,10 @@ const ActivityDisplay = ({
   const [selectedImage, setSelectedImage] = useState(null);
   const [mediaLoadingStates, setMediaLoadingStates] = useState(new Map());
   const [mediaErrors, setMediaErrors] = useState(new Set());
+  const [currentUser] = useState({
+    name: "Anonymous User",
+    role: "user",
+  });
 
   const reactions = [
     {
@@ -408,25 +410,20 @@ const ActivityDisplay = ({
         {/* Header */}
         <div className="p-6 pb-4">
           <div className="flex items-start space-x-4">
-            <img
-              src={activity.user?.avatar || "/api/placeholder/48/48"}
-              alt={activity.user?.name || "User"}
-              className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100"
-              onError={(e) => {
-                e.target.src = "/api/placeholder/48/48";
-              }}
-            />
+            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-lg">
+              {activity.user?.name?.charAt(0) || currentUser.name.charAt(0)}
+            </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-gray-900 text-lg">
-                    {activity.user?.name || "Unknown User"}
+                    {activity.user?.name || currentUser.name}
                   </h3>
                   <div className="flex items-center space-x-2 text-sm text-gray-500">
                     <span>{formatTime(activity.timestamp)}</span>
                     <span>•</span>
                     <span className="capitalize">
-                      {activity.user?.role || "user"}
+                      {activity.user?.role || currentUser.role}
                     </span>
                     {activity.type === "event" && (
                       <>
@@ -562,14 +559,9 @@ const ActivityDisplay = ({
             {/* Comment Input */}
             <div className="p-6 pb-4">
               <form onSubmit={handleCommentSubmit} className="flex space-x-3">
-                <img
-                  src="/api/placeholder/40/40"
-                  alt="You"
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm"
-                  onError={(e) => {
-                    e.target.src = "/api/placeholder/40/40";
-                  }}
-                />
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold flex-shrink-0">
+                  {currentUser.name.charAt(0)}
+                </div>
                 <div className="flex-1 relative">
                   <input
                     type="text"
@@ -598,19 +590,15 @@ const ActivityDisplay = ({
               <div className="px-6 pb-6 space-y-4">
                 {activity.comments.map((comment) => (
                   <div key={comment?.id} className="flex space-x-3 group">
-                    <img
-                      src={comment?.user?.avatar || "/api/placeholder/32/32"}
-                      alt={comment?.user?.name || "User"}
-                      className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0"
-                      onError={(e) => {
-                        e.target.src = "/api/placeholder/32/32";
-                      }}
-                    />
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm flex-shrink-0">
+                      {comment?.user?.name?.charAt(0) ||
+                        currentUser.name.charAt(0)}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-semibold text-sm text-gray-900 truncate">
-                            {comment?.user?.name || "Unknown User"}
+                            {comment?.user?.name || currentUser.name}
                           </span>
                           <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
                             {formatTime(comment?.timestamp)}
