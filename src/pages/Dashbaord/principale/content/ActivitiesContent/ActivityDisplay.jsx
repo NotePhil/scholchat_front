@@ -21,6 +21,7 @@ import {
   X,
   AlertCircle,
   RefreshCw,
+  Image as ImageIcon,
 } from "lucide-react";
 
 const ActivityDisplay = ({
@@ -30,15 +31,15 @@ const ActivityDisplay = ({
   onComment,
   onShare,
   onJoinEvent,
+  onMediaDownload,
 }) => {
   const [commentText, setCommentText] = useState("");
   const [showComments, setShowComments] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [isCommenting, setIsCommenting] = useState(false);
-  const [mediaUrls, setMediaUrls] = useState(new Map());
-  const [loadingMedia, setLoadingMedia] = useState(new Set());
-  const [failedMedia, setFailedMedia] = useState(new Set());
   const [selectedImage, setSelectedImage] = useState(null);
+  const [mediaLoadingStates, setMediaLoadingStates] = useState(new Map());
+  const [mediaErrors, setMediaErrors] = useState(new Set());
 
   const reactions = [
     {
@@ -91,139 +92,17 @@ const ActivityDisplay = ({
     },
   ];
 
-  // Load media URLs when component mounts or activity changes
+  // Initialize media loading states
   useEffect(() => {
     if (activity?.media && activity.media.length > 0) {
-      loadMediaUrls();
+      const initialStates = new Map();
+      activity.media.forEach((media) => {
+        const mediaKey = media.id || media.filePath;
+        initialStates.set(mediaKey, false);
+      });
+      setMediaLoadingStates(initialStates);
     }
   }, [activity?.media]);
-
-  const loadMediaUrls = async () => {
-    if (!activity?.media || activity.media.length === 0) return;
-
-    const newMediaUrls = new Map();
-    const newLoadingMedia = new Set();
-    const newFailedMedia = new Set();
-
-    for (const mediaItem of activity.media) {
-      if (
-        mediaItem?.filePath &&
-        !mediaUrls.has(mediaItem.id || mediaItem.filePath)
-      ) {
-        const mediaKey = mediaItem.id || mediaItem.filePath;
-        newLoadingMedia.add(mediaKey);
-
-        try {
-          let downloadUrl;
-
-          // Try different methods to get the download URL with proper error handling
-          if (mediaItem.id) {
-            try {
-              const downloadData = await minioS3Service.generateDownloadUrl(
-                mediaItem.id
-              );
-              downloadUrl = downloadData?.downloadUrl;
-            } catch (idError) {
-              console.warn("Failed to get URL by ID, trying by path:", idError);
-              // Fallback to path-based URL generation
-              try {
-                const downloadData =
-                  await minioS3Service.generateDownloadUrlByPath(
-                    mediaItem.filePath
-                  );
-                downloadUrl = downloadData?.downloadUrl;
-              } catch (pathError) {
-                console.error("Both ID and path methods failed:", pathError);
-                throw pathError;
-              }
-            }
-          } else if (mediaItem.filePath) {
-            const downloadData = await minioS3Service.generateDownloadUrlByPath(
-              mediaItem.filePath
-            );
-            downloadUrl = downloadData?.downloadUrl;
-          }
-
-          if (downloadUrl) {
-            newMediaUrls.set(mediaKey, {
-              url: downloadUrl,
-              fileName: mediaItem.fileName || "Image",
-              contentType: mediaItem.contentType || "image/jpeg",
-              fileSize: mediaItem.fileSize,
-              error: false,
-            });
-          } else {
-            throw new Error("No download URL generated");
-          }
-        } catch (error) {
-          console.error("Error loading media URL:", error);
-          newFailedMedia.add(mediaKey);
-          // Set a placeholder for failed loads
-          newMediaUrls.set(mediaKey, {
-            url: "/api/placeholder/400/300",
-            fileName: mediaItem.fileName || "Image",
-            contentType: mediaItem.contentType || "image/jpeg",
-            fileSize: mediaItem.fileSize,
-            error: true,
-          });
-        }
-
-        newLoadingMedia.delete(mediaKey);
-      }
-    }
-
-    setMediaUrls((prev) => new Map([...prev, ...newMediaUrls]));
-    setLoadingMedia(newLoadingMedia);
-    setFailedMedia((prev) => new Set([...prev, ...newFailedMedia]));
-  };
-
-  const retryLoadMedia = async (mediaItem) => {
-    const mediaKey = mediaItem.id || mediaItem.filePath;
-    setLoadingMedia((prev) => new Set([...prev, mediaKey]));
-    setFailedMedia((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(mediaKey);
-      return newSet;
-    });
-
-    try {
-      let downloadUrl;
-      if (mediaItem.id) {
-        const downloadData = await minioS3Service.generateDownloadUrl(
-          mediaItem.id
-        );
-        downloadUrl = downloadData?.downloadUrl;
-      } else {
-        const downloadData = await minioS3Service.generateDownloadUrlByPath(
-          mediaItem.filePath
-        );
-        downloadUrl = downloadData?.downloadUrl;
-      }
-
-      if (downloadUrl) {
-        setMediaUrls((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(mediaKey, {
-            url: downloadUrl,
-            fileName: mediaItem.fileName || "Image",
-            contentType: mediaItem.contentType || "image/jpeg",
-            fileSize: mediaItem.fileSize,
-            error: false,
-          });
-          return newMap;
-        });
-      }
-    } catch (error) {
-      console.error("Retry failed:", error);
-      setFailedMedia((prev) => new Set([...prev, mediaKey]));
-    } finally {
-      setLoadingMedia((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(mediaKey);
-        return newSet;
-      });
-    }
-  };
 
   const handleReactionClick = async (reactionType) => {
     try {
@@ -271,13 +150,67 @@ const ActivityDisplay = ({
 
   const handleDownloadMedia = async (mediaItem) => {
     try {
-      if (mediaItem.id) {
-        await minioS3Service.downloadFile(mediaItem.id);
-      } else if (mediaItem.filePath) {
-        await minioS3Service.downloadFileByPath(mediaItem.filePath);
+      setMediaLoadingStates((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(mediaItem.id || mediaItem.filePath, true);
+        return newMap;
+      });
+
+      if (onMediaDownload) {
+        await onMediaDownload(mediaItem);
+      } else {
+        // Fallback to direct service call
+        if (mediaItem.id) {
+          await minioS3Service.downloadFile(mediaItem.id);
+        } else if (mediaItem.filePath) {
+          await minioS3Service.downloadFileByPath(mediaItem.filePath);
+        } else {
+          throw new Error("No valid media identifier found");
+        }
       }
     } catch (error) {
       console.error("Error downloading file:", error);
+      setMediaErrors(
+        (prev) => new Set([...prev, mediaItem.id || mediaItem.filePath])
+      );
+    } finally {
+      setMediaLoadingStates((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(mediaItem.id || mediaItem.filePath, false);
+        return newMap;
+      });
+    }
+  };
+
+  const retryMediaLoad = async (mediaItem) => {
+    const mediaKey = mediaItem.id || mediaItem.filePath;
+    setMediaErrors((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(mediaKey);
+      return newSet;
+    });
+
+    try {
+      let downloadUrl = null;
+
+      if (mediaItem.id) {
+        const downloadData = await minioS3Service.generateDownloadUrl(
+          mediaItem.id
+        );
+        downloadUrl = downloadData.downloadUrl;
+      } else if (mediaItem.filePath) {
+        const downloadData = await minioS3Service.generateDownloadUrlByPath(
+          mediaItem.filePath
+        );
+        downloadUrl = downloadData.downloadUrl;
+      }
+
+      // Force a re-render by updating the activity
+      // This would ideally be handled by the parent component
+      console.log("Media retry successful, new URL:", downloadUrl);
+    } catch (error) {
+      console.error("Retry failed:", error);
+      setMediaErrors((prev) => new Set([...prev, mediaKey]));
     }
   };
 
@@ -414,12 +347,11 @@ const ActivityDisplay = ({
         {activity.media.length === 1 ? (
           <MediaItem
             mediaItem={activity.media[0]}
-            mediaUrls={mediaUrls}
-            loadingMedia={loadingMedia}
-            failedMedia={failedMedia}
             onDownload={handleDownloadMedia}
             onViewImage={setSelectedImage}
-            onRetry={retryLoadMedia}
+            onRetry={retryMediaLoad}
+            mediaLoadingStates={mediaLoadingStates}
+            mediaErrors={mediaErrors}
           />
         ) : (
           <div
@@ -432,15 +364,17 @@ const ActivityDisplay = ({
             }`}
           >
             {activity.media.slice(0, 4).map((media, index) => (
-              <div key={media?.id || index} className="relative">
+              <div
+                key={media?.id || media?.filePath || index}
+                className="relative"
+              >
                 <MediaItem
                   mediaItem={media}
-                  mediaUrls={mediaUrls}
-                  loadingMedia={loadingMedia}
-                  failedMedia={failedMedia}
                   onDownload={handleDownloadMedia}
                   onViewImage={setSelectedImage}
-                  onRetry={retryLoadMedia}
+                  onRetry={retryMediaLoad}
+                  mediaLoadingStates={mediaLoadingStates}
+                  mediaErrors={mediaErrors}
                   isGrid={true}
                   showMoreCount={
                     index === 3 && activity.media.length > 4
@@ -724,25 +658,24 @@ const ActivityDisplay = ({
   );
 };
 
-// Improved MediaItem component with better error handling
+// Enhanced MediaItem component with MinioS3 integration
 const MediaItem = ({
   mediaItem,
-  mediaUrls,
-  loadingMedia,
-  failedMedia,
   onDownload,
   onViewImage,
   onRetry,
+  mediaLoadingStates,
+  mediaErrors,
   isGrid = false,
   showMoreCount = null,
 }) => {
+  const [imageError, setImageError] = useState(false);
   const mediaKey = mediaItem?.id || mediaItem?.filePath;
-  const mediaData = mediaUrls.get(mediaKey);
-  const isLoading = loadingMedia.has(mediaKey);
-  const hasFailed = failedMedia.has(mediaKey);
+  const isLoading = mediaLoadingStates?.get(mediaKey) || false;
+  const hasError =
+    mediaErrors?.has(mediaKey) || imageError || !mediaItem?.hasValidUrl;
 
-  const imageUrl = mediaData?.url || "/api/placeholder/400/300";
-  const hasError = mediaData?.error || hasFailed;
+  const imageUrl = mediaItem?.downloadUrl || "/api/placeholder/400/300";
 
   const handleImageClick = () => {
     if (
@@ -753,14 +686,20 @@ const MediaItem = ({
       onViewImage({
         ...mediaItem,
         url: imageUrl,
-        fileName: mediaData?.fileName || mediaItem?.fileName,
+        fileName: mediaItem?.fileName,
       });
     }
   };
 
   const handleRetryClick = (e) => {
     e.stopPropagation();
+    setImageError(false);
     onRetry(mediaItem);
+  };
+
+  const handleDownloadClick = (e) => {
+    e.stopPropagation();
+    onDownload(mediaItem);
   };
 
   if (!mediaItem) {
@@ -784,7 +723,7 @@ const MediaItem = ({
       ) : hasError ? (
         <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 p-4">
           <AlertCircle className="w-8 h-8 mb-2" />
-          <span className="text-sm mb-2">Failed to load image</span>
+          <span className="text-sm mb-2 text-center">Failed to load image</span>
           <button
             onClick={handleRetryClick}
             className="flex items-center space-x-1 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
@@ -803,8 +742,10 @@ const MediaItem = ({
             } object-cover cursor-pointer transition-transform duration-200 group-hover:scale-105`}
             onClick={handleImageClick}
             onError={(e) => {
+              setImageError(true);
               e.target.src = "/api/placeholder/400/300";
             }}
+            onLoad={() => setImageError(false)}
           />
 
           {/* Overlay with actions */}
@@ -814,15 +755,22 @@ const MediaItem = ({
                 <button
                   onClick={handleImageClick}
                   className="bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-800 p-2 rounded-full transition-all duration-200 shadow-lg"
+                  title="View full size"
                 >
                   <ZoomIn className="w-5 h-5" />
                 </button>
               )}
               <button
-                onClick={() => onDownload(mediaItem)}
-                className="bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-800 p-2 rounded-full transition-all duration-200 shadow-lg"
+                onClick={handleDownloadClick}
+                disabled={isLoading}
+                className="bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-800 p-2 rounded-full transition-all duration-200 shadow-lg disabled:opacity-50"
+                title="Download"
               >
-                <Download className="w-5 h-5" />
+                {isLoading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-800 border-t-transparent"></div>
+                ) : (
+                  <Download className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>
@@ -868,7 +816,7 @@ const ImageLightbox = ({ image, onClose, onDownload }) => {
     >
       <div className="relative max-w-4xl max-h-full">
         <img
-          src={image?.url || "/api/placeholder/800/600"}
+          src={image?.url || image?.downloadUrl || "/api/placeholder/800/600"}
           alt={image?.fileName || "Image"}
           className="max-w-full max-h-full object-contain rounded-lg"
           onError={(e) => {

@@ -10,7 +10,7 @@ import SettingsContent from "./content/othersContent/SettingsContent";
 import ManageClass from "./ManageClass/ManageClass";
 import MessagingInterface from "./Messsages/MessagingInterface";
 import "../../../CSS/Principal.css";
-import ManageEstablishmentContent from "../principale/content/EstablishmentContent/CreateEstablishmentContent";
+import ManageEstablishmentContent from "./content/EstablishmentContent/ManageEstablishmentContent";
 import AdminContent from "./content/AdminContent/AdminContent";
 import StudentsContent from "./content/StudentsContent/StudentsContent";
 import OthersContent from "./content/othersContent/OthersContent";

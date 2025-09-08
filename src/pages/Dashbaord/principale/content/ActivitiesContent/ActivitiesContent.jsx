@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
+import { minioS3Service } from "../../../../../services/minioS3";
 import ActivityDisplay from "./ActivityDisplay";
 import CreateEventModal from "./CreateEventModal";
 import {
@@ -9,6 +10,7 @@ import {
   Calendar,
   MessageCircle,
   Users,
+  RefreshCw,
 } from "lucide-react";
 
 const ActivitiesContent = () => {
@@ -17,22 +19,111 @@ const ActivitiesContent = () => {
   const [filter, setFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadActivities();
   }, [filter]);
 
-  const loadActivities = async () => {
+  const loadActivities = async (showRefreshIndicator = false) => {
     try {
-      setLoading(true);
+      if (showRefreshIndicator) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError("");
+
       const data = await activityFeedService.getActivities(filter);
-      setActivities(data);
+
+      // Process activities to ensure media has proper URLs
+      const processedActivities = await Promise.all(
+        data.map(async (activity) => {
+          if (activity.media && activity.media.length > 0) {
+            // Process media items to get download URLs
+            const processedMedia = await Promise.all(
+              activity.media.map(async (mediaItem) => {
+                try {
+                  let downloadUrl = null;
+
+                  if (mediaItem.id) {
+                    try {
+                      const downloadData =
+                        await minioS3Service.generateDownloadUrl(mediaItem.id);
+                      downloadUrl = downloadData.downloadUrl;
+                    } catch (error) {
+                      console.warn(
+                        `Failed to get URL for media ID ${mediaItem.id}:`,
+                        error
+                      );
+                      // Try fallback with path if available
+                      if (mediaItem.filePath) {
+                        try {
+                          const downloadData =
+                            await minioS3Service.generateDownloadUrlByPath(
+                              mediaItem.filePath
+                            );
+                          downloadUrl = downloadData.downloadUrl;
+                        } catch (pathError) {
+                          console.warn(
+                            `Failed to get URL for path ${mediaItem.filePath}:`,
+                            pathError
+                          );
+                        }
+                      }
+                    }
+                  } else if (mediaItem.filePath) {
+                    try {
+                      const downloadData =
+                        await minioS3Service.generateDownloadUrlByPath(
+                          mediaItem.filePath
+                        );
+                      downloadUrl = downloadData.downloadUrl;
+                    } catch (error) {
+                      console.warn(
+                        `Failed to get URL for path ${mediaItem.filePath}:`,
+                        error
+                      );
+                    }
+                  }
+
+                  return {
+                    ...mediaItem,
+                    downloadUrl: downloadUrl || "/api/placeholder/400/300",
+                    hasValidUrl: !!downloadUrl,
+                  };
+                } catch (error) {
+                  console.error("Error processing media item:", error);
+                  return {
+                    ...mediaItem,
+                    downloadUrl: "/api/placeholder/400/300",
+                    hasValidUrl: false,
+                  };
+                }
+              })
+            );
+
+            return {
+              ...activity,
+              media: processedMedia,
+            };
+          }
+          return activity;
+        })
+      );
+
+      setActivities(processedActivities);
     } catch (err) {
       setError("Failed to load activities");
       console.error("Error loading activities:", err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadActivities(true);
   };
 
   const handleReaction = async (activityId, reactionType) => {
@@ -188,14 +279,79 @@ const ActivitiesContent = () => {
 
   const handleCreateEvent = async (eventData) => {
     try {
-      const newEvent = await activityFeedService.createEvent(eventData);
+      // Ensure media is properly formatted for the backend
+      const processedEventData = {
+        ...eventData,
+        medias: eventData.medias || [],
+      };
+
+      const newEvent = await activityFeedService.createEvent(
+        processedEventData
+      );
+
+      // Transform the event to activity format
       const newActivity =
         activityFeedService.transformEventToActivity(newEvent);
+
+      // Process media URLs for the new activity
+      if (newActivity.media && newActivity.media.length > 0) {
+        const processedMedia = await Promise.all(
+          newActivity.media.map(async (mediaItem) => {
+            try {
+              let downloadUrl = null;
+
+              if (mediaItem.id) {
+                const downloadData = await minioS3Service.generateDownloadUrl(
+                  mediaItem.id
+                );
+                downloadUrl = downloadData.downloadUrl;
+              } else if (mediaItem.filePath) {
+                const downloadData =
+                  await minioS3Service.generateDownloadUrlByPath(
+                    mediaItem.filePath
+                  );
+                downloadUrl = downloadData.downloadUrl;
+              }
+
+              return {
+                ...mediaItem,
+                downloadUrl: downloadUrl || "/api/placeholder/400/300",
+                hasValidUrl: !!downloadUrl,
+              };
+            } catch (error) {
+              console.error("Error processing new activity media:", error);
+              return {
+                ...mediaItem,
+                downloadUrl: "/api/placeholder/400/300",
+                hasValidUrl: false,
+              };
+            }
+          })
+        );
+
+        newActivity.media = processedMedia;
+      }
+
       setActivities((prev) => [newActivity, ...prev]);
       setShowCreateModal(false);
     } catch (err) {
       setError("Failed to create event");
       console.error("Error creating event:", err);
+    }
+  };
+
+  const handleMediaDownload = async (mediaItem) => {
+    try {
+      if (mediaItem.id) {
+        await minioS3Service.downloadFile(mediaItem.id);
+      } else if (mediaItem.filePath) {
+        await minioS3Service.downloadFileByPath(mediaItem.filePath);
+      } else {
+        throw new Error("No valid media identifier found");
+      }
+    } catch (error) {
+      console.error("Error downloading media:", error);
+      setError(`Failed to download ${mediaItem.fileName || "file"}`);
     }
   };
 
@@ -240,13 +396,25 @@ const ActivitiesContent = () => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center space-x-2 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Create Event</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-3 rounded-xl transition-all duration-200 disabled:opacity-50"
+                title="Refresh activities"
+              >
+                <RefreshCw
+                  className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
+                />
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center space-x-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Create Event</span>
+              </button>
+            </div>
           </div>
 
           {/* Enhanced Filter Tabs */}
@@ -273,23 +441,41 @@ const ActivitiesContent = () => {
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
+            <div className="flex justify-between items-start">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-red-800 font-medium">{error}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-600"
+              >
                 <svg
-                  className="h-5 w-5 text-red-400"
-                  viewBox="0 0 20 20"
+                  className="w-5 h-5"
                   fill="currentColor"
+                  viewBox="0 0 20 20"
                 >
                   <path
                     fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
                     clipRule="evenodd"
                   />
                 </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-red-800 font-medium">{error}</p>
-              </div>
+              </button>
             </div>
           </div>
         )}
@@ -326,6 +512,7 @@ const ActivitiesContent = () => {
                 onComment={handleComment}
                 onShare={handleShare}
                 onJoinEvent={handleJoinEvent}
+                onMediaDownload={handleMediaDownload}
               />
             ))
           )}

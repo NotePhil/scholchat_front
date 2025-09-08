@@ -141,7 +141,10 @@ class RejectionService {
 
   async updateMotif(id, motifData) {
     try {
-      const response = await rejectionApi.put(`/motifsRejets/${id}`, motifData);
+      const response = await rejectionApi.patch(
+        `/motifsRejets/${id}`,
+        motifData
+      );
       return response.data;
     } catch (error) {
       this.handleError(error);

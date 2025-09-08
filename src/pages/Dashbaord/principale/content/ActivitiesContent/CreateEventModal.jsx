@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
 import { minioS3Service } from "../../../../../services/minioS3";
 import {
@@ -33,6 +33,7 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(new Map());
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -60,26 +61,6 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFiles(e.dataTransfer.files);
     }
-  };
-
-  // Create local preview URLs for files before upload
-  const createLocalPreviews = (files) => {
-    const previews = new Map();
-    files.forEach((file, index) => {
-      if (file.type.startsWith("image/")) {
-        const url = URL.createObjectURL(file);
-        const tempId = `temp_${Date.now()}_${index}`;
-        previews.set(tempId, {
-          url,
-          file,
-          fileName: file.name,
-          fileSize: file.size,
-          contentType: file.type,
-          isLocal: true,
-        });
-      }
-    });
-    return previews;
   };
 
   const handleFiles = async (files) => {
@@ -153,52 +134,50 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
     setUploadingFiles(true);
 
     try {
-      // Update status to uploading
-      setMedia((prev) =>
-        prev.map((item) =>
-          mediaItems.some((mi) => mi.id === item.id)
-            ? { ...item, uploadStatus: "uploading" }
-            : item
-        )
-      );
-
-      const uploadResults = await minioS3Service.uploadMultipleFiles(
-        files,
-        "IMAGE",
-        "event-images"
-      );
-
-      if (uploadResults.failed.length > 0) {
-        console.error("Some uploads failed:", uploadResults.failed);
-        setError(`Failed to upload ${uploadResults.failed.length} file(s)`);
-      }
-
-      // Update media items with upload results
-      const successfulUploads = uploadResults.successful;
-      const uploadedMediaMap = new Map();
-
-      // Generate download URLs for uploaded files
-      for (let i = 0; i < successfulUploads.length; i++) {
-        const uploadResult = successfulUploads[i];
+      // Process each file individually for better progress tracking
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         const mediaItem = mediaItems[i];
 
-        if (uploadResult && mediaItem) {
-          try {
+        if (!mediaItem) continue;
+
+        try {
+          // Update status to uploading
+          setMedia((prev) =>
+            prev.map((item) =>
+              item.id === mediaItem.id
+                ? { ...item, uploadStatus: "uploading" }
+                : item
+            )
+          );
+
+          setUploadProgress((prev) => new Map([...prev, [mediaItem.id, 0]]));
+
+          // Upload single file to MinioS3
+          console.log(`Starting upload for: ${file.name}`);
+          const uploadResult = await minioS3Service.uploadFile(
+            file,
+            "IMAGE",
+            "event-images"
+          );
+
+          if (uploadResult.success) {
             // Generate download URL immediately after upload
-            const downloadData = await minioS3Service.generateDownloadUrlByPath(
-              uploadResult.fileName
-            );
+            let downloadData;
+            try {
+              downloadData = await minioS3Service.generateDownloadUrlByPath(
+                uploadResult.fileName
+              );
+            } catch (urlError) {
+              console.warn(
+                "Failed to generate URL by path, trying by ID:",
+                urlError
+              );
+              // If path-based URL fails, we might need to use ID-based approach
+              // This depends on your backend implementation
+            }
 
-            uploadedMediaMap.set(mediaItem.id, {
-              url: downloadData.downloadUrl,
-              fileName: uploadResult.fileName,
-              filePath: uploadResult.fileName,
-              contentType: uploadResult.contentType,
-              fileSize: uploadResult.fileSize,
-              isLocal: false,
-            });
-
-            // Update media item status
+            // Update the media item with upload results
             setMedia((prev) =>
               prev.map((item) =>
                 item.id === mediaItem.id
@@ -207,40 +186,75 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
                       filePath: uploadResult.fileName,
                       uploadStatus: "uploaded",
                       isLocal: false,
+                      // Store server response data
+                      serverId: uploadResult.mediaId, // If returned by your service
+                      downloadUrl: downloadData?.downloadUrl,
                     }
                   : item
               )
             );
-          } catch (urlError) {
-            console.error("Error generating download URL:", urlError);
-            setMedia((prev) =>
-              prev.map((item) =>
-                item.id === mediaItem.id
-                  ? { ...item, uploadStatus: "failed" }
-                  : item
-              )
+
+            // Store in uploaded media map for quick access
+            if (downloadData?.downloadUrl) {
+              setUploadedMedia(
+                (prev) =>
+                  new Map([
+                    ...prev,
+                    [
+                      mediaItem.id,
+                      {
+                        url: downloadData.downloadUrl,
+                        fileName: uploadResult.fileName,
+                        filePath: uploadResult.fileName,
+                        contentType: uploadResult.contentType,
+                        fileSize: uploadResult.fileSize,
+                        isLocal: false,
+                      },
+                    ],
+                  ])
+              );
+            }
+
+            setUploadProgress(
+              (prev) => new Map([...prev, [mediaItem.id, 100]])
             );
+
+            console.log(`Upload successful for: ${file.name}`);
+          } else {
+            throw new Error("Upload failed");
           }
+        } catch (uploadError) {
+          console.error(`Error uploading ${file.name}:`, uploadError);
+
+          // Mark this specific item as failed
+          setMedia((prev) =>
+            prev.map((item) =>
+              item.id === mediaItem.id
+                ? { ...item, uploadStatus: "failed" }
+                : item
+            )
+          );
+
+          setUploadProgress((prev) => {
+            const newMap = new Map(prev);
+            newMap.delete(mediaItem.id);
+            return newMap;
+          });
         }
       }
 
-      setUploadedMedia((prev) => new Map([...prev, ...uploadedMediaMap]));
+      // Show success message for successful uploads
+      const successfulUploads = mediaItems.filter(
+        (item) =>
+          media.find((m) => m.id === item.id)?.uploadStatus === "uploaded"
+      );
 
       if (successfulUploads.length > 0) {
-        console.log(`Successfully uploaded ${successfulUploads.length} files`);
+        console.log(`Successfully processed ${successfulUploads.length} files`);
       }
     } catch (err) {
-      console.error("Error uploading files:", err);
-      setError(`Upload failed: ${err.message}`);
-
-      // Mark all as failed
-      setMedia((prev) =>
-        prev.map((item) =>
-          mediaItems.some((mi) => mi.id === item.id)
-            ? { ...item, uploadStatus: "failed" }
-            : item
-        )
-      );
+      console.error("Error in upload process:", err);
+      setError(`Upload process failed: ${err.message}`);
     } finally {
       setUploadingFiles(false);
     }
@@ -277,6 +291,13 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
         return newMap;
       });
 
+      // Clean up progress tracking
+      setUploadProgress((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(mediaItem.id);
+        return newMap;
+      });
+
       console.log("Removing media item:", mediaItem.fileName);
     } catch (error) {
       console.error("Error removing media:", error);
@@ -296,15 +317,16 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
         )
       );
 
+      setUploadProgress((prev) => new Map([...prev, [mediaItem.id, 0]]));
+
       try {
-        const uploadResults = await minioS3Service.uploadMultipleFiles(
-          [localPreview.file],
+        const uploadResult = await minioS3Service.uploadFile(
+          localPreview.file,
           "IMAGE",
           "event-images"
         );
 
-        if (uploadResults.successful.length > 0) {
-          const uploadResult = uploadResults.successful[0];
+        if (uploadResult.success) {
           const downloadData = await minioS3Service.generateDownloadUrlByPath(
             uploadResult.fileName
           );
@@ -335,10 +357,13 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
                     filePath: uploadResult.fileName,
                     uploadStatus: "uploaded",
                     isLocal: false,
+                    downloadUrl: downloadData.downloadUrl,
                   }
                 : item
             )
           );
+
+          setUploadProgress((prev) => new Map([...prev, [mediaItem.id, 100]]));
         } else {
           throw new Error("Upload failed");
         }
@@ -351,6 +376,11 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
               : item
           )
         );
+        setUploadProgress((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(mediaItem.id);
+          return newMap;
+        });
       }
     }
   };
@@ -397,17 +427,27 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
     }
 
     try {
-      // Only include successfully uploaded media
-      const uploadedMediaItems = media.filter(
-        (item) => item.uploadStatus === "uploaded"
-      );
+      // Only include successfully uploaded media with proper format for backend
+      const uploadedMediaItems = media
+        .filter((item) => item.uploadStatus === "uploaded")
+        .map((item) => ({
+          fileName: item.fileName,
+          filePath: item.filePath,
+          contentType: item.contentType,
+          fileSize: item.fileSize,
+          type: item.type,
+          // Include any server-generated IDs if available
+          ...(item.serverId && { id: item.serverId }),
+        }));
 
       const eventData = {
         ...formData,
-        createurId: activityFeedService.getValidUserId(),
+        createurId: minioS3Service.getValidUserId(),
         medias: uploadedMediaItems,
         participantsIds: [],
       };
+
+      console.log("Submitting event with data:", eventData);
 
       await onSubmit(eventData);
 
@@ -418,6 +458,7 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
         }
       });
     } catch (err) {
+      console.error("Error creating event:", err);
       setError(err.message || "Failed to create event");
     } finally {
       setLoading(false);
@@ -458,13 +499,18 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
   };
 
   const getMediaPreviewUrl = (mediaItem) => {
-    // First check if it's uploaded
+    // First check if it's uploaded and has a download URL
+    if (mediaItem.downloadUrl) {
+      return mediaItem.downloadUrl;
+    }
+
+    // Then check uploaded media map
     const uploadedData = uploadedMedia.get(mediaItem.id);
     if (uploadedData) {
       return uploadedData.url;
     }
 
-    // Then check local previews
+    // Finally check local previews
     const localPreview = localPreviews.get(mediaItem.id);
     if (localPreview) {
       return localPreview.url;
@@ -482,7 +528,7 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
   };
 
   // Clean up URLs on unmount
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       localPreviews.forEach((preview) => {
         if (preview.isLocal) {
@@ -525,10 +571,17 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
               {error && (
                 <div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4 flex items-start space-x-3">
                   <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-red-800 font-medium">Error</p>
                     <p className="text-red-700 text-sm">{error}</p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setError("")}
+                    className="text-red-400 hover:text-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 
@@ -686,7 +739,7 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
                     <div>
                       {uploadingFiles ? (
                         <p className="text-blue-600 font-semibold">
-                          Uploading files...
+                          Uploading files to MinIO S3...
                         </p>
                       ) : (
                         <>
@@ -721,11 +774,44 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
                         onRetry={() => retryUpload(mediaItem)}
                         onView={() => handleImageView(mediaItem)}
                         getPreviewUrl={getMediaPreviewUrl}
+                        uploadProgress={uploadProgress.get(mediaItem.id)}
                       />
                     ))}
                   </div>
                 )}
               </div>
+
+              {/* Upload Status Summary */}
+              {media.length > 0 && (
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Upload Status:</span>
+                    <div className="flex space-x-4">
+                      <span className="text-green-600">
+                        {
+                          media.filter((m) => m.uploadStatus === "uploaded")
+                            .length
+                        }{" "}
+                        uploaded
+                      </span>
+                      <span className="text-blue-600">
+                        {
+                          media.filter((m) => m.uploadStatus === "uploading")
+                            .length
+                        }{" "}
+                        uploading
+                      </span>
+                      <span className="text-red-600">
+                        {
+                          media.filter((m) => m.uploadStatus === "failed")
+                            .length
+                        }{" "}
+                        failed
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex space-x-4 pt-6 border-t border-gray-100">
@@ -744,12 +830,12 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
                   {loading ? (
                     <div className="flex items-center justify-center space-x-2">
                       <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                      <span>Creating...</span>
+                      <span>Creating Event...</span>
                     </div>
                   ) : uploadingFiles ? (
                     <div className="flex items-center justify-center space-x-2">
                       <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                      <span>Uploading...</span>
+                      <span>Uploading to S3...</span>
                     </div>
                   ) : (
                     "Create Event"
@@ -772,7 +858,7 @@ const CreateEventModal = ({ onClose, onSubmit }) => {
   );
 };
 
-// Enhanced MediaPreview component with better error handling and status indicators
+// Enhanced MediaPreview component with upload progress
 const MediaPreview = ({
   mediaItem,
   index,
@@ -780,6 +866,7 @@ const MediaPreview = ({
   onRetry,
   onView,
   getPreviewUrl,
+  uploadProgress,
 }) => {
   const [imageError, setImageError] = useState(false);
   const previewUrl = getPreviewUrl(mediaItem);
@@ -842,6 +929,22 @@ const MediaPreview = ({
           />
         )}
 
+        {/* Upload Progress Bar */}
+        {mediaItem.uploadStatus === "uploading" &&
+          typeof uploadProgress === "number" && (
+            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+              <p className="text-white text-xs text-center mt-1">
+                {uploadProgress}% uploaded
+              </p>
+            </div>
+          )}
+
         {/* Status Indicator */}
         {getStatusIndicator()}
 
@@ -899,7 +1002,7 @@ const MediaPreview = ({
             }`}
           >
             {mediaItem.uploadStatus === "uploaded"
-              ? "Ready"
+              ? "Uploaded"
               : mediaItem.uploadStatus === "uploading"
               ? "Uploading"
               : mediaItem.uploadStatus === "failed"
@@ -954,9 +1057,9 @@ const ImageLightbox = ({ image, onClose }) => {
           <p className="text-xs text-gray-400">
             Status:{" "}
             {image?.uploadStatus === "uploaded"
-              ? "Uploaded to server"
+              ? "Uploaded to MinIO S3"
               : image?.uploadStatus === "uploading"
-              ? "Uploading..."
+              ? "Uploading to S3..."
               : image?.uploadStatus === "failed"
               ? "Upload failed"
               : "Local preview"}

@@ -60,7 +60,7 @@ class UserService {
   // Update an existing user
   async updateUser(id, userData) {
     try {
-      const response = await userApi.put(`/utilisateurs/${id}`, userData);
+      const response = await userApi.patch(`/utilisateurs/${id}`, userData);
       return response.data;
     } catch (error) {
       this.handleError(error);
