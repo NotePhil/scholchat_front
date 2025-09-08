@@ -331,7 +331,9 @@ const Principal = () => {
   const onNavigateToClassesList = () => {
     setActiveTab("manage-class");
   };
-
+  const onNavigateToEstablishmentsList = () => {
+    setActiveTab("manage-establishment");
+  };
   const handleLanguageChange = (lang) => {
     setCurrentLanguage(lang);
     setShowLanguageDropdown(false);
@@ -406,7 +408,13 @@ const Principal = () => {
       case "manage-class":
         return <ManageClassContent {...contentProps} />;
       case "create-establishment":
-        return <CreateEstablishmentContent {...contentProps} />;
+        return (
+          <CreateEstablishmentContent
+            {...contentProps}
+            setActiveTab={setActiveTab}
+            onNavigateToManage={onNavigateToEstablishmentsList}
+          />
+        );
       case "manage-establishment":
         return <ManageEstablishmentContent {...contentProps} />;
       case "messages":

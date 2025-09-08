@@ -17,6 +17,7 @@ import {
   List,
   X,
   User,
+  Plus,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { matiereService } from "../../../../../services/MatiereService";
@@ -70,29 +71,58 @@ const ProfessorCoursesContent = () => {
     }
   };
 
+  // Helper function to validate course object
+  const isValidCourse = (course) => {
+    return course && typeof course === "object" && course.id && course.titre;
+  };
+
   const loadCourses = async () => {
     try {
       setLoading(true);
       setError("");
+
       const professorId = localStorage.getItem("userId");
       if (!professorId) {
-        throw new Error("ID du professeur non trouvé");
+        throw new Error(
+          "ID du professeur non trouvé. Veuillez vous reconnecter."
+        );
       }
+
+      console.log("Chargement des cours pour le professeur:", professorId);
+
       const coursesData = await coursService.getCoursByProfesseur(professorId);
-      setCourses(coursesData || []);
+
+      console.log("Données brutes reçues:", coursesData);
+
+      // Validate and filter courses more thoroughly
+      let validCourses = [];
+
+      if (Array.isArray(coursesData)) {
+        validCourses = coursesData.filter(isValidCourse);
+      } else if (coursesData && typeof coursesData === "object") {
+        // If it's a single course object
+        if (isValidCourse(coursesData)) {
+          validCourses = [coursesData];
+        }
+      }
+
+      console.log("Cours valides filtrés:", validCourses);
+
+      setCourses(validCourses);
 
       // Load user images for course creators
-      if (coursesData && coursesData.length > 0) {
+      if (validCourses.length > 0) {
         const userIds = [
           ...new Set(
-            coursesData.map((course) => course.redacteurId).filter(Boolean)
+            validCourses.map((course) => course.redacteurId).filter(Boolean)
           ),
         ];
         userIds.forEach((userId) => loadUserImage(userId));
       }
     } catch (err) {
-      console.error("Error loading courses:", err);
+      console.error("Erreur lors du chargement des cours:", err);
       setError("Erreur lors du chargement des cours: " + err.message);
+      setCourses([]); // Ensure courses is always an array
     } finally {
       setLoading(false);
     }
@@ -101,38 +131,73 @@ const ProfessorCoursesContent = () => {
   const loadSubjects = async () => {
     try {
       const subjectsData = await matiereService.getAllMatieres();
-      setSubjects(subjectsData || []);
+
+      // Validate subjects data
+      const validSubjects = Array.isArray(subjectsData)
+        ? subjectsData.filter((subject) => subject && subject.id)
+        : [];
+
+      setSubjects(validSubjects);
     } catch (err) {
-      console.error("Error loading subjects:", err);
+      console.error("Erreur lors du chargement des matières:", err);
       setError("Erreur lors du chargement des matières: " + err.message);
+      setSubjects([]); // Ensure subjects is always an array
     }
   };
 
   const filterCourses = () => {
-    let filtered = courses;
+    // Start with valid courses only
+    let filtered = courses.filter(isValidCourse);
+
     if (searchTerm) {
-      filtered = filtered.filter(
-        (course) =>
-          course.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          course.description
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          course.matiere?.nom?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter((course) => {
+        const titre = course.titre?.toLowerCase() || "";
+        const description = course.description?.toLowerCase() || "";
+        const matiereName = course.matiere?.nom?.toLowerCase() || "";
+
+        return (
+          titre.includes(searchLower) ||
+          description.includes(searchLower) ||
+          matiereName.includes(searchLower)
+        );
+      });
     }
+
     if (filterStatus !== "all") {
       filtered = filtered.filter((course) => course.etat === filterStatus);
     }
+
     setFilteredCourses(filtered);
   };
 
+  const handleCreateCourse = () => {
+    setModalMode("create");
+    setSelectedCourse(null);
+    setError("");
+    setSuccess("");
+    setShowCreateModal(true);
+  };
+
   const handleEditCourse = (course) => {
+    if (!isValidCourse(course)) {
+      setError("Cours invalide. Impossible de le modifier.");
+      return;
+    }
+
     setModalMode("edit");
     setSelectedCourse(course);
+    setError("");
+    setSuccess("");
     setShowCreateModal(true);
   };
 
   const handleViewCourse = (course) => {
+    if (!isValidCourse(course)) {
+      setError("Cours invalide. Impossible de l'afficher.");
+      return;
+    }
+
     setViewingCourse(course);
     setShowViewModal(true);
   };
@@ -145,6 +210,7 @@ const ProfessorCoursesContent = () => {
   const handleViewModalSuccess = () => {
     loadCourses();
     handleCloseViewModal();
+    setSuccess("Action effectuée avec succès !");
   };
 
   const handleViewModalEdit = (course) => {
@@ -153,17 +219,24 @@ const ProfessorCoursesContent = () => {
   };
 
   const getInitials = (title) => {
-    return (
-      title
-        ?.split(" ")
-        .map((word) => word.charAt(0))
-        .join("")
-        .substring(0, 2)
-        .toUpperCase() || "CO"
-    );
+    if (!title || typeof title !== "string") return "CO";
+    return title
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
   };
 
   const getUserAvatar = (course) => {
+    if (!isValidCourse(course) || !course.redacteurId) {
+      return (
+        <div className="w-8 h-8 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+          <User className="w-4 h-4 text-white" />
+        </div>
+      );
+    }
+
     const userId = course.redacteurId;
     const userImage = userImages[userId];
 
@@ -173,6 +246,10 @@ const ProfessorCoursesContent = () => {
           src={userImage}
           alt="Professeur"
           className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm"
+          onError={(e) => {
+            e.target.style.display = "none";
+            e.target.nextSibling.style.display = "flex";
+          }}
         />
       );
     }
@@ -184,6 +261,7 @@ const ProfessorCoursesContent = () => {
     );
   };
 
+  // Clear messages automatically
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => {
@@ -201,6 +279,18 @@ const ProfessorCoursesContent = () => {
       return () => clearTimeout(timer);
     }
   }, [error]);
+
+  const clearMessages = () => {
+    setError("");
+    setSuccess("");
+  };
+
+  // Stats calculations with safety checks
+  const validCourses = courses.filter(isValidCourse);
+  const brouillonCount = validCourses.filter(
+    (c) => c.etat === "BROUILLON"
+  ).length;
+  const publieCount = validCourses.filter((c) => c.etat === "PUBLIE").length;
 
   if (loading && courses.length === 0) {
     return (
@@ -226,18 +316,31 @@ const ProfessorCoursesContent = () => {
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
-            <div className="p-2 sm:p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg">
-              <BookOpen className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="p-2 sm:p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg">
+                <BookOpen className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                  Mes Cours
+                </h1>
+                <p className="text-slate-600 mt-1 text-xs sm:text-base">
+                  Gérez vos cours et suivez vos programmes d'enseignement
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                Mes Cours
-              </h1>
-              <p className="text-slate-600 mt-1 text-xs sm:text-base">
-                Gérez vos cours et suivez vos programmes d'enseignement
-              </p>
-            </div>
+
+            {/* Create Course Button */}
+            <button
+              onClick={handleCreateCourse}
+              disabled={loading}
+              className="flex items-center space-x-2 px-4 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Nouveau Cours</span>
+              <span className="sm:hidden">Nouveau</span>
+            </button>
           </div>
         </div>
 
@@ -257,7 +360,7 @@ const ProfessorCoursesContent = () => {
                 </div>
               </div>
               <button
-                onClick={() => setSuccess("")}
+                onClick={clearMessages}
                 className="text-green-400 hover:text-green-600"
               >
                 <X className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -281,7 +384,7 @@ const ProfessorCoursesContent = () => {
                 </div>
               </div>
               <button
-                onClick={() => setError("")}
+                onClick={clearMessages}
                 className="text-red-400 hover:text-red-600"
               >
                 <X className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -299,7 +402,7 @@ const ProfessorCoursesContent = () => {
                   Total Cours
                 </p>
                 <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-                  {courses.length}
+                  {validCourses.length}
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl">
@@ -321,7 +424,7 @@ const ProfessorCoursesContent = () => {
                   Brouillon
                 </p>
                 <p className="text-2xl sm:text-3xl font-bold text-yellow-600 mt-1">
-                  {courses.filter((c) => c.etat === "BROUILLON").length}
+                  {brouillonCount}
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl">
@@ -343,7 +446,7 @@ const ProfessorCoursesContent = () => {
                   Publiés
                 </p>
                 <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-1">
-                  {courses.filter((c) => c.etat === "PUBLIE").length}
+                  {publieCount}
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl">
@@ -390,6 +493,8 @@ const ProfessorCoursesContent = () => {
                   <option value="all">Tous les statuts</option>
                   <option value="BROUILLON">Brouillon</option>
                   <option value="PUBLIE">Publié</option>
+                  <option value="EN_ATTENTE_VALIDATION">En attente</option>
+                  <option value="ARCHIVE">Archivé</option>
                 </select>
                 <ChevronDown
                   className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
@@ -405,6 +510,7 @@ const ProfessorCoursesContent = () => {
                       ? "bg-white text-indigo-600 shadow-sm"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
+                  title="Vue en grille"
                 >
                   <Grid size={14} />
                 </button>
@@ -415,12 +521,45 @@ const ProfessorCoursesContent = () => {
                       ? "bg-white text-indigo-600 shadow-sm"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
+                  title="Vue en tableau"
                 >
                   <List size={14} />
                 </button>
               </div>
             </div>
           </div>
+
+          {filteredCourses.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <p className="text-sm text-slate-600">
+                <span className="font-medium text-slate-800">
+                  {filteredCourses.length}
+                </span>{" "}
+                {filteredCourses.length === 1
+                  ? "cours trouvé"
+                  : "cours trouvés"}
+                {searchTerm && (
+                  <span>
+                    {" "}
+                    pour "<span className="font-medium">{searchTerm}</span>"
+                  </span>
+                )}
+                {filterStatus !== "all" && (
+                  <span>
+                    {" "}
+                    avec le statut "
+                    <span className="font-medium">
+                      {filterStatus === "BROUILLON" && "Brouillon"}
+                      {filterStatus === "PUBLIE" && "Publié"}
+                      {filterStatus === "EN_ATTENTE_VALIDATION" && "En attente"}
+                      {filterStatus === "ARCHIVE" && "Archivé"}
+                    </span>
+                    "
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Course Content */}
@@ -466,88 +605,13 @@ const ProfessorCoursesContent = () => {
                 </thead>
                 <tbody className="bg-white/30 divide-y divide-slate-100">
                   {filteredCourses.map((course) => (
-                    <tr
+                    <CourseTableRow
                       key={course.id}
-                      className="hover:bg-white/50 transition-colors duration-200"
-                    >
-                      <td className="px-3 sm:px-6 py-3 sm:py-4">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 relative">
-                            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
-                              <span className="text-white font-medium text-xs sm:text-sm">
-                                {getInitials(course.titre)}
-                              </span>
-                            </div>
-                            <div className="absolute -top-1 -right-1">
-                              {getUserAvatar(course)}
-                            </div>
-                          </div>
-                          <div className="ml-3 sm:ml-4 flex-1 min-w-0">
-                            <div className="text-xs sm:text-sm font-semibold text-slate-900 break-words leading-tight">
-                              {course.titre}
-                            </div>
-                            <div className="text-xs text-slate-500 line-clamp-1 mt-1 sm:block hidden">
-                              {course.description || "Aucune description"}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden sm:table-cell">
-                        <div className="text-xs sm:text-sm text-slate-900">
-                          {course.matiere?.nom || "Non définie"}
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 hidden md:table-cell">
-                        <div className="text-xs sm:text-sm text-slate-900">
-                          {course.dateHeureDebut
-                            ? new Date(
-                                course.dateHeureDebut
-                              ).toLocaleDateString("fr-FR")
-                            : "Non défini"}
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium border ${
-                            course.etat === "BROUILLON"
-                              ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                              : course.etat === "PUBLIE"
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : "bg-gray-50 text-gray-700 border-gray-200"
-                          }`}
-                        >
-                          {course.etat === "BROUILLON"
-                            ? "Brouillon"
-                            : course.etat === "PUBLIE"
-                            ? "Publié"
-                            : course.etat}
-                        </span>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-sm">
-                        <div className="flex items-center justify-end space-x-1">
-                          <button
-                            onClick={() => handleViewCourse(course)}
-                            className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                            title="Voir les détails"
-                          >
-                            <Eye size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleEditCourse(course)}
-                            className="p-1.5 sm:p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
-                            title="Modifier"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            className="p-1.5 sm:p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                      course={course}
+                      onView={handleViewCourse}
+                      onEdit={handleEditCourse}
+                      getInitials={getInitials}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -570,8 +634,17 @@ const ProfessorCoursesContent = () => {
               <p className="text-slate-600 text-sm sm:text-base mb-4 sm:mb-6 max-w-md mx-auto">
                 {searchTerm || filterStatus !== "all"
                   ? "Essayez de modifier vos critères de recherche ou de filtrage."
-                  : "Vos cours apparaîtront ici une fois créés."}
+                  : "Commencez par créer votre premier cours."}
               </p>
+              {!searchTerm && filterStatus === "all" && (
+                <button
+                  onClick={handleCreateCourse}
+                  className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Créer mon premier cours</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -614,7 +687,7 @@ const ProfessorCoursesContent = () => {
         />
       )}
 
-      {showViewModal && (
+      {showViewModal && viewingCourse && (
         <CourseViewModal
           classe={viewingCourse}
           onClose={handleCloseViewModal}

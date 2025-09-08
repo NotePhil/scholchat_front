@@ -10,8 +10,10 @@ import {
   Settings,
 } from "lucide-react";
 import establishmentService from "../../../../../services/EstablishmentService";
+import { useNavigate } from "react-router-dom";
 
-const CreateEstablishmentContent = ({ onNavigateToManage }) => {
+const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nom: "",
     localisation: "",
@@ -26,6 +28,38 @@ const CreateEstablishmentContent = ({ onNavigateToManage }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(5); // Add countdown state
+
+  // Manual redirect function for the button
+  const handleManualRedirect = () => {
+    if (setActiveTab) {
+      // If setActiveTab is available, use it to navigate to manage-establishment tab
+      setActiveTab("manage-establishment");
+    } else if (onNavigateToManage) {
+      // Fallback to the original callback
+      onNavigateToManage();
+    } else {
+      // Final fallback: navigate to manage-establishment route
+      navigate("/manage-establishment");
+    }
+  };
+
+  // Success countdown and redirect effect
+  React.useEffect(() => {
+    let timer;
+    if (success && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else if (success && countdown === 0) {
+      // Redirect when countdown reaches 0
+      handleManualRedirect();
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [success, countdown, setActiveTab, onNavigateToManage, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -75,13 +109,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage }) => {
     try {
       await establishmentService.createEstablishment(formData);
       setSuccess(true);
-
-      // Navigate to manage page after 2 seconds
-      setTimeout(() => {
-        if (onNavigateToManage) {
-          onNavigateToManage();
-        }
-      }, 2000);
+      setCountdown(5); // Reset countdown to 5 seconds
     } catch (error) {
       console.error("Error creating establishment:", error);
       setErrors({ submit: "Erreur lors de la création de l'établissement" });
@@ -101,10 +129,30 @@ const CreateEstablishmentContent = ({ onNavigateToManage }) => {
             Établissement créé avec succès!
           </h2>
           <p className="text-gray-600 mb-6">
-            Votre établissement a été créé et vous allez être redirigé vers la
-            page de gestion.
+            Votre établissement a été créé avec succès. Redirection automatique
+            vers la gestion des établissements dans {countdown} seconde
+            {countdown !== 1 ? "s" : ""}.
           </p>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-1000 ease-linear"
+              style={{ width: `${((5 - countdown) / 5) * 100}%` }}
+            ></div>
+          </div>
+
+          {/* Manual redirect button */}
+          <button
+            onClick={handleManualRedirect}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 mb-4"
+          >
+            Aller à la gestion des établissements maintenant
+          </button>
+
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
         </div>
       </div>
     );

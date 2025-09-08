@@ -12,6 +12,41 @@ import {
 } from "lucide-react";
 
 const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
+  // Early return if course is undefined or null
+  if (!course) {
+    return (
+      <tr className="animate-pulse">
+        <td className="px-6 py-4">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-slate-200 rounded-xl mr-4"></div>
+            <div className="flex-1">
+              <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+            </div>
+          </div>
+        </td>
+        <td className="px-6 py-4">
+          <div className="h-4 bg-slate-200 rounded w-20"></div>
+        </td>
+        <td className="px-6 py-4">
+          <div className="h-4 bg-slate-200 rounded w-24 mb-1"></div>
+          <div className="h-3 bg-slate-200 rounded w-20"></div>
+        </td>
+        <td className="px-6 py-4">
+          <div className="h-6 bg-slate-200 rounded-full w-16"></div>
+        </td>
+        <td className="px-6 py-4">
+          <div className="flex justify-end space-x-1">
+            <div className="w-8 h-8 bg-slate-200 rounded-lg"></div>
+            <div className="w-8 h-8 bg-slate-200 rounded-lg"></div>
+            <div className="w-8 h-8 bg-slate-200 rounded-lg"></div>
+            <div className="w-8 h-8 bg-slate-200 rounded-lg"></div>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
   const getStatusBadge = (status) => {
     const badges = {
       BROUILLON: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -29,7 +64,7 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
       PUBLIE: "Publié",
       ARCHIVE: "Archivé",
     };
-    return texts[status] || status;
+    return texts[status] || status || "Non défini";
   };
 
   const getStatusIcon = (status) => {
@@ -49,13 +84,26 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "Non défini";
-    return new Date(dateString).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      return new Date(dateString).toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      return "Date invalide";
+    }
+  };
+
+  // Safe function to get initials with fallback
+  const safeGetInitials = (title) => {
+    if (!title) return "CO";
+    if (typeof getInitials === "function") {
+      return getInitials(title);
+    }
+    return title.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -65,13 +113,13 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
           <div className="flex-shrink-0">
             <div className="h-10 w-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
               <span className="text-white font-medium text-sm">
-                {getInitials(course.titre)}
+                {safeGetInitials(course.titre)}
               </span>
             </div>
           </div>
           <div className="ml-4 flex-1 min-w-0">
             <div className="text-sm font-semibold text-slate-900 break-words leading-tight">
-              {course.titre}
+              {course.titre || "Titre non défini"}
             </div>
             <div className="text-xs text-slate-500 line-clamp-1 mt-1">
               {course.description || "Aucune description"}
@@ -105,28 +153,32 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
         <div className="flex items-center justify-end space-x-1">
           <button
-            onClick={() => onView(course)}
+            onClick={() => onView?.(course)}
             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
             title="Voir les détails"
+            disabled={!course}
           >
             <Eye size={16} />
           </button>
           <button
-            onClick={() => onEdit(course)}
+            onClick={() => onEdit?.(course)}
             className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
             title="Modifier"
+            disabled={!course}
           >
             <Edit2 size={16} />
           </button>
           <button
             className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all duration-200"
             title="Partager"
+            disabled={!course}
           >
             <Share2 size={16} />
           </button>
           <button
             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
             title="Supprimer"
+            disabled={!course}
           >
             <Trash2 size={16} />
           </button>
