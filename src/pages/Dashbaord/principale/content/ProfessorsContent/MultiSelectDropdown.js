@@ -1,139 +1,101 @@
-import React from "react";
-import {
-  Eye,
-  Edit2,
-  Trash2,
-  Share2,
-  FileText,
-  Clock,
-  CheckCircle,
-  Archive,
-  AlertCircle,
-} from "lucide-react";
+import React, { useState } from "react";
+import { ChevronDown, CheckCircle, X } from "lucide-react";
 
-const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
-  const getStatusBadge = (status) => {
-    const badges = {
-      BROUILLON: "bg-yellow-50 text-yellow-700 border-yellow-200",
-      EN_ATTENTE_VALIDATION: "bg-blue-50 text-blue-700 border-blue-200",
-      PUBLIE: "bg-green-50 text-green-700 border-green-200",
-      ARCHIVE: "bg-gray-50 text-gray-700 border-gray-200",
-    };
-    return badges[status] || "bg-gray-50 text-gray-700 border-gray-200";
+const MultiSelectDropdown = ({
+  options,
+  selected,
+  onChange,
+  placeholder,
+  error,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleSelect = (optionId) => {
+    const newSelected = selected.includes(optionId)
+      ? selected.filter((id) => id !== optionId)
+      : [...selected, optionId];
+    onChange(newSelected);
   };
 
-  const getStatusText = (status) => {
-    const texts = {
-      BROUILLON: "Brouillon",
-      EN_ATTENTE_VALIDATION: "En attente",
-      PUBLIE: "Publié",
-      ARCHIVE: "Archivé",
-    };
-    return texts[status] || status;
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "BROUILLON":
-        return <FileText className="w-4 h-4 text-yellow-500" />;
-      case "EN_ATTENTE_VALIDATION":
-        return <Clock className="w-4 h-4 text-blue-500" />;
-      case "PUBLIE":
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case "ARCHIVE":
-        return <Archive className="w-4 h-4 text-gray-500" />;
-      default:
-        return <AlertCircle className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "Non défini";
-    return new Date(dateString).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const getSelectedLabels = () => {
+    return options
+      .filter((option) => selected.includes(option.id))
+      .map((option) => option.nom)
+      .join(", ");
   };
 
   return (
-    <tr className="hover:bg-white/50 transition-colors duration-200">
-      <td className="px-6 py-4">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <div className="h-10 w-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
-              <span className="text-white font-medium text-sm">
-                {getInitials(course.titre)}
-              </span>
-            </div>
-          </div>
-          <div className="ml-4 flex-1 min-w-0">
-            <div className="text-sm font-semibold text-slate-900 break-words leading-tight">
-              {course.titre}
-            </div>
-            <div className="text-xs text-slate-500 line-clamp-1 mt-1">
-              {course.description || "Aucune description"}
-            </div>
-          </div>
-        </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-slate-900">
-          {course.matiere?.nom || "Non définie"}
-        </div>
-      </td>
-      <td className="px-6 py-4">
-        <div className="text-sm text-slate-900">
-          {formatDate(course.dateHeureDebut)}
-        </div>
-        <div className="text-sm text-slate-500">
-          {formatDate(course.dateHeureFin)}
-        </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-left flex items-center justify-between ${
+          error ? "border-red-300" : "border-slate-200"
+        }`}
+      >
         <span
-          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-            course.etat
-          )}`}
+          className={
+            selected.length === 0 ? "text-slate-400" : "text-slate-900"
+          }
         >
-          <div className="mr-2">{getStatusIcon(course.etat)}</div>
-          {getStatusText(course.etat)}
+          {selected.length === 0 ? placeholder : getSelectedLabels()}
         </span>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-        <div className="flex items-center justify-end space-x-1">
-          <button
-            onClick={() => onView(course)}
-            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-            title="Voir les détails"
-          >
-            <Eye size={16} />
-          </button>
-          <button
-            onClick={() => onEdit(course)}
-            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
-            title="Modifier"
-          >
-            <Edit2 size={16} />
-          </button>
-          <button
-            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all duration-200"
-            title="Partager"
-          >
-            <Share2 size={16} />
-          </button>
-          <button
-            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-            title="Supprimer"
-          >
-            <Trash2 size={16} />
-          </button>
+        <ChevronDown
+          className={`w-4 h-4 text-slate-400 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+          {options.map((option) => (
+            <div
+              key={option.id}
+              onClick={() => handleSelect(option.id)}
+              className={`px-4 py-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between ${
+                selected.includes(option.id)
+                  ? "bg-indigo-50 text-indigo-900"
+                  : "text-slate-700"
+              }`}
+            >
+              <span>{option.nom}</span>
+              {selected.includes(option.id) && (
+                <CheckCircle className="w-4 h-4 text-indigo-600" />
+              )}
+            </div>
+          ))}
+          {options.length === 0 && (
+            <div className="px-4 py-3 text-slate-500 text-center">
+              Aucune matière disponible
+            </div>
+          )}
         </div>
-      </td>
-    </tr>
+      )}
+
+      {selected.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {options
+            .filter((option) => selected.includes(option.id))
+            .map((option) => (
+              <span
+                key={option.id}
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-800"
+              >
+                {option.nom}
+                <button
+                  type="button"
+                  onClick={() => handleSelect(option.id)}
+                  className="ml-2 hover:text-indigo-600"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+        </div>
+      )}
+    </div>
   );
 };
 
-export default CourseTableRow;
+export default MultiSelectDropdown;
