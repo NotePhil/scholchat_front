@@ -11,6 +11,10 @@ import {
   ChevronUp,
   ChevronDown,
   XCircle,
+  FileText,
+  Upload,
+  Image,
+  Paperclip,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import MultiSelectDropdown from "./MultiSelectDropdown";
@@ -39,6 +43,7 @@ const courseSchema = yup.object().shape({
 
 const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
   const editorRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const execCommand = (command, value = null) => {
     document.execCommand(command, false, value);
@@ -54,6 +59,30 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
         .replace(/<br\s*\/?>/g, "\n")
         .replace(/&nbsp;/g, " ");
       onChange(cleanedContent);
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const fileContent = event.target.result;
+        if (file.type.startsWith("image/")) {
+          document.execCommand("insertImage", false, fileContent);
+        } else {
+          const fileName = file.name;
+          const link = `<a href="${fileContent}" target="_blank" style="color: #3b82f6; text-decoration: underline;">${fileName}</a>`;
+          document.execCommand("insertHTML", false, link);
+        }
+        handleContentChange();
+      };
+
+      if (file.type.startsWith("image/")) {
+        reader.readAsDataURL(file);
+      } else {
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -121,6 +150,14 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
         <div className="w-px bg-slate-300 mx-1"></div>
         <button
           type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="p-2 hover:bg-slate-200 rounded text-slate-600 flex items-center gap-1"
+          title="Insérer fichier/image"
+        >
+          <Paperclip size={14} />
+        </button>
+        <button
+          type="button"
           onClick={() => execCommand("removeFormat")}
           className="p-2 hover:bg-slate-200 rounded text-slate-600 text-xs"
           title="Supprimer le formatage"
@@ -145,6 +182,14 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
         suppressContentEditableWarning={true}
       />
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+        onChange={handleFileUpload}
+      />
+
       <style jsx>{`
         [contenteditable]:empty:before {
           content: attr(data-placeholder);
@@ -162,6 +207,12 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
         [contenteditable] li {
           margin: 0.25em 0;
         }
+        [contenteditable] img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 4px;
+          margin: 8px 0;
+        }
       `}</style>
     </div>
   );
@@ -170,20 +221,13 @@ const RichTextEditor = ({ value, onChange, placeholder, chapterIndex }) => {
 const ChapterCard = ({
   chapter,
   index,
-  isEditing,
-  editData,
   onEdit,
-  onSave,
-  onCancel,
   onDelete,
   onMoveUp,
   onMoveDown,
   canMoveUp,
   canMoveDown,
-  onEditDataChange,
 }) => {
-  const [errors, setErrors] = useState({});
-
   const truncateText = (text, length) => {
     if (text.length <= length) return text;
     return text.substring(0, length) + "...";
@@ -194,118 +238,6 @@ const ChapterCard = ({
     div.innerHTML = html;
     return div.textContent || div.innerText || "";
   };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!editData.titre.trim()) {
-      newErrors.titre = "Le titre est requis";
-    }
-    if (!editData.contenu.replace(/<[^>]*>/g, "").trim()) {
-      newErrors.contenu = "Le contenu est requis";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = () => {
-    if (validateForm()) {
-      onSave({
-        ...editData,
-        ordre: index + 1,
-      });
-    }
-  };
-
-  if (isEditing) {
-    return (
-      <div className="bg-white border-2 border-indigo-300 rounded-lg p-6 shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-semibold text-slate-900">
-            Modifier le Chapitre {index + 1}
-          </h4>
-          <button
-            onClick={onCancel}
-            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Annuler"
-          >
-            <XCircle size={18} />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Titre du chapitre *
-            </label>
-            <input
-              type="text"
-              value={editData.titre}
-              onChange={(e) =>
-                onEditDataChange({ ...editData, titre: e.target.value })
-              }
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                errors.titre ? "border-red-300" : "border-slate-200"
-              }`}
-              placeholder="Titre du chapitre"
-            />
-            {errors.titre && (
-              <p className="mt-1 text-sm text-red-600">{errors.titre}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Description du chapitre
-            </label>
-            <textarea
-              value={editData.description}
-              onChange={(e) =>
-                onEditDataChange({ ...editData, description: e.target.value })
-              }
-              rows={2}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Description du chapitre"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Contenu du chapitre *
-            </label>
-            <RichTextEditor
-              value={editData.contenu}
-              onChange={(content) =>
-                onEditDataChange({ ...editData, contenu: content })
-              }
-              placeholder="Contenu détaillé du chapitre..."
-              chapterIndex={index}
-            />
-            {errors.contenu && (
-              <p className="mt-1 text-sm text-red-600">{errors.contenu}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-3 mt-6">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-lg hover:bg-slate-50"
-          >
-            Annuler
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <Save size={16} />
-            Sauvegarder
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow relative group">
@@ -367,14 +299,27 @@ const ChapterCard = ({
   );
 };
 
-const ChapterForm = ({ onSave, onCancel, totalChapters }) => {
+const ChapterEditor = ({
+  mode, // 'create' or 'edit'
+  initialData,
+  totalChapters,
+  onSave,
+  onCancel,
+}) => {
   const [formData, setFormData] = useState({
     titre: "",
     description: "",
     contenu: "",
+    ...initialData,
   });
 
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({ ...formData, ...initialData });
+    }
+  }, [initialData]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -392,16 +337,34 @@ const ChapterForm = ({ onSave, onCancel, totalChapters }) => {
     if (validateForm()) {
       onSave({
         ...formData,
-        ordre: totalChapters + 1,
+        ordre:
+          mode === "create"
+            ? totalChapters + 1
+            : formData.ordre || totalChapters + 1,
       });
+      if (mode === "create") {
+        // Reset form for new chapter
+        setFormData({
+          titre: "",
+          description: "",
+          contenu: "",
+        });
+        setErrors({});
+      }
     }
   };
 
+  const chapterNumber =
+    mode === "create" ? totalChapters + 1 : formData.ordre || totalChapters + 1;
+
   return (
-    <div className="bg-white rounded-xl p-6 border-2 border-indigo-200 shadow-sm">
+    <div className="bg-white rounded-xl p-6 border-2 border-indigo-200 shadow-sm mb-6">
       <div className="flex items-center justify-between mb-6">
-        <h4 className="text-lg font-semibold text-slate-900">
-          Nouveau Chapitre {totalChapters + 1}
+        <h4 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+          <FileText size={20} className="text-indigo-600" />
+          {mode === "create"
+            ? `Nouveau Chapitre ${chapterNumber}`
+            : `Modifier Chapitre ${chapterNumber}`}
         </h4>
         <button
           onClick={onCancel}
@@ -458,7 +421,7 @@ const ChapterForm = ({ onSave, onCancel, totalChapters }) => {
               setFormData({ ...formData, contenu: content })
             }
             placeholder="Contenu détaillé du chapitre..."
-            chapterIndex={totalChapters}
+            chapterIndex={chapterNumber - 1}
           />
           {errors.contenu && (
             <p className="mt-1 text-sm text-red-600">{errors.contenu}</p>
@@ -480,7 +443,7 @@ const ChapterForm = ({ onSave, onCancel, totalChapters }) => {
           className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <Save size={16} />
-          Enregistrer
+          {mode === "create" ? "Ajouter" : "Sauvegarder"}
         </button>
       </div>
     </div>
@@ -496,7 +459,7 @@ const GeneralInfoSection = ({
   setValue,
 }) => {
   return (
-    <div className="bg-slate-50 rounded-xl p-6">
+    <div className="bg-slate-50 rounded-xl p-6 mb-6">
       <h3 className="text-lg font-semibold text-slate-900 mb-4">
         Informations générales
       </h3>
@@ -603,28 +566,26 @@ const GeneralInfoSection = ({
 
 const ChaptersSection = ({
   savedChapters,
-  isCreatingChapter,
-  editingChapterIndex,
-  editingChapterData,
+  activeEditor,
+  editingData,
   handleSaveChapter,
   handleEditChapter,
-  handleEditChapterDataChange,
-  handleCancelEdit,
   handleDeleteChapter,
   moveChapter,
-  handleCancelChapterForm,
-  setIsCreatingChapter,
+  handleCancelEditor,
+  setActiveEditor,
+  setEditingData,
 }) => {
   return (
     <div className="bg-blue-50 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-slate-900">
           Chapitres du cours * ({savedChapters.length})
         </h3>
-        {!isCreatingChapter && editingChapterIndex === null && (
+        {!activeEditor && (
           <button
             type="button"
-            onClick={() => setIsCreatingChapter(true)}
+            onClick={() => setActiveEditor("create")}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm"
           >
             <Plus size={16} />
@@ -633,32 +594,40 @@ const ChaptersSection = ({
         )}
       </div>
 
-      <div className="space-y-4 max-h-[400px] overflow-y-auto mb-4">
+      {/* Chapter Editor */}
+      {activeEditor && (
+        <ChapterEditor
+          mode={activeEditor}
+          initialData={editingData}
+          totalChapters={savedChapters.length}
+          onSave={handleSaveChapter}
+          onCancel={handleCancelEditor}
+        />
+      )}
+
+      {/* Chapters List */}
+      <div className="space-y-3 max-h-[400px] overflow-y-auto">
         {savedChapters.map((chapter, index) => (
           <ChapterCard
             key={index}
             chapter={chapter}
             index={index}
-            isEditing={editingChapterIndex === index}
-            editData={editingChapterData}
             onEdit={() => handleEditChapter(index)}
-            onSave={handleSaveChapter}
-            onCancel={handleCancelEdit}
             onDelete={() => handleDeleteChapter(index)}
             onMoveUp={() => moveChapter(index, "up")}
             onMoveDown={() => moveChapter(index, "down")}
             canMoveUp={index > 0}
             canMoveDown={index < savedChapters.length - 1}
-            onEditDataChange={handleEditChapterDataChange}
           />
         ))}
 
-        {savedChapters.length === 0 && !isCreatingChapter && (
+        {savedChapters.length === 0 && !activeEditor && (
           <div className="text-center py-8 text-slate-500">
+            <FileText className="mx-auto mb-4 text-slate-400" size={48} />
             <p className="mb-4">Aucun chapitre ajouté</p>
             <button
               type="button"
-              onClick={() => setIsCreatingChapter(true)}
+              onClick={() => setActiveEditor("create")}
               className="text-indigo-600 hover:text-indigo-700 font-medium"
             >
               Créer votre premier chapitre
@@ -666,14 +635,6 @@ const ChaptersSection = ({
           </div>
         )}
       </div>
-
-      {isCreatingChapter && (
-        <ChapterForm
-          onSave={handleSaveChapter}
-          onCancel={handleCancelChapterForm}
-          totalChapters={savedChapters.length}
-        />
-      )}
     </div>
   );
 };
@@ -691,9 +652,8 @@ const CourseFormModal = ({
 }) => {
   const [selectedMatiereIds, setSelectedMatiereIds] = useState([]);
   const [savedChapters, setSavedChapters] = useState([]);
-  const [isCreatingChapter, setIsCreatingChapter] = useState(false);
-  const [editingChapterIndex, setEditingChapterIndex] = useState(null);
-  const [editingChapterData, setEditingChapterData] = useState(null);
+  const [activeEditor, setActiveEditor] = useState(null); // 'create' or 'edit'
+  const [editingData, setEditingData] = useState(null);
 
   const {
     register,
@@ -745,41 +705,31 @@ const CourseFormModal = ({
   }, [watchedMatiereIds]);
 
   const handleSaveChapter = (chapterData) => {
-    if (editingChapterIndex !== null) {
+    if (activeEditor === "edit") {
       // Update existing chapter
       const updatedChapters = [...savedChapters];
-      updatedChapters[editingChapterIndex] = {
-        ...updatedChapters[editingChapterIndex],
-        ...chapterData,
-      };
-      setSavedChapters(updatedChapters);
-      setEditingChapterIndex(null);
-      setEditingChapterData(null);
+      const index = savedChapters.findIndex(
+        (ch) => ch.ordre === chapterData.ordre
+      );
+      if (index !== -1) {
+        updatedChapters[index] = { ...updatedChapters[index], ...chapterData };
+        setSavedChapters(updatedChapters);
+      }
     } else {
       // Add new chapter
       const newChapter = {
         id: null,
         ...chapterData,
-        ordre: savedChapters.length + 1,
       };
       setSavedChapters([...savedChapters, newChapter]);
-      setIsCreatingChapter(false);
     }
+    setActiveEditor(null);
+    setEditingData(null);
   };
 
   const handleEditChapter = (index) => {
-    setEditingChapterIndex(index);
-    setEditingChapterData({ ...savedChapters[index] });
-    setIsCreatingChapter(false);
-  };
-
-  const handleEditChapterDataChange = (newData) => {
-    setEditingChapterData(newData);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingChapterIndex(null);
-    setEditingChapterData(null);
+    setActiveEditor("edit");
+    setEditingData({ ...savedChapters[index] });
   };
 
   const handleDeleteChapter = (index) => {
@@ -805,10 +755,9 @@ const CourseFormModal = ({
     }
   };
 
-  const handleCancelChapterForm = () => {
-    setIsCreatingChapter(false);
-    setEditingChapterIndex(null);
-    setEditingChapterData(null);
+  const handleCancelEditor = () => {
+    setActiveEditor(null);
+    setEditingData(null);
   };
 
   const onSubmit = async (data) => {
@@ -880,9 +829,8 @@ const CourseFormModal = ({
     });
     setSelectedMatiereIds([]);
     setSavedChapters([]);
-    setIsCreatingChapter(false);
-    setEditingChapterIndex(null);
-    setEditingChapterData(null);
+    setActiveEditor(null);
+    setEditingData(null);
   };
 
   const handleMatiereChange = (newSelectedIds) => {
@@ -898,10 +846,10 @@ const CourseFormModal = ({
   if (!showCreateModal) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-8 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-8">
+        <div className="sticky top-0 bg-white rounded-t-2xl border-b border-slate-200 p-6 z-10">
+          <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-slate-900">
               {modalMode === "create" ? "Nouveau Cours" : "Modifier le Cours"}
             </h2>
@@ -912,7 +860,9 @@ const CourseFormModal = ({
               <X size={20} />
             </button>
           </div>
+        </div>
 
+        <div className="p-6 max-h-[70vh] overflow-y-auto">
           <form onSubmit={handleFormSubmit} className="space-y-6">
             <GeneralInfoSection
               register={register}
@@ -925,35 +875,37 @@ const CourseFormModal = ({
 
             <ChaptersSection
               savedChapters={savedChapters}
-              isCreatingChapter={isCreatingChapter}
-              editingChapterIndex={editingChapterIndex}
-              editingChapterData={editingChapterData}
+              activeEditor={activeEditor}
+              editingData={editingData}
               handleSaveChapter={handleSaveChapter}
               handleEditChapter={handleEditChapter}
-              handleEditChapterDataChange={handleEditChapterDataChange}
-              handleCancelEdit={handleCancelEdit}
               handleDeleteChapter={handleDeleteChapter}
               moveChapter={moveChapter}
-              handleCancelChapterForm={handleCancelChapterForm}
-              setIsCreatingChapter={setIsCreatingChapter}
+              handleCancelEditor={handleCancelEditor}
+              setActiveEditor={setActiveEditor}
+              setEditingData={setEditingData}
             />
-
-            <div className="flex justify-end space-x-4 pt-6">
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-xl hover:bg-slate-50"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
-              >
-                {modalMode === "create" ? "Créer le cours" : "Sauvegarder"}
-              </button>
-            </div>
           </form>
+        </div>
+
+        <div className="sticky bottom-0 bg-white rounded-b-2xl border-t border-slate-200 p-6 z-10">
+          <div className="flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-xl hover:bg-slate-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleFormSubmit}
+              disabled={savedChapters.length === 0}
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              {modalMode === "create" ? "Créer le cours" : "Sauvegarder"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

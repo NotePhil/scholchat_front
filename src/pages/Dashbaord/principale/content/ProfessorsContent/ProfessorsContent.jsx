@@ -18,6 +18,8 @@ import {
   MoreVertical,
   Calendar,
   Activity,
+  Shield,
+  Edit3,
 } from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import { classService } from "../../../../../services/ClassService";
@@ -40,8 +42,15 @@ const ProfessorsContent = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [viewMode, setViewMode] = useState("grid");
+  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
+    // Get user role from localStorage
+    const role = localStorage.getItem("userRole");
+    if (role) {
+      setUserRole(role.toUpperCase());
+    }
+
     loadData();
   }, []);
 
@@ -149,6 +158,9 @@ const ProfessorsContent = () => {
       lastName?.charAt(0) || ""
     }`.toUpperCase();
   };
+
+  // Check if user is ADMIN
+  const isAdmin = userRole === "ADMIN";
 
   if (loading && professors.length === 0) {
     return (
@@ -355,6 +367,21 @@ const ProfessorsContent = () => {
                   Table
                 </button>
               </div>
+
+              {/* Add Professor Button (only for ADMIN) */}
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setModalMode("create");
+                    setSelectedProfessor(null);
+                    setShowModal(true);
+                  }}
+                  className="px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md flex items-center space-x-2"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Ajouter un professeur</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -437,6 +464,29 @@ const ProfessorsContent = () => {
                     </div>
                   )}
 
+                  {/* Publication Rights Info */}
+                  {(professor.peutPublier || professor.peutModerer) && (
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-slate-500 mb-2 pl-1">
+                        Droits de publication
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {professor.peutPublier && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200 break-all whitespace-normal">
+                            <Edit3 size={10} className="mr-1" />
+                            Peut publier
+                          </span>
+                        )}
+                        {professor.peutModerer && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 break-all whitespace-normal">
+                            <Shield size={10} className="mr-1" />
+                            Peut modérer
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Classes */}
                   <div className="pt-2">
                     <p className="text-xs font-medium text-slate-500 mb-2 pl-1">
@@ -478,27 +528,33 @@ const ProfessorsContent = () => {
                     >
                       <Eye size={16} />
                     </button>
-                    <button
-                      onClick={() => {
-                        setModalMode("edit");
-                        setSelectedProfessor(professor);
-                        setShowModal(true);
-                      }}
-                      className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
-                      title="Modifier"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedProfessor(professor);
-                        setShowDeleteConfirm(true);
-                      }}
-                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                      title="Supprimer"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+
+                    {/* Only show edit/delete buttons for ADMIN users */}
+                    {isAdmin && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setModalMode("edit");
+                            setSelectedProfessor(professor);
+                            setShowModal(true);
+                          }}
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
+                          title="Modifier"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedProfessor(professor);
+                            setShowDeleteConfirm(true);
+                          }}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                          title="Supprimer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -526,6 +582,11 @@ const ProfessorsContent = () => {
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Statut
                     </th>
+                    {professors.some((p) => p.peutPublier || p.peutModerer) && (
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                        Droits
+                      </th>
+                    )}
                     <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Actions
                     </th>
@@ -643,6 +704,35 @@ const ProfessorsContent = () => {
                           {getStatusText(professor.etat)}
                         </span>
                       </td>
+
+                      {/* Publication Rights Column */}
+                      {professors.some(
+                        (p) => p.peutPublier || p.peutModerer
+                      ) && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-1">
+                            {professor.peutPublier && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                                <Edit3 size={10} className="mr-1" />
+                                Publier
+                              </span>
+                            )}
+                            {professor.peutModerer && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                                <Shield size={10} className="mr-1" />
+                                Modérer
+                              </span>
+                            )}
+                            {!professor.peutPublier &&
+                              !professor.peutModerer && (
+                                <span className="text-xs text-slate-400">
+                                  Aucun
+                                </span>
+                              )}
+                          </div>
+                        </td>
+                      )}
+
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex items-center justify-end space-x-1">
                           <button
@@ -652,27 +742,33 @@ const ProfessorsContent = () => {
                           >
                             <Eye size={16} />
                           </button>
-                          <button
-                            onClick={() => {
-                              setModalMode("edit");
-                              setSelectedProfessor(professor);
-                              setShowModal(true);
-                            }}
-                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
-                            title="Modifier"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedProfessor(professor);
-                              setShowDeleteConfirm(true);
-                            }}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+
+                          {/* Only show edit/delete buttons for ADMIN users */}
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setModalMode("edit");
+                                  setSelectedProfessor(professor);
+                                  setShowModal(true);
+                                }}
+                                className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
+                                title="Modifier"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedProfessor(professor);
+                                  setShowDeleteConfirm(true);
+                                }}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                                title="Supprimer"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -700,6 +796,18 @@ const ProfessorsContent = () => {
                   ? "Essayez de modifier vos critères de recherche ou de filtrage pour voir plus de résultats."
                   : "Il n'y a actuellement aucun professeur dans le système."}
               </p>
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setModalMode("create");
+                    setSelectedProfessor(null);
+                    setShowModal(true);
+                  }}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md"
+                >
+                  Ajouter votre premier professeur
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -728,30 +836,35 @@ const ProfessorsContent = () => {
       </div>
 
       {/* Modals */}
-      <ProfessorModal
-        showModal={showModal}
-        setShowModal={setShowModal}
-        modalMode={modalMode}
-        selectedProfessor={selectedProfessor}
-        classes={classes}
-        loadData={loadData}
-        setError={setError}
-        setLoading={setLoading}
-      />
+      {isAdmin && (
+        <>
+          <ProfessorModal
+            showModal={showModal}
+            setShowModal={setShowModal}
+            modalMode={modalMode}
+            selectedProfessor={selectedProfessor}
+            classes={classes}
+            loadData={loadData}
+            setError={setError}
+            setLoading={setLoading}
+          />
 
-      <DeleteConfirmationModal
-        showDeleteConfirm={showDeleteConfirm}
-        setShowDeleteConfirm={setShowDeleteConfirm}
-        selectedProfessor={selectedProfessor}
-        handleDelete={handleDelete}
-        loading={loading}
-      />
+          <DeleteConfirmationModal
+            showDeleteConfirm={showDeleteConfirm}
+            setShowDeleteConfirm={setShowDeleteConfirm}
+            selectedProfessor={selectedProfessor}
+            handleDelete={handleDelete}
+            loading={loading}
+          />
+        </>
+      )}
 
       {isViewModalOpen && (
         <UserViewModal
           user={currentUser}
           onClose={() => setIsViewModalOpen(false)}
           onSuccess={handleSuccess}
+          isAdmin={isAdmin}
         />
       )}
     </div>

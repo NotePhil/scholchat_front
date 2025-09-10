@@ -244,9 +244,12 @@ class MinioS3Service {
   async generateDownloadUrlByPath(filePath) {
     try {
       console.log("Generating download URL by path:", filePath);
+
+      // Use the correct endpoint structure - check your backend API
       const response = await minioApi.get("/media/download-by-path", {
         params: { filePath },
       });
+
       return {
         downloadUrl: response.data.url,
         fileName: response.data.fileName,
@@ -255,6 +258,12 @@ class MinioS3Service {
       };
     } catch (error) {
       console.error("Failed to generate download URL by path:", error);
+
+      // Check if it's a 404 error (media not found)
+      if (error.response?.status === 404) {
+        throw new Error(`File not found: ${filePath}`);
+      }
+
       throw new Error(
         `Failed to generate download URL: ${
           error.response?.data?.message || error.message

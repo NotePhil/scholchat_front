@@ -23,14 +23,17 @@ import {
   Download,
   RefreshCw,
   Settings,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import { classService, EtatClasse } from "../../../../../services/ClassService";
 import ClassModals from "../../modals/ClassModals";
+import PublicationRightsService from "../../../../../services/PublicationRightsService";
 
 const ClassesListContent = ({
   onNavigateToCreate,
   userRole = "professeur",
-  onSelectClass, // Add this prop to handle navigation to manage class
+  onSelectClass,
 }) => {
   // State Management
   const [classes, setClasses] = useState([]);
@@ -57,6 +60,8 @@ const ClassesListContent = ({
   const [showDeactivationModal, setShowDeactivationModal] = useState(null);
   const [showAccessRequestModal, setShowAccessRequestModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(null);
+  const [showPublicationRightsModal, setShowPublicationRightsModal] =
+    useState(null);
 
   // Form States
   const [actionLoading, setActionLoading] = useState(null);
@@ -72,9 +77,17 @@ const ClassesListContent = ({
     cardHolder: "",
   });
 
+  // Publication Rights States
+  const [publicationRights, setPublicationRights] = useState({});
+  const [loadingRights, setLoadingRights] = useState({});
+
   // Navigation States
   const [showEditPage, setShowEditPage] = useState(false);
   const [availableEtablissements, setAvailableEtablissements] = useState([]);
+
+  // Current user ID
+  const currentUserId =
+    localStorage.getItem("userId") || sessionStorage.getItem("userId");
 
   // Load classes based on user role
   useEffect(() => {
@@ -113,7 +126,41 @@ const ClassesListContent = ({
           data = await classService.obtenirClassesEnAttente();
           break;
         default: // professeur
-          data = await classService.obtenirToutesLesClasses();
+          // For professors, load classes where they have publication rights
+          if (currentUserId) {
+            try {
+              const rightsResponse =
+                await PublicationRightsService.getClassesWithRightsForUser(
+                  currentUserId
+                );
+              if (rightsResponse.success && rightsResponse.data) {
+                // Get class details for each class where user has rights
+                const classPromises = rightsResponse.data.map(
+                  async (classId) => {
+                    try {
+                      return await classService.obtenirClasse(classId);
+                    } catch (error) {
+                      console.error(`Error loading class ${classId}:`, error);
+                      return null;
+                    }
+                  }
+                );
+
+                const classesData = await Promise.all(classPromises);
+                data = classesData.filter((cls) => cls !== null);
+              } else {
+                data = [];
+              }
+            } catch (error) {
+              console.warn(
+                "Failed to load classes with publication rights:",
+                error
+              );
+              data = [];
+            }
+          } else {
+            data = [];
+          }
           break;
       }
 
@@ -145,6 +192,38 @@ const ClassesListContent = ({
     } catch (error) {
       console.error("Error loading etablissements:", error);
     }
+  };
+
+  // Load publication rights for a specific class
+  const loadPublicationRights = async (classId) => {
+    if (!classId) return;
+
+    try {
+      setLoadingRights((prev) => ({ ...prev, [classId]: true }));
+      const response =
+        await PublicationRightsService.getUsersWithRightsForClass(classId);
+
+      if (response.success) {
+        setPublicationRights((prev) => ({
+          ...prev,
+          [classId]: response.data || [],
+        }));
+      }
+    } catch (error) {
+      console.error(
+        `Error loading publication rights for class ${classId}:`,
+        error
+      );
+    } finally {
+      setLoadingRights((prev) => ({ ...prev, [classId]: false }));
+    }
+  };
+
+  // Check if current user has publication rights for a class
+  const hasPublicationRights = (classId) => {
+    if (!currentUserId || !publicationRights[classId]) return false;
+
+    return publicationRights[classId].some((user) => user.id === currentUserId);
   };
 
   const applyFiltersAndSearch = () => {
@@ -331,6 +410,13 @@ const ClassesListContent = ({
     }
   };
 
+  // Handle manage publication rights
+  const handleManagePublicationRights = async (classe) => {
+    setShowPublicationRightsModal(classe);
+    // Load publication rights for this class
+    await loadPublicationRights(classe.id);
+  };
+
   const getStatusColor = (etat) => {
     switch (etat) {
       case EtatClasse.ACTIF:
@@ -357,7 +443,7 @@ const ClassesListContent = ({
     }
   };
 
-  // Handle manage class click
+  // Handle manage class click - Show manage button based on role and class status
   const handleManageClass = (classe) => {
     if (onSelectClass) {
       onSelectClass(classe.id);
@@ -365,6 +451,28 @@ const ClassesListContent = ({
       console.log("Managing class:", classe.id);
       // Default behavior if onSelectClass is not provided
     }
+  };
+
+  // Determine if manage button should be shown
+  const shouldShowManageButton = (classe) => {
+    // For administrators, always show manage button regardless of status
+    if (userRole === "administrateur") {
+      return true;
+    }
+
+    // For professors, only show manage button if class is ACTIF (approved) AND they have publication rights
+    if (userRole === "professeur") {
+      return (
+        classe.etat === EtatClasse.ACTIF && hasPublicationRights(classe.id)
+      );
+    }
+
+    // For establishment users, show based on class status
+    if (userRole === "etablissement") {
+      return classe.etat === EtatClasse.ACTIF;
+    }
+
+    return false;
   };
 
   if (loading) {
@@ -599,6 +707,36 @@ const ClassesListContent = ({
                       >
                         {classService.getEtatDisplayName(classe.etat)}
                       </span>
+
+                      {/* Publication Rights Status for Professors */}
+                      {userRole === "professeur" && (
+                        <div className="mt-2 text-xs flex items-center gap-1">
+                          {hasPublicationRights(classe.id) ? (
+                            <>
+                              <UserCheck className="w-3 h-3 text-green-600" />
+                              <span className="text-green-600">
+                                Vous avez des droits de publication
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <UserX className="w-3 h-3 text-amber-600" />
+                              <span className="text-amber-600">
+                                Aucun droit de publication
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Status-specific messages */}
+                      {classe.etat === EtatClasse.EN_ATTENTE_APPROBATION &&
+                        userRole === "professeur" && (
+                          <div className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                            En attente d'approbation. Le bouton "Gérer" sera
+                            disponible après approbation.
+                          </div>
+                        )}
                     </div>
 
                     {/* Actions */}
@@ -612,19 +750,44 @@ const ClassesListContent = ({
                         Voir
                       </button>
 
-                      {/* Manage Button */}
-                      <button
-                        onClick={() => handleManageClass(classe)}
-                        className="flex-1 bg-indigo-50 text-indigo-600 py-2 px-3 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 text-sm"
-                      >
-                        <Settings className="w-4 h-4" />
-                        Gérer
-                      </button>
+                      {/* Manage Button - Conditionally shown based on role and status */}
+                      {shouldShowManageButton(classe) && (
+                        <button
+                          onClick={() => handleManageClass(classe)}
+                          className="flex-1 bg-indigo-50 text-indigo-600 py-2 px-3 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 text-sm"
+                        >
+                          <Settings className="w-4 h-4" />
+                          Gérer
+                        </button>
+                      )}
 
-                      {/* Edit Button - Available for all roles */}
+                      {/* Publication Rights Button - For administrators */}
+                      {userRole === "administrateur" &&
+                        classe.etat === EtatClasse.ACTIF && (
+                          <button
+                            onClick={() =>
+                              handleManagePublicationRights(classe)
+                            }
+                            disabled={loadingRights[classe.id]}
+                            className="flex-1 bg-purple-50 text-purple-600 py-2 px-3 rounded-lg hover:bg-purple-100 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                          >
+                            {loadingRights[classe.id] ? (
+                              <Loader className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <UserCheck className="w-4 h-4" />
+                            )}
+                            Droits
+                          </button>
+                        )}
+
+                      {/* Edit Button - Available for all roles with rights */}
                       <button
                         onClick={() => handleEdit(classe)}
-                        disabled={actionLoading === "edit"}
+                        disabled={
+                          actionLoading === "edit" ||
+                          (userRole === "professeur" &&
+                            !hasPublicationRights(classe.id))
+                        }
                         className="flex-1 bg-green-50 text-green-600 py-2 px-3 rounded-lg hover:bg-green-100 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {actionLoading === "edit" ? (
@@ -635,9 +798,10 @@ const ClassesListContent = ({
                         Modifier
                       </button>
 
-                      {/* Delete Button - Available for administrateur and professeur */}
+                      {/* Delete Button - Available for administrateur and professeur with rights */}
                       {(userRole === "administrateur" ||
-                        userRole === "professeur") && (
+                        (userRole === "professeur" &&
+                          hasPublicationRights(classe.id))) && (
                         <button
                           onClick={() => setShowDeleteModal(classe)}
                           disabled={actionLoading === classe.id}
@@ -771,6 +935,8 @@ const ClassesListContent = ({
           setShowAccessRequestModal={setShowAccessRequestModal}
           showPaymentModal={showPaymentModal}
           setShowPaymentModal={setShowPaymentModal}
+          showPublicationRightsModal={showPublicationRightsModal}
+          setShowPublicationRightsModal={setShowPublicationRightsModal}
           actionLooading={actionLoading}
           setActionLoading={setActionLoading}
           error={error}
@@ -791,6 +957,9 @@ const ClassesListContent = ({
           handleDelete={handleDelete}
           loadClasses={loadClasses}
           getStatusColor={getStatusColor}
+          publicationRights={publicationRights}
+          loadingRights={loadingRights}
+          loadPublicationRights={loadPublicationRights}
         />
       </div>
     </div>

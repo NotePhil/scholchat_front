@@ -16,6 +16,8 @@ import {
   Table,
   Tabs,
   Popconfirm,
+  List,
+  Checkbox,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -34,12 +36,14 @@ import {
   SafetyCertificateOutlined,
   PlusOutlined,
   UserOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import { classService } from "../../../../services/ClassService";
 import { rejectionServiceClass } from "../../../../services/RejectionServiceClass";
 import { scholchatService } from "../../../../services/ScholchatService";
 import UserViewModalParentStudent from "../modals/UserViewModalParentStudent";
 import ClassAccessRequests from "./ClassAccessRequests";
+import PublicationRightsService from "../../../../services/PublicationRightsService";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -56,6 +60,7 @@ const ManageClassDetailsView = ({
   const [classData, setClassData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
+  const [userRole, setUserRole] = useState("");
 
   // Modal states
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
@@ -86,6 +91,16 @@ const ManageClassDetailsView = ({
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [parentsLoading, setParentsLoading] = useState(false);
 
+  // Publication rights states
+  const [searchEmail, setSearchEmail] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedUserForRights, setSelectedUserForRights] = useState(null);
+  const [publicationRights, setPublicationRights] = useState({
+    peutPublier: true,
+    peutModerer: false,
+  });
+
   // Pagination states
   const [professorsPagination, setProfessorsPagination] = useState({
     current: 1,
@@ -104,6 +119,12 @@ const ManageClassDetailsView = ({
   });
 
   useEffect(() => {
+    // Get user role from localStorage
+    const role = localStorage.getItem("userRole");
+    if (role) {
+      setUserRole(role.toUpperCase());
+    }
+
     if (classId) {
       fetchClassDetails(classId);
       fetchClassMembers(classId);
@@ -467,6 +488,71 @@ const ManageClassDetailsView = ({
     }
   };
 
+  // New functions for publication rights management
+  const handleSearchUserByEmail = async () => {
+    if (!searchEmail) {
+      onError("Veuillez entrer une adresse email");
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      // Search across all user types
+      const [professors, students, parents] = await Promise.all([
+        scholchatService.getAllProfessors(),
+        scholchatService.getAllStudents(),
+        scholchatService.getAllParents(),
+      ]);
+
+      // Filter users by email
+      const allUsers = [...professors, ...students, ...parents];
+      const filteredUsers = allUsers.filter(
+        (user) =>
+          user.email &&
+          user.email.toLowerCase().includes(searchEmail.toLowerCase())
+      );
+
+      setSearchResults(filteredUsers);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      onError("Erreur lors de la recherche d'utilisateurs");
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleAssignPublicationRights = async () => {
+    if (!selectedUserForRights || !classId) {
+      onError("Veuillez sélectionner un utilisateur");
+      return;
+    }
+
+    try {
+      setActionLoading("assignPublicationRights");
+      const result = await PublicationRightsService.assignPublicationRights(
+        selectedUserForRights.id,
+        classId,
+        publicationRights.peutPublier,
+        publicationRights.peutModerer
+      );
+
+      if (result.success) {
+        onSuccess("Droits de publication assignés avec succès");
+        setPublicationRightsModalVisible(false);
+        setSearchEmail("");
+        setSearchResults([]);
+        setSelectedUserForRights(null);
+      } else {
+        onError(result.error || "Erreur lors de l'assignation des droits");
+      }
+    } catch (error) {
+      console.error("Error assigning publication rights:", error);
+      onError("Erreur lors de l'assignation des droits de publication");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const renderStatusTag = (etat) => {
     let color, icon, text;
     switch (etat) {
@@ -513,6 +599,8 @@ const ManageClassDetailsView = ({
   const renderActionButtons = () => {
     if (!classData) return null;
 
+    const isAdmin = userRole === "ADMIN";
+
     return (
       <Card
         size="small"
@@ -533,7 +621,7 @@ const ManageClassDetailsView = ({
             Actualiser
           </Button>
 
-          {classData.etat === "EN_ATTENTE_APPROBATION" && (
+          {isAdmin && classData.etat === "EN_ATTENTE_APPROBATION" && (
             <>
               <Button
                 type="primary"
@@ -559,6 +647,14 @@ const ManageClassDetailsView = ({
               </Button>
             </>
           )}
+
+          <Button
+            icon={<SafetyCertificateOutlined />}
+            onClick={() => setPublicationRightsModalVisible(true)}
+            style={{ borderRadius: "8px" }}
+          >
+            Droits de publication
+          </Button>
 
           <Button
             icon={<HistoryOutlined />}
@@ -1087,40 +1183,115 @@ const ManageClassDetailsView = ({
       </Modal>
 
       <Modal
-        title="Modifier les droits de publication"
+        title="Gérer les droits de publication"
         visible={publicationRightsModalVisible}
-        onCancel={() => setPublicationRightsModalVisible(false)}
+        onCancel={() => {
+          setPublicationRightsModalVisible(false);
+          setSearchEmail("");
+          setSearchResults([]);
+          setSelectedUserForRights(null);
+        }}
         footer={null}
+        width={600}
       >
-        <Form layout="vertical">
-          <Form.Item label="Droits de publication">
-            <Select
-              value={selectedPublicationRight}
-              onChange={setSelectedPublicationRight}
-              placeholder="Sélectionner les droits"
+        <div style={{ marginBottom: 16 }}>
+          <Text strong>Rechercher un utilisateur par email:</Text>
+          <Space.Compact style={{ width: "100%", marginTop: 8 }}>
+            <Input
+              placeholder="Entrez l'email de l'utilisateur"
+              value={searchEmail}
+              onChange={(e) => setSearchEmail(e.target.value)}
+              onPressEnter={handleSearchUserByEmail}
+            />
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearchUserByEmail}
+              loading={searchLoading}
             >
-              <Option value="PROFESSEURS_SEULEMENT">
-                Professeurs seulement
-              </Option>
-              <Option value="TOUS">Tous les membres</Option>
-              <Option value="MODERATEUR_SEULEMENT">Modérateur seulement</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item>
-            <Space>
+              Rechercher
+            </Button>
+          </Space.Compact>
+        </div>
+
+        {searchResults.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <Text strong>Résultats de la recherche:</Text>
+            <List
+              size="small"
+              dataSource={searchResults}
+              renderItem={(user) => (
+                <List.Item
+                  actions={[
+                    <Button
+                      type="link"
+                      onClick={() => setSelectedUserForRights(user)}
+                      disabled={selectedUserForRights?.id === user.id}
+                    >
+                      {selectedUserForRights?.id === user.id
+                        ? "Sélectionné"
+                        : "Sélectionner"}
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    title={`${user.nom} ${user.prenom}`}
+                    description={user.email}
+                  />
+                </List.Item>
+              )}
+            />
+          </div>
+        )}
+
+        {selectedUserForRights && (
+          <div>
+            <Divider />
+            <Text strong>
+              Droits à assigner à {selectedUserForRights.nom}{" "}
+              {selectedUserForRights.prenom}:
+            </Text>
+            <div style={{ marginTop: 8 }}>
+              <Space direction="vertical" style={{ width: "100%" }}>
+                <div>
+                  <Checkbox
+                    checked={publicationRights.peutPublier}
+                    onChange={(e) =>
+                      setPublicationRights({
+                        ...publicationRights,
+                        peutPublier: e.target.checked,
+                      })
+                    }
+                  >
+                    Peut publier
+                  </Checkbox>
+                </div>
+                <div>
+                  <Checkbox
+                    checked={publicationRights.peutModerer}
+                    onChange={(e) =>
+                      setPublicationRights({
+                        ...publicationRights,
+                        peutModerer: e.target.checked,
+                      })
+                    }
+                  >
+                    Peut modérer
+                  </Checkbox>
+                </div>
+              </Space>
+            </div>
+            <div style={{ marginTop: 16, textAlign: "right" }}>
               <Button
                 type="primary"
-                onClick={handlePublicationRightsUpdate}
-                loading={actionLoading === "publicationRights"}
+                onClick={handleAssignPublicationRights}
+                loading={actionLoading === "assignPublicationRights"}
               >
-                Mettre à jour
+                Assigner les droits
               </Button>
-              <Button onClick={() => setPublicationRightsModalVisible(false)}>
-                Annuler
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Student and Parent Modals */}

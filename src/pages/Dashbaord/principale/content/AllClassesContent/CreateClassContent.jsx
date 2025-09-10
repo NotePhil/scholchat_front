@@ -12,6 +12,7 @@ import { classService, EtatClasse } from "../../../../../services/ClassService";
 import establishmentService from "../../../../../services/EstablishmentService";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import { useNavigate } from "react-router-dom";
+import PublicationRightsService from "../../../../../services/PublicationRightsService";
 
 const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
   const [formData, setFormData] = useState({
@@ -31,6 +32,11 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(5); // Add countdown state
+  const [createdClassId, setCreatedClassId] = useState(null); // Store the ID of the created class
+
+  // Get current user ID
+  const currentUserId =
+    localStorage.getItem("userId") || sessionStorage.getItem("userId");
 
   // Load establishments and professors on component mount
   useEffect(() => {
@@ -154,6 +160,38 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Function to assign publication rights to the creator
+  const assignPublicationRightsToCreator = async (classId) => {
+    if (!currentUserId) {
+      console.error("Cannot assign publication rights: No user ID found");
+      return false;
+    }
+
+    try {
+      console.log(
+        `Assigning publication rights to user ${currentUserId} for class ${classId}`
+      );
+
+      const response = await PublicationRightsService.assignPublicationRights(
+        currentUserId,
+        classId,
+        true, // peutPublier
+        true // peutModerer
+      );
+
+      if (response.success) {
+        console.log("Publication rights assigned successfully");
+        return true;
+      } else {
+        console.error("Failed to assign publication rights:", response.error);
+        return false;
+      }
+    } catch (error) {
+      console.error("Error assigning publication rights:", error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -180,7 +218,24 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
         eleves: [],
       };
 
-      await classService.creerClasse(classData);
+      // Create the class
+      const createdClass = await classService.creerClasse(classData);
+      setCreatedClassId(createdClass.id);
+
+      // Automatically assign publication rights to the creator
+      if (currentUserId) {
+        const rightsAssigned = await assignPublicationRightsToCreator(
+          createdClass.id
+        );
+
+        if (!rightsAssigned) {
+          console.warn(
+            "Class created but publication rights assignment failed"
+          );
+          // We still consider this a success since the class was created
+        }
+      }
+
       setSuccess(true);
       setCountdown(5); // Reset countdown to 5 seconds
     } catch (error) {
@@ -205,6 +260,12 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
           </h2>
           <p className="text-gray-600 mb-6">
             Votre classe a été créée et est en attente d'approbation.
+            {currentUserId && (
+              <span className="block mt-2 text-sm text-green-600">
+                Les droits de publication vous ont été automatiquement
+                attribués.
+              </span>
+            )}
             Redirection automatique vers la gestion des classes dans {countdown}{" "}
             seconde
             {countdown !== 1 ? "s" : ""}.
@@ -453,6 +514,10 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
                           <li>
                             • Vous pourrez ajouter des parents et élèves après
                             la création
+                          </li>
+                          <li>
+                            • Vous recevrez automatiquement les droits de
+                            publication pour cette classe
                           </li>
                           <li>• Les champs marqués avec * sont obligatoires</li>
                         </ul>
