@@ -1,108 +1,81 @@
 import React, { useState, useEffect } from "react";
-import { activityFeedService } from "../../../../../services/ActivityFeedService";
-import { minioS3Service } from "../../../../../services/minioS3";
-import ActivityDisplay from "./ActivityDisplay";
-import CreateEventModal from "./CreateEventModal";
 import {
   Plus,
   Filter,
-  TrendingUp,
-  Calendar,
-  MessageCircle,
+  Search,
   Users,
-  RefreshCw,
+  Calendar,
+  TrendingUp,
 } from "lucide-react";
+import CreateEventModal from "./CreateEventModal";
+import ActivityDisplay from "./ActivityDisplay";
+import { activityFeedService } from "../../../../../services/ActivityFeedService";
+import { minioS3Service } from "../../../../../services/minioS3";
 
 const ActivitiesContent = () => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [error, setError] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const filters = [
+    { id: "all", label: "All Activities", icon: Users },
+    { id: "events", label: "Events", icon: Calendar },
+    { id: "posts", label: "Posts", icon: TrendingUp },
+    { id: "recent", label: "Recent", icon: TrendingUp },
+    { id: "popular", label: "Popular", icon: TrendingUp },
+  ];
+
+  useEffect(() => {
+    initializeData();
+  }, []);
 
   useEffect(() => {
     loadActivities();
-  }, [filter]);
+  }, [activeFilter]);
 
-  const loadActivities = async (showRefreshIndicator = false) => {
+  const initializeData = async () => {
     try {
-      if (showRefreshIndicator) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      setError("");
+      const user = activityFeedService.getCurrentUser();
+      setCurrentUser(user);
+      await loadActivities();
+    } catch (error) {
+      console.error("Failed to initialize:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      const data = await activityFeedService.getActivities(filter);
+  const loadActivities = async () => {
+    try {
+      setLoading(true);
+      const data = await activityFeedService.getActivities(activeFilter);
 
-      // Process activities to ensure media has proper URLs
+      // Process activities and get media URLs
       const processedActivities = await Promise.all(
         data.map(async (activity) => {
           if (activity.media && activity.media.length > 0) {
-            // Process media items to get download URLs
             const processedMedia = await Promise.all(
-              activity.media.map(async (mediaItem) => {
+              activity.media.map(async (media) => {
                 try {
-                  let downloadUrl = null;
-
-                  if (mediaItem.id) {
-                    try {
-                      const downloadData =
-                        await minioS3Service.generateDownloadUrl(mediaItem.id);
-                      downloadUrl = downloadData.downloadUrl;
-                    } catch (error) {
-                      console.warn(
-                        `Failed to get URL for media ID ${mediaItem.id}:`,
-                        error
-                      );
-                      // Try fallback with path if available
-                      if (mediaItem.filePath) {
-                        try {
-                          const downloadData =
-                            await minioS3Service.generateDownloadUrlByPath(
-                              mediaItem.filePath
-                            );
-                          downloadUrl = downloadData.downloadUrl;
-                        } catch (pathError) {
-                          console.warn(
-                            `Failed to get URL for path ${mediaItem.filePath}:`,
-                            pathError
-                          );
-                        }
-                      }
-                    }
-                  } else if (mediaItem.filePath) {
-                    try {
-                      const downloadData =
-                        await minioS3Service.generateDownloadUrlByPath(
-                          mediaItem.filePath
-                        );
-                      downloadUrl = downloadData.downloadUrl;
-                    } catch (error) {
-                      console.warn(
-                        `Failed to get URL for path ${mediaItem.filePath}:`,
-                        error
-                      );
-                    }
-                  }
-
+                  // Get download URL from Minio
+                  const downloadData = await minioS3Service.generateDownloadUrl(
+                    media.id
+                  );
                   return {
-                    ...mediaItem,
-                    downloadUrl: downloadUrl || "/api/placeholder/400/300",
-                    hasValidUrl: !!downloadUrl,
+                    ...media,
+                    url: downloadData.downloadUrl,
+                    fileName: downloadData.fileName,
+                    contentType: downloadData.contentType,
                   };
                 } catch (error) {
-                  console.error("Error processing media item:", error);
-                  return {
-                    ...mediaItem,
-                    downloadUrl: "/api/placeholder/400/300",
-                    hasValidUrl: false,
-                  };
+                  console.error("Failed to get media URL:", error);
+                  return media;
                 }
               })
             );
-
             return {
               ...activity,
               media: processedMedia,
@@ -113,101 +86,124 @@ const ActivitiesContent = () => {
       );
 
       setActivities(processedActivities);
-    } catch (err) {
-      setError("Failed to load activities");
-      console.error("Error loading activities:", err);
+    } catch (error) {
+      console.error("Failed to load activities:", error);
+      setActivities([]);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const handleRefresh = () => {
-    loadActivities(true);
+  const handleCreateEvent = async (eventData, files) => {
+    try {
+      // First create the event without media
+      const createdEvent = await activityFeedService.createEvent({
+        titre: eventData.titre,
+        description: eventData.description,
+        lieu: eventData.lieu,
+        heureDebut: eventData.heureDebut,
+        heureFin: eventData.heureFin,
+        etat: eventData.etat,
+        participantsIds: eventData.participantsIds,
+      });
+
+      // If event creation is successful and there are files to upload
+      if (createdEvent && files && files.length > 0) {
+        try {
+          // Upload files after event creation
+          const uploadPromises = files.map(async (file) => {
+            try {
+              // Validate file before upload
+              minioS3Service.validateFile(file, 20 * 1024 * 1024); // 20MB limit
+
+              // Upload to Minio with event-specific folder
+              const result = await minioS3Service.uploadFile(
+                file,
+                minioS3Service.isImageFile(file.type) ? "IMAGE" : "DOCUMENT",
+                `events/${createdEvent.id}`
+              );
+
+              return {
+                fileName: result.fileName,
+                filePath: result.fileName,
+                type: minioS3Service.isImageFile(file.type)
+                  ? "IMAGE"
+                  : "DOCUMENT",
+                contentType: file.type,
+                eventId: createdEvent.id,
+              };
+            } catch (error) {
+              console.error("Failed to upload file:", file.name, error);
+              throw error;
+            }
+          });
+
+          const uploadResults = await Promise.allSettled(uploadPromises);
+
+          // Get successful uploads
+          const successfulUploads = uploadResults
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => result.value);
+
+          const failedUploads = uploadResults.filter(
+            (result) => result.status === "rejected"
+          ).length;
+
+          // If there are successful uploads, associate them with the event
+          if (successfulUploads.length > 0) {
+            await activityFeedService.addMediaToEvent(
+              createdEvent.id,
+              successfulUploads
+            );
+          }
+
+          // Show warning if some files failed
+          if (failedUploads > 0) {
+            console.warn(`${failedUploads} file(s) failed to upload`);
+            // You might want to show a toast notification here
+          }
+        } catch (uploadError) {
+          console.error("Failed to upload files:", uploadError);
+          // Event is created but files failed to upload
+          // You might want to show a notification that the event was created but files failed
+        }
+      }
+
+      setShowCreateModal(false);
+      await loadActivities();
+
+      return createdEvent;
+    } catch (error) {
+      console.error("Failed to create event:", error);
+      alert("Failed to create event. Please try again.");
+      throw error;
+    }
   };
 
   const handleReaction = async (activityId, reactionType) => {
     try {
-      const success = await activityFeedService.addReaction(
+      const result = await activityFeedService.addReaction(
         activityId,
         reactionType
       );
 
-      if (success !== undefined) {
-        setActivities((prev) =>
-          prev.map((activity) => {
-            if (activity.id === activityId) {
-              // Initialize reactions object if it doesn't exist
-              const reactions = activity.reactions || {};
-
-              if (success) {
-                // Add reaction
-                return {
-                  ...activity,
-                  reactions: {
-                    ...reactions,
-                    [reactionType]: (reactions[reactionType] || 0) + 1,
-                  },
-                  userReaction: reactionType,
-                  isLiked: reactionType === "like",
-                };
-              } else {
-                // Remove reaction (dislike)
-                const updatedReactions = { ...reactions };
-                if (updatedReactions[reactionType] > 0) {
-                  updatedReactions[reactionType] = Math.max(
-                    0,
-                    (updatedReactions[reactionType] || 0) - 1
-                  );
-                }
-
-                return {
-                  ...activity,
-                  reactions: updatedReactions,
-                  userReaction: null,
-                  isLiked: false,
-                };
-              }
-            }
-            return activity;
-          })
-        );
-      }
-    } catch (err) {
-      console.error("Error adding reaction:", err);
-    }
-  };
-
-  const handleRemoveReaction = async (activityId) => {
-    try {
-      const success = await activityFeedService.removeReaction(activityId);
-      if (success !== undefined) {
-        setActivities((prev) =>
-          prev.map((activity) => {
-            if (activity.id === activityId && activity.userReaction) {
-              const reactions = activity.reactions || {};
-              const updatedReactions = { ...reactions };
-
-              if (updatedReactions[activity.userReaction] > 0) {
-                updatedReactions[activity.userReaction] = Math.max(
-                  0,
-                  (updatedReactions[activity.userReaction] || 0) - 1
-                );
-              }
-
+      // Update activities state
+      setActivities((prevActivities) =>
+        prevActivities.map((activity) => {
+          if (activity.id === activityId) {
+            if (reactionType === "like") {
               return {
                 ...activity,
-                reactions: updatedReactions,
-                userReaction: null,
-                isLiked: false,
+                isLiked: result,
+                likes: result ? activity.likes + 1 : activity.likes - 1,
               };
             }
-            return activity;
-          })
-        );
-      }
-    } catch (err) {
-      console.error("Error removing reaction:", err);
+          }
+          return activity;
+        })
+      );
+    } catch (error) {
+      console.error("Failed to add reaction:", error);
     }
   };
 
@@ -217,160 +213,108 @@ const ActivitiesContent = () => {
         activityId,
         comment
       );
-      setActivities((prev) =>
-        prev.map((activity) =>
-          activity.id === activityId
-            ? {
-                ...activity,
-                comments: [...(activity.comments || []), newComment],
-                commentsCount: (activity.commentsCount || 0) + 1,
-              }
-            : activity
-        )
+
+      // Update activities state
+      setActivities((prevActivities) =>
+        prevActivities.map((activity) => {
+          if (activity.id === activityId) {
+            return {
+              ...activity,
+              comments: [...(activity.comments || []), newComment],
+            };
+          }
+          return activity;
+        })
       );
-    } catch (err) {
-      console.error("Error posting comment:", err);
+    } catch (error) {
+      console.error("Failed to comment:", error);
     }
   };
 
   const handleShare = async (activityId) => {
     try {
-      const success = await activityFeedService.shareActivity(activityId);
-      if (success) {
-        setActivities((prev) =>
-          prev.map((activity) =>
-            activity.id === activityId
-              ? {
-                  ...activity,
-                  shares: (activity.shares || 0) + 1,
-                  isShared: true,
-                }
-              : activity
-          )
-        );
-      }
-    } catch (err) {
-      console.error("Error sharing activity:", err);
+      await activityFeedService.shareActivity(activityId);
+
+      // Update activities state
+      setActivities((prevActivities) =>
+        prevActivities.map((activity) => {
+          if (activity.id === activityId) {
+            return {
+              ...activity,
+              isShared: true,
+              shares: activity.shares + 1,
+            };
+          }
+          return activity;
+        })
+      );
+    } catch (error) {
+      console.error("Failed to share:", error);
     }
   };
 
   const handleJoinEvent = async (eventId) => {
     try {
       await activityFeedService.joinEvent(eventId);
-      setActivities((prev) =>
-        prev.map((activity) =>
-          activity.id === eventId && activity.type === "event"
-            ? {
-                ...activity,
-                eventDetails: {
-                  ...activity.eventDetails,
-                  participantsCount:
-                    (activity.eventDetails.participantsCount || 0) + 1,
-                  hasJoined: true,
-                },
-              }
-            : activity
-        )
+
+      // Update activities state
+      setActivities((prevActivities) =>
+        prevActivities.map((activity) => {
+          if (activity.id === eventId && activity.eventDetails) {
+            return {
+              ...activity,
+              eventDetails: {
+                ...activity.eventDetails,
+                participantsCount: activity.eventDetails.participantsCount + 1,
+              },
+            };
+          }
+          return activity;
+        })
       );
-    } catch (err) {
-      console.error("Error joining event:", err);
-    }
-  };
-
-  const handleCreateEvent = async (eventData) => {
-    try {
-      // Ensure media is properly formatted for the backend
-      const processedEventData = {
-        ...eventData,
-        medias: eventData.medias || [],
-      };
-
-      const newEvent = await activityFeedService.createEvent(
-        processedEventData
-      );
-
-      // Transform the event to activity format
-      const newActivity =
-        activityFeedService.transformEventToActivity(newEvent);
-
-      // Process media URLs for the new activity
-      if (newActivity.media && newActivity.media.length > 0) {
-        const processedMedia = await Promise.all(
-          newActivity.media.map(async (mediaItem) => {
-            try {
-              let downloadUrl = null;
-
-              if (mediaItem.id) {
-                const downloadData = await minioS3Service.generateDownloadUrl(
-                  mediaItem.id
-                );
-                downloadUrl = downloadData.downloadUrl;
-              } else if (mediaItem.filePath) {
-                const downloadData =
-                  await minioS3Service.generateDownloadUrlByPath(
-                    mediaItem.filePath
-                  );
-                downloadUrl = downloadData.downloadUrl;
-              }
-
-              return {
-                ...mediaItem,
-                downloadUrl: downloadUrl || "/api/placeholder/400/300",
-                hasValidUrl: !!downloadUrl,
-              };
-            } catch (error) {
-              console.error("Error processing new activity media:", error);
-              return {
-                ...mediaItem,
-                downloadUrl: "/api/placeholder/400/300",
-                hasValidUrl: false,
-              };
-            }
-          })
-        );
-
-        newActivity.media = processedMedia;
-      }
-
-      setActivities((prev) => [newActivity, ...prev]);
-      setShowCreateModal(false);
-    } catch (err) {
-      setError("Failed to create event");
-      console.error("Error creating event:", err);
-    }
-  };
-
-  const handleMediaDownload = async (mediaItem) => {
-    try {
-      if (mediaItem.id) {
-        await minioS3Service.downloadFile(mediaItem.id);
-      } else if (mediaItem.filePath) {
-        await minioS3Service.downloadFileByPath(mediaItem.filePath);
-      } else {
-        throw new Error("No valid media identifier found");
-      }
     } catch (error) {
-      console.error("Error downloading media:", error);
-      setError(`Failed to download ${mediaItem.fileName || "file"}`);
+      console.error("Failed to join event:", error);
     }
   };
 
-  const filters = [
-    { key: "all", label: "All", icon: Filter },
-    { key: "events", label: "Events", icon: Calendar },
-    { key: "interactions", label: "Posts", icon: MessageCircle },
-    { key: "popular", label: "Popular", icon: TrendingUp },
-  ];
+  const filteredActivities = activities.filter(
+    (activity) =>
+      activity.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  if (loading) {
+  const generateUserAvatar = (userName) => {
+    if (!userName) return "?";
+    return userName.charAt(0).toUpperCase();
+  };
+
+  if (loading && activities.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-              <p className="text-gray-500 font-medium">Loading activities...</p>
+          <div className="animate-pulse">
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-300 rounded w-1/4 mb-2"></div>
+                  <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                </div>
+              </div>
             </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-300 rounded w-1/3 mb-2"></div>
+                    <div className="h-3 bg-gray-300 rounded w-1/4"></div>
+                  </div>
+                </div>
+                <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -379,153 +323,158 @@ const ActivitiesContent = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                School Activities
+              </h1>
+              <p className="text-gray-600 text-sm">
+                Stay connected with your academic community
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Create Event</span>
+              <span className="sm:hidden">Create</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Header Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-xl">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  SchoolChat Feed
-                </h1>
-                <p className="text-gray-500">
-                  Stay connected with your academic community
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-3 rounded-xl transition-all duration-200 disabled:opacity-50"
-                title="Refresh activities"
-              >
-                <RefreshCw
-                  className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
-                />
-              </button>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center space-x-2 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Create Event</span>
-              </button>
-            </div>
+        {/* Search and Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search activities, events, or users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
 
-          {/* Enhanced Filter Tabs */}
-          <div className="bg-gray-50 p-2 rounded-xl">
-            <div className="flex space-x-2">
-              {filters.map(({ key, label, icon: Icon }) => (
+          {/* Filter Buttons */}
+          <div className="flex flex-wrap gap-2">
+            {filters.map((filter) => {
+              const IconComponent = filter.icon;
+              return (
                 <button
-                  key={key}
-                  onClick={() => setFilter(key)}
-                  className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                    filter === key
-                      ? "bg-white text-blue-600 shadow-md"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  key={filter.id}
+                  onClick={() => setActiveFilter(filter.id)}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    activeFilter === filter.id
+                      ? "bg-blue-100 text-blue-700 border-2 border-blue-200"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span>{label}</span>
+                  <IconComponent className="w-4 h-4" />
+                  <span className="hidden sm:inline">{filter.label}</span>
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4 mb-6">
-            <div className="flex justify-between items-start">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-5 w-5 text-red-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-red-800 font-medium">{error}</p>
-                </div>
+        {/* Create Post Card */}
+        {currentUser && (
+          <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                {generateUserAvatar(currentUser.name)}
               </div>
               <button
-                onClick={() => setError("")}
-                className="text-red-400 hover:text-red-600"
+                onClick={() => setShowCreateModal(true)}
+                className="flex-1 text-left px-4 py-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition-colors"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                What's happening in your academic life?
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+              <span className="text-sm text-gray-500">
+                Share an event, announcement, or update
+              </span>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+              >
+                Create Event
               </button>
             </div>
           </div>
         )}
 
-        {/* Activities List */}
+        {/* Activities Feed */}
         <div className="space-y-6">
-          {activities.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-              <div className="max-w-sm mx-auto">
-                <div className="bg-gray-50 rounded-full p-6 w-24 h-24 flex items-center justify-center mx-auto mb-4">
-                  <MessageCircle className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No activities yet
-                </h3>
-                <p className="text-gray-500 mb-6">
-                  Be the first to share something with your academic community
-                </p>
+          {filteredActivities.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Calendar className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No activities found
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {searchQuery
+                  ? "Try adjusting your search terms"
+                  : "Be the first to create an event or post"}
+              </p>
+              {!searchQuery && (
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Create First Event
                 </button>
-              </div>
+              )}
             </div>
           ) : (
-            activities.map((activity) => (
+            filteredActivities.map((activity) => (
               <ActivityDisplay
                 key={activity.id}
                 activity={activity}
                 onReaction={handleReaction}
-                onRemoveReaction={handleRemoveReaction}
                 onComment={handleComment}
                 onShare={handleShare}
                 onJoinEvent={handleJoinEvent}
-                onMediaDownload={handleMediaDownload}
+                generateUserAvatar={generateUserAvatar}
               />
             ))
           )}
         </div>
 
-        {/* Create Event Modal */}
-        {showCreateModal && (
-          <CreateEventModal
-            onClose={() => setShowCreateModal(false)}
-            onSubmit={handleCreateEvent}
-          />
+        {/* Load More Button */}
+        {filteredActivities.length > 0 && (
+          <div className="text-center mt-8">
+            <button
+              onClick={() => loadActivities()}
+              disabled={loading}
+              className="bg-white text-gray-700 px-6 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {loading ? "Loading..." : "Load More Activities"}
+            </button>
+          </div>
         )}
       </div>
+
+      {/* Create Event Modal */}
+      {showCreateModal && (
+        <CreateEventModal
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={handleCreateEvent}
+          currentUser={currentUser}
+        />
+      )}
     </div>
   );
 };
