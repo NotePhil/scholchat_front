@@ -146,6 +146,7 @@ const ActivityDisplay = ({
   const [mediaErrors, setMediaErrors] = useState({});
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [downloading, setDownloading] = useState({});
 
   // Helper function to determine if a file is an image based on multiple criteria
   const isImageFile = (media) => {
@@ -158,6 +159,15 @@ const ActivityDisplay = ({
 
     return isImageByType || isImageByContentType || isImageByFileName;
   };
+
+  // Create content preview
+  const contentPreview =
+    activity.content.length > 200
+      ? activity.content.substring(0, 200) + "..."
+      : activity.content;
+
+  // Get modal images (only the images from mediaWithUrls)
+  const modalImages = mediaWithUrls.filter(isImageFile);
 
   useEffect(() => {
     const processMediaUrls = async () => {
@@ -181,21 +191,114 @@ const ActivityDisplay = ({
               let fileName = media.fileName;
               let contentType = media.contentType || media.type;
 
+              // Debug: Log what we have for this media
+              console.log(`Processing media ${index}:`, {
+                id: media.id,
+                url: media.url,
+                fileName: media.fileName,
+                contentType: media.contentType,
+                type: media.type,
+                filePath: media.filePath,
+                mediaType: media.mediaType,
+              });
+
               // If URL is not available, get it from MinIO
               if (!downloadUrl) {
                 console.log(`Fetching URL for media ${index}:`, media.id);
-                const downloadData = await minioS3Service.generateDownloadUrl(
-                  media.id
-                );
 
-                if (!downloadData.downloadUrl) {
-                  throw new Error("No download URL returned");
+                // Try to get download URL by ID first
+                try {
+                  if (media.id) {
+                    const downloadData =
+                      await minioS3Service.generateDownloadUrl(media.id);
+                    downloadUrl = downloadData.downloadUrl;
+                    fileName = downloadData.fileName || media.fileName;
+                    contentType =
+                      downloadData.contentType ||
+                      media.contentType ||
+                      media.type;
+                    console.log(
+                      `Got URL by ID for media ${index}:`,
+                      downloadUrl
+                    );
+                  } else {
+                    throw new Error("No media ID available");
+                  }
+                } catch (error) {
+                  console.log(
+                    `Failed to get URL by ID for media ${index}:`,
+                    error.message
+                  );
+
+                  // If ID method fails, try by path if we have one
+                  if (media.filePath) {
+                    console.log(
+                      `Trying download by path for media ${index}:`,
+                      media.filePath
+                    );
+                    const downloadData =
+                      await minioS3Service.generateDownloadUrlByPath(
+                        media.filePath
+                      );
+                    downloadUrl = downloadData.downloadUrl;
+                    fileName = downloadData.fileName || media.fileName;
+                    contentType =
+                      downloadData.contentType ||
+                      media.contentType ||
+                      media.type;
+                    console.log(
+                      `Got URL by path for media ${index}:`,
+                      downloadUrl
+                    );
+                  } else if (media.fileName) {
+                    // Try to construct a path based on common patterns
+                    const userId = minioS3Service.getValidUserId();
+                    const mediaType = (
+                      media.mediaType ||
+                      media.type ||
+                      "DOCUMENT"
+                    ).toLowerCase();
+                    const documentType = media.documentType || "general";
+                    const possiblePath = `users/${userId}/${
+                      mediaType === "image" ? "images" : mediaType
+                    }/${documentType}/${media.fileName}`;
+
+                    console.log(
+                      `Trying constructed path for media ${index}:`,
+                      possiblePath
+                    );
+                    try {
+                      const downloadData =
+                        await minioS3Service.generateDownloadUrlByPath(
+                          possiblePath
+                        );
+                      downloadUrl = downloadData.downloadUrl;
+                      fileName = downloadData.fileName || media.fileName;
+                      contentType =
+                        downloadData.contentType ||
+                        media.contentType ||
+                        media.type;
+                      console.log(
+                        `Got URL by constructed path for media ${index}:`,
+                        downloadUrl
+                      );
+                    } catch (pathError) {
+                      console.log(
+                        `Failed to get URL by constructed path for media ${index}:`,
+                        pathError.message
+                      );
+                      throw new Error(
+                        `Could not retrieve media: ${error.message}`
+                      );
+                    }
+                  } else {
+                    throw error;
+                  }
                 }
 
-                downloadUrl = downloadData.downloadUrl;
-                fileName = downloadData.fileName || media.fileName;
-                contentType =
-                  downloadData.contentType || media.contentType || media.type;
+                if (!downloadUrl) {
+                  throw new Error("No download URL returned");
+                }
               }
 
               const processedItem = {
@@ -205,7 +308,10 @@ const ActivityDisplay = ({
                 contentType: contentType,
               };
 
-              console.log(`Processed media ${index}:`, processedItem);
+              console.log(
+                `Successfully processed media ${index}:`,
+                processedItem
+              );
               return processedItem;
             } catch (error) {
               console.error(`Failed to get URL for media ${index}:`, error);
@@ -281,31 +387,125 @@ const ActivityDisplay = ({
   };
 
   const handleDownloadMedia = async (media) => {
+    const mediaKey = media.id || mediaWithUrls.indexOf(media);
+
     try {
-      if (media.url) {
-        // Create a temporary link to download
-        const link = document.createElement("a");
-        link.href = media.url;
-        link.download = media.fileName || "download";
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        // Generate download URL if not available
-        const downloadData = await minioS3Service.generateDownloadUrl(media.id);
-        const link = document.createElement("a");
-        link.href = downloadData.downloadUrl;
-        link.download = downloadData.fileName || "download";
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      setDownloading((prev) => ({ ...prev, [mediaKey]: true }));
+
+      let downloadUrl = media.url;
+      let fileName = media.fileName || "download";
+
+      // If we don't have a direct URL, generate one
+      if (!downloadUrl && media.id) {
+        try {
+          const downloadData = await minioS3Service.generateDownloadUrl(
+            media.id
+          );
+          downloadUrl = downloadData.downloadUrl;
+          fileName = downloadData.fileName || fileName;
+        } catch (error) {
+          // Try by path if ID fails
+          if (media.filePath) {
+            const downloadData = await minioS3Service.generateDownloadUrlByPath(
+              media.filePath
+            );
+            downloadUrl = downloadData.downloadUrl;
+            fileName = downloadData.fileName || fileName;
+          } else {
+            throw error;
+          }
+        }
       }
+
+      if (!downloadUrl) {
+        throw new Error("No download URL available");
+      }
+
+      // Create a temporary link to download
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = fileName;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error("Failed to download media:", error);
       alert("Failed to download file. Please try again.");
+    } finally {
+      setDownloading((prev) => ({ ...prev, [mediaKey]: false }));
     }
+  };
+
+  // Add renderEventDetails function
+  const renderEventDetails = () => {
+    if (activity.type !== "event" || !activity.eventDetails) {
+      return null;
+    }
+
+    const { eventDetails } = activity;
+
+    return (
+      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-semibold text-blue-900 flex items-center space-x-2">
+            <Calendar className="w-4 h-4" />
+            <span>Event Details</span>
+          </h4>
+          {eventDetails.status && (
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                eventDetails.status
+              )}`}
+            >
+              {getStatusLabel(eventDetails.status)}
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          {eventDetails.startDate && (
+            <div className="flex items-center space-x-2 text-gray-700">
+              <Clock className="w-4 h-4 text-blue-600" />
+              <span>
+                {new Date(eventDetails.startDate).toLocaleDateString()}
+                {eventDetails.startTime && ` at ${eventDetails.startTime}`}
+              </span>
+            </div>
+          )}
+
+          {eventDetails.location && (
+            <div className="flex items-center space-x-2 text-gray-700">
+              <MapPin className="w-4 h-4 text-blue-600" />
+              <span>{eventDetails.location}</span>
+            </div>
+          )}
+
+          {eventDetails.participantsCount !== undefined && (
+            <div className="flex items-center space-x-2 text-gray-700">
+              <Users className="w-4 h-4 text-blue-600" />
+              <span>{eventDetails.participantsCount} attending</span>
+            </div>
+          )}
+        </div>
+
+        {eventDetails.description && (
+          <p className="mt-3 text-gray-600 text-sm">
+            {eventDetails.description}
+          </p>
+        )}
+
+        {onJoinEvent && eventDetails.canJoin && (
+          <button
+            onClick={() => onJoinEvent(activity.id)}
+            className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center space-x-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Join Event</span>
+          </button>
+        )}
+      </div>
+    );
   };
 
   const renderMedia = () => {
@@ -344,6 +544,7 @@ const ActivityDisplay = ({
                 const hasError = mediaErrors[mediaKey] || media.error;
                 const isLoading = mediaLoading[mediaKey];
                 const hasUrl = media.url && !hasError;
+                const isDownloading = downloading[mediaKey];
 
                 console.log(`Rendering image ${index}:`, {
                   id: media.id,
@@ -407,8 +608,13 @@ const ActivityDisplay = ({
                               }}
                               className="p-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all"
                               title="Download"
+                              disabled={isDownloading}
                             >
-                              <Download className="w-4 h-4" />
+                              {isDownloading ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
                             </button>
                           </div>
                         </div>
@@ -451,6 +657,8 @@ const ActivityDisplay = ({
           <div className="space-y-2">
             {documents.map((media, index) => {
               const mediaKey = media.id || index;
+              const isDownloading = downloading[mediaKey];
+
               return (
                 <div
                   key={mediaKey}
@@ -484,8 +692,13 @@ const ActivityDisplay = ({
                         onClick={() => handleDownloadMedia(media)}
                         className="text-blue-600 hover:text-blue-700 p-2"
                         title="Download"
+                        disabled={isDownloading}
                       >
-                        <Download className="w-4 h-4" />
+                        {isDownloading ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -497,88 +710,6 @@ const ActivityDisplay = ({
       </div>
     );
   };
-
-  const renderEventDetails = () => {
-    if (activity.type !== "event" || !activity.eventDetails) return null;
-
-    const { eventDetails } = activity;
-    const startTime = new Date(eventDetails.startTime);
-    const endTime = eventDetails.endTime
-      ? new Date(eventDetails.endTime)
-      : null;
-    const isUpcoming = startTime > new Date();
-
-    return (
-      <div className="mt-4 bg-gray-50 rounded-lg p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">{eventDetails.title}</h3>
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-              eventDetails.status
-            )}`}
-          >
-            {getStatusLabel(eventDetails.status)}
-          </span>
-        </div>
-
-        {eventDetails.description && (
-          <p className="text-gray-600 text-sm">{eventDetails.description}</p>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          {eventDetails.location && (
-            <div className="flex items-center space-x-2 text-gray-600">
-              <MapPin className="w-4 h-4" />
-              <span>{eventDetails.location}</span>
-            </div>
-          )}
-
-          <div className="flex items-center space-x-2 text-gray-600">
-            <Calendar className="w-4 h-4" />
-            <span>{startTime.toLocaleDateString()}</span>
-          </div>
-
-          <div className="flex items-center space-x-2 text-gray-600">
-            <Clock className="w-4 h-4" />
-            <span>
-              {startTime.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-              {endTime &&
-                ` - ${endTime.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}`}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-2 text-gray-600">
-            <Users className="w-4 h-4" />
-            <span>{eventDetails.participantsCount || 0} participants</span>
-          </div>
-        </div>
-
-        {isUpcoming && (
-          <button
-            onClick={() => onJoinEvent(activity.id)}
-            className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Join Event</span>
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  const contentPreview =
-    activity.content.length > 200
-      ? `${activity.content.substring(0, 200)}...`
-      : activity.content;
-
-  // Get images for modal - using improved detection
-  const modalImages = mediaWithUrls.filter(isImageFile);
 
   return (
     <>

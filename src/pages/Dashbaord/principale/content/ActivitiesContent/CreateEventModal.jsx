@@ -10,6 +10,7 @@ import {
   Upload,
   AlertCircle,
 } from "lucide-react";
+import { minioS3Service } from "../../../../../services/minioS3";
 
 const CreateEventModal = ({ onClose, onSubmit, currentUser }) => {
   const [formData, setFormData] = useState({
@@ -142,9 +143,72 @@ const CreateEventModal = ({ onClose, onSubmit, currentUser }) => {
         });
       }
 
-      // Submit event data and files to parent component
-      // The parent will handle creating the event first, then uploading files
-      await onSubmit(formData, selectedFiles);
+      // Upload files to MinIO first
+      let uploadedMedia = [];
+      if (selectedFiles.length > 0) {
+        setUploadProgress({
+          uploading: true,
+          current: 0,
+          total: selectedFiles.length,
+        });
+
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+
+          try {
+            // Determine media type based on file type
+            let mediaType = "DOCUMENT";
+            let documentType = "documents";
+
+            if (file.type.startsWith("image/")) {
+              mediaType = "IMAGE";
+              documentType = "images";
+            }
+
+            // Upload file to MinIO
+            const uploadResult = await minioS3Service.uploadFile(
+              file,
+              mediaType,
+              documentType
+            );
+
+            // Store the uploaded file information
+            uploadedMedia.push({
+              fileName: uploadResult.fileName,
+              filePath: uploadResult.filePath,
+              mediaType: uploadResult.mediaType,
+              documentType: uploadResult.documentType,
+              contentType: file.type,
+              fileSize: file.size,
+            });
+
+            // Update progress
+            setUploadProgress((prev) => ({
+              ...prev,
+              current: i + 1,
+            }));
+          } catch (error) {
+            console.error("Failed to upload file:", error);
+            alert(`Failed to upload file "${file.name}". Please try again.`);
+            setSubmitting(false);
+            setUploadProgress({
+              uploading: false,
+              current: 0,
+              total: 0,
+            });
+            return;
+          }
+        }
+
+        setUploadProgress({
+          uploading: false,
+          current: 0,
+          total: 0,
+        });
+      }
+
+      // Submit event data with uploaded media information
+      await onSubmit(formData, uploadedMedia);
 
       // Reset form
       setFormData({
@@ -324,8 +388,8 @@ const CreateEventModal = ({ onClose, onSubmit, currentUser }) => {
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
                 <p className="text-sm text-blue-700">
-                  Files will be uploaded after the event is successfully
-                  created.
+                  Files will be uploaded to MinIO after the event is
+                  successfully created.
                 </p>
               </div>
             </div>
@@ -440,7 +504,7 @@ const CreateEventModal = ({ onClose, onSubmit, currentUser }) => {
                 <div className="bg-orange-50 p-3 rounded-lg">
                   <p className="text-sm text-orange-700">
                     📁 {selectedFiles.length} file(s) ready for upload. Files
-                    will be uploaded after event creation.
+                    will be uploaded to MinIO after event creation.
                   </p>
                 </div>
               </div>
@@ -452,7 +516,7 @@ const CreateEventModal = ({ onClose, onSubmit, currentUser }) => {
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-blue-700">
-                  Creating event and uploading files...
+                  Uploading files to MinIO...
                 </span>
                 <span className="text-sm text-blue-600">
                   {uploadProgress.current}/{uploadProgress.total}
@@ -469,7 +533,7 @@ const CreateEventModal = ({ onClose, onSubmit, currentUser }) => {
                 ></div>
               </div>
               <p className="text-xs text-blue-600 mt-1">
-                Please wait while we process your event...
+                Please wait while we upload your files...
               </p>
             </div>
           )}
@@ -481,7 +545,7 @@ const CreateEventModal = ({ onClose, onSubmit, currentUser }) => {
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                 <span className="text-sm text-blue-700">
                   {selectedFiles.length > 0
-                    ? "Creating event..."
+                    ? "Creating event and uploading files..."
                     : "Creating event..."}
                 </span>
               </div>
