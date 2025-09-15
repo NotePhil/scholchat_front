@@ -70,10 +70,16 @@ const RichTextEditor = ({
       onChange(cleanedContent);
     }
   };
-
-  const handleFileUpload = async (e) => {
+  // Fixed handleFileUpload for file input change event
+  const handleFileInputChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Add filename validation
+    if (!file.name || file.name.trim() === "") {
+      alert("Le fichier sélectionné n'a pas de nom valide.");
+      return;
+    }
 
     try {
       setUploading(true);
@@ -82,13 +88,13 @@ const RichTextEditor = ({
 
       if (uploadResult.success) {
         if (file.type.startsWith("image/")) {
-          const downloadData = await minioS3Service.generateDownloadUrl(
-            uploadResult.fileName
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(
+            uploadResult.filePath
           );
           document.execCommand("insertImage", false, downloadData.downloadUrl);
         } else {
-          const downloadData = await minioS3Service.generateDownloadUrl(
-            uploadResult.fileName
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(
+            uploadResult.filePath
           );
           const fileName = file.name;
           const link = `<a href="${downloadData.downloadUrl}" target="_blank" style="color: #3b82f6; text-decoration: underline;">${fileName}</a>`;
@@ -235,7 +241,7 @@ const RichTextEditor = ({
         type="file"
         className="hidden"
         accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-        onChange={handleFileUpload}
+        onChange={handleFileInputChange}
         disabled={uploading}
       />
 
@@ -663,6 +669,7 @@ const ChaptersSection = ({
             type="button"
             onClick={() => setActiveEditor("create")}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm"
+            data-testid="create-chapter-button"
           >
             <Plus size={16} />
             Nouveau chapitre
@@ -731,6 +738,11 @@ const CreateCourseFormModal = ({
   const [activeEditor, setActiveEditor] = useState(null);
   const [editingData, setEditingData] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Add missing refs and state for file handling
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
 
   const {
     register,
@@ -754,8 +766,18 @@ const CreateCourseFormModal = ({
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
 
-  const handleFileUpload = async (file) => {
+  // Add missing handleContentChange function
+  const handleContentChange = () => {
+    // This function is used for content editing
+  };
+
+  // Fixed onFileUpload function for actual file upload
+  const onFileUpload = async (file) => {
     try {
+      if (!file || !file.name) {
+        throw new Error("Invalid file or missing file name");
+      }
+
       let documentType = "documents";
       let mediaType = "DOCUMENT";
 
@@ -767,15 +789,73 @@ const CreateCourseFormModal = ({
         mediaType = "VIDEO";
       }
 
+      const timestamp = Date.now();
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const uniqueFileName = `temp_${timestamp}_${cleanFileName}`;
+
+      // Upload the file
       const result = await minioS3Service.uploadFile(
-        file,
+        new File([file], uniqueFileName, { type: file.type }),
         mediaType,
         documentType
       );
-      return result;
+
+      // Get the current user ID to construct the expected file path
+      const userId = minioS3Service.getValidUserId();
+
+      // Construct the file path that matches your backend structure
+      const expectedFilePath = `users/${userId}/${mediaType.toLowerCase()}/${documentType}/${uniqueFileName}`;
+
+      return {
+        ...result,
+        filePath: expectedFilePath, // Add the file path that the frontend expects
+        success: true,
+      };
     } catch (error) {
       console.error("Error uploading file:", error);
       throw error;
+    }
+  };
+
+  // Fixed handleFileUpload function for file input change events
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.name || file.name.trim() === "") {
+      alert("Le fichier sélectionné n'a pas de nom valide.");
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const uploadResult = await onFileUpload(file);
+
+      if (uploadResult.success) {
+        if (file.type.startsWith("image/")) {
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(
+            uploadResult.filePath
+          );
+          document.execCommand("insertImage", false, downloadData.downloadUrl);
+        } else {
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(
+            uploadResult.filePath
+          );
+          const fileName = file.name;
+          const link = `<a href="${downloadData.downloadUrl}" target="_blank" style="color: #3b82f6; text-decoration: underline;">${fileName}</a>`;
+          document.execCommand("insertHTML", false, link);
+        }
+        handleContentChange();
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert(`Erreur lors du téléchargement du fichier: ${error.message}`);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -795,6 +875,7 @@ const CreateCourseFormModal = ({
       };
       setSavedChapters([...savedChapters, newChapter]);
     }
+
     setActiveEditor(null);
     setEditingData(null);
     setEditingIndex(null);
@@ -838,13 +919,17 @@ const CreateCourseFormModal = ({
   };
 
   const onSubmit = async (data) => {
+    console.log("onSubmit called with data:", data);
+    console.log("savedChapters:", savedChapters);
+    console.log("selectedMatiereIds:", selectedMatiereIds);
+
     try {
+      setIsSubmitting(true);
       setLoading(true);
       setError("");
 
       if (savedChapters.length === 0) {
-        setError("Au moins un chapitre est requis");
-        return;
+        throw new Error("Au moins un chapitre est requis");
       }
 
       const professorId = localStorage.getItem("userId");
@@ -870,14 +955,17 @@ const CreateCourseFormModal = ({
         redacteurId: professorId,
         etat: "BROUILLON",
         references: data.references || "",
-        restriction: data.restriction,
+        restriction: data.restriction || "PRIVE",
         matieres: matieresData,
         chapitres: chapitresData,
       };
 
-      const result = await coursService.createCours(courseData);
-      setSuccess("Cours créé avec succès !");
+      console.log("Creating course with data:", courseData);
 
+      const result = await coursService.createCours(courseData);
+      console.log("Course created successfully:", result);
+
+      setSuccess("Cours créé avec succès !");
       setShowCreateModal(false);
       resetForm();
       loadCourses();
@@ -885,6 +973,7 @@ const CreateCourseFormModal = ({
       console.error("Error in onSubmit:", err);
       setError("Erreur lors de l'enregistrement: " + err.message);
     } finally {
+      setIsSubmitting(false);
       setLoading(false);
     }
   };
@@ -912,6 +1001,12 @@ const CreateCourseFormModal = ({
   const handleFormSubmit = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (savedChapters.length === 0) {
+      setError("Au moins un chapitre est requis");
+      return;
+    }
+
     handleSubmit(onSubmit)(e);
   };
 
@@ -943,7 +1038,7 @@ const CreateCourseFormModal = ({
         </div>
 
         <div className="p-6 max-h-[70vh] overflow-y-auto">
-          <form onSubmit={handleFormSubmit} className="space-y-6">
+          <div className="space-y-6">
             <GeneralInfoSection
               register={register}
               errors={errors}
@@ -964,27 +1059,72 @@ const CreateCourseFormModal = ({
               handleCancelEditor={handleCancelEditor}
               setActiveEditor={setActiveEditor}
               setEditingData={setEditingData}
-              onFileUpload={handleFileUpload}
+              onFileUpload={onFileUpload}
             />
-          </form>
+          </div>
         </div>
 
         <div className="sticky bottom-0 bg-white rounded-b-2xl border-t border-slate-200 p-6 z-10">
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => setShowCreateModal(false)}
-              className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-xl hover:bg-slate-50"
+              onClick={() => {
+                setShowCreateModal(false);
+                resetForm();
+              }}
+              disabled={isSubmitting}
+              className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Annuler
             </button>
             <button
               type="button"
-              onClick={handleFormSubmit}
-              disabled={savedChapters.length === 0}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("Submit button clicked");
+                console.log("Saved chapters:", savedChapters.length);
+
+                if (savedChapters.length === 0) {
+                  setError(
+                    "Au moins un chapitre est requis pour créer un cours"
+                  );
+                  return;
+                }
+
+                const formData = watch();
+                console.log("Form data:", formData);
+
+                if (!formData.titre?.trim()) {
+                  setError("Le titre est requis");
+                  return;
+                }
+                if (!formData.description?.trim()) {
+                  setError("La description est requise");
+                  return;
+                }
+                if (!selectedMatiereIds || selectedMatiereIds.length === 0) {
+                  setError("Au moins une matière est requise");
+                  return;
+                }
+
+                try {
+                  await onSubmit(formData);
+                } catch (error) {
+                  console.error("Submit error:", error);
+                }
+              }}
+              disabled={savedChapters.length === 0 || isSubmitting}
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center gap-2"
             >
-              Créer le cours
+              {isSubmitting ? (
+                <>
+                  <Loader size={16} className="animate-spin" />
+                  Création...
+                </>
+              ) : (
+                "Créer le cours"
+              )}
             </button>
           </div>
         </div>

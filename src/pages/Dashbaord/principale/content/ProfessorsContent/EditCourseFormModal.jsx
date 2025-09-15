@@ -71,9 +71,16 @@ const RichTextEditor = ({
     }
   };
 
-  const handleFileUpload = async (e) => {
+  // Fixed handleFileUpload for file input change event
+  const handleFileInputChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Add filename validation
+    if (!file.name || file.name.trim() === "") {
+      alert("Le fichier sélectionné n'a pas de nom valide.");
+      return;
+    }
 
     try {
       setUploading(true);
@@ -82,13 +89,13 @@ const RichTextEditor = ({
 
       if (uploadResult.success) {
         if (file.type.startsWith("image/")) {
-          const downloadData = await minioS3Service.generateDownloadUrl(
-            uploadResult.fileName
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(
+            uploadResult.filePath
           );
           document.execCommand("insertImage", false, downloadData.downloadUrl);
         } else {
-          const downloadData = await minioS3Service.generateDownloadUrl(
-            uploadResult.fileName
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(
+            uploadResult.filePath
           );
           const fileName = file.name;
           const link = `<a href="${downloadData.downloadUrl}" target="_blank" style="color: #3b82f6; text-decoration: underline;">${fileName}</a>`;
@@ -235,7 +242,7 @@ const RichTextEditor = ({
         type="file"
         className="hidden"
         accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-        onChange={handleFileUpload}
+        onChange={handleFileInputChange}
         disabled={uploading}
       />
 
@@ -266,7 +273,6 @@ const RichTextEditor = ({
     </div>
   );
 };
-
 const ChapterCard = ({
   chapter,
   index,
@@ -336,6 +342,7 @@ const ChapterCard = ({
           )}
           <button
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onEdit();
             }}
@@ -346,6 +353,7 @@ const ChapterCard = ({
           </button>
           <button
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onDelete();
             }}
@@ -661,8 +669,12 @@ const ChaptersSection = ({
         {!activeEditor && (
           <button
             type="button"
-            onClick={() => setActiveEditor("create")}
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveEditor("create");
+            }}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm"
+            data-testid="create-chapter-button"
           >
             <Plus size={16} />
             Nouveau chapitre
@@ -685,17 +697,27 @@ const ChaptersSection = ({
 
       <div className="space-y-3 max-h-[400px] overflow-y-auto">
         {savedChapters.map((chapter, index) => (
-          <ChapterCard
+          <div
             key={index}
-            chapter={chapter}
-            index={index}
-            onEdit={() => handleEditChapter(index)}
-            onDelete={() => handleDeleteChapter(index)}
-            onMoveUp={() => moveChapter(index, "up")}
-            onMoveDown={() => moveChapter(index, "down")}
-            canMoveUp={index > 0}
-            canMoveDown={index < savedChapters.length - 1}
-          />
+            onClick={(e) => {
+              // Only handle clicks on the card itself, not the buttons
+              if (e.target === e.currentTarget) {
+                handleEditChapter(index);
+              }
+            }}
+            className="cursor-pointer"
+          >
+            <ChapterCard
+              chapter={chapter}
+              index={index}
+              onEdit={() => handleEditChapter(index)}
+              onDelete={() => handleDeleteChapter(index)}
+              onMoveUp={() => moveChapter(index, "up")}
+              onMoveDown={() => moveChapter(index, "down")}
+              canMoveUp={index > 0}
+              canMoveDown={index < savedChapters.length - 1}
+            />
+          </div>
         ))}
 
         {savedChapters.length === 0 && !activeEditor && (
@@ -704,7 +726,10 @@ const ChaptersSection = ({
             <p className="mb-4">Aucun chapitre ajouté</p>
             <button
               type="button"
-              onClick={() => setActiveEditor("create")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveEditor("create");
+              }}
               className="text-indigo-600 hover:text-indigo-700 font-medium"
             >
               Créer votre premier chapitre
@@ -731,6 +756,10 @@ const EditCourseFormModal = ({
   const [activeEditor, setActiveEditor] = useState(null);
   const [editingData, setEditingData] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
+
+  // Add missing refs and state for file handling
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
 
   const {
     register,
@@ -781,8 +810,18 @@ const EditCourseFormModal = ({
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
 
-  const handleFileUpload = async (file) => {
+  // Add missing handleContentChange function
+  const handleContentChange = () => {
+    // This function is used for content editing
+  };
+
+  // Fixed onFileUpload function for actual file upload
+  const onFileUpload = async (file) => {
     try {
+      if (!file || !file.name) {
+        throw new Error("Invalid file or missing file name");
+      }
+
       let documentType = "documents";
       let mediaType = "DOCUMENT";
 
@@ -794,15 +833,62 @@ const EditCourseFormModal = ({
         mediaType = "VIDEO";
       }
 
+      const timestamp = Date.now();
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const uniqueFileName = `${timestamp}_${cleanFileName}`;
+
       const result = await minioS3Service.uploadFile(
-        file,
+        new File([file], uniqueFileName, { type: file.type }),
         mediaType,
         documentType
       );
+
       return result;
     } catch (error) {
       console.error("Error uploading file:", error);
       throw error;
+    }
+  };
+
+  // Fixed handleFileUpload function for file input change events
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.name || file.name.trim() === "") {
+      alert("Le fichier sélectionné n'a pas de nom valide.");
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const uploadResult = await onFileUpload(file);
+
+      if (uploadResult.success) {
+        if (file.type.startsWith("image/")) {
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(
+            uploadResult.filePath
+          );
+          document.execCommand("insertImage", false, downloadData.downloadUrl);
+        } else {
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(
+            uploadResult.filePath
+          );
+          const fileName = file.name;
+          const link = `<a href="${downloadData.downloadUrl}" target="_blank" style="color: #3b82f6; text-decoration: underline;">${fileName}</a>`;
+          document.execCommand("insertHTML", false, link);
+        }
+        handleContentChange();
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert(`Erreur lors du téléchargement du fichier: ${error.message}`);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -822,6 +908,7 @@ const EditCourseFormModal = ({
       };
       setSavedChapters([...savedChapters, newChapter]);
     }
+
     setActiveEditor(null);
     setEditingData(null);
     setEditingIndex(null);
@@ -902,10 +989,13 @@ const EditCourseFormModal = ({
         chapitres: chapitresData,
       };
 
+      console.log("Updating course:", courseData);
+
       const result = await coursService.updateCours(
         selectedCourse.id,
         courseData
       );
+
       setSuccess("Cours modifié avec succès !");
 
       setShowCreateModal(false);
@@ -998,7 +1088,7 @@ const EditCourseFormModal = ({
               handleCancelEditor={handleCancelEditor}
               setActiveEditor={setActiveEditor}
               setEditingData={setEditingData}
-              onFileUpload={handleFileUpload}
+              onFileUpload={onFileUpload}
             />
           </form>
         </div>

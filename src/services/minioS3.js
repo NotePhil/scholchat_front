@@ -160,6 +160,12 @@ class MinioS3Service {
 
       await this.uploadFileToMinio(uploadUrlData.uploadUrl, file, file.type);
 
+      // Construct the expected file path based on the backend structure
+      const userId = this.getValidUserId();
+      const expectedFilePath = `users/${userId}/${mediaType.toLowerCase()}/${documentType}/${
+        uploadUrlData.fileName
+      }`;
+
       return {
         success: true,
         fileName: uploadUrlData.fileName,
@@ -168,6 +174,7 @@ class MinioS3Service {
         ownerId: uploadUrlData.ownerId,
         fileSize: file.size,
         contentType: file.type,
+        filePath: expectedFilePath, // Add the file path for frontend usage
       };
     } catch (error) {
       console.error("Upload process failed:", error);
@@ -245,7 +252,6 @@ class MinioS3Service {
     try {
       console.log("Generating download URL by path:", filePath);
 
-      // Use the correct endpoint structure - check your backend API
       const response = await minioApi.get("/media/download-by-path", {
         params: { filePath },
       });
