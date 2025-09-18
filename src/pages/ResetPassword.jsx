@@ -16,6 +16,9 @@ const ResetPassword = () => {
 
   // Extract token from URL query parameters on component mount
   useEffect(() => {
+    // Clear any authentication data to ensure fresh login
+    localStorage.clear();
+
     const searchParams = new URLSearchParams(location.search);
     const token = searchParams.get("token");
 
@@ -73,16 +76,18 @@ const ResetPassword = () => {
       const success = await ForgotPasswordService.resetPassword(formData);
 
       if (success) {
-        // Success
+        // Success - clear all stored data and redirect immediately
+        localStorage.clear();
+
         setMessage({
-          text: "Mot de passe réinitialisé avec succès!",
+          text: "Mot de passe réinitialisé avec succès! Redirection vers la page de connexion...",
           type: "success",
         });
 
-        // Redirect to login after successful password reset
+        // Redirect to login immediately after successful password reset
         setTimeout(() => {
-          navigate("/schoolchat/login");
-        }, 3000);
+          navigate("/schoolchat/login", { replace: true });
+        }, 2000);
       } else {
         throw new Error("Échec de la réinitialisation du mot de passe");
       }
@@ -99,6 +104,18 @@ const ResetPassword = () => {
     }
   };
 
+  const handleBackToLogin = () => {
+    // Clear all stored data before navigating to login
+    localStorage.clear();
+    navigate("/schoolchat/login", { replace: true });
+  };
+
+  const handleRequestNewLink = () => {
+    // Clear all stored data before navigating to forgot password
+    localStorage.clear();
+    navigate("/schoolchat/forgot-password", { replace: true });
+  };
+
   return (
     <div className="reset-password-page">
       <div className="reset-password-container">
@@ -109,10 +126,11 @@ const ResetPassword = () => {
         {!formData.token ? (
           <div className="invalid-token-message">
             <p>
-              {message.text || "Lien de réinitialisation invalide (token manquant)."}
+              {message.text ||
+                "Lien de réinitialisation invalide (token manquant)."}
             </p>
             <button
-              onClick={() => navigate("/schoolchat/forgot-password")}
+              onClick={handleRequestNewLink}
               className="request-new-link-button"
             >
               Demander un nouveau lien
@@ -187,7 +205,7 @@ const ResetPassword = () => {
 
             <div className="reset-password-footer">
               <button
-                onClick={() => navigate("/schoolchat/login")}
+                onClick={handleBackToLogin}
                 className="back-to-login-button"
               >
                 Retour à la connexion

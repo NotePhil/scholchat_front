@@ -31,17 +31,16 @@ export const Login = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    remember: false,
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
     if (error) setError("");
   };
@@ -162,12 +161,6 @@ export const Login = () => {
       localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
       localStorage.setItem("authResponse", JSON.stringify(authData));
 
-      if (formData.remember) {
-        localStorage.setItem("rememberedEmail", formData.email);
-      } else {
-        localStorage.removeItem("rememberedEmail");
-      }
-
       await new Promise((resolve) => setTimeout(resolve, 100));
       window.dispatchEvent(new Event("storage"));
 
@@ -190,22 +183,23 @@ export const Login = () => {
   };
 
   useEffect(() => {
-    const rememberedEmail = localStorage.getItem("rememberedEmail");
-    if (rememberedEmail) {
-      setFormData((prev) => ({
-        ...prev,
-        email: rememberedEmail,
-        remember: true,
-      }));
-    }
+    // Clear any remembered credentials on component mount
+    localStorage.removeItem("rememberedEmail");
 
-    const isAuthenticated = localStorage.getItem("isAuthenticated");
-    const accessToken = localStorage.getItem("accessToken");
-
-    if (isAuthenticated === "true" && accessToken) {
-      navigate("/schoolchat/principal", { replace: true });
-    }
-  }, [navigate]);
+    // Clear all authentication data to force fresh login
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("username");
+    localStorage.removeItem("userRoles");
+    localStorage.removeItem("decodedToken");
+    localStorage.removeItem("authResponse");
+    localStorage.removeItem("loginTime");
+  }, []);
 
   return (
     <div className="login-page">
@@ -271,19 +265,6 @@ export const Login = () => {
             </div>
 
             <div className="flex-container">
-              <div className="remember-me">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  name="remember"
-                  checked={formData.remember}
-                  onChange={handleChange}
-                  className="remember-checkbox"
-                />
-                <label htmlFor="remember" className="remember-label">
-                  Se souvenir de moi
-                </label>
-              </div>
               <a href="/schoolchat/forgot-password" className="forgot-password">
                 Mot de passe oublié ?
               </a>
