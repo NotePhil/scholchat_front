@@ -218,33 +218,70 @@ const RichTextEditor = ({
     );
   };
 
-  // Download file function
+  // Download file function - Fixed for better compatibility
   const downloadFile = async (file) => {
     try {
-      const response = await fetch(file.url);
-      const blob = await response.blob();
-
-      // Create download link
-      const downloadUrl = window.URL.createObjectURL(blob);
+      // First try direct download
       const link = document.createElement("a");
-      link.href = downloadUrl;
+      link.href = file.url;
       link.download = file.name;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+
+      // Add to body temporarily for Firefox compatibility
       document.body.appendChild(link);
       link.click();
-
-      // Clean up
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error("Error downloading file:", error);
       // Fallback: open in new tab
-      window.open(file.url, "_blank");
+      window.open(file.url, "_blank", "noopener,noreferrer");
     }
   };
 
+  // Extract existing files from content when initializing
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
       editorRef.current.innerHTML = value || "";
+
+      // Extract existing files from content for display
+      if (value) {
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = value;
+
+        // Find existing links and images
+        const existingFiles = [];
+
+        // Find document links
+        const links = tempDiv.querySelectorAll("a[href]");
+        links.forEach((link, index) => {
+          if (link.href && link.textContent) {
+            existingFiles.push({
+              name: link.textContent,
+              type: "application/pdf", // Assume PDF for documents
+              url: link.href,
+              timestamp: Date.now() + index, // Unique timestamp
+            });
+          }
+        });
+
+        // Find images
+        const images = tempDiv.querySelectorAll("img[src]");
+        images.forEach((img, index) => {
+          if (img.src && img.alt) {
+            existingFiles.push({
+              name: img.alt,
+              type: "image/jpeg", // Assume image
+              url: img.src,
+              timestamp: Date.now() + 1000 + index, // Unique timestamp
+            });
+          }
+        });
+
+        if (existingFiles.length > 0) {
+          setUploadedFiles(existingFiles);
+        }
+      }
     }
   }, [value]);
 
@@ -315,13 +352,18 @@ const RichTextEditor = ({
                 </div>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => downloadFile(file)}
-                    className="text-green-600 hover:text-green-800 p-1"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      downloadFile(file);
+                    }}
+                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
                     title="Télécharger le fichier"
+                    type="button"
                   >
                     <svg
-                      width="14"
-                      height="14"
+                      width="16"
+                      height="16"
                       viewBox="0 0 24 24"
                       fill="currentColor"
                     >
@@ -329,9 +371,14 @@ const RichTextEditor = ({
                     </svg>
                   </button>
                   <button
-                    onClick={() => removeUploadedFile(file.timestamp)}
-                    className="text-red-500 hover:text-red-700 p-1"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeUploadedFile(file.timestamp);
+                    }}
+                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
                     title="Supprimer de la liste"
+                    type="button"
                   >
                     <X size={14} />
                   </button>
