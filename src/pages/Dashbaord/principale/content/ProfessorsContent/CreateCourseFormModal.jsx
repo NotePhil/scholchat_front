@@ -53,6 +53,7 @@ const RichTextEditor = ({
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   const execCommand = (command, value = null) => {
     document.execCommand(command, false, value);
@@ -62,49 +63,146 @@ const RichTextEditor = ({
   const handleContentChange = () => {
     if (editorRef.current) {
       const htmlContent = editorRef.current.innerHTML;
-      const cleanedContent = htmlContent
-        .replace(/<div>/g, "<br>")
-        .replace(/<\/div>/g, "")
-        .replace(/<br\s*\/?>/g, "\n")
-        .replace(/&nbsp;/g, " ");
-      onChange(cleanedContent);
+      onChange(htmlContent);
     }
   };
-  // Fixed handleFileUpload for file input change event
-  const handleFileInputChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    // Add filename validation
-    if (!file.name || file.name.trim() === "") {
-      alert("Le fichier sélectionné n'a pas de nom valide.");
+  // Fixed handleKeyDown for proper Word-like behavior
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      // Don't prevent default - let the browser handle it naturally
+      // Just trigger content change after a short delay
+      setTimeout(() => {
+        handleContentChange();
+      }, 10);
       return;
+    }
+
+    // Handle other keys normally
+    if (e.key === " " || e.key === "Backspace" || e.key === "Delete") {
+      setTimeout(() => {
+        handleContentChange();
+      }, 10);
+    }
+  };
+
+  // Handle multiple file uploads
+  const handleFileInputChange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    // Validate files
+    for (const file of files) {
+      if (!file.name || file.name.trim() === "") {
+        alert("Un des fichiers sélectionnés n'a pas de nom valide.");
+        return;
+      }
     }
 
     try {
       setUploading(true);
+      const uploadResults = [];
 
-      const uploadResult = await onFileUpload(file);
-
-      if (uploadResult.success) {
-        if (file.type.startsWith("image/")) {
-          const downloadData = await minioS3Service.generateDownloadUrlByPath(
-            uploadResult.filePath
+      // Upload all files
+      for (const file of files) {
+        try {
+          const uploadResult = await onFileUpload(file);
+          if (uploadResult.success) {
+            uploadResults.push({
+              file,
+              result: uploadResult,
+              downloadData: await minioS3Service.generateDownloadUrlByPath(
+                uploadResult.filePath
+              ),
+            });
+          }
+        } catch (error) {
+          console.error(`Error uploading ${file.name}:`, error);
+          alert(
+            `Erreur lors du téléchargement de ${file.name}: ${error.message}`
           );
-          document.execCommand("insertImage", false, downloadData.downloadUrl);
-        } else {
-          const downloadData = await minioS3Service.generateDownloadUrlByPath(
-            uploadResult.filePath
-          );
-          const fileName = file.name;
-          const link = `<a href="${downloadData.downloadUrl}" target="_blank" style="color: #3b82f6; text-decoration: underline;">${fileName}</a>`;
-          document.execCommand("insertHTML", false, link);
         }
+      }
+
+      // Insert all successfully uploaded files
+      const selection = window.getSelection();
+      const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+      for (const { file, result, downloadData } of uploadResults) {
+        if (file.type.startsWith("image/")) {
+          // Insert image
+          const img = document.createElement("img");
+          img.src = downloadData.downloadUrl;
+          img.alt = file.name;
+          img.style.maxWidth = "100%";
+          img.style.height = "auto";
+          img.style.borderRadius = "4px";
+          img.style.margin = "8px 0";
+          img.style.display = "block";
+
+          if (range) {
+            range.insertNode(img);
+            range.setStartAfter(img);
+            range.collapse(false);
+          } else {
+            editorRef.current.appendChild(img);
+          }
+        } else {
+          // Insert document link
+          const linkContainer = document.createElement("div");
+          linkContainer.style.margin = "8px 0";
+          linkContainer.style.padding = "8px 12px";
+          linkContainer.style.backgroundColor = "#f8fafc";
+          linkContainer.style.border = "1px solid #e2e8f0";
+          linkContainer.style.borderRadius = "6px";
+          linkContainer.style.display = "flex";
+          linkContainer.style.alignItems = "center";
+          linkContainer.style.gap = "8px";
+
+          // File icon
+          const icon = document.createElement("span");
+          icon.innerHTML = "📄";
+          icon.style.fontSize = "16px";
+
+          // File link
+          const link = document.createElement("a");
+          link.href = downloadData.downloadUrl;
+          link.target = "_blank";
+          link.style.color = "#3b82f6";
+          link.style.textDecoration = "underline";
+          link.style.fontWeight = "500";
+          link.textContent = file.name;
+
+          linkContainer.appendChild(icon);
+          linkContainer.appendChild(link);
+
+          if (range) {
+            range.insertNode(linkContainer);
+            range.setStartAfter(linkContainer);
+            range.collapse(false);
+          } else {
+            editorRef.current.appendChild(linkContainer);
+          }
+        }
+
+        // Add to uploaded files list for display at top
+        setUploadedFiles((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            type: file.type,
+            url: downloadData.downloadUrl,
+            timestamp: Date.now(),
+          },
+        ]);
+      }
+
+      if (uploadResults.length > 0) {
         handleContentChange();
       }
     } catch (error) {
-      console.error("Error uploading file:", error);
-      alert(`Erreur lors du téléchargement du fichier: ${error.message}`);
+      console.error("Error uploading files:", error);
+      alert(`Erreur lors du téléchargement: ${error.message}`);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -113,21 +211,137 @@ const RichTextEditor = ({
     }
   };
 
+  // Remove uploaded file from list
+  const removeUploadedFile = (timestamp) => {
+    setUploadedFiles((prev) =>
+      prev.filter((file) => file.timestamp !== timestamp)
+    );
+  };
+
+  // Download file function
+  const downloadFile = async (file) => {
+    try {
+      const response = await fetch(file.url);
+      const blob = await response.blob();
+
+      // Create download link
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      // Fallback: open in new tab
+      window.open(file.url, "_blank");
+    }
+  };
+
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
-      const displayContent = value.replace(/\n/g, "<br>");
-      editorRef.current.innerHTML = displayContent;
+      editorRef.current.innerHTML = value || "";
     }
   }, [value]);
 
   const handlePaste = (e) => {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text);
+
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+
+      // Create a document fragment with properly formatted text
+      const fragment = document.createDocumentFragment();
+      const lines = text.split("\n");
+
+      lines.forEach((line, index) => {
+        if (index > 0) {
+          fragment.appendChild(document.createElement("br"));
+        }
+        if (line.trim()) {
+          fragment.appendChild(document.createTextNode(line));
+        }
+      });
+
+      range.insertNode(fragment);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    setTimeout(() => handleContentChange(), 10);
+  };
+
+  // Handle input event for content changes
+  const handleInput = (e) => {
+    handleContentChange();
   };
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
+      {/* Uploaded Files Display at Top */}
+      {uploadedFiles.length > 0 && (
+        <div className="bg-blue-50 border-b border-blue-200 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Paperclip size={16} className="text-blue-600" />
+            <span className="text-sm font-medium text-blue-800">
+              Fichiers téléchargés:
+            </span>
+          </div>
+          <div className="space-y-2">
+            {uploadedFiles.map((file) => (
+              <div
+                key={file.timestamp}
+                className="flex items-center justify-between bg-white p-2 rounded border"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">
+                    {file.type.startsWith("image/") ? "🖼️" : "📄"}
+                  </span>
+                  <button
+                    onClick={() => downloadFile(file)}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer text-left"
+                    title="Cliquer pour télécharger"
+                  >
+                    {file.name}
+                  </button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => downloadFile(file)}
+                    className="text-green-600 hover:text-green-800 p-1"
+                    title="Télécharger le fichier"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm5-13v2h2v13H5V5h2V3h10z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => removeUploadedFile(file.timestamp)}
+                    className="text-red-500 hover:text-red-700 p-1"
+                    title="Supprimer de la liste"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap gap-1">
         <button
           type="button"
@@ -197,7 +411,7 @@ const RichTextEditor = ({
             fileInputRef.current?.click();
           }}
           className="p-2 hover:bg-slate-200 rounded text-slate-600 flex items-center gap-1"
-          title="Insérer fichier/image"
+          title="Insérer fichier/image (plusieurs fichiers possibles)"
           disabled={uploading}
         >
           {uploading ? (
@@ -205,6 +419,7 @@ const RichTextEditor = ({
           ) : (
             <Paperclip size={14} />
           )}
+          <span className="text-xs">Fichiers</span>
         </button>
         <button
           type="button"
@@ -222,7 +437,8 @@ const RichTextEditor = ({
       <div
         ref={editorRef}
         contentEditable
-        onInput={handleContentChange}
+        onInput={handleInput}
+        onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         onClick={(e) => e.stopPropagation()}
         className="w-full min-h-[150px] p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-inset"
@@ -230,7 +446,7 @@ const RichTextEditor = ({
           minHeight: "150px",
           maxHeight: "300px",
           overflowY: "auto",
-          lineHeight: "1.5",
+          lineHeight: "1.6",
         }}
         data-placeholder={placeholder}
         suppressContentEditableWarning={true}
@@ -240,9 +456,10 @@ const RichTextEditor = ({
         ref={fileInputRef}
         type="file"
         className="hidden"
-        accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+        accept="image/*,.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx"
         onChange={handleFileInputChange}
         disabled={uploading}
+        multiple
       />
 
       <style jsx>{`
@@ -253,6 +470,9 @@ const RichTextEditor = ({
         }
         [contenteditable] p {
           margin: 0.5em 0;
+        }
+        [contenteditable] div {
+          margin: 0.25em 0;
         }
         [contenteditable] ul,
         [contenteditable] ol {
@@ -267,6 +487,19 @@ const RichTextEditor = ({
           height: auto;
           border-radius: 4px;
           margin: 8px 0;
+          display: block;
+        }
+        [contenteditable] br {
+          display: block;
+          margin: 0;
+          line-height: 1.2;
+        }
+        [contenteditable] a {
+          color: #3b82f6;
+          text-decoration: underline;
+        }
+        [contenteditable] a:hover {
+          color: #1d4ed8;
         }
       `}</style>
     </div>

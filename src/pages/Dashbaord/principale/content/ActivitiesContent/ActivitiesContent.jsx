@@ -2,181 +2,105 @@ import React, { useState, useEffect } from "react";
 import {
   Plus,
   Filter,
-  Search,
+  Loader2,
+  AlertCircle,
+  Zap,
   Users,
   Calendar,
-  TrendingUp,
+  MessageSquare,
 } from "lucide-react";
-import CreateEventModal from "./CreateEventModal";
 import ActivityDisplay from "./ActivityDisplay";
+import CreateEventModal from "./CreateEventModal";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
 import { minioS3Service } from "../../../../../services/minioS3";
 
 const ActivitiesContent = () => {
   const [activities, setActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [filteredActivities, setFilteredActivities] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
   const filters = [
-    { id: "all", label: "All Activities", icon: Users },
-    { id: "events", label: "Events", icon: Calendar },
-    { id: "posts", label: "Posts", icon: TrendingUp },
-    { id: "recent", label: "Recent", icon: TrendingUp },
-    { id: "popular", label: "Popular", icon: TrendingUp },
+    {
+      id: "all",
+      label: "Tous",
+      icon: Users,
+      color: "bg-blue-100 text-blue-700",
+    },
+    {
+      id: "events",
+      label: "Événements",
+      icon: Calendar,
+      color: "bg-purple-100 text-purple-700",
+    },
+    {
+      id: "posts",
+      label: "Publications",
+      icon: MessageSquare,
+      color: "bg-green-100 text-green-700",
+    },
+    {
+      id: "popular",
+      label: "Populaires",
+      icon: Zap,
+      color: "bg-orange-100 text-orange-700",
+    },
+    {
+      id: "recent",
+      label: "Récents",
+      icon: Filter,
+      color: "bg-pink-100 text-pink-700",
+    },
   ];
 
   useEffect(() => {
-    initializeData();
+    loadActivities();
+    setCurrentUser(activityFeedService.getCurrentUser());
   }, []);
 
   useEffect(() => {
-    loadActivities();
-  }, [activeFilter]);
-
-  const initializeData = async () => {
-    try {
-      const user = activityFeedService.getCurrentUser();
-      setCurrentUser(user);
-      await loadActivities();
-    } catch (error) {
-      console.error("Failed to initialize:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    applyFilter(activeFilter);
+  }, [activities, activeFilter]);
 
   const loadActivities = async () => {
     try {
       setLoading(true);
-      const data = await activityFeedService.getActivities(activeFilter);
-
-      // Process activities and get media URLs
-      const processedActivities = await Promise.all(
-        data.map(async (activity) => {
-          if (activity.media && activity.media.length > 0) {
-            const processedMedia = await Promise.all(
-              activity.media.map(async (media) => {
-                try {
-                  // Get download URL from Minio
-                  const downloadData = await minioS3Service.generateDownloadUrl(
-                    media.id
-                  );
-                  return {
-                    ...media,
-                    url: downloadData.downloadUrl,
-                    fileName: downloadData.fileName,
-                    contentType: downloadData.contentType,
-                  };
-                } catch (error) {
-                  console.error("Failed to get media URL:", error);
-                  return media;
-                }
-              })
-            );
-            return {
-              ...activity,
-              media: processedMedia,
-            };
-          }
-          return activity;
-        })
-      );
-
-      setActivities(processedActivities);
-    } catch (error) {
-      console.error("Failed to load activities:", error);
-      setActivities([]);
+      setError("");
+      const data = await activityFeedService.getActivities();
+      setActivities(data);
+    } catch (err) {
+      console.error("Erreur lors du chargement des activités:", err);
+      setError("Impossible de charger les activités");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateEvent = async (eventData, files) => {
+  const applyFilter = (filter) => {
+    const filtered = activityFeedService.applyFilter(activities, filter);
+    setFilteredActivities(filtered);
+    setActiveFilter(filter);
+  };
+
+  const handleCreateEvent = async (eventData) => {
     try {
-      // First create the event without media
-      const createdEvent = await activityFeedService.createEvent({
-        titre: eventData.titre,
-        description: eventData.description,
-        lieu: eventData.lieu,
-        heureDebut: eventData.heureDebut,
-        heureFin: eventData.heureFin,
-        etat: eventData.etat,
-        participantsIds: eventData.participantsIds,
-      });
-
-      // If event creation is successful and there are files to upload
-      if (createdEvent && files && files.length > 0) {
-        try {
-          // Upload files after event creation
-          const uploadPromises = files.map(async (file) => {
-            try {
-              // Validate file before upload
-              minioS3Service.validateFile(file, 20 * 1024 * 1024); // 20MB limit
-
-              // Upload to Minio with event-specific folder
-              const result = await minioS3Service.uploadFile(
-                file,
-                minioS3Service.isImageFile(file.type) ? "IMAGE" : "DOCUMENT",
-                `events/${createdEvent.id}`
-              );
-
-              return {
-                fileName: result.fileName,
-                filePath: result.fileName,
-                type: minioS3Service.isImageFile(file.type)
-                  ? "IMAGE"
-                  : "DOCUMENT",
-                contentType: file.type,
-                eventId: createdEvent.id,
-              };
-            } catch (error) {
-              console.error("Failed to upload file:", file.name, error);
-              throw error;
-            }
-          });
-
-          const uploadResults = await Promise.allSettled(uploadPromises);
-
-          // Get successful uploads
-          const successfulUploads = uploadResults
-            .filter((result) => result.status === "fulfilled")
-            .map((result) => result.value);
-
-          const failedUploads = uploadResults.filter(
-            (result) => result.status === "rejected"
-          ).length;
-
-          // If there are successful uploads, associate them with the event
-          if (successfulUploads.length > 0) {
-            await activityFeedService.addMediaToEvent(
-              createdEvent.id,
-              successfulUploads
-            );
-          }
-
-          // Show warning if some files failed
-          if (failedUploads > 0) {
-            console.warn(`${failedUploads} file(s) failed to upload`);
-            // You might want to show a toast notification here
-          }
-        } catch (uploadError) {
-          console.error("Failed to upload files:", uploadError);
-          // Event is created but files failed to upload
-          // You might want to show a notification that the event was created but files failed
-        }
-      }
-
+      setLoading(true);
+      await activityFeedService.createEvent(eventData);
+      setSuccess("Événement créé avec succès !");
       setShowCreateModal(false);
       await loadActivities();
 
-      return createdEvent;
-    } catch (error) {
-      console.error("Failed to create event:", error);
-      alert("Failed to create event. Please try again.");
-      throw error;
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error("Erreur lors de la création de l'événement:", err);
+      setError("Impossible de créer l'événement: " + err.message);
+      setTimeout(() => setError(""), 5000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -187,23 +111,25 @@ const ActivitiesContent = () => {
         reactionType
       );
 
-      // Update activities state
-      setActivities((prevActivities) =>
-        prevActivities.map((activity) => {
+      // Mettre à jour l'activité localement
+      setActivities((prev) =>
+        prev.map((activity) => {
           if (activity.id === activityId) {
-            if (reactionType === "like") {
-              return {
-                ...activity,
-                isLiked: result,
-                likes: result ? activity.likes + 1 : activity.likes - 1,
-              };
-            }
+            return {
+              ...activity,
+              isLiked: result,
+              likes: result
+                ? activity.likes + 1
+                : Math.max(0, activity.likes - 1),
+            };
           }
           return activity;
         })
       );
-    } catch (error) {
-      console.error("Failed to add reaction:", error);
+    } catch (err) {
+      console.error("Erreur lors de la réaction:", err);
+      setError("Impossible d'ajouter la réaction");
+      setTimeout(() => setError(""), 3000);
     }
   };
 
@@ -214,9 +140,9 @@ const ActivitiesContent = () => {
         comment
       );
 
-      // Update activities state
-      setActivities((prevActivities) =>
-        prevActivities.map((activity) => {
+      // Mettre à jour les commentaires localement
+      setActivities((prev) =>
+        prev.map((activity) => {
           if (activity.id === activityId) {
             return {
               ...activity,
@@ -226,8 +152,10 @@ const ActivitiesContent = () => {
           return activity;
         })
       );
-    } catch (error) {
-      console.error("Failed to comment:", error);
+    } catch (err) {
+      console.error("Erreur lors du commentaire:", err);
+      setError("Impossible d'ajouter le commentaire");
+      setTimeout(() => setError(""), 3000);
     }
   };
 
@@ -235,21 +163,26 @@ const ActivitiesContent = () => {
     try {
       await activityFeedService.shareActivity(activityId);
 
-      // Update activities state
-      setActivities((prevActivities) =>
-        prevActivities.map((activity) => {
+      // Mettre à jour le compteur de partages localement
+      setActivities((prev) =>
+        prev.map((activity) => {
           if (activity.id === activityId) {
             return {
               ...activity,
-              isShared: true,
               shares: activity.shares + 1,
+              isShared: true,
             };
           }
           return activity;
         })
       );
-    } catch (error) {
-      console.error("Failed to share:", error);
+
+      setSuccess("Activité partagée !");
+      setTimeout(() => setSuccess(""), 2000);
+    } catch (err) {
+      console.error("Erreur lors du partage:", err);
+      setError("Impossible de partager l'activité");
+      setTimeout(() => setError(""), 3000);
     }
   };
 
@@ -257,9 +190,9 @@ const ActivitiesContent = () => {
     try {
       await activityFeedService.joinEvent(eventId);
 
-      // Update activities state
-      setActivities((prevActivities) =>
-        prevActivities.map((activity) => {
+      // Mettre à jour l'événement localement
+      setActivities((prev) =>
+        prev.map((activity) => {
           if (activity.id === eventId && activity.eventDetails) {
             return {
               ...activity,
@@ -272,50 +205,25 @@ const ActivitiesContent = () => {
           return activity;
         })
       );
-    } catch (error) {
-      console.error("Failed to join event:", error);
+
+      setSuccess("Vous avez rejoint l'événement !");
+      setTimeout(() => setSuccess(""), 2000);
+    } catch (err) {
+      console.error("Erreur lors de l'adhésion:", err);
+      setError("Impossible de rejoindre l'événement");
+      setTimeout(() => setError(""), 3000);
     }
-  };
-
-  const filteredActivities = activities.filter(
-    (activity) =>
-      activity.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      activity.user.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const generateUserAvatar = (userName) => {
-    if (!userName) return "?";
-    return userName.charAt(0).toUpperCase();
   };
 
   if (loading && activities.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
-                <div className="flex-1">
-                  <div className="h-4 bg-gray-300 rounded w-1/4 mb-2"></div>
-                  <div className="h-3 bg-gray-300 rounded w-1/2"></div>
-                </div>
-              </div>
-            </div>
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-300 rounded w-1/3 mb-2"></div>
-                    <div className="h-3 bg-gray-300 rounded w-1/4"></div>
-                  </div>
-                </div>
-                <div className="h-4 bg-gray-300 rounded mb-2"></div>
-                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-              </div>
-            ))}
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2
+            className="animate-spin text-blue-600 mx-auto mb-4"
+            size={48}
+          />
+          <p className="text-gray-600">Chargement des activités...</p>
         </div>
       </div>
     );
@@ -323,122 +231,86 @@ const ActivitiesContent = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+      {/* Messages de notification */}
+      {error && (
+        <div className="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
+          <AlertCircle size={20} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
+          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+            <div className="w-2 h-2 bg-white rounded-full"></div>
+          </div>
+          <span>{success}</span>
+        </div>
+      )}
+
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* En-tête */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                School Activities
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                Fil d'activité
               </h1>
-              <p className="text-gray-600 text-sm">
-                Stay connected with your academic community
+              <p className="text-gray-600">
+                Découvrez les dernières activités et événements
               </p>
             </div>
-
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-auto justify-center"
             >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Create Event</span>
-              <span className="sm:hidden">Create</span>
+              <Plus size={20} />
+              <span>Créer un événement</span>
             </button>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          {/* Search Bar */}
-          <div className="relative mb-4">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search activities, events, or users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Filter Buttons */}
+        {/* Filtres */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex flex-wrap gap-2">
             {filters.map((filter) => {
-              const IconComponent = filter.icon;
+              const Icon = filter.icon;
               return (
                 <button
                   key={filter.id}
-                  onClick={() => setActiveFilter(filter.id)}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  onClick={() => applyFilter(filter.id)}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
                     activeFilter === filter.id
-                      ? "bg-blue-100 text-blue-700 border-2 border-blue-200"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      ? filter.color + " shadow-sm"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  <IconComponent className="w-4 h-4" />
-                  <span className="hidden sm:inline">{filter.label}</span>
+                  <Icon size={16} />
+                  {filter.label}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Create Post Card */}
-        {currentUser && (
-          <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                {generateUserAvatar(currentUser.name)}
-              </div>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex-1 text-left px-4 py-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition-colors"
-              >
-                What's happening in your academic life?
-              </button>
+        {/* Zone de création rapide */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+          <div
+            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+              {currentUser?.name?.charAt(0)?.toUpperCase() || "U"}
             </div>
-
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-              <span className="text-sm text-gray-500">
-                Share an event, announcement, or update
-              </span>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-              >
-                Create Event
-              </button>
+            <div className="flex-1 text-gray-500">
+              Que souhaitez-vous partager aujourd'hui ?
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Activities Feed */}
+        {/* Liste des activités */}
         <div className="space-y-6">
-          {filteredActivities.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No activities found
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {searchQuery
-                  ? "Try adjusting your search terms"
-                  : "Be the first to create an event or post"}
-              </p>
-              {!searchQuery && (
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Create First Event
-                </button>
-              )}
-            </div>
-          ) : (
+          {filteredActivities.length > 0 ? (
             filteredActivities.map((activity) => (
               <ActivityDisplay
                 key={activity.id}
@@ -447,34 +319,52 @@ const ActivitiesContent = () => {
                 onComment={handleComment}
                 onShare={handleShare}
                 onJoinEvent={handleJoinEvent}
-                generateUserAvatar={generateUserAvatar}
+                currentUser={currentUser}
               />
             ))
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+              <div className="text-gray-400 mb-4">
+                <Users size={64} className="mx-auto" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                Aucune activité trouvée
+              </h3>
+              <p className="text-gray-500 mb-6">
+                {activeFilter === "all"
+                  ? "Il n'y a pas encore d'activités. Créez le premier événement !"
+                  : `Aucune activité ne correspond au filtre "${
+                      filters.find((f) => f.id === activeFilter)?.label
+                    }".`}
+              </p>
+              {activeFilter === "all" && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 mx-auto transition-all duration-200"
+                >
+                  <Plus size={20} />
+                  Créer un événement
+                </button>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Load More Button */}
-        {filteredActivities.length > 0 && (
-          <div className="text-center mt-8">
-            <button
-              onClick={() => loadActivities()}
-              disabled={loading}
-              className="bg-white text-gray-700 px-6 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              {loading ? "Loading..." : "Load More Activities"}
-            </button>
+        {/* Chargement supplémentaire */}
+        {loading && activities.length > 0 && (
+          <div className="text-center py-8">
+            <Loader2 className="animate-spin text-blue-600 mx-auto" size={32} />
           </div>
         )}
       </div>
 
-      {/* Create Event Modal */}
-      {showCreateModal && (
-        <CreateEventModal
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={handleCreateEvent}
-          currentUser={currentUser}
-        />
-      )}
+      {/* Modal de création d'événement */}
+      <CreateEventModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateEvent}
+        loading={loading}
+      />
     </div>
   );
 };

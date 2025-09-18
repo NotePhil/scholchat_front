@@ -32,6 +32,7 @@ import {
   PlayCircle,
   CalendarPlus,
 } from "lucide-react";
+import { minioS3Service } from "../../../../services/minioS3";
 
 const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
   // Handle the course data (passed as classe prop)
@@ -46,6 +47,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
   const [documentViewMode, setDocumentViewMode] = useState("grid");
   const [activeTab, setActiveTab] = useState("details");
   const [participants, setParticipants] = useState([]);
+  const [processedChapters, setProcessedChapters] = useState([]);
 
   // Move all useEffect hooks before any conditional logic
   useEffect(() => {
@@ -57,6 +59,12 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
   useEffect(() => {
     filterDocuments();
   }, [documentSearchTerm, documentFilter, courseDocuments]);
+
+  useEffect(() => {
+    if (course && course.chapitres) {
+      processChapterContent();
+    }
+  }, [course]);
 
   // Early return after all hooks have been declared
   if (!course) {
@@ -83,6 +91,62 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
       setError("Failed to load course data");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const processChapterContent = async () => {
+    if (!course.chapitres) return;
+
+    try {
+      const processedChaps = await Promise.all(
+        course.chapitres.map(async (chapter) => {
+          let processedContent = chapter.contenu || "";
+
+          // Find all MinIO file paths in the content
+          const minioPathRegex =
+            /(?:https?:\/\/[^\/\s]+\/)?(images|videos|documents)\/[^"\s<>]+\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|txt)/g;
+          let match;
+          const pathsToProcess = [];
+
+          while ((match = minioPathRegex.exec(processedContent)) !== null) {
+            pathsToProcess.push(match[0]);
+          }
+
+          // Process each path to generate download URLs
+          for (const path of pathsToProcess) {
+            try {
+              // Clean the path to get just the relative path
+              const cleanPath = path.replace(/^https?:\/\/[^\/]+\//, "");
+
+              const downloadData =
+                await minioS3Service.generateDownloadUrlByPath(cleanPath);
+
+              if (downloadData && downloadData.downloadUrl) {
+                // Replace the path with the signed URL
+                processedContent = processedContent.replace(
+                  new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+                  downloadData.downloadUrl
+                );
+              }
+            } catch (error) {
+              console.warn(
+                `Failed to generate download URL for ${path}:`,
+                error
+              );
+            }
+          }
+
+          return {
+            ...chapter,
+            processedContent,
+          };
+        })
+      );
+
+      setProcessedChapters(processedChaps);
+    } catch (error) {
+      console.error("Error processing chapter content:", error);
+      setProcessedChapters(course.chapitres || []);
     }
   };
 
@@ -239,6 +303,23 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
       .toUpperCase();
   };
 
+  const renderChapterContent = (content) => {
+    if (!content) return null;
+
+    // Convert newlines to <br> tags for display
+    const formattedContent = content.replace(/\n/g, "<br>");
+
+    return (
+      <div
+        className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: formattedContent }}
+        style={{
+          wordBreak: "break-word",
+        }}
+      />
+    );
+  };
+
   return (
     <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
@@ -282,6 +363,20 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
             >
               Détails
             </button>
+            {(processedChapters.length > 0 ||
+              (course?.chapitres && course.chapitres.length > 0)) && (
+              <button
+                onClick={() => setActiveTab("chapters")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
+                  activeTab === "chapters"
+                    ? "border-indigo-500 text-indigo-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                Chapitres (
+                {processedChapters.length || course?.chapitres?.length || 0})
+              </button>
+            )}
             {participants.length > 0 && (
               <button
                 onClick={() => setActiveTab("participants")}
@@ -501,47 +596,177 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                     </div>
                   )}
 
-                  {/* Subject Information */}
-                  {course?.matiere && (
+                  {course?.references && (
                     <div className="mt-8 pt-6 border-t border-slate-200">
                       <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <School className="w-5 h-5 mr-2 text-indigo-600" />
-                        Matière Associée
+                        <FileText className="w-5 h-5 mr-2 text-indigo-600" />
+                        Références
                       </h4>
-
                       <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h5 className="font-medium text-slate-900">
-                              {course.matiere.nom}
-                            </h5>
-                            {course.matiere.description && (
-                              <p className="text-sm text-slate-600 mt-1">
-                                {course.matiere.description}
-                              </p>
-                            )}
-                            {course.matiere.coefficient && (
-                              <div className="mt-2">
-                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                                  Coefficient: {course.matiere.coefficient}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <span
-                            className={`text-xs px-2 py-1 rounded-full ${
-                              course.matiere.etat === "ACTIF"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {course.matiere.etat}
-                          </span>
-                        </div>
+                        <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                          {course.references}
+                        </p>
                       </div>
                     </div>
                   )}
+
+                  {/* Subject Information */}
+                  {(course?.matiere ||
+                    (course?.matieres && course.matieres.length > 0)) && (
+                    <div className="mt-8 pt-6 border-t border-slate-200">
+                      <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                        <School className="w-5 h-5 mr-2 text-indigo-600" />
+                        {course?.matieres && course.matieres.length > 1
+                          ? "Matières Associées"
+                          : "Matière Associée"}
+                      </h4>
+
+                      {course?.matiere ? (
+                        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h5 className="font-medium text-slate-900">
+                                {course.matiere.nom}
+                              </h5>
+                              {course.matiere.description && (
+                                <p className="text-sm text-slate-600 mt-1">
+                                  {course.matiere.description}
+                                </p>
+                              )}
+                              {course.matiere.coefficient && (
+                                <div className="mt-2">
+                                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                                    Coefficient: {course.matiere.coefficient}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full ${
+                                course.matiere.etat === "ACTIF"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              {course.matiere.etat}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {course.matieres.map((matiere, index) => (
+                            <div
+                              key={matiere.id || index}
+                              className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h5 className="font-medium text-slate-900">
+                                    {matiere.nom}
+                                  </h5>
+                                  {matiere.description && (
+                                    <p className="text-sm text-slate-600 mt-1">
+                                      {matiere.description}
+                                    </p>
+                                  )}
+                                  {matiere.coefficient && (
+                                    <div className="mt-2">
+                                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                                        Coefficient: {matiere.coefficient}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <span
+                                  className={`text-xs px-2 py-1 rounded-full ${
+                                    matiere.etat === "ACTIF"
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : "bg-amber-100 text-amber-800"
+                                  }`}
+                                >
+                                  {matiere.etat || "ACTIF"}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
+              </div>
+            )}
+
+            {/* Chapters Tab */}
+            {activeTab === "chapters" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-slate-900 flex items-center">
+                    <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
+                    Chapitres du Cours (
+                    {processedChapters.length || course?.chapitres?.length || 0}
+                    )
+                  </h3>
+                </div>
+
+                {(!processedChapters || processedChapters.length === 0) &&
+                (!course?.chapitres || course.chapitres.length === 0) ? (
+                  <div className="text-center py-12">
+                    <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                      <BookOpen className="w-8 h-8 text-slate-400" />
+                    </div>
+                    <h4 className="text-lg font-medium text-slate-900 mb-2">
+                      Aucun chapitre disponible
+                    </h4>
+                    <p className="text-slate-600">
+                      Ce cours ne contient pas encore de chapitres.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {(processedChapters.length > 0
+                      ? processedChapters
+                      : course.chapitres
+                    ).map((chapter, index) => (
+                      <div
+                        key={chapter.id || index}
+                        className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                      >
+                        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-4 border-b border-slate-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full text-sm font-medium">
+                                {chapter.ordre || index + 1}
+                              </div>
+                              <div>
+                                <h4 className="text-lg font-semibold text-slate-900">
+                                  {chapter.titre}
+                                </h4>
+                                {chapter.description && (
+                                  <p className="text-sm text-slate-600 mt-1">
+                                    {chapter.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="px-6 py-6">
+                          {chapter.processedContent ? (
+                            renderChapterContent(chapter.processedContent)
+                          ) : chapter.contenu ? (
+                            renderChapterContent(chapter.contenu)
+                          ) : (
+                            <div className="text-slate-500 italic">
+                              Aucun contenu disponible pour ce chapitre.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
