@@ -55,7 +55,7 @@ import { coursProgrammerService } from "../../../../services/coursProgrammerServ
 import AccederService from "../../../../services/accederService";
 import ParentClassManagementModal from "./ParentClassManagementModal";
 import VirtualClassroomModal from "./vitualClasse/VirtualClassroomPage";
-
+import CoursProgrammeManagement from "../content/InterfaceCours/CoursProgrammeManagement";
 const StyledCard = styled(Card)(({ theme }) => ({
   height: "100%",
   display: "flex",
@@ -265,7 +265,7 @@ const ParentClassManagement = () => {
   const [classCourses, setClassCourses] = useState([]);
   const [courseLoading, setCourseLoading] = useState(false);
   const [courseCounts, setCourseCounts] = useState({});
-
+  const [showCourseManagement, setShowCourseManagement] = useState(false);
   const userId = localStorage.getItem("userId");
   const userEmail = localStorage.getItem("userEmail");
   const username = localStorage.getItem("username");
@@ -461,9 +461,9 @@ const ParentClassManagement = () => {
 
   const handleAccessClick = async (classe) => {
     if (hasApprovedAccess(classe.id)) {
-      // Open the virtual classroom directly
+      // Navigate to course management interface
       setSelectedClass(classe);
-      setVirtualClassroomOpen(true);
+      setShowCourseManagement(true); // This is now defined
     } else if (hasPendingRequest(classe.id)) {
       setPendingDialog({
         open: true,
@@ -471,7 +471,6 @@ const ParentClassManagement = () => {
       });
     }
   };
-
   const handleSearchClass = async () => {
     if (!activationCode) {
       showSnackbar("Veuillez entrer un code d'activation", "error");
@@ -628,6 +627,14 @@ const ParentClassManagement = () => {
           </EmptyState>
         </Box>
       </Box>
+    );
+  }
+  if (showCourseManagement && selectedClass) {
+    return (
+      <CoursProgrammeManagement
+        selectedClass={selectedClass}
+        onBack={() => setShowCourseManagement(false)}
+      />
     );
   }
 
@@ -880,7 +887,7 @@ const ParentClassManagement = () => {
                           onClick={() => handleAccessClick(classe)}
                           startIcon={<VideoCallIcon />}
                         >
-                          Entrer en classe virtuelle
+                          Entrer dans la classe
                         </ActionButton>
                       ) : isPending ? (
                         <ActionButton
@@ -911,10 +918,19 @@ const ParentClassManagement = () => {
 
         <ParentClassManagementModal
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={() => {
+            setModalOpen(false);
+            // Reset activation code when closing modal if it was from search
+            if (foundClass) {
+              setActivationCode("");
+              setFoundClass(null);
+            }
+          }}
           classe={selectedClass}
           isRequestMode={isRequestMode}
           onRequestAccess={handleRequestAccess}
+          activationCode={activationCode}
+          isCodeReadOnly={foundClass !== null}
         />
 
         <VirtualClassroomModal

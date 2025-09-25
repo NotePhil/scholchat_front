@@ -1,64 +1,44 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  Card,
-  Button,
-  Space,
-  Typography,
-  Avatar,
-  Tag,
-  List,
-  Badge,
-  Spin,
-  Empty,
-  Alert,
-  Divider,
-  Pagination,
-  Input,
-  Select,
-  DatePicker,
-  Row,
-  Col,
-  Statistic,
-  Modal,
-  Form,
-  Input as AntInput,
-  DatePicker as AntDatePicker,
-  Tooltip,
-  Dropdown,
-  Menu,
-} from "antd";
-import {
-  BookOutlined,
-  TeamOutlined,
-  UserOutlined,
-  BankOutlined,
-  ClockCircleOutlined,
-  SettingOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  ClearOutlined,
-  ArrowLeftOutlined,
-  TrophyOutlined,
-  EyeOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-  CheckOutlined,
-  PoweroffOutlined,
-  ExclamationCircleOutlined,
-  MoreOutlined,
-  FilterOutlined,
-  SortAscendingOutlined,
-  CalendarOutlined,
-  UsergroupAddOutlined,
-} from "@ant-design/icons";
-import { classService, EtatClasse } from "../../../../services/ClassService";
-import ClassModals from "../modals/ClassModals";
-
-const { Title, Text, Paragraph } = Typography;
-const { Option } = Select;
-const { RangePicker } = DatePicker;
-const { confirm } = Modal;
+  GraduationCap,
+  Search,
+  Edit,
+  Trash2,
+  Plus,
+  Users,
+  School,
+  Clock,
+  PowerOff,
+  Check,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Loader,
+  Eye,
+  Key,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  RefreshCw,
+  Settings,
+  UserCheck,
+  UserX,
+  X,
+  Sparkles,
+  ArrowLeft,
+  Trophy,
+  MoreHorizontal,
+  SortAsc,
+  CalendarDays,
+  UserPlus,
+  Bell,
+  Zap,
+} from "lucide-react";
+import AccederService, {
+  EtatDemandeAcces,
+} from "../../../../services/accederService";
+import "./ManageClassList.css";
 
 const ManageClassList = ({
   classes = [],
@@ -72,7 +52,6 @@ const ManageClassList = ({
   onNavigateToCreate,
   userRole = "professeur",
 }) => {
-  // State for filters and pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,8 +61,6 @@ const ManageClassList = ({
   const [sortBy, setSortBy] = useState("dateCreation");
   const [sortOrder, setSortOrder] = useState("desc");
   const [pendingRequests, setPendingRequests] = useState({});
-
-  // Modal and action states
   const [selectedClass, setSelectedClass] = useState(null);
   const [editingClass, setEditingClass] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(null);
@@ -94,77 +71,114 @@ const ManageClassList = ({
   const [accessToken, setAccessToken] = useState("");
   const [deactivationReason, setDeactivationReason] = useState("");
   const [deactivationComment, setDeactivationComment] = useState("");
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
-  // Fetch pending access requests for classes
-  useEffect(() => {
-    const fetchPendingRequests = async () => {
-      try {
-        const classIds = classes.map((c) => c.id);
-        if (classIds.length === 0) return;
-
-        const response = await fetch(
-          `http://localhost:8486/scholchat/acceder/classes/demandes?classeIds=${classIds.join(
-            ","
-          )}`
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch pending requests");
-        }
-
-        const requests = await response.json();
-        const requestsCount = {};
-
-        requests.forEach((request) => {
-          if (request.status === "PENDING") {
-            requestsCount[request.classeId] =
-              (requestsCount[request.classeId] || 0) + 1;
-          }
-        });
-
-        setPendingRequests(requestsCount);
-      } catch (error) {
-        console.error("Error fetching pending requests:", error);
-      }
-    };
-
-    fetchPendingRequests();
-
-    // Set up polling for new requests
-    const interval = setInterval(fetchPendingRequests, 300000); // Poll every 5 minutes
-
-    return () => clearInterval(interval);
-  }, [classes]);
+  const EtatClasse = {
+    ACTIF: "ACTIF",
+    EN_ATTENTE_APPROBATION: "EN_ATTENTE_APPROBATION",
+    INACTIF: "INACTIF",
+  };
 
   const getStatusColor = (etat) => {
     switch (etat) {
       case EtatClasse.ACTIF:
-        return "green";
+        return "status-active";
       case EtatClasse.EN_ATTENTE_APPROBATION:
-        return "gold";
+        return "status-pending";
       case EtatClasse.INACTIF:
-        return "red";
+        return "status-inactive";
       default:
-        return "default";
+        return "status-default";
     }
   };
 
   const getStatusText = (etat) => {
-    return classService.getEtatDisplayName(etat);
+    switch (etat) {
+      case EtatClasse.ACTIF:
+        return "Actif";
+      case EtatClasse.EN_ATTENTE_APPROBATION:
+        return "En attente";
+      case EtatClasse.INACTIF:
+        return "Inactif";
+      default:
+        return "Inconnu";
+    }
   };
 
   const getStatusIcon = (etat) => {
     switch (etat) {
       case EtatClasse.ACTIF:
-        return <CheckOutlined />;
+        return <CheckCircle className="status-icon" />;
       case EtatClasse.EN_ATTENTE_APPROBATION:
-        return <ClockCircleOutlined />;
+        return <Clock className="status-icon" />;
       case EtatClasse.INACTIF:
-        return <PoweroffOutlined />;
+        return <XCircle className="status-icon" />;
       default:
-        return <ExclamationCircleOutlined />;
+        return <AlertCircle className="status-icon" />;
     }
   };
+
+  // Load pending requests for all classes
+  const loadPendingRequestsForAllClasses = async () => {
+    if (!classes || classes.length === 0) return;
+
+    try {
+      setLoadingRequests(true);
+      console.log("Loading pending requests for", classes.length, "classes");
+
+      const requestsPromises = classes.map(async (classe) => {
+        try {
+          const requests = await AccederService.obtenirDemandesAccesPourClasse(
+            classe.id
+          );
+          const pendingCount = requests.filter(
+            (req) =>
+              req.etat === EtatDemandeAcces.EN_ATTENTE ||
+              req.etat === "EN_ATTENTE"
+          ).length;
+
+          console.log(
+            `Class ${classe.nom} (${classe.id}): ${pendingCount} pending requests`
+          );
+          return { classId: classe.id, count: pendingCount };
+        } catch (error) {
+          console.error(
+            `Error loading requests for class ${classe.id}:`,
+            error
+          );
+          return { classId: classe.id, count: 0 };
+        }
+      });
+
+      const requestsResults = await Promise.all(requestsPromises);
+      const requestsMap = {};
+
+      requestsResults.forEach(({ classId, count }) => {
+        requestsMap[classId] = count;
+      });
+
+      console.log("Final requests map:", requestsMap);
+      setPendingRequests(requestsMap);
+    } catch (error) {
+      console.error("Error loading pending requests:", error);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  // Load pending requests when classes change
+  useEffect(() => {
+    if (classes && classes.length > 0) {
+      loadPendingRequestsForAllClasses();
+    }
+  }, [classes]);
+
+  // Refresh pending requests when refreshing
+  useEffect(() => {
+    if (refreshing) {
+      loadPendingRequestsForAllClasses();
+    }
+  }, [refreshing]);
 
   const sortedAndFilteredClasses = useMemo(() => {
     let filtered = classes.filter((classe) => {
@@ -181,13 +195,12 @@ const ManageClassList = ({
         !dateRange ||
         !dateRange[0] ||
         !dateRange[1] ||
-        (new Date(classe.dateCreation) >= dateRange[0].toDate() &&
-          new Date(classe.dateCreation) <= dateRange[1].toDate());
+        (new Date(classe.dateCreation) >= new Date(dateRange[0]) &&
+          new Date(classe.dateCreation) <= new Date(dateRange[1]));
 
       return matchesSearch && matchesStatus && matchesNiveau && matchesDate;
     });
 
-    // Sort the filtered results
     filtered.sort((a, b) => {
       let aValue = a[sortBy];
       let bValue = b[sortBy];
@@ -239,6 +252,12 @@ const ManageClassList = ({
     0
   );
 
+  // Calculate total pending requests across all classes
+  const totalPendingRequests = Object.values(pendingRequests).reduce(
+    (sum, count) => sum + count,
+    0
+  );
+
   const clearFilters = () => {
     setSearchTerm("");
     setStatusFilter("all");
@@ -251,991 +270,406 @@ const ManageClassList = ({
 
   const uniqueNiveaux = [...new Set(classes.map((c) => c.niveau))];
 
-  // Action handlers
-  const handleEdit = (classe) => {
-    setEditingClass(classe);
-  };
-
-  const handleEditSave = async (updatedClass) => {
-    try {
-      setActionLoading("edit");
-      await classService.modifierClasse(updatedClass.id, updatedClass);
-      await onRefresh();
-      setEditingClass(null);
-    } catch (error) {
-      console.error("Error updating class:", error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleApprove = async (classId) => {
-    try {
-      setActionLoading(classId);
-      await classService.approuverClasse(classId);
-      await onRefresh();
-      setShowApprovalModal(null);
-    } catch (error) {
-      console.error("Error approving class:", error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleReject = async (classId, motif) => {
-    try {
-      setActionLoading(classId);
-      await classService.rejeterClasse(classId, motif);
-      await onRefresh();
-      setShowApprovalModal(null);
-    } catch (error) {
-      console.error("Error rejecting class:", error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleDeactivation = async (classId, motif, commentaire) => {
-    try {
-      setActionLoading(classId);
-      console.log("Deactivating class:", { classId, motif, commentaire });
-      await onRefresh();
-      setShowDeactivationModal(null);
-      setDeactivationReason("");
-      setDeactivationComment("");
-    } catch (error) {
-      console.error("Error deactivating class:", error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleAccessRequest = async () => {
-    try {
-      setActionLoading("access-request");
-      console.log("Processing access request with token:", accessToken);
-      setShowAccessRequestModal(false);
-      setAccessToken("");
-    } catch (error) {
-      console.error("Error processing access request:", error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleDelete = async (classId) => {
-    try {
-      setActionLoading(classId);
-      await classService.supprimerClasse(classId);
-      await onRefresh();
-      setShowDeleteModal(null);
-    } catch (error) {
-      console.error("Error deleting class:", error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   const handleManageClass = (classe) => {
     if (onSelectClass) {
       onSelectClass(classe.id);
     }
   };
 
-  const getClassActions = (classe) => {
-    const actions = [
-      {
-        key: "view",
-        label: "Voir les détails",
-        icon: <EyeOutlined />,
-        onClick: () => setSelectedClass(classe),
-      },
-      {
-        key: "manage",
-        label: "Gérer la classe",
-        icon: <SettingOutlined />,
-        onClick: () => handleManageClass(classe),
-      },
-      {
-        key: "edit",
-        label: "Modifier",
-        icon: <EditOutlined />,
-        onClick: () => handleEdit(classe),
-      },
-    ];
-
-    if (
-      userRole === "etablissement" &&
-      classe.etat === EtatClasse.EN_ATTENTE_APPROBATION
-    ) {
-      actions.push({
-        key: "approve",
-        label: "Approuver",
-        icon: <CheckOutlined />,
-        onClick: () => setShowApprovalModal(classe),
-      });
-    }
-
-    if (
-      (userRole === "etablissement" || userRole === "administrateur") &&
-      classe.etat === EtatClasse.ACTIF
-    ) {
-      actions.push({
-        key: "deactivate",
-        label: "Désactiver",
-        icon: <PoweroffOutlined />,
-        onClick: () => setShowDeactivationModal(classe),
-      });
-    }
-
-    actions.push({
-      key: "delete",
-      label: "Supprimer",
-      icon: <DeleteOutlined />,
-      onClick: () => setShowDeleteModal(classe),
-      danger: true,
-    });
-
-    return actions;
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
-  const sortMenu = (
-    <Menu
-      onClick={({ key }) => {
-        const [sortField, order] = key.split("-");
-        setSortBy(sortField);
-        setSortOrder(order);
-      }}
-      items={[
-        {
-          key: "dateCreation-desc",
-          label: "Date de création (récent)",
-          icon: <CalendarOutlined />,
-        },
-        {
-          key: "dateCreation-asc",
-          label: "Date de création (ancien)",
-          icon: <CalendarOutlined />,
-        },
-        {
-          key: "nom-asc",
-          label: "Nom (A-Z)",
-          icon: <SortAscendingOutlined />,
-        },
-        {
-          key: "nom-desc",
-          label: "Nom (Z-A)",
-          icon: <SortAscendingOutlined />,
-        },
-        {
-          key: "eleveCount-desc",
-          label: "Nombre d'élèves (desc)",
-          icon: <TeamOutlined />,
-        },
-        {
-          key: "eleveCount-asc",
-          label: "Nombre d'élèves (asc)",
-          icon: <TeamOutlined />,
-        },
-      ]}
-    />
-  );
+  const handleRefreshWithRequests = async () => {
+    if (onRefresh) {
+      await onRefresh();
+    }
+    // Reload pending requests after refresh
+    await loadPendingRequestsForAllClasses();
+  };
+
+  if (loading && classes.length === 0) {
+    return (
+      <div className="loading-container">
+        <div className="loading-content">
+          <Loader className="loading-spinner" />
+          <p className="loading-text">Chargement des classes...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        padding: "16px",
-      }}
-    >
-      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-        {/* Header Section */}
-        <Card
-          style={{
-            borderRadius: "20px",
-            marginBottom: "24px",
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(10px)",
-            border: "none",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-          }}
-          bodyStyle={{ padding: "32px" }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+    <div className="manage-container">
+      <div className="manage-wrapper">
+        <div className="header-card">
+          <div className="header-content">
+            <div className="header-left">
               {onBack && (
-                <Button
-                  icon={<ArrowLeftOutlined />}
-                  onClick={onBack}
-                  type="text"
-                  size="large"
-                  style={{
-                    color: "#667eea",
-                    borderRadius: "12px",
-                    padding: "8px 16px",
-                  }}
-                />
+                <button onClick={onBack} className="back-btn">
+                  <ArrowLeft className="back-icon" />
+                </button>
               )}
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "12px" }}
-              >
-                <div
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    borderRadius: "16px",
-                    padding: "16px",
-                    color: "white",
-                    fontSize: "24px",
-                  }}
-                >
-                  <BookOutlined />
+              <div className="header-info">
+                <div className="header-icon">
+                  <GraduationCap className="icon" />
                 </div>
-                <div>
-                  <Title
-                    level={1}
-                    style={{
-                      margin: 0,
-                      color: "#2d3748",
-                      fontSize: "32px",
-                      fontWeight: "700",
-                    }}
-                  >
-                    Gestion des Classes
-                  </Title>
-                  <Text
-                    style={{
-                      fontSize: "16px",
-                      color: "#718096",
-                      marginTop: "4px",
-                    }}
-                  >
+                <div className="header-text">
+                  <h1 className="header-title">Gestion des Classes</h1>
+                  <p className="header-subtitle">
                     Gérez et supervisez toutes les classes de votre
                     établissement
-                  </Text>
+                  </p>
                 </div>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <Button
-                icon={<ReloadOutlined />}
-                loading={refreshing}
-                onClick={onRefresh}
-                size="large"
-                style={{
-                  borderRadius: "12px",
-                  border: "1px solid #e2e8f0",
-                }}
+            <div className="header-actions">
+              <button
+                onClick={handleRefreshWithRequests}
+                disabled={refreshing || loadingRequests}
+                className="btn btn-secondary"
               >
-                Actualiser
-              </Button>
-              {userRole === "professeur" && (
-                <>
-                  <Button
-                    icon={<CheckOutlined />}
-                    onClick={() => setShowAccessRequestModal(true)}
-                    size="large"
-                    style={{
-                      borderRadius: "12px",
-                      border: "1px solid #e2e8f0",
-                    }}
-                  >
-                    Accès Token
-                  </Button>
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={onNavigateToCreate}
-                    size="large"
-                    style={{
-                      borderRadius: "12px",
-                      background:
-                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      border: "none",
-                      boxShadow: "0 4px 16px rgba(102, 126, 234, 0.3)",
-                    }}
-                  >
-                    Nouvelle Classe
-                  </Button>
-                </>
-              )}
+                <RefreshCw
+                  className={`btn-icon ${
+                    refreshing || loadingRequests ? "spinning" : ""
+                  }`}
+                />
+                <span className="btn-text">
+                  {refreshing || loadingRequests
+                    ? "Actualisation..."
+                    : "Actualiser"}
+                </span>
+              </button>
             </div>
           </div>
-        </Card>
+        </div>
 
-        {/* Messages */}
         {error && (
-          <Alert
-            message={error}
-            type="error"
-            showIcon
-            closable
-            style={{
-              marginBottom: "24px",
-              borderRadius: "16px",
-              border: "none",
-              boxShadow: "0 4px 16px rgba(245, 101, 101, 0.2)",
-            }}
-          />
+          <div className="alert alert-error">
+            <AlertCircle className="alert-icon" />
+            <p className="alert-text">{error}</p>
+            <button onClick={() => {}} className="alert-close">
+              <X className="close-icon" />
+            </button>
+          </div>
         )}
 
         {successMessage && (
-          <Alert
-            message={successMessage}
-            type="success"
-            showIcon
-            closable
-            style={{
-              marginBottom: "24px",
-              borderRadius: "16px",
-              border: "none",
-              boxShadow: "0 4px 16px rgba(72, 187, 120, 0.2)",
-            }}
-          />
+          <div className="alert alert-success">
+            <CheckCircle className="alert-icon" />
+            <p className="alert-text">{successMessage}</p>
+            <button onClick={() => {}} className="alert-close">
+              <X className="close-icon" />
+            </button>
+          </div>
         )}
 
-        {/* Statistics Cards */}
-        <Row gutter={[24, 24]} style={{ marginBottom: "32px" }}>
-          <Col xs={12} sm={6} md={6} lg={6}>
-            <Card
-              style={{
-                borderRadius: "20px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                border: "none",
-                color: "white",
-                textAlign: "center",
-                minHeight: "140px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <div>
-                <BookOutlined
-                  style={{ fontSize: "32px", marginBottom: "12px" }}
-                />
-                <Title
-                  level={2}
-                  style={{ margin: 0, color: "white", fontSize: "28px" }}
-                >
-                  {totalClasses}
-                </Title>
-                <Text
-                  style={{
-                    color: "rgba(255, 255, 255, 0.8)",
-                    fontSize: "14px",
-                  }}
-                >
-                  Total Classes
-                </Text>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={12} sm={6} md={6} lg={6}>
-            <Card
-              style={{
-                borderRadius: "20px",
-                background: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
-                border: "none",
-                color: "white",
-                textAlign: "center",
-                minHeight: "140px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <div>
-                <TrophyOutlined
-                  style={{ fontSize: "32px", marginBottom: "12px" }}
-                />
-                <Title
-                  level={2}
-                  style={{ margin: 0, color: "white", fontSize: "28px" }}
-                >
-                  {activeClasses}
-                </Title>
-                <Text
-                  style={{
-                    color: "rgba(255, 255, 255, 0.8)",
-                    fontSize: "14px",
-                  }}
-                >
-                  Classes Actives
-                </Text>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={12} sm={6} md={6} lg={6}>
-            <Card
-              style={{
-                borderRadius: "20px",
-                background: "linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)",
-                border: "none",
-                color: "white",
-                textAlign: "center",
-                minHeight: "140px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <div>
-                <TeamOutlined
-                  style={{ fontSize: "32px", marginBottom: "12px" }}
-                />
-                <Title
-                  level={2}
-                  style={{ margin: 0, color: "white", fontSize: "28px" }}
-                >
-                  {totalStudents}
-                </Title>
-                <Text
-                  style={{
-                    color: "rgba(255, 255, 255, 0.8)",
-                    fontSize: "14px",
-                  }}
-                >
-                  Total Élèves
-                </Text>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={12} sm={6} md={6} lg={6}>
-            <Card
-              style={{
-                borderRadius: "20px",
-                background: "linear-gradient(135deg, #9f7aea 0%, #805ad5 100%)",
-                border: "none",
-                color: "white",
-                textAlign: "center",
-                minHeight: "140px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <div>
-                <UserOutlined
-                  style={{ fontSize: "32px", marginBottom: "12px" }}
-                />
-                <Title
-                  level={2}
-                  style={{ margin: 0, color: "white", fontSize: "28px" }}
-                >
-                  {totalParents}
-                </Title>
-                <Text
-                  style={{
-                    color: "rgba(255, 255, 255, 0.8)",
-                    fontSize: "14px",
-                  }}
-                >
-                  Total Parents
-                </Text>
-              </div>
-            </Card>
-          </Col>
-        </Row>
+        <div className="stats-grid">
+          <div className="stat-card stat-primary">
+            <div className="stat-icon">
+              <GraduationCap className="icon" />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{totalClasses}</div>
+              <div className="stat-label">Total Classes</div>
+            </div>
+          </div>
+          <div className="stat-card stat-success">
+            <div className="stat-icon">
+              <Trophy className="icon" />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{activeClasses}</div>
+              <div className="stat-label">Classes Actives</div>
+            </div>
+          </div>
 
-        {/* Filters and Search */}
-        <Card
-          style={{
-            borderRadius: "20px",
-            marginBottom: "32px",
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(10px)",
-            border: "none",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-          }}
-          bodyStyle={{ padding: "24px" }}
-        >
-          <Row gutter={[16, 16]} align="middle">
-            <Col xs={24} sm={12} md={8} lg={8}>
-              <Input
+          {/* New stat card for pending requests */}
+          <div className="stat-card stat-info">
+            <div className="stat-icon">
+              <Bell className="icon" />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">
+                {loadingRequests ? (
+                  <Loader className="loading-mini" />
+                ) : (
+                  totalPendingRequests
+                )}
+              </div>
+              <div className="stat-label">Demandes en Attente</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="filters-card">
+          <div className="filters-grid">
+            <div className="search-wrapper">
+              <Search className="search-icon" />
+              <input
+                type="text"
                 placeholder="Rechercher une classe..."
-                prefix={<SearchOutlined style={{ color: "#667eea" }} />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                size="large"
-                style={{
-                  borderRadius: "12px",
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                }}
+                className="search-input"
               />
-            </Col>
-            <Col xs={12} sm={6} md={4} lg={4}>
-              <Select
-                placeholder="Statut"
-                value={statusFilter}
-                onChange={setStatusFilter}
-                size="large"
-                style={{ width: "100%" }}
-                suffixIcon={<FilterOutlined style={{ color: "#667eea" }} />}
-              >
-                <Option value="all">Tous les statuts</Option>
-                <Option value={EtatClasse.ACTIF}>Actif</Option>
-                <Option value={EtatClasse.EN_ATTENTE_APPROBATION}>
-                  En attente
-                </Option>
-                <Option value={EtatClasse.INACTIF}>Inactif</Option>
-              </Select>
-            </Col>
-            <Col xs={12} sm={6} md={4} lg={4}>
-              <Select
-                placeholder="Niveau"
-                value={niveauFilter}
-                onChange={setNiveauFilter}
-                size="large"
-                style={{ width: "100%" }}
-                suffixIcon={<BookOutlined style={{ color: "#667eea" }} />}
-              >
-                <Option value="all">Tous les niveaux</Option>
-                {uniqueNiveaux.map((niveau) => (
-                  <Option key={niveau} value={niveau}>
-                    {niveau}
-                  </Option>
-                ))}
-              </Select>
-            </Col>
-            <Col xs={12} sm={6} md={4} lg={4}>
-              <RangePicker
-                style={{ width: "100%" }}
-                size="large"
-                value={dateRange}
-                onChange={setDateRange}
-                placeholder={["Date début", "Date fin"]}
-              />
-            </Col>
-            <Col xs={6} sm={3} md={2} lg={2}>
-              <Dropdown overlay={sortMenu} trigger={["click"]}>
-                <Button
-                  icon={<SortAscendingOutlined />}
-                  size="large"
-                  style={{
-                    width: "100%",
-                    borderRadius: "12px",
-                    border: "1px solid #e2e8f0",
-                  }}
-                >
-                  Trier
-                </Button>
-              </Dropdown>
-            </Col>
-            <Col xs={6} sm={3} md={2} lg={2}>
-              <Button
-                icon={<ClearOutlined />}
-                onClick={clearFilters}
-                size="large"
-                style={{
-                  width: "100%",
-                  borderRadius: "12px",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                Effacer
-              </Button>
-            </Col>
-          </Row>
-        </Card>
-
-        {/* Classes Grid */}
-        <Card
-          style={{
-            borderRadius: "20px",
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(10px)",
-            border: "none",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-          }}
-          bodyStyle={{ padding: "32px" }}
-        >
-          {loading && classes.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "80px 0" }}>
-              <Spin size="large" />
             </div>
-          ) : sortedAndFilteredClasses.length === 0 ? (
-            <Empty
-              image="/api/placeholder/400/300"
-              description={
-                <div>
-                  <Title level={4} style={{ color: "#4a5568" }}>
-                    Aucune classe trouvée
-                  </Title>
-                  <Text type="secondary">
-                    Aucune classe ne correspond à vos critères de recherche
-                  </Text>
-                </div>
-              }
-              style={{ padding: "80px 0" }}
-            />
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">Tous les statuts</option>
+              <option value={EtatClasse.ACTIF}>Actif</option>
+              <option value={EtatClasse.EN_ATTENTE_APPROBATION}>
+                En attente
+              </option>
+              <option value={EtatClasse.INACTIF}>Inactif</option>
+            </select>
+
+            <select
+              value={niveauFilter}
+              onChange={(e) => setNiveauFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">Tous les niveaux</option>
+              {uniqueNiveaux.map((niveau) => (
+                <option key={niveau} value={niveau}>
+                  {niveau}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="filter-select"
+            >
+              <option value={12}>12 par page</option>
+              <option value={18}>18 par page</option>
+              <option value={24}>24 par page</option>
+            </select>
+
+            <button onClick={clearFilters} className="btn btn-outline">
+              <X className="btn-icon" />
+              <span className="btn-text">Effacer</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="classes-card">
+          {loadingRequests && (
+            <div className="loading-requests-notice">
+              <Loader className="loading-spinner-small" />
+              <span>Chargement des demandes d'accès...</span>
+            </div>
+          )}
+
+          {sortedAndFilteredClasses.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-content">
+                <GraduationCap className="empty-icon" />
+                <h3 className="empty-title">Aucune classe trouvée</h3>
+                <p className="empty-description">
+                  Aucune classe ne correspond à vos critères de recherche
+                </p>
+              </div>
+            </div>
           ) : (
             <>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
-                  gap: "24px",
-                  marginBottom: "32px",
-                }}
-              >
-                {paginatedClasses.map((classe) => (
-                  <Badge
-                    key={classe.id}
-                    count={pendingRequests[classe.id] || 0}
-                    offset={[-10, 10]}
-                    style={{
-                      backgroundColor: "#ff4d4f",
-                      boxShadow: "0 0 0 1px #fff",
-                    }}
-                  >
-                    <Card
-                      hoverable
-                      style={{
-                        borderRadius: "20px",
-                        border: "none",
-                        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
-                        transition: "all 0.3s ease",
-                        overflow: "hidden",
-                      }}
-                      bodyStyle={{ padding: "24px" }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-4px)";
-                        e.currentTarget.style.boxShadow =
-                          "0 8px 40px rgba(0, 0, 0, 0.12)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow =
-                          "0 4px 20px rgba(0, 0, 0, 0.08)";
-                      }}
-                    >
-                      {/* Class Card Header */}
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          marginBottom: "20px",
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "12px",
-                              marginBottom: "8px",
-                            }}
-                          >
+              <div className="classes-grid">
+                {paginatedClasses.map((classe) => {
+                  const pendingCount = pendingRequests[classe.id] || 0;
+
+                  return (
+                    <div key={classe.id} className="class-card">
+                      {classe.isNew && (
+                        <div className="new-badge">
+                          <Sparkles className="new-icon" />
+                          <span>NOUVEAU</span>
+                        </div>
+                      )}
+
+                      {/* Updated pending requests badge */}
+                      {pendingCount > 0 && (
+                        <div
+                          className={`pending-badge ${
+                            pendingCount > 9 ? "large-count" : ""
+                          }`}
+                        >
+                          <span>
+                            {pendingCount > 99 ? "99+" : pendingCount}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="card-content">
+                        <div className="card-header">
+                          <div className="card-title-section">
+                            <div className="class-info">
+                              <div className="class-icon">
+                                <GraduationCap className="icon" />
+                              </div>
+                              <div className="class-details">
+                                <h3 className="class-name">{classe.nom}</h3>
+                                <p className="class-level">{classe.niveau}</p>
+                              </div>
+                            </div>
                             <div
-                              style={{
-                                background:
-                                  "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                                borderRadius: "12px",
-                                padding: "12px",
-                                color: "white",
-                              }}
+                              className={`status-badge ${getStatusColor(
+                                classe.etat
+                              )}`}
                             >
-                              <BookOutlined style={{ fontSize: "20px" }} />
-                            </div>
-                            <div>
-                              <Title
-                                level={4}
-                                style={{ margin: 0, color: "#2d3748" }}
-                              >
-                                {classe.nom}
-                              </Title>
-                              <Text
-                                type="secondary"
-                                style={{ fontSize: "14px" }}
-                              >
-                                {classe.niveau}
-                              </Text>
+                              {getStatusIcon(classe.etat)}
+                              <span>{getStatusText(classe.etat)}</span>
                             </div>
                           </div>
-                          <Tag
-                            color={getStatusColor(classe.etat)}
-                            icon={getStatusIcon(classe.etat)}
-                            style={{
-                              borderRadius: "8px",
-                              padding: "4px 12px",
-                              fontSize: "12px",
-                              fontWeight: "500",
-                            }}
-                          >
-                            {getStatusText(classe.etat)}
-                          </Tag>
                         </div>
-                        <Dropdown
-                          overlay={
-                            <Menu
-                              items={getClassActions(classe).map((action) => ({
-                                key: action.key,
-                                label: action.label,
-                                icon: action.icon,
-                                onClick: action.onClick,
-                                danger: action.danger,
-                              }))}
-                            />
-                          }
-                          trigger={["click"]}
-                          placement="bottomRight"
-                        >
-                          <Button
-                            type="text"
-                            icon={<MoreOutlined />}
-                            style={{
-                              borderRadius: "8px",
-                              color: "#667eea",
-                            }}
-                          />
-                        </Dropdown>
-                      </div>
 
-                      {/* Class Stats */}
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(2, 1fr)",
-                          gap: "16px",
-                          marginBottom: "20px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            background:
-                              "linear-gradient(135deg, #667eea15 0%, #764ba215 100%)",
-                            borderRadius: "12px",
-                            padding: "16px",
-                            textAlign: "center",
-                          }}
-                        >
-                          <TeamOutlined
-                            style={{
-                              fontSize: "20px",
-                              color: "#667eea",
-                              marginBottom: "8px",
-                            }}
-                          />
-                          <div
-                            style={{
-                              fontSize: "18px",
-                              fontWeight: "600",
-                              color: "#2d3748",
-                            }}
-                          >
-                            {classe.eleves?.length || 0}
+                        <div className="stats-section">
+                          {/* New stat for pending requests */}
+                          <div className="stat-item">
+                            <div className="stat-icon-wrapper stat-requests">
+                              <Bell className="stat-icon" />
+                            </div>
+                            <div className="stat-info">
+                              <div className="stat-number">
+                                {loadingRequests ? (
+                                  <Loader className="loading-mini-stat" />
+                                ) : (
+                                  pendingCount
+                                )}
+                              </div>
+                              <div className="stat-text">Demandes</div>
+                            </div>
                           </div>
-                          <Text type="secondary" style={{ fontSize: "12px" }}>
-                            Élèves
-                          </Text>
                         </div>
-                        <div
-                          style={{
-                            background:
-                              "linear-gradient(135deg, #48bb7815 0%, #38a16915 100%)",
-                            borderRadius: "12px",
-                            padding: "16px",
-                            textAlign: "center",
-                          }}
-                        >
-                          <UserOutlined
-                            style={{
-                              fontSize: "20px",
-                              color: "#48bb78",
-                              marginBottom: "8px",
-                            }}
-                          />
-                          <div
-                            style={{
-                              fontSize: "18px",
-                              fontWeight: "600",
-                              color: "#2d3748",
-                            }}
-                          >
-                            {classe.parents?.length || 0}
+
+                        <div className="date-section">
+                          <Calendar className="date-icon" />
+                          <span className="date-text">
+                            Créée le{" "}
+                            {new Date(classe.dateCreation).toLocaleDateString(
+                              "fr-FR",
+                              {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              }
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Show pending requests info if any */}
+                        {pendingCount > 0 && (
+                          <div className="pending-requests-info">
+                            <Zap className="pending-icon" />
+                            <span className="pending-text">
+                              {pendingCount} nouvelle
+                              {pendingCount > 1 ? "s" : ""} demande
+                              {pendingCount > 1 ? "s" : ""} d'accès
+                            </span>
                           </div>
-                          <Text type="secondary" style={{ fontSize: "12px" }}>
-                            Parents
-                          </Text>
+                        )}
+
+                        <div className="card-actions">
+                          <button
+                            onClick={() => handleManageClass(classe)}
+                            className="action-btn action-secondary"
+                          >
+                            <Settings className="action-icon" />
+                            <span>Gérer</span>
+                          </button>
                         </div>
                       </div>
-
-                      {/* Class Date */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          padding: "12px 16px",
-                          background: "#f8fafc",
-                          borderRadius: "12px",
-                          marginBottom: "20px",
-                        }}
-                      >
-                        <CalendarOutlined style={{ color: "#667eea" }} />
-                        <Text type="secondary" style={{ fontSize: "14px" }}>
-                          Créée le{" "}
-                          {new Date(classe.dateCreation).toLocaleDateString(
-                            "fr-FR",
-                            {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            }
-                          )}
-                        </Text>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <Button
-                          type="primary"
-                          icon={<EyeOutlined />}
-                          onClick={() => setSelectedClass(classe)}
-                          style={{
-                            borderRadius: "10px",
-                            background:
-                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            border: "none",
-                            flex: 1,
-                            minWidth: "120px",
-                          }}
-                        >
-                          Voir
-                        </Button>
-                        <Button
-                          icon={<SettingOutlined />}
-                          onClick={() => handleManageClass(classe)}
-                          style={{
-                            borderRadius: "10px",
-                            border: "1px solid #e2e8f0",
-                            flex: 1,
-                            minWidth: "120px",
-                          }}
-                        >
-                          Gérer
-                        </Button>
-                      </div>
-                    </Card>
-                  </Badge>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Pagination */}
-              {sortedAndFilteredClasses.length > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "16px",
-                    paddingTop: "24px",
-                    borderTop: "1px solid #e2e8f0",
-                  }}
-                >
-                  <Text type="secondary" style={{ fontSize: "14px" }}>
+              {Math.ceil(sortedAndFilteredClasses.length / pageSize) > 1 && (
+                <div className="pagination-container">
+                  <div className="pagination-info">
                     Affichage de {(currentPage - 1) * pageSize + 1} à{" "}
                     {Math.min(
                       currentPage * pageSize,
                       sortedAndFilteredClasses.length
                     )}{" "}
                     sur {sortedAndFilteredClasses.length} classes
-                  </Text>
-                  <Pagination
-                    current={currentPage}
-                    total={sortedAndFilteredClasses.length}
-                    pageSize={pageSize}
-                    onChange={(page) => setCurrentPage(page)}
-                    onShowSizeChange={(current, size) => {
-                      setPageSize(size);
-                      setCurrentPage(1);
-                    }}
-                    showSizeChanger
-                    showQuickJumper
-                    showTotal={false}
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                    itemRender={(page, type, originalElement) => {
-                      if (type === "prev") {
+                  </div>
+                  <div className="pagination-controls">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="pagination-btn"
+                    >
+                      <ChevronLeft className="pagination-icon" />
+                    </button>
+                    {Array.from(
+                      {
+                        length: Math.ceil(
+                          sortedAndFilteredClasses.length / pageSize
+                        ),
+                      },
+                      (_, i) => {
+                        const page = i + 1;
+                        const isCurrentPage = page === currentPage;
+                        const totalPages = Math.ceil(
+                          sortedAndFilteredClasses.length / pageSize
+                        );
+                        const shouldShow =
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 1 && page <= currentPage + 1);
+
+                        if (!shouldShow) {
+                          if (
+                            page === currentPage - 2 ||
+                            page === currentPage + 2
+                          ) {
+                            return (
+                              <span key={page} className="pagination-ellipsis">
+                                ...
+                              </span>
+                            );
+                          }
+                          return null;
+                        }
+
                         return (
-                          <Button style={{ borderRadius: "8px" }}>
-                            Précédent
-                          </Button>
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`pagination-btn ${
+                              isCurrentPage ? "active" : ""
+                            }`}
+                          >
+                            {page}
+                          </button>
                         );
                       }
-                      if (type === "next") {
-                        return (
-                          <Button style={{ borderRadius: "8px" }}>
-                            Suivant
-                          </Button>
-                        );
+                    )}
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={
+                        currentPage ===
+                        Math.ceil(sortedAndFilteredClasses.length / pageSize)
                       }
-                      return originalElement;
-                    }}
-                  />
+                      className="pagination-btn"
+                    >
+                      <ChevronRight className="pagination-icon" />
+                    </button>
+                  </div>
                 </div>
               )}
             </>
           )}
-        </Card>
+        </div>
       </div>
-
-      {/* Modals */}
-      <ClassModals
-        selectedClass={selectedClass}
-        setSelectedClass={setSelectedClass}
-        editingClass={editingClass}
-        setEditingClass={setEditingClass}
-        showDeleteModal={showDeleteModal}
-        setShowDeleteModal={setShowDeleteModal}
-        showApprovalModal={showApprovalModal}
-        setShowApprovalModal={setShowApprovalModal}
-        showDeactivationModal={showDeactivationModal}
-        setShowDeactivationModal={setShowDeactivationModal}
-        showAccessRequestModal={showAccessRequestModal}
-        setShowAccessRequestModal={setShowAccessRequestModal}
-        actionLoading={actionLoading}
-        setActionLoading={setActionLoading}
-        accessToken={accessToken}
-        setAccessToken={setAccessToken}
-        deactivationReason={deactivationReason}
-        setDeactivationReason={setDeactivationReason}
-        deactivationComment={deactivationComment}
-        setDeactivationComment={setDeactivationComment}
-        handleApprove={handleApprove}
-        handleReject={handleReject}
-        handleDeactivation={handleDeactivation}
-        handleAccessRequest={handleAccessRequest}
-        handleDelete={handleDelete}
-        handleEditSave={handleEditSave}
-        getStatusColor={getStatusColor}
-      />
     </div>
   );
 };

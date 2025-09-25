@@ -23,6 +23,8 @@ const ActivitiesContent = () => {
   const [success, setSuccess] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [currentUser, setCurrentUser] = useState(null);
+  const [userRole, setUserRole] = useState("");
+  const [userRoles, setUserRoles] = useState([]);
 
   const filters = [
     {
@@ -59,12 +61,44 @@ const ActivitiesContent = () => {
 
   useEffect(() => {
     loadActivities();
-    setCurrentUser(activityFeedService.getCurrentUser());
+    const user = activityFeedService.getCurrentUser();
+    setCurrentUser(user);
+
+    // Get user role information (adjust according to your user data structure)
+    if (user) {
+      setUserRole(user.role || "");
+      setUserRoles(user.roles || []);
+    }
   }, []);
 
   useEffect(() => {
     applyFilter(activeFilter);
   }, [activities, activeFilter]);
+
+  // Check if user can create activities (admin or professor only)
+  const canCreateActivity = () => {
+    const allowedRoles = [
+      "ROLE_ADMIN",
+      "ROLE_PROFESSOR",
+      "admin",
+      "professor",
+      "professeur", // Adding French version
+    ];
+
+    // Check single role
+    if (userRole && allowedRoles.includes(userRole.toLowerCase())) {
+      return true;
+    }
+
+    // Check multiple roles array
+    if (userRoles && userRoles.length > 0) {
+      return userRoles.some((role) =>
+        allowedRoles.includes(role.toLowerCase())
+      );
+    }
+
+    return false;
+  };
 
   const loadActivities = async () => {
     try {
@@ -260,13 +294,16 @@ const ActivitiesContent = () => {
                 Découvrez les dernières activités et événements
               </p>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-auto justify-center"
-            >
-              <Plus size={20} />
-              <span>Créer un événement</span>
-            </button>
+            {/* Only show create button for admin and professor roles */}
+            {canCreateActivity() && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-auto justify-center"
+              >
+                <Plus size={20} />
+                <span>Créer un événement</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -293,20 +330,22 @@ const ActivitiesContent = () => {
           </div>
         </div>
 
-        {/* Zone de création rapide */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <div
-            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-              {currentUser?.name?.charAt(0)?.toUpperCase() || "U"}
-            </div>
-            <div className="flex-1 text-gray-500">
-              Que souhaitez-vous partager aujourd'hui ?
+        {/* Zone de création rapide - Only show for authorized users */}
+        {canCreateActivity() && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div
+              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                {currentUser?.name?.charAt(0)?.toUpperCase() || "U"}
+              </div>
+              <div className="flex-1 text-gray-500">
+                Que souhaitez-vous partager aujourd'hui ?
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Liste des activités */}
         <div className="space-y-6">
@@ -332,12 +371,13 @@ const ActivitiesContent = () => {
               </h3>
               <p className="text-gray-500 mb-6">
                 {activeFilter === "all"
-                  ? "Il n'y a pas encore d'activités. Créez le premier événement !"
+                  ? "Il n'y a pas encore d'activités."
                   : `Aucune activité ne correspond au filtre "${
                       filters.find((f) => f.id === activeFilter)?.label
                     }".`}
               </p>
-              {activeFilter === "all" && (
+              {/* Only show create button for authorized users in empty state */}
+              {activeFilter === "all" && canCreateActivity() && (
                 <button
                   onClick={() => setShowCreateModal(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 mx-auto transition-all duration-200"
@@ -358,13 +398,15 @@ const ActivitiesContent = () => {
         )}
       </div>
 
-      {/* Modal de création d'événement */}
-      <CreateEventModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreateEvent}
-        loading={loading}
-      />
+      {/* Modal de création d'événement - Only render if user can create */}
+      {canCreateActivity() && (
+        <CreateEventModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={handleCreateEvent}
+          loading={loading}
+        />
+      )}
     </div>
   );
 };

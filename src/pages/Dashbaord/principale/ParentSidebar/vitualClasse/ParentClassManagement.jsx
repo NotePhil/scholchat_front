@@ -439,6 +439,7 @@ const ParentClassManagement = () => {
         setIsRequestMode(true);
         setModalOpen(true);
         setSearchDialogOpen(false);
+        // Keep the activation code for the modal but don't reset it
       } else {
         showSnackbar(
           "Aucune classe trouvée avec ce code d'activation",

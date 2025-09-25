@@ -490,7 +490,9 @@ const PaymentModal = ({
               <h4 className="font-semibold text-gray-900 mb-2">
                 Paiement accepté !
               </h4>
-              <p className="text-gray-600">Votre classe va être créée...</p>
+              <p className="text-gray-600">
+                Votre classe va être créée et approuvée automatiquement...
+              </p>
             </div>
           )}
         </div>
@@ -664,7 +666,8 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
     }
   };
 
-  const createClass = async () => {
+  // MODIFIED: Updated createClass function to handle auto-approval
+  const createClass = async (shouldAutoApprove = false) => {
     setLoading(true);
     try {
       const classData = {
@@ -672,7 +675,9 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
         niveau: formData.niveau.trim(),
         dateCreation: new Date().toISOString(),
         codeActivation: formData.codeActivation.trim(),
-        etat: EtatClasse.ACTIVE,
+        etat: shouldAutoApprove
+          ? EtatClasse.ACTIF
+          : EtatClasse.EN_ATTENTE_APPROBATION,
         ...(formData.etablissement && {
           etablissement: { id: formData.etablissement },
         }),
@@ -683,9 +688,26 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
         eleves: [],
       };
 
+      console.log("Creating class with data:", classData);
       const createdClass = await classService.creerClasse(classData);
+      console.log("Class created:", createdClass);
       setCreatedClassId(createdClass.id);
 
+      // If auto-approval is needed and class was not automatically approved during creation
+      if (shouldAutoApprove && createdClass.etat !== EtatClasse.ACTIF) {
+        console.log("Auto-approving class after payment...");
+        try {
+          const approvedClass = await classService.approuverClasse(
+            createdClass.id
+          );
+          console.log("Class auto-approved:", approvedClass);
+        } catch (approvalError) {
+          console.error("Failed to auto-approve class:", approvalError);
+          // Don't throw the error, just log it - the class was still created
+        }
+      }
+
+      // Assign publication rights to creator
       if (currentUserId) {
         const rightsAssigned = await assignPublicationRightsToCreator(
           createdClass.id
@@ -717,16 +739,24 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
     }
 
     if (formData.etablissement) {
-      await createClass();
+      // Class with establishment - no payment needed, no auto-approval
+      await createClass(false);
     } else {
+      // Independent class - payment required
       setShowPaymentModal(true);
     }
   };
 
+  // MODIFIED: Updated handlePaymentSuccess to auto-approve the class
   const handlePaymentSuccess = async () => {
     setIsProcessingPayment(true);
     setShowPaymentModal(false);
-    await createClass();
+
+    console.log("Payment successful, creating and auto-approving class...");
+
+    // Create class with auto-approval since payment was successful
+    await createClass(true);
+
     setIsProcessingPayment(false);
   };
 
@@ -743,7 +773,7 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
           <p className="text-gray-600 mb-6">
             {formData.etablissement
               ? "Votre classe a été créée et est en attente d'approbation."
-              : "Votre classe premium a été créée avec succès!"}
+              : "Votre classe premium a été créée et approuvée automatiquement!"}
             {currentUserId && (
               <span className="block mt-2 text-sm text-green-600">
                 Les droits de publication vous ont été automatiquement

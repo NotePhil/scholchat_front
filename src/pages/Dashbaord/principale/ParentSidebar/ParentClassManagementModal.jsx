@@ -31,6 +31,7 @@ import {
   PersonAdd as PersonAddIcon,
   VpnKey as VpnKeyIcon,
   Info as InfoIcon,
+  Lock as LockIcon,
 } from "@mui/icons-material";
 
 const ParentClassManagementModal = ({
@@ -41,6 +42,7 @@ const ParentClassManagementModal = ({
   onRequestAccess,
   isRequestMode = false,
   activationCode: initialActivationCode = "",
+  isCodeReadOnly = false, // New prop to control read-only state
 }) => {
   // All hooks must be called at the top level before any conditionals
   const [activationCode, setActivationCode] = useState(initialActivationCode);
@@ -379,24 +381,51 @@ const ParentClassManagementModal = ({
               Demande d'accès
             </Typography>
             <DialogContentText sx={{ mb: 3 }}>
-              Pour demander l'accès à cette classe, veuillez entrer le code
-              d'activation fourni par l'établissement ou le modérateur.
+              {isCodeReadOnly
+                ? "Le code d'activation a été automatiquement rempli suite à votre recherche. Confirmez votre demande d'accès à cette classe."
+                : "Pour demander l'accès à cette classe, veuillez entrer le code d'activation fourni par l'établissement ou le modérateur."}
             </DialogContentText>
             <TextField
-              autoFocus
+              autoFocus={!isCodeReadOnly}
               margin="dense"
               label="Code d'activation"
               type="text"
               fullWidth
               variant="outlined"
               value={activationCode}
-              onChange={(e) => setActivationCode(e.target.value)}
+              onChange={(e) =>
+                !isCodeReadOnly && setActivationCode(e.target.value)
+              }
               error={!!error}
-              helperText={error}
-              placeholder="Entrez le code d'activation"
+              helperText={
+                error || (isCodeReadOnly ? "Code automatiquement rempli" : "")
+              }
+              placeholder={isCodeReadOnly ? "" : "Entrez le code d'activation"}
               sx={{ mb: 2 }}
-              disabled={hasPendingRequest}
+              disabled={hasPendingRequest || isCodeReadOnly}
+              InputProps={{
+                readOnly: isCodeReadOnly,
+                endAdornment: isCodeReadOnly && (
+                  <LockIcon sx={{ color: "text.secondary", mr: 1 }} />
+                ),
+                sx: {
+                  backgroundColor: isCodeReadOnly ? "grey.50" : "inherit",
+                  "& input": {
+                    cursor: isCodeReadOnly ? "default" : "text",
+                  },
+                },
+              }}
             />
+            {isCodeReadOnly && (
+              <Alert
+                severity="info"
+                sx={{ mt: 2, borderRadius: 2 }}
+                icon={<InfoIcon />}
+              >
+                Ce code a été automatiquement rempli suite à votre recherche.
+                Vous pouvez maintenant confirmer votre demande d'accès.
+              </Alert>
+            )}
           </Box>
         )}
       </DialogContent>
