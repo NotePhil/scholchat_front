@@ -42,7 +42,6 @@ const schedulingSchema = yup.object().shape({
       "La date de début effective est requise",
       function (value) {
         const { etatCoursProgramme } = this.parent;
-        // Le backend exige les dates effectives même pour PLANIFIE
         return etatCoursProgramme !== "PLANIFIE" ? !!value : true;
       }
     )
@@ -64,7 +63,6 @@ const schedulingSchema = yup.object().shape({
       "La date de fin effective est requise",
       function (value) {
         const { etatCoursProgramme } = this.parent;
-        // Le backend exige les dates effectives même pour PLANIFIE
         return etatCoursProgramme !== "PLANIFIE" ? !!value : true;
       }
     )
@@ -136,10 +134,12 @@ const CoursProgrammerForm = ({
 
   // Update selected participants when form value changes
   useEffect(() => {
-    setSelectedParticipants(watchedParticipants || []);
+    if (Array.isArray(watchedParticipants)) {
+      setSelectedParticipants(watchedParticipants);
+    }
   }, [watchedParticipants]);
 
-  // Fetch class participants when class changes
+  // Fetch class participants when class changes - FIXED
   useEffect(() => {
     const fetchClassParticipants = async (classeId) => {
       if (!classeId) {
@@ -151,13 +151,25 @@ const CoursProgrammerForm = ({
 
       try {
         setLoadingParticipants(true);
+        console.log("Fetching participants for class:", classeId);
+
         const participants = await AccederService.obtenirUtilisateursAvecAcces(
           classeId
         );
 
-        // Filter only approved students and format them professionally
-        const approvedStudents = participants
-          .filter((user) => user.etat === "APPROUVEE")
+        console.log("Raw participants data:", participants);
+
+        // Filter only approved users and format them properly
+        const approvedUsers = participants
+          .filter((user) => {
+            // Check different possible status field names
+            const status = user.etat || user.status || user.statut;
+            return (
+              status === "APPROUVEE" ||
+              status === "ACTIVE" ||
+              status === "ACTIF"
+            );
+          })
           .map((user) => {
             // Get the full name in a professional format
             const firstName = user.prenom || "";
@@ -175,7 +187,7 @@ const CoursProgrammerForm = ({
               id: user.utilisateurId || user.id,
               name: displayName,
               email: user.email || user.utilisateurEmail || "",
-              type: user.type || user.role || "MEMBER",
+              type: user.type || user.role || user.typeUtilisateur || "MEMBER",
               // Keep original data for reference
               originalData: user,
             };
@@ -183,8 +195,12 @@ const CoursProgrammerForm = ({
           // Sort participants alphabetically by name for better UX
           .sort((a, b) => a.name.localeCompare(b.name));
 
-        console.log("Processed participants:", approvedStudents);
-        setClassParticipants(approvedStudents);
+        console.log("Processed participants:", approvedUsers);
+        setClassParticipants(approvedUsers);
+
+        // Clear previous selections when class changes
+        setSelectedParticipants([]);
+        setValue("participantsIds", []);
       } catch (error) {
         console.error("Error fetching class participants:", error);
         setClassParticipants([]);
@@ -214,7 +230,6 @@ const CoursProgrammerForm = ({
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
           const date = new Date(dateString);
-          // Format for datetime-local input
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, "0");
           const day = String(date.getDate()).padStart(2, "0");
@@ -277,6 +292,7 @@ const CoursProgrammerForm = ({
     }
   };
 
+  // FIXED: Handle participant change properly
   const handleParticipantChange = (newSelectedIds) => {
     console.log("Participant selection changed:", newSelectedIds);
     setSelectedParticipants(newSelectedIds);
@@ -293,7 +309,6 @@ const CoursProgrammerForm = ({
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  // Get minimum date for date debut effectif (must be >= date prevue)
   const getMinDateDebutEffectif = () => {
     if (watchedDatePrevue) {
       return watchedDatePrevue;
@@ -301,7 +316,6 @@ const CoursProgrammerForm = ({
     return getCurrentDateTime();
   };
 
-  // Get minimum date for date fin effectif (must be >= date debut effectif)
   const getMinDateFinEffectif = () => {
     if (watchedDateDebut) {
       return watchedDateDebut;
@@ -318,7 +332,6 @@ const CoursProgrammerForm = ({
         return new Date(dateString).toISOString();
       };
 
-      // Fonction utilitaire pour calculer la date de fin
       const calculateEndDate = (startDate, hoursToAdd = 2) => {
         if (!startDate) return null;
         const date = new Date(startDate);
@@ -326,7 +339,6 @@ const CoursProgrammerForm = ({
         return date.toISOString();
       };
 
-      // Pour le statut PLANIFIE, utiliser la date prévue comme dates effectives
       const isPlanifie = data.etatCoursProgramme === "PLANIFIE";
 
       const scheduleData = {
@@ -334,10 +346,10 @@ const CoursProgrammerForm = ({
         classeId: data.classeId || null,
         dateCoursPrevue: formatDate(data.dateCoursPrevue),
         dateDebutEffectif: isPlanifie
-          ? formatDate(data.dateCoursPrevue) // Utiliser date prévue pour début effectif
+          ? formatDate(data.dateCoursPrevue)
           : formatDate(data.dateDebutEffectif),
         dateFinEffectif: isPlanifie
-          ? calculateEndDate(data.dateCoursPrevue, 2) // Ajouter 2 heures par défaut
+          ? calculateEndDate(data.dateCoursPrevue, 2)
           : formatDate(data.dateFinEffectif),
         etatCoursProgramme: data.etatCoursProgramme,
         lieu: data.lieu.trim(),
@@ -356,24 +368,14 @@ const CoursProgrammerForm = ({
     }
   };
 
-  // Fonction utilitaire pour calculer la date de fin
-  const calculateEndDate = (startDate, hoursToAdd = 2) => {
-    if (!startDate) return null;
-    const date = new Date(startDate);
-    date.setHours(date.getHours() + hoursToAdd);
-    return date.toISOString();
-  };
-
   const handleClose = () => {
     resetForm();
     onClose();
   };
 
-  // Determine if date fields should be disabled based on state
   const shouldDisableDateDebutEffectif = watchedEtat === "PLANIFIE";
   const shouldDisableDateFinEffectif = watchedEtat !== "TERMINE";
 
-  // Status options with icons
   const getStatusDisplay = (status) => {
     const statusMap = {
       PLANIFIE: { icon: Calendar, text: "Planifié", color: "text-blue-600" },
@@ -387,16 +389,22 @@ const CoursProgrammerForm = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col">
-        {/* Fixed Header */}
-        <div className="p-6 border-b border-slate-200 flex-shrink-0">
+    // FIXED: Added higher z-index and proper positioning to avoid header conflicts
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col relative">
+        {/* FIXED: Header with better spacing and positioning */}
+        <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center">
-              <Calendar className="mr-3 text-indigo-600" size={28} />
-              {modalMode === "create"
-                ? "Programmer un Cours"
-                : "Modifier la Programmation"}
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
+              <Calendar className="mr-2 sm:mr-3 text-indigo-600" size={24} />
+              <span className="hidden sm:inline">
+                {modalMode === "create"
+                  ? "Programmer un Cours"
+                  : "Modifier la Programmation"}
+              </span>
+              <span className="sm:hidden">
+                {modalMode === "create" ? "Programmer" : "Modifier"}
+              </span>
             </h2>
             <button
               onClick={handleClose}
@@ -407,22 +415,22 @@ const CoursProgrammerForm = ({
           </div>
 
           {submitError && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700">
-              <AlertCircle size={16} className="mr-2 flex-shrink-0" />
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start text-red-700">
+              <AlertCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
               <span className="text-sm">{submitError}</span>
             </div>
           )}
         </div>
 
-        {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* FIXED: Scrollable Form Content with proper spacing */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <form
             id="course-form"
             onSubmit={handleSubmit(handleFormSubmit)}
-            className="space-y-6"
+            className="space-y-4 sm:space-y-6"
           >
             {/* Course and State Selection */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label
                   htmlFor="coursId"
@@ -474,7 +482,6 @@ const CoursProgrammerForm = ({
                   }`}
                   onChange={(e) => {
                     setValue("etatCoursProgramme", e.target.value);
-                    // Clear dependent date fields when changing state
                     if (e.target.value === "PLANIFIE") {
                       setValue("dateDebutEffectif", "");
                       setValue("dateFinEffectif", "");
@@ -499,7 +506,7 @@ const CoursProgrammerForm = ({
             </div>
 
             {/* Class and Capacity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label
                   htmlFor="classeId"
@@ -561,20 +568,19 @@ const CoursProgrammerForm = ({
               </div>
             </div>
 
-            {/* Date Controls with Better Alignment */}
-            {/* Date Controls with Better Alignment */}
-            <div className="bg-slate-50 p-6 rounded-xl">
-              <h3 className="text-lg font-semibold text-slate-800 mb-6 flex items-center">
+            {/* FIXED: Date Controls with better responsive layout */}
+            <div className="bg-slate-50 p-4 sm:p-6 rounded-xl">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 sm:mb-6 flex items-center">
                 <Clock className="mr-2 text-indigo-600" size={20} />
                 Planning des dates
               </h3>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Planned Date */}
                 <div>
                   <label
                     htmlFor="dateCoursPrevue"
-                    className="block text-sm font-semibold text-slate-700 mb-3 flex items-center"
+                    className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                   >
                     <Calendar size={16} className="mr-2 text-blue-600" />
                     Date prévue *
@@ -592,19 +598,22 @@ const CoursProgrammerForm = ({
                     style={{ minHeight: "48px" }}
                   />
                   {errors.dateCoursPrevue && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <AlertCircle size={14} className="mr-1 flex-shrink-0" />
+                    <p className="mt-2 text-sm text-red-600 flex items-start">
+                      <AlertCircle
+                        size={14}
+                        className="mr-1 flex-shrink-0 mt-0.5"
+                      />
                       {errors.dateCoursPrevue.message}
                     </p>
                   )}
                 </div>
 
                 {/* Effective Dates */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label
                       htmlFor="dateDebutEffectif"
-                      className="block text-sm font-semibold text-slate-700 mb-3 flex items-center"
+                      className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                     >
                       <Activity size={16} className="mr-2 text-green-600" />
                       Date début effectif *
@@ -622,8 +631,11 @@ const CoursProgrammerForm = ({
                       style={{ minHeight: "48px" }}
                     />
                     {errors.dateDebutEffectif && (
-                      <p className="mt-2 text-sm text-red-600 flex items-center">
-                        <AlertCircle size={14} className="mr-1 flex-shrink-0" />
+                      <p className="mt-2 text-sm text-red-600 flex items-start">
+                        <AlertCircle
+                          size={14}
+                          className="mr-1 flex-shrink-0 mt-0.5"
+                        />
                         {errors.dateDebutEffectif.message}
                       </p>
                     )}
@@ -632,7 +644,7 @@ const CoursProgrammerForm = ({
                   <div>
                     <label
                       htmlFor="dateFinEffectif"
-                      className="block text-sm font-semibold text-slate-700 mb-3 flex items-center"
+                      className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                     >
                       <BookOpen size={16} className="mr-2 text-gray-600" />
                       Date fin effectif *
@@ -650,8 +662,11 @@ const CoursProgrammerForm = ({
                       style={{ minHeight: "48px" }}
                     />
                     {errors.dateFinEffectif && (
-                      <p className="mt-2 text-sm text-red-600 flex items-center">
-                        <AlertCircle size={14} className="mr-1 flex-shrink-0" />
+                      <p className="mt-2 text-sm text-red-600 flex items-start">
+                        <AlertCircle
+                          size={14}
+                          className="mr-1 flex-shrink-0 mt-0.5"
+                        />
                         {errors.dateFinEffectif.message}
                       </p>
                     )}
@@ -704,25 +719,27 @@ const CoursProgrammerForm = ({
               />
             </div>
 
-            {/* Participants - Enhanced Section */}
-            <div className="bg-slate-50 p-6 rounded-xl">
-              <div className="flex items-center justify-between mb-4">
-                <label className="block text-sm font-semibold text-slate-700">
-                  <div className="flex items-center">
-                    <Users2 size={16} className="mr-2 text-indigo-600" />
-                    Participants (optionnel)
-                  </div>
-                  {!watchedClassId && (
-                    <span className="block text-xs text-amber-600 font-medium mt-1 flex items-center">
-                      <AlertCircle size={12} className="mr-1" />
-                      Sélectionnez d'abord une classe
-                    </span>
-                  )}
-                </label>
+            {/* FIXED: Participants - Enhanced Section */}
+            <div className="bg-slate-50 p-4 sm:p-6 rounded-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    <div className="flex items-center">
+                      <Users2 size={16} className="mr-2 text-indigo-600" />
+                      Participants (optionnel)
+                    </div>
+                    {!watchedClassId && (
+                      <span className="block text-xs text-amber-600 font-medium mt-1 flex items-center">
+                        <AlertCircle size={12} className="mr-1" />
+                        Sélectionnez d'abord une classe
+                      </span>
+                    )}
+                  </label>
+                </div>
 
                 {/* Participant count display */}
                 {classParticipants.length > 0 && (
-                  <div className="text-sm text-slate-600 bg-white px-3 py-1 rounded-full border">
+                  <div className="text-sm text-slate-600 bg-white px-3 py-1 rounded-full border flex-shrink-0">
                     {selectedParticipants.length} / {classParticipants.length}{" "}
                     sélectionnés
                   </div>
@@ -778,7 +795,7 @@ const CoursProgrammerForm = ({
                       {selectedParticipants
                         .map((id) => classParticipants.find((p) => p.id === id))
                         .filter(Boolean)
-                        .slice(0, 10) // Show max 10 participants to avoid overflow
+                        .slice(0, 10)
                         .map((participant) => (
                           <span
                             key={participant.id}
@@ -811,13 +828,13 @@ const CoursProgrammerForm = ({
           </form>
         </div>
 
-        {/* Fixed Footer with Action Buttons */}
-        <div className="p-6 bg-slate-50 border-t border-slate-200 flex-shrink-0">
+        {/* FIXED: Footer with Action Buttons - Better responsive design */}
+        <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex-shrink-0 sticky bottom-0 rounded-b-2xl">
           <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
             <button
               type="button"
               onClick={handleClose}
-              className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors rounded-lg hover:bg-slate-200 flex items-center justify-center"
+              className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors rounded-lg hover:bg-slate-200 flex items-center justify-center order-2 sm:order-1"
             >
               <X size={16} className="mr-2" />
               Annuler
@@ -826,7 +843,7 @@ const CoursProgrammerForm = ({
               type="submit"
               form="course-form"
               disabled={loading}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center"
+              className="px-6 sm:px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center order-1 sm:order-2"
             >
               {loading ? (
                 <>
@@ -850,14 +867,20 @@ const CoursProgrammerForm = ({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  {modalMode === "create"
-                    ? "Programmation..."
-                    : "Sauvegarde..."}
+                  <span className="hidden sm:inline">
+                    {modalMode === "create"
+                      ? "Programmation..."
+                      : "Sauvegarde..."}
+                  </span>
+                  <span className="sm:hidden">
+                    {modalMode === "create" ? "En cours..." : "Sauvegarde..."}
+                  </span>
                 </>
               ) : modalMode === "create" ? (
                 <>
                   <Plus size={16} className="mr-2" />
-                  Programmer
+                  <span className="hidden sm:inline">Programmer</span>
+                  <span className="sm:hidden">Créer</span>
                 </>
               ) : (
                 <>

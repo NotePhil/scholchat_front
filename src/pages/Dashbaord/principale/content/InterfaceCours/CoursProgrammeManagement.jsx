@@ -19,113 +19,15 @@ import {
   PlayCircle,
   User,
   GraduationCap,
+  Download,
+  Image,
+  FileIcon,
+  Play,
+  Pause,
+  Loader,
 } from "lucide-react";
-import onBack from "prop-types";
-// Mock data - Replace with actual API calls
-const mockClasses = [
-  {
-    id: "1",
-    nom: "Mathématiques 2nde A",
-    niveau: "Seconde",
-    effectif: 32,
-    codeActivation: "MATH2A2024",
-  },
-  {
-    id: "2",
-    nom: "Français 1ère B",
-    niveau: "Première",
-    effectif: 28,
-    codeActivation: "FR1B2024",
-  },
-  {
-    id: "3",
-    nom: "Physique Terminale",
-    niveau: "Terminale",
-    effectif: 25,
-    codeActivation: "PHY2024",
-  },
-];
 
-const mockScheduledCourses = [
-  {
-    id: "1",
-    cours: {
-      id: "c1",
-      titre: "Les fonctions polynômes",
-      description: "Introduction aux fonctions polynômes du second degré",
-      matieres: [{ nom: "Mathématiques" }],
-    },
-    classeId: "1",
-    dateCoursPrevue: "2024-12-15T10:00:00Z",
-    dateDebutEffectif: "2024-12-15T10:05:00Z",
-    dateFinEffectif: "2024-12-15T11:35:00Z",
-    lieu: "Salle 203",
-    etatCoursProgramme: "PLANIFIE",
-    capaciteMax: 32,
-    participantsIds: ["p1", "p2", "p3"],
-    description: "Cours sur les fonctions polynômes avec exercices pratiques",
-  },
-  {
-    id: "2",
-    cours: {
-      id: "c2",
-      titre: "Équations du second degré",
-      description:
-        "Résolution des équations du second degré - méthodes et applications",
-      matieres: [{ nom: "Mathématiques" }],
-    },
-    classeId: "1",
-    dateCoursPrevue: "2024-12-18T14:00:00Z",
-    dateDebutEffectif: null,
-    dateFinEffectif: null,
-    lieu: "Salle 203",
-    etatCoursProgramme: "PLANIFIE",
-    capaciteMax: 32,
-    participantsIds: ["p1", "p2", "p3"],
-    description: "Méthodes de résolution avec discriminant",
-  },
-  {
-    id: "3",
-    cours: {
-      id: "c3",
-      titre: "Analyse littéraire",
-      description: "Analyse de textes littéraires du 19ème siècle",
-      matieres: [{ nom: "Français" }],
-    },
-    classeId: "2",
-    dateCoursPrevue: "2024-12-16T09:00:00Z",
-    dateDebutEffectif: "2024-12-16T09:00:00Z",
-    dateFinEffectif: "2024-12-16T10:30:00Z",
-    lieu: "Salle 105",
-    etatCoursProgramme: "EN_COURS",
-    capaciteMax: 28,
-    participantsIds: ["p4", "p5"],
-    description: "Étude des œuvres de Balzac et Zola",
-  },
-  {
-    id: "4",
-    cours: {
-      id: "c4",
-      titre: "Mécanique quantique",
-      description:
-        "Introduction aux concepts fondamentaux de la mécanique quantique",
-      matieres: [{ nom: "Physique" }],
-    },
-    classeId: "3",
-    dateCoursPrevue: "2024-12-20T15:00:00Z",
-    dateDebutEffectif: "2024-12-20T15:10:00Z",
-    dateFinEffectif: "2024-12-20T16:40:00Z",
-    lieu: "Laboratoire Physique",
-    etatCoursProgramme: "TERMINE",
-    capaciteMax: 25,
-    participantsIds: ["p6", "p7", "p8"],
-    description: "Principes de base et expériences pratiques",
-  },
-];
-
-const CoursProgrammeManagement = () => {
-  const [selectedClass, setSelectedClass] = useState(null);
-  const [classes, setClasses] = useState([]);
+const CoursProgrammeManagement = ({ selectedClass, onBack }) => {
   const [scheduledCourses, setScheduledCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -133,32 +35,251 @@ const CoursProgrammeManagement = () => {
   const [statusFilter, setStatusFilter] = useState("TOUS");
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showCourseDetail, setShowCourseDetail] = useState(false);
+  const [courseResources, setCourseResources] = useState([]);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Initialize data
-  useEffect(() => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setClasses(mockClasses);
-      setLoading(false);
-    }, 500);
-  }, []);
+  const userId = localStorage.getItem("userId");
 
-  // Load courses when class is selected
+  // Fetch courses for the selected class when component mounts
   useEffect(() => {
     if (selectedClass) {
-      setLoading(true);
-      // Simulate API call to load courses for selected class
-      setTimeout(() => {
-        const classScheduledCourses = mockScheduledCourses.filter(
-          (course) => course.classeId === selectedClass.id
-        );
-        setScheduledCourses(classScheduledCourses);
-        setFilteredCourses(classScheduledCourses);
-        setLoading(false);
-      }, 300);
+      fetchCoursesForClass();
     }
   }, [selectedClass]);
+
+  const fetchCoursesForClass = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      console.log("Fetching courses for class:", selectedClass.id);
+      console.log("Current user ID:", userId);
+
+      // Import services - using correct paths based on your working component
+      const { coursProgrammerService } = await import(
+        "../../../../../services/coursProgrammerService"
+      );
+      const { coursService } = await import(
+        "../../../../../services/CoursService"
+      );
+
+      // Get all courses that the current user can access as a participant
+      const userCourses =
+        await coursProgrammerService.obtenirProgrammationParParticipant(userId);
+
+      console.log("All user courses:", userCourses);
+
+      // Enrich the scheduled courses with full course details
+      const enrichedCourses = await Promise.all(
+        userCourses.map(async (scheduledCourse) => {
+          try {
+            // Get full course details if coursId exists
+            if (scheduledCourse.coursId) {
+              const fullCourseDetails = await coursService.getCoursById(
+                scheduledCourse.coursId
+              );
+              return {
+                ...scheduledCourse,
+                cours: fullCourseDetails, // Add full course details
+              };
+            } else {
+              // If no coursId, keep the original structure but ensure cours field exists
+              return {
+                ...scheduledCourse,
+                cours: scheduledCourse.cours || {
+                  titre: "Cours sans titre",
+                  description: "Description non disponible",
+                },
+              };
+            }
+          } catch (courseError) {
+            console.warn(
+              `Could not load course details for ${scheduledCourse.coursId}:`,
+              courseError
+            );
+            // Return with minimal course info if loading fails
+            return {
+              ...scheduledCourse,
+              cours: {
+                id: scheduledCourse.coursId,
+                titre:
+                  scheduledCourse.titre ||
+                  `Cours ${scheduledCourse.coursId?.substring(0, 8)}` ||
+                  "Cours non identifié",
+                description:
+                  scheduledCourse.description || "Description non disponible",
+              },
+            };
+          }
+        })
+      );
+
+      console.log("Enriched courses:", enrichedCourses);
+
+      // Filter courses to show only those where:
+      // 1. The user is in the participants list
+      // 2. The course is associated with the selected class (if classeId exists)
+      // 3. OR the course doesn't have a specific class but user has access through other means
+      const classScheduledCourses = enrichedCourses.filter(
+        (scheduledCourse) => {
+          // Check if user is explicitly in participants
+          const isParticipant =
+            scheduledCourse.participantsIds &&
+            scheduledCourse.participantsIds.includes(userId);
+
+          // Check if course is for this class
+          const isForThisClass = scheduledCourse.classeId === selectedClass.id;
+
+          // If course has no specific class, check if user should have access based on class membership
+          const hasGeneralAccess = !scheduledCourse.classeId && isParticipant;
+
+          return isParticipant && (isForThisClass || hasGeneralAccess);
+        }
+      );
+
+      console.log("Filtered courses for class:", classScheduledCourses);
+
+      // If no courses found specifically for this class, try to get courses accessible to the user
+      // that might be relevant to this class
+      if (classScheduledCourses.length === 0) {
+        console.log(
+          "No courses found with classeId, trying accessible courses approach"
+        );
+
+        try {
+          const accessibleCourses =
+            await coursProgrammerService.obtenirProgrammationAccessible(userId);
+          console.log("Accessible courses:", accessibleCourses);
+
+          // Enrich accessible courses with full details too
+          const enrichedAccessibleCourses = await Promise.all(
+            accessibleCourses.map(async (scheduledCourse) => {
+              try {
+                if (scheduledCourse.coursId) {
+                  const fullCourseDetails = await coursService.getCoursById(
+                    scheduledCourse.coursId
+                  );
+                  return {
+                    ...scheduledCourse,
+                    cours: fullCourseDetails,
+                  };
+                } else {
+                  return {
+                    ...scheduledCourse,
+                    cours: scheduledCourse.cours || {
+                      titre: "Cours sans titre",
+                      description: "Description non disponible",
+                    },
+                  };
+                }
+              } catch (error) {
+                console.warn(`Could not enrich accessible course:`, error);
+                return {
+                  ...scheduledCourse,
+                  cours: {
+                    id: scheduledCourse.coursId,
+                    titre: scheduledCourse.titre || "Cours accessible",
+                    description:
+                      scheduledCourse.description ||
+                      "Description non disponible",
+                  },
+                };
+              }
+            })
+          );
+
+          setScheduledCourses(enrichedAccessibleCourses);
+          setFilteredCourses(enrichedAccessibleCourses);
+        } catch (accessError) {
+          console.error("Error fetching accessible courses:", accessError);
+          setScheduledCourses(classScheduledCourses);
+          setFilteredCourses(classScheduledCourses);
+        }
+      } else {
+        setScheduledCourses(classScheduledCourses);
+        setFilteredCourses(classScheduledCourses);
+      }
+
+      console.log(
+        "Final courses set:",
+        classScheduledCourses.length > 0
+          ? classScheduledCourses
+          : "accessible courses"
+      );
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      setError(`Erreur lors du chargement des cours: ${error.message}`);
+      setScheduledCourses([]);
+      setFilteredCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCourseResources = async (courseId) => {
+    try {
+      setResourcesLoading(true);
+
+      // Import services - using correct paths based on your working component
+      const { coursService } = await import(
+        "../../../../../services/coursService"
+      );
+      const { minioS3Service } = await import(
+        "../../../../../services/minioS3Service"
+      );
+
+      // Get course details with chapters/resources
+      const courseDetails = await coursService.getCoursWithChapitres(courseId);
+
+      // Get user media files related to this course
+      const userMedia = await minioS3Service.getUserMedia(userId);
+
+      // Filter media that might be related to this course
+      // You can customize this logic based on your file naming conventions
+      const courseRelatedMedia = userMedia.filter(
+        (media) =>
+          media.fileName
+            .toLowerCase()
+            .includes(courseDetails.titre.toLowerCase()) ||
+          media.documentType === "course-materials"
+      );
+
+      setCourseResources(courseRelatedMedia);
+    } catch (error) {
+      console.error("Error fetching course resources:", error);
+      setCourseResources([]);
+    } finally {
+      setResourcesLoading(false);
+    }
+  };
+
+  const handleDownloadResource = async (resource) => {
+    try {
+      const { minioS3Service } = await import(
+        "../../../../../services/minioS3Service"
+      );
+
+      if (resource.filePath) {
+        await minioS3Service.downloadFileByPath(resource.filePath);
+      } else {
+        await minioS3Service.downloadFile(resource.id);
+      }
+    } catch (error) {
+      console.error("Error downloading resource:", error);
+      alert("Erreur lors du téléchargement du fichier");
+    }
+  };
+
+  const getFileIcon = (contentType) => {
+    if (contentType?.startsWith("image/")) {
+      return <Image className="w-4 h-4" />;
+    } else if (contentType?.startsWith("video/")) {
+      return <Video className="w-4 h-4" />;
+    } else {
+      return <FileIcon className="w-4 h-4" />;
+    }
+  };
 
   // Filter courses based on search and status
   useEffect(() => {
@@ -167,11 +288,13 @@ const CoursProgrammeManagement = () => {
     if (searchTerm) {
       filtered = filtered.filter(
         (course) =>
-          course.cours.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          course.cours.description
-            .toLowerCase()
+          course.cours?.titre
+            ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          course.lieu.toLowerCase().includes(searchTerm.toLowerCase())
+          course.cours?.description
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          course.lieu?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -230,6 +353,7 @@ const CoursProgrammeManagement = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "Date non définie";
     const date = new Date(dateString);
     return date.toLocaleDateString("fr-FR", {
       weekday: "long",
@@ -240,6 +364,7 @@ const CoursProgrammeManagement = () => {
   };
 
   const formatTime = (dateString) => {
+    if (!dateString) return "Heure non définie";
     const date = new Date(dateString);
     return date.toLocaleTimeString("fr-FR", {
       hour: "2-digit",
@@ -247,29 +372,33 @@ const CoursProgrammeManagement = () => {
     });
   };
 
-  const handleClassSelect = (classe) => {
-    setSelectedClass(classe);
-    setSearchTerm("");
-    setStatusFilter("TOUS");
-  };
-
-  const handleBackToClasses = () => {
-    onBack(); // Call the parent's back function
-    setScheduledCourses([]);
-    setFilteredCourses([]);
-    setShowCourseDetail(false);
-    setSelectedCourse(null);
-  };
   const handleCourseSelect = (course) => {
     setSelectedCourse(course);
     setShowCourseDetail(true);
+    // Fetch resources for this course
+    if (course.cours?.id) {
+      fetchCourseResources(course.cours.id);
+    }
   };
 
   const handleBackToCourses = () => {
     setShowCourseDetail(false);
     setSelectedCourse(null);
+    setCourseResources([]);
   };
 
+  const handleBackToClasses = () => {
+    if (onBack && typeof onBack === "function") {
+      onBack();
+    }
+    setScheduledCourses([]);
+    setFilteredCourses([]);
+    setShowCourseDetail(false);
+    setSelectedCourse(null);
+    setError("");
+  };
+
+  // Course Detail View
   if (showCourseDetail && selectedCourse) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -290,7 +419,7 @@ const CoursProgrammeManagement = () => {
                       <BookOpen className="w-6 h-6 mr-3" />
                       Détails du cours
                     </h1>
-                    <p className="text-blue-100 mt-1">{selectedClass.nom}</p>
+                    <p className="text-blue-100 mt-1">{selectedClass?.nom}</p>
                   </div>
                 </div>
                 <div
@@ -318,16 +447,20 @@ const CoursProgrammeManagement = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h2 className="text-xl font-bold text-gray-900 mb-2">
-                      {selectedCourse.cours.titre}
+                      {selectedCourse.cours?.titre || "Titre non disponible"}
                     </h2>
                     <p className="text-gray-600 mb-4">
-                      {selectedCourse.cours.description}
+                      {selectedCourse.cours?.description ||
+                        "Description non disponible"}
                     </p>
                   </div>
                   <div className="ml-4">
                     <div className="flex items-center space-x-2 text-sm text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
                       <Book className="w-4 h-4" />
-                      <span>{selectedCourse.cours.matieres[0]?.nom}</span>
+                      <span>
+                        {selectedCourse.cours?.matieres?.[0]?.nom ||
+                          "Matière non définie"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -340,6 +473,62 @@ const CoursProgrammeManagement = () => {
                     </h3>
                     <p className="text-gray-700">
                       {selectedCourse.description}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Resources Card */}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                  <FileText className="w-5 h-5 mr-2 text-indigo-600" />
+                  Ressources du cours
+                  {resourcesLoading && (
+                    <div className="ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                  )}
+                </h3>
+
+                {resourcesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <span className="ml-2 text-gray-600">
+                      Chargement des ressources...
+                    </span>
+                  </div>
+                ) : courseResources.length > 0 ? (
+                  <div className="space-y-3">
+                    {courseResources.map((resource) => (
+                      <div
+                        key={resource.id}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          {getFileIcon(resource.contentType)}
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {resource.fileName}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {resource.mediaType} •{" "}
+                              {Math.round(resource.fileSize / 1024)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDownloadResource(resource)}
+                          className="flex items-center space-x-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span className="text-sm">Télécharger</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-600">
+                      Aucune ressource disponible pour ce cours
                     </p>
                   </div>
                 )}
@@ -418,7 +607,7 @@ const CoursProgrammeManagement = () => {
                 <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg">
                   <MapPin className="w-4 h-4 text-slate-600" />
                   <span className="font-medium text-gray-900">
-                    {selectedCourse.lieu}
+                    {selectedCourse.lieu || "Lieu non défini"}
                   </span>
                 </div>
               </div>
@@ -438,7 +627,7 @@ const CoursProgrammeManagement = () => {
                       </span>
                     </div>
                     <span className="font-bold text-indigo-600">
-                      {selectedCourse.participantsIds.length}
+                      {selectedCourse.participantsIds?.length || 0}
                     </span>
                   </div>
                   {selectedCourse.capaciteMax && (
@@ -470,9 +659,14 @@ const CoursProgrammeManagement = () => {
                     </button>
                   )}
 
-                  <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
+                  <button
+                    onClick={() =>
+                      fetchCourseResources(selectedCourse.cours?.id)
+                    }
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                  >
                     <FileText className="w-4 h-4" />
-                    <span>Voir les ressources</span>
+                    <span>Actualiser les ressources</span>
                   </button>
 
                   <button className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
@@ -488,11 +682,11 @@ const CoursProgrammeManagement = () => {
     );
   }
 
+  // No class selected state
   if (!selectedClass) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="max-w-6xl mx-auto p-6">
-          {/* Header */}
           <div className="bg-white rounded-2xl shadow-lg mb-8 overflow-hidden">
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white">
               <div className="flex items-center justify-between">
@@ -502,85 +696,28 @@ const CoursProgrammeManagement = () => {
                     Mes Cours Programmés
                   </h1>
                   <p className="text-indigo-100 mt-2 text-lg">
-                    Sélectionnez une classe pour voir les cours programmés
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-indigo-100 text-sm">Élève</p>
-                  <p className="font-semibold text-lg">
-                    Interface d'apprentissage
+                    Aucune classe sélectionnée
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center min-h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            </div>
-          ) : (
-            <>
-              {classes.length === 0 ? (
-                <div className="text-center py-12">
-                  <GraduationCap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Aucune classe disponible
-                  </h3>
-                  <p className="text-gray-600">
-                    Vous n'êtes inscrit à aucune classe pour le moment.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {classes.map((classe) => (
-                    <div
-                      key={classe.id}
-                      onClick={() => handleClassSelect(classe)}
-                      className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 border border-gray-100"
-                    >
-                      <div className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <h3 className="font-bold text-lg text-gray-900 mb-2">
-                              {classe.nom}
-                            </h3>
-                            <p className="text-gray-600 text-sm mb-3">
-                              {classe.niveau}
-                            </p>
-                          </div>
-                          <ChevronRight className="w-5 h-5 text-indigo-400 mt-1" />
-                        </div>
-
-                        <div className="space-y-3">
-                          <div className="flex items-center space-x-2 text-sm text-gray-600">
-                            <Users className="w-4 h-4" />
-                            <span>{classe.effectif} élèves</span>
-                          </div>
-
-                          <div className="pt-3 border-t border-gray-100">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-gray-500">
-                                Code:
-                              </span>
-                              <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
-                                {classe.codeActivation}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+          <div className="text-center py-12">
+            <GraduationCap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Aucune classe sélectionnée
+            </h3>
+            <p className="text-gray-600">
+              Veuillez sélectionner une classe pour voir les cours programmés.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Main courses list view
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-7xl mx-auto p-6">
@@ -609,7 +746,9 @@ const CoursProgrammeManagement = () => {
                 <p className="text-blue-100 text-sm">
                   {filteredCourses.length} cours
                 </p>
-                <p className="font-semibold">{selectedClass.effectif} élèves</p>
+                <p className="font-semibold">
+                  {selectedClass.effectif || 0} élèves
+                </p>
               </div>
             </div>
           </div>
@@ -645,9 +784,24 @@ const CoursProgrammeManagement = () => {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center">
+              <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+              <p className="text-red-700">{error}</p>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center min-h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="flex items-center space-x-3">
+              <Loader className="w-8 h-8 animate-spin text-blue-600" />
+              <span className="text-lg text-gray-600">
+                Chargement des cours...
+              </span>
+            </div>
           </div>
         ) : (
           <>
@@ -664,6 +818,14 @@ const CoursProgrammeManagement = () => {
                     ? "Il n'y a actuellement aucun cours programmé pour cette classe."
                     : "Aucun cours ne correspond à vos critères de recherche."}
                 </p>
+                {scheduledCourses.length === 0 && (
+                  <button
+                    onClick={fetchCoursesForClass}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Actualiser
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -678,7 +840,7 @@ const CoursProgrammeManagement = () => {
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
                             <h3 className="font-bold text-lg text-gray-900">
-                              {course.cours.titre}
+                              {course.cours?.titre || "Titre non disponible"}
                             </h3>
                             <div
                               className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
@@ -694,24 +856,14 @@ const CoursProgrammeManagement = () => {
                             </div>
                           </div>
                           <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                            {course.cours.description}
+                            {course.cours?.description ||
+                              "Description non disponible"}
                           </p>
                         </div>
                         <ChevronRight className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0 ml-2" />
                       </div>
 
                       <div className="space-y-3">
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <Book className="w-4 h-4" />
-                            <span>{course.cours.matieres[0]?.nom}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <MapPin className="w-4 h-4" />
-                            <span>{course.lieu}</span>
-                          </div>
-                        </div>
-
                         <div className="flex items-center space-x-4 text-sm text-gray-600">
                           <div className="flex items-center space-x-1">
                             <Calendar className="w-4 h-4" />
@@ -723,16 +875,27 @@ const CoursProgrammeManagement = () => {
                           </div>
                         </div>
 
-                        {course.participantsIds.length > 0 && (
+                        {course.lieu && (
                           <div className="flex items-center space-x-2">
-                            <Users className="w-4 h-4 text-gray-600" />
+                            <MapPin className="w-4 h-4 text-gray-600" />
                             <span className="text-sm text-gray-600">
-                              {course.participantsIds.length} participant
-                              {course.participantsIds.length > 1 ? "s" : ""}
-                              {course.capaciteMax && ` / ${course.capaciteMax}`}
+                              {course.lieu}
                             </span>
                           </div>
                         )}
+
+                        {course.participantsIds &&
+                          course.participantsIds.length > 0 && (
+                            <div className="flex items-center space-x-2">
+                              <Users className="w-4 h-4 text-gray-600" />
+                              <span className="text-sm text-gray-600">
+                                {course.participantsIds.length} participant
+                                {course.participantsIds.length > 1 ? "s" : ""}
+                                {course.capaciteMax &&
+                                  ` / ${course.capaciteMax}`}
+                              </span>
+                            </div>
+                          )}
 
                         {/* Action buttons */}
                         <div className="pt-4 border-t border-gray-100">

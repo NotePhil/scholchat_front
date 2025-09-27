@@ -88,6 +88,7 @@ const Principal = () => {
   const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
   const [tokenChecked, setTokenChecked] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isCustomBreakpoint, setIsCustomBreakpoint] = useState(false); // New state for custom breakpoint
   const [currentLanguage, setCurrentLanguage] = useState("fr");
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -101,11 +102,16 @@ const Principal = () => {
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
+      // Custom breakpoint: from 992px going downward (but not including mobile)
+      const customBreakpoint =
+        window.innerWidth <= 992 && window.innerWidth > 768;
 
-      if (mobile) {
+      setIsMobile(mobile);
+      setIsCustomBreakpoint(customBreakpoint);
+
+      if (mobile || customBreakpoint) {
         setShowSidebar(false);
-      } else {
+      } else if (window.innerWidth > 992) {
         setShowSidebar(true);
       }
     };
@@ -292,7 +298,8 @@ const Principal = () => {
       setShowMessaging(false);
     }
 
-    if (isMobile && showSidebar) {
+    // Close sidebar on mobile and custom breakpoint when navigating
+    if (isMobile || isCustomBreakpoint) {
       setShowSidebar(false);
     }
   };
@@ -477,7 +484,7 @@ const Principal = () => {
 
   return (
     <div className={`principal-container ${isDark ? "dark-mode" : ""}`}>
-      {showSidebar && (
+      {showSidebar && (isMobile || isCustomBreakpoint) && (
         <div
           className="sidebar-overlay"
           onClick={() => setShowSidebar(false)}
@@ -521,7 +528,11 @@ const Principal = () => {
         toggleSidebar={toggleSidebar}
       />
 
-      <div className={`main-content ${showSidebar ? "with-sidebar" : ""}`}>
+      <div
+        className={`main-content ${
+          showSidebar && !isMobile && !isCustomBreakpoint ? "with-sidebar" : ""
+        }`}
+      >
         <div className="content-header fixed-header">
           <div className="header-left">
             <button
