@@ -1018,10 +1018,49 @@ const ManageEstablishmentDetailsView = ({
                   <Text code>{establishment.id}</Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Date de création">
-                  <Text>{establishment.dateCreation || "N/A"}</Text>
+                  <Text>
+                    {establishment.dateCreation
+                      ? new Date(establishment.dateCreation).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )
+                      : establishment.creationDate
+                      ? new Date(establishment.creationDate).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )
+                      : "N/A"}
+                  </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Dernière modification">
-                  <Text>{establishment.dateModification || "N/A"}</Text>
+                  <Text>
+                    {establishment.dateModification
+                      ? new Date(
+                          establishment.dateModification
+                        ).toLocaleDateString("fr-FR", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })
+                      : establishment.lastModified
+                      ? new Date(establishment.lastModified).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )
+                      : "N/A"}
+                  </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Code Unique" span={3}>
                   <Text code>{establishment.codeUnique || "Non défini"}</Text>
