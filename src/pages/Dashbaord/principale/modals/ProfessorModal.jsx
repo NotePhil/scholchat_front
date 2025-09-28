@@ -1,5 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { X, Save, Camera, Upload, Check, XCircle } from "lucide-react";
+import {
+  X,
+  Save,
+  Camera,
+  Upload,
+  Check,
+  XCircle,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  IdCard,
+  FileImage,
+  AlertCircle,
+  Shield,
+} from "lucide-react";
 import { scholchatService } from "../../../../services/ScholchatService";
 import axios from "axios";
 
@@ -221,6 +236,7 @@ const ProfessorModal = ({
       [fieldName]: "",
     }));
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -474,13 +490,13 @@ const ProfessorModal = ({
   const getStatusColor = (status) => {
     switch (status) {
       case "APPROVED":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 border-green-200";
       case "REJECTED":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 border-red-200";
       case "EN_ATTENTE":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
@@ -497,24 +513,33 @@ const ProfessorModal = ({
     }
   };
 
-  const renderImageSection = (fieldName, label, isRequired = false) => {
+  const renderImageSection = (
+    fieldName,
+    label,
+    isRequired = false,
+    icon = FileImage
+  ) => {
     const hasNewImage = imagePreview[fieldName];
     const hasExistingImage = imageUrls[fieldName];
+    const IconComponent = icon;
 
     return (
-      <div className="form-group">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="bg-slate-50 rounded-xl p-4">
+        <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center">
+          <IconComponent size={16} className="mr-2 text-indigo-600" />
           {label}{" "}
           {isRequired && modalMode === "create" && (
-            <span className="text-red-500">*</span>
+            <span className="text-red-500 ml-1">*</span>
           )}
         </label>
 
         {modalMode !== "view" && (
-          <div className="flex items-center space-x-4 mb-2">
-            <label className="flex items-center px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100">
-              <Camera size={16} className="mr-2" />
-              Choisir fichier
+          <div className="flex items-center mb-4">
+            <label className="flex items-center px-4 py-3 bg-white border-2 border-slate-200 rounded-lg cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200 shadow-sm">
+              <Camera size={16} className="mr-2 text-indigo-600" />
+              <span className="text-sm font-medium text-slate-700">
+                Choisir un fichier
+              </span>
               <input
                 type="file"
                 accept="image/*"
@@ -528,18 +553,21 @@ const ProfessorModal = ({
 
         {/* Show new image preview if available */}
         {hasNewImage && (
-          <div className="mb-2 relative">
-            <p className="text-xs text-green-600 mb-1">Nouvelle image:</p>
+          <div className="mb-4 relative">
+            <p className="text-xs text-green-600 mb-2 font-medium flex items-center">
+              <Check size={12} className="mr-1" />
+              Nouvelle image:
+            </p>
             <div className="relative inline-block">
               <img
                 src={imagePreview[fieldName]}
                 alt={`${label} - Nouveau`}
-                className="h-20 w-32 object-cover rounded border"
+                className="h-24 w-36 object-cover rounded-lg border-2 border-green-200 shadow-sm"
               />
               {modalMode !== "view" && (
                 <button
                   type="button"
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors shadow-lg"
                   onClick={() => handleRemoveImage(fieldName)}
                   aria-label="Supprimer l'image"
                 >
@@ -552,20 +580,25 @@ const ProfessorModal = ({
 
         {/* Show existing image if available and no new image */}
         {!hasNewImage && hasExistingImage && (
-          <div className="mb-2">
-            <p className="text-xs text-gray-500 mb-1">Image actuelle:</p>
+          <div className="mb-4">
+            <p className="text-xs text-slate-500 mb-2 font-medium">
+              Image actuelle:
+            </p>
             <img
               src={imageUrls[fieldName]}
               alt={`${label} - Existant`}
-              className="h-20 w-32 object-cover rounded border"
+              className="h-24 w-36 object-cover rounded-lg border-2 border-slate-200 shadow-sm"
             />
           </div>
         )}
 
         {/* Show placeholder if no images */}
         {!hasNewImage && !hasExistingImage && (
-          <div className="h-20 w-32 bg-gray-100 rounded border flex items-center justify-center">
-            <span className="text-xs text-gray-400">Aucune image</span>
+          <div className="h-24 w-36 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center">
+            <div className="text-center">
+              <IconComponent className="mx-auto h-6 w-6 text-slate-400 mb-1" />
+              <span className="text-xs text-slate-400">Aucune image</span>
+            </div>
           </div>
         )}
       </div>
@@ -578,58 +611,70 @@ const ProfessorModal = ({
   const shouldShowApprovalButtons =
     modalMode === "view" &&
     selectedProfessor &&
-    formData.statut == "EN_ATTENTE";
+    formData.statut === "EN_ATTENTE";
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={() => setShowModal(false)}
-        ></div>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col relative">
+        {/* Header - Fixed and sticky */}
+        <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
+                <User className="mr-2 sm:mr-3 text-indigo-600" size={24} />
+                <span className="hidden sm:inline">
+                  {modalMode === "create"
+                    ? "Nouveau Professeur"
+                    : modalMode === "edit"
+                    ? "Modifier Professeur"
+                    : "Détails Professeur"}
+                </span>
+                <span className="sm:hidden">
+                  {modalMode === "create"
+                    ? "Nouveau"
+                    : modalMode === "edit"
+                    ? "Modifier"
+                    : "Détails"}
+                </span>
+              </h3>
+              {/* Status Badge */}
+              {(modalMode === "edit" || modalMode === "view") &&
+                selectedProfessor && (
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(
+                      formData.statut
+                    )}`}
+                  >
+                    <Shield size={12} className="mr-1" />
+                    {getStatusText(formData.statut)}
+                  </span>
+                )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <form onSubmit={handleSubmit}>
-            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    {modalMode === "create"
-                      ? "Nouveau Professeur"
-                      : modalMode === "edit"
-                      ? "Modifier Professeur"
-                      : "Détails Professeur"}
-                  </h3>
-                  {/* Status Badge */}
-                  {(modalMode === "edit" || modalMode === "view") &&
-                    selectedProfessor && (
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                          formData.statut
-                        )}`}
-                      >
-                        {getStatusText(formData.statut)}
-                      </span>
-                    )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X size={24} />
-                </button>
-              </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {/* Personal Information Section */}
+              <div className="bg-slate-50 rounded-xl p-4 sm:p-6">
+                <h4 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
+                  <User size={18} className="mr-2 text-indigo-600" />
+                  Informations Personnelles
+                </h4>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Personal Information */}
                 <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900">
-                    Informations Personnelles
-                  </h4>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                      <User size={14} className="mr-1 text-indigo-600" />
                       Prénom <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -639,13 +684,14 @@ const ProfessorModal = ({
                       onChange={handleInputChange}
                       required
                       disabled={modalMode === "view"}
-                      placeholder="Entrez votre prénom"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      placeholder="Entrez le prénom"
+                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                      <User size={14} className="mr-1 text-indigo-600" />
                       Nom <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -655,13 +701,14 @@ const ProfessorModal = ({
                       onChange={handleInputChange}
                       required
                       disabled={modalMode === "view"}
-                      placeholder="Entrez votre nom"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      placeholder="Entrez le nom"
+                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                      <Mail size={14} className="mr-1 text-indigo-600" />
                       Email <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -671,13 +718,14 @@ const ProfessorModal = ({
                       onChange={handleInputChange}
                       required
                       disabled={modalMode === "view"}
-                      placeholder="Email"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      placeholder="exemple@email.com"
+                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                      <Phone size={14} className="mr-1 text-indigo-600" />
                       Numéro de téléphone{" "}
                       <span className="text-red-500">*</span>
                     </label>
@@ -688,13 +736,14 @@ const ProfessorModal = ({
                       onChange={handleInputChange}
                       required
                       disabled={modalMode === "view"}
-                      placeholder="Entrez votre numéro"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      placeholder="+237 6XX XXX XXX"
+                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                      <MapPin size={14} className="mr-1 text-indigo-600" />
                       Adresse <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -704,13 +753,14 @@ const ProfessorModal = ({
                       onChange={handleInputChange}
                       required
                       disabled={modalMode === "view"}
-                      placeholder="Entrez votre adresse"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      placeholder="Entrez l'adresse complète"
+                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                      <IdCard size={14} className="mr-1 text-indigo-600" />
                       Matricule du professeur (Optionnel)
                     </label>
                     <input
@@ -719,71 +769,91 @@ const ProfessorModal = ({
                       value={formData.matriculeProfesseur || ""}
                       onChange={handleInputChange}
                       disabled={modalMode === "view"}
-                      placeholder="Entrez votre matricule"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      placeholder="Matricule professionnel"
+                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
                     />
                   </div>
                 </div>
+              </div>
 
-                {/* Documents */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900">
-                    Documents d'identité
-                  </h4>
+              {/* Documents Section */}
+              <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
+                <h4 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
+                  <FileImage size={18} className="mr-2 text-indigo-600" />
+                  Documents d'identité
+                </h4>
 
-                  {renderImageSection("cniRecto", "CNI Recto", true)}
-                  {renderImageSection("cniVerso", "CNI Verso", true)}
-                  {renderImageSection("selfie", "Photo de profil", true)}
+                <div className="space-y-6">
+                  {renderImageSection("cniRecto", "CNI Recto", true, IdCard)}
+                  {renderImageSection("cniVerso", "CNI Verso", true, IdCard)}
+                  {renderImageSection("selfie", "Photo de profil", true, User)}
                 </div>
               </div>
             </div>
-
-            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-              {/* Status Action Buttons - Only show when NOT EN_ATTENTE */}
-              {shouldShowApprovalButtons && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleStatusChange("APPROVED")}
-                    disabled={loading}
-                    className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                  >
-                    <Check size={16} className="mr-2" />
-                    {loading ? "Traitement..." : "Approuver"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleStatusChange("REJECTED")}
-                    disabled={loading}
-                    className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                  >
-                    <XCircle size={16} className="mr-2" />
-                    {loading ? "Traitement..." : "Rejeter"}
-                  </button>
-                </>
-              )}
-
-              {/* Regular Form Buttons */}
-              {modalMode !== "view" && (
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                >
-                  <Save size={16} className="mr-2" />
-                  {loading ? "Enregistrement..." : "Enregistrer"}
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-              >
-                {modalMode === "view" ? "Fermer" : "Annuler"}
-              </button>
-            </div>
           </form>
+        </div>
+
+        {/* Footer with Action Buttons */}
+        <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex-shrink-0 sticky bottom-0 rounded-b-2xl">
+          <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+            {/* Status Action Buttons - Only show when in view mode and EN_ATTENTE */}
+            {shouldShowApprovalButtons && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange("APPROVED")}
+                  disabled={loading}
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-transparent shadow-lg px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-base font-semibold text-white hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-75 disabled:cursor-not-allowed transform hover:-translate-y-0.5 transition-all duration-200 order-1 sm:order-3"
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                  ) : (
+                    <Check size={16} className="mr-2" />
+                  )}
+                  {loading ? "Traitement..." : "Approuver"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange("REJECTED")}
+                  disabled={loading}
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-transparent shadow-lg px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-base font-semibold text-white hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-75 disabled:cursor-not-allowed transform hover:-translate-y-0.5 transition-all duration-200 order-2 sm:order-4"
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                  ) : (
+                    <XCircle size={16} className="mr-2" />
+                  )}
+                  {loading ? "Traitement..." : "Rejeter"}
+                </button>
+              </>
+            )}
+
+            {/* Regular Form Buttons */}
+            {modalMode !== "view" && (
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-transparent shadow-lg px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-base font-semibold text-white hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 disabled:cursor-not-allowed transform hover:-translate-y-0.5 transition-all duration-200 order-1 sm:order-2"
+                onClick={handleSubmit}
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                ) : (
+                  <Save size={16} className="mr-2" />
+                )}
+                {loading ? "Enregistrement..." : "Enregistrer"}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border-2 border-slate-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 order-3 sm:order-1"
+            >
+              <X size={16} className="mr-2" />
+              {modalMode === "view" ? "Fermer" : "Annuler"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -19,6 +19,9 @@ import {
   Table,
   Empty,
   Popconfirm,
+  Tooltip,
+  Badge,
+  message,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -38,8 +41,15 @@ import {
   BookOutlined,
   CalendarOutlined,
   InfoCircleOutlined,
+  EyeOutlined,
+  CheckOutlined,
+  StopOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import EstablishmentService from "../../../../services/EstablishmentService";
+import { classService } from "../../../../services/ClassService";
+import { scholchatService } from "../../../../services/ScholchatService";
+import UserViewModal from "../modals/UserViewModal";
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -64,9 +74,21 @@ const ManageEstablishmentDetailsView = ({
   const [successMessage, setSuccessMessage] = useState(null);
   const [form] = Form.useForm();
 
+  // New states for classes and professors
+  const [classes, setClasses] = useState([]);
+  const [professors, setProfessors] = useState([]);
+  const [classesLoading, setClassesLoading] = useState(false);
+  const [professorsLoading, setProfessorsLoading] = useState(false);
+
+  // Modal states
+  const [selectedProfessor, setSelectedProfessor] = useState(null);
+  const [isProfessorModalOpen, setIsProfessorModalOpen] = useState(false);
+
   useEffect(() => {
     if (establishmentId) {
       fetchEstablishmentDetails();
+      fetchEstablishmentClasses();
+      fetchEstablishmentProfessors();
     }
   }, [establishmentId]);
 
@@ -98,9 +120,70 @@ const ManageEstablishmentDetailsView = ({
     }
   };
 
+  const fetchEstablishmentClasses = async () => {
+    try {
+      setClassesLoading(true);
+      // Fetch all classes and filter by establishment
+      const allClasses = await classService.obtenirToutesLesClasses();
+      const establishmentClasses = allClasses.filter(
+        (classe) =>
+          classe.etablissement && classe.etablissement.id === establishmentId
+      );
+      setClasses(establishmentClasses);
+    } catch (error) {
+      console.error("Error fetching establishment classes:", error);
+      message.error("Erreur lors du chargement des classes");
+    } finally {
+      setClassesLoading(false);
+    }
+  };
+
+  const fetchEstablishmentProfessors = async () => {
+    try {
+      setProfessorsLoading(true);
+      // Fetch all professors and filter by those who moderate classes in this establishment
+      const allClasses = await classService.obtenirToutesLesClasses();
+      const establishmentClasses = allClasses.filter(
+        (classe) =>
+          classe.etablissement && classe.etablissement.id === establishmentId
+      );
+
+      // Get unique professors who moderate classes in this establishment
+      const professorIds = new Set();
+      const professorsList = [];
+
+      establishmentClasses.forEach((classe) => {
+        if (
+          classe.moderator &&
+          classe.moderator.id &&
+          !professorIds.has(classe.moderator.id)
+        ) {
+          professorIds.add(classe.moderator.id);
+          professorsList.push({
+            ...classe.moderator,
+            moderatedClassesInEstablishment: establishmentClasses.filter(
+              (c) => c.moderator && c.moderator.id === classe.moderator.id
+            ).length,
+          });
+        }
+      });
+
+      setProfessors(professorsList);
+    } catch (error) {
+      console.error("Error fetching establishment professors:", error);
+      message.error("Erreur lors du chargement des professeurs");
+    } finally {
+      setProfessorsLoading(false);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchEstablishmentDetails();
+    await Promise.all([
+      fetchEstablishmentDetails(),
+      fetchEstablishmentClasses(),
+      fetchEstablishmentProfessors(),
+    ]);
     setRefreshing(false);
     setSuccessMessage("Données actualisées avec succès");
     setTimeout(() => setSuccessMessage(null), 3000);
@@ -181,6 +264,107 @@ const ManageEstablishmentDetailsView = ({
     });
   };
 
+  // Class actions
+  const handleApproveClass = async (classId) => {
+    try {
+      setActionLoading(`approve-${classId}`);
+      await classService.approuverClasse(classId);
+      message.success("Classe approuvée avec succès");
+      fetchEstablishmentClasses();
+    } catch (error) {
+      console.error("Error approving class:", error);
+      message.error("Erreur lors de l'approbation de la classe");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectClass = async (classId) => {
+    try {
+      setActionLoading(`reject-${classId}`);
+      await classService.rejeterClasse(classId, "Rejetée par l'établissement");
+      message.success("Classe rejetée avec succès");
+      fetchEstablishmentClasses();
+    } catch (error) {
+      console.error("Error rejecting class:", error);
+      message.error("Erreur lors du rejet de la classe");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteClass = async (classId) => {
+    confirm({
+      title: "Supprimer la classe",
+      content: "Êtes-vous sûr de vouloir supprimer cette classe ?",
+      okText: "Supprimer",
+      okType: "danger",
+      cancelText: "Annuler",
+      onOk: async () => {
+        try {
+          setActionLoading(`delete-${classId}`);
+          await classService.supprimerClasse(classId);
+          message.success("Classe supprimée avec succès");
+          fetchEstablishmentClasses();
+        } catch (error) {
+          console.error("Error deleting class:", error);
+          message.error("Erreur lors de la suppression de la classe");
+        } finally {
+          setActionLoading(null);
+        }
+      },
+    });
+  };
+
+  // Professor actions
+  const handleViewProfessor = async (professorId) => {
+    try {
+      // Fetch the complete professor data
+      const professorData = await scholchatService.getProfessorById(
+        professorId
+      );
+      setSelectedProfessor(professorData);
+      setIsProfessorModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching professor details:", error);
+      message.error("Erreur lors du chargement des détails du professeur");
+    }
+  };
+
+  const handleCloseProfessorModal = () => {
+    setIsProfessorModalOpen(false);
+    setSelectedProfessor(null);
+  };
+
+  const handleProfessorModalSuccess = () => {
+    // Refresh the professors list after successful action
+    fetchEstablishmentProfessors();
+    handleCloseProfessorModal();
+  };
+
+  const handleDeleteProfessor = async (professorId) => {
+    confirm({
+      title: "Supprimer le professeur",
+      content: "Êtes-vous sûr de vouloir supprimer ce professeur ?",
+      okText: "Supprimer",
+      okType: "danger",
+      cancelText: "Annuler",
+      onOk: async () => {
+        try {
+          setActionLoading(`delete-prof-${professorId}`);
+          await scholchatService.deleteProfessor(professorId);
+          message.success("Professeur supprimé avec succès");
+          fetchEstablishmentProfessors();
+        } catch (error) {
+          console.error("Error deleting professor:", error);
+          message.error("Erreur lors de la suppression du professeur");
+        } finally {
+          setActionLoading(null);
+        }
+      },
+    });
+  };
+
   const getStatusTag = (establishment) => {
     // Assuming we determine status based on data completeness
     const hasRequiredInfo =
@@ -191,6 +375,193 @@ const ManageEstablishmentDetailsView = ({
       </Tag>
     );
   };
+
+  const getClassStatusTag = (status) => {
+    switch (status) {
+      case "ACTIF":
+        return <Tag color="green">Actif</Tag>;
+      case "EN_ATTENTE_APPROBATION":
+        return <Tag color="orange">En attente</Tag>;
+      case "INACTIF":
+        return <Tag color="red">Inactif</Tag>;
+      default:
+        return <Tag color="default">{status}</Tag>;
+    }
+  };
+
+  const getProfessorStatusTag = (status) => {
+    switch (status) {
+      case "ACTIVE":
+        return <Tag color="green">Actif</Tag>;
+      case "AWAITING_VALIDATION":
+        return <Tag color="orange">En attente</Tag>;
+      case "INACTIVE":
+        return <Tag color="red">Inactif</Tag>;
+      default:
+        return <Tag color="default">{status}</Tag>;
+    }
+  };
+
+  // Table columns for classes
+  const classColumns = [
+    {
+      title: "Nom",
+      dataIndex: "nom",
+      key: "nom",
+      render: (text) => <Text strong>{text}</Text>,
+    },
+    {
+      title: "Niveau",
+      dataIndex: "niveau",
+      key: "niveau",
+    },
+    {
+      title: "Code d'activation",
+      dataIndex: "codeActivation",
+      key: "codeActivation",
+      render: (text) => <Text code>{text}</Text>,
+    },
+    {
+      title: "Statut",
+      dataIndex: "etat",
+      key: "etat",
+      render: (status) => getClassStatusTag(status),
+    },
+    {
+      title: "Date de création",
+      dataIndex: "dateCreation",
+      key: "dateCreation",
+      render: (date) => new Date(date).toLocaleDateString("fr-FR"),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="Voir">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => message.info(`Voir classe ${record.nom}`)}
+            />
+          </Tooltip>
+          {record.etat === "EN_ATTENTE_APPROBATION" && (
+            <>
+              <Tooltip title="Approuver">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CheckOutlined />}
+                  loading={actionLoading === `approve-${record.id}`}
+                  onClick={() => handleApproveClass(record.id)}
+                  style={{ color: "#52c41a" }}
+                />
+              </Tooltip>
+              <Tooltip title="Rejeter">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<StopOutlined />}
+                  loading={actionLoading === `reject-${record.id}`}
+                  onClick={() => handleRejectClass(record.id)}
+                  style={{ color: "#ff4d4f" }}
+                />
+              </Tooltip>
+            </>
+          )}
+          <Tooltip title="Supprimer">
+            <Popconfirm
+              title="Supprimer la classe"
+              description="Êtes-vous sûr de vouloir supprimer cette classe ?"
+              onConfirm={() => handleDeleteClass(record.id)}
+              okText="Oui"
+              cancelText="Non"
+            >
+              <Button
+                type="text"
+                size="small"
+                icon={<DeleteOutlined />}
+                loading={actionLoading === `delete-${record.id}`}
+                danger
+              />
+            </Popconfirm>
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
+  // Table columns for professors
+  const professorColumns = [
+    {
+      title: "Nom",
+      key: "name",
+      render: (_, record) => (
+        <div>
+          <Text strong>
+            {record.nom} {record.prenom}
+          </Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: "12px" }}>
+            {record.email}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Téléphone",
+      dataIndex: "telephone",
+      key: "telephone",
+    },
+    {
+      title: "Classes modérées",
+      dataIndex: "moderatedClassesInEstablishment",
+      key: "moderatedClasses",
+      render: (count) => (
+        <Badge count={count} showZero style={{ backgroundColor: "#1890ff" }} />
+      ),
+    },
+    {
+      title: "Statut",
+      dataIndex: "etat",
+      key: "etat",
+      render: (status) => getProfessorStatusTag(status),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="Voir">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewProfessor(record.id)}
+            />
+          </Tooltip>
+          <Tooltip title="Supprimer">
+            <Popconfirm
+              title="Supprimer le professeur"
+              description="Êtes-vous sûr de vouloir supprimer ce professeur ?"
+              onConfirm={() => handleDeleteProfessor(record.id)}
+              okText="Oui"
+              cancelText="Non"
+            >
+              <Button
+                type="text"
+                size="small"
+                icon={<DeleteOutlined />}
+                loading={actionLoading === `delete-prof-${record.id}`}
+                danger
+              />
+            </Popconfirm>
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
 
   if (loading) {
     return (
@@ -228,73 +599,75 @@ const ManageEstablishmentDetailsView = ({
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
-          <Button icon={<ArrowLeftOutlined />} onClick={onBack} type="text" />
-          <div>
-            <h2 className="text-2xl font-bold m-0">
-              Gestion de l'établissement
-            </h2>
-            <p className="text-gray-500 m-0">{establishment.nom}</p>
+      {/* Header - Made Responsive */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div className="flex items-center gap-3">
+            <Button icon={<ArrowLeftOutlined />} onClick={onBack} type="text" />
+            <div>
+              <h2 className="text-2xl font-bold m-0">
+                Gestion de l'établissement
+              </h2>
+              <p className="text-gray-500 m-0">{establishment.nom}</p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex gap-2">
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-            loading={refreshing}
-            type="default"
-          >
-            Actualiser
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleRefresh}
+              loading={refreshing}
+              type="default"
+            >
+              Actualiser
+            </Button>
 
-          {editing ? (
-            <>
-              <Button
-                icon={<CloseOutlined />}
-                onClick={handleCancelEdit}
-                disabled={saving}
-              >
-                Annuler
-              </Button>
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                onClick={handleSave}
-                loading={saving}
-              >
-                Sauvegarder
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                icon={<EditOutlined />}
-                onClick={handleEdit}
-                type="primary"
-              >
-                Modifier
-              </Button>
-              <Popconfirm
-                title="Êtes-vous sûr de vouloir supprimer cet établissement ?"
-                description="Cette action est irréversible."
-                onConfirm={handleDelete}
-                okText="Oui"
-                cancelText="Non"
-                okButtonProps={{ danger: true }}
-              >
+            {editing ? (
+              <>
                 <Button
-                  danger
-                  icon={<DeleteOutlined />}
-                  loading={actionLoading === "delete"}
+                  icon={<CloseOutlined />}
+                  onClick={handleCancelEdit}
+                  disabled={saving}
                 >
-                  Supprimer
+                  Annuler
                 </Button>
-              </Popconfirm>
-            </>
-          )}
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  onClick={handleSave}
+                  loading={saving}
+                >
+                  Sauvegarder
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={handleEdit}
+                  type="primary"
+                >
+                  Modifier
+                </Button>
+                <Popconfirm
+                  title="Êtes-vous sûr de vouloir supprimer cet établissement ?"
+                  description="Cette action est irréversible."
+                  onConfirm={handleDelete}
+                  okText="Oui"
+                  cancelText="Non"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    loading={actionLoading === "delete"}
+                  >
+                    Supprimer
+                  </Button>
+                </Popconfirm>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -565,29 +938,65 @@ const ManageEstablishmentDetailsView = ({
               tab={
                 <span>
                   <TeamOutlined />
-                  Classes (0)
+                  Classes ({classes.length})
                 </span>
               }
               key="1"
             >
-              <Empty
-                description="Aucune classe dans cet établissement"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              <Table
+                columns={classColumns}
+                dataSource={classes}
+                rowKey="id"
+                loading={classesLoading}
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) =>
+                    `${range[0]}-${range[1]} sur ${total} classes`,
+                }}
+                scroll={{ x: 800 }}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      description="Aucune classe dans cet établissement"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ),
+                }}
               />
             </TabPane>
 
             <TabPane
               tab={
                 <span>
-                  <BookOutlined />
-                  Professeurs (0)
+                  <UserOutlined />
+                  Professeurs ({professors.length})
                 </span>
               }
               key="2"
             >
-              <Empty
-                description="Aucun professeur dans cet établissement"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              <Table
+                columns={professorColumns}
+                dataSource={professors}
+                rowKey="id"
+                loading={professorsLoading}
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) =>
+                    `${range[0]}-${range[1]} sur ${total} professeurs`,
+                }}
+                scroll={{ x: 800 }}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      description="Aucun professeur dans cet établissement"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ),
+                }}
               />
             </TabPane>
 
@@ -617,10 +1026,50 @@ const ManageEstablishmentDetailsView = ({
                 <Descriptions.Item label="Code Unique" span={3}>
                   <Text code>{establishment.codeUnique || "Non défini"}</Text>
                 </Descriptions.Item>
+                <Descriptions.Item label="Total Classes" span={1}>
+                  <Badge
+                    count={classes.length}
+                    showZero
+                    style={{ backgroundColor: "#52c41a" }}
+                  />
+                </Descriptions.Item>
+                <Descriptions.Item label="Classes Actives" span={1}>
+                  <Badge
+                    count={classes.filter((c) => c.etat === "ACTIF").length}
+                    showZero
+                    style={{ backgroundColor: "#1890ff" }}
+                  />
+                </Descriptions.Item>
+                <Descriptions.Item label="Classes en Attente" span={1}>
+                  <Badge
+                    count={
+                      classes.filter((c) => c.etat === "EN_ATTENTE_APPROBATION")
+                        .length
+                    }
+                    showZero
+                    style={{ backgroundColor: "#faad14" }}
+                  />
+                </Descriptions.Item>
+                <Descriptions.Item label="Total Professeurs" span={3}>
+                  <Badge
+                    count={professors.length}
+                    showZero
+                    style={{ backgroundColor: "#13c2c2" }}
+                  />
+                </Descriptions.Item>
               </Descriptions>
             </TabPane>
           </Tabs>
         </Card>
+      )}
+
+      {/* Professor Modal */}
+      {isProfessorModalOpen && selectedProfessor && (
+        <UserViewModal
+          user={selectedProfessor}
+          onClose={handleCloseProfessorModal}
+          onSuccess={handleProfessorModalSuccess}
+        />
       )}
     </div>
   );

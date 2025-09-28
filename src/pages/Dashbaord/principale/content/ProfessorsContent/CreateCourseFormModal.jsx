@@ -16,6 +16,9 @@ import {
   Image,
   Paperclip,
   Loader,
+  BookOpen,
+  Users2,
+  AlertCircle,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import MultiSelectDropdown from "./MultiSelectDropdown";
@@ -67,18 +70,14 @@ const RichTextEditor = ({
     }
   };
 
-  // Fixed handleKeyDown for proper Word-like behavior
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      // Don't prevent default - let the browser handle it naturally
-      // Just trigger content change after a short delay
       setTimeout(() => {
         handleContentChange();
       }, 10);
       return;
     }
 
-    // Handle other keys normally
     if (e.key === " " || e.key === "Backspace" || e.key === "Delete") {
       setTimeout(() => {
         handleContentChange();
@@ -86,12 +85,10 @@ const RichTextEditor = ({
     }
   };
 
-  // Handle multiple file uploads
   const handleFileInputChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    // Validate files
     for (const file of files) {
       if (!file.name || file.name.trim() === "") {
         alert("Un des fichiers sélectionnés n'a pas de nom valide.");
@@ -103,7 +100,6 @@ const RichTextEditor = ({
       setUploading(true);
       const uploadResults = [];
 
-      // Upload all files
       for (const file of files) {
         try {
           const uploadResult = await onFileUpload(file);
@@ -124,13 +120,11 @@ const RichTextEditor = ({
         }
       }
 
-      // Insert all successfully uploaded files
       const selection = window.getSelection();
       const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
 
       for (const { file, result, downloadData } of uploadResults) {
         if (file.type.startsWith("image/")) {
-          // Insert image
           const img = document.createElement("img");
           img.src = downloadData.downloadUrl;
           img.alt = file.name;
@@ -148,7 +142,6 @@ const RichTextEditor = ({
             editorRef.current.appendChild(img);
           }
         } else {
-          // Insert document link
           const linkContainer = document.createElement("div");
           linkContainer.style.margin = "8px 0";
           linkContainer.style.padding = "8px 12px";
@@ -159,12 +152,10 @@ const RichTextEditor = ({
           linkContainer.style.alignItems = "center";
           linkContainer.style.gap = "8px";
 
-          // File icon
           const icon = document.createElement("span");
           icon.innerHTML = "📄";
           icon.style.fontSize = "16px";
 
-          // File link
           const link = document.createElement("a");
           link.href = downloadData.downloadUrl;
           link.target = "_blank";
@@ -185,7 +176,6 @@ const RichTextEditor = ({
           }
         }
 
-        // Add to uploaded files list for display at top
         setUploadedFiles((prev) => [
           ...prev,
           {
@@ -211,20 +201,17 @@ const RichTextEditor = ({
     }
   };
 
-  // Remove uploaded file from list
   const removeUploadedFile = (timestamp) => {
     setUploadedFiles((prev) =>
       prev.filter((file) => file.timestamp !== timestamp)
     );
   };
 
-  // Download file function
   const downloadFile = async (file) => {
     try {
       const response = await fetch(file.url);
       const blob = await response.blob();
 
-      // Create download link
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
@@ -232,12 +219,10 @@ const RichTextEditor = ({
       document.body.appendChild(link);
       link.click();
 
-      // Clean up
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error("Error downloading file:", error);
-      // Fallback: open in new tab
       window.open(file.url, "_blank");
     }
   };
@@ -257,7 +242,6 @@ const RichTextEditor = ({
       const range = selection.getRangeAt(0);
       range.deleteContents();
 
-      // Create a document fragment with properly formatted text
       const fragment = document.createDocumentFragment();
       const lines = text.split("\n");
 
@@ -279,14 +263,12 @@ const RichTextEditor = ({
     setTimeout(() => handleContentChange(), 10);
   };
 
-  // Handle input event for content changes
   const handleInput = (e) => {
     handleContentChange();
   };
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
-      {/* Uploaded Files Display at Top */}
       {uploadedFiles.length > 0 && (
         <div className="bg-blue-50 border-b border-blue-200 p-3">
           <div className="flex items-center gap-2 mb-2">
@@ -419,7 +401,7 @@ const RichTextEditor = ({
           ) : (
             <Paperclip size={14} />
           )}
-          <span className="text-xs">Fichiers</span>
+          <span className="text-xs hidden sm:inline">Fichiers</span>
         </button>
         <button
           type="button"
@@ -528,15 +510,15 @@ const ChapterCard = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow relative group">
+    <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow relative group">
       <div className="flex items-start justify-between">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2 py-1 rounded-full">
               Chapitre {index + 1}
             </span>
           </div>
-          <h4 className="font-semibold text-slate-900 text-sm mb-1">
+          <h4 className="font-semibold text-slate-900 text-sm mb-1 truncate">
             {truncateText(chapter.titre, 40)}
           </h4>
           {chapter.description && (
@@ -544,11 +526,11 @@ const ChapterCard = ({
               {truncateText(chapter.description, 60)}
             </p>
           )}
-          <p className="text-slate-500 text-xs">
+          <p className="text-slate-500 text-xs line-clamp-2">
             {truncateText(getPlainText(chapter.contenu), 80)}
           </p>
         </div>
-        <div className="flex items-center gap-1 ml-3">
+        <div className="flex items-center gap-1 ml-2 flex-shrink-0">
           {canMoveUp && (
             <button
               onClick={(e) => {
@@ -660,13 +642,20 @@ const ChapterEditor = ({
   const chapterNumber = mode === "create" ? totalChapters + 1 : formData.ordre;
 
   return (
-    <div className="bg-white rounded-xl p-6 border-2 border-indigo-200 shadow-sm mb-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-xl p-4 sm:p-6 border-2 border-indigo-200 shadow-sm mb-4 sm:mb-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <h4 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
           <FileText size={20} className="text-indigo-600" />
-          {mode === "create"
-            ? `Nouveau Chapitre ${chapterNumber}`
-            : `Modifier Chapitre ${chapterNumber}`}
+          <span className="hidden sm:inline">
+            {mode === "create"
+              ? `Nouveau Chapitre ${chapterNumber}`
+              : `Modifier Chapitre ${chapterNumber}`}
+          </span>
+          <span className="sm:hidden">
+            {mode === "create"
+              ? `Ch. ${chapterNumber}`
+              : `Modifier Ch. ${chapterNumber}`}
+          </span>
         </h4>
         <button
           onClick={(e) => {
@@ -692,13 +681,16 @@ const ChapterEditor = ({
               setFormData({ ...formData, titre: e.target.value })
             }
             onClick={(e) => e.stopPropagation()}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-              errors.titre ? "border-red-300" : "border-slate-200"
+            className={`w-full px-3 py-2 sm:py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
+              errors.titre ? "border-red-300 bg-red-50" : "border-slate-200"
             }`}
             placeholder="Titre du chapitre"
           />
           {errors.titre && (
-            <p className="mt-1 text-sm text-red-600">{errors.titre}</p>
+            <p className="mt-1 text-sm text-red-600 flex items-center">
+              <AlertCircle size={14} className="mr-1" />
+              {errors.titre}
+            </p>
           )}
         </div>
 
@@ -713,7 +705,7 @@ const ChapterEditor = ({
             }
             onClick={(e) => e.stopPropagation()}
             rows={2}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-3 py-2 sm:py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
             placeholder="Description du chapitre"
           />
         </div>
@@ -732,19 +724,22 @@ const ChapterEditor = ({
             onFileUpload={onFileUpload}
           />
           {errors.contenu && (
-            <p className="mt-1 text-sm text-red-600">{errors.contenu}</p>
+            <p className="mt-1 text-sm text-red-600 flex items-center">
+              <AlertCircle size={14} className="mr-1" />
+              {errors.contenu}
+            </p>
           )}
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3 mt-6">
+      <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onCancel();
           }}
-          className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-lg hover:bg-slate-50"
+          className="px-4 py-2 sm:py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-lg hover:bg-slate-50 order-2 sm:order-1"
         >
           Annuler
         </button>
@@ -754,7 +749,7 @@ const ChapterEditor = ({
             e.stopPropagation();
             handleSave();
           }}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          className="px-4 py-2 sm:py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 order-1 sm:order-2"
         >
           <Save size={16} />
           {mode === "create" ? "Ajouter" : "Sauvegarder"}
@@ -773,16 +768,17 @@ const GeneralInfoSection = ({
   setValue,
 }) => {
   return (
-    <div className="bg-slate-50 rounded-xl p-6 mb-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">
+    <div className="bg-slate-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+        <BookOpen size={18} className="mr-2 text-indigo-600" />
         Informations générales
       </h3>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="space-y-4">
         <div>
           <label
             htmlFor="titre"
-            className="block text-sm font-medium text-slate-700 mb-2"
+            className="block text-sm font-semibold text-slate-700 mb-2"
           >
             Titre du cours *
           </label>
@@ -790,27 +786,30 @@ const GeneralInfoSection = ({
             id="titre"
             type="text"
             {...register("titre")}
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-              errors.titre ? "border-red-300" : "border-slate-200"
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${
+              errors.titre ? "border-red-300 bg-red-50" : "border-slate-200"
             }`}
             placeholder="Introduction à la programmation"
           />
           {errors.titre && (
-            <p className="mt-2 text-sm text-red-600">{errors.titre.message}</p>
+            <p className="mt-1 text-sm text-red-600 flex items-center">
+              <AlertCircle size={14} className="mr-1" />
+              {errors.titre.message}
+            </p>
           )}
         </div>
 
         <div>
           <label
             htmlFor="restriction"
-            className="block text-sm font-medium text-slate-700 mb-2"
+            className="block text-sm font-semibold text-slate-700 mb-2"
           >
             Visibilité *
           </label>
           <select
             id="restriction"
             {...register("restriction")}
-            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white"
           >
             <option value="PRIVE">Privé</option>
             <option value="PUBLIC">Public</option>
@@ -820,7 +819,7 @@ const GeneralInfoSection = ({
         <div>
           <label
             htmlFor="description"
-            className="block text-sm font-medium text-slate-700 mb-2"
+            className="block text-sm font-semibold text-slate-700 mb-2"
           >
             Description du cours *
           </label>
@@ -828,20 +827,24 @@ const GeneralInfoSection = ({
             id="description"
             {...register("description")}
             rows={3}
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-              errors.description ? "border-red-300" : "border-slate-200"
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white resize-none ${
+              errors.description
+                ? "border-red-300 bg-red-50"
+                : "border-slate-200"
             }`}
             placeholder="Décrivez le contenu général de ce cours..."
           />
           {errors.description && (
-            <p className="mt-2 text-sm text-red-600">
+            <p className="mt-1 text-sm text-red-600 flex items-center">
+              <AlertCircle size={14} className="mr-1" />
               {errors.description.message}
             </p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+            <Users2 size={16} className="mr-2 text-indigo-600" />
             Matières associées *
           </label>
           <MultiSelectDropdown
@@ -852,7 +855,8 @@ const GeneralInfoSection = ({
             error={errors.matieres}
           />
           {errors.matieres && (
-            <p className="mt-2 text-sm text-red-600">
+            <p className="mt-1 text-sm text-red-600 flex items-center">
+              <AlertCircle size={14} className="mr-1" />
               {errors.matieres.message}
             </p>
           )}
@@ -861,15 +865,16 @@ const GeneralInfoSection = ({
         <div>
           <label
             htmlFor="references"
-            className="block text-sm font-medium text-slate-700 mb-2"
+            className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
           >
+            <FileText size={16} className="mr-2 text-indigo-600" />
             Références
           </label>
           <textarea
             id="references"
             {...register("references")}
             rows={2}
-            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white resize-none"
             placeholder="Livres, articles, liens utiles..."
           />
         </div>
@@ -892,20 +897,22 @@ const ChaptersSection = ({
   onFileUpload,
 }) => {
   return (
-    <div className="bg-blue-50 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-slate-900">
+    <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+        <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+          <FileText size={18} className="mr-2 text-indigo-600" />
           Chapitres du cours * ({savedChapters.length})
         </h3>
         {!activeEditor && (
           <button
             type="button"
             onClick={() => setActiveEditor("create")}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
             data-testid="create-chapter-button"
           >
             <Plus size={16} />
-            Nouveau chapitre
+            <span className="hidden sm:inline">Nouveau chapitre</span>
+            <span className="sm:hidden">Nouveau</span>
           </button>
         )}
       </div>
@@ -923,7 +930,7 @@ const ChaptersSection = ({
         </div>
       )}
 
-      <div className="space-y-3 max-h-[400px] overflow-y-auto">
+      <div className="space-y-3 max-h-[50vh] sm:max-h-[400px] overflow-y-auto">
         {savedChapters.map((chapter, index) => (
           <div key={index} onClick={(e) => e.stopPropagation()}>
             <ChapterCard
@@ -972,6 +979,7 @@ const CreateCourseFormModal = ({
   const [editingData, setEditingData] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   // Add missing refs and state for file handling
   const fileInputRef = useRef(null);
@@ -998,11 +1006,6 @@ const CreateCourseFormModal = ({
   useEffect(() => {
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
-
-  // Add missing handleContentChange function
-  const handleContentChange = () => {
-    // This function is used for content editing
-  };
 
   // Fixed onFileUpload function for actual file upload
   const onFileUpload = async (file) => {
@@ -1041,54 +1044,12 @@ const CreateCourseFormModal = ({
 
       return {
         ...result,
-        filePath: expectedFilePath, // Add the file path that the frontend expects
+        filePath: expectedFilePath,
         success: true,
       };
     } catch (error) {
       console.error("Error uploading file:", error);
       throw error;
-    }
-  };
-
-  // Fixed handleFileUpload function for file input change events
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.name || file.name.trim() === "") {
-      alert("Le fichier sélectionné n'a pas de nom valide.");
-      return;
-    }
-
-    try {
-      setUploading(true);
-
-      const uploadResult = await onFileUpload(file);
-
-      if (uploadResult.success) {
-        if (file.type.startsWith("image/")) {
-          const downloadData = await minioS3Service.generateDownloadUrlByPath(
-            uploadResult.filePath
-          );
-          document.execCommand("insertImage", false, downloadData.downloadUrl);
-        } else {
-          const downloadData = await minioS3Service.generateDownloadUrlByPath(
-            uploadResult.filePath
-          );
-          const fileName = file.name;
-          const link = `<a href="${downloadData.downloadUrl}" target="_blank" style="color: #3b82f6; text-decoration: underline;">${fileName}</a>`;
-          document.execCommand("insertHTML", false, link);
-        }
-        handleContentChange();
-      }
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      alert(`Erreur lors du téléchargement du fichier: ${error.message}`);
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
   };
 
@@ -1152,14 +1113,11 @@ const CreateCourseFormModal = ({
   };
 
   const onSubmit = async (data) => {
-    console.log("onSubmit called with data:", data);
-    console.log("savedChapters:", savedChapters);
-    console.log("selectedMatiereIds:", selectedMatiereIds);
-
     try {
       setIsSubmitting(true);
       setLoading(true);
       setError("");
+      setSubmitError("");
 
       if (savedChapters.length === 0) {
         throw new Error("Au moins un chapitre est requis");
@@ -1193,10 +1151,7 @@ const CreateCourseFormModal = ({
         chapitres: chapitresData,
       };
 
-      console.log("Creating course with data:", courseData);
-
       const result = await coursService.createCours(courseData);
-      console.log("Course created successfully:", result);
 
       setSuccess("Cours créé avec succès !");
       setShowCreateModal(false);
@@ -1204,7 +1159,9 @@ const CreateCourseFormModal = ({
       loadCourses();
     } catch (err) {
       console.error("Error in onSubmit:", err);
-      setError("Erreur lors de l'enregistrement: " + err.message);
+      const errorMessage = err.message || "Erreur lors de l'enregistrement";
+      setError(errorMessage);
+      setSubmitError(errorMessage);
     } finally {
       setIsSubmitting(false);
       setLoading(false);
@@ -1224,6 +1181,7 @@ const CreateCourseFormModal = ({
     setActiveEditor(null);
     setEditingData(null);
     setEditingIndex(null);
+    setSubmitError("");
   };
 
   const handleMatiereChange = (newSelectedIds) => {
@@ -1231,47 +1189,48 @@ const CreateCourseFormModal = ({
     setValue("matieres", newSelectedIds, { shouldValidate: true });
   };
 
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (savedChapters.length === 0) {
-      setError("Au moins un chapitre est requis");
-      return;
-    }
-
-    handleSubmit(onSubmit)(e);
+  const handleClose = () => {
+    setShowCreateModal(false);
+    resetForm();
   };
 
   if (!showCreateModal) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-8 overflow-y-auto"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          setShowCreateModal(false);
-        }
-      }}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="sticky top-0 bg-white rounded-t-2xl border-b border-slate-200 p-6 z-10">
+    // FIXED: Added higher z-index and proper positioning to match CoursProgrammerForm
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col relative">
+        {/* FIXED: Header with better spacing and positioning */}
+        <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-slate-900">Nouveau Cours</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
+              <BookOpen className="mr-2 sm:mr-3 text-indigo-600" size={24} />
+              <span className="hidden sm:inline">Nouveau Cours</span>
+              <span className="sm:hidden">Nouveau Cours</span>
+            </h2>
             <button
-              onClick={() => setShowCreateModal(false)}
+              onClick={handleClose}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
               <X size={20} />
             </button>
           </div>
+
+          {submitError && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start text-red-700">
+              <AlertCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+              <span className="text-sm">{submitError}</span>
+            </div>
+          )}
         </div>
 
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
-          <div className="space-y-6">
+        {/* FIXED: Scrollable Form Content with proper spacing */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <form
+            id="course-form"
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4 sm:space-y-6"
+          >
             <GeneralInfoSection
               register={register}
               errors={errors}
@@ -1294,69 +1253,58 @@ const CreateCourseFormModal = ({
               setEditingData={setEditingData}
               onFileUpload={onFileUpload}
             />
-          </div>
+          </form>
         </div>
 
-        <div className="sticky bottom-0 bg-white rounded-b-2xl border-t border-slate-200 p-6 z-10">
-          <div className="flex justify-end space-x-4">
+        {/* FIXED: Footer with Action Buttons - Better responsive design */}
+        <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex-shrink-0 sticky bottom-0 rounded-b-2xl">
+          <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
             <button
               type="button"
-              onClick={() => {
-                setShowCreateModal(false);
-                resetForm();
-              }}
+              onClick={handleClose}
               disabled={isSubmitting}
-              className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors rounded-lg hover:bg-slate-200 flex items-center justify-center order-2 sm:order-1"
             >
+              <X size={16} className="mr-2" />
               Annuler
             </button>
             <button
-              type="button"
-              onClick={async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log("Submit button clicked");
-                console.log("Saved chapters:", savedChapters.length);
-
-                if (savedChapters.length === 0) {
-                  setError(
-                    "Au moins un chapitre est requis pour créer un cours"
-                  );
-                  return;
-                }
-
-                const formData = watch();
-                console.log("Form data:", formData);
-
-                if (!formData.titre?.trim()) {
-                  setError("Le titre est requis");
-                  return;
-                }
-                if (!formData.description?.trim()) {
-                  setError("La description est requise");
-                  return;
-                }
-                if (!selectedMatiereIds || selectedMatiereIds.length === 0) {
-                  setError("Au moins une matière est requise");
-                  return;
-                }
-
-                try {
-                  await onSubmit(formData);
-                } catch (error) {
-                  console.error("Submit error:", error);
-                }
-              }}
+              type="submit"
+              form="course-form"
               disabled={savedChapters.length === 0 || isSubmitting}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center gap-2"
+              className="px-6 sm:px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center order-1 sm:order-2"
             >
               {isSubmitting ? (
                 <>
-                  <Loader size={16} className="animate-spin" />
-                  Création...
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span className="hidden sm:inline">Création...</span>
+                  <span className="sm:hidden">En cours...</span>
                 </>
               ) : (
-                "Créer le cours"
+                <>
+                  <Plus size={16} className="mr-2" />
+                  <span className="hidden sm:inline">Créer le cours</span>
+                  <span className="sm:hidden">Créer</span>
+                </>
               )}
             </button>
           </div>

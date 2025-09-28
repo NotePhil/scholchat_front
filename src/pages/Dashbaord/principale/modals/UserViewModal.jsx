@@ -11,11 +11,18 @@ import {
   ZoomOut,
   RotateCw,
   Maximize2,
+  User,
+  Calendar,
+  Mail,
+  Phone,
+  Shield,
+  Image as ImageIcon,
+  File,
 } from "lucide-react";
 import { rejectionService } from "../../../../services/RejectionService";
 import { minioS3Service } from "../../../../services/minioS3";
 
-// Image Modal Component for zooming
+// Image Modal Component for zooming - Updated with better z-index
 const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -106,7 +113,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
   const currentImage = images[currentIndex];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60]">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       {/* Header with controls */}
       <div className="absolute top-4 left-0 right-0 flex justify-between items-center px-6 z-10">
         <div className="text-white">
@@ -117,7 +124,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
         </div>
         <button
           onClick={onClose}
-          className="text-white hover:text-gray-300 p-2 rounded-full bg-black bg-opacity-50"
+          className="text-white hover:text-gray-300 p-2 rounded-full bg-black/50 backdrop-blur-sm transition-colors"
         >
           <X className="w-6 h-6" />
         </button>
@@ -127,7 +134,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
       {currentIndex > 0 && (
         <button
           onClick={() => onNavigate(currentIndex - 1)}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 p-3 rounded-full bg-black bg-opacity-50 z-10"
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 backdrop-blur-sm z-10 transition-colors"
         >
           <ChevronDown className="w-6 h-6 rotate-90" />
         </button>
@@ -135,7 +142,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
       {currentIndex < images.length - 1 && (
         <button
           onClick={() => onNavigate(currentIndex + 1)}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 p-3 rounded-full bg-black bg-opacity-50 z-10"
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 backdrop-blur-sm z-10 transition-colors"
         >
           <ChevronDown className="w-6 h-6 -rotate-90" />
         </button>
@@ -160,10 +167,10 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
       </div>
 
       {/* Bottom controls */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-black bg-opacity-50 rounded-full px-4 py-2">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-black/50 backdrop-blur-sm rounded-full px-4 py-2">
         <button
           onClick={handleZoomOut}
-          className="text-white hover:text-gray-300 p-2 rounded"
+          className="text-white hover:text-gray-300 p-2 rounded transition-colors"
           disabled={zoom <= 0.5}
         >
           <ZoomOut className="w-5 h-5" />
@@ -173,7 +180,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
         </span>
         <button
           onClick={handleZoomIn}
-          className="text-white hover:text-gray-300 p-2 rounded"
+          className="text-white hover:text-gray-300 p-2 rounded transition-colors"
           disabled={zoom >= 5}
         >
           <ZoomIn className="w-5 h-5" />
@@ -181,13 +188,13 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
         <div className="w-px h-6 bg-gray-400 mx-2"></div>
         <button
           onClick={handleRotate}
-          className="text-white hover:text-gray-300 p-2 rounded"
+          className="text-white hover:text-gray-300 p-2 rounded transition-colors"
         >
           <RotateCw className="w-5 h-5" />
         </button>
         <button
           onClick={handleReset}
-          className="text-white hover:text-gray-300 p-2 rounded"
+          className="text-white hover:text-gray-300 p-2 rounded transition-colors"
         >
           <Maximize2 className="w-5 h-5" />
         </button>
@@ -442,7 +449,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
     return (
       <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}
+        className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}
       >
         {statusText}
       </span>
@@ -542,21 +549,21 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
   if (successMessage) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
           <div className="text-center">
-            <Check className="mx-auto h-12 w-12 text-green-500" />
-            <h3 className="mt-2 text-lg font-medium text-gray-900">Succès</h3>
-            <div className="mt-2 text-sm text-gray-500">{successMessage}</div>
-            <div className="mt-4">
-              <button
-                type="button"
-                className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
-                onClick={handleSuccess}
-              >
-                Fermer
-              </button>
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+              <Check className="h-6 w-6 text-green-600" />
             </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Succès</h3>
+            <div className="text-sm text-gray-500 mb-4">{successMessage}</div>
+            <button
+              type="button"
+              className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+              onClick={handleSuccess}
+            >
+              Fermer
+            </button>
           </div>
         </div>
       </div>
@@ -569,137 +576,343 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
   return (
     <>
-      <div className="fixed inset-0 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center z-50 pt-8">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
-          <div className="border-b px-6 py-4 flex justify-between items-center bg-gray-50 sticky top-0 z-10">
-            <h2 className="text-xl font-semibold text-gray-800">
-              Détails de l'utilisateur
-            </h2>
-            <div className="flex items-center space-x-4">
-              {getVerificationStatusBadge()}
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-6 h-6" />
-              </button>
+      {/* Updated modal with same styling approach as CreateCourseFormModal */}
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col relative">
+          {/* Header - Fixed and sticky */}
+          <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
+                <User className="mr-2 sm:mr-3 text-indigo-600" size={24} />
+                <span className="hidden sm:inline">
+                  Détails de l'utilisateur
+                </span>
+                <span className="sm:hidden">Utilisateur</span>
+              </h2>
+              <div className="flex items-center space-x-3 sm:space-x-4">
+                {getVerificationStatusBadge()}
+                <button
+                  onClick={onClose}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="p-6 pt-8">
+            {/* Status Messages */}
             {error && (
-              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md flex items-center">
-                <AlertCircle className="w-5 h-5 mr-2" />
-                <span>{error}</span>
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start text-red-700">
+                <AlertCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+                <span className="text-sm">{error}</span>
               </div>
             )}
 
             {statusMessage && (
               <div
-                className={`mb-4 p-3 rounded-md flex items-center ${
+                className={`mt-4 p-3 rounded-lg flex items-start ${
                   statusMessage.type === "success"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-orange-100 text-orange-700"
+                    ? "bg-green-50 border border-green-200 text-green-700"
+                    : "bg-orange-50 border border-orange-200 text-orange-700"
                 }`}
               >
-                <AlertCircle className="w-5 h-5 mr-2" />
-                <span>{statusMessage.message}</span>
+                <AlertCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+                <span className="text-sm">{statusMessage.message}</span>
               </div>
             )}
+          </div>
 
-            <div className="flex flex-col lg:flex-row gap-6">
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="flex flex-col xl:flex-row gap-6">
+              {/* User Information Section */}
               <div className="flex-1">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-medium mb-4 text-gray-800">
-                    Informations de l'utilisateur
+                <div className="bg-slate-50 rounded-xl p-4 sm:p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
+                    <Shield size={18} className="mr-2 text-indigo-600" />
+                    Informations personnelles
                   </h3>
 
-                  <div className="flex items-center mb-4">
-                    <div className="flex-shrink-0 h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xl font-medium">
+                  {/* User Avatar and Name */}
+                  <div className="flex items-center mb-6">
+                    <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
                       {user?.nom?.charAt(0)}
                       {user?.prenom?.charAt(0)}
                     </div>
                     <div className="ml-4">
-                      <div className="text-xl font-semibold text-gray-900">
+                      <div className="text-xl font-bold text-slate-900">
                         {user?.nom} {user?.prenom}
                       </div>
-                      <div className="text-sm text-gray-500 capitalize">
+                      <div className="text-sm text-slate-500 capitalize flex items-center">
+                        <User size={14} className="mr-1" />
                         {user?.type}
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{user?.email}</p>
+                  {/* User Details Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-slate-500 flex items-center">
+                        <Mail size={14} className="mr-1" />
+                        Email
+                      </p>
+                      <p className="font-medium text-slate-900 break-all">
+                        {user?.email}
+                      </p>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Téléphone</p>
-                      <p className="font-medium">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-slate-500 flex items-center">
+                        <Phone size={14} className="mr-1" />
+                        Téléphone
+                      </p>
+                      <p className="font-medium text-slate-900">
                         {user?.telephone || "Non fourni"}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Statut</p>
-                      <p className="font-medium">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            user?.etat === "ACTIVE" ||
-                            user?.etat === "APPROUVEE"
-                              ? "bg-green-100 text-green-800"
-                              : user?.etat === "EN_ATTENTE" ||
-                                user?.etat === "AWAITING_VALIDATION" ||
-                                user?.etat === "EN_ATTENTE"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {user?.etat}
-                        </span>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-slate-500 flex items-center">
+                        <Shield size={14} className="mr-1" />
+                        Statut
                       </p>
+                      <div>{getVerificationStatusBadge()}</div>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-slate-500 flex items-center">
+                        <Calendar size={14} className="mr-1" />
                         Date d'inscription
                       </p>
-                      <p className="font-medium">
+                      <p className="font-medium text-slate-900">
                         {user?.dateCreation
-                          ? new Date(user.dateCreation).toLocaleDateString()
+                          ? new Date(user.dateCreation).toLocaleDateString(
+                              "fr-FR",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              }
+                            )
                           : "Non disponible"}
                       </p>
                     </div>
                     {user?.motif && (
-                      <div className="col-span-2">
-                        <p className="text-sm text-gray-500">Motif de rejet</p>
-                        <p className="font-medium text-red-600">{user.motif}</p>
+                      <div className="col-span-2 space-y-1">
+                        <p className="text-sm font-medium text-slate-500">
+                          Motif de rejet
+                        </p>
+                        <p className="font-medium text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                          {user.motif}
+                        </p>
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* Documents Section */}
+                <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                    <FileText size={18} className="mr-2 text-indigo-600" />
+                    Documents de l'utilisateur ({userDocuments.length})
+                  </h3>
+
+                  {isLoadingDocuments ? (
+                    <div className="flex justify-center items-center p-8 text-slate-500">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                      <span className="ml-3">Chargement des documents...</span>
+                    </div>
+                  ) : userDocuments.length === 0 ? (
+                    <div className="bg-white p-8 rounded-lg text-center text-slate-500 border-2 border-dashed border-slate-300">
+                      <FileText className="mx-auto h-12 w-12 text-slate-400 mb-3" />
+                      <p className="text-lg font-medium mb-1">
+                        Aucun document trouvé
+                      </p>
+                      <p className="text-sm">
+                        Cet utilisateur n'a téléchargé aucun document
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Images section - Grid layout for responsive design */}
+                      {images.length > 0 && (
+                        <div>
+                          <h4 className="text-md font-semibold mb-4 text-slate-700 flex items-center">
+                            <ImageIcon
+                              size={16}
+                              className="mr-2 text-indigo-600"
+                            />
+                            Images ({images.length})
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {images.map((doc, index) => (
+                              <div
+                                key={doc.id}
+                                className="bg-white p-3 rounded-lg border-2 border-slate-200 group cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300"
+                                onClick={() => handleImageClick(doc)}
+                              >
+                                <div className="relative">
+                                  <div className="aspect-w-16 aspect-h-9 mb-3">
+                                    <img
+                                      src={doc.url}
+                                      alt={doc.title}
+                                      className="w-full h-32 sm:h-40 object-cover rounded-lg bg-slate-100 border group-hover:scale-105 transition-transform duration-300 shadow-sm"
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src =
+                                          "https://via.placeholder.com/300x200?text=Image+Non+Trouvée";
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <div className="bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full shadow-lg">
+                                      <ZoomIn className="w-4 h-4" />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1 min-w-0 pr-2">
+                                    <h5
+                                      className="font-semibold text-sm text-slate-900 truncate mb-2"
+                                      title={doc.title}
+                                    >
+                                      {doc.title}
+                                    </h5>
+                                    <div className="text-xs text-slate-500 space-y-1">
+                                      <p className="flex items-center">
+                                        <File size={12} className="mr-1" />
+                                        {formatFileSize(doc.size)}
+                                      </p>
+                                      <p className="flex items-center">
+                                        <Calendar size={12} className="mr-1" />
+                                        {formatDate(doc.uploadDate)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDownload(doc);
+                                    }}
+                                    disabled={downloadingFiles[doc.id]}
+                                    className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 transition-colors shadow-sm hover:shadow-md"
+                                    title="Télécharger l'image"
+                                  >
+                                    {downloadingFiles[doc.id] ? (
+                                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                    ) : (
+                                      <Download className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Other documents section */}
+                      {others.length > 0 && (
+                        <div>
+                          <h4 className="text-md font-semibold mb-4 text-slate-700 flex items-center">
+                            <File size={16} className="mr-2 text-indigo-600" />
+                            Autres documents ({others.length})
+                          </h4>
+                          <div className="space-y-3">
+                            {others.map((doc) => (
+                              <div
+                                key={doc.id}
+                                className="bg-white p-4 rounded-lg border-2 border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all duration-300"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                    <div className="flex-shrink-0 w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                                      <span className="text-lg">
+                                        {getFileIcon(doc.type)}
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h5
+                                        className="font-semibold text-sm text-slate-900 truncate mb-1"
+                                        title={doc.title}
+                                      >
+                                        {doc.title}
+                                      </h5>
+                                      <div className="text-xs text-slate-500 grid grid-cols-1 sm:grid-cols-3 gap-1">
+                                        <p className="flex items-center">
+                                          <File size={12} className="mr-1" />
+                                          {doc.type
+                                            ? doc.type
+                                                .split("/")[1]
+                                                ?.toUpperCase() || "Inconnu"
+                                            : "Inconnu"}
+                                        </p>
+                                        <p className="flex items-center">
+                                          <Download
+                                            size={12}
+                                            className="mr-1"
+                                          />
+                                          {formatFileSize(doc.size)}
+                                        </p>
+                                        <p className="flex items-center">
+                                          <Calendar
+                                            size={12}
+                                            className="mr-1"
+                                          />
+                                          {formatDate(doc.uploadDate)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleDownload(doc)}
+                                    disabled={downloadingFiles[doc.id]}
+                                    className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ml-3 transition-colors shadow-sm hover:shadow-md"
+                                    title="Télécharger le document"
+                                  >
+                                    {downloadingFiles[doc.id] ? (
+                                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                    ) : (
+                                      <Download className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
+              {/* Actions Section - Responsive sidebar */}
               {showActions && (
-                <div className="flex-shrink-0 w-full lg:w-64">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium mb-4 text-gray-800">
-                      Actions
+                <div className="flex-shrink-0 w-full xl:w-80">
+                  <div className="bg-slate-50 rounded-xl p-4 sm:p-6 sticky top-6">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
+                      <Shield size={18} className="mr-2 text-indigo-600" />
+                      Actions de validation
                     </h3>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <button
                         onClick={handleApprove}
                         disabled={isProcessing}
-                        className={`w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md flex items-center justify-center ${
-                          isProcessing ? "opacity-75 cursor-not-allowed" : ""
+                        className={`w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${
+                          isProcessing
+                            ? "opacity-75 cursor-not-allowed transform-none"
+                            : ""
                         }`}
                       >
                         {isProcessing ? (
-                          <span className="animate-spin mr-2">↻</span>
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
                         ) : (
                           <Check className="w-5 h-5 mr-2" />
                         )}
-                        Approuver
+                        <span className="hidden sm:inline">
+                          Approuver le professeur
+                        </span>
+                        <span className="sm:hidden">Approuver</span>
                       </button>
 
                       <div className="relative">
@@ -708,12 +921,17 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                             setShowRejectionOptions(!showRejectionOptions)
                           }
                           disabled={isProcessing}
-                          className={`w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md flex items-center justify-center ${
-                            isProcessing ? "opacity-75 cursor-not-allowed" : ""
+                          className={`w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${
+                            isProcessing
+                              ? "opacity-75 cursor-not-allowed transform-none"
+                              : ""
                           }`}
                         >
                           <X className="w-5 h-5 mr-2" />
-                          Rejeter
+                          <span className="flex-1 hidden sm:inline">
+                            Rejeter le professeur
+                          </span>
+                          <span className="flex-1 sm:hidden">Rejeter</span>
                           {showRejectionOptions ? (
                             <ChevronUp className="w-5 h-5 ml-2" />
                           ) : (
@@ -722,32 +940,37 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                         </button>
 
                         {showRejectionOptions && (
-                          <div className="mt-2 p-4 bg-white border border-gray-200 rounded-md shadow-lg">
-                            <h4 className="font-medium mb-2">
-                              Sélectionnez les motifs:
+                          <div className="mt-4 p-4 bg-white border-2 border-red-200 rounded-xl shadow-lg">
+                            <h4 className="font-semibold text-slate-900 mb-3 flex items-center">
+                              <AlertCircle
+                                size={16}
+                                className="mr-2 text-red-600"
+                              />
+                              Motifs de rejet
                             </h4>
 
                             {isLoadingMotifs ? (
-                              <div className="py-2 text-gray-500 text-sm">
+                              <div className="py-4 text-slate-500 text-sm flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-300 border-t-slate-600 mr-2"></div>
                                 Chargement des motifs...
                               </div>
                             ) : (
-                              <div className="max-h-40 overflow-y-auto mb-3">
+                              <div className="max-h-40 overflow-y-auto mb-4 pr-2 space-y-2">
                                 {rejectionMotifs.map((motif) => (
                                   <label
                                     key={motif.id}
-                                    className="flex items-center mb-2"
+                                    className="flex items-start p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
                                   >
                                     <input
                                       type="checkbox"
-                                      className="mr-2"
+                                      className="mr-3 mt-1 rounded border-slate-300 text-red-600 focus:ring-red-500"
                                       checked={selectedMotifs.some(
                                         (m) => m.id === motif.id
                                       )}
                                       onChange={() => toggleMotif(motif)}
                                       disabled={isProcessing}
                                     />
-                                    <span className="text-sm">
+                                    <span className="text-sm text-slate-700 leading-relaxed">
                                       {motif.descriptif}
                                     </span>
                                   </label>
@@ -755,16 +978,16 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                               </div>
                             )}
 
-                            <div className="mb-3">
-                              <label className="block text-sm font-medium mb-1">
-                                Ajouter un motif personnalisé:
+                            <div className="mb-4">
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Motif personnalisé :
                               </label>
                               <textarea
                                 value={customMotif}
                                 onChange={(e) => setCustomMotif(e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                rows="2"
-                                placeholder="Détails supplémentaires..."
+                                className="w-full p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none"
+                                rows="3"
+                                placeholder="Ajoutez des détails supplémentaires..."
                                 disabled={isProcessing}
                               ></textarea>
                             </div>
@@ -772,169 +995,32 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                             <button
                               onClick={handleReject}
                               disabled={
-                                (selectedMotifs.length === 0 && !customMotif) ||
+                                (selectedMotifs.length === 0 &&
+                                  !customMotif.trim()) ||
                                 isProcessing
                               }
-                              className={`w-full py-1 px-3 rounded-md text-white ${
-                                (selectedMotifs.length === 0 && !customMotif) ||
+                              className={`w-full py-3 px-4 rounded-lg text-white font-medium transition-all duration-200 ${
+                                (selectedMotifs.length === 0 &&
+                                  !customMotif.trim()) ||
                                 isProcessing
-                                  ? "bg-gray-400 cursor-not-allowed"
-                                  : "bg-red-600 hover:bg-red-700"
+                                  ? "bg-slate-400 cursor-not-allowed"
+                                  : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                               }`}
                             >
-                              {isProcessing
-                                ? "Traitement en cours..."
-                                : "Confirmer le rejet"}
+                              {isProcessing ? (
+                                <div className="flex items-center justify-center">
+                                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                                  Traitement en cours...
+                                </div>
+                              ) : (
+                                "Confirmer le rejet"
+                              )}
                             </button>
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Documents section - Enhanced with horizontal image layout */}
-            <div className="mt-6">
-              <h3 className="text-lg font-medium mb-4 text-gray-800">
-                Documents de l'utilisateur ({userDocuments.length})
-              </h3>
-
-              {isLoadingDocuments ? (
-                <div className="flex justify-center items-center p-8 text-gray-500">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-2">Chargement des documents...</span>
-                </div>
-              ) : userDocuments.length === 0 ? (
-                <div className="bg-gray-50 p-6 rounded-lg text-center text-gray-500">
-                  <FileText className="mx-auto h-12 w-12 text-gray-400 mb-2" />
-                  <p>Aucun document trouvé pour cet utilisateur</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Images section - Horizontal layout */}
-                  {images.length > 0 && (
-                    <div>
-                      <h4 className="text-md font-medium mb-3 text-gray-700 flex items-center">
-                        <span className="text-lg mr-2">🖼️</span>
-                        Images ({images.length})
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {images.map((doc, index) => (
-                          <div
-                            key={doc.id}
-                            className="bg-gray-50 p-3 rounded-lg border group cursor-pointer hover:shadow-lg transition-all duration-200"
-                            onClick={() => handleImageClick(doc)}
-                          >
-                            <div className="relative">
-                              <div className="aspect-w-16 aspect-h-9 mb-3">
-                                <img
-                                  src={doc.url}
-                                  alt={doc.title}
-                                  className="w-full h-40 object-cover rounded-md bg-white border group-hover:scale-105 transition-transform duration-200"
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src =
-                                      "https://via.placeholder.com/300x200?text=Image+Non+Trouvée";
-                                  }}
-                                />
-                              </div>
-                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                <div className="bg-black bg-opacity-50 text-white p-1 rounded-full">
-                                  <ZoomIn className="w-4 h-4" />
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1 min-w-0 pr-2">
-                                <h5
-                                  className="font-medium text-sm truncate"
-                                  title={doc.title}
-                                >
-                                  {doc.title}
-                                </h5>
-                                <div className="text-xs text-gray-500 space-y-1">
-                                  <p>Taille: {formatFileSize(doc.size)}</p>
-                                  <p>
-                                    Uploadé le: {formatDate(doc.uploadDate)}
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDownload(doc);
-                                }}
-                                disabled={downloadingFiles[doc.id]}
-                                className="p-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                                title="Télécharger l'image"
-                              >
-                                {downloadingFiles[doc.id] ? (
-                                  <div className="animate-spin rounded-full h-3 w-3 border-b border-white"></div>
-                                ) : (
-                                  <Download className="w-3 h-3" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Other documents section */}
-                  {others.length > 0 && (
-                    <div>
-                      <h4 className="text-md font-medium mb-3 text-gray-700 flex items-center">
-                        <FileText className="w-5 h-5 mr-2" />
-                        Autres documents ({others.length})
-                      </h4>
-                      <div className="space-y-3">
-                        {others.map((doc) => (
-                          <div
-                            key={doc.id}
-                            className="bg-gray-50 p-4 rounded-lg border"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                <span className="text-xl flex-shrink-0">
-                                  {getFileIcon(doc.type)}
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  <h5
-                                    className="font-medium text-sm truncate"
-                                    title={doc.title}
-                                  >
-                                    {doc.title}
-                                  </h5>
-                                  <div className="text-xs text-gray-500 grid grid-cols-1 md:grid-cols-3 gap-1">
-                                    <p>Type: {doc.type || "Inconnu"}</p>
-                                    <p>Taille: {formatFileSize(doc.size)}</p>
-                                    <p>
-                                      Uploadé le: {formatDate(doc.uploadDate)}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handleDownload(doc)}
-                                disabled={downloadingFiles[doc.id]}
-                                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ml-3"
-                                title="Télécharger le document"
-                              >
-                                {downloadingFiles[doc.id] ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                ) : (
-                                  <Download className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
