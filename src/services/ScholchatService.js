@@ -11,8 +11,14 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to handle different content types
+// Request interceptor to handle different content types and add authentication token
 api.interceptors.request.use((config) => {
+  // Add authentication token to all requests
+  const token = localStorage.getItem("authToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   if (config.data instanceof FormData) {
     // Let browser set the boundary for multipart/form-data
     delete config.headers["Content-Type"];
@@ -42,7 +48,7 @@ class ScholchatService {
     return {
       nom: userData.nom,
       prenom: userData.prenom,
-      email: userData.email,
+      email: userData.email?.toLowerCase(), // Ensure email is lowercase
       telephone: userData.telephone,
       passeAccess: userData.passeAccess,
       adresse: userData.adresse,
@@ -56,6 +62,11 @@ class ScholchatService {
     const appendToFormData = (key, value) => {
       if (value === null || value === undefined) return;
 
+      // Convert email fields to lowercase
+      if (key === "email" && typeof value === "string") {
+        value = value.toLowerCase();
+      }
+
       if (Array.isArray(value)) {
         value.forEach((item, index) => {
           if (typeof item === "object" && !(item instanceof File)) {
@@ -68,7 +79,12 @@ class ScholchatService {
         formData.append(key, value);
       } else if (typeof value === "object" && value !== null) {
         Object.entries(value).forEach(([subKey, subValue]) => {
-          appendToFormData(`${key}.${subKey}`, subValue);
+          appendToFormData(
+            `${key}.${subKey}`,
+            subKey === "email" && typeof subValue === "string"
+              ? subValue.toLowerCase()
+              : subValue
+          );
         });
       } else {
         formData.append(key, value.toString());
@@ -119,7 +135,10 @@ class ScholchatService {
 
   async createUser(userData) {
     try {
-      const payload = this.createBaseUserPayload(userData);
+      const payload = this.createBaseUserPayload({
+        ...userData,
+        email: userData.email?.toLowerCase(), // Ensure email is lowercase
+      });
       const response = await api.post("/utilisateurs", payload);
       return response.data;
     } catch (error) {
@@ -129,6 +148,10 @@ class ScholchatService {
 
   async updateUser(id, userData) {
     try {
+      // Ensure email is lowercase if provided
+      if (userData.email) {
+        userData.email = userData.email.toLowerCase();
+      }
       const response = await api.put(`/utilisateurs/${id}`, userData);
       return response.data;
     } catch (error) {
@@ -169,7 +192,7 @@ class ScholchatService {
       const payload = {
         nom: professorData.nom?.trim(),
         prenom: professorData.prenom?.trim(),
-        email: professorData.email?.trim(),
+        email: professorData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: professorData.telephone?.trim(),
         adresse: professorData.adresse?.trim(),
         etat: professorData.etat || "ACTIVE",
@@ -234,6 +257,11 @@ class ScholchatService {
 
   async updateProfessor(id, professorData) {
     try {
+      // Ensure email is lowercase if provided
+      if (professorData.email) {
+        professorData.email = professorData.email.toLowerCase();
+      }
+
       // Process and validate image files if present
       if (professorData.cniUrlRecto) {
         professorData.cniUrlRecto = await this.processFileUpload(
@@ -288,7 +316,7 @@ class ScholchatService {
         type: "parent",
         nom: parentData.nom?.trim(),
         prenom: parentData.prenom?.trim(),
-        email: parentData.email?.trim(),
+        email: parentData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: parentData.telephone?.trim(),
         adresse: parentData.adresse?.trim(),
         etat: parentData.etat || "ACTIVE",
@@ -309,7 +337,7 @@ class ScholchatService {
         type: "parent",
         nom: parentData.nom?.trim(),
         prenom: parentData.prenom?.trim(),
-        email: parentData.email?.trim(),
+        email: parentData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: parentData.telephone?.trim(),
         adresse: parentData.adresse?.trim(),
         etat: parentData.etat || "ACTIVE",
@@ -318,14 +346,6 @@ class ScholchatService {
 
       const response = await api.put(`/parents/${id}`, payload);
       return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async deleteParent(id) {
-    try {
-      await api.delete(`/parents/${id}`);
     } catch (error) {
       this.handleError(error);
     }
@@ -364,7 +384,7 @@ class ScholchatService {
         type: "eleve",
         nom: studentData.nom?.trim(),
         prenom: studentData.prenom?.trim(),
-        email: studentData.email?.trim(),
+        email: studentData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: studentData.telephone?.trim(),
         adresse: studentData.adresse?.trim(),
         etat: studentData.etat || "ACTIVE",
@@ -385,7 +405,7 @@ class ScholchatService {
         type: "eleve",
         nom: studentData.nom?.trim(),
         prenom: studentData.prenom?.trim(),
-        email: studentData.email?.trim(),
+        email: studentData.email?.trim().toLowerCase(), // Ensure email is lowercase
         telephone: studentData.telephone?.trim(),
         adresse: studentData.adresse?.trim(),
         etat: studentData.etat || "ACTIVE",
@@ -429,6 +449,11 @@ class ScholchatService {
 
   async createTutor(tutorData) {
     try {
+      // Ensure email is lowercase
+      if (tutorData.email) {
+        tutorData.email = tutorData.email.toLowerCase();
+      }
+
       // Process and validate image files
       const cniFront = await this.processFileUpload(tutorData.cniUrlFront);
       const cniBack = await this.processFileUpload(tutorData.cniUrlBack);
@@ -451,6 +476,11 @@ class ScholchatService {
 
   async updateTutor(id, tutorData) {
     try {
+      // Ensure email is lowercase if provided
+      if (tutorData.email) {
+        tutorData.email = tutorData.email.toLowerCase();
+      }
+
       // Process and validate image files if present
       if (tutorData.cniUrlFront) {
         tutorData.cniUrlFront = await this.processFileUpload(
@@ -483,8 +513,6 @@ class ScholchatService {
       this.handleError(error);
     }
   }
-
-  // ============ Class Management ============
 
   // ============ Class Management ============
   async getAllClasses() {
@@ -603,6 +631,190 @@ class ScholchatService {
   async deleteEstablishment(id) {
     try {
       await api.delete(`/etablissements/${id}`);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Motif Management ============
+  async getAllMotifs() {
+    try {
+      const response = await api.get("/motifsRejets");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getMotifById(id) {
+    try {
+      const response = await api.get(`/motifsRejets/${id}`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async createMotif(motifData) {
+    try {
+      const response = await api.post("/motifsRejets", motifData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async updateMotif(id, motifData) {
+    try {
+      const response = await api.put(`/motifsRejets/${id}`, motifData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async deleteMotif(id) {
+    try {
+      await api.delete(`/motifsRejets/${id}`);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Professor Motif Assignment ============
+  async getProfessorMotifs(professorId) {
+    try {
+      const response = await api.get(`/professeurs/${professorId}/motifs`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async assignMotifToProfessor(professorId, motifId) {
+    try {
+      const response = await api.post(
+        `/professeurs/${professorId}/motifs/${motifId}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async removeMotifFromProfessor(professorId, motifId) {
+    try {
+      const response = await api.delete(
+        `/professeurs/${professorId}/motifs/${motifId}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ File Upload ============
+  async uploadFile(file) {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await api.post("/upload", formData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Professor Validation/Rejection ============
+  async validateProfessor(professorId) {
+    try {
+      const response = await api.post(
+        `/utilisateurs/professeurs/${professorId}/validate`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async rejectProfessor(professorId, rejectionData) {
+    try {
+      const formData = this.createFormDataFromObject(rejectionData);
+      const response = await api.post(
+        `/utilisateurs/professeurs/${professorId}/rejet`,
+        formData
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Pending Professors ============
+  async getPendingProfessors() {
+    try {
+      const response = await api.get("/utilisateurs/professeurs/pending");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Authentication ============
+  async login(credentials) {
+    try {
+      // Ensure email is lowercase for login
+      if (credentials.email) {
+        credentials.email = credentials.email.toLowerCase();
+      }
+
+      const response = await api.post("/auth/login", credentials);
+      // Store token in localStorage
+      if (response.data.token) {
+        localStorage.setItem("authToken", response.data.token);
+      }
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async logout() {
+    try {
+      const response = await api.post("/auth/logout");
+      // Remove token from localStorage
+      localStorage.removeItem("authToken");
+      return response.data;
+    } catch (error) {
+      // Still remove token even if server error
+      localStorage.removeItem("authToken");
+      this.handleError(error);
+    }
+  }
+
+  isAuthenticated() {
+    return !!localStorage.getItem("authToken");
+  }
+
+  getToken() {
+    return localStorage.getItem("authToken");
+  }
+  async patchUser(id, partialUpdate) {
+    try {
+      // Ensure email is lowercase if provided
+      if (partialUpdate.email) {
+        partialUpdate.email = partialUpdate.email.toLowerCase();
+      }
+
+      // Remove any file references since they're already uploaded to S3
+      const payload = { ...partialUpdate };
+      delete payload.cniUrlRecto;
+      delete payload.cniUrlVerso;
+      delete payload.selfieUrl;
+
+      const response = await api.patch(`/utilisateurs/${id}`, payload);
+      return response.data;
     } catch (error) {
       this.handleError(error);
     }

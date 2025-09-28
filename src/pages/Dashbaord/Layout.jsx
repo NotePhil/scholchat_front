@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Navigate, useNavigate, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
-import { themes, colorSchemes } from "./Theme";
+import { themes, colorSchemes } from "./theme";
 import DashboardCharts from "./components/DashboardCharts";
 import DashboardStats from "./components/DashboardStats";
 import ActivityFeed from "./components/StudentDashboard/ActivityFeed";
@@ -15,7 +15,7 @@ import StudentDashboard from "./components/StudentDashboard/StudentDashboard";
 import ParentDashboard from "./components/ParentDashboard/ParentDashboard";
 import EmailDashboard from "./components/StudentDashboard/EmailDashboard";
 import { scholchatService } from "../../services/ScholchatService";
-
+import StudentParentStats from "./principale/StudentParentStats";
 const Layoute = () => {
   // State management
   const [showSidebar, setShowSidebar] = useState(true);
@@ -387,7 +387,7 @@ const Layoute = () => {
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-8">
           {/* Only render DashboardStats for admin users */}
-          {userRole === "admin" && (
+          {userRole === "admin" ? (
             <DashboardStats
               stats={stats}
               isDark={isDark}
@@ -398,6 +398,16 @@ const Layoute = () => {
               onViewAll={(tabName) => setActiveTab(tabName)}
               userRole={userRole}
             />
+          ) : (
+            (userRole === "parent" || userRole === "student") && (
+              <StudentParentStats
+                stats={stats}
+                isDark={isDark}
+                themes={themes}
+                currentTheme={currentTheme}
+                userRole={userRole}
+              />
+            )
           )}
           <div className={`${userRole === "admin" ? "mt-8" : ""}`}>
             {renderMainContent()}

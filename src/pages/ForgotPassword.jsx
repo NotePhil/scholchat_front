@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../CSS/ForgotPassword.css";
+import ForgotPasswordService from "../services/forgotPassword";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -21,36 +22,26 @@ const ForgotPassword = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const response = await fetch(
-        "http://localhost:8486/scholchat/auth/reset-password-request",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        }
-      );
+      // Call the service with just the email parameter
+      await ForgotPasswordService.requestPasswordReset(email);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Échec de la demande");
-      }
-
-      // Success - show confirmation
+      // Si la requête réussit, montrer le message de confirmation
       setStep("confirmation");
       setMessage({
         text: "Instructions envoyées! Vérifiez votre boîte de réception.",
         type: "success",
       });
-    } catch (err) {
-      console.error("Erreur lors de la demande:", err);
+    } catch (error) {
+      console.error("Erreur lors de la demande:", error);
+
+      // Afficher le message d'erreur
       setMessage({
-        text:
-          err.message ||
-          "Une erreur s'est produite. Veuillez vérifier votre email et réessayer.",
+        text: "Erreur lors de l'envoi des instructions. Veuillez réessayer plus tard.",
         type: "error",
       });
+
+      // Ne pas passer à l'étape de confirmation en cas d'erreur
+      // setStep reste à "request"
     } finally {
       setLoading(false);
     }
@@ -131,7 +122,7 @@ const ForgotPassword = () => {
 
           <div className="forgot-password-footer">
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/schoolchat/login")}
               className="back-to-login-button"
             >
               Retour à la connexion

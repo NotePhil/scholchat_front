@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Menu,
   Users,
@@ -7,10 +8,16 @@ import {
   Building2,
   Mail,
   Settings,
+  LogOut,
+  ChevronDown,
+  ChevronUp,
+  Activity,
+  School,
+  Book,
+  X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
-export default function Sidebar({
+const Sidebar = ({
   showSidebar,
   activeTab,
   setActiveTab,
@@ -18,261 +25,385 @@ export default function Sidebar({
   currentTheme,
   themes,
   colorSchemes,
-}) {
+  userRole,
+  userRoles,
+  onShowMessaging,
+  toggleSidebar,
+}) => {
   const navigate = useNavigate();
-  const userRole = localStorage.getItem("userRole");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState({
+    users: false,
+    classes: false,
+    establishments: false,
+    courses: false,
+  });
 
-  // Define menu items based on user role
+  useEffect(() => {
+    const coursesTabs = ["create-course", "schedule-course"];
+    const usersTabs = ["admin", "professors", "parents", "students", "others"];
+    const classesTabs = ["create-class", "manage-class"];
+    const establishmentsTabs = ["create-establishment", "manage-establishment"];
+
+    setOpenDropdown((prev) => ({
+      ...prev,
+      courses: coursesTabs.includes(activeTab),
+      users: usersTabs.includes(activeTab),
+      classes: classesTabs.includes(activeTab),
+      establishments: establishmentsTabs.includes(activeTab),
+    }));
+  }, [activeTab]);
+
+  const toggleDropdown = (dropdown) => {
+    setOpenDropdown({
+      ...openDropdown,
+      [dropdown]: !openDropdown[dropdown],
+    });
+  };
+
+  const isAdmin = () => {
+    return userRoles.includes("ROLE_ADMIN") || userRole === "admin";
+  };
+
+  const isProfessor = () => {
+    return (
+      userRoles.includes("ROLE_PROFESSOR") ||
+      userRole === "professor" ||
+      userRole === "repetiteur"
+    );
+  };
+
+  const isParentOrStudent = () => {
+    return (
+      userRoles.includes("ROLE_PARENT") ||
+      userRoles.includes("ROLE_STUDENT") ||
+      userRole === "parent" ||
+      userRole === "student"
+    );
+  };
+
   const getMenuItems = () => {
-    switch (userRole) {
-      case "admin":
-        return [
-          {
-            name: "Dashboard",
-            icon: Menu,
-            tab: "dashboard",
-            path: "/admin/dashboard",
-          },
-          { name: "Users", icon: Users, tab: "users", path: "/users" },
-          {
-            name: "Parents",
-            icon: UserPlus,
-            tab: "parents",
-            path: "/parents/dashboard",
-          },
-          {
-            name: "Professors",
-            icon: BookOpen,
-            tab: "professors",
-            path: "/professors/dashboard",
-          },
-          {
-            name: "Classes",
-            icon: Building2,
-            tab: "classes",
-            path: "/classes",
-          },
-          { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
-          {
-            name: "Settings",
-            icon: Settings,
-            tab: "settings",
-            path: "/settings",
-          },
-        ];
+    const baseItems = [
+      { name: "Tableau de Bord", icon: Menu, tab: "dashboard" },
+      { name: "Activités", icon: Activity, tab: "activities" },
+    ];
 
-      case "professor":
-      case "repetiteur":
-        return [
-          {
-            name: "Activities",
-            icon: Menu,
-            tab: "dashboard",
-            path: "/admin/dashboard",
-          },
-          {
-            name: "DashBoard",
-            icon: Users,
-            tab: "students",
-            path: "/professors/dashboard",
-          },
-          {
-            name: "Parents",
-            icon: UserPlus,
-            tab: "parents",
-            path: "/parents/dashboard",
-          },
-          {
-            name: "Professors",
-            icon: BookOpen,
-            tab: "professors",
-            path: "/professors/dashboard",
-          },
-          {
-            name: "Classes",
-            icon: Building2,
-            tab: "classes",
-            path: "/classes",
-          },
-          { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
-          {
-            name: "Settings",
-            icon: Settings,
-            tab: "settings",
-            path: "/settings",
-          },
-        ];
+    let roleItems = [];
 
-      case "student":
-        return [
-          {
-            name: "Dashboard",
-            icon: Menu,
-            tab: "dashboard",
-            path: "/student/dashboard",
-          },
-          {
-            name: "Students",
-            icon: Users,
-            tab: "students",
-            path: "/students/dashboard",
-          },
-          {
-            name: "Classes",
-            icon: Building2,
-            tab: "classes",
-            path: "/classes",
-          },
-          { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
-          {
-            name: "Settings",
-            icon: Settings,
-            tab: "settings",
-            path: "/settings",
-          },
-        ];
-
-      case "parent":
-        return [
-          {
-            name: "Dashboard",
-            icon: Menu,
-            tab: "dashboard",
-            path: "/parent/dashboard",
-          },
-          {
-            name: "Students",
-            icon: Users,
-            tab: "students",
-            path: "/students/dashboard",
-          },
-          {
-            name: "Classes",
-            icon: Building2,
-            tab: "classes",
-            path: "/classes",
-          },
-          { name: "Messages", icon: Mail, tab: "messages", path: "/messages" },
-          {
-            name: "Settings",
-            icon: Settings,
-            tab: "settings",
-            path: "/settings",
-          },
-        ];
-
-      default:
-        return [];
+    if (isAdmin()) {
+      roleItems = [
+        {
+          name: "Gérer Utilisateur",
+          icon: Users,
+          dropdown: "users",
+          items: [
+            { name: "Admin", tab: "admin" },
+            { name: "Professeurs", tab: "professors" },
+            { name: "Parents", tab: "parents" },
+            { name: "Élèves", tab: "students" },
+            { name: "Autres", tab: "others" },
+          ],
+        },
+        {
+          name: "Motifs de Rejet",
+          icon: BookOpen,
+          tab: "motifs-de-rejet",
+        },
+        {
+          name: "Classes",
+          icon: Building2,
+          dropdown: "classes",
+          items: [
+            { name: "Créer une Classe", tab: "create-class" },
+            { name: "Gérer une Classe", tab: "manage-class" },
+          ],
+        },
+        {
+          name: "Établissements",
+          icon: School,
+          dropdown: "establishments",
+          items: [
+            { name: "Créer un Établissement", tab: "create-establishment" },
+            { name: "Gérer un Établissement", tab: "manage-establishment" },
+          ],
+        },
+        {
+          name: "Messagerie",
+          icon: Mail,
+          tab: "messages",
+        },
+      ];
+    } else if (isProfessor()) {
+      roleItems = [
+        {
+          name: "Gérer les Cours",
+          icon: Book,
+          dropdown: "courses",
+          items: [
+            { name: "Cours", tab: "create-course" },
+            { name: "Programmer le Cours", tab: "schedule-course" },
+          ],
+        },
+        {
+          name: "Gérer Utilisateur",
+          icon: Users,
+          dropdown: "users",
+          items: [
+            { name: "Professeurs", tab: "professors" },
+            { name: "Parents", tab: "parents" },
+            { name: "Élèves", tab: "students" },
+          ],
+        },
+        {
+          name: "Classes",
+          icon: Building2,
+          dropdown: "classes",
+          items: [
+            { name: "Créer une Classe", tab: "create-class" },
+            { name: "Gérer une Classe", tab: "manage-class" },
+          ],
+        },
+        {
+          name: "Messagerie",
+          icon: Mail,
+          tab: "messages",
+        },
+      ];
+    } else if (isParentOrStudent()) {
+      roleItems = [
+        { name: "Classes", icon: Building2, tab: "classes" },
+        {
+          name: "Messagerie",
+          icon: Mail,
+          tab: "messages",
+        },
+      ];
+    } else {
+      roleItems = [
+        { name: "Classes", icon: Building2, tab: "classes" },
+        {
+          name: "Motifs de Rejet",
+          icon: BookOpen,
+          tab: "motifs-de-rejet",
+        },
+        {
+          name: "Messagerie",
+          icon: Mail,
+          tab: "messages",
+        },
+      ];
     }
+
+    const bottomItems = [
+      { name: "Paramètres", icon: Settings, tab: "settings" },
+    ];
+
+    return [...baseItems, ...roleItems, ...bottomItems];
   };
 
   const menuItems = getMenuItems();
 
-  const handleNavigation = (path, tab) => {
+  const handleTabChange = (tab) => {
+    console.log(
+      "Sidebar: Changing tab to:",
+      tab,
+      "User role:",
+      userRole,
+      "User roles:",
+      userRoles
+    );
+
     setActiveTab(tab);
 
-    if (tab === "messages") {
-      window.location.href = "mailto:";
-    } else {
-      navigate(path);
+    if (tab === "messages" && onShowMessaging) {
+      onShowMessaging();
     }
   };
 
+  const openLogoutModal = () => {
+    setShowLogoutModal(true);
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
+  };
+
+  const confirmLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("username");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userRoles");
+    localStorage.removeItem("decodedToken");
+    localStorage.removeItem("authResponse");
+
+    navigate("/schoolchat/login");
+  };
+
+  const isActiveTab = (tab) => {
+    return activeTab === tab;
+  };
+
+  const isActiveDropdown = (dropdown, items) => {
+    return (
+      activeTab.startsWith(dropdown) ||
+      (items && items.some((subItem) => subItem.tab === activeTab))
+    );
+  };
+
   return (
-    <aside
-      className={`${
-        isDark ? themes.dark.cardBg : themes.light.cardBg
-      } w-64 min-h-screen ${
-        showSidebar ? "block" : "hidden"
-      } md:block shadow-lg transition-colors duration-300`}
-    >
-      <div
-        className={`p-6 ${
-          isDark ? themes.dark.border : themes.light.border
-        } border-b`}
+    <>
+      <aside
+        className={`${
+          isDark ? themes?.dark?.cardBg : themes?.light?.cardBg
+        } sidebar ${
+          showSidebar ? "open" : "closed"
+        } transition-colors duration-300`}
       >
-        <h1
-          className="text-2xl font-bold"
-          style={{ color: colorSchemes[currentTheme].primary }}
-        >
-          ScholChat
-        </h1>
-      </div>
-
-      <nav className="mt-6">
-        {menuItems.map((item) => (
-          <div
-            key={item.name}
-            className={`relative flex items-center px-6 py-4 cursor-pointer transition-all duration-300 ${
-              activeTab === item.tab
-                ? `${
-                    isDark ? "text-white" : "text-gray-900"
-                  } font-medium transform scale-100`
-                : isDark
-                ? "text-gray-300 hover:text-white"
-                : "text-gray-700 hover:text-gray-900"
-            }`}
-            onClick={() => handleNavigation(item.path, item.tab)}
-          >
-            {/* Active state background effect */}
-            {activeTab === item.tab && (
-              <div
-                className="absolute inset-0 transition-all duration-300"
-                style={{
-                  backgroundColor: colorSchemes[currentTheme].light,
-                  opacity: isDark ? 0.2 : 0.15,
-                }}
-              />
-            )}
-
-            {/* Active state indicator line */}
-            {activeTab === item.tab && (
-              <div
-                className="absolute left-0 top-0 bottom-0 w-1 transition-all duration-300"
-                style={{
-                  backgroundColor: colorSchemes[currentTheme].primary,
-                }}
-              />
-            )}
-
-            {/* Icon and text container */}
-            <div className="relative flex items-center w-full group">
-              <item.icon
-                className={`w-6 h-6 transition-all duration-300 ${
-                  activeTab === item.tab ? "" : "group-hover:scale-110"
-                }`}
-                style={{
-                  color:
-                    activeTab === item.tab
-                      ? colorSchemes[currentTheme].primary
-                      : isDark
-                      ? "currentColor"
-                      : "currentColor",
-                }}
-              />
-              <span
-                className={`mx-4 transition-all duration-300 ${
-                  activeTab === item.tab
-                    ? "transform translate-x-1"
-                    : "group-hover:translate-x-1"
-                }`}
+        <div className="sidebar-header">
+          <div className="sidebar-header-content">
+            <div className="sidebar-brand">
+              <h2
+                className="text-2xl font-bold mb-1"
+                style={{ color: colorSchemes?.[currentTheme]?.primary }}
               >
-                {item.name}
-              </span>
+                ScholChat
+              </h2>
+              <p className="user-role text-sm">
+                {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+              </p>
             </div>
-
-            {/* Hover effect overlay */}
-            <div
-              className={`absolute inset-0 opacity-0 transition-opacity duration-300 ${
-                activeTab !== item.tab ? "hover:opacity-10" : ""
-              }`}
-              style={{
-                backgroundColor: colorSchemes[currentTheme].primary,
-              }}
-            />
+            <button
+              className="sidebar-close-btn"
+              onClick={toggleSidebar}
+              aria-label="Close sidebar"
+            >
+              <X size={20} />
+            </button>
           </div>
-        ))}
-      </nav>
-    </aside>
+        </div>
+
+        <nav className="sidebar-nav">
+          <ul>
+            {menuItems.map((item) => (
+              <React.Fragment key={item.name}>
+                {item.dropdown ? (
+                  <li>
+                    <div
+                      className={`dropdown-header ${
+                        isActiveDropdown(item.dropdown, item.items)
+                          ? "active"
+                          : ""
+                      }`}
+                      onClick={() => toggleDropdown(item.dropdown)}
+                    >
+                      <a href="#" onClick={(e) => e.preventDefault()}>
+                        <span className="icon">
+                          <item.icon
+                            style={{
+                              color: isActiveDropdown(item.dropdown, item.items)
+                                ? colorSchemes?.[currentTheme]?.primary
+                                : "currentColor",
+                            }}
+                          />
+                        </span>
+                        <span className="menu-text">{item.name}</span>
+                        <span className="dropdown-icon">
+                          {openDropdown[item.dropdown] ? (
+                            <ChevronUp size={18} />
+                          ) : (
+                            <ChevronDown size={18} />
+                          )}
+                        </span>
+                      </a>
+                    </div>
+                    {openDropdown[item.dropdown] && (
+                      <ul className="dropdown-menu">
+                        {item.items.map((subItem) => (
+                          <li
+                            key={subItem.name}
+                            className={
+                              isActiveTab(subItem.tab) ? "active-sub" : ""
+                            }
+                            onClick={() => handleTabChange(subItem.tab)}
+                          >
+                            <a href="#" onClick={(e) => e.preventDefault()}>
+                              <span className="menu-text">{subItem.name}</span>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ) : (
+                  <li
+                    className={isActiveTab(item.tab) ? "active" : ""}
+                    onClick={() => handleTabChange(item.tab)}
+                  >
+                    <a href="#" onClick={(e) => e.preventDefault()}>
+                      <span className="icon">
+                        <item.icon
+                          style={{
+                            color: isActiveTab(item.tab)
+                              ? colorSchemes?.[currentTheme]?.primary
+                              : "currentColor",
+                          }}
+                        />
+                      </span>
+                      <span className="menu-text">{item.name}</span>
+                    </a>
+                  </li>
+                )}
+              </React.Fragment>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="sidebar-footer">
+          <button className="logout-button" onClick={openLogoutModal}>
+            <span className="icon">
+              <LogOut size={18} />
+            </span>
+            <span className="menu-text">Déconnexion</span>
+          </button>
+        </div>
+      </aside>
+
+      {showLogoutModal && (
+        <div className="modal-overlay-custom">
+          <div
+            className={`modal-custom ${
+              isDark ? "bg-gray-800 text-white" : "bg-white text-gray-800"
+            }`}
+          >
+            <h3 className="text-xl font-semibold mb-4">Confirmation</h3>
+            <p className="mb-6">Êtes-vous sûr de vouloir vous déconnecter?</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={cancelLogout}
+                className="px-4 py-2 rounded-md bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="px-4 py-2 rounded-md text-white hover:opacity-90 transition-colors"
+                style={{
+                  backgroundColor: colorSchemes?.[currentTheme]?.primary,
+                }}
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
-}
+};
+
+export default Sidebar;

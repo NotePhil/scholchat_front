@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import logImg from "../assets/images/logo.png";
 import {
   BsApple,
@@ -10,202 +10,346 @@ import {
 import { NavLink } from "react-router-dom";
 
 export const Footer = () => {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const footer = document.querySelector(".footer-container");
+      if (footer) {
+        const rect = footer.getBoundingClientRect();
+        setMousePosition({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    return () => document.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
   return (
     <>
       <style>
         {`
-        .app {
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          background-color: #007BFF;
-          color: white;
+        .footer-container {
+          background: linear-gradient(135deg, #0f0f23 0%, #1a0b3d 50%, #2563eb 100%);
+          position: relative;
+          overflow: hidden;
+          margin-top: 4rem;
+        }
+
+        .app-download {
+          background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+          backdrop-filter: blur(15px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 1.5rem;
           margin: 2rem auto;
           padding: 2rem;
-          border-radius: 1rem;
+          max-width: 900px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 2rem;
+          position: relative;
         }
 
-        .app .left {
-          flex: 1 1 60%;
+        .app-download .left {
+          flex: 1;
         }
 
-        .app .right {
-          flex: 1 1 40%;
+        .app-download .left h3 {
+          font-size: 1.5rem;
+          font-weight: bold;
+          background: linear-gradient(135deg, #06b6d4, #a855f7, #ec4899);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin-bottom: 0.5rem;
+        }
+
+        .app-download .left p {
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 0.9rem;
+          margin: 0;
+        }
+
+        .app-download .right {
           display: flex;
           gap: 1rem;
-          justify-content: center;
+          flex-shrink: 0;
         }
 
-        .app .box {
+        .download-btn {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.75rem 1.5rem;
-          border: 1px solid white;
-          border-radius: 0.5rem;
-          cursor: pointer;
+          padding: 0.75rem 1.25rem;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 0.75rem;
+          color: white;
+          text-decoration: none;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+          font-size: 0.9rem;
         }
 
-        .app .box:hover {
-          background-color: white;
-          color: #007BFF;
+        .download-btn:hover {
+          background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(168, 85, 247, 0.2));
+          transform: translateY(-2px);
         }
 
-        footer {
-          background-color: #f3f4f8;
-          padding: 4rem 1rem;
+        .footer-main {
+          padding: 2.5rem 1.5rem 1.5rem;
+          max-width: 1200px;
+          margin: 0 auto;
         }
 
-        footer .container {
+        .footer-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: 2fr 1fr 1fr 1fr;
           gap: 2rem;
+          margin-bottom: 2rem;
         }
 
-        footer h4 {
-          font-size: 1.5rem;
+        .footer-section h4 {
+          font-size: 1.1rem;
+          font-weight: 600;
           margin-bottom: 1rem;
-          color: #000;
+          background: linear-gradient(135deg, #06b6d4, #a855f7);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
-        footer p {
-          font-size: 1rem;
-          color: #555;
+        .footer-section p {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 0.9rem;
+          line-height: 1.5;
+          margin-bottom: 1rem;
         }
 
-        footer .logo img {
+        .footer-link {
+          color: rgba(255, 255, 255, 0.6);
+          text-decoration: none;
           display: block;
-          margin: 0 auto 1rem;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
+          transition: all 0.3s ease;
         }
 
-        footer .flex {
+        .footer-link:hover {
+          color: #06b6d4;
+          transform: translateX(5px);
+        }
+
+        .logo-section {
           display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .logo-section img {
+          width: 120px;
+          margin-bottom: 1rem;
+          filter: brightness(1.1);
+        }
+
+        .social-links {
+          display: flex;
+          gap: 0.75rem;
+          margin-top: 1rem;
+        }
+
+        .social-link {
+          display: flex;
+          align-items: center;
           justify-content: center;
-          gap: 1rem;
+          width: 2.25rem;
+          height: 2.25rem;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 50%;
+          color: rgba(255, 255, 255, 0.7);
+          text-decoration: none;
+          transition: all 0.3s ease;
         }
 
-        footer .flex a {
-          color: #555;
-          transition: color 0.3s;
+        .social-link:hover {
+          background: linear-gradient(135deg, #06b6d4, #a855f7);
+          color: white;
+          transform: translateY(-2px);
         }
 
-        footer .flex a:hover {
-          color: #007BFF;
+        .footer-bottom {
+          text-align: center;
+          padding-top: 1.5rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer-bottom p {
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 0.85rem;
+          margin: 0;
+        }
+
+        .mouse-glow {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          pointer-events: none;
+          opacity: 0.3;
         }
 
         @media (max-width: 768px) {
-          .app {
+          .app-download {
             flex-direction: column;
             text-align: center;
+            padding: 1.5rem;
+            margin: 1rem;
           }
 
-          .app .left,
-          .app .right {
-            flex: 1 1 100%;
-          }
-
-          footer .container {
-            grid-template-columns: 1fr;
-            text-align: center;
-          }
-
-          footer h4 {
+          .app-download .left h3 {
             font-size: 1.25rem;
           }
 
-          footer p {
-            font-size: 0.875rem;
+          .app-download .right {
+            justify-content: center;
+            flex-wrap: wrap;
           }
 
-          footer .flex {
+          .footer-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            text-align: center;
+          }
+
+          .logo-section {
+            align-items: center;
+          }
+
+          .social-links {
             justify-content: center;
+          }
+
+          .footer-main {
+            padding: 2rem 1rem 1rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .download-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+          }
+
+          .download-btn svg {
+            width: 16px;
+            height: 16px;
           }
         }
       `}
       </style>
 
-      {/* App Download Section */}
-      <section className="app">
-        <div className="left">
-          <h1 className="text-3xl md:text-2xl font-bold">
-            Restez Connecté avec Votre Communauté Scolaire !
-          </h1>
-          <p className="mt-4 text-base md:text-sm text-gray-200">
-            Téléchargez l'application ScholChat pour rejoindre les discussions,
-            accéder aux ressources, et rester informé des actualités scolaires.
-          </p>
+      <footer className="footer-container">
+        {/* Mouse Glow Effect */}
+        <div
+          className="mouse-glow"
+          style={{
+            background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(6, 182, 212, 0.15) 0%, transparent 50%)`,
+          }}
+        />
+
+        {/* App Download Section */}
+        <div className="app-download">
+          <div className="left">
+            <h3>Restez Connecté !</h3>
+            <p>Téléchargez ScholChat pour une expérience éducative optimale</p>
+          </div>
+          <div className="right">
+            <a href="#" className="download-btn">
+              <BsApple size={20} />
+              <span>App Store</span>
+            </a>
+            <a href="#" className="download-btn">
+              <BsGooglePlay size={20} />
+              <span>Play Store</span>
+            </a>
+          </div>
         </div>
-        {/* <div className="right">
-          <div className="box">
-            <BsApple size={24} />
-            <span>App Store</span>
-          </div>
-          <div className="box">
-            <BsGooglePlay size={24} />
-            <span>Play Store</span>
-          </div>
-        </div> */}
-      </section>
 
-      {/* Footer Section */}
-      <footer>
-        <div className="container">
-          {/* Logo and About Section */}
-          <div className="logo">
-            <img src={logImg} alt="Logo ScholChat" />
-            <p>
-              ScholChat réunit les étudiants, enseignants, et parents dans une
-              application sécurisée, facilitant la communication et l'engagement
-              scolaire.
-            </p>
-          </div>
-
-          {/* Contact Section */}
-          <div>
-            <h4>Contact</h4>
-            <p>
-              Vous avez des questions ou besoin de support ? Notre équipe est là
-              pour vous aider.
-            </p>
-            <NavLink to="#" className="text-primary font-semibold block mt-4">
-              Nous Contacter
-            </NavLink>
-          </div>
-
-          {/* Mentions Légales Section */}
-          <div>
-            <h4>Mentions Légales</h4>
-            <p>
-              ScholChat respecte votre vie privée et garantit un environnement
-              en ligne sécurisé.
-            </p>
-            <NavLink to="#" className="text-primary font-semibold block mt-4">
-              Politique de Confidentialité
-            </NavLink>
-            <NavLink to="#" className="text-primary font-semibold block">
-              Conditions Générales
-            </NavLink>
-          </div>
-
-          {/* Suivez-nous Section */}
-          <div>
-            <h4>Suivez-nous</h4>
-            <p>
-              Suivez-nous sur les réseaux sociaux pour rester informé des
-              dernières actualités.
-            </p>
-            <div className="flex">
-              <a href="https://facebook.com">
-                <BsFacebook size={28} />
-              </a>
-              <a href="https://twitter.com">
-                <BsTwitter size={28} />
-              </a>
-              <a href="https://instagram.com">
-                <BsInstagram size={28} />
-              </a>
+        {/* Main Footer Content */}
+        <div className="footer-main">
+          <div className="footer-grid">
+            {/* Logo and About Section */}
+            <div className="footer-section logo-section">
+              <img src={logImg} alt="Logo ScholChat" />
+              <p>
+                ScholChat réunit étudiants, enseignants et parents dans une
+                plateforme sécurisée pour faciliter la communication scolaire.
+              </p>
+              <div className="social-links">
+                <a href="https://facebook.com" className="social-link">
+                  <BsFacebook size={16} />
+                </a>
+                <a href="https://twitter.com" className="social-link">
+                  <BsTwitter size={16} />
+                </a>
+                <a href="https://instagram.com" className="social-link">
+                  <BsInstagram size={16} />
+                </a>
+              </div>
             </div>
+
+            {/* Contact Section */}
+            <div className="footer-section">
+              <h4>Contact</h4>
+              <NavLink to="#" className="footer-link">
+                Nous Contacter
+              </NavLink>
+              <NavLink to="#" className="footer-link">
+                Support
+              </NavLink>
+              <NavLink to="#" className="footer-link">
+                Centre d'Aide
+              </NavLink>
+            </div>
+
+            {/* Legal Section */}
+            <div className="footer-section">
+              <h4>Légal</h4>
+              <NavLink to="#" className="footer-link">
+                Confidentialité
+              </NavLink>
+              <NavLink to="#" className="footer-link">
+                Conditions
+              </NavLink>
+              <NavLink to="#" className="footer-link">
+                Mentions Légales
+              </NavLink>
+            </div>
+
+            {/* Resources Section */}
+            <div className="footer-section">
+              <h4>Ressources</h4>
+              <NavLink to="#" className="footer-link">
+                Guide Utilisateur
+              </NavLink>
+              <NavLink to="#" className="footer-link">
+                Blog
+              </NavLink>
+              <NavLink to="#" className="footer-link">
+                FAQ
+              </NavLink>
+            </div>
+          </div>
+
+          {/* Footer Bottom */}
+          <div className="footer-bottom">
+            <p>© 2024 ScholChat. Tous droits réservés.</p>
           </div>
         </div>
       </footer>

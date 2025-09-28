@@ -1,27 +1,29 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
-import {
-  X,
-  Save,
-  ArrowRight,
-  ArrowLeft,
-  Loader,
-  Eye,
-  EyeOff,
-} from "lucide-react";
-import PhoneInputs from "./PhoneInput";
-import { useNavigate } from "react-router-dom";
-import "../CSS/Signup.css"; // Import the separate CSS file
+import { ArrowRight, ArrowLeft, Loader, X } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import "../CSS/Signup.css";
+import axios from "axios";
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("CM");
+  const [isUpdateMode, setIsUpdateMode] = useState(false);
+  const [token, setToken] = useState("");
+  const [createdUserId, setCreatedUserId] = useState(null);
+
+  const [imagePreviews, setImagePreviews] = useState({
+    cniRecto: null,
+    cniVerso: null,
+    selfie: null,
+  });
 
   const [formData, setFormData] = useState({
     type: "",
@@ -29,16 +31,157 @@ const SignUp = () => {
     prenom: "",
     email: "",
     telephone: "",
-    passeAccess: "", // Correspond au champ du backend
     adresse: "",
     etat: "INACTIVE",
     niveau: "",
-    cniUrlRecto: "",
-    cniUrlVerso: "",
-    nomEtablissement: "",
+    cniRecto: "",
+    cniVerso: "",
+    selfie: "",
     matriculeProfesseur: "",
-    nomClasse: "",
+    hasUploaded: false,
   });
+
+  const handleTypeChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    localStorage.setItem("userType", value);
+
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: false }));
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: false }));
+    }
+  };
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const emailParam = urlParams.get("email");
+    const tokenParam = urlParams.get("token");
+
+    if (emailParam && tokenParam) {
+      setIsUpdateMode(true);
+      setToken(tokenParam);
+
+      const fetchUserData = async () => {
+        try {
+          setIsSubmitting(true);
+          const response = await axios.get(
+            `http://localhost:8486/scholchat/auth/users/byEmail`,
+            {
+              params: { email: emailParam, token: tokenParam },
+            }
+          );
+
+          if (response.data) {
+            const userData = response.data;
+            setFormData({
+              id: userData.id || "",
+              type: userData.type || "",
+              nom: userData.nom || "",
+              prenom: userData.prenom || "",
+              email: emailParam,
+              telephone: userData.telephone || "",
+              adresse: userData.adresse || "",
+              etat: userData.etat || "INACTIVE",
+              niveau: userData.niveau || "",
+              cniRecto: userData.cniUrlRecto || "",
+              cniVerso: userData.cniUrlVerso || "",
+              selfie: userData.selfieUrl || "",
+              matriculeProfesseur: userData.matriculeProfesseur || "",
+            });
+
+            if (userData.type) {
+              localStorage.setItem("userType", userData.type);
+            }
+
+            if (userData.telephone) {
+              if (userData.telephone.startsWith("+237")) {
+                setSelectedCountry("CM");
+              } else if (userData.telephone.startsWith("+33")) {
+                setSelectedCountry("FR");
+              }
+            }
+
+            setImagePreviews({
+              cniRecto: userData.cniUrlRecto || null,
+              cniVerso: userData.cniUrlVerso || null,
+              selfie: userData.selfieUrl || null,
+            });
+
+            if (
+              userData.type === "professeur" &&
+              (userData.cniUrlRecto ||
+                userData.cniUrlVerso ||
+                userData.selfieUrl)
+            ) {
+              setCurrentStep(3);
+            } else if (userData.type) {
+              setCurrentStep(2);
+            }
+
+            showAlert(
+              "Veuillez vérifier et mettre à jour vos informations",
+              "info"
+            );
+          }
+        } catch (err) {
+          console.error("Erreur lors du chargement des données:", err);
+          showAlert(
+            err.response?.data?.message ||
+              "Erreur lors du chargement de vos informations",
+            "error"
+          );
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
+
+      fetchUserData();
+    } else {
+      const storedData = localStorage.getItem("signupFormData");
+      const storedPreviews = localStorage.getItem("imagePreviews");
+      const storedUserType = localStorage.getItem("userType");
+      const storedUserId = localStorage.getItem("createdUserId");
+
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        setFormData(parsedData);
+
+        if (parsedData.telephone && parsedData.telephone.startsWith("+")) {
+          if (parsedData.telephone.startsWith("+237")) {
+            setSelectedCountry("CM");
+          } else if (parsedData.telephone.startsWith("+33")) {
+            setSelectedCountry("FR");
+          }
+        }
+      }
+
+      if (storedPreviews) {
+        setImagePreviews(JSON.parse(storedPreviews));
+      }
+
+      if (storedUserType) {
+        setFormData((prev) => ({ ...prev, type: storedUserType }));
+      }
+
+      if (storedUserId) {
+        setCreatedUserId(storedUserId);
+      }
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!isUpdateMode) {
+      localStorage.setItem("signupFormData", JSON.stringify(formData));
+      localStorage.setItem("imagePreviews", JSON.stringify(imagePreviews));
+    }
+  }, [formData, imagePreviews, isUpdateMode]);
 
   const showAlert = (message, type = "error") => {
     setAlertMessage(message);
@@ -46,35 +189,10 @@ const SignUp = () => {
     setTimeout(() => {
       setAlertMessage("");
       setAlertType("");
-    }, 3000);
+    }, 5000);
   };
 
-  // Improved image compression with better error handling
-  const validateFileSize = async (file) => {
-    const maxSize = 300 * 1024; // Reduced to 300KB for better handling
-    if (file.size > maxSize) {
-      let quality = 0.5; // Start with lower quality
-      let compressedDataUrl = await compressImage(file, quality);
-      let compressedSize = atob(compressedDataUrl.split(",")[1]).length;
-
-      while (compressedSize > maxSize && quality > 0.1) {
-        quality -= 0.1;
-        compressedDataUrl = await compressImage(file, quality);
-        compressedSize = atob(compressedDataUrl.split(",")[1]).length;
-      }
-
-      if (compressedSize > maxSize) {
-        showAlert(
-          "L'image est trop volumineuse. Veuillez utiliser une image plus petite."
-        );
-        return null;
-      }
-      return compressedDataUrl;
-    }
-    return await compressImage(file, 0.5); // Use lower default quality
-  };
-
-  const compressImage = async (file, quality) => {
+  const compressImage = async (file, quality = 0.7) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -83,34 +201,28 @@ const SignUp = () => {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement("canvas");
+          const maxWidth = 800;
+          const maxHeight = 800;
           let width = img.width;
           let height = img.height;
 
-          const maxWidth = 600; // Reduced from 800
-          const maxHeight = 400; // Reduced from 600
-
           if (width > height) {
             if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
+              height *= maxWidth / width;
               width = maxWidth;
             }
           } else {
             if (height > maxHeight) {
-              width = Math.round((width * maxHeight) / height);
+              width *= maxHeight / height;
               height = maxHeight;
             }
           }
 
           canvas.width = width;
           canvas.height = height;
-
           const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
-
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
-          resolve(compressedDataUrl);
+          resolve(canvas.toDataURL("image/jpeg", quality));
         };
       };
     });
@@ -127,42 +239,43 @@ const SignUp = () => {
       showAlert("Le prénom est requis");
       newErrors.prenom = true;
     }
-    if (!formData.email.trim()) {
-      showAlert("L'email est requis");
-      newErrors.email = true;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      showAlert("Veuillez entrer une adresse email valide");
-      newErrors.email = true;
-    }
     if (!formData.telephone) {
       showAlert("Le numéro de téléphone est requis");
       newErrors.telephone = true;
+    } else {
+      const cleanedPhone = formData.telephone.replace(/\s+|-|\(|\)/g, "");
+
+      if (
+        selectedCountry === "CM" &&
+        !cleanedPhone.match(/^(\+237|00237)?[6-9]\d{8}$/)
+      ) {
+        showAlert("Format de téléphone camerounais invalide");
+        newErrors.telephone = true;
+      } else if (
+        selectedCountry === "FR" &&
+        !cleanedPhone.match(/^(\+33|0033)?[1-9]\d{8}$/)
+      ) {
+        showAlert("Format de téléphone français invalide");
+        newErrors.telephone = true;
+      }
     }
-    if (!formData.passeAccess.trim()) {
-      showAlert("Le mot de passe est requis");
-      newErrors.passeAccess = true;
-    } else if (formData.passeAccess.length < 8) {
-      showAlert("Le mot de passe doit contenir au moins 8 caractères");
-      newErrors.passeAccess = true;
-    } else if (!formData.passeAccess.match(/.*[A-Z].*/)) {
-      showAlert("Le mot de passe doit contenir au moins une majuscule");
-      newErrors.passeAccess = true;
-    } else if (!formData.passeAccess.match(/.*[a-z].*/)) {
-      showAlert("Le mot de passe doit contenir au moins une minuscule");
-      newErrors.passeAccess = true;
-    } else if (!formData.passeAccess.match(/.*\d.*/)) {
-      showAlert("Le mot de passe doit contenir au moins un chiffre");
-      newErrors.passeAccess = true;
-    } else if (
-      !formData.passeAccess.match(/.*[!@#$%^&*()_+\-=\[\]{};':"\\\|,.<>\/?].*/)
-    ) {
-      showAlert("Le mot de passe doit contenir au moins un caractère spécial");
-      newErrors.passeAccess = true;
+
+    if (!formData.email.trim()) {
+      showAlert("L'email est requis");
+      newErrors.email = true;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      showAlert("Adresse email invalide");
+      newErrors.email = true;
+    }
+
+    if (!formData.adresse.trim()) {
+      showAlert("L'adresse est requise");
+      newErrors.adresse = true;
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  }, [formData, selectedCountry]);
 
   const validateStep2 = useCallback(() => {
     const newErrors = {};
@@ -173,38 +286,7 @@ const SignUp = () => {
       return false;
     }
 
-    // Different validation based on user type
-    if (formData.type === "professeur") {
-      if (!formData.nomEtablissement.trim()) {
-        showAlert("Le nom de l'établissement est requis");
-        newErrors.nomEtablissement = true;
-      }
-      if (!formData.matriculeProfesseur.trim()) {
-        showAlert("Le matricule du professeur est requis");
-        newErrors.matriculeProfesseur = true;
-      }
-      if (!formData.nomClasse.trim()) {
-        showAlert("Le nom de la classe est requis");
-        newErrors.nomClasse = true;
-      }
-      if (!formData.cniUrlRecto) {
-        showAlert("L'image recto de la CNI est requise");
-        newErrors.cniUrlRecto = true;
-      }
-      if (!formData.cniUrlVerso) {
-        showAlert("L'image verso de la CNI est requise");
-        newErrors.cniUrlVerso = true;
-      }
-    } else if (formData.type === "repetiteur") {
-      if (!formData.nomEtablissement.trim()) {
-        showAlert("Le nom de l'établissement est requis");
-        newErrors.nomEtablissement = true;
-      }
-      if (!formData.matriculeProfesseur.trim()) {
-        showAlert("Le matricule du répétiteur est requis");
-        newErrors.matriculeProfesseur = true;
-      }
-    } else if (formData.type === "eleve") {
+    if (formData.type === "eleve") {
       if (!formData.niveau.trim()) {
         showAlert("Le niveau d'éducation est requis");
         newErrors.niveau = true;
@@ -215,29 +297,81 @@ const SignUp = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: false }));
+const validateStep3 = useCallback(() => {
+  const newErrors = {};
+  if (formData.type === "professeur" && !isUpdateMode) {
+    if (!formData.cniRecto) {
+      showAlert("La photo recto de la CNI est requise");
+      newErrors.cniRecto = true;
     }
-  };
+    if (!formData.cniVerso) {
+      showAlert("La photo verso de la CNI est requise");
+      newErrors.cniVerso = true;
+    }
+    if (!formData.selfie) {
+      showAlert("Une photo de profil est requise");
+      newErrors.selfie = true;
+    }
+  }
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+}, [formData, isUpdateMode]);
+
 
   const handlePhoneChange = (value) => {
     setFormData((prev) => ({
       ...prev,
       telephone: value || "",
     }));
+
+    if (value) {
+      if (value.startsWith("+237")) {
+        setSelectedCountry("CM");
+      } else if (value.startsWith("+33")) {
+        setSelectedCountry("FR");
+      }
+    }
+
     if (errors.telephone) {
       setErrors((prev) => ({ ...prev, telephone: false }));
     }
   };
 
-  const handleCountryChange = (country) => {
-    setSelectedCountry(country);
+  const CountrySelect = ({ value, onChange, options, ...restProps }) => {
+    const countryToFlag = (countryCode) => {
+      return countryCode
+        .toUpperCase()
+        .replace(/./g, (char) =>
+          String.fromCodePoint(127397 + char.charCodeAt())
+        );
+    };
+
+    return (
+      <select
+        {...restProps}
+        value={value}
+        onChange={(event) => onChange(event.target.value || undefined)}
+        style={{
+          width: "60px",
+          backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='feather feather-chevron-down'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 0.5rem center",
+          backgroundSize: "1rem",
+          appearance: "none",
+        }}
+      >
+        {options?.map(({ value, label }) => (
+          <option key={value} value={value}>
+            {countryToFlag(value)} {label}
+          </option>
+        ))}
+        <option value={value} style={{ display: "none" }}>
+          {value ? countryToFlag(value) : ""}
+        </option>
+      </select>
+    );
   };
 
-  // Updated file handling to generate URLs instead of base64 data
   const handleFileChange = async (e, fieldName) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -249,146 +383,293 @@ const SignUp = () => {
     }
 
     try {
-      const compressedDataUrl = await validateFileSize(file);
-      if (!compressedDataUrl) {
-        e.target.value = "";
-        return;
-      }
-
-      // Map frontend field names to backend field names
-      const fieldMapping = {
-        cniUrlFront: "cniUrlRecto",
-        cniUrlBack: "cniUrlVerso",
-      };
-
-      const backendFieldName = fieldMapping[fieldName] || fieldName;
-
-      // Create a temporary URL for the compressed image
-      // In production, you would upload to a server and get a URL
-      // This is a simplified example
-      const mockUrl = `http://example.com/${file.name.replace(/\s+/g, "_")}`;
+      const compressedDataUrl = await compressImage(file);
+      setImagePreviews((prev) => ({
+        ...prev,
+        [fieldName]: compressedDataUrl,
+      }));
 
       setFormData((prev) => ({
         ...prev,
-        [backendFieldName]: mockUrl,
+        [fieldName]: file,
       }));
 
       setErrors((prev) => ({
         ...prev,
         [fieldName]: false,
-        [backendFieldName]: false,
       }));
     } catch (error) {
       console.error("Erreur lors du traitement de l'image:", error);
-      showAlert(
-        "Erreur lors du traitement de l'image. Veuillez essayer une autre image."
-      );
+      showAlert("Erreur lors du traitement de l'image. Veuillez réessayer.");
       e.target.value = "";
     }
   };
 
-  // Updated submit handler with improved error handling
-  const handleSubmit = async () => {
-    try {
-      if (!validateStep2()) return;
+  const handleRemoveImage = (fieldName) => {
+    setImagePreviews((prev) => ({
+      ...prev,
+      [fieldName]: null,
+    }));
 
+    setFormData((prev) => ({
+      ...prev,
+      [fieldName]: "",
+    }));
+  };
+
+const uploadFileToS3 = async (file, userId, documentType) => {
+  try {
+    const timestamp = Date.now();
+    const fileExtension = file.name.split(".").pop().toLowerCase();
+    const fileName = `${documentType}_${timestamp}.${fileExtension}`;
+
+    // Generate presigned URL
+    const presignedResponse = await axios.post(
+      "http://localhost:8486/scholchat/media/presigned-url",
+      {
+        fileName: fileName,
+        contentType: file.type,
+        mediaType: "IMAGE",
+        ownerId: userId,
+        documentType: documentType,
+      }
+    );
+
+    const { url } = presignedResponse.data;
+
+    // Upload the file
+    let fileToUpload;
+    if (typeof file === "string" && file.startsWith("data:")) {
+      const res = await fetch(file);
+      fileToUpload = await res.blob();
+    } else {
+      fileToUpload = file;
+    }
+
+    const uploadResponse = await fetch(url, {
+      method: "PUT",
+      body: fileToUpload,
+      headers: {
+        "Content-Type": file.type,
+      },
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      throw new Error(
+        `Upload failed with status ${uploadResponse.status}: ${errorText}`
+      );
+    }
+
+    // Return the full URL from the presigned response
+    return url.split("?")[0];
+  } catch (error) {
+    console.error("Upload error:", error);
+    throw new Error(`Upload error: ${error.message}`);
+  }
+};
+
+
+  const createBasicProfile = async () => {
+    try {
       setIsSubmitting(true);
 
-      // Prepare payload based on user type
-      let payloadData = {
-        nom: formData.nom,
-        prenom: formData.prenom,
-        email: formData.email,
-        passeAccess: formData.passeAccess, // Correspond au champ du backend
-        telephone: formData.telephone,
-        adresse: formData.adresse,
+      const payloadData = {
         type: formData.type,
+        nom: formData.nom.trim(),
+        prenom: formData.prenom.trim(),
+        email: formData.email.trim(),
+        telephone: formData.telephone,
+        adresse: formData.adresse.trim(),
         etat: "INACTIVE",
       };
 
-      // Add specific fields based on user type
-      if (formData.type === "professeur") {
-        payloadData = {
-          ...payloadData,
-          cniUrlRecto: formData.cniUrlRecto,
-          cniUrlVerso: formData.cniUrlVerso,
-          nomEtablissement: formData.nomEtablissement,
-          matriculeProfesseur: formData.matriculeProfesseur,
-          nomClasse: formData.nomClasse,
-        };
-      } else if (formData.type === "repetiteur") {
-        payloadData = {
-          ...payloadData,
-          nomEtablissement: formData.nomEtablissement,
-          matriculeProfesseur: formData.matriculeProfesseur,
-        };
-      } else if (formData.type === "eleve") {
-        payloadData = {
-          ...payloadData,
-          niveau: formData.niveau,
-        };
-      } else if (formData.type === "parent") {
-        // Default fields are already included
+      if (formData.type === "eleve") {
+        payloadData.niveau = formData.niveau;
       }
 
-      console.log("Sending data:", JSON.stringify(payloadData, null, 2));
-
-      const apiUrl = "http://localhost:8486/scholchat/auth/register";
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Include credentials if needed
-        body: JSON.stringify(payloadData),
-      });
-
-      // Log response details for debugging
-      console.log("Response status:", response.status);
-      console.log(
-        "Response headers:",
-        Object.fromEntries([...response.headers])
+      const response = await axios.post(
+        "http://localhost:8486/scholchat/utilisateurs",
+        payloadData
       );
 
-      const responseData = await response.text();
-      console.log("Response data:", responseData);
+      const newUserId = response.data.id;
+      setCreatedUserId(newUserId);
+      localStorage.setItem("createdUserId", newUserId);
 
-      if (!response.ok) {
-        throw new Error(
-          responseData || `Error ${response.status}: Registration failed`
-        );
+      showAlert("Profil créé avec succès!", "success");
+
+      if (formData.type === "professeur") {
+        setCurrentStep(3);
+      } else {
+        completeRegistration();
       }
-
-      // Display the exact message from the backend
-      showAlert(responseData, "success");
-
-      // Navigate to verification page with email as a query parameter (using search params for React Router)
-      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (err) {
-      console.error("Detailed registration error:", err);
-      const errorMessage =
-        err.message || "L'inscription a échoué. Veuillez réessayer.";
-      showAlert(errorMessage);
+      console.error("Erreur lors de la création du profil:", err);
+      showAlert(
+        err.response?.data?.message || "Erreur lors de la création du profil"
+      );
     } finally {
       setIsSubmitting(false);
     }
+  };
+const handleDocumentSubmission = async () => {
+  try {
+    if (!validateStep3()) return;
+    setIsSubmitting(true);
+    const userId = isUpdateMode ? formData.id : createdUserId;
+
+    const updatePayload = {
+      id: userId,
+      type: formData.type,
+      hasUploaded: false, // Default to false
+    };
+
+    if (formData.matriculeProfesseur?.trim()) {
+      updatePayload.matriculeProfesseur = formData.matriculeProfesseur.trim();
+    }
+
+    // Upload files and collect URLs
+    if (formData.cniRecto instanceof File || typeof formData.cniRecto === "string") {
+      const cniRectoUrl = await uploadFileToS3(formData.cniRecto, userId, "cni-recto");
+      updatePayload.cniUrlRecto = cniRectoUrl;
+    }
+
+    if (formData.cniVerso instanceof File || typeof formData.cniVerso === "string") {
+      const cniVersoUrl = await uploadFileToS3(formData.cniVerso, userId, "cni-verso");
+      updatePayload.cniUrlVerso = cniVersoUrl;
+    }
+
+    if (formData.selfie instanceof File || typeof formData.selfie === "string") {
+      const selfieUrl = await uploadFileToS3(formData.selfie, userId, "selfie");
+      updatePayload.selfieUrl = selfieUrl;
+    }
+
+    // Check if all required images are uploaded
+    const allImagesUploaded =
+      updatePayload.cniUrlRecto &&
+      updatePayload.cniUrlVerso &&
+      updatePayload.selfieUrl;
+
+    // Set hasUploaded to true only if all images are uploaded
+    if (allImagesUploaded) {
+      updatePayload.hasUploaded = true;
+    }
+
+    // Update user with the collected URLs and hasUploaded status
+    if (isUpdateMode) {
+      await axios.post(
+        "http://localhost:8486/scholchat/auth/users/update",
+        updatePayload,
+        {
+          params: {
+            email: formData.email,
+            token: token,
+          },
+        }
+      );
+      showAlert("Vos informations ont été mises à jour avec succès!", "success");
+      setTimeout(() => {
+        navigate("/schoolchat/login");
+      }, 2000);
+    } else {
+      await axios.patch(
+        `http://localhost:8486/scholchat/utilisateurs/${userId}`,
+        updatePayload
+      );
+      completeRegistration();
+    }
+  } catch (err) {
+    console.error("Erreur lors du traitement des documents:", err);
+    showAlert(
+      err.response?.data?.message || "Erreur lors du traitement des documents"
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+
+
+  const completeRegistration = () => {
+    localStorage.setItem("userEmail", formData.email);
+    localStorage.removeItem("signupFormData");
+    localStorage.removeItem("imagePreviews");
+    localStorage.removeItem("createdUserId");
+
+    showAlert(
+      "Inscription réussie! Veuillez vérifier votre email pour activer votre compte.",
+      "success"
+    );
+
+    navigate(
+      `/schoolchat/verify-email?email=${encodeURIComponent(formData.email)}`
+    );
   };
 
   const handleNextStep = () => {
     if (currentStep === 1 && validateStep1()) {
       setCurrentStep(2);
-    } else if (currentStep === 2) {
-      handleSubmit();
+    } else if (currentStep === 2 && validateStep2()) {
+      createBasicProfile();
+    } else if (currentStep === 3) {
+      handleDocumentSubmission();
     }
   };
 
   const handlePrevStep = () => {
-    setCurrentStep(1);
+    if (currentStep === 3) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(1);
+    }
     setErrors({});
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const getPageTitle = () => {
+    return isUpdateMode ? "Mise à jour des informations" : "Inscription";
+  };
+
+  const getSubmitButtonText = () => {
+    if (isSubmitting) {
+      return "Traitement en cours...";
+    }
+
+    if (currentStep === 1) {
+      return "Étape suivante";
+    } else if (currentStep === 2) {
+      return formData.type === "professeur"
+        ? "Créer le profil"
+        : "Terminer l'inscription";
+    } else if (currentStep === 3) {
+      return isUpdateMode
+        ? "Mettre à jour mes informations"
+        : "Terminer l'inscription";
+    }
+  };
+
+  const getStepTitle = () => {
+    if (currentStep === 1) return "Informations personnelles";
+    if (currentStep === 2) return "Type de compte";
+    if (currentStep === 3) return "Documents et photo";
+  };
+
+  const ImagePreview = ({ src, alt, onRemove }) => {
+    if (!src) return null;
+
+    return (
+      <div className="image-preview">
+        <img src={src} alt={alt} />
+        <button
+          type="button"
+          className="remove-image-btn"
+          onClick={onRemove}
+          aria-label="Supprimer l'image"
+        >
+          <X size={16} />
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -398,41 +679,69 @@ const SignUp = () => {
       )}
 
       <div className="signup-container">
+        <h2 className="page-title">{getPageTitle()}</h2>
+
         <div className="progress-bar">
           <div className="step-circles">
             <div className={`step-circle ${currentStep >= 1 ? "active" : ""}`}>
               1
             </div>
-            <div className="step-line"></div>
+            <div
+              className={`step-line ${currentStep >= 2 ? "active" : ""}`}
+            ></div>
             <div className={`step-circle ${currentStep >= 2 ? "active" : ""}`}>
               2
             </div>
+            {formData.type === "professeur" && (
+              <>
+                <div
+                  className={`step-line ${currentStep >= 3 ? "active" : ""}`}
+                ></div>
+                <div
+                  className={`step-circle ${currentStep >= 3 ? "active" : ""}`}
+                >
+                  3
+                </div>
+              </>
+            )}
           </div>
           <div className="step-labels">
-            <span>Informations personnelles</span>
-            <span>Détails du compte</span>
+            <span className={currentStep >= 1 ? "active" : ""}>
+              Informations personnelles
+            </span>
+            <span className={currentStep >= 2 ? "active" : ""}>
+              Type de compte
+            </span>
+            {formData.type === "professeur" && (
+              <span className={currentStep >= 3 ? "active" : ""}>
+                Documents
+              </span>
+            )}
           </div>
         </div>
 
         {currentStep === 1 && (
           <form className="signup-form" onSubmit={(e) => e.preventDefault()}>
-            <div className="form-grid">
+            <div className="form-three-columns">
               <div className="form-group">
-                <label>Prénom</label>
+                <label>
+                  Prénom <span className="required">*</span>
+                </label>
                 <input
                   type="text"
-                  name="prenom"
-                  valuetype="text"
                   name="prenom"
                   value={formData.prenom}
                   onChange={handleInputChange}
                   className={errors.prenom ? "error" : ""}
                   placeholder="Entrez votre prénom"
+                  required
                 />
               </div>
 
               <div className="form-group">
-                <label>Nom</label>
+                <label>
+                  Nom <span className="required">*</span>
+                </label>
                 <input
                   type="text"
                   name="nom"
@@ -440,62 +749,66 @@ const SignUp = () => {
                   onChange={handleInputChange}
                   className={errors.nom ? "error" : ""}
                   placeholder="Entrez votre nom"
+                  required
                 />
               </div>
-            </div>
 
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className={errors.email ? "error" : ""}
-                placeholder="Entrez votre email"
-              />
-            </div>
-
-            <div className="form-group phone-input">
-              <label>Numéro de téléphone</label>
-              <PhoneInputs
-                value={formData.telephone || ""}
-                onChange={handlePhoneChange}
-                onCountryChange={handleCountryChange}
-                error={errors.telephone}
-              />
-            </div>
-
-            <div className="form-group password-input">
-              <label>Mot de passe</label>
-              <div className="password-container">
+              <div className="form-group">
+                <label>
+                  Email <span className="required">*</span>
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  name="passeAccess"
-                  value={formData.passeAccess}
+                  type="email"
+                  name="email"
+                  value={formData.email}
                   onChange={handleInputChange}
-                  className={errors.passeAccess ? "error" : ""}
-                  placeholder="Entrez votre mot de passe"
+                  className={errors.email ? "error" : ""}
+                  placeholder="Email"
+                  disabled={isUpdateMode}
+                  required
                 />
-                <button
-                  type="button"
-                  onClick={togglePasswordVisibility}
-                  className="password-toggle"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Adresse (Optionnel)</label>
-              <textarea
-                name="adresse"
-                value={formData.adresse}
-                onChange={handleInputChange}
-                placeholder="Entrez votre adresse"
-                rows="3"
-              />
+            <div className="form-three-columns">
+              <div className="form-group phone-group">
+                <label>
+                  Numéro de téléphone <span className="required">*</span>
+                </label>
+                <div
+                  className={`phone-input-container ${
+                    errors.telephone ? "error" : ""
+                  }`}
+                >
+                  <PhoneInput
+                    defaultCountry={selectedCountry}
+                    value={formData.telephone}
+                    onChange={handlePhoneChange}
+                    countrySelectComponent={CountrySelect}
+                    placeholder="Entrez votre numéro"
+                    international
+                    countryCallingCodeEditable={false}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>
+                  Adresse <span className="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="adresse"
+                  value={formData.adresse}
+                  onChange={handleInputChange}
+                  className={errors.adresse ? "error" : ""}
+                  placeholder="Entrez votre adresse"
+                  required
+                />
+              </div>
+
+              <div className="form-group"></div>
             </div>
 
             <button
@@ -512,137 +825,23 @@ const SignUp = () => {
         {currentStep === 2 && (
           <div className="signup-form">
             <div className="form-group">
-              <label>Type d'utilisateur</label>
+              <label>
+                Type d'utilisateur <span className="required">*</span>
+              </label>
               <select
                 name="type"
                 value={formData.type}
-                onChange={handleInputChange}
+                onChange={handleTypeChange}
                 className={errors.type ? "error" : ""}
+                disabled={isUpdateMode}
+                required
               >
                 <option value="">Sélectionnez le type d'utilisateur</option>
                 <option value="professeur">Professeur</option>
-                <option value="repetiteur">Répétiteur</option>
                 <option value="eleve">Élève</option>
                 <option value="parent">Parent</option>
               </select>
             </div>
-
-            {formData.type === "professeur" && (
-              <div className="professor-details">
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>
-                      CNI Recto <span className="required">*</span>
-                    </label>
-                    <input
-                      type="file"
-                      onChange={(e) => handleFileChange(e, "cniUrlFront")}
-                      className={errors.cniUrlRecto ? "error" : ""}
-                      accept="image/*"
-                    />
-                    {formData.cniUrlRecto && (
-                      <div className="image-preview-info">
-                        Image sélectionnée ✓
-                      </div>
-                    )}
-                  </div>
-                  <div className="form-group">
-                    <label>
-                      CNI Verso <span className="required">*</span>
-                    </label>
-                    <input
-                      type="file"
-                      onChange={(e) => handleFileChange(e, "cniUrlBack")}
-                      className={errors.cniUrlVerso ? "error" : ""}
-                      accept="image/*"
-                    />
-                    {formData.cniUrlVerso && (
-                      <div className="image-preview-info">
-                        Image sélectionnée ✓
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>
-                      Nom de l'établissement <span className="required">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="nomEtablissement"
-                      value={formData.nomEtablissement}
-                      onChange={handleInputChange}
-                      className={errors.nomEtablissement ? "error" : ""}
-                      placeholder="Entrez le nom de l'établissement"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>
-                      Matricule du professeur{" "}
-                      <span className="required">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="matriculeProfesseur"
-                      value={formData.matriculeProfesseur}
-                      onChange={handleInputChange}
-                      className={errors.matriculeProfesseur ? "error" : ""}
-                      placeholder="Entrez le matricule du professeur"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>
-                    Nom de la classe <span className="required">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="nomClasse"
-                    value={formData.nomClasse}
-                    onChange={handleInputChange}
-                    className={errors.nomClasse ? "error" : ""}
-                    placeholder="Entrez le nom de la classe"
-                  />
-                </div>
-              </div>
-            )}
-
-            {formData.type === "repetiteur" && (
-              <div className="tutor-details">
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>
-                      Nom de l'établissement <span className="required">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="nomEtablissement"
-                      value={formData.nomEtablissement}
-                      onChange={handleInputChange}
-                      className={errors.nomEtablissement ? "error" : ""}
-                      placeholder="Entrez le nom de l'établissement"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>
-                      Matricule du répétiteur{" "}
-                      <span className="required">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="matriculeProfesseur"
-                      value={formData.matriculeProfesseur}
-                      onChange={handleInputChange}
-                      className={errors.matriculeProfesseur ? "error" : ""}
-                      placeholder="Entrez le matricule du répétiteur"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {formData.type === "eleve" && (
               <div className="student-details">
@@ -655,26 +854,130 @@ const SignUp = () => {
                     value={formData.niveau}
                     onChange={handleInputChange}
                     className={errors.niveau ? "error" : ""}
+                    required
                   >
-                    <option value="">Sélectionnez le niveau d'éducation</option>
-                    <option value="primaire">École primaire</option>
+                    <option value="">Sélectionnez votre niveau</option>
+                    <option value="primaire">Primaire</option>
                     <option value="college">Collège</option>
                     <option value="lycee">Lycée</option>
-                    <option value="universite">Université</option>
+                    <option value="superieur">Supérieur</option>
                   </select>
                 </div>
               </div>
             )}
 
-            <div className="button-group">
+            <div className="form-navigation">
               <button
                 type="button"
                 className="prev-button"
                 onClick={handlePrevStep}
-                disabled={isSubmitting}
               >
                 <ArrowLeft size={16} />
-                Étape précédente
+                Retour
+              </button>
+              <button
+                type="button"
+                className="next-button"
+                onClick={handleNextStep}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader size={16} className="spinner" /> Traitement...
+                  </>
+                ) : (
+                  <>
+                    {getSubmitButtonText()}
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 3 && formData.type === "professeur" && (
+          <div className="signup-form">
+            <div className="professor-details">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>
+                    CNI Recto{" "}
+                    {!isUpdateMode && <span className="required">*</span>}
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => handleFileChange(e, "cniRecto")}
+                    className={errors.cniRecto ? "error" : ""}
+                    accept="image/*"
+                    required={!isUpdateMode}
+                  />
+                  <ImagePreview
+                    src={imagePreviews.cniRecto}
+                    alt="CNI Recto"
+                    onRemove={() => handleRemoveImage("cniRecto")}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    CNI Verso{" "}
+                    {!isUpdateMode && <span className="required">*</span>}
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => handleFileChange(e, "cniVerso")}
+                    className={errors.cniVerso ? "error" : ""}
+                    accept="image/*"
+                    required={!isUpdateMode}
+                  />
+                  <ImagePreview
+                    src={imagePreviews.cniVerso}
+                    alt="CNI Verso"
+                    onRemove={() => handleRemoveImage("cniVerso")}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>
+                  Photo de profil{" "}
+                  {!isUpdateMode && <span className="required">*</span>}
+                </label>
+                <input
+                  type="file"
+                  onChange={(e) => handleFileChange(e, "selfie")}
+                  className={errors.selfie ? "error" : ""}
+                  accept="image/*"
+                  required={!isUpdateMode}
+                />
+                <ImagePreview
+                  src={imagePreviews.selfie}
+                  alt="Photo de profil"
+                  onRemove={() => handleRemoveImage("selfie")}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Matricule du professeur (Optionnel)</label>
+                <input
+                  type="text"
+                  name="matriculeProfesseur"
+                  value={formData.matriculeProfesseur || ""}
+                  onChange={handleInputChange}
+                  placeholder="Entrez votre matricule"
+                />
+              </div>
+            </div>
+
+            <div className="form-navigation">
+              <button
+                type="button"
+                className="prev-button"
+                onClick={handlePrevStep}
+              >
+                <ArrowLeft size={16} />
+                Retour
               </button>
               <button
                 type="button"
@@ -684,14 +987,10 @@ const SignUp = () => {
               >
                 {isSubmitting ? (
                   <>
-                    <Loader className="animate-spin" size={16} />
-                    Traitement en cours...
+                    <Loader size={16} className="spinner" /> Traitement...
                   </>
                 ) : (
-                  <>
-                    Terminer l'inscription
-                    <ArrowRight size={16} />
-                  </>
+                  getSubmitButtonText()
                 )}
               </button>
             </div>

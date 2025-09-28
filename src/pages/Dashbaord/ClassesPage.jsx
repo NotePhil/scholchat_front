@@ -1,24 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { Search, Edit, Trash2, Plus, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, X } from "lucide-react";
 import { scholchatService } from "../../services/ScholchatService";
 
 const ClassesPage = () => {
+  const navigate = useNavigate();
   const [classes, setClasses] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingClass, setEditingClass] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    id: null,
     nom: "",
     niveau: "",
-    date_creation: new Date().toISOString(),
-    code_activation: null,
+    dateCreation: new Date(),
+    codeActivation: "",
     etat: "ACTIF",
     etablissement_id: null,
   });
   const [errors, setErrors] = useState({});
   const [establishments, setEstablishments] = useState([]);
+  const userRole = localStorage.getItem("userRole");
+  const userId = localStorage.getItem("userId");
 
   useEffect(() => {
     fetchClasses();
@@ -52,10 +53,22 @@ const ClassesPage = () => {
       [name]: value,
     }));
 
-    // Clear error when field is edited
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
+  };
+
+  const formatDateForDisplay = (date) => {
+    const d = new Date(date);
+    const year = d.getFullYear().toString().slice(-2);
+    const month = (d.getMonth() + 1).toString().padStart(2, "0");
+    const day = d.getDate().toString().padStart(2, "0");
+    return `${year}/${month}/${day}`;
+  };
+
+  const formatDateForBackend = (date) => {
+    const d = new Date(date);
+    return d.toISOString();
   };
 
   const validateForm = () => {
@@ -68,94 +81,54 @@ const ClassesPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const formatDateForBackend = (date) => {
-    return new Date(date).toISOString();
-  };
-
-  const handleSubmit = async (e) => {
+  const handleCreateClass = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     try {
-      const submissionData = {
-        ...formData,
-        date_creation: formatDateForBackend(formData.date_creation),
+      const newClass = {
+        nom: formData.nom,
+        niveau: formData.niveau,
+        dateCreation: formatDateForBackend(formData.dateCreation),
+        codeActivation: formData.codeActivation,
+        etat: formData.etat,
+        etablissement_id: formData.etablissement_id,
+        created_by: userId,
       };
 
-      if (editingClass) {
-        await scholchatService.updateClass(editingClass.id, submissionData);
-      } else {
-        await scholchatService.createClass(submissionData);
-      }
-      closeModal();
-      fetchClasses();
+      const createdClass = await scholchatService.createClass(newClass);
+      handleClassSelect(createdClass);
+      closeCreateModal();
     } catch (error) {
-      console.error("Error saving class:", error);
+      console.error("Error creating class:", error);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this class?")) {
-      try {
-        await scholchatService.deleteClass(id);
-        fetchClasses();
-      } catch (error) {
-        console.error("Error deleting class:", error);
-      }
-    }
+  const handleClassSelect = (selectedClass) => {
+    localStorage.setItem("userClass", JSON.stringify(selectedClass));
+    navigate(
+      userRole === "professor"
+        ? "/schoolchat/professors/dashboard"
+        : "/schoolchat/admin/dashboard"
+    );
   };
 
-  const openModal = (classData = null) => {
-    if (classData) {
-      setEditingClass(classData);
-      setFormData({
-        id: classData.id,
-        nom: classData.nom,
-        niveau: classData.niveau,
-        date_creation: classData.dateCreation || classData.date_creation,
-        code_activation: classData.codeActivation,
-        etat: classData.etat,
-        etablissement_id: classData.etablissement?.id,
-      });
-    } else {
-      setEditingClass(null);
-      setFormData({
-        id: null,
-        nom: "",
-        niveau: "",
-        date_creation: new Date().toISOString(),
-        code_activation: null,
-        etat: "ACTIF",
-        etablissement_id: null,
-      });
-    }
-    setErrors({});
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingClass(null);
+  const openCreateModal = () => {
+    setIsCreateModalOpen(true);
     setFormData({
-      id: null,
       nom: "",
       niveau: "",
-      date_creation: new Date().toISOString(),
-      code_activation: null,
+      dateCreation: new Date(),
+      codeActivation: "",
       etat: "ACTIF",
       etablissement_id: null,
     });
     setErrors({});
   };
 
-  const filteredClasses = classes.filter(
-    (classe) =>
-      classe.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      classe.niveau.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      classe.etablissement?.nom
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase())
-  );
+  const closeCreateModal = () => {
+    setIsCreateModalOpen(false);
+  };
 
   if (loading) {
     return (
@@ -166,249 +139,222 @@ const ClassesPage = () => {
   }
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      {/* Header section */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="relative w-96">
-          <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={20}
-          />
-          <input
-            className="w-full pl-10 pr-4 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Search by class, level, or establishment..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition duration-150"
-        >
-          <Plus size={20} className="mr-2" /> Add Class
-        </button>
-      </div>
+    <div className="p-8 bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl w-full">
+        <h2 className="text-2xl font-bold mb-6">
+          {classes.length > 0 ? "Select Your Class" : "Create Your First Class"}
+        </h2>
 
-      {/* Table section */}
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                  No.
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                  Class Name
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                  Level
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                  Establishment
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                  Creation Date
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                  Activation Code
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-600">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredClasses.map((classe, index) => (
-                <tr
+        {classes.length > 0 ? (
+          <>
+            <div className="space-y-4 max-h-96 overflow-y-auto mb-6">
+              {classes.map((classe) => (
+                <div
                   key={classe.id}
-                  className="hover:bg-gray-50 transition duration-150"
+                  className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition duration-150"
+                  onClick={() => handleClassSelect(classe)}
                 >
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {index + 1}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {classe.nom}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {classe.niveau}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {classe.etablissement?.nom || "N/A"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {new Date(
-                      classe.dateCreation || classe.date_creation
-                    ).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {classe.codeActivation || "Not Set"}
-                  </td>
-                  <td className="px-6 py-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium text-lg">{classe.nom}</h3>
+                      <p className="text-gray-600">{classe.niveau}</p>
+                      <div className="text-sm text-gray-500 mt-1 space-y-1">
+                        <p>
+                          Created: {formatDateForDisplay(classe.dateCreation)}
+                        </p>
+                        <p>
+                          Establishment: {classe.etablissement?.nom || "N/A"}
+                        </p>
+                        {classe.codeActivation && (
+                          <p>Activation Code: {classe.codeActivation}</p>
+                        )}
+                      </div>
+                    </div>
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        classe.etat === "ACTIF" || classe.etat === "ACTIVE"
+                        classe.etat === "ACTIF"
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
                       }`}
                     >
                       {classe.etat}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button
-                      onClick={() => openModal(classe)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full inline-flex items-center justify-center transition duration-150"
-                      title="Edit Class"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(classe.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-full inline-flex items-center justify-center transition duration-150"
-                      title="Delete Class"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-              {filteredClasses.length === 0 && (
-                <tr>
-                  <td
-                    colSpan="8"
-                    className="px-6 py-8 text-center text-gray-500"
-                  >
-                    No classes found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-3xl">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-800">
-                {editingClass ? "Update Class" : "Add New Class"}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="p-2 hover:bg-gray-100 rounded-full transition duration-150"
-              >
-                <X size={20} />
-              </button>
             </div>
-            <div className="p-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Class Name
-                  </label>
-                  <input
-                    name="nom"
-                    className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.nom ? "border-red-500" : "border-gray-300"
-                    }`}
-                    value={formData.nom}
-                    onChange={handleInputChange}
-                  />
-                  {errors.nom && (
-                    <p className="mt-1 text-sm text-red-500">{errors.nom}</p>
-                  )}
-                </div>
+            <button
+              onClick={openCreateModal}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition duration-150"
+            >
+              <Plus size={20} className="mr-2" /> Create New Class
+            </button>
+          </>
+        ) : (
+          <div className="space-y-6">
+            <p className="text-gray-600">
+              No classes found. Please create your first class to continue.
+            </p>
+            <button
+              onClick={openCreateModal}
+              className="flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition duration-150 text-lg"
+            >
+              <Plus size={24} className="mr-2" /> Create Your First Class
+            </button>
+          </div>
+        )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Level
-                  </label>
-                  <input
-                    name="niveau"
-                    className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.niveau ? "border-red-500" : "border-gray-300"
-                    }`}
-                    value={formData.niveau}
-                    onChange={handleInputChange}
-                  />
-                  {errors.niveau && (
-                    <p className="mt-1 text-sm text-red-500">{errors.niveau}</p>
-                  )}
-                </div>
+        {/* Create Class Modal */}
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg w-full max-w-2xl">
+              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  Create New Class
+                </h2>
+                <button
+                  onClick={closeCreateModal}
+                  className="p-2 hover:bg-gray-100 rounded-full transition duration-150"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6">
+                <form onSubmit={handleCreateClass} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Class Name *
+                      </label>
+                      <input
+                        name="nom"
+                        className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.nom ? "border-red-500" : "border-gray-300"
+                        }`}
+                        value={formData.nom}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Mathematics 101"
+                      />
+                      {errors.nom && (
+                        <p className="mt-1 text-sm text-red-500">
+                          {errors.nom}
+                        </p>
+                      )}
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Establishment
-                  </label>
-                  <select
-                    name="etablissement_id"
-                    className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.etablissement_id
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
-                    value={formData.etablissement_id || ""}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select an establishment</option>
-                    {establishments.map((establishment) => (
-                      <option key={establishment.id} value={establishment.id}>
-                        {establishment.nom}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.etablissement_id && (
-                    <p className="mt-1 text-sm text-red-500">
-                      {errors.etablissement_id}
-                    </p>
-                  )}
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Level *
+                      </label>
+                      <input
+                        name="niveau"
+                        className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.niveau ? "border-red-500" : "border-gray-300"
+                        }`}
+                        value={formData.niveau}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Primary 5, Grade 10"
+                      />
+                      {errors.niveau && (
+                        <p className="mt-1 text-sm text-red-500">
+                          {errors.niveau}
+                        </p>
+                      )}
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    name="etat"
-                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    value={formData.etat}
-                    onChange={handleInputChange}
-                  >
-                    <option value="ACTIF">Active</option>
-                    <option value="INACTIF">Inactive</option>
-                  </select>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Establishment *
+                      </label>
+                      <select
+                        name="etablissement_id"
+                        className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.etablissement_id
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                        value={formData.etablissement_id || ""}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Select an establishment</option>
+                        {establishments.map((establishment) => (
+                          <option
+                            key={establishment.id}
+                            value={establishment.id}
+                          >
+                            {establishment.nom}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.etablissement_id && (
+                        <p className="mt-1 text-sm text-red-500">
+                          {errors.etablissement_id}
+                        </p>
+                      )}
+                    </div>
 
-                <div className="flex justify-end space-x-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition duration-150"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-sm transition duration-150 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    {editingClass ? "Update" : "Create"} Class
-                  </button>
-                </div>
-              </form>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Activation Code
+                      </label>
+                      <input
+                        name="codeActivation"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={formData.codeActivation}
+                        onChange={handleInputChange}
+                        placeholder="Optional activation code"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Status
+                      </label>
+                      <select
+                        name="etat"
+                        className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={formData.etat}
+                        onChange={handleInputChange}
+                      >
+                        <option value="ACTIF">Active</option>
+                        <option value="INACTIF">Inactive</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Creation Date
+                      </label>
+                      <div className="w-full p-2 border border-gray-300 rounded-md bg-gray-50">
+                        {formatDateForDisplay(formData.dateCreation)}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Automatically set to current date
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-4 pt-4">
+                    <button
+                      type="button"
+                      onClick={closeCreateModal}
+                      className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition duration-150"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-sm transition duration-150"
+                    >
+                      Create Class
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
