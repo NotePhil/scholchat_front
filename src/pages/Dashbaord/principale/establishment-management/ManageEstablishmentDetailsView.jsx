@@ -55,6 +55,7 @@ const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 const { confirm } = Modal;
 
+
 const ManageEstablishmentDetailsView = ({
   establishmentId,
   onBack,
