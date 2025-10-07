@@ -402,9 +402,10 @@ const ManageClassList = ({
           </div>
         </div>
 
+        {/* ALL FILTERS ON ONE LINE */}
         <div className="filters-card">
-          <div className="filters-grid">
-            <div className="search-wrapper">
+          <div className="filters-row-all">
+            <div className="search-wrapper-inline">
               <Search className="search-icon" />
               <input
                 type="text"
@@ -494,7 +495,6 @@ const ManageClassList = ({
                         </div>
                       )}
 
-                      {/* Updated pending requests badge */}
                       {pendingCount > 0 && (
                         <div
                           className={`pending-badge ${
@@ -531,7 +531,6 @@ const ManageClassList = ({
                         </div>
 
                         <div className="stats-section">
-                          {/* New stat for pending requests */}
                           <div className="stat-item">
                             <div className="stat-icon-wrapper stat-requests">
                               <Bell className="stat-icon" />
@@ -564,7 +563,6 @@ const ManageClassList = ({
                           </span>
                         </div>
 
-                        {/* Show pending requests info if any */}
                         {pendingCount > 0 && (
                           <div className="pending-requests-info">
                             <Zap className="pending-icon" />

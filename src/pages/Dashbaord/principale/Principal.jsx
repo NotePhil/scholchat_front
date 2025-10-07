@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import ProfessorCoursesContent from "./content/ProfessorsContent/ProfessorCoursesContent";
 import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgrammerContent";
+import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
 
 Modal.setAppElement("#root");
 
@@ -88,7 +89,7 @@ const Principal = () => {
   const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
   const [tokenChecked, setTokenChecked] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [isCustomBreakpoint, setIsCustomBreakpoint] = useState(false); // New state for custom breakpoint
+  const [isCustomBreakpoint, setIsCustomBreakpoint] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState("fr");
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -102,7 +103,6 @@ const Principal = () => {
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
-      // Custom breakpoint: from 992px going downward (but not including mobile)
       const customBreakpoint =
         window.innerWidth <= 992 && window.innerWidth > 768;
 
@@ -170,7 +170,6 @@ const Principal = () => {
     };
   }, []);
 
-  // Extract user info from token and localStorage
   useEffect(() => {
     if (tokenChecked) {
       const email = localStorage.getItem("userEmail") || "";
@@ -183,11 +182,9 @@ const Principal = () => {
       if (decodedTokenStr) {
         try {
           const decodedToken = JSON.parse(decodedTokenStr);
-          // Extract name from email if not available
           if (!name && email) {
             name = email.split("@")[0];
           }
-          // You can add more fields here if they're available in your token
           phone = decodedToken.phone || decodedToken.phoneNumber || "";
         } catch (error) {
           console.error("Error parsing decoded token:", error);
@@ -207,7 +204,6 @@ const Principal = () => {
     }
   }, [tokenChecked]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".language-dropdown")) {
@@ -298,7 +294,6 @@ const Principal = () => {
       setShowMessaging(false);
     }
 
-    // Close sidebar on mobile and custom breakpoint when navigating
     if (isMobile || isCustomBreakpoint) {
       setShowSidebar(false);
     }
@@ -344,7 +339,6 @@ const Principal = () => {
   const handleLanguageChange = (lang) => {
     setCurrentLanguage(lang);
     setShowLanguageDropdown(false);
-    // Here you can implement actual language change logic
     console.log("Language changed to:", lang);
   };
 
@@ -390,6 +384,9 @@ const Principal = () => {
       case "schedule-course":
         console.log("Rendering CoursProgrammerContent");
         return <CoursProgrammerContent {...contentProps} />;
+      case "manage-exercises":
+        console.log("Rendering ManageExercisesContent");
+        return <ManageExercisesContent {...contentProps} />;
       case "classes":
         if (userRole === "parent" || userRoles.includes("ROLE_PARENT")) {
           return <ParentClassManagementClass {...contentProps} />;
@@ -462,9 +459,7 @@ const Principal = () => {
         ? "Mon Tableau de Bord"
         : "Tableau de Bord Parent";
     }
-    if (activeTab === "messages") {
-      return "Messages";
-    }
+    if (activeTab === "messages") return "Messages";
     if (activeTab === "admin") return "Gérer Administrateurs";
     if (activeTab === "professors") return "Gérer Professeurs";
     if (activeTab === "motifs-de-rejet") return "Motifs de Rejet";
@@ -474,6 +469,7 @@ const Principal = () => {
     if (activeTab === "activities") return "Activités";
     if (activeTab === "create-course") return "Gérer les Cours";
     if (activeTab === "schedule-course") return "Programmer le Cours";
+    if (activeTab === "manage-exercises") return "Gérer les Exercices";
     if (activeTab === "create-class") return "Créer une Classe";
     if (activeTab === "manage-class") return "Gérer une Classe";
     if (activeTab === "create-establishment") return "Créer un Établissement";
@@ -547,7 +543,6 @@ const Principal = () => {
           <div className="header-actions">
             <NotificationIcon />
 
-            {/* Language Switcher */}
             <div className="language-dropdown">
               <button
                 className="language-toggle-btn"
@@ -574,7 +569,6 @@ const Principal = () => {
               )}
             </div>
 
-            {/* User Profile */}
             <div className="user-profile-dropdown">
               <button
                 className="user-profile-btn"
@@ -648,7 +642,7 @@ const Principal = () => {
           className={`content-body ${
             isDark ? "bg-gray-900 text-white" : "bg-gray-50"
           }`}
-          style={{ paddingTop: "100px" }} // Added padding to account for fixed header
+          style={{ paddingTop: "100px" }}
         >
           {renderContent()}
         </div>

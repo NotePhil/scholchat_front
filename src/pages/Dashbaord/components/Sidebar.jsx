@@ -15,6 +15,8 @@ import {
   School,
   Book,
   X,
+  FileText,
+  ClipboardList,
 } from "lucide-react";
 
 const Sidebar = ({
@@ -37,6 +39,7 @@ const Sidebar = ({
     classes: false,
     establishments: false,
     courses: false,
+    exercises: false,
   });
 
   useEffect(() => {
@@ -44,6 +47,7 @@ const Sidebar = ({
     const usersTabs = ["admin", "professors", "parents", "students", "others"];
     const classesTabs = ["create-class", "manage-class"];
     const establishmentsTabs = ["create-establishment", "manage-establishment"];
+    const exercisesTabs = ["manage-exercises"];
 
     setOpenDropdown((prev) => ({
       ...prev,
@@ -51,6 +55,7 @@ const Sidebar = ({
       users: usersTabs.includes(activeTab),
       classes: classesTabs.includes(activeTab),
       establishments: establishmentsTabs.includes(activeTab),
+      exercises: exercisesTabs.includes(activeTab),
     }));
   }, [activeTab]);
 
@@ -145,6 +150,11 @@ const Sidebar = ({
           ],
         },
         {
+          name: "Exercices",
+          icon: ClipboardList,
+          tab: "manage-exercises",
+        },
+        {
           name: "Gérer Utilisateur",
           icon: Users,
           dropdown: "users",
@@ -171,6 +181,11 @@ const Sidebar = ({
       ];
     } else if (isParentOrStudent()) {
       roleItems = [
+        {
+          name: "Exercices",
+          icon: ClipboardList,
+          tab: "manage-exercises",
+        },
         { name: "Classes", icon: Building2, tab: "classes" },
         {
           name: "Messagerie",

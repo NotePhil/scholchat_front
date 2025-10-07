@@ -269,61 +269,7 @@ const RichTextEditor = ({
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
-      {uploadedFiles.length > 0 && (
-        <div className="bg-blue-50 border-b border-blue-200 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Paperclip size={16} className="text-blue-600" />
-            <span className="text-sm font-medium text-blue-800">
-              Fichiers téléchargés:
-            </span>
-          </div>
-          <div className="space-y-2">
-            {uploadedFiles.map((file) => (
-              <div
-                key={file.timestamp}
-                className="flex items-center justify-between bg-white p-2 rounded border"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">
-                    {file.type.startsWith("image/") ? "🖼️" : "📄"}
-                  </span>
-                  <button
-                    onClick={() => downloadFile(file)}
-                    className="text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer text-left"
-                    title="Cliquer pour télécharger"
-                  >
-                    {file.name}
-                  </button>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => downloadFile(file)}
-                    className="text-green-600 hover:text-green-800 p-1"
-                    title="Télécharger le fichier"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm5-13v2h2v13H5V5h2V3h10z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => removeUploadedFile(file.timestamp)}
-                    className="text-red-500 hover:text-red-700 p-1"
-                    title="Supprimer de la liste"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* Toolbar */}
       <div className="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap gap-1">
         <button
           type="button"
@@ -416,6 +362,7 @@ const RichTextEditor = ({
         </button>
       </div>
 
+      {/* Editor Content Area */}
       <div
         ref={editorRef}
         contentEditable
@@ -433,6 +380,62 @@ const RichTextEditor = ({
         data-placeholder={placeholder}
         suppressContentEditableWarning={true}
       />
+
+      {/* Uploaded Files Display at Bottom */}
+      {uploadedFiles.length > 0 && (
+        <div className="bg-blue-50 border-t border-blue-200 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Paperclip size={16} className="text-blue-600" />
+            <span className="text-sm font-medium text-blue-800">
+              Fichiers téléchargés:
+            </span>
+          </div>
+          <div className="space-y-2">
+            {uploadedFiles.map((file) => (
+              <div
+                key={file.timestamp}
+                className="flex items-center justify-between bg-white p-2 rounded border"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">
+                    {file.type.startsWith("image/") ? "🖼️" : "📄"}
+                  </span>
+                  <button
+                    onClick={() => downloadFile(file)}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer text-left"
+                    title="Cliquer pour télécharger"
+                  >
+                    {file.name}
+                  </button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => downloadFile(file)}
+                    className="text-green-600 hover:text-green-800 p-1"
+                    title="Télécharger le fichier"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm5-13v2h2v13H5V5h2V3h10z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => removeUploadedFile(file.timestamp)}
+                    className="text-red-500 hover:text-red-700 p-1"
+                    title="Supprimer de la liste"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <input
         ref={fileInputRef}

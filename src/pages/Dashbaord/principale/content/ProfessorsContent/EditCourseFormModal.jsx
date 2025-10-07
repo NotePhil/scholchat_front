@@ -67,18 +67,14 @@ const RichTextEditor = ({
     }
   };
 
-  // Fixed handleKeyDown for proper Word-like behavior
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      // Don't prevent default - let the browser handle it naturally
-      // Just trigger content change after a short delay
       setTimeout(() => {
         handleContentChange();
       }, 10);
       return;
     }
 
-    // Handle other keys normally
     if (e.key === " " || e.key === "Backspace" || e.key === "Delete") {
       setTimeout(() => {
         handleContentChange();
@@ -86,12 +82,10 @@ const RichTextEditor = ({
     }
   };
 
-  // Handle multiple file uploads
   const handleFileInputChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    // Validate files
     for (const file of files) {
       if (!file.name || file.name.trim() === "") {
         alert("Un des fichiers sélectionnés n'a pas de nom valide.");
@@ -103,7 +97,6 @@ const RichTextEditor = ({
       setUploading(true);
       const uploadResults = [];
 
-      // Upload all files
       for (const file of files) {
         try {
           const uploadResult = await onFileUpload(file);
@@ -124,13 +117,11 @@ const RichTextEditor = ({
         }
       }
 
-      // Insert all successfully uploaded files
       const selection = window.getSelection();
       const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
 
       for (const { file, result, downloadData } of uploadResults) {
         if (file.type.startsWith("image/")) {
-          // Insert image
           const img = document.createElement("img");
           img.src = downloadData.downloadUrl;
           img.alt = file.name;
@@ -148,7 +139,6 @@ const RichTextEditor = ({
             editorRef.current.appendChild(img);
           }
         } else {
-          // Insert document link
           const linkContainer = document.createElement("div");
           linkContainer.style.margin = "8px 0";
           linkContainer.style.padding = "8px 12px";
@@ -159,12 +149,10 @@ const RichTextEditor = ({
           linkContainer.style.alignItems = "center";
           linkContainer.style.gap = "8px";
 
-          // File icon
           const icon = document.createElement("span");
           icon.innerHTML = "📄";
           icon.style.fontSize = "16px";
 
-          // File link
           const link = document.createElement("a");
           link.href = downloadData.downloadUrl;
           link.target = "_blank";
@@ -185,7 +173,6 @@ const RichTextEditor = ({
           }
         }
 
-        // Add to uploaded files list for display at top
         setUploadedFiles((prev) => [
           ...prev,
           {
@@ -211,77 +198,35 @@ const RichTextEditor = ({
     }
   };
 
-  // Remove uploaded file from list
   const removeUploadedFile = (timestamp) => {
     setUploadedFiles((prev) =>
       prev.filter((file) => file.timestamp !== timestamp)
     );
   };
 
-  // Download file function - Fixed for better compatibility
   const downloadFile = async (file) => {
     try {
-      // First try direct download
-      const link = document.createElement("a");
-      link.href = file.url;
-      link.download = file.name;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
+      const response = await fetch(file.url);
+      const blob = await response.blob();
 
-      // Add to body temporarily for Firefox compatibility
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = file.name;
       document.body.appendChild(link);
       link.click();
+
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error("Error downloading file:", error);
-      // Fallback: open in new tab
-      window.open(file.url, "_blank", "noopener,noreferrer");
+      window.open(file.url, "_blank");
     }
   };
 
-  // Extract existing files from content when initializing
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
       editorRef.current.innerHTML = value || "";
-
-      // Extract existing files from content for display
-      if (value) {
-        const tempDiv = document.createElement("div");
-        tempDiv.innerHTML = value;
-
-        // Find existing links and images
-        const existingFiles = [];
-
-        // Find document links
-        const links = tempDiv.querySelectorAll("a[href]");
-        links.forEach((link, index) => {
-          if (link.href && link.textContent) {
-            existingFiles.push({
-              name: link.textContent,
-              type: "application/pdf", // Assume PDF for documents
-              url: link.href,
-              timestamp: Date.now() + index, // Unique timestamp
-            });
-          }
-        });
-
-        // Find images
-        const images = tempDiv.querySelectorAll("img[src]");
-        images.forEach((img, index) => {
-          if (img.src && img.alt) {
-            existingFiles.push({
-              name: img.alt,
-              type: "image/jpeg", // Assume image
-              url: img.src,
-              timestamp: Date.now() + 1000 + index, // Unique timestamp
-            });
-          }
-        });
-
-        if (existingFiles.length > 0) {
-          setUploadedFiles(existingFiles);
-        }
-      }
     }
   }, [value]);
 
@@ -294,7 +239,6 @@ const RichTextEditor = ({
       const range = selection.getRangeAt(0);
       range.deleteContents();
 
-      // Create a document fragment with properly formatted text
       const fragment = document.createDocumentFragment();
       const lines = text.split("\n");
 
@@ -316,79 +260,13 @@ const RichTextEditor = ({
     setTimeout(() => handleContentChange(), 10);
   };
 
-  // Handle input event for content changes
   const handleInput = (e) => {
     handleContentChange();
   };
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
-      {/* Uploaded Files Display at Top */}
-      {uploadedFiles.length > 0 && (
-        <div className="bg-blue-50 border-b border-blue-200 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Paperclip size={16} className="text-blue-600" />
-            <span className="text-sm font-medium text-blue-800">
-              Fichiers téléchargés:
-            </span>
-          </div>
-          <div className="space-y-2">
-            {uploadedFiles.map((file) => (
-              <div
-                key={file.timestamp}
-                className="flex items-center justify-between bg-white p-2 rounded border"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">
-                    {file.type.startsWith("image/") ? "🖼️" : "📄"}
-                  </span>
-                  <button
-                    onClick={() => downloadFile(file)}
-                    className="text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer text-left"
-                    title="Cliquer pour télécharger"
-                  >
-                    {file.name}
-                  </button>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      downloadFile(file);
-                    }}
-                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
-                    title="Télécharger le fichier"
-                    type="button"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm5-13v2h2v13H5V5h2V3h10z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      removeUploadedFile(file.timestamp);
-                    }}
-                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
-                    title="Supprimer de la liste"
-                    type="button"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* Toolbar */}
       <div className="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap gap-1">
         <button
           type="button"
@@ -466,7 +344,7 @@ const RichTextEditor = ({
           ) : (
             <Paperclip size={14} />
           )}
-          <span className="text-xs">Fichiers</span>
+          <span className="text-xs hidden sm:inline">Fichiers</span>
         </button>
         <button
           type="button"
@@ -481,6 +359,7 @@ const RichTextEditor = ({
         </button>
       </div>
 
+      {/* Editor Content Area */}
       <div
         ref={editorRef}
         contentEditable
@@ -498,6 +377,62 @@ const RichTextEditor = ({
         data-placeholder={placeholder}
         suppressContentEditableWarning={true}
       />
+
+      {/* Uploaded Files Display at Bottom */}
+      {uploadedFiles.length > 0 && (
+        <div className="bg-blue-50 border-t border-blue-200 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Paperclip size={16} className="text-blue-600" />
+            <span className="text-sm font-medium text-blue-800">
+              Fichiers téléchargés:
+            </span>
+          </div>
+          <div className="space-y-2">
+            {uploadedFiles.map((file) => (
+              <div
+                key={file.timestamp}
+                className="flex items-center justify-between bg-white p-2 rounded border"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">
+                    {file.type.startsWith("image/") ? "🖼️" : "📄"}
+                  </span>
+                  <button
+                    onClick={() => downloadFile(file)}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer text-left"
+                    title="Cliquer pour télécharger"
+                  >
+                    {file.name}
+                  </button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => downloadFile(file)}
+                    className="text-green-600 hover:text-green-800 p-1"
+                    title="Télécharger le fichier"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm5-13v2h2v13H5V5h2V3h10z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => removeUploadedFile(file.timestamp)}
+                    className="text-red-500 hover:text-red-700 p-1"
+                    title="Supprimer de la liste"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <input
         ref={fileInputRef}
