@@ -34,7 +34,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import CourseViewModal from "../../modals/CourseViewModal";
-import CourseFormModal from "./CourseFormModal";
+import CreateCourseComponent from "./CreateCourseComponent";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import CourseCard from "./CourseCard";
 import CourseTableRow from "./CourseTableRow";
@@ -53,7 +53,7 @@ const ProfessorCoursesContent = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [modalMode, setModalMode] = useState("create");
   const [subjects, setSubjects] = useState([]);
@@ -117,15 +117,16 @@ const ProfessorCoursesContent = () => {
   };
 
   const handleCreateCourse = () => {
-    setModalMode("create");
-    setSelectedCourse(null);
-    setShowCreateModal(true);
+    setShowCreateForm(true);
+  };
+
+  const handleBackFromCreate = () => {
+    setShowCreateForm(false);
   };
 
   const handleEditCourse = (course) => {
-    setModalMode("edit");
-    setSelectedCourse(course);
-    setShowCreateModal(true);
+    // TODO: Implement edit functionality
+    console.log("Edit course:", course);
   };
 
   const handleViewCourse = (course) => {
@@ -193,6 +194,19 @@ const ProfessorCoursesContent = () => {
           </p>
         </div>
       </div>
+    );
+  }
+
+  if (showCreateForm) {
+    return (
+      <CreateCourseComponent
+        onBack={handleBackFromCreate}
+        subjects={subjects}
+        setSuccess={setSuccess}
+        setError={setError}
+        loadCourses={loadCourses}
+        setLoading={setLoading}
+      />
     );
   }
 
@@ -499,20 +513,6 @@ const ProfessorCoursesContent = () => {
           </div>
         )}
       </div>
-
-      {showCreateModal && (
-        <CourseFormModal
-          modalMode={modalMode}
-          selectedCourse={selectedCourse}
-          subjects={subjects}
-          showCreateModal={showCreateModal}
-          setShowCreateModal={setShowCreateModal}
-          setSuccess={setSuccess}
-          setError={setError}
-          loadCourses={loadCourses}
-          setLoading={setLoading}
-        />
-      )}
 
       {showViewModal && (
         <CourseViewModal

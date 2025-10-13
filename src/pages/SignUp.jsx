@@ -297,26 +297,25 @@ const SignUp = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-const validateStep3 = useCallback(() => {
-  const newErrors = {};
-  if (formData.type === "professeur" && !isUpdateMode) {
-    if (!formData.cniRecto) {
-      showAlert("La photo recto de la CNI est requise");
-      newErrors.cniRecto = true;
+  const validateStep3 = useCallback(() => {
+    const newErrors = {};
+    if (formData.type === "professeur" && !isUpdateMode) {
+      if (!formData.cniRecto) {
+        showAlert("La photo recto de la CNI est requise");
+        newErrors.cniRecto = true;
+      }
+      if (!formData.cniVerso) {
+        showAlert("La photo verso de la CNI est requise");
+        newErrors.cniVerso = true;
+      }
+      if (!formData.selfie) {
+        showAlert("Une photo de profil est requise");
+        newErrors.selfie = true;
+      }
     }
-    if (!formData.cniVerso) {
-      showAlert("La photo verso de la CNI est requise");
-      newErrors.cniVerso = true;
-    }
-    if (!formData.selfie) {
-      showAlert("Une photo de profil est requise");
-      newErrors.selfie = true;
-    }
-  }
-  setErrors(newErrors);
-  return Object.keys(newErrors).length === 0;
-}, [formData, isUpdateMode]);
-
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData, isUpdateMode]);
 
   const handlePhoneChange = (value) => {
     setFormData((prev) => ({
@@ -417,58 +416,57 @@ const validateStep3 = useCallback(() => {
     }));
   };
 
-const uploadFileToS3 = async (file, userId, documentType) => {
-  try {
-    const timestamp = Date.now();
-    const fileExtension = file.name.split(".").pop().toLowerCase();
-    const fileName = `${documentType}_${timestamp}.${fileExtension}`;
+  const uploadFileToS3 = async (file, userId, documentType) => {
+    try {
+      const timestamp = Date.now();
+      const fileExtension = file.name.split(".").pop().toLowerCase();
+      const fileName = `${documentType}_${timestamp}.${fileExtension}`;
 
-    // Generate presigned URL
-    const presignedResponse = await axios.post(
-      "http://localhost:8486/scholchat/media/presigned-url",
-      {
-        fileName: fileName,
-        contentType: file.type,
-        mediaType: "IMAGE",
-        ownerId: userId,
-        documentType: documentType,
-      }
-    );
-
-    const { url } = presignedResponse.data;
-
-    // Upload the file
-    let fileToUpload;
-    if (typeof file === "string" && file.startsWith("data:")) {
-      const res = await fetch(file);
-      fileToUpload = await res.blob();
-    } else {
-      fileToUpload = file;
-    }
-
-    const uploadResponse = await fetch(url, {
-      method: "PUT",
-      body: fileToUpload,
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      throw new Error(
-        `Upload failed with status ${uploadResponse.status}: ${errorText}`
+      // Generate presigned URL
+      const presignedResponse = await axios.post(
+        "http://localhost:8486/scholchat/media/presigned-url",
+        {
+          fileName: fileName,
+          contentType: file.type,
+          mediaType: "IMAGE",
+          ownerId: userId,
+          documentType: documentType,
+        }
       );
+
+      const { url } = presignedResponse.data;
+
+      // Upload the file
+      let fileToUpload;
+      if (typeof file === "string" && file.startsWith("data:")) {
+        const res = await fetch(file);
+        fileToUpload = await res.blob();
+      } else {
+        fileToUpload = file;
+      }
+
+      const uploadResponse = await fetch(url, {
+        method: "PUT",
+        body: fileToUpload,
+        headers: {
+          "Content-Type": file.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(
+          `Upload failed with status ${uploadResponse.status}: ${errorText}`
+        );
+      }
+
+      // Return the full URL from the presigned response
+      return url.split("?")[0];
+    } catch (error) {
+      console.error("Upload error:", error);
+      throw new Error(`Upload error: ${error.message}`);
     }
-
-    // Return the full URL from the presigned response
-    return url.split("?")[0];
-  } catch (error) {
-    console.error("Upload error:", error);
-    throw new Error(`Upload error: ${error.message}`);
-  }
-};
-
+  };
 
   const createBasicProfile = async () => {
     try {
@@ -513,83 +511,134 @@ const uploadFileToS3 = async (file, userId, documentType) => {
       setIsSubmitting(false);
     }
   };
-const handleDocumentSubmission = async () => {
-  try {
-    if (!validateStep3()) return;
-    setIsSubmitting(true);
-    const userId = isUpdateMode ? formData.id : createdUserId;
+  const handleDocumentSubmission = async () => {
+    try {
+      if (!validateStep3()) return;
+      setIsSubmitting(true);
 
-    const updatePayload = {
-      id: userId,
-      type: formData.type,
-      hasUploaded: false, // Default to false
-    };
+      let userId;
 
-    if (formData.matriculeProfesseur?.trim()) {
-      updatePayload.matriculeProfesseur = formData.matriculeProfesseur.trim();
-    }
+      if (isUpdateMode) {
+        userId = formData.id;
+      } else {
+        // First register the user if not already created
+        if (!createdUserId) {
+          const payloadData = {
+            type: formData.type,
+            nom: formData.nom.trim(),
+            prenom: formData.prenom.trim(),
+            email: formData.email.trim(),
+            telephone: formData.telephone,
+            adresse: formData.adresse.trim(),
+            etat: "INACTIVE",
+          };
 
-    // Upload files and collect URLs
-    if (formData.cniRecto instanceof File || typeof formData.cniRecto === "string") {
-      const cniRectoUrl = await uploadFileToS3(formData.cniRecto, userId, "cni-recto");
-      updatePayload.cniUrlRecto = cniRectoUrl;
-    }
+          const response = await axios.post(
+            "http://localhost:8486/scholchat/utilisateurs",
+            payloadData
+          );
 
-    if (formData.cniVerso instanceof File || typeof formData.cniVerso === "string") {
-      const cniVersoUrl = await uploadFileToS3(formData.cniVerso, userId, "cni-verso");
-      updatePayload.cniUrlVerso = cniVersoUrl;
-    }
-
-    if (formData.selfie instanceof File || typeof formData.selfie === "string") {
-      const selfieUrl = await uploadFileToS3(formData.selfie, userId, "selfie");
-      updatePayload.selfieUrl = selfieUrl;
-    }
-
-    // Check if all required images are uploaded
-    const allImagesUploaded =
-      updatePayload.cniUrlRecto &&
-      updatePayload.cniUrlVerso &&
-      updatePayload.selfieUrl;
-
-    // Set hasUploaded to true only if all images are uploaded
-    if (allImagesUploaded) {
-      updatePayload.hasUploaded = true;
-    }
-
-    // Update user with the collected URLs and hasUploaded status
-    if (isUpdateMode) {
-      await axios.post(
-        "http://localhost:8486/scholchat/auth/users/update",
-        updatePayload,
-        {
-          params: {
-            email: formData.email,
-            token: token,
-          },
+          userId = response.data.id;
+          setCreatedUserId(userId);
+          localStorage.setItem("createdUserId", userId);
+        } else {
+          userId = createdUserId;
         }
+      }
+
+      const updatePayload = {
+        id: userId,
+        type: formData.type,
+        hasUploaded: false,
+      };
+
+      if (formData.matriculeProfesseur?.trim()) {
+        updatePayload.matriculeProfesseur = formData.matriculeProfesseur.trim();
+      }
+
+      // Upload files and collect URLs
+      if (
+        formData.cniRecto instanceof File ||
+        typeof formData.cniRecto === "string"
+      ) {
+        const cniRectoUrl = await uploadFileToS3(
+          formData.cniRecto,
+          userId,
+          "cni-recto"
+        );
+        updatePayload.cniUrlRecto = cniRectoUrl;
+      }
+
+      if (
+        formData.cniVerso instanceof File ||
+        typeof formData.cniVerso === "string"
+      ) {
+        const cniVersoUrl = await uploadFileToS3(
+          formData.cniVerso,
+          userId,
+          "cni-verso"
+        );
+        updatePayload.cniUrlVerso = cniVersoUrl;
+      }
+
+      if (
+        formData.selfie instanceof File ||
+        typeof formData.selfie === "string"
+      ) {
+        const selfieUrl = await uploadFileToS3(
+          formData.selfie,
+          userId,
+          "selfie"
+        );
+        updatePayload.selfieUrl = selfieUrl;
+      }
+
+      // Check if all required images are uploaded
+      const allImagesUploaded =
+        updatePayload.cniUrlRecto &&
+        updatePayload.cniUrlVerso &&
+        updatePayload.selfieUrl;
+
+      // Set hasUploaded to true only if all images are uploaded
+      if (allImagesUploaded) {
+        updatePayload.hasUploaded = true;
+      }
+
+      // Update user with the collected URLs and hasUploaded status
+      if (isUpdateMode) {
+        await axios.post(
+          "http://localhost:8486/scholchat/auth/users/update",
+          updatePayload,
+          {
+            params: {
+              email: formData.email,
+              token: token,
+            },
+          }
+        );
+        showAlert(
+          "Vos informations ont été mises à jour avec succès!",
+          "success"
+        );
+        setTimeout(() => {
+          navigate("/schoolchat/login");
+        }, 2000);
+      } else {
+        await axios.patch(
+          `http://localhost:8486/scholchat/utilisateurs/${userId}`,
+          updatePayload
+        );
+        completeRegistration();
+      }
+    } catch (err) {
+      console.error("Erreur lors du traitement des documents:", err);
+      showAlert(
+        err.response?.data?.message || "Erreur lors du traitement des documents"
       );
-      showAlert("Vos informations ont été mises à jour avec succès!", "success");
-      setTimeout(() => {
-        navigate("/schoolchat/login");
-      }, 2000);
-    } else {
-      await axios.patch(
-        `http://localhost:8486/scholchat/utilisateurs/${userId}`,
-        updatePayload
-      );
-      completeRegistration();
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (err) {
-    console.error("Erreur lors du traitement des documents:", err);
-    showAlert(
-      err.response?.data?.message || "Erreur lors du traitement des documents"
-    );
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-
+  };
 
   const completeRegistration = () => {
     localStorage.setItem("userEmail", formData.email);
@@ -611,7 +660,11 @@ const handleDocumentSubmission = async () => {
     if (currentStep === 1 && validateStep1()) {
       setCurrentStep(2);
     } else if (currentStep === 2 && validateStep2()) {
-      createBasicProfile();
+      if (formData.type === "professeur") {
+        setCurrentStep(3);
+      } else {
+        createBasicProfile();
+      }
     } else if (currentStep === 3) {
       handleDocumentSubmission();
     }
