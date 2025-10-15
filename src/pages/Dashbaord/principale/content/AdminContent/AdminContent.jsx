@@ -122,7 +122,8 @@ const AdminModal = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Nom and Prenom on same line */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Nom *
@@ -156,23 +157,24 @@ const AdminModal = ({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Email *
-            </label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
-              placeholder="admin@example.com"
-            />
-          </div>
+          {/* Email and Telephone on same line */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
+                placeholder="admin@example.com"
+              />
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Téléphone
@@ -185,6 +187,24 @@ const AdminModal = ({
                 }
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                 placeholder="0123456789"
+              />
+            </div>
+          </div>
+
+          {/* Address and Status on same line */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Adresse
+              </label>
+              <textarea
+                value={formData.adresse}
+                onChange={(e) =>
+                  setFormData({ ...formData, adresse: e.target.value })
+                }
+                rows={3}
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 resize-none"
+                placeholder="Entrez l'adresse complète"
               />
             </div>
 
@@ -204,21 +224,6 @@ const AdminModal = ({
                 <option value="PENDING">En attente</option>
               </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Adresse
-            </label>
-            <textarea
-              value={formData.adresse}
-              onChange={(e) =>
-                setFormData({ ...formData, adresse: e.target.value })
-              }
-              rows={3}
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 resize-none"
-              placeholder="Entrez l'adresse complète"
-            />
           </div>
 
           <div className="flex items-center justify-end space-x-4 pt-6 border-t border-slate-200">

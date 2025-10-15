@@ -33,8 +33,9 @@ import { matiereService } from "../../../../../services/MatiereService";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import CourseViewModal from "../../modals/CourseViewModal";
+
 import CreateCourseComponent from "./CreateCourseComponent";
+import CourseContentView from "./CourseContentView";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import CourseCard from "./CourseCard";
 import CourseTableRow from "./CourseTableRow";
@@ -58,8 +59,8 @@ const ProfessorCoursesContent = () => {
   const [modalMode, setModalMode] = useState("create");
   const [subjects, setSubjects] = useState([]);
   const [selectedMatiereIds, setSelectedMatiereIds] = useState([]);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [viewingCourse, setViewingCourse] = useState(null);
+  const [showCourseContent, setShowCourseContent] = useState(false);
 
   useEffect(() => {
     loadCourses();
@@ -124,6 +125,11 @@ const ProfessorCoursesContent = () => {
     setShowCreateForm(false);
   };
 
+  const handleBackFromCourseContent = () => {
+    setShowCourseContent(false);
+    setViewingCourse(null);
+  };
+
   const handleEditCourse = (course) => {
     // TODO: Implement edit functionality
     console.log("Edit course:", course);
@@ -131,23 +137,10 @@ const ProfessorCoursesContent = () => {
 
   const handleViewCourse = (course) => {
     setViewingCourse(course);
-    setShowViewModal(true);
+    setShowCourseContent(true);
   };
 
-  const handleCloseViewModal = () => {
-    setShowViewModal(false);
-    setViewingCourse(null);
-  };
 
-  const handleViewModalSuccess = () => {
-    loadCourses();
-    handleCloseViewModal();
-  };
-
-  const handleViewModalEdit = (course) => {
-    handleCloseViewModal();
-    handleEditCourse(course);
-  };
 
   const getInitials = (title) => {
     return (
@@ -206,6 +199,15 @@ const ProfessorCoursesContent = () => {
         setError={setError}
         loadCourses={loadCourses}
         setLoading={setLoading}
+      />
+    );
+  }
+
+  if (showCourseContent && viewingCourse) {
+    return (
+      <CourseContentView
+        course={viewingCourse}
+        onBack={handleBackFromCourseContent}
       />
     );
   }
@@ -514,15 +516,7 @@ const ProfessorCoursesContent = () => {
         )}
       </div>
 
-      {showViewModal && (
-        <CourseViewModal
-          classe={viewingCourse}
-          onClose={handleCloseViewModal}
-          onSuccess={handleViewModalSuccess}
-          onEdit={handleViewModalEdit}
-          theme="light"
-        />
-      )}
+
     </div>
   );
 };

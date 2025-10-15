@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from "react";
 import {
-  X,
-  AlertCircle,
-  Users,
+  ArrowLeft,
   BookOpen,
-  MapPin,
   Calendar,
+  Clock,
+  User,
+  MapPin,
+  Timer,
+  CalendarPlus,
   FileText,
+  School,
+  UserCheck,
+  Users,
+  Mail,
+  Phone,
+  AlertCircle,
   Search,
   Filter,
   ChevronDown,
@@ -14,30 +22,19 @@ import {
   Eye,
   Grid,
   List,
-  User,
-  Mail,
-  Phone,
-  School,
-  ChevronRight,
-  Clock,
-  Edit2,
-  Share2,
-  Archive,
-  Star,
   CheckCircle,
   XCircle,
   Activity,
-  Timer,
-  UserCheck,
-  PlayCircle,
-  CalendarPlus,
+  Edit2,
+  Share2,
+  Archive,
 } from "lucide-react";
-import { minioS3Service } from "../../../../services/minioS3";
+import { minioS3Service } from "../../../../../services/minioS3";
 
-const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
-  // Handle the course data (passed as classe prop)
-  const course = classe;
-
+const CourseContentView = ({ course, onBack }) => {
+  const [processedChapters, setProcessedChapters] = useState([]);
+  const [activeTab, setActiveTab] = useState("details");
+  const [participants, setParticipants] = useState([]);
   const [courseDocuments, setCourseDocuments] = useState([]);
   const [filteredDocuments, setFilteredDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,11 +42,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
   const [documentSearchTerm, setDocumentSearchTerm] = useState("");
   const [documentFilter, setDocumentFilter] = useState("all");
   const [documentViewMode, setDocumentViewMode] = useState("grid");
-  const [activeTab, setActiveTab] = useState("details");
-  const [participants, setParticipants] = useState([]);
-  const [processedChapters, setProcessedChapters] = useState([]);
 
-  // Move all useEffect hooks before any conditional logic
   useEffect(() => {
     if (course) {
       fetchCourseData();
@@ -65,11 +58,6 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
       processChapterContent();
     }
   }, [course]);
-
-  // Early return after all hooks have been declared
-  if (!course) {
-    return null;
-  }
 
   const fetchCourseData = async () => {
     try {
@@ -94,6 +82,22 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
     }
   };
 
+  const filterDocuments = () => {
+    let filtered = courseDocuments;
+
+    if (documentSearchTerm) {
+      filtered = filtered.filter((doc) =>
+        doc.title.toLowerCase().includes(documentSearchTerm.toLowerCase())
+      );
+    }
+
+    if (documentFilter !== "all") {
+      filtered = filtered.filter((doc) => doc.type === documentFilter);
+    }
+
+    setFilteredDocuments(filtered);
+  };
+
   const processChapterContent = async () => {
     if (!course.chapitres) return;
 
@@ -102,7 +106,6 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
         course.chapitres.map(async (chapter) => {
           let processedContent = chapter.contenu || "";
 
-          // Find all MinIO file paths in the content
           const minioPathRegex =
             /(?:https?:\/\/[^\/\s]+\/)?(images|videos|documents)\/[^"\s<>]+\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|txt)/g;
           let match;
@@ -112,27 +115,20 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
             pathsToProcess.push(match[0]);
           }
 
-          // Process each path to generate download URLs
           for (const path of pathsToProcess) {
             try {
-              // Clean the path to get just the relative path
               const cleanPath = path.replace(/^https?:\/\/[^\/]+\//, "");
-
               const downloadData =
                 await minioS3Service.generateDownloadUrlByPath(cleanPath);
 
               if (downloadData && downloadData.downloadUrl) {
-                // Replace the path with the signed URL
                 processedContent = processedContent.replace(
                   new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
                   downloadData.downloadUrl
                 );
               }
             } catch (error) {
-              console.warn(
-                `Failed to generate download URL for ${path}:`,
-                error
-              );
+              console.warn(`Failed to generate download URL for ${path}:`, error);
             }
           }
 
@@ -150,20 +146,26 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
     }
   };
 
-  const filterDocuments = () => {
-    let filtered = courseDocuments;
+  const formatDate = (dateString) => {
+    if (!dateString) return "Non défini";
+    const date = new Date(dateString);
+    return date.toLocaleString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
-    if (documentSearchTerm) {
-      filtered = filtered.filter((doc) =>
-        doc.title.toLowerCase().includes(documentSearchTerm.toLowerCase())
-      );
-    }
-
-    if (documentFilter !== "all") {
-      filtered = filtered.filter((doc) => doc.type === documentFilter);
-    }
-
-    setFilteredDocuments(filtered);
+  const getInitials = (name) => {
+    if (!name) return "??";
+    const words = name.split(" ");
+    return words
+      .map((word) => word[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
   };
 
   const getStatusBadge = (status) => {
@@ -212,216 +214,125 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
     );
   };
 
-  const getDocumentTypeBadge = (type) => {
-    const typeConfig = {
-      identity: {
-        className: "bg-blue-50 text-blue-700 border-blue-200",
-        text: "Identité",
-      },
-      profile: {
-        className: "bg-purple-50 text-purple-700 border-purple-200",
-        text: "Profil",
-      },
-      academic: {
-        className: "bg-green-50 text-green-700 border-green-200",
-        text: "Académique",
-      },
-    };
-
-    const config = typeConfig[type] || {
-      className: "bg-slate-50 text-slate-700 border-slate-200",
-      text: "Autre",
-    };
-
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${config.className}`}
-      >
-        {type === "identity" ? (
-          <User className="w-4 h-4 mr-1" />
-        ) : type === "profile" ? (
-          <User className="w-4 h-4 mr-1" />
-        ) : (
-          <FileText className="w-4 h-4 mr-1" />
-        )}
-        {config.text}
-      </span>
-    );
-  };
-
-  const handleDocumentView = (document) => {
-    window.open(document.url, "_blank");
-  };
-
-  const handleDocumentDownload = (document) => {
-    const link = document.createElement("a");
-    link.href = document.url;
-    link.download = `${document.title}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "Non défini";
-    const date = new Date(dateString);
-    return date.toLocaleString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatDateOnly = (dateString) => {
-    if (!dateString) return "Non défini";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  const formatTimeOnly = (dateString) => {
-    if (!dateString) return "Non défini";
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getInitials = (name) => {
-    if (!name) return "??";
-    const words = name.split(" ");
-    return words
-      .map((word) => word[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
-  };
-
   const renderChapterContent = (content) => {
     if (!content) return null;
 
-    // Convert newlines to <br> tags for display
     const formattedContent = content.replace(/\n/g, "<br>");
 
     return (
       <div
         className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
         dangerouslySetInnerHTML={{ __html: formattedContent }}
-        style={{
-          wordBreak: "break-word",
-        }}
+        style={{ wordBreak: "break-word" }}
       />
     );
   };
 
+  if (!course) {
+    return null;
+  }
+
   return (
-    <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-8 py-6 border-b border-slate-200">
-          <div className="flex justify-between items-start">
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={onBack}
+              className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </button>
             <div className="flex items-center space-x-4">
               <div className="p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg">
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
                   Détails du Cours
-                </h2>
-                <p className="text-slate-600 mt-1">{course?.titre}</p>
+                </h1>
+                <div className="flex items-center gap-3 mt-2">
+                  <p className="text-slate-600">{course?.titre}</p>
+                  {getStatusBadge(course?.etat)}
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              {getStatusBadge(course?.etat)}
-              <button
-                onClick={onClose}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
-              >
-                <X className="w-6 h-6" />
-              </button>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-slate-200 px-8">
-          <div className="flex space-x-6">
-            <button
-              onClick={() => setActiveTab("details")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                activeTab === "details"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-              }`}
-            >
-              Détails
-            </button>
-            {(processedChapters.length > 0 ||
-              (course?.chapitres && course.chapitres.length > 0)) && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
+          <div className="border-b border-slate-200 px-6">
+            <div className="flex space-x-6">
               <button
-                onClick={() => setActiveTab("chapters")}
+                onClick={() => setActiveTab("details")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                  activeTab === "chapters"
+                  activeTab === "details"
                     ? "border-indigo-500 text-indigo-600"
                     : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
                 }`}
               >
-                Chapitres (
-                {processedChapters.length || course?.chapitres?.length || 0})
+                Détails
               </button>
-            )}
-            {participants.length > 0 && (
+              {(processedChapters.length > 0 ||
+                (course?.chapitres && course.chapitres.length > 0)) && (
+                <button
+                  onClick={() => setActiveTab("chapters")}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
+                    activeTab === "chapters"
+                      ? "border-indigo-500 text-indigo-600"
+                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                  }`}
+                >
+                  Chapitres (
+                  {processedChapters.length || course?.chapitres?.length || 0})
+                </button>
+              )}
+              {participants.length > 0 && (
+                <button
+                  onClick={() => setActiveTab("participants")}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
+                    activeTab === "participants"
+                      ? "border-indigo-500 text-indigo-600"
+                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                  }`}
+                >
+                  Participants ({participants.length})
+                </button>
+              )}
               <button
-                onClick={() => setActiveTab("participants")}
+                onClick={() => setActiveTab("documents")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                  activeTab === "participants"
+                  activeTab === "documents"
                     ? "border-indigo-500 text-indigo-600"
                     : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
                 }`}
               >
-                Participants ({participants.length})
+                Documents ({courseDocuments.length})
               </button>
-            )}
-            <button
-              onClick={() => setActiveTab("documents")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                activeTab === "documents"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-              }`}
-            >
-              Documents ({courseDocuments.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("history")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                activeTab === "history"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-              }`}
-            >
-              Historique
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {error && (
-            <div className="mx-8 mt-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-center border border-red-200">
-              <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-              <span>{error}</span>
+              <button
+                onClick={() => setActiveTab("history")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
+                  activeTab === "history"
+                    ? "border-indigo-500 text-indigo-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                Historique
+              </button>
             </div>
-          )}
+          </div>
 
-          <div className="p-8">
+          {/* Content */}
+          <div className="p-6">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-center border border-red-200">
+                <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
             {/* Details Tab */}
             {activeTab === "details" && (
               <div className="space-y-8">
@@ -1061,54 +972,43 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
         </div>
 
         {/* Footer Actions */}
-        <div className="bg-slate-50 px-8 py-6 border-t border-slate-200">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-slate-600">
-              ID: {course?.id || "Non défini"}
-            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 mt-6">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-slate-600">
+                ID: {course?.id || "Non défini"}
+              </div>
 
-            <div className="flex items-center space-x-3">
-              {/* Action buttons based on course state */}
-              {onEdit && (
+              <div className="flex items-center space-x-3">
+                {/* Action buttons based on course state */}
                 <button
                   onClick={() => {
-                    onEdit(course);
-                    onClose();
+                    // Handle share functionality
+                    if (navigator.share) {
+                      navigator.share({
+                        title: course?.titre,
+                        text: course?.description || "Cours partagé",
+                        url: window.location.href,
+                      });
+                    } else {
+                      // Fallback: copy to clipboard
+                      navigator.clipboard.writeText(window.location.href);
+                      alert("Lien copié dans le presse-papiers !");
+                    }
                   }}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
+                  className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
                 >
-                  <Edit2 className="w-4 h-4" />
-                  Modifier
+                  <Share2 className="w-4 h-4" />
+                  Partager
                 </button>
-              )}
 
-              <button
-                onClick={() => {
-                  // Handle share functionality
-                  if (navigator.share) {
-                    navigator.share({
-                      title: course?.titre,
-                      text: course?.description || "Cours partagé",
-                      url: window.location.href,
-                    });
-                  } else {
-                    // Fallback: copy to clipboard
-                    navigator.clipboard.writeText(window.location.href);
-                    alert("Lien copié dans le presse-papiers !");
-                  }
-                }}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
-              >
-                <Share2 className="w-4 h-4" />
-                Partager
-              </button>
-
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium"
-              >
-                Fermer
-              </button>
+                <button
+                  onClick={onBack}
+                  className="px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium"
+                >
+                  Retour
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1117,5 +1017,4 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
   );
 };
 
-export default CourseViewModal;
-
+export default CourseContentView;

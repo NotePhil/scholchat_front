@@ -10,14 +10,14 @@ import {
   MessageSquare,
 } from "lucide-react";
 import ActivityDisplay from "./ActivityDisplay";
-import CreateEventModal from "./CreateEventModal";
+import CreateEventContent from "./CreateEventContent";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
 import { minioS3Service } from "../../../../../services/minioS3";
 
 const ActivitiesContent = () => {
   const [activities, setActivities] = useState([]);
   const [filteredActivities, setFilteredActivities] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -125,7 +125,7 @@ const ActivitiesContent = () => {
       setLoading(true);
       await activityFeedService.createEvent(eventData);
       setSuccess("Événement créé avec succès !");
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       await loadActivities();
 
       setTimeout(() => setSuccess(""), 3000);
@@ -265,6 +265,15 @@ const ActivitiesContent = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Show create form if active */}
+      {showCreateForm && canCreateActivity() ? (
+        <CreateEventContent
+          onClose={() => setShowCreateForm(false)}
+          onSubmit={handleCreateEvent}
+          loading={loading}
+        />
+      ) : (
+        <>
       {/* Messages de notification */}
       {error && (
         <div className="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
@@ -285,7 +294,7 @@ const ActivitiesContent = () => {
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* En-tête */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 Fil d'activité
@@ -297,11 +306,11 @@ const ActivitiesContent = () => {
             {/* Only show create button for admin and professor roles */}
             {canCreateActivity() && (
               <button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-auto justify-center"
+                onClick={() => setShowCreateForm(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <Plus size={20} />
-                <span>Créer un événement</span>
+                <span>Créer</span>
               </button>
             )}
           </div>
@@ -335,7 +344,7 @@ const ActivitiesContent = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
             <div
               className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => setShowCreateForm(true)}
             >
               <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
                 {currentUser?.name?.charAt(0)?.toUpperCase() || "U"}
@@ -379,7 +388,7 @@ const ActivitiesContent = () => {
               {/* Only show create button for authorized users in empty state */}
               {activeFilter === "all" && canCreateActivity() && (
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => setShowCreateForm(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 mx-auto transition-all duration-200"
                 >
                   <Plus size={20} />
@@ -397,15 +406,7 @@ const ActivitiesContent = () => {
           </div>
         )}
       </div>
-
-      {/* Modal de création d'événement - Only render if user can create */}
-      {canCreateActivity() && (
-        <CreateEventModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={handleCreateEvent}
-          loading={loading}
-        />
+        </>
       )}
     </div>
   );

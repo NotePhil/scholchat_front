@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Users,
   UserCheck,
+  RefreshCw,
 } from "lucide-react";
 import { rejectionService } from "../../../../services/RejectionService";
 import { rejectionServiceClass } from "../../../../services/RejectionServiceClass"; // Import the new service
@@ -256,8 +257,8 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
     <div className={`flex-1 p-4 sm:p-6 ${theme.background}`}>
       <div className="flex flex-col">
         {/* Header - Responsive */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
-          <div className="flex-1">
+        <div className="flex justify-between items-center mb-6">
+          <div>
             <h1 className={`text-xl sm:text-2xl font-bold ${theme.text}`}>
               Gestion des Motifs de Rejet
             </h1>
@@ -270,11 +271,11 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
             </p>
           </div>
           <button
-            className={`px-3 py-2 sm:px-4 sm:py-2 rounded text-white hover:bg-opacity-90 transition-colors duration-200 text-sm sm:text-base w-full sm:w-auto`}
-            style={{ backgroundColor: colors.secondary }}
+            className={`p-2 rounded text-black hover:bg-gray-100 transition-colors duration-200 ${isLoading ? 'animate-spin' : ''}`}
             onClick={handleRefresh}
+            disabled={isLoading}
           >
-            Actualiser
+            <RefreshCw className="w-5 h-5" />
           </button>
         </div>
 
@@ -342,12 +343,12 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
 
         {/* Main Content */}
         <div>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4">
+          <div className="flex justify-between items-center mb-4">
             <h2 className={`text-lg sm:text-xl font-semibold ${theme.text}`}>
               {getCurrentSectionTitle()}
             </h2>
             <button
-              className={`flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 rounded transition-colors duration-200 text-white hover:bg-opacity-90 text-sm sm:text-base w-full sm:w-auto`}
+              className={`flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 rounded transition-colors duration-200 text-white hover:bg-opacity-90 text-sm sm:text-base`}
               style={{ backgroundColor: colors.primary }}
               onClick={() => {
                 resetMotifForm();
@@ -432,7 +433,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                   )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
+                <div className="flex justify-between">
                   <button
                     type="button"
                     className={`px-4 py-2 rounded transition-colors duration-200 text-sm ${
