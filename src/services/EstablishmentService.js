@@ -245,7 +245,7 @@ class EstablishmentService {
    * @returns {boolean} Is valid phone
    */
   isValidPhone(phone) {
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    const phoneRegex = /^\+\d{1,3}\(\d{1,4}\)\d{7,10}$/;
     return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ""));
   }
 

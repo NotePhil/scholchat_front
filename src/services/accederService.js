@@ -434,4 +434,5 @@ class AccederService {
 }
 
 // Export a singleton instance
-export default new AccederService();
+const accederService = new AccederService();
+export default accederService;

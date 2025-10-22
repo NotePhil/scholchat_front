@@ -11,12 +11,12 @@ import FunctionalitiesSection from "./pages/FunctionalitiesSection";
 
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
-import ProfessorPage from "./pages/Dashbaord/ProfessorPage";
-import StudentPage from "./pages/Dashbaord/StudentPage";
-import ParentPage from "./pages/Dashbaord/ParentPage";
-import ClassesPage from "./pages/Dashbaord/ClassesPage";
+// import ProfessorPage from "./pages/Dashbaord/ProfessorPage";
+// import StudentPage from "./pages/Dashbaord/StudentPage";
+// import ParentPage from "./pages/Dashbaord/ParentPage";
+// import ClassesPage from "./pages/Dashbaord/ClassesPage";
 
-import ActivityFeed from "./pages/Dashbaord/components/StudentDashboard/ActivityFeed";
+// import ActivityFeed from "./pages/Dashbaord/components/StudentDashboard/ActivityFeed";
 import AccountActivation from "./pages/AccountActivation";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -136,17 +136,17 @@ function App() {
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
-            <Route
+            {/* <Route
               path="/schoolchat/activity"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
                   <ActivityFeed theme={theme} />
                 </Layout>
               }
-            />
+            /> */}
 
-            <Route path="/schoolchat/parents" element={<ParentPage />} />
-            <Route path="/schoolchat/classes" element={<ClassesPage />} />
+            {/* <Route path="/schoolchat/parents" element={<ParentPage />} /> */}
+            {/* <Route path="/schoolchat/classes" element={<ClassesPage />} /> */}
 
             <Route
               path="/schoolchat/manage-class"

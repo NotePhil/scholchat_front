@@ -318,4 +318,5 @@ class PublicationRightsService {
   }
 }
 
-export default new PublicationRightsService();
+const publicationRightsService = new PublicationRightsService();
+export default publicationRightsService;
