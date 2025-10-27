@@ -991,7 +991,7 @@ const CreateCourseComponent = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-6">
@@ -1021,15 +1021,17 @@ const CreateCourseComponent = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {/* General Information */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border">
-            <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center">
-              <BookOpen size={18} className="mr-2 text-indigo-600" />
-              Informations générales
-            </h3>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            {/* General Information */}
+            <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border">
+              <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center">
+                <BookOpen size={18} className="mr-2 text-indigo-600" />
+                Informations générales
+              </h3>
 
             <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Titre du cours *
@@ -1087,45 +1089,43 @@ const CreateCourseComponent = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                    <Users2 size={16} className="mr-2 text-indigo-600" />
-                    Matières associées *
-                  </label>
-                  <MultiSelectDropdown
-                    options={subjects}
-                    selected={selectedMatiereIds}
-                    onChange={handleMatiereChange}
-                    placeholder="Sélectionnez les matières..."
-                    error={errors.matieres}
-                  />
-                  {errors.matieres && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <AlertCircle size={14} className="mr-1" />
-                      {errors.matieres.message}
-                    </p>
-                  )}
-                </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                  <Users2 size={16} className="mr-2 text-indigo-600" />
+                  Matières associées *
+                </label>
+                <MultiSelectDropdown
+                  options={subjects}
+                  selected={selectedMatiereIds}
+                  onChange={handleMatiereChange}
+                  placeholder="Sélectionnez les matières..."
+                  error={errors.matieres}
+                />
+                {errors.matieres && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center">
+                    <AlertCircle size={14} className="mr-1" />
+                    {errors.matieres.message}
+                  </p>
+                )}
+              </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                    <FileText size={16} className="mr-2 text-indigo-600" />
-                    Références
-                  </label>
-                  <textarea
-                    {...register("references")}
-                    rows={2}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
-                    placeholder="Livres, articles, liens utiles..."
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                  <FileText size={16} className="mr-2 text-indigo-600" />
+                  Références
+                </label>
+                <textarea
+                  {...register("references")}
+                  rows={2}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
+                  placeholder="Livres, articles, liens utiles..."
+                />
               </div>
             </div>
-          </div>
+            </div>
 
-          {/* Chapters Section */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border">
+            {/* Chapters Section */}
+            <div className="lg:col-span-3 bg-white rounded-xl p-6 shadow-sm border">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3 sm:gap-0">
               <h3 className="text-lg font-semibold text-slate-900 flex items-center">
                 <FileText size={18} className="mr-2 text-indigo-600" />
@@ -1188,6 +1188,7 @@ const CreateCourseComponent = ({
               )}
             </div>
           </div>
+        </div>
 
           {/* Action Buttons */}
           <div className="flex justify-center gap-6 pt-6">

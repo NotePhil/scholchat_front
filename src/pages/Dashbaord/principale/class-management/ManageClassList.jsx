@@ -366,30 +366,28 @@ const ManageClassList = ({
 
         <div className="stats-grid">
           <div className="stat-card stat-primary">
-            <div className="stat-icon">
-              <GraduationCap className="icon" />
-            </div>
-            <div className="stat-content">
+            <div className="stat-header">
+              <div className="stat-icon">
+                <GraduationCap className="icon" />
+              </div>
               <div className="stat-value">{totalClasses}</div>
-              <div className="stat-label">Total Classes</div>
             </div>
+            <div className="stat-label">Total Classes</div>
           </div>
           <div className="stat-card stat-success">
-            <div className="stat-icon">
-              <Trophy className="icon" />
-            </div>
-            <div className="stat-content">
+            <div className="stat-header">
+              <div className="stat-icon">
+                <Trophy className="icon" />
+              </div>
               <div className="stat-value">{activeClasses}</div>
-              <div className="stat-label">Classes Actives</div>
             </div>
+            <div className="stat-label">Classes Actives</div>
           </div>
-
-          {/* New stat card for pending requests */}
           <div className="stat-card stat-info">
-            <div className="stat-icon">
-              <Bell className="icon" />
-            </div>
-            <div className="stat-content">
+            <div className="stat-header">
+              <div className="stat-icon">
+                <Bell className="icon" />
+              </div>
               <div className="stat-value">
                 {loadingRequests ? (
                   <Loader className="loading-mini" />
@@ -397,8 +395,8 @@ const ManageClassList = ({
                   totalPendingRequests
                 )}
               </div>
-              <div className="stat-label">Demandes en Attente</div>
             </div>
+            <div className="stat-label">Demandes en Attente</div>
           </div>
         </div>
 

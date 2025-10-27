@@ -22,7 +22,7 @@ export default function Header({
       <div className="flex items-center justify-between p-4">
         <button
           onClick={() => setShowSidebar(!showSidebar)}
-          className={`p-2 rounded-md transition-colors duration-200 ${
+          className={`md:hidden p-2 rounded-md transition-colors duration-200 ${
             isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
           }`}
         >

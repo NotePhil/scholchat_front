@@ -3,7 +3,7 @@ import Header from "./Header";
 import Sidebar from "./Sidebar";
 
 export const LayoutWrapper = ({ children }) => {
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("blue");
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -130,15 +130,17 @@ const colorSchemes = {
         isDark ? themes.dark.background : themes.light.background
       } transition-colors duration-300`}
     >
-      <Sidebar
-        showSidebar={showSidebar}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        isDark={isDark}
-        currentTheme={currentTheme}
-        themes={themes}
-        colorSchemes={colorSchemes}
-      />
+      {showSidebar && (
+        <Sidebar
+          showSidebar={showSidebar}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isDark={isDark}
+          currentTheme={currentTheme}
+          themes={themes}
+          colorSchemes={colorSchemes}
+        />
+      )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
