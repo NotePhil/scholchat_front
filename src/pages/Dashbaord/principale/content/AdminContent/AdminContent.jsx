@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -9,28 +9,19 @@ import {
   Filter,
   X,
   UserCheck,
-  UserX,
-  Mail,
-  Phone,
-  MapPin,
-  Hash,
   Shield,
   ChevronDown,
-  MoreVertical,
-  Calendar,
   Activity,
 } from "lucide-react";
 import { userService } from "../../../../../services/userService";
 
-// Admin Modal Component
 const AdminModal = ({
   showModal,
   setShowModal,
   modalMode,
   selectedAdmin,
-  loadData,
-  setError,
-  setLoading,
+  onSuccess,
+  onError,
 }) => {
   const [formData, setFormData] = useState({
     nom: "",
@@ -41,6 +32,7 @@ const AdminModal = ({
     etat: "ACTIVE",
     admin: true,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (modalMode === "edit" && selectedAdmin) {
@@ -66,25 +58,30 @@ const AdminModal = ({
     }
   }, [modalMode, selectedAdmin, showModal]);
 
+  const handleInputChange = useCallback((field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      setLoading(true);
       if (modalMode === "create") {
         await userService.createUser(formData);
       } else {
         await userService.updateUser(selectedAdmin.id, formData);
       }
-      await loadData();
+      onSuccess();
       setShowModal(false);
     } catch (err) {
-      setError(
+      onError(
         `Erreur lors de ${
           modalMode === "create" ? "la création" : "la modification"
         }: ${err.message}`
       );
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -115,6 +112,7 @@ const AdminModal = ({
             <button
               onClick={() => setShowModal(false)}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              disabled={isSubmitting}
             >
               <X size={20} />
             </button>
@@ -122,7 +120,6 @@ const AdminModal = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Nom and Prenom on same line */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -132,11 +129,10 @@ const AdminModal = ({
                 type="text"
                 required
                 value={formData.nom}
-                onChange={(e) =>
-                  setFormData({ ...formData, nom: e.target.value })
-                }
+                onChange={(e) => handleInputChange("nom", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                 placeholder="Entrez le nom"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -148,16 +144,14 @@ const AdminModal = ({
                 type="text"
                 required
                 value={formData.prenom}
-                onChange={(e) =>
-                  setFormData({ ...formData, prenom: e.target.value })
-                }
+                onChange={(e) => handleInputChange("prenom", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                 placeholder="Entrez le prénom"
+                disabled={isSubmitting}
               />
             </div>
           </div>
 
-          {/* Email and Telephone on same line */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -167,11 +161,10 @@ const AdminModal = ({
                 type="email"
                 required
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => handleInputChange("email", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                 placeholder="admin@example.com"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -182,16 +175,14 @@ const AdminModal = ({
               <input
                 type="tel"
                 value={formData.telephone}
-                onChange={(e) =>
-                  setFormData({ ...formData, telephone: e.target.value })
-                }
+                onChange={(e) => handleInputChange("telephone", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                 placeholder="0123456789"
+                disabled={isSubmitting}
               />
             </div>
           </div>
 
-          {/* Address and Status on same line */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -199,12 +190,11 @@ const AdminModal = ({
               </label>
               <textarea
                 value={formData.adresse}
-                onChange={(e) =>
-                  setFormData({ ...formData, adresse: e.target.value })
-                }
+                onChange={(e) => handleInputChange("adresse", e.target.value)}
                 rows={3}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 resize-none"
                 placeholder="Entrez l'adresse complète"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -214,10 +204,9 @@ const AdminModal = ({
               </label>
               <select
                 value={formData.etat}
-                onChange={(e) =>
-                  setFormData({ ...formData, etat: e.target.value })
-                }
+                onChange={(e) => handleInputChange("etat", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
+                disabled={isSubmitting}
               >
                 <option value="ACTIVE">Actif</option>
                 <option value="INACTIVE">Inactif</option>
@@ -231,14 +220,19 @@ const AdminModal = ({
               type="button"
               onClick={() => setShowModal(false)}
               className="px-6 py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium"
+              disabled={isSubmitting}
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {modalMode === "create" ? "Créer" : "Modifier"}
+              {isSubmitting && (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              <span>{modalMode === "create" ? "Créer" : "Modifier"}</span>
             </button>
           </div>
         </form>
@@ -247,12 +241,12 @@ const AdminModal = ({
   );
 };
 
-// Delete Confirmation Modal
+// components/DeleteConfirmationModal.jsx
 const DeleteConfirmationModal = ({
   showDeleteConfirm,
   setShowDeleteConfirm,
   selectedAdmin,
-  handleDelete,
+  onConfirm,
   loading,
 }) => {
   if (!showDeleteConfirm) return null;
@@ -297,7 +291,7 @@ const DeleteConfirmationModal = ({
               Annuler
             </button>
             <button
-              onClick={handleDelete}
+              onClick={onConfirm}
               disabled={loading}
               className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center space-x-2"
             >
@@ -313,7 +307,7 @@ const DeleteConfirmationModal = ({
   );
 };
 
-// Admin View Modal
+// components/AdminViewModal.jsx
 const AdminViewModal = ({ admin, onClose }) => {
   if (!admin) return null;
 
@@ -344,6 +338,7 @@ const AdminViewModal = ({ admin, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -385,11 +380,11 @@ const AdminViewModal = ({ admin, onClose }) => {
           </div>
         </div>
 
+        {/* Content sections remain the same */}
         <div className="p-6 space-y-6">
           {/* Contact Information */}
           <div className="bg-slate-50 rounded-2xl p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              <Mail className="w-5 h-5 mr-2 text-slate-600" />
               Informations de Contact
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -397,20 +392,14 @@ const AdminViewModal = ({ admin, onClose }) => {
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   Email
                 </label>
-                <div className="flex items-center text-slate-900">
-                  <Mail className="w-4 h-4 mr-2 text-slate-400" />
-                  {admin.email}
-                </div>
+                <div className="text-slate-900">{admin.email}</div>
               </div>
               {admin.telephone && (
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">
                     Téléphone
                   </label>
-                  <div className="flex items-center text-slate-900">
-                    <Phone className="w-4 h-4 mr-2 text-slate-400" />
-                    {admin.telephone}
-                  </div>
+                  <div className="text-slate-900">{admin.telephone}</div>
                 </div>
               )}
             </div>
@@ -419,10 +408,7 @@ const AdminViewModal = ({ admin, onClose }) => {
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   Adresse
                 </label>
-                <div className="flex items-start text-slate-900">
-                  <MapPin className="w-4 h-4 mr-2 text-slate-400 mt-0.5" />
-                  {admin.adresse}
-                </div>
+                <div className="text-slate-900">{admin.adresse}</div>
               </div>
             )}
           </div>
@@ -430,7 +416,6 @@ const AdminViewModal = ({ admin, onClose }) => {
           {/* Account Information */}
           <div className="bg-slate-50 rounded-2xl p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              <Shield className="w-5 h-5 mr-2 text-slate-600" />
               Informations du Compte
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -438,8 +423,7 @@ const AdminViewModal = ({ admin, onClose }) => {
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   ID Utilisateur
                 </label>
-                <div className="flex items-center text-slate-900 font-mono text-sm">
-                  <Hash className="w-4 h-4 mr-2 text-slate-400" />
+                <div className="text-slate-900 font-mono text-sm">
                   {admin.id}
                 </div>
               </div>
@@ -447,8 +431,7 @@ const AdminViewModal = ({ admin, onClose }) => {
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   Date de Création
                 </label>
-                <div className="flex items-center text-slate-900">
-                  <Calendar className="w-4 h-4 mr-2 text-slate-400" />
+                <div className="text-slate-900">
                   {new Date(admin.creationDate).toLocaleDateString("fr-FR", {
                     year: "numeric",
                     month: "long",
@@ -457,43 +440,6 @@ const AdminViewModal = ({ admin, onClose }) => {
                     minute: "2-digit",
                   })}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Permissions */}
-          <div className="bg-purple-50 rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              <UserCheck className="w-5 h-5 mr-2 text-purple-600" />
-              Permissions & Rôles
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-purple-200">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
-                  <span className="font-medium text-slate-900">
-                    Accès Administrateur
-                  </span>
-                </div>
-                <span className="text-purple-600 font-semibold">Accordé</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-purple-200">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
-                  <span className="font-medium text-slate-900">
-                    Gestion des Utilisateurs
-                  </span>
-                </div>
-                <span className="text-purple-600 font-semibold">Accordé</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-purple-200">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
-                  <span className="font-medium text-slate-900">
-                    Configuration Système
-                  </span>
-                </div>
-                <span className="text-purple-600 font-semibold">Accordé</span>
               </div>
             </div>
           </div>
@@ -512,61 +458,31 @@ const AdminViewModal = ({ admin, onClose }) => {
   );
 };
 
-// Main AdminContent Component
-const AdminContent = () => {
-  const [admins, setAdmins] = useState([]);
-  const [filteredAdmins, setFilteredAdmins] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState("create");
-  const [selectedAdmin, setSelectedAdmin] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [currentAdmin, setCurrentAdmin] = useState(null);
-  const [viewMode, setViewMode] = useState("grid");
+// components/StatsCard.jsx
+const StatsCard = ({ title, value, icon: Icon, gradient, subtext, color }) => (
+  <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-slate-600 text-sm font-medium">{title}</p>
+        <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
+      </div>
+      <div className={`p-3 bg-gradient-to-r ${gradient} rounded-xl`}>
+        <Icon className="w-6 h-6 text-white" />
+      </div>
+    </div>
+    <div className="mt-4 flex items-center">
+      <Activity className="w-4 h-4 text-slate-400 mr-2" />
+      <span className="text-slate-500 text-sm">{subtext}</span>
+    </div>
+  </div>
+);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    filterAdmins();
-  }, [admins, searchTerm, filterStatus]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const usersData = await userService.getAllUsers();
-      // Filter only admin users
-      const adminUsers = usersData?.filter((user) => user.admin === true) || [];
-      setAdmins(adminUsers);
-    } catch (err) {
-      setError("Erreur lors du chargement des données: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterAdmins = () => {
-    let filtered = admins;
-
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (admin) =>
-          admin.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          admin.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          admin.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (filterStatus !== "all") {
-      filtered = filtered.filter((admin) => admin.etat === filterStatus);
-    }
-
-    setFilteredAdmins(filtered);
+// components/AdminCard.jsx
+const AdminCard = ({ admin, onView, onEdit, onDelete }) => {
+  const getInitials = (firstName, lastName) => {
+    return `${firstName?.charAt(0) || ""}${
+      lastName?.charAt(0) || ""
+    }`.toUpperCase();
   };
 
   const getStatusBadge = (status) => {
@@ -587,22 +503,125 @@ const AdminContent = () => {
     return texts[status] || status;
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "ACTIVE":
-        return <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>;
-      case "INACTIVE":
-        return <div className="w-2 h-2 bg-red-500 rounded-full"></div>;
-      case "PENDING":
-        return (
-          <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-        );
-      default:
-        return <div className="w-2 h-2 bg-gray-500 rounded-full"></div>;
-    }
-  };
+  return (
+    <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-lg">
+              {getInitials(admin.prenom, admin.nom)}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-slate-900 truncate">
+              {admin.prenom} {admin.nom}
+            </h3>
+            <span
+              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
+                admin.etat
+              )} mt-1`}
+            >
+              {getStatusText(admin.etat)}
+            </span>
+          </div>
+        </div>
+      </div>
 
-  const handleDelete = async () => {
+      <div className="space-y-2 text-sm text-slate-600 mb-4">
+        <div className="truncate">{admin.email}</div>
+        {admin.telephone && <div>{admin.telephone}</div>}
+      </div>
+
+      <div className="flex items-center justify-end space-x-2 pt-4 border-t border-slate-100">
+        <button
+          onClick={() => onView(admin)}
+          className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+          title="Voir"
+        >
+          <Eye size={16} />
+        </button>
+        <button
+          onClick={() => onEdit(admin)}
+          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+          title="Modifier"
+        >
+          <Edit2 size={16} />
+        </button>
+        <button
+          onClick={() => onDelete(admin)}
+          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+          title="Supprimer"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Main Component
+const AdminContent = () => {
+  const [admins, setAdmins] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState("create");
+  const [selectedAdmin, setSelectedAdmin] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState(null);
+  const [viewMode, setViewMode] = useState("grid");
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const usersData = await userService.getAllUsers();
+      const adminUsers = usersData?.filter((user) => user.admin === true) || [];
+      setAdmins(adminUsers);
+      setError("");
+    } catch (err) {
+      setError("Erreur lors du chargement des données: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const filteredAdmins = useMemo(() => {
+    let filtered = admins;
+
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (admin) =>
+          admin.nom?.toLowerCase().includes(search) ||
+          admin.prenom?.toLowerCase().includes(search) ||
+          admin.email?.toLowerCase().includes(search)
+      );
+    }
+
+    if (filterStatus !== "all") {
+      filtered = filtered.filter((admin) => admin.etat === filterStatus);
+    }
+
+    return filtered;
+  }, [admins, searchTerm, filterStatus]);
+
+  const stats = useMemo(
+    () => ({
+      total: admins.length,
+      active: admins.filter((a) => a.etat === "ACTIVE").length,
+      pending: admins.filter((a) => a.etat === "PENDING").length,
+    }),
+    [admins]
+  );
+
+  const handleDelete = useCallback(async () => {
     try {
       setLoading(true);
       await userService.deleteUser(selectedAdmin.id);
@@ -614,18 +633,29 @@ const AdminContent = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedAdmin, loadData]);
 
-  const handleViewAdmin = (admin) => {
+  const handleViewAdmin = useCallback((admin) => {
     setCurrentAdmin(admin);
     setIsViewModalOpen(true);
-  };
+  }, []);
 
-  const getInitials = (firstName, lastName) => {
-    return `${firstName?.charAt(0) || ""}${
-      lastName?.charAt(0) || ""
-    }`.toUpperCase();
-  };
+  const handleEditAdmin = useCallback((admin) => {
+    setModalMode("edit");
+    setSelectedAdmin(admin);
+    setShowModal(true);
+  }, []);
+
+  const handleDeleteAdmin = useCallback((admin) => {
+    setSelectedAdmin(admin);
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const handleCreateAdmin = useCallback(() => {
+    setModalMode("create");
+    setSelectedAdmin(null);
+    setShowModal(true);
+  }, []);
 
   if (loading && admins.length === 0) {
     return (
@@ -649,7 +679,7 @@ const AdminContent = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Modern Header */}
+        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-lg">
@@ -668,91 +698,56 @@ const AdminContent = () => {
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 relative">
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                    <X className="w-3 h-3 text-white" />
-                  </div>
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                  <X className="w-3 h-3 text-white" />
                 </div>
-                <div className="ml-3 flex-1">
-                  <p className="text-red-800 font-medium">Erreur</p>
-                  <p className="text-red-700 text-sm mt-1">{error}</p>
-                </div>
-                <button
-                  onClick={() => setError("")}
-                  className="flex-shrink-0 ml-4 text-red-400 hover:text-red-600 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
+              <div className="ml-3 flex-1">
+                <p className="text-red-800 font-medium">Erreur</p>
+                <p className="text-red-700 text-sm mt-1">{error}</p>
+              </div>
+              <button
+                onClick={() => setError("")}
+                className="flex-shrink-0 ml-4 text-red-400 hover:text-red-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
 
-        {/* Modern Stats Cards */}
+        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-medium">
-                  Total Admins
-                </p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">
-                  {admins.length}
-                </p>
-              </div>
-              <div className="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center">
-              <Activity className="w-4 h-4 text-slate-400 mr-2" />
-              <span className="text-slate-500 text-sm">
-                Administrateurs système
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-medium">Actifs</p>
-                <p className="text-3xl font-bold text-emerald-600 mt-1">
-                  {admins.filter((a) => a.etat === "ACTIVE").length}
-                </p>
-              </div>
-              <div className="p-3 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl">
-                <UserCheck className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></div>
-              <span className="text-slate-500 text-sm">Comptes validés</span>
-            </div>
-          </div>
-
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-medium">En attente</p>
-                <p className="text-3xl font-bold text-amber-600 mt-1">
-                  {admins.filter((a) => a.etat === "PENDING").length}
-                </p>
-              </div>
-              <div className="p-3 bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center">
-              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse mr-2"></div>
-              <span className="text-slate-500 text-sm">Validation requise</span>
-            </div>
-          </div>
+          <StatsCard
+            title="Total Admins"
+            value={stats.total}
+            icon={Shield}
+            gradient="from-purple-500 to-purple-600"
+            color="text-slate-900"
+            subtext="Administrateurs système"
+          />
+          <StatsCard
+            title="Actifs"
+            value={stats.active}
+            icon={UserCheck}
+            gradient="from-emerald-500 to-emerald-600"
+            color="text-emerald-600"
+            subtext="Comptes validés"
+          />
+          <StatsCard
+            title="En attente"
+            value={stats.pending}
+            icon={Users}
+            gradient="from-amber-500 to-amber-600"
+            color="text-amber-600"
+            subtext="Validation requise"
+          />
         </div>
 
-        {/* Modern Controls */}
+        {/* Controls */}
         <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             {/* Search */}
@@ -819,11 +814,7 @@ const AdminContent = () => {
 
               {/* Add Button */}
               <button
-                onClick={() => {
-                  setModalMode("create");
-                  setSelectedAdmin(null);
-                  setShowModal(true);
-                }}
+                onClick={handleCreateAdmin}
                 className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
               >
                 <Plus size={20} />
@@ -835,111 +826,18 @@ const AdminContent = () => {
 
         {/* Content Area */}
         {viewMode === "grid" ? (
-          // Grid View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAdmins.map((admin) => (
-              <div
+              <AdminCard
                 key={admin.id}
-                className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
-              >
-                {/* Card Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
-                        <span className="text-white font-bold text-lg">
-                          {getInitials(admin.prenom, admin.nom)}
-                        </span>
-                      </div>
-                      <div className="absolute -bottom-1 -right-1">
-                        {getStatusIcon(admin.etat)}
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-slate-900 truncate">
-                        {admin.prenom} {admin.nom}
-                      </h3>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                          admin.etat
-                        )} mt-1`}
-                      >
-                        {getStatusText(admin.etat)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Actions Dropdown */}
-                  <div className="relative group/actions">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                      <MoreVertical size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Card Content */}
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Mail size={14} className="mr-2 text-slate-400" />
-                    <span className="truncate">{admin.email}</span>
-                  </div>
-
-                  {admin.telephone && (
-                    <div className="flex items-center text-sm text-slate-600">
-                      <Phone size={14} className="mr-2 text-slate-400" />
-                      <span>{admin.telephone}</span>
-                    </div>
-                  )}
-
-                  {admin.adresse && (
-                    <div className="flex items-center text-sm text-slate-600">
-                      <MapPin size={14} className="mr-2 text-slate-400" />
-                      <span className="truncate">{admin.adresse}</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Hash size={14} className="mr-2 text-slate-400" />
-                    <span>{admin.id}</span>
-                  </div>
-                </div>
-
-                {/* Card Actions */}
-                <div className="flex items-center justify-end space-x-2 mt-6 pt-4 border-t border-slate-100">
-                  <button
-                    onClick={() => handleViewAdmin(admin)}
-                    className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
-                    title="Voir les détails"
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setModalMode("edit");
-                      setSelectedAdmin(admin);
-                      setShowModal(true);
-                    }}
-                    className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
-                    title="Modifier"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedAdmin(admin);
-                      setShowDeleteConfirm(true);
-                    }}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                    title="Supprimer"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
+                admin={admin}
+                onView={handleViewAdmin}
+                onEdit={handleEditAdmin}
+                onDelete={handleDeleteAdmin}
+              />
             ))}
           </div>
         ) : (
-          // Table View
           <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
@@ -950,9 +848,6 @@ const AdminContent = () => {
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Contact
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      ID
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Statut
@@ -970,57 +865,50 @@ const AdminContent = () => {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="relative flex-shrink-0">
-                            <div className="h-10 w-10 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
-                              <span className="text-white font-medium text-sm">
-                                {getInitials(admin.prenom, admin.nom)}
-                              </span>
-                            </div>
-                            <div className="absolute -bottom-0.5 -right-0.5">
-                              {getStatusIcon(admin.etat)}
-                            </div>
+                          <div className="h-10 w-10 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
+                            <span className="text-white font-medium text-sm">
+                              {`${admin.prenom?.charAt(0) || ""}${
+                                admin.nom?.charAt(0) || ""
+                              }`.toUpperCase()}
+                            </span>
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-semibold text-slate-900">
                               {admin.prenom} {admin.nom}
                             </div>
-                            <div className="text-sm text-slate-500 flex items-center">
-                              <MapPin size={12} className="mr-1" />
-                              {admin.adresse || "Non renseigné"}
+                            <div className="text-sm text-slate-500">
+                              ID: {admin.id}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="space-y-1">
-                          <div className="text-sm text-slate-900 flex items-center">
-                            <Mail size={12} className="mr-2 text-slate-400" />
+                          <div className="text-sm text-slate-900">
                             {admin.email}
                           </div>
                           {admin.telephone && (
-                            <div className="text-sm text-slate-500 flex items-center">
-                              <Phone
-                                size={12}
-                                className="mr-2 text-slate-400"
-                              />
+                            <div className="text-sm text-slate-500">
                               {admin.telephone}
                             </div>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-slate-900">
-                          <Hash size={12} className="mr-1 text-slate-400" />
-                          {admin.id}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                            admin.etat
-                          )}`}
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
+                            admin.etat === "ACTIVE"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : admin.etat === "INACTIVE"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}
                         >
-                          {getStatusText(admin.etat)}
+                          {admin.etat === "ACTIVE"
+                            ? "Actif"
+                            : admin.etat === "INACTIVE"
+                            ? "Inactif"
+                            : "En attente"}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -1028,26 +916,19 @@ const AdminContent = () => {
                           <button
                             onClick={() => handleViewAdmin(admin)}
                             className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
-                            title="Voir les détails"
+                            title="Voir"
                           >
                             <Eye size={16} />
                           </button>
                           <button
-                            onClick={() => {
-                              setModalMode("edit");
-                              setSelectedAdmin(admin);
-                              setShowModal(true);
-                            }}
+                            onClick={() => handleEditAdmin(admin)}
                             className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
                             title="Modifier"
                           >
                             <Edit2 size={16} />
                           </button>
                           <button
-                            onClick={() => {
-                              setSelectedAdmin(admin);
-                              setShowDeleteConfirm(true);
-                            }}
+                            onClick={() => handleDeleteAdmin(admin)}
                             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
                             title="Supprimer"
                           >
@@ -1082,11 +963,7 @@ const AdminContent = () => {
               </p>
               {!searchTerm && filterStatus === "all" && (
                 <button
-                  onClick={() => {
-                    setModalMode("create");
-                    setSelectedAdmin(null);
-                    setShowModal(true);
-                  }}
+                  onClick={handleCreateAdmin}
                   className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto"
                 >
                   <Plus size={20} />
@@ -1126,16 +1003,15 @@ const AdminContent = () => {
         setShowModal={setShowModal}
         modalMode={modalMode}
         selectedAdmin={selectedAdmin}
-        loadData={loadData}
-        setError={setError}
-        setLoading={setLoading}
+        onSuccess={loadData}
+        onError={setError}
       />
 
       <DeleteConfirmationModal
         showDeleteConfirm={showDeleteConfirm}
         setShowDeleteConfirm={setShowDeleteConfirm}
         selectedAdmin={selectedAdmin}
-        handleDelete={handleDelete}
+        onConfirm={handleDelete}
         loading={loading}
       />
 

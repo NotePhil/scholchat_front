@@ -1,5 +1,29 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useCallback, useMemo } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import Modal from "react-modal";
+import {
+  Menu,
+  User,
+  ChevronDown,
+  LogOut,
+  Settings,
+  Phone,
+  Mail,
+} from "lucide-react";
+
+import { useAuth } from "../../../hooks/useAuth";
+import { setLastLocation } from "../../../store/slices/authSlice";
+import {
+  toggleSidebar as toggleSidebarAction,
+  setSidebar,
+  setActiveTab as setActiveTabAction,
+  setLanguage,
+  setMessaging,
+  setBreakpoints,
+  setTheme as setThemeAction,
+} from "../../../store/slices/uiSlice";
+
 import Sidebar from "../components/Sidebar";
 import DashboardContent from "./DashboardContent";
 import ParentsContent from "./content/ParentContent/ParentsContent";
@@ -9,7 +33,6 @@ import ClassesContent from "./content/AllClassesContent/ClassesContent";
 import SettingsContent from "./content/othersContent/SettingsContent";
 import ManageClass from "./ManageClass/ManageClass";
 import MessagingInterface from "./Messsages/MessagingInterface";
-import "../../../CSS/Principal.css";
 import ManageEstablishmentContent from "./content/EstablishmentContent/ManageEstablishmentContent";
 import AdminContent from "./content/AdminContent/AdminContent";
 import StudentsContent from "./content/StudentsContent/StudentsContent";
@@ -21,147 +44,128 @@ import ActivitiesContent from "./content/ActivitiesContent/ActivitiesContent";
 import StudentParentStats from "./shared/StudentParentStats";
 import ParentClassManagement from "./ParentSidebar/ParentClassManagement";
 import ParentClassManagementClass from "./ParentSidebar/ParentClassManagementClass";
-import Modal from "react-modal";
 import NotificationIcon from "./modals/NotificationIcon";
-import {
-  Bell,
-  X,
-  Menu,
-  User,
-  Globe,
-  ChevronDown,
-  LogOut,
-  Settings,
-  Phone,
-  Mail,
-} from "lucide-react";
 import ProfessorCoursesContent from "./content/ProfessorsContent/ProfessorCoursesContent";
 import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgrammerContent";
 import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
 
+import "../../../CSS/Principal.css";
+
 Modal.setAppElement("#root");
 
 const themes = {
-  light: {
-    cardBg: "bg-white",
-    border: "border-gray-200",
-  },
-  dark: {
-    cardBg: "bg-gray-800",
-    border: "border-gray-700",
-  },
+  light: { cardBg: "bg-white", border: "border-gray-200" },
+  dark: { cardBg: "bg-gray-800", border: "border-gray-700" },
 };
 
 const colorSchemes = {
-  blue: {
-    primary: "#4a6da7",
-    light: "#6889c3",
-  },
-  green: {
-    primary: "#2e7d32",
-    light: "#4caf50",
-  },
+  blue: { primary: "#4a6da7", light: "#6889c3" },
+  green: { primary: "#2e7d32", light: "#4caf50" },
 };
 
 const languages = {
-  fr: {
-    name: "Français",
-    flag: "🇫🇷",
-  },
-  en: {
-    name: "English",
-    flag: "🇺🇸",
-  },
+  fr: { name: "Français", flag: "🇫🇷" },
+  en: { name: "English", flag: "🇺🇸" },
 };
 
 const Principal = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
   const { dashboardType } = useParams();
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [isDark, setIsDark] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState("blue");
-  const [userRole, setUserRole] = useState("admin");
-  const [userRoles, setUserRoles] = useState([]);
-  const [showManageClass, setShowManageClass] = useState(false);
-  const [showMessaging, setShowMessaging] = useState(false);
-  const [selectedConversation, setSelectedConversation] = useState(null);
-  const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
-  const [tokenChecked, setTokenChecked] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [isCustomBreakpoint, setIsCustomBreakpoint] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState("fr");
-  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
-  const [showUserProfile, setShowUserProfile] = useState(false);
-  const [userInfo, setUserInfo] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    username: "",
-  });
 
+  const auth = useAuth();
+  const { userRole, userRoles, user, logout } = auth;
+
+  const ui = useSelector((state) => state.ui);
+  const {
+    showSidebar,
+    activeTab,
+    isDark,
+    currentTheme,
+    currentLanguage,
+    showMessaging,
+    selectedConversation,
+    isMobile,
+    isCustomBreakpoint,
+  } = ui;
+
+  const [showManageClass, setShowManageClass] = React.useState(false);
+  const [showTokenExpiredModal, setShowTokenExpiredModal] =
+    React.useState(false);
+  const [showLanguageDropdown, setShowLanguageDropdown] = React.useState(false);
+  const [showUserProfile, setShowUserProfile] = React.useState(false);
+
+  // Handle responsive breakpoints
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
       const customBreakpoint =
         window.innerWidth <= 992 && window.innerWidth > 768;
 
-      setIsMobile(mobile);
-      setIsCustomBreakpoint(customBreakpoint);
+      dispatch(
+        setBreakpoints({
+          isMobile: mobile,
+          isCustomBreakpoint: customBreakpoint,
+        })
+      );
 
       if (mobile || customBreakpoint) {
-        setShowSidebar(false);
+        dispatch(setSidebar(false));
       } else if (window.innerWidth > 992) {
-        setShowSidebar(true);
+        dispatch(setSidebar(true));
       }
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [dispatch]);
 
+  // Save last location
+  useEffect(() => {
+    const currentPath = location.pathname;
+    if (currentPath.includes("/schoolchat/principal")) {
+      localStorage.setItem("lastLocation", currentPath);
+      dispatch(setLastLocation(currentPath));
+    }
+  }, [location.pathname, dispatch]);
+
+  // Token expiration check
   useEffect(() => {
     const checkTokenExpiration = () => {
       const token = localStorage.getItem("accessToken");
       if (!token) {
         setShowTokenExpiredModal(true);
-        setTokenChecked(true);
         return;
       }
 
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
         const expirationTime = payload.exp * 1000;
-        const currentTime = Date.now();
 
-        if (currentTime > expirationTime) {
+        if (Date.now() > expirationTime) {
           setShowTokenExpiredModal(true);
         }
-        setTokenChecked(true);
       } catch (error) {
         setShowTokenExpiredModal(true);
-        setTokenChecked(true);
       }
     };
 
     checkTokenExpiration();
-
     const interval = setInterval(checkTokenExpiration, 5 * 60 * 1000);
-
     return () => clearInterval(interval);
   }, []);
 
+  // Handle 401 responses
   useEffect(() => {
     const originalFetch = window.fetch;
 
     window.fetch = async (...args) => {
       const response = await originalFetch(...args);
-
       if (response.status === 401) {
         setShowTokenExpiredModal(true);
       }
-
       return response;
     };
 
@@ -170,40 +174,39 @@ const Principal = () => {
     };
   }, []);
 
+  // Navigate to appropriate dashboard
   useEffect(() => {
-    if (tokenChecked) {
-      const email = localStorage.getItem("userEmail") || "";
-      const username = localStorage.getItem("username") || "";
-      const decodedTokenStr = localStorage.getItem("decodedToken");
+    if (!userRole) return;
 
-      let name = username;
-      let phone = "";
+    let expectedDashboard;
+    const safeUserRole = userRole || "admin";
 
-      if (decodedTokenStr) {
-        try {
-          const decodedToken = JSON.parse(decodedTokenStr);
-          if (!name && email) {
-            name = email.split("@")[0];
-          }
-          phone = decodedToken.phone || decodedToken.phoneNumber || "";
-        } catch (error) {
-          console.error("Error parsing decoded token:", error);
-        }
-      }
-
-      if (!name && email) {
-        name = email.split("@")[0];
-      }
-
-      setUserInfo({
-        name: name || "User",
-        email: email || "",
-        phone: phone || "",
-        username: username || "",
-      });
+    if (safeUserRole === "admin" || userRoles.includes("ROLE_ADMIN")) {
+      expectedDashboard = "AdminDashboard";
+    } else if (
+      safeUserRole === "professor" ||
+      userRoles.includes("ROLE_PROFESSOR")
+    ) {
+      expectedDashboard = "ProfessorDashboard";
+    } else if (safeUserRole === "parent" || userRoles.includes("ROLE_PARENT")) {
+      expectedDashboard = "ParentDashboard";
+    } else if (
+      safeUserRole === "student" ||
+      userRoles.includes("ROLE_STUDENT")
+    ) {
+      expectedDashboard = "StudentDashboard";
+    } else {
+      expectedDashboard = `${
+        safeUserRole.charAt(0).toUpperCase() + safeUserRole.slice(1)
+      }Dashboard`;
     }
-  }, [tokenChecked]);
 
+    if (!dashboardType) {
+      navigate(`/schoolchat/Principal/${expectedDashboard}`);
+    }
+  }, [dashboardType, navigate, userRole, userRoles]);
+
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".language-dropdown")) {
@@ -218,147 +221,98 @@ const Principal = () => {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("username");
-    localStorage.removeItem("userRoles");
-    localStorage.removeItem("decodedToken");
-    localStorage.removeItem("authResponse");
-    navigate("/schoolchat/login");
-  };
+  const handleTabChange = useCallback(
+    (tab) => {
+      setShowManageClass(false);
+      dispatch(setActiveTabAction(tab));
 
-  useEffect(() => {
-    if (!tokenChecked) return;
-
-    const role = localStorage.getItem("userRole") || "admin";
-    const rolesStr = localStorage.getItem("userRoles");
-    let roles = [];
-
-    try {
-      if (rolesStr) {
-        roles = JSON.parse(rolesStr);
+      if (isMobile || isCustomBreakpoint) {
+        dispatch(setSidebar(false));
       }
-    } catch (error) {
-      console.error("Error parsing user roles:", error);
-    }
+    },
+    [dispatch, isMobile, isCustomBreakpoint]
+  );
 
-    setUserRole(role);
-    setUserRoles(roles);
-
-    const username = localStorage.getItem("username");
-    if (username) {
-      localStorage.setItem("userName", username);
-    }
-
-    let expectedDashboard;
-    if (role === "admin" || roles.includes("ROLE_ADMIN")) {
-      expectedDashboard = "AdminDashboard";
-    } else if (role === "professor" || roles.includes("ROLE_PROFESSOR")) {
-      expectedDashboard = "ProfessorDashboard";
-    } else if (role === "parent" || roles.includes("ROLE_PARENT")) {
-      expectedDashboard = "ParentDashboard";
-    } else if (role === "student" || roles.includes("ROLE_STUDENT")) {
-      expectedDashboard = "StudentDashboard";
-    } else {
-      expectedDashboard = `${
-        role.charAt(0).toUpperCase() + role.slice(1)
-      }Dashboard`;
-    }
-
-    if (!dashboardType) {
-      navigate(`/schoolchat/Principal/${expectedDashboard}`);
-    }
-  }, [dashboardType, navigate, tokenChecked]);
-
-  const handleTabChange = (tab) => {
-    console.log(
-      "Principal: Changing tab to:",
-      tab,
-      "User role:",
-      userRole,
-      "User roles:",
-      userRoles
-    );
-
-    setShowManageClass(false);
-    setActiveTab(tab);
-
-    if (tab === "messages") {
-      setShowMessaging(true);
-    } else {
-      setShowMessaging(false);
-    }
-
-    if (isMobile || isCustomBreakpoint) {
-      setShowSidebar(false);
-    }
-  };
-
-  const handleManageClass = () => {
+  const handleManageClass = useCallback(() => {
     setShowManageClass(true);
-  };
+  }, []);
 
-  const handleBackToClasses = () => {
+  const handleBackToClasses = useCallback(() => {
     setShowManageClass(false);
-  };
+  }, []);
 
-  const toggleSidebar = () => {
-    setShowSidebar(!showSidebar);
-  };
+  const toggleSidebar = useCallback(() => {
+    dispatch(toggleSidebarAction());
+  }, [dispatch]);
 
-  const handleShowMessaging = (conversation = null) => {
-    setShowMessaging(true);
-    setSelectedConversation(conversation);
-  };
+  const handleShowMessaging = useCallback(
+    (conversation = null) => {
+      dispatch(setMessaging({ show: true, conversation }));
+    },
+    [dispatch]
+  );
 
-  const handleCloseMessaging = () => {
-    setShowMessaging(false);
-    setSelectedConversation(null);
-  };
+  const handleCloseMessaging = useCallback(() => {
+    dispatch(setMessaging({ show: false, conversation: null }));
+  }, [dispatch]);
 
-  const isParentOrStudent = () => {
+  const handleLanguageChange = useCallback(
+    (lang) => {
+      dispatch(setLanguage(lang));
+      setShowLanguageDropdown(false);
+    },
+    [dispatch]
+  );
+
+  const handleThemeChange = useCallback(
+    (isDarkMode, theme) => {
+      dispatch(setThemeAction({ isDark: isDarkMode, currentTheme: theme }));
+    },
+    [dispatch]
+  );
+
+  const isParentOrStudent = useMemo(() => {
     return (
       userRoles.includes("ROLE_PARENT") ||
       userRoles.includes("ROLE_STUDENT") ||
       userRole === "parent" ||
       userRole === "student"
     );
-  };
+  }, [userRole, userRoles]);
 
-  const onNavigateToClassesList = () => {
-    setActiveTab("manage-class");
-  };
-  const onNavigateToEstablishmentsList = () => {
-    setActiveTab("manage-establishment");
-  };
-  const handleLanguageChange = (lang) => {
-    setCurrentLanguage(lang);
-    setShowLanguageDropdown(false);
-    console.log("Language changed to:", lang);
-  };
+  const onNavigateToClassesList = useCallback(() => {
+    dispatch(setActiveTabAction("manage-class"));
+  }, [dispatch]);
 
-  const renderContent = () => {
-    const contentProps = {
+  const onNavigateToEstablishmentsList = useCallback(() => {
+    dispatch(setActiveTabAction("manage-establishment"));
+  }, [dispatch]);
+
+  const contentProps = useMemo(
+    () => ({
       isDark,
       currentTheme,
       themes,
       colorSchemes,
-      userRole,
-      userRoles,
+      userRole: userRole || "admin",
+      userRoles: userRoles || [],
       onManageClass: handleManageClass,
       onShowMessaging: handleShowMessaging,
-    };
+    }),
+    [
+      isDark,
+      currentTheme,
+      userRole,
+      userRoles,
+      handleManageClass,
+      handleShowMessaging,
+    ]
+  );
 
-    console.log("Rendering content for activeTab:", activeTab);
-
+  const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return isParentOrStudent() ? (
+        return isParentOrStudent ? (
           <StudentParentStats {...contentProps} />
         ) : (
           <DashboardContent {...contentProps} />
@@ -370,7 +324,6 @@ const Principal = () => {
       case "professors":
         return <ProfessorsContent {...contentProps} />;
       case "motifs-de-rejet":
-        console.log("Rendering MotifsDeRejet for user:", userRole, userRoles);
         return <MotifsDeRejet {...contentProps} />;
       case "parents":
         return <ParentsContent {...contentProps} />;
@@ -379,13 +332,10 @@ const Principal = () => {
       case "others":
         return <OthersContent {...contentProps} />;
       case "create-course":
-        console.log("Rendering ProfessorCoursesContent");
         return <ProfessorCoursesContent {...contentProps} />;
       case "schedule-course":
-        console.log("Rendering CoursProgrammerContent");
         return <CoursProgrammerContent {...contentProps} />;
       case "manage-exercises":
-        console.log("Rendering ManageExercisesContent");
         return <ManageExercisesContent {...contentProps} />;
       case "classes":
         if (userRole === "parent" || userRoles.includes("ROLE_PARENT")) {
@@ -405,7 +355,7 @@ const Principal = () => {
         return (
           <CreateClassContent
             {...contentProps}
-            setActiveTab={setActiveTab}
+            setActiveTab={handleTabChange}
             onNavigateToClassesList={onNavigateToClassesList}
           />
         );
@@ -415,7 +365,7 @@ const Principal = () => {
         return (
           <CreateEstablishmentContent
             {...contentProps}
-            setActiveTab={setActiveTab}
+            setActiveTab={handleTabChange}
             onNavigateToManage={onNavigateToEstablishmentsList}
           />
         );
@@ -431,15 +381,14 @@ const Principal = () => {
         return (
           <SettingsContent
             isDark={isDark}
-            setIsDark={setIsDark}
+            setIsDark={(val) => handleThemeChange(val, currentTheme)}
             currentTheme={currentTheme}
-            setCurrentTheme={setCurrentTheme}
+            setCurrentTheme={(val) => handleThemeChange(isDark, val)}
             userRoles={userRoles}
           />
         );
       default:
-        console.log("Default case - rendering default content");
-        return isParentOrStudent() ? (
+        return isParentOrStudent ? (
           <StudentParentStats {...contentProps} />
         ) : (
           <DashboardContent {...contentProps} />
@@ -448,34 +397,44 @@ const Principal = () => {
   };
 
   const getTabDisplayName = () => {
+    const safeUserRole = userRole || "admin";
+
     if (
       activeTab === "dashboard" &&
-      (userRole === "professor" || userRole === "repetiteur")
+      (safeUserRole === "professor" || safeUserRole === "repetiteur")
     ) {
       return "Activities";
     }
-    if (activeTab === "dashboard" && isParentOrStudent()) {
-      return userRole === "student"
+    if (activeTab === "dashboard" && isParentOrStudent) {
+      return safeUserRole === "student"
         ? "Mon Tableau de Bord"
         : "Tableau de Bord Parent";
     }
-    if (activeTab === "messages") return "Messages";
-    if (activeTab === "admin") return "Gérer Administrateurs";
-    if (activeTab === "professors") return "Gérer Professeurs";
-    if (activeTab === "motifs-de-rejet") return "Motifs de Rejet";
-    if (activeTab === "parents") return "Gérer Parents";
-    if (activeTab === "students") return "Gérer Élèves";
-    if (activeTab === "others") return "Gérer Autres Utilisateurs";
-    if (activeTab === "activities") return "Activités";
-    if (activeTab === "create-course") return "Gérer les Cours";
-    if (activeTab === "schedule-course") return "Programmer le Cours";
-    if (activeTab === "manage-exercises") return "Gérer les Exercices";
-    if (activeTab === "create-class") return "Créer une Classe";
-    if (activeTab === "manage-class") return "Gérer une Classe";
-    if (activeTab === "create-establishment") return "Créer un Établissement";
-    if (activeTab === "manage-establishment") return "Gérer un Établissement";
 
-    return activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
+    const tabNames = {
+      messages: "Messages",
+      admin: "Gérer Administrateurs",
+      professors: "Gérer Professeurs",
+      "motifs-de-rejet": "Motifs de Rejet",
+      parents: "Gérer Parents",
+      students: "Gérer Élèves",
+      others: "Gérer Autres Utilisateurs",
+      activities: "Activités",
+      "create-course": "Gérer les Cours",
+      "schedule-course": "Programmer le Cours",
+      "manage-exercises": "Gérer les Exercices",
+      "create-class": "Créer une Classe",
+      "manage-class": "Gérer une Classe",
+      "create-establishment": "Créer un Établissement",
+      "manage-establishment": "Gérer un Établissement",
+    };
+
+    return (
+      tabNames[activeTab] ||
+      (activeTab
+        ? activeTab.charAt(0).toUpperCase() + activeTab.slice(1)
+        : "Dashboard")
+    );
   };
 
   return (
@@ -483,7 +442,7 @@ const Principal = () => {
       {showSidebar && (isMobile || isCustomBreakpoint) && (
         <div
           className="sidebar-overlay"
-          onClick={() => setShowSidebar(false)}
+          onClick={() => dispatch(setSidebar(false))}
         />
       )}
 
@@ -503,7 +462,7 @@ const Principal = () => {
             continuer.
           </p>
           <div className="modal-actions">
-            <button onClick={handleLogout} className="logout-button">
+            <button onClick={logout} className="logout-button">
               Se reconnecter
             </button>
           </div>
@@ -518,8 +477,8 @@ const Principal = () => {
         currentTheme={currentTheme}
         themes={themes}
         colorSchemes={colorSchemes}
-        userRole={userRole}
-        userRoles={userRoles}
+        userRole={userRole || "admin"}
+        userRoles={userRoles || []}
         onShowMessaging={handleShowMessaging}
         toggleSidebar={toggleSidebar}
       />
@@ -578,7 +537,7 @@ const Principal = () => {
                   <User size={20} />
                 </div>
                 <div className="user-info">
-                  <span className="user-name">{userInfo.name}</span>
+                  <span className="user-name">{user?.name || "User"}</span>
                 </div>
                 <ChevronDown size={16} />
               </button>
@@ -589,27 +548,27 @@ const Principal = () => {
                       <User size={32} />
                     </div>
                     <div className="user-details">
-                      <h4>{userInfo.name}</h4>
-                      <p className="user-role-text">{userRole}</p>
+                      <h4>{user?.name || "User"}</h4>
+                      <p className="user-role-text">{userRole || "admin"}</p>
                     </div>
                   </div>
                   <div className="user-profile-info">
-                    {userInfo.email && (
+                    {user?.email && (
                       <div className="info-item">
                         <Mail size={16} />
-                        <span>{userInfo.email}</span>
+                        <span>{user.email}</span>
                       </div>
                     )}
-                    {userInfo.phone && (
+                    {user?.phone && (
                       <div className="info-item">
                         <Phone size={16} />
-                        <span>{userInfo.phone}</span>
+                        <span>{user.phone}</span>
                       </div>
                     )}
-                    {userInfo.username && (
+                    {user?.username && (
                       <div className="info-item">
                         <User size={16} />
-                        <span>{userInfo.username}</span>
+                        <span>{user.username}</span>
                       </div>
                     )}
                   </div>
@@ -617,7 +576,7 @@ const Principal = () => {
                     <button
                       className="profile-action-btn"
                       onClick={() => {
-                        setActiveTab("settings");
+                        handleTabChange("settings");
                         setShowUserProfile(false);
                       }}
                     >
@@ -626,7 +585,7 @@ const Principal = () => {
                     </button>
                     <button
                       className="profile-action-btn logout"
-                      onClick={handleLogout}
+                      onClick={logout}
                     >
                       <LogOut size={16} />
                       <span>Logout</span>
@@ -656,7 +615,7 @@ const Principal = () => {
             isDark={isDark}
             currentTheme={currentTheme}
             colorSchemes={colorSchemes}
-            userRole={userRole}
+            userRole={userRole || "admin"}
           />
         </div>
       )}

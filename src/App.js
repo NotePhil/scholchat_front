@@ -1,5 +1,7 @@
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { Provider } from "react-redux";
+import { store } from "./store/store";
 import { Layout } from "./components/common/Layout";
 import { Home } from "./pages/Home";
 import { BlogSinglePage } from "./components/common/BlogSinglePage";
@@ -8,15 +10,8 @@ import { Courses } from "./pages/Courses";
 import { Blog } from "./pages/Blog";
 import { Instructor } from "./pages/Instructor";
 import FunctionalitiesSection from "./pages/FunctionalitiesSection";
-
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
-// import ProfessorPage from "./pages/Dashbaord/ProfessorPage";
-// import StudentPage from "./pages/Dashbaord/StudentPage";
-// import ParentPage from "./pages/Dashbaord/ParentPage";
-// import ClassesPage from "./pages/Dashbaord/ClassesPage";
-
-// import ActivityFeed from "./pages/Dashbaord/components/StudentDashboard/ActivityFeed";
 import AccountActivation from "./pages/AccountActivation";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -27,7 +22,6 @@ import ManageClass from "./pages/Dashbaord/principale/ManageClass/ManageClass";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 
-// Scroll to top on route change
 function ScrollToTop() {
   const { pathname } = useLocation();
 
@@ -42,143 +36,117 @@ function App() {
   const [theme, setTheme] = useState("default");
 
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ScrollToTop />
-        <Routes>
-          {/* Public Routes */}
-          <Route
-            path="/"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <Home theme={theme} />
-              </Layout>
-            }
-          />
-          <Route
-            path="/schoolchat/about"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <About theme={theme} />
-              </Layout>
-            }
-          />
-          <Route
-            path="/schoolchat/courses"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <Courses theme={theme} />
-              </Layout>
-            }
-          />
-          <Route
-            path="/schoolchat/instructor"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <Instructor theme={theme} />
-              </Layout>
-            }
-          />
-          <Route
-            path="/schoolchat/blog"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <Blog theme={theme} />
-              </Layout>
-            }
-          />
-          <Route
-            path="/schoolchat/single-blog"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <BlogSinglePage theme={theme} />
-              </Layout>
-            }
-          />
-          <Route
-            path="/schoolchat/functionalities"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <FunctionalitiesSection theme={theme} />
-              </Layout>
-            }
-          />
-          <Route
-            path="/schoolchat/login"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <Login theme={theme} />
-              </Layout>
-            }
-          />
-          <Route
-            path="/schoolchat/signup"
-            element={
-              <Layout theme={theme} setTheme={setTheme}>
-                <SignUp theme={theme} />
-              </Layout>
-            }
-          />
-          <Route path="/schoolchat/PasswordPage" element={<PasswordPage />} />
-          <Route
-            path="/schoolchat/account-activation"
-            element={<AccountActivation />}
-          />
-          <Route path="/schoolchat/verify-email" element={<VerifyEmail />} />
-          <Route
-            path="/schoolchat/forgot-password"
-            element={<ForgotPassword />}
-          />
-          <Route
-            path="/schoolchat/reset-password"
-            element={<ResetPassword />}
-          />
-
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            {/* <Route
-              path="/schoolchat/activity"
-              element={
-                <Layout theme={theme} setTheme={setTheme}>
-                  <ActivityFeed theme={theme} />
-                </Layout>
-              }
-            /> */}
-
-            {/* <Route path="/schoolchat/parents" element={<ParentPage />} /> */}
-            {/* <Route path="/schoolchat/classes" element={<ClassesPage />} /> */}
-
+    <Provider store={store}>
+      <BrowserRouter>
+        <AuthProvider>
+          <ScrollToTop />
+          <Routes>
             <Route
-              path="/schoolchat/manage-class"
+              path="/"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <ManageClass theme={theme} />
+                  <Home theme={theme} />
                 </Layout>
               }
             />
-
-            {/* Role-based routes */}
-            {/* <Route path="/schoolchat/student" element={<StudentPage />}>
-              <Route index element={<StudentDashboard />} />
-            </Route> */}
-
-            {/* <Route path="/schoolchat/professor" element={<ProfessorPage />}>
-              <Route index element={<ProfessorDashboard />} />
-            </Route> */}
-
-            {/* <Route path="/schoolchat/parent" element={<ParentPage />}>
-              <Route index element={<ParentDashboard />} />
-            </Route> */}
-
-            <Route path="/schoolchat/principal" element={<Principal />} />
             <Route
-              path="/schoolchat/principal/:dashboardType"
-              element={<Principal />}
+              path="/schoolchat/about"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <About theme={theme} />
+                </Layout>
+              }
             />
-          </Route>
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+            <Route
+              path="/schoolchat/courses"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <Courses theme={theme} />
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/instructor"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <Instructor theme={theme} />
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/blog"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <Blog theme={theme} />
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/single-blog"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <BlogSinglePage theme={theme} />
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/functionalities"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <FunctionalitiesSection theme={theme} />
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/login"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <Login theme={theme} />
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/signup"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <SignUp theme={theme} />
+                </Layout>
+              }
+            />
+            <Route path="/schoolchat/PasswordPage" element={<PasswordPage />} />
+            <Route
+              path="/schoolchat/account-activation"
+              element={<AccountActivation />}
+            />
+            <Route path="/schoolchat/verify-email" element={<VerifyEmail />} />
+            <Route
+              path="/schoolchat/forgot-password"
+              element={<ForgotPassword />}
+            />
+            <Route
+              path="/schoolchat/reset-password"
+              element={<ResetPassword />}
+            />
+
+            <Route element={<ProtectedRoute />}>
+              <Route
+                path="/schoolchat/manage-class"
+                element={
+                  <Layout theme={theme} setTheme={setTheme}>
+                    <ManageClass theme={theme} />
+                  </Layout>
+                }
+              />
+              <Route path="/schoolchat/principal" element={<Principal />} />
+              <Route
+                path="/schoolchat/principal/:dashboardType"
+                element={<Principal />}
+              />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </Provider>
   );
 }
 
