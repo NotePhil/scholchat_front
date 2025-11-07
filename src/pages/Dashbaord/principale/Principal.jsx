@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import Modal from "react-modal";
@@ -12,8 +12,10 @@ import {
   Mail,
 } from "lucide-react";
 
-import { useAuth } from "../../../hooks/useAuth";
-import { setLastLocation } from "../../../store/slices/authSlice";
+import {
+  setLastLocation,
+  logout as logoutAction,
+} from "../../../store/slices/authSlice";
 import {
   toggleSidebar as toggleSidebarAction,
   setSidebar,
@@ -74,8 +76,8 @@ const Principal = () => {
   const dispatch = useDispatch();
   const { dashboardType } = useParams();
 
-  const auth = useAuth();
-  const { userRole, userRoles, user, logout } = auth;
+  const auth = useSelector((state) => state.auth);
+  const { userRole, userRoles, user } = auth;
 
   const ui = useSelector((state) => state.ui);
   const {
@@ -90,13 +92,28 @@ const Principal = () => {
     isCustomBreakpoint,
   } = ui;
 
-  const [showManageClass, setShowManageClass] = React.useState(false);
-  const [showTokenExpiredModal, setShowTokenExpiredModal] =
-    React.useState(false);
-  const [showLanguageDropdown, setShowLanguageDropdown] = React.useState(false);
-  const [showUserProfile, setShowUserProfile] = React.useState(false);
+  const [showManageClass, setShowManageClass] = useState(false);
+  const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
-  // Handle responsive breakpoints
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("username");
+    localStorage.removeItem("userRoles");
+    localStorage.removeItem("decodedToken");
+    localStorage.removeItem("authResponse");
+    localStorage.removeItem("lastLocation");
+
+    dispatch(logoutAction());
+    navigate("/schoolchat/login");
+  }, [dispatch, navigate]);
+
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
@@ -122,7 +139,6 @@ const Principal = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, [dispatch]);
 
-  // Save last location
   useEffect(() => {
     const currentPath = location.pathname;
     if (currentPath.includes("/schoolchat/principal")) {
@@ -131,7 +147,6 @@ const Principal = () => {
     }
   }, [location.pathname, dispatch]);
 
-  // Token expiration check
   useEffect(() => {
     const checkTokenExpiration = () => {
       const token = localStorage.getItem("accessToken");
@@ -157,7 +172,6 @@ const Principal = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Handle 401 responses
   useEffect(() => {
     const originalFetch = window.fetch;
 
@@ -174,7 +188,6 @@ const Principal = () => {
     };
   }, []);
 
-  // Navigate to appropriate dashboard
   useEffect(() => {
     if (!userRole) return;
 
@@ -206,7 +219,6 @@ const Principal = () => {
     }
   }, [dashboardType, navigate, userRole, userRoles]);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".language-dropdown")) {
@@ -462,7 +474,7 @@ const Principal = () => {
             continuer.
           </p>
           <div className="modal-actions">
-            <button onClick={logout} className="logout-button">
+            <button onClick={handleLogout} className="logout-button">
               Se reconnecter
             </button>
           </div>
@@ -585,7 +597,7 @@ const Principal = () => {
                     </button>
                     <button
                       className="profile-action-btn logout"
-                      onClick={logout}
+                      onClick={handleLogout}
                     >
                       <LogOut size={16} />
                       <span>Logout</span>
