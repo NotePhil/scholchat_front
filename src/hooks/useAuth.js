@@ -72,28 +72,30 @@ export const useAuth = () => {
         normalizedRole.replace("ROLE_", ""),
       ];
 
+      // Check primary role
       if (authState.userRole) {
         const normalizedUserRole = authState.userRole.toUpperCase();
         if (
           roleVariants.some(
             (variant) =>
               normalizedUserRole === variant ||
-              normalizedUserRole === variant.replace("ROLE_", "") ||
-              normalizedUserRole.includes(variant)
+              normalizedUserRole === `ROLE_${variant}` ||
+              normalizedUserRole === variant.replace("ROLE_", "")
           )
         ) {
           return true;
         }
       }
 
+      // Check roles array
       if (authState.userRoles && authState.userRoles.length > 0) {
         return authState.userRoles.some((role) => {
           const normalizedArrayRole = String(role).toUpperCase();
           return roleVariants.some(
             (variant) =>
               normalizedArrayRole === variant ||
-              normalizedArrayRole === variant.replace("ROLE_", "") ||
-              normalizedArrayRole.includes(variant)
+              normalizedArrayRole === `ROLE_${variant}` ||
+              normalizedArrayRole === variant.replace("ROLE_", "")
           );
         });
       }
@@ -119,67 +121,45 @@ export const useAuth = () => {
     [hasRole]
   );
 
+  // Check roles based on backend format: ROLE_ADMIN, ROLE_PROFESSOR, etc.
   const isAdmin = useMemo(() => {
-    return hasAnyRole([
-      "ADMIN",
-      "ROLE_ADMIN",
-      "SUPER_ADMIN",
-      "ROLE_SUPER_ADMIN",
-    ]);
-  }, [hasAnyRole]);
+    return hasRole("ADMIN");
+  }, [hasRole]);
 
   const isProfessor = useMemo(() => {
-    return hasAnyRole([
-      "PROFESSOR",
-      "ROLE_PROFESSOR",
-      "PROFESSEUR",
-      "ROLE_PROFESSEUR",
-      "REPETITEUR",
-      "ROLE_REPETITEUR",
-    ]);
-  }, [hasAnyRole]);
+    return hasRole("PROFESSOR");
+  }, [hasRole]);
 
   const isParent = useMemo(() => {
-    return hasAnyRole(["PARENT", "ROLE_PARENT"]);
-  }, [hasAnyRole]);
+    return hasRole("PARENT");
+  }, [hasRole]);
 
   const isStudent = useMemo(() => {
-    return hasAnyRole(["STUDENT", "ROLE_STUDENT", "ELEVE", "ROLE_ELEVE"]);
-  }, [hasAnyRole]);
+    return hasRole("STUDENT");
+  }, [hasRole]);
+
+  const isTutor = useMemo(() => {
+    return hasRole("TUTOR");
+  }, [hasRole]);
 
   const isParentOrStudent = useMemo(() => {
     return isParent || isStudent;
   }, [isParent, isStudent]);
 
-  // Clean display name for the role
-  const displayRole = useMemo(() => {
-    if (!authState.userRole) {
-      if (authState.userRoles && authState.userRoles.length > 0) {
-        const firstRole = authState.userRoles[0];
-        return getCleanRoleName(firstRole);
-      }
-      return null;
-    }
-
-    return getCleanRoleName(authState.userRole);
-  }, [authState.userRole, authState.userRoles]);
-
-  // Helper function to get clean role name
-  const getCleanRoleName = (role) => {
+  // Helper function to get clean display name from ROLE_* format
+  const getCleanRoleName = useCallback((role) => {
     if (!role) return null;
 
+    // Remove ROLE_ prefix and normalize
     const cleanRole = role.toUpperCase().replace("ROLE_", "");
 
+    // Map to display names
     const roleDisplayMap = {
       ADMIN: "Admin",
-      SUPER_ADMIN: "Super Admin",
       PROFESSOR: "Professor",
-      PROFESSEUR: "Professor",
-      REPETITEUR: "Professor",
       PARENT: "Parent",
-      PARENTS: "Parent",
       STUDENT: "Student",
-      ELEVE: "Student",
+      TUTOR: "Tutor",
       USER: "User",
     };
 
@@ -187,32 +167,30 @@ export const useAuth = () => {
       roleDisplayMap[cleanRole] ||
       cleanRole.charAt(0).toUpperCase() + cleanRole.slice(1).toLowerCase()
     );
-  };
+  }, []);
 
-  const normalizedUserRole = useMemo(() => {
+  // Clean display name for the role
+  const displayRole = useMemo(() => {
     if (!authState.userRole) {
       if (authState.userRoles && authState.userRoles.length > 0) {
-        const firstRole = authState.userRoles[0]
-          .toLowerCase()
-          .replace("role_", "");
-        const roleMap = {
-          professeur: "professor",
-          eleve: "student",
-          repetiteur: "professor",
-        };
-        return roleMap[firstRole] || firstRole;
+        return getCleanRoleName(authState.userRoles[0]);
       }
       return null;
     }
 
-    const role = authState.userRole.toLowerCase().replace("role_", "");
-    const roleMap = {
-      professeur: "professor",
-      eleve: "student",
-      repetiteur: "professor",
-    };
+    return getCleanRoleName(authState.userRole);
+  }, [authState.userRole, authState.userRoles, getCleanRoleName]);
 
-    return roleMap[role] || role;
+  // Normalized role for internal use (lowercase without ROLE_ prefix)
+  const normalizedUserRole = useMemo(() => {
+    if (!authState.userRole) {
+      if (authState.userRoles && authState.userRoles.length > 0) {
+        return authState.userRoles[0].toLowerCase().replace("role_", "");
+      }
+      return null;
+    }
+
+    return authState.userRole.toLowerCase().replace("role_", "");
   }, [authState.userRole, authState.userRoles]);
 
   return {
@@ -228,10 +206,11 @@ export const useAuth = () => {
     isProfessor,
     isParent,
     isStudent,
+    isTutor,
     isParentOrStudent,
-    displayRole,
-    normalizedUserRole,
-    userRole: authState.userRole,
+    displayRole, // "Admin", "Professor", "Parent", "Student"
+    normalizedUserRole, // "admin", "professor", "parent", "student"
+    userRole: authState.userRole, // "ROLE_ADMIN", "ROLE_PROFESSOR", etc.
     userRoles: authState.userRoles || [],
   };
 };

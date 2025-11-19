@@ -18,6 +18,7 @@ import {
   FileText,
   ClipboardList,
 } from "lucide-react";
+import { useAuth } from "../../../hooks/useAuth";
 
 const Sidebar = ({
   showSidebar,
@@ -27,8 +28,6 @@ const Sidebar = ({
   currentTheme,
   themes,
   colorSchemes,
-  userRole,
-  userRoles,
   onShowMessaging,
   toggleSidebar,
 }) => {
@@ -41,6 +40,18 @@ const Sidebar = ({
     courses: false,
     exercises: false,
   });
+
+  // Use the useAuth hook for clean role handling
+  const {
+    displayRole,
+    normalizedUserRole,
+    isAdmin,
+    isProfessor,
+    isParent,
+    isStudent,
+    isParentOrStudent,
+    isTutor,
+  } = useAuth();
 
   useEffect(() => {
     const coursesTabs = ["create-course", "schedule-course"];
@@ -66,27 +77,6 @@ const Sidebar = ({
     });
   };
 
-  const isAdmin = () => {
-    return userRoles.includes("ROLE_ADMIN") || userRole === "admin";
-  };
-
-  const isProfessor = () => {
-    return (
-      userRoles.includes("ROLE_PROFESSOR") ||
-      userRole === "professor" ||
-      userRole === "repetiteur"
-    );
-  };
-
-  const isParentOrStudent = () => {
-    return (
-      userRoles.includes("ROLE_PARENT") ||
-      userRoles.includes("ROLE_STUDENT") ||
-      userRole === "parent" ||
-      userRole === "student"
-    );
-  };
-
   const getMenuItems = () => {
     const baseItems = [
       { name: "Tableau de Bord", icon: Menu, tab: "dashboard" },
@@ -95,7 +85,7 @@ const Sidebar = ({
 
     let roleItems = [];
 
-    if (isAdmin()) {
+    if (isAdmin) {
       roleItems = [
         {
           name: "Gérer Utilisateur",
@@ -138,7 +128,7 @@ const Sidebar = ({
           tab: "messages",
         },
       ];
-    } else if (isProfessor()) {
+    } else if (isProfessor || isTutor) {
       roleItems = [
         {
           name: "Gérer les Cours",
@@ -179,7 +169,7 @@ const Sidebar = ({
           tab: "messages",
         },
       ];
-    } else if (isParentOrStudent()) {
+    } else if (isParentOrStudent) {
       roleItems = [
         {
           name: "Exercices",
@@ -219,15 +209,6 @@ const Sidebar = ({
   const menuItems = getMenuItems();
 
   const handleTabChange = (tab) => {
-    console.log(
-      "Sidebar: Changing tab to:",
-      tab,
-      "User role:",
-      userRole,
-      "User roles:",
-      userRoles
-    );
-
     setActiveTab(tab);
 
     if (tab === "messages" && onShowMessaging) {
@@ -288,9 +269,7 @@ const Sidebar = ({
               >
                 ScholChat
               </h2>
-              <p className="user-role text-sm">
-                {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-              </p>
+              <p className="user-role text-sm">{displayRole || "User"}</p>
             </div>
             <button
               className="sidebar-close-btn"

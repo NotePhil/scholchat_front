@@ -26,6 +26,7 @@ import {
   setTheme as setThemeAction,
 } from "../../../store/slices/uiSlice";
 
+import { useAuth } from "../../../hooks/useAuth";
 import Sidebar from "../components/Sidebar";
 import DashboardContent from "./DashboardContent";
 import ParentsContent from "./content/ParentContent/ParentsContent";
@@ -76,8 +77,18 @@ const Principal = () => {
   const dispatch = useDispatch();
   const { dashboardType } = useParams();
 
-  const auth = useSelector((state) => state.auth);
-  const { userRole, userRoles, user } = auth;
+  // Use the useAuth hook for clean role handling
+  const {
+    user,
+    displayRole,
+    normalizedUserRole,
+    isAdmin,
+    isProfessor,
+    isParent,
+    isStudent,
+    isParentOrStudent,
+    hasRole,
+  } = useAuth();
 
   const ui = useSelector((state) => state.ui);
   const {
@@ -189,35 +200,36 @@ const Principal = () => {
   }, []);
 
   useEffect(() => {
-    if (!userRole) return;
+    if (!normalizedUserRole) return;
 
     let expectedDashboard;
-    const safeUserRole = userRole || "admin";
 
-    if (safeUserRole === "admin" || userRoles.includes("ROLE_ADMIN")) {
+    if (isAdmin) {
       expectedDashboard = "AdminDashboard";
-    } else if (
-      safeUserRole === "professor" ||
-      userRoles.includes("ROLE_PROFESSOR")
-    ) {
+    } else if (isProfessor) {
       expectedDashboard = "ProfessorDashboard";
-    } else if (safeUserRole === "parent" || userRoles.includes("ROLE_PARENT")) {
+    } else if (isParent) {
       expectedDashboard = "ParentDashboard";
-    } else if (
-      safeUserRole === "student" ||
-      userRoles.includes("ROLE_STUDENT")
-    ) {
+    } else if (isStudent) {
       expectedDashboard = "StudentDashboard";
     } else {
       expectedDashboard = `${
-        safeUserRole.charAt(0).toUpperCase() + safeUserRole.slice(1)
+        normalizedUserRole.charAt(0).toUpperCase() + normalizedUserRole.slice(1)
       }Dashboard`;
     }
 
     if (!dashboardType) {
       navigate(`/schoolchat/Principal/${expectedDashboard}`);
     }
-  }, [dashboardType, navigate, userRole, userRoles]);
+  }, [
+    dashboardType,
+    navigate,
+    normalizedUserRole,
+    isAdmin,
+    isProfessor,
+    isParent,
+    isStudent,
+  ]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -283,15 +295,6 @@ const Principal = () => {
     [dispatch]
   );
 
-  const isParentOrStudent = useMemo(() => {
-    return (
-      userRoles.includes("ROLE_PARENT") ||
-      userRoles.includes("ROLE_STUDENT") ||
-      userRole === "parent" ||
-      userRole === "student"
-    );
-  }, [userRole, userRoles]);
-
   const onNavigateToClassesList = useCallback(() => {
     dispatch(setActiveTabAction("manage-class"));
   }, [dispatch]);
@@ -306,16 +309,14 @@ const Principal = () => {
       currentTheme,
       themes,
       colorSchemes,
-      userRole: userRole || "admin",
-      userRoles: userRoles || [],
+      userRole: normalizedUserRole || "admin",
       onManageClass: handleManageClass,
       onShowMessaging: handleShowMessaging,
     }),
     [
       isDark,
       currentTheme,
-      userRole,
-      userRoles,
+      normalizedUserRole,
       handleManageClass,
       handleShowMessaging,
     ]
@@ -350,12 +351,9 @@ const Principal = () => {
       case "manage-exercises":
         return <ManageExercisesContent {...contentProps} />;
       case "classes":
-        if (userRole === "parent" || userRoles.includes("ROLE_PARENT")) {
+        if (isParent) {
           return <ParentClassManagementClass {...contentProps} />;
-        } else if (
-          userRole === "student" ||
-          userRoles.includes("ROLE_STUDENT")
-        ) {
+        } else if (isStudent) {
           return <ParentClassManagement {...contentProps} />;
         }
         return showManageClass ? (
@@ -396,7 +394,6 @@ const Principal = () => {
             setIsDark={(val) => handleThemeChange(val, currentTheme)}
             currentTheme={currentTheme}
             setCurrentTheme={(val) => handleThemeChange(isDark, val)}
-            userRoles={userRoles}
           />
         );
       default:
@@ -409,18 +406,14 @@ const Principal = () => {
   };
 
   const getTabDisplayName = () => {
-    const safeUserRole = userRole || "admin";
-
     if (
       activeTab === "dashboard" &&
-      (safeUserRole === "professor" || safeUserRole === "repetiteur")
+      (normalizedUserRole === "professor" || normalizedUserRole === "tutor")
     ) {
       return "Activities";
     }
     if (activeTab === "dashboard" && isParentOrStudent) {
-      return safeUserRole === "student"
-        ? "Mon Tableau de Bord"
-        : "Tableau de Bord Parent";
+      return isStudent ? "Mon Tableau de Bord" : "Tableau de Bord Parent";
     }
 
     const tabNames = {
@@ -489,8 +482,6 @@ const Principal = () => {
         currentTheme={currentTheme}
         themes={themes}
         colorSchemes={colorSchemes}
-        userRole={userRole || "admin"}
-        userRoles={userRoles || []}
         onShowMessaging={handleShowMessaging}
         toggleSidebar={toggleSidebar}
       />
@@ -561,7 +552,7 @@ const Principal = () => {
                     </div>
                     <div className="user-details">
                       <h4>{user?.name || "User"}</h4>
-                      <p className="user-role-text">{userRole || "admin"}</p>
+                      <p className="user-role-text">{displayRole || "User"}</p>
                     </div>
                   </div>
                   <div className="user-profile-info">
@@ -627,7 +618,7 @@ const Principal = () => {
             isDark={isDark}
             currentTheme={currentTheme}
             colorSchemes={colorSchemes}
-            userRole={userRole || "admin"}
+            userRole={normalizedUserRole || "admin"}
           />
         </div>
       )}

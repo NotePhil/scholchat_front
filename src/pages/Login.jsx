@@ -110,13 +110,14 @@ export const Login = () => {
         throw new Error("Erreur d'authentification: ID utilisateur invalide");
       }
 
-      // Extract roles from token - KEEP ORIGINAL FORMAT
+      // Extract roles from token - roles come as array from backend
       let userRoles = [];
       let primaryRole = null;
 
       if (Array.isArray(decodedToken.roles) && decodedToken.roles.length > 0) {
+        // Backend sends roles like ["ROLE_USER", "ROLE_PROFESSOR"]
         userRoles = decodedToken.roles;
-        // Get the most specific role (usually the second one if there are multiple)
+        // Get the specific role (usually second one if there are multiple)
         primaryRole =
           decodedToken.roles.length > 1
             ? decodedToken.roles[1]
@@ -124,46 +125,10 @@ export const Login = () => {
       } else if (decodedToken.role) {
         primaryRole = decodedToken.role;
         userRoles = [decodedToken.role];
-      } else if (
-        decodedToken.authorities &&
-        Array.isArray(decodedToken.authorities)
-      ) {
+      } else if (Array.isArray(decodedToken.authorities)) {
         userRoles = decodedToken.authorities;
         primaryRole = decodedToken.authorities[0];
-      } else if (decodedToken.userType) {
-        primaryRole = decodedToken.userType;
-        userRoles = [decodedToken.userType];
-      } else if (authData.userType) {
-        primaryRole = authData.userType;
-        userRoles = [authData.userType];
       }
-
-      // Normalize role to ensure it has ROLE_ prefix if needed
-      const normalizeRole = (role) => {
-        if (!role) return null;
-        const upperRole = role.toUpperCase();
-        if (upperRole.startsWith("ROLE_")) {
-          return upperRole;
-        }
-        // Map common role names
-        const roleMap = {
-          ADMIN: "ROLE_ADMIN",
-          PROFESSOR: "ROLE_PROFESSOR",
-          PROFESSEUR: "ROLE_PROFESSOR",
-          PROFESSEURS: "ROLE_PROFESSOR",
-          PARENT: "ROLE_PARENT",
-          PARENTS: "ROLE_PARENT",
-          STUDENT: "ROLE_STUDENT",
-          ELEVE: "ROLE_STUDENT",
-          UTILISATEURS: "ROLE_STUDENT",
-          USER: "ROLE_USER",
-        };
-        return roleMap[upperRole] || `ROLE_${upperRole}`;
-      };
-
-      // Normalize primary role and roles array
-      primaryRole = normalizeRole(primaryRole);
-      userRoles = userRoles.map((role) => normalizeRole(role)).filter(Boolean);
 
       console.log("Primary Role:", primaryRole);
       console.log("User Roles:", userRoles);
@@ -193,12 +158,12 @@ export const Login = () => {
       localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
       localStorage.setItem("authResponse", JSON.stringify(authData));
 
-      // Dispatch to Redux
+      // Dispatch to Redux with exact role format from backend
       const credentials = {
         token: accessToken,
         user: user,
-        userRole: primaryRole,
-        userRoles: userRoles,
+        userRole: primaryRole, // ROLE_ADMIN, ROLE_PROFESSOR, etc.
+        userRoles: userRoles, // Array of roles
       };
 
       console.log("Dispatching credentials:", credentials);
@@ -208,7 +173,7 @@ export const Login = () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
       window.dispatchEvent(new Event("storage"));
 
-      // Navigate based on role
+      // Navigate based on role - backend sends ROLE_ADMIN, ROLE_PROFESSOR, etc.
       let dashboardPath = "/schoolchat/principal";
 
       if (primaryRole === "ROLE_ADMIN") {
@@ -219,6 +184,8 @@ export const Login = () => {
         dashboardPath = "/schoolchat/principal/ParentDashboard";
       } else if (primaryRole === "ROLE_STUDENT") {
         dashboardPath = "/schoolchat/principal/StudentDashboard";
+      } else if (primaryRole === "ROLE_TUTOR") {
+        dashboardPath = "/schoolchat/principal/ProfessorDashboard";
       }
 
       console.log("Navigating to:", dashboardPath);
