@@ -1,104 +1,150 @@
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { logout as logoutAction, restoreAuth } from "../store/slices/authSlice";
+import { createSlice } from "@reduxjs/toolkit";
 
-export const useAuth = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const auth = useSelector((state) => state.auth);
+const getInitialState = () => {
+  // Récupération sécurisée des données du localStorage
+  const token = localStorage.getItem("accessToken");
+  let userRole = "admin";
+  let userRoles = [];
+  let user = { name: "User", email: "", phone: "", username: "" };
+  let lastLocation = "/schoolchat/principal";
 
-  useEffect(() => {
-    // Only run once on mount
-    const token = localStorage.getItem("accessToken");
-    if (token && !auth.isAuthenticated) {
+  if (token) {
+    try {
+      userRole = localStorage.getItem("userRole") || "admin";
+
+      const userRolesStr = localStorage.getItem("userRoles");
       try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const expirationTime = payload.exp * 1000;
-
-        if (Date.now() < expirationTime) {
-          const userRole = localStorage.getItem("userRole") || "admin";
-          const userRolesStr = localStorage.getItem("userRoles");
-          let userRoles = [];
-
-          try {
-            userRoles = userRolesStr ? JSON.parse(userRolesStr) : [];
-          } catch (e) {
-            console.error("Error parsing user roles:", e);
-            userRoles = [];
-          }
-
-          const lastLocation = localStorage.getItem("lastLocation");
-          const userEmail = localStorage.getItem("userEmail") || "";
-          const username = localStorage.getItem("username") || "";
-          const decodedTokenStr = localStorage.getItem("decodedToken");
-
-          let name = username || "";
-          let phone = "";
-
-          if (decodedTokenStr) {
-            try {
-              const decodedToken = JSON.parse(decodedTokenStr);
-              phone = decodedToken.phone || decodedToken.phoneNumber || "";
-            } catch (e) {
-              console.error("Error parsing decoded token:", e);
-            }
-          }
-
-          if (!name && userEmail) {
-            name = userEmail.split("@")[0];
-          }
-
-          const user = {
-            name: name || "User",
-            email: userEmail,
-            phone: phone,
-            username: username,
-          };
-
-          dispatch(
-            restoreAuth({
-              token,
-              user,
-              userRole,
-              userRoles,
-              lastLocation,
-            })
-          );
-        } else {
-          // Token expired
-          handleLogout();
-        }
-      } catch (error) {
-        console.error("Token validation error:", error);
-        handleLogout();
+        userRoles = userRolesStr ? JSON.parse(userRolesStr) : [];
+      } catch (e) {
+        console.error("Error parsing user roles:", e);
+        userRoles = [];
       }
+
+      const userEmail = localStorage.getItem("userEmail") || "";
+      const username = localStorage.getItem("username") || "";
+      const decodedTokenStr = localStorage.getItem("decodedToken");
+
+      let name = username || "";
+      let phone = "";
+
+      if (decodedTokenStr) {
+        try {
+          const decodedToken = JSON.parse(decodedTokenStr);
+          phone = decodedToken.phone || decodedToken.phoneNumber || "";
+        } catch (e) {
+          console.error("Error parsing decoded token:", e);
+        }
+      }
+
+      if (!name && userEmail) {
+        name = userEmail.split("@")[0];
+      }
+
+      user = {
+        name: name || "User",
+        email: userEmail,
+        phone: phone,
+        username: username,
+      };
+
+      const savedLocation = localStorage.getItem("lastLocation");
+      if (savedLocation) {
+        lastLocation = savedLocation;
+      }
+    } catch (error) {
+      console.error("Error initializing auth state:", error);
     }
-  }, []); // Empty dependency array - run only once
-
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("username");
-    localStorage.removeItem("userRoles");
-    localStorage.removeItem("decodedToken");
-    localStorage.removeItem("authResponse");
-    localStorage.removeItem("lastLocation");
-
-    dispatch(logoutAction());
-    navigate("/schoolchat/login");
-  };
+  }
 
   return {
-    ...auth,
-    logout: handleLogout,
-    // Provide safe defaults
-    userRole: auth.userRole || "admin",
-    userRoles: auth.userRoles || [],
-    user: auth.user || { name: "User", email: "", phone: "", username: "" },
+    isAuthenticated: !!token,
+    user,
+    userRole,
+    userRoles,
+    token,
+    lastLocation,
   };
 };
+
+const authSlice = createSlice({
+  name: "auth",
+  initialState: getInitialState(),
+  reducers: {
+    setCredentials: (state, action) => {
+      const { token, user, userRole, userRoles } = action.payload;
+
+      // Sauvegarde dans le localStorage
+      localStorage.setItem("accessToken", token);
+      if (userRole) localStorage.setItem("userRole", userRole);
+      if (userRoles)
+        localStorage.setItem("userRoles", JSON.stringify(userRoles));
+      if (user?.email) localStorage.setItem("userEmail", user.email);
+      if (user?.username) localStorage.setItem("username", user.username);
+
+      // Mise à jour du state
+      state.isAuthenticated = true;
+      state.token = token;
+      state.user = user || state.user;
+      state.userRole = userRole || state.userRole;
+      state.userRoles = userRoles || state.userRoles;
+    },
+    setLastLocation: (state, action) => {
+      state.lastLocation = action.payload;
+      localStorage.setItem("lastLocation", action.payload);
+    },
+    logout: (state) => {
+      // Nettoyage du localStorage
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("username");
+      localStorage.removeItem("userRoles");
+      localStorage.removeItem("decodedToken");
+      localStorage.removeItem("authResponse");
+      localStorage.removeItem("lastLocation");
+
+      // Réinitialisation du state
+      state.isAuthenticated = false;
+      state.user = { name: "User", email: "", phone: "", username: "" };
+      state.userRole = "admin";
+      state.userRoles = [];
+      state.token = null;
+      state.lastLocation = "/schoolchat/principal";
+    },
+    restoreAuth: (state, action) => {
+      const { token, user, userRole, userRoles, lastLocation } = action.payload;
+
+      state.isAuthenticated = true;
+      state.token = token;
+      state.user = user || state.user;
+      state.userRole = userRole || state.userRole;
+      state.userRoles = userRoles || state.userRoles;
+      if (lastLocation) {
+        state.lastLocation = lastLocation;
+        localStorage.setItem("lastLocation", lastLocation);
+      }
+    },
+    updateUserProfile: (state, action) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+        // Mettre à jour le localStorage si nécessaire
+        if (action.payload.username) {
+          localStorage.setItem("username", action.payload.username);
+        }
+      }
+    },
+  },
+});
+
+export const {
+  setCredentials,
+  setLastLocation,
+  logout,
+  restoreAuth,
+  updateUserProfile,
+} = authSlice.actions;
+
+export default authSlice.reducer;
