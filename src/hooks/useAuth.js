@@ -1,79 +1,29 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { useCallback, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import {
+  setCredentials,
+  setLastLocation,
+  logout as logoutAction,
+  updateUserProfile,
+} from "../store/slices/authSlice";
 
-const getInitialState = () => {
-  // Récupération sécurisée des données du localStorage
-  const token = localStorage.getItem("accessToken");
-  let userRole = "admin";
-  let userRoles = [];
-  let user = { name: "User", email: "", phone: "", username: "" };
-  let lastLocation = "/schoolchat/principal";
+export const useAuth = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const authState = useSelector((state) => state.auth);
 
-  if (token) {
-    try {
-      userRole = localStorage.getItem("userRole") || "admin";
+  const login = useCallback(
+    (authData) => {
+      const { token, user, userRole, userRoles } = authData;
 
-      const userRolesStr = localStorage.getItem("userRoles");
-      try {
-        userRoles = userRolesStr ? JSON.parse(userRolesStr) : [];
-      } catch (e) {
-        console.error("Error parsing user roles:", e);
-        userRoles = [];
-      }
+      console.log("useAuth login called with:", {
+        token,
+        user,
+        userRole,
+        userRoles,
+      });
 
-      const userEmail = localStorage.getItem("userEmail") || "";
-      const username = localStorage.getItem("username") || "";
-      const decodedTokenStr = localStorage.getItem("decodedToken");
-
-      let name = username || "";
-      let phone = "";
-
-      if (decodedTokenStr) {
-        try {
-          const decodedToken = JSON.parse(decodedTokenStr);
-          phone = decodedToken.phone || decodedToken.phoneNumber || "";
-        } catch (e) {
-          console.error("Error parsing decoded token:", e);
-        }
-      }
-
-      if (!name && userEmail) {
-        name = userEmail.split("@")[0];
-      }
-
-      user = {
-        name: name || "User",
-        email: userEmail,
-        phone: phone,
-        username: username,
-      };
-
-      const savedLocation = localStorage.getItem("lastLocation");
-      if (savedLocation) {
-        lastLocation = savedLocation;
-      }
-    } catch (error) {
-      console.error("Error initializing auth state:", error);
-    }
-  }
-
-  return {
-    isAuthenticated: !!token,
-    user,
-    userRole,
-    userRoles,
-    token,
-    lastLocation,
-  };
-};
-
-const authSlice = createSlice({
-  name: "auth",
-  initialState: getInitialState(),
-  reducers: {
-    setCredentials: (state, action) => {
-      const { token, user, userRole, userRoles } = action.payload;
-
-      // Sauvegarde dans le localStorage
       localStorage.setItem("accessToken", token);
       if (userRole) localStorage.setItem("userRole", userRole);
       if (userRoles)
@@ -81,70 +31,207 @@ const authSlice = createSlice({
       if (user?.email) localStorage.setItem("userEmail", user.email);
       if (user?.username) localStorage.setItem("username", user.username);
 
-      // Mise à jour du state
-      state.isAuthenticated = true;
-      state.token = token;
-      state.user = user || state.user;
-      state.userRole = userRole || state.userRole;
-      state.userRoles = userRoles || state.userRoles;
+      dispatch(setCredentials(authData));
     },
-    setLastLocation: (state, action) => {
-      state.lastLocation = action.payload;
-      localStorage.setItem("lastLocation", action.payload);
-    },
-    logout: (state) => {
-      // Nettoyage du localStorage
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("userRole");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("username");
-      localStorage.removeItem("userRoles");
-      localStorage.removeItem("decodedToken");
-      localStorage.removeItem("authResponse");
-      localStorage.removeItem("lastLocation");
+    [dispatch]
+  );
 
-      // Réinitialisation du state
-      state.isAuthenticated = false;
-      state.user = { name: "User", email: "", phone: "", username: "" };
-      state.userRole = "admin";
-      state.userRoles = [];
-      state.token = null;
-      state.lastLocation = "/schoolchat/principal";
-    },
-    restoreAuth: (state, action) => {
-      const { token, user, userRole, userRoles, lastLocation } = action.payload;
+  const logout = useCallback(() => {
+    dispatch(logoutAction());
+    navigate("/schoolchat/login");
+  }, [dispatch, navigate]);
 
-      state.isAuthenticated = true;
-      state.token = token;
-      state.user = user || state.user;
-      state.userRole = userRole || state.userRole;
-      state.userRoles = userRoles || state.userRoles;
-      if (lastLocation) {
-        state.lastLocation = lastLocation;
-        localStorage.setItem("lastLocation", lastLocation);
+  const updateLocation = useCallback(
+    (location) => {
+      dispatch(setLastLocation(location));
+    },
+    [dispatch]
+  );
+
+  const updateProfile = useCallback(
+    (profileData) => {
+      dispatch(updateUserProfile(profileData));
+    },
+    [dispatch]
+  );
+
+  const hasRole = useCallback(
+    (roleToCheck) => {
+      if (!roleToCheck) return false;
+      if (
+        !authState.userRole &&
+        (!authState.userRoles || authState.userRoles.length === 0)
+      ) {
+        return false;
       }
-    },
-    updateUserProfile: (state, action) => {
-      if (state.user) {
-        state.user = { ...state.user, ...action.payload };
-        // Mettre à jour le localStorage si nécessaire
-        if (action.payload.username) {
-          localStorage.setItem("username", action.payload.username);
+
+      const normalizedRole = roleToCheck.toUpperCase();
+      const roleVariants = [
+        normalizedRole,
+        `ROLE_${normalizedRole}`,
+        normalizedRole.replace("ROLE_", ""),
+      ];
+
+      if (authState.userRole) {
+        const normalizedUserRole = authState.userRole.toUpperCase();
+        if (
+          roleVariants.some(
+            (variant) =>
+              normalizedUserRole === variant ||
+              normalizedUserRole === variant.replace("ROLE_", "") ||
+              normalizedUserRole.includes(variant)
+          )
+        ) {
+          return true;
         }
       }
+
+      if (authState.userRoles && authState.userRoles.length > 0) {
+        return authState.userRoles.some((role) => {
+          const normalizedArrayRole = String(role).toUpperCase();
+          return roleVariants.some(
+            (variant) =>
+              normalizedArrayRole === variant ||
+              normalizedArrayRole === variant.replace("ROLE_", "") ||
+              normalizedArrayRole.includes(variant)
+          );
+        });
+      }
+
+      return false;
     },
-  },
-});
+    [authState.userRole, authState.userRoles]
+  );
 
-export const {
-  setCredentials,
-  setLastLocation,
-  logout,
-  restoreAuth,
-  updateUserProfile,
-} = authSlice.actions;
+  const hasAnyRole = useCallback(
+    (rolesToCheck) => {
+      if (!rolesToCheck || rolesToCheck.length === 0) return false;
+      return rolesToCheck.some((role) => hasRole(role));
+    },
+    [hasRole]
+  );
 
-export default authSlice.reducer;
+  const hasAllRoles = useCallback(
+    (rolesToCheck) => {
+      if (!rolesToCheck || rolesToCheck.length === 0) return false;
+      return rolesToCheck.every((role) => hasRole(role));
+    },
+    [hasRole]
+  );
+
+  const isAdmin = useMemo(() => {
+    return hasAnyRole([
+      "ADMIN",
+      "ROLE_ADMIN",
+      "SUPER_ADMIN",
+      "ROLE_SUPER_ADMIN",
+    ]);
+  }, [hasAnyRole]);
+
+  const isProfessor = useMemo(() => {
+    return hasAnyRole([
+      "PROFESSOR",
+      "ROLE_PROFESSOR",
+      "PROFESSEUR",
+      "ROLE_PROFESSEUR",
+      "REPETITEUR",
+      "ROLE_REPETITEUR",
+    ]);
+  }, [hasAnyRole]);
+
+  const isParent = useMemo(() => {
+    return hasAnyRole(["PARENT", "ROLE_PARENT"]);
+  }, [hasAnyRole]);
+
+  const isStudent = useMemo(() => {
+    return hasAnyRole(["STUDENT", "ROLE_STUDENT", "ELEVE", "ROLE_ELEVE"]);
+  }, [hasAnyRole]);
+
+  const isParentOrStudent = useMemo(() => {
+    return isParent || isStudent;
+  }, [isParent, isStudent]);
+
+  // Clean display name for the role
+  const displayRole = useMemo(() => {
+    if (!authState.userRole) {
+      if (authState.userRoles && authState.userRoles.length > 0) {
+        const firstRole = authState.userRoles[0];
+        return getCleanRoleName(firstRole);
+      }
+      return null;
+    }
+
+    return getCleanRoleName(authState.userRole);
+  }, [authState.userRole, authState.userRoles]);
+
+  // Helper function to get clean role name
+  const getCleanRoleName = (role) => {
+    if (!role) return null;
+
+    const cleanRole = role.toUpperCase().replace("ROLE_", "");
+
+    const roleDisplayMap = {
+      ADMIN: "Admin",
+      SUPER_ADMIN: "Super Admin",
+      PROFESSOR: "Professor",
+      PROFESSEUR: "Professor",
+      REPETITEUR: "Professor",
+      PARENT: "Parent",
+      PARENTS: "Parent",
+      STUDENT: "Student",
+      ELEVE: "Student",
+      USER: "User",
+    };
+
+    return (
+      roleDisplayMap[cleanRole] ||
+      cleanRole.charAt(0).toUpperCase() + cleanRole.slice(1).toLowerCase()
+    );
+  };
+
+  const normalizedUserRole = useMemo(() => {
+    if (!authState.userRole) {
+      if (authState.userRoles && authState.userRoles.length > 0) {
+        const firstRole = authState.userRoles[0]
+          .toLowerCase()
+          .replace("role_", "");
+        const roleMap = {
+          professeur: "professor",
+          eleve: "student",
+          repetiteur: "professor",
+        };
+        return roleMap[firstRole] || firstRole;
+      }
+      return null;
+    }
+
+    const role = authState.userRole.toLowerCase().replace("role_", "");
+    const roleMap = {
+      professeur: "professor",
+      eleve: "student",
+      repetiteur: "professor",
+    };
+
+    return roleMap[role] || role;
+  }, [authState.userRole, authState.userRoles]);
+
+  return {
+    ...authState,
+    login,
+    logout,
+    updateLocation,
+    updateProfile,
+    hasRole,
+    hasAnyRole,
+    hasAllRoles,
+    isAdmin,
+    isProfessor,
+    isParent,
+    isStudent,
+    isParentOrStudent,
+    displayRole,
+    normalizedUserRole,
+    userRole: authState.userRole,
+    userRoles: authState.userRoles || [],
+  };
+};
