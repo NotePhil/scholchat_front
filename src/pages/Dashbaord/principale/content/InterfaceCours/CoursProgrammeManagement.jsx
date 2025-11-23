@@ -22,7 +22,7 @@ import {
   Download,
   Image,
   FileIcon,
-  Play,
+
   Pause,
   Loader,
 } from "lucide-react";
@@ -223,10 +223,10 @@ const CoursProgrammeManagement = ({ selectedClass, onBack }) => {
 
       // Import services - using correct paths based on your working component
       const { coursService } = await import(
-        "../../../../../services/coursService"
+        "../../../../../services/CoursService"
       );
       const { minioS3Service } = await import(
-        "../../../../../services/minioS3Service"
+        "../../../../../services/minioS3"
       );
 
       // Get course details with chapters/resources
@@ -257,7 +257,7 @@ const CoursProgrammeManagement = ({ selectedClass, onBack }) => {
   const handleDownloadResource = async (resource) => {
     try {
       const { minioS3Service } = await import(
-        "../../../../../services/minioS3Service"
+        "../../../../../services/minioS3"
       );
 
       if (resource.filePath) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../store/slices/authSlice";
+import { encryptPassword } from "../utils/crypto";
 import "../CSS/Login.css";
 
 const decodeJWT = (token) => {
@@ -67,7 +68,7 @@ export const Login = () => {
           },
           body: JSON.stringify({
             email: formData.email,
-            password: formData.password,
+            password: encryptPassword(formData.password),
           }),
         }
       );
