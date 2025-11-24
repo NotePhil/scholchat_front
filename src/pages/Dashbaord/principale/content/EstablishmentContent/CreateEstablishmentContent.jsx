@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   CheckCircle,
   AlertCircle,
@@ -8,8 +8,11 @@ import {
   MapPin,
   Globe,
   Settings,
+  User,
+  ChevronDown,
 } from "lucide-react";
 import establishmentService from "../../../../../services/EstablishmentService";
+import { userService } from "../../../../../services/userService";
 import { useNavigate } from "react-router-dom";
 
 const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
@@ -23,12 +26,34 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
     optionEnvoiMailVersClasse: false,
     optionTokenGeneral: false,
     codeUnique: false,
+    gestionnaire: null,
   });
+
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
-  const [countdown, setCountdown] = useState(5); // Add countdown state
+  const [countdown, setCountdown] = useState(5);
+
+  // Load users on component mount
+  useEffect(() => {
+    const loadUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const usersData = await userService.getAllUsers();
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Error loading users:", error);
+        setErrors({ users: "Erreur lors du chargement des utilisateurs" });
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+    loadUsers();
+  }, []);
 
   // Manual redirect function for the button
   const handleManualRedirect = () => {
@@ -74,6 +99,14 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
     }
   };
 
+  const handleUserSelect = (user) => {
+    setFormData((prev) => ({ ...prev, gestionnaire: user }));
+    setShowUserDropdown(false);
+    if (errors.gestionnaire) {
+      setErrors((prev) => ({ ...prev, gestionnaire: null }));
+    }
+  };
+
   const validateForm = () => {
     const validation = establishmentService.validateEstablishment(formData);
     const newErrors = {};
@@ -94,6 +127,10 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
       newErrors.pays = "Le pays est requis";
     }
 
+    if (!formData.gestionnaire) {
+      newErrors.gestionnaire = "Un gestionnaire est requis";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -107,9 +144,15 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
 
     setLoading(true);
     try {
-      await establishmentService.createEstablishment(formData);
+      const establishmentData = {
+        ...formData,
+        gestionnaire: {
+          id: formData.gestionnaire.id
+        }
+      };
+      await establishmentService.createEstablishment(establishmentData);
       setSuccess(true);
-      setCountdown(5); // Reset countdown to 5 seconds
+      setCountdown(5);
     } catch (error) {
       console.error("Error creating establishment:", error);
       setErrors({ submit: "Erreur lors de la création de l'établissement" });
@@ -318,6 +361,69 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                       <AlertCircle className="w-4 h-4" />
                       {errors.telephone}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Gestionnaire *
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowUserDropdown(!showUserDropdown)}
+                      className={`w-full pl-12 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-left ${
+                        errors.gestionnaire ? "border-red-500" : "border-gray-300"
+                      }`}
+                    >
+                      {formData.gestionnaire
+                        ? `${formData.gestionnaire.nom} ${formData.gestionnaire.prenom} (${formData.gestionnaire.email})`
+                        : "Sélectionner un gestionnaire"}
+                    </button>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    
+                    {showUserDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {loadingUsers ? (
+                          <div className="p-4 text-center text-gray-500">
+                            Chargement des utilisateurs...
+                          </div>
+                        ) : users.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">
+                            Aucun utilisateur disponible
+                          </div>
+                        ) : (
+                          users.map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => handleUserSelect(user)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">
+                                {user.nom} {user.prenom}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {user.email}
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {errors.gestionnaire && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.gestionnaire}
+                    </p>
+                  )}
+                  {errors.users && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.users}
                     </p>
                   )}
                 </div>

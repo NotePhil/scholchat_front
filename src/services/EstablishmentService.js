@@ -2,6 +2,7 @@
 import axios from "axios";
 
 const API_BASE_URL = "http://localhost:8486/scholchat/etablissements";
+const USER_API_BASE_URL = "http://localhost:8486/scholchat";
 
 // Create axios instance with interceptor to handle dynamic token
 const api = axios.create({
@@ -11,8 +12,30 @@ const api = axios.create({
   },
 });
 
+// Create user API instance for fetching users
+const userApi = axios.create({
+  baseURL: USER_API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 // Add request interceptor to include fresh token
 api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add request interceptor for user API
+userApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
     if (token) {
@@ -51,6 +74,7 @@ class EstablishmentService {
    * @param {boolean} establishment.optionEnvoiMailVersClasse - Email to class option
    * @param {boolean} establishment.optionTokenGeneral - General token option
    * @param {boolean} establishment.codeUnique - Unique code option
+   * @param {Object} establishment.gestionnaire - Manager/User object with id
    * @returns {Promise<Object>} Created establishment data
    */
   async createEstablishment(establishment) {
@@ -123,6 +147,21 @@ class EstablishmentService {
     } catch (error) {
       console.error(`Error fetching establishment ${establishmentId}:`, error);
       this.handleError(error, "Failed to fetch establishment");
+      throw error;
+    }
+  }
+
+  /**
+   * Get all users for gestionnaire dropdown
+   * @returns {Promise<Array>} List of users
+   */
+  async getAllUsers() {
+    try {
+      const response = await userApi.get("/utilisateurs");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      this.handleError(error, "Failed to fetch users");
       throw error;
     }
   }
@@ -220,7 +259,7 @@ class EstablishmentService {
       establishment.telephone &&
       !this.isValidPhone(establishment.telephone)
     ) {
-      errors.push("Invalid phone number format");
+      errors.push("Invalid phone number format. Use international format");
     }
 
     return {
@@ -245,8 +284,21 @@ class EstablishmentService {
    * @returns {boolean} Is valid phone
    */
   isValidPhone(phone) {
-    const phoneRegex = /^\+\d{1,3}\(\d{1,4}\)\d{7,10}$/;
-    return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ""));
+    if (!phone) return false;
+    
+    // Remove all non-digit characters except +
+    const cleanPhone = phone.replace(/[^\d+]/g, "");
+    
+    // Check for common international formats
+    const patterns = [
+      /^\+237[62]\d{7}$/, // Cameroon: +237 followed by 6 or 2 and 7 digits
+      /^\+33[1-9]\d{8}$/, // France: +33 followed by 1-9 and 8 digits
+      /^\+1\d{10}$/, // US/Canada: +1 followed by 10 digits
+      /^\+234[789]\d{9}$/, // Nigeria: +234 followed by 7,8,9 and 9 digits
+      /^\+\d{10,15}$/ // Generic international format
+    ];
+    
+    return patterns.some(pattern => pattern.test(cleanPhone));
   }
 
   /**

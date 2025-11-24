@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import Modal from "react-modal";
@@ -12,8 +12,10 @@ import {
   Mail,
 } from "lucide-react";
 
-import { useAuth } from "../../../hooks/useAuth";
-import { setLastLocation } from "../../../store/slices/authSlice";
+import {
+  setLastLocation,
+  logout as logoutAction,
+} from "../../../store/slices/authSlice";
 import {
   toggleSidebar as toggleSidebarAction,
   setSidebar,
@@ -24,6 +26,7 @@ import {
   setTheme as setThemeAction,
 } from "../../../store/slices/uiSlice";
 
+import { useAuth } from "../../../hooks/useAuth";
 import Sidebar from "../components/Sidebar";
 import DashboardContent from "./DashboardContent";
 import ParentsContent from "./content/ParentContent/ParentsContent";
@@ -74,8 +77,18 @@ const Principal = () => {
   const dispatch = useDispatch();
   const { dashboardType } = useParams();
 
-  const auth = useAuth();
-  const { userRole, userRoles, user, logout } = auth;
+  // Use the useAuth hook for clean role handling
+  const {
+    user,
+    displayRole,
+    normalizedUserRole,
+    isAdmin,
+    isProfessor,
+    isParent,
+    isStudent,
+    isParentOrStudent,
+    hasRole,
+  } = useAuth();
 
   const ui = useSelector((state) => state.ui);
   const {
@@ -90,13 +103,28 @@ const Principal = () => {
     isCustomBreakpoint,
   } = ui;
 
-  const [showManageClass, setShowManageClass] = React.useState(false);
-  const [showTokenExpiredModal, setShowTokenExpiredModal] =
-    React.useState(false);
-  const [showLanguageDropdown, setShowLanguageDropdown] = React.useState(false);
-  const [showUserProfile, setShowUserProfile] = React.useState(false);
+  const [showManageClass, setShowManageClass] = useState(false);
+  const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
-  // Handle responsive breakpoints
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("username");
+    localStorage.removeItem("userRoles");
+    localStorage.removeItem("decodedToken");
+    localStorage.removeItem("authResponse");
+    localStorage.removeItem("lastLocation");
+
+    dispatch(logoutAction());
+    navigate("/schoolchat/login");
+  }, [dispatch, navigate]);
+
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
@@ -122,7 +150,6 @@ const Principal = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, [dispatch]);
 
-  // Save last location
   useEffect(() => {
     const currentPath = location.pathname;
     if (currentPath.includes("/schoolchat/principal")) {
@@ -131,7 +158,6 @@ const Principal = () => {
     }
   }, [location.pathname, dispatch]);
 
-  // Token expiration check
   useEffect(() => {
     const checkTokenExpiration = () => {
       const token = localStorage.getItem("accessToken");
@@ -157,7 +183,6 @@ const Principal = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Handle 401 responses
   useEffect(() => {
     const originalFetch = window.fetch;
 
@@ -174,39 +199,38 @@ const Principal = () => {
     };
   }, []);
 
-  // Navigate to appropriate dashboard
   useEffect(() => {
-    if (!userRole) return;
+    if (!normalizedUserRole) return;
 
     let expectedDashboard;
-    const safeUserRole = userRole || "admin";
 
-    if (safeUserRole === "admin" || userRoles.includes("ROLE_ADMIN")) {
+    if (isAdmin) {
       expectedDashboard = "AdminDashboard";
-    } else if (
-      safeUserRole === "professor" ||
-      userRoles.includes("ROLE_PROFESSOR")
-    ) {
+    } else if (isProfessor) {
       expectedDashboard = "ProfessorDashboard";
-    } else if (safeUserRole === "parent" || userRoles.includes("ROLE_PARENT")) {
+    } else if (isParent) {
       expectedDashboard = "ParentDashboard";
-    } else if (
-      safeUserRole === "student" ||
-      userRoles.includes("ROLE_STUDENT")
-    ) {
+    } else if (isStudent) {
       expectedDashboard = "StudentDashboard";
     } else {
       expectedDashboard = `${
-        safeUserRole.charAt(0).toUpperCase() + safeUserRole.slice(1)
+        normalizedUserRole.charAt(0).toUpperCase() + normalizedUserRole.slice(1)
       }Dashboard`;
     }
 
     if (!dashboardType) {
       navigate(`/schoolchat/Principal/${expectedDashboard}`);
     }
-  }, [dashboardType, navigate, userRole, userRoles]);
+  }, [
+    dashboardType,
+    navigate,
+    normalizedUserRole,
+    isAdmin,
+    isProfessor,
+    isParent,
+    isStudent,
+  ]);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".language-dropdown")) {
@@ -271,15 +295,6 @@ const Principal = () => {
     [dispatch]
   );
 
-  const isParentOrStudent = useMemo(() => {
-    return (
-      userRoles.includes("ROLE_PARENT") ||
-      userRoles.includes("ROLE_STUDENT") ||
-      userRole === "parent" ||
-      userRole === "student"
-    );
-  }, [userRole, userRoles]);
-
   const onNavigateToClassesList = useCallback(() => {
     dispatch(setActiveTabAction("manage-class"));
   }, [dispatch]);
@@ -294,16 +309,14 @@ const Principal = () => {
       currentTheme,
       themes,
       colorSchemes,
-      userRole: userRole || "admin",
-      userRoles: userRoles || [],
+      userRole: normalizedUserRole || "admin",
       onManageClass: handleManageClass,
       onShowMessaging: handleShowMessaging,
     }),
     [
       isDark,
       currentTheme,
-      userRole,
-      userRoles,
+      normalizedUserRole,
       handleManageClass,
       handleShowMessaging,
     ]
@@ -338,12 +351,9 @@ const Principal = () => {
       case "manage-exercises":
         return <ManageExercisesContent {...contentProps} />;
       case "classes":
-        if (userRole === "parent" || userRoles.includes("ROLE_PARENT")) {
+        if (isParent) {
           return <ParentClassManagementClass {...contentProps} />;
-        } else if (
-          userRole === "student" ||
-          userRoles.includes("ROLE_STUDENT")
-        ) {
+        } else if (isStudent) {
           return <ParentClassManagement {...contentProps} />;
         }
         return showManageClass ? (
@@ -384,7 +394,6 @@ const Principal = () => {
             setIsDark={(val) => handleThemeChange(val, currentTheme)}
             currentTheme={currentTheme}
             setCurrentTheme={(val) => handleThemeChange(isDark, val)}
-            userRoles={userRoles}
           />
         );
       default:
@@ -397,18 +406,14 @@ const Principal = () => {
   };
 
   const getTabDisplayName = () => {
-    const safeUserRole = userRole || "admin";
-
     if (
       activeTab === "dashboard" &&
-      (safeUserRole === "professor" || safeUserRole === "repetiteur")
+      (normalizedUserRole === "professor" || normalizedUserRole === "tutor")
     ) {
       return "Activities";
     }
     if (activeTab === "dashboard" && isParentOrStudent) {
-      return safeUserRole === "student"
-        ? "Mon Tableau de Bord"
-        : "Tableau de Bord Parent";
+      return isStudent ? "Mon Tableau de Bord" : "Tableau de Bord Parent";
     }
 
     const tabNames = {
@@ -462,7 +467,7 @@ const Principal = () => {
             continuer.
           </p>
           <div className="modal-actions">
-            <button onClick={logout} className="logout-button">
+            <button onClick={handleLogout} className="logout-button">
               Se reconnecter
             </button>
           </div>
@@ -477,8 +482,6 @@ const Principal = () => {
         currentTheme={currentTheme}
         themes={themes}
         colorSchemes={colorSchemes}
-        userRole={userRole || "admin"}
-        userRoles={userRoles || []}
         onShowMessaging={handleShowMessaging}
         toggleSidebar={toggleSidebar}
       />
@@ -549,7 +552,7 @@ const Principal = () => {
                     </div>
                     <div className="user-details">
                       <h4>{user?.name || "User"}</h4>
-                      <p className="user-role-text">{userRole || "admin"}</p>
+                      <p className="user-role-text">{displayRole || "User"}</p>
                     </div>
                   </div>
                   <div className="user-profile-info">
@@ -585,7 +588,7 @@ const Principal = () => {
                     </button>
                     <button
                       className="profile-action-btn logout"
-                      onClick={logout}
+                      onClick={handleLogout}
                     >
                       <LogOut size={16} />
                       <span>Logout</span>
@@ -615,7 +618,7 @@ const Principal = () => {
             isDark={isDark}
             currentTheme={currentTheme}
             colorSchemes={colorSchemes}
-            userRole={userRole || "admin"}
+            userRole={normalizedUserRole || "admin"}
           />
         </div>
       )}

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "../store/slices/authSlice";
+import { encryptPassword } from "../utils/crypto";
 import "../CSS/Login.css";
 
 const decodeJWT = (token) => {
@@ -28,6 +31,7 @@ const decodeJWT = (token) => {
 
 export const Login = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -64,7 +68,7 @@ export const Login = () => {
           },
           body: JSON.stringify({
             email: formData.email,
-            password: formData.password,
+            password: encryptPassword(formData.password),
           }),
         }
       );
@@ -82,18 +86,16 @@ export const Login = () => {
         throw new Error("Token d'accès manquant dans la réponse");
       }
 
+      // Clear localStorage
       localStorage.clear();
-
-      localStorage.setItem("accessToken", accessToken);
-      if (refreshToken) {
-        localStorage.setItem("refreshToken", refreshToken);
-      }
-      localStorage.setItem("authToken", accessToken);
 
       const decodedToken = decodeJWT(accessToken);
       if (!decodedToken) {
         throw new Error("Token invalide");
       }
+
+      console.log("Decoded Token:", decodedToken);
+      console.log("Auth Data:", authData);
 
       const userId = authData.userId;
       const userEmail =
@@ -109,67 +111,93 @@ export const Login = () => {
         throw new Error("Erreur d'authentification: ID utilisateur invalide");
       }
 
-      let tokenUserRole;
+      // Extract roles from token - roles come as array from backend
+      let userRoles = [];
+      let primaryRole = null;
 
       if (Array.isArray(decodedToken.roles) && decodedToken.roles.length > 0) {
-        tokenUserRole =
+        // Backend sends roles like ["ROLE_USER", "ROLE_PROFESSOR"]
+        userRoles = decodedToken.roles;
+        // Get the specific role (usually second one if there are multiple)
+        primaryRole =
           decodedToken.roles.length > 1
             ? decodedToken.roles[1]
             : decodedToken.roles[0];
-      } else {
-        tokenUserRole =
-          decodedToken.role ||
-          (decodedToken.authorities && decodedToken.authorities[0]) ||
-          decodedToken.userType ||
-          decodedToken.userRole ||
-          decodedToken.type ||
-          authData.userType;
+      } else if (decodedToken.role) {
+        primaryRole = decodedToken.role;
+        userRoles = [decodedToken.role];
+      } else if (Array.isArray(decodedToken.authorities)) {
+        userRoles = decodedToken.authorities;
+        primaryRole = decodedToken.authorities[0];
       }
 
-      const userTypeMapping = {
-        utilisateurs: "student",
-        professeurs: "professor",
-        admin: "admin",
-        ROLE_ADMIN: "admin",
-        ADMIN: "admin",
-        PROFESSOR: "professor",
-        ROLE_PROFESSOR: "professor",
-        PARENT: "parent",
-        STUDENT: "student",
-        ROLE_STUDENT: "student",
-        ROLE_USER: "student",
-        parents: "parent",
-        ROLE_PARENT: "parent",
+      console.log("Primary Role:", primaryRole);
+      console.log("User Roles:", userRoles);
+
+      // Prepare user object
+      const user = {
+        name: username,
+        email: userEmail,
+        username: username,
+        phone: decodedToken.phone || decodedToken.phoneNumber || "",
+        id: userId,
       };
 
-      const userRole =
-        userTypeMapping[tokenUserRole] ||
-        tokenUserRole ||
-        userTypeMapping[authData.userType] ||
-        "student";
-
-      localStorage.setItem("userRole", userRole);
+      // Save to localStorage (for persistence)
+      localStorage.setItem("accessToken", accessToken);
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
+      }
+      localStorage.setItem("authToken", accessToken);
+      localStorage.setItem("userRole", primaryRole);
       localStorage.setItem("userId", userId);
       localStorage.setItem("userEmail", userEmail);
       localStorage.setItem("username", username);
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("loginTime", new Date().getTime().toString());
-
-      if (Array.isArray(decodedToken.roles)) {
-        localStorage.setItem("userRoles", JSON.stringify(decodedToken.roles));
-      }
+      localStorage.setItem("userRoles", JSON.stringify(userRoles));
       localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
       localStorage.setItem("authResponse", JSON.stringify(authData));
 
+      // Dispatch to Redux with exact role format from backend
+      const credentials = {
+        token: accessToken,
+        user: user,
+        userRole: primaryRole, // ROLE_ADMIN, ROLE_PROFESSOR, etc.
+        userRoles: userRoles, // Array of roles
+      };
+
+      console.log("Dispatching credentials:", credentials);
+      dispatch(setCredentials(credentials));
+
+      // Small delay for state to update
       await new Promise((resolve) => setTimeout(resolve, 100));
       window.dispatchEvent(new Event("storage"));
 
-      navigate("/schoolchat/principal", { replace: true });
+      // Navigate based on role - backend sends ROLE_ADMIN, ROLE_PROFESSOR, etc.
+      let dashboardPath = "/schoolchat/principal";
+
+      if (primaryRole === "ROLE_ADMIN") {
+        dashboardPath = "/schoolchat/principal/AdminDashboard";
+      } else if (primaryRole === "ROLE_PROFESSOR") {
+        dashboardPath = "/schoolchat/principal/ProfessorDashboard";
+      } else if (primaryRole === "ROLE_PARENT") {
+        dashboardPath = "/schoolchat/principal/ParentDashboard";
+      } else if (primaryRole === "ROLE_STUDENT") {
+        dashboardPath = "/schoolchat/principal/StudentDashboard";
+      } else if (primaryRole === "ROLE_TUTOR") {
+        dashboardPath = "/schoolchat/principal/ProfessorDashboard";
+      }
+
+      console.log("Navigating to:", dashboardPath);
+      navigate(dashboardPath, { replace: true });
     } catch (err) {
+      console.error("Login error:", err);
       setError(
         err.message || "Identifiants invalides. Veuillez vérifier et réessayer."
       );
 
+      // Clear storage on error
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("authToken");
@@ -177,16 +205,18 @@ export const Login = () => {
       localStorage.removeItem("userId");
       localStorage.removeItem("userRole");
       localStorage.removeItem("userEmail");
+      localStorage.removeItem("username");
+      localStorage.removeItem("userRoles");
+      localStorage.removeItem("decodedToken");
+      localStorage.removeItem("authResponse");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Clear any remembered credentials on component mount
+    // Clear all authentication data on mount
     localStorage.removeItem("rememberedEmail");
-
-    // Clear all authentication data to force fresh login
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
