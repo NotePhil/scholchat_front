@@ -152,6 +152,22 @@ class EstablishmentService {
   }
 
   /**
+   * Get gestionnaire of an establishment
+   * @param {string} establishmentId - ID of the establishment
+   * @returns {Promise<Object>} Gestionnaire data
+   */
+  async getEstablishmentGestionnaire(establishmentId) {
+    try {
+      const response = await api.get(`/${establishmentId}/gestionnaire`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching gestionnaire for establishment ${establishmentId}:`, error);
+      this.handleError(error, "Failed to fetch establishment gestionnaire");
+      throw error;
+    }
+  }
+
+  /**
    * Get all users for gestionnaire dropdown
    * @returns {Promise<Array>} List of users
    */

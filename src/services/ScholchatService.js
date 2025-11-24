@@ -754,7 +754,7 @@ class ScholchatService {
   // ============ Pending Professors ============
   async getPendingProfessors() {
     try {
-      const response = await api.get("/utilisateurs/professeurs/pending");
+      const response = await api.get("/utilisateurs/professors/pending");
       return response.data;
     } catch (error) {
       this.handleError(error);

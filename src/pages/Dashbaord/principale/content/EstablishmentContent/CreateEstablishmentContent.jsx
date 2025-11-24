@@ -147,6 +147,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
       const establishmentData = {
         ...formData,
         gestionnaire: {
+          type: formData.gestionnaire.type,
           id: formData.gestionnaire.id
         }
       };
@@ -379,7 +380,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                       }`}
                     >
                       {formData.gestionnaire
-                        ? `${formData.gestionnaire.nom} ${formData.gestionnaire.prenom} (${formData.gestionnaire.email})`
+                        ? `${formData.gestionnaire.nom} ${formData.gestionnaire.prenom} (${formData.gestionnaire.email}) - ${formData.gestionnaire.type || 'N/A'}`
                         : "Sélectionner un gestionnaire"}
                     </button>
                     <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -407,6 +408,9 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                               </div>
                               <div className="text-sm text-gray-500">
                                 {user.email}
+                              </div>
+                              <div className="text-xs text-blue-600 font-medium">
+                                {user.type || 'Type non défini'}
                               </div>
                             </button>
                           ))

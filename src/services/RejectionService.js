@@ -164,7 +164,7 @@ class RejectionService {
   async getPendingProfessors(page = 1, limit = 10) {
     try {
       const response = await rejectionApi.get(
-        "/utilisateurs/professeurs/pending",
+        "/utilisateurs/professors/pending",
         {
           params: { page, limit },
         }

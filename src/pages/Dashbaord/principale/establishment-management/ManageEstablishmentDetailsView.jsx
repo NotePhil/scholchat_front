@@ -66,6 +66,7 @@ const ManageEstablishmentDetailsView = ({
   onDelete,
 }) => {
   const [establishment, setEstablishment] = useState(null);
+  const [gestionnaire, setGestionnaire] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,6 +81,12 @@ const ManageEstablishmentDetailsView = ({
   const [professors, setProfessors] = useState([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [professorsLoading, setProfessorsLoading] = useState(false);
+  
+  // User selection states
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [selectedGestionnaire, setSelectedGestionnaire] = useState(null);
 
   // Modal states
   const [selectedProfessor, setSelectedProfessor] = useState(null);
@@ -88,8 +95,10 @@ const ManageEstablishmentDetailsView = ({
   useEffect(() => {
     if (establishmentId) {
       fetchEstablishmentDetails();
+      fetchEstablishmentGestionnaire();
       fetchEstablishmentClasses();
       fetchEstablishmentProfessors();
+      fetchUsers();
     }
   }, [establishmentId]);
 
@@ -118,6 +127,28 @@ const ManageEstablishmentDetailsView = ({
       setError("Erreur lors du chargement des détails de l'établissement");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEstablishmentGestionnaire = async () => {
+    try {
+      const gestionnaireData = await EstablishmentService.getEstablishmentGestionnaire(establishmentId);
+      setGestionnaire(gestionnaireData);
+      setSelectedGestionnaire(gestionnaireData);
+    } catch (error) {
+      console.error("Error fetching establishment gestionnaire:", error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const usersData = await EstablishmentService.getAllUsers();
+      setUsers(usersData);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
@@ -182,6 +213,7 @@ const ManageEstablishmentDetailsView = ({
     setRefreshing(true);
     await Promise.all([
       fetchEstablishmentDetails(),
+      fetchEstablishmentGestionnaire(),
       fetchEstablishmentClasses(),
       fetchEstablishmentProfessors(),
     ]);
@@ -194,11 +226,14 @@ const ManageEstablishmentDetailsView = ({
     setEditing(true);
     setError(null);
     setSuccessMessage(null);
+    setSelectedGestionnaire(gestionnaire);
   };
 
   const handleCancelEdit = () => {
     setEditing(false);
     setError(null);
+    setShowUserDropdown(false);
+    setSelectedGestionnaire(gestionnaire);
     // Reset form to original values
     form.setFieldsValue({
       nom: establishment.nom || "",
@@ -221,6 +256,11 @@ const ManageEstablishmentDetailsView = ({
 
       const values = await form.validateFields();
 
+      if (!selectedGestionnaire) {
+        setError("Un gestionnaire est requis");
+        return;
+      }
+
       // Validate data
       const validation = EstablishmentService.validateEstablishment(values);
       if (!validation.isValid) {
@@ -228,8 +268,17 @@ const ManageEstablishmentDetailsView = ({
         return;
       }
 
-      await onUpdate(establishmentId, values);
+      const updateData = {
+        ...values,
+        gestionnaire: {
+          type: selectedGestionnaire.type,
+          id: selectedGestionnaire.id
+        }
+      };
+
+      await onUpdate(establishmentId, updateData);
       setEstablishment({ ...establishment, ...values });
+      setGestionnaire(selectedGestionnaire);
       setEditing(false);
       setSuccessMessage("Établissement mis à jour avec succès");
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -745,6 +794,58 @@ const ManageEstablishmentDetailsView = ({
             </Descriptions>
           </Col>
         </Row>
+        
+        {/* Gestionnaire Information */}
+        {gestionnaire && (
+          <>
+            <Divider orientation="left">
+              <Space>
+                <UserOutlined style={{ color: "#1890ff" }} />
+                <Text strong>Gestionnaire</Text>
+              </Space>
+            </Divider>
+            <Row gutter={[24, 16]}>
+              <Col xs={24} md={12}>
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Nom">
+                    <Text strong>{gestionnaire.nom} {gestionnaire.prenom}</Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Type">
+                    <Tag color="blue">{gestionnaire.type}</Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Email">
+                    <Space>
+                      <MailOutlined style={{ color: "#faad14" }} />
+                      <Text copyable>{gestionnaire.email}</Text>
+                    </Space>
+                  </Descriptions.Item>
+                </Descriptions>
+              </Col>
+              <Col xs={24} md={12}>
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Téléphone">
+                    {gestionnaire.telephone ? (
+                      <Space>
+                        <PhoneOutlined style={{ color: "#13c2c2" }} />
+                        <Text copyable>{gestionnaire.telephone}</Text>
+                      </Space>
+                    ) : (
+                      <Text type="secondary">N/A</Text>
+                    )}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Statut">
+                    <Tag color={gestionnaire.etat === 'ACTIVE' ? 'green' : 'orange'}>
+                      {gestionnaire.etat}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Adresse">
+                    {gestionnaire.adresse || <Text type="secondary">N/A</Text>}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Col>
+            </Row>
+          </>
+        )}
       </Card>
 
       {/* Configuration Options */}
@@ -884,6 +985,96 @@ const ManageEstablishmentDetailsView = ({
                       <Switch />
                     </div>
                   </Form.Item>
+                </Card>
+              </Col>
+            </Row>
+            
+            {/* Gestionnaire Selection */}
+            <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+              <Col xs={24}>
+                <Card
+                  title={
+                    <Space>
+                      <UserOutlined />
+                      <span>Gestionnaire</span>
+                    </Space>
+                  }
+                  size="small"
+                >
+                  <div style={{ position: "relative" }}>
+                    <Button
+                      onClick={() => setShowUserDropdown(!showUserDropdown)}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        height: "40px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                      }}
+                    >
+                      <span>
+                        {selectedGestionnaire
+                          ? `${selectedGestionnaire.nom} ${selectedGestionnaire.prenom} (${selectedGestionnaire.email}) - ${selectedGestionnaire.type}`
+                          : "Sélectionner un gestionnaire"}
+                      </span>
+                      <span>▼</span>
+                    </Button>
+                    
+                    {showUserDropdown && (
+                      <div style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        zIndex: 1000,
+                        backgroundColor: "white",
+                        border: "1px solid #d9d9d9",
+                        borderRadius: "6px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        maxHeight: "200px",
+                        overflowY: "auto"
+                      }}>
+                        {loadingUsers ? (
+                          <div style={{ padding: "16px", textAlign: "center" }}>
+                            Chargement des utilisateurs...
+                          </div>
+                        ) : users.length === 0 ? (
+                          <div style={{ padding: "16px", textAlign: "center" }}>
+                            Aucun utilisateur disponible
+                          </div>
+                        ) : (
+                          users.map((user) => (
+                            <div
+                              key={user.id}
+                              onClick={() => {
+                                setSelectedGestionnaire(user);
+                                setShowUserDropdown(false);
+                              }}
+                              style={{
+                                padding: "12px 16px",
+                                cursor: "pointer",
+                                borderBottom: "1px solid #f0f0f0",
+                                ":hover": { backgroundColor: "#f5f5f5" }
+                              }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = "#f5f5f5"}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = "white"}
+                            >
+                              <div style={{ fontWeight: "500" }}>
+                                {user.nom} {user.prenom}
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#666" }}>
+                                {user.email}
+                              </div>
+                              <div style={{ fontSize: "11px", color: "#1890ff", fontWeight: "500" }}>
+                                {user.type || 'Type non défini'}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </Card>
               </Col>
             </Row>
