@@ -176,7 +176,7 @@ const ActivityDisplay = ({
     }
 
     return (
-      <div className="relative group">
+      <div className="relative">
         <img
           src={imageUrl}
           alt={media.fileName || "Image"}
@@ -187,14 +187,6 @@ const ActivityDisplay = ({
             setImageLoadError(prev => ({ ...prev, [mediaKey]: true }));
           }}
         />
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-          <button
-            onClick={() => handleMediaDownload(media)}
-            className="bg-white text-gray-700 p-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
-          >
-            <Download size={20} />
-          </button>
-        </div>
       </div>
     );
   };
@@ -205,7 +197,7 @@ const ActivityDisplay = ({
     }
 
     return (
-      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
         <div className="flex items-center gap-3">
           {getMediaIcon(media.type, media.contentType)}
           <div className="flex-1">
@@ -216,13 +208,6 @@ const ActivityDisplay = ({
               <p className="text-xs text-gray-500">{media.contentType}</p>
             )}
           </div>
-          <button
-            onClick={() => handleMediaDownload(media)}
-            className="text-gray-500 hover:text-blue-600 p-1 rounded transition-colors"
-            title="Télécharger"
-          >
-            <Download size={18} />
-          </button>
         </div>
       </div>
     );
