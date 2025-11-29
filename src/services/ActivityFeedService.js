@@ -86,31 +86,36 @@ class ActivityFeedService {
     return finalUserId;
   }
 
-  getProfessorId() {
-    // Try to get professor ID from different storage locations
-    const professorId = localStorage.getItem("professorId") || 
-                       localStorage.getItem("professeurId") ||
-                       localStorage.getItem("userId");
-    
-    const authResponse = JSON.parse(
-      localStorage.getItem("authResponse") || "{}"
-    );
-    
-    const userRole = localStorage.getItem("userRole") || authResponse.userType;
-    
-    let finalId = professorId || authResponse.professorId || authResponse.professeurId || authResponse.userId;
-    
-    // For admin users, use their userId as professor ID
-    if (userRole === 'admin' || userRole === 'ROLE_ADMIN') {
-      finalId = localStorage.getItem("userId") || authResponse.userId;
-    }
+  async getProfessorId() {
+    const userRole = localStorage.getItem("userRole");
+    const userId = localStorage.getItem("userId");
+    const authResponse = JSON.parse(localStorage.getItem("authResponse") || "{}");
     
     console.log('=== PROFESSOR ID DEBUG ===');
     console.log('userRole:', userRole);
-    console.log('professorId from localStorage:', localStorage.getItem("professorId"));
-    console.log('professeurId from localStorage:', localStorage.getItem("professeurId"));
-    console.log('userId from localStorage:', localStorage.getItem("userId"));
-    console.log('authResponse:', authResponse);
+    console.log('userId:', userId);
+    
+    // For admin users, try to get the first available professor ID from backend
+    if (userRole === 'ROLE_ADMIN' || userRole === 'admin') {
+      try {
+        const response = await activityFeedApi.get('/professeurs');
+        const professors = response.data;
+        if (professors && professors.length > 0) {
+          console.log('Using first available professor ID for admin:', professors[0].id);
+          return professors[0].id;
+        }
+      } catch (error) {
+        console.warn('Could not fetch professors for admin, using userId:', error);
+      }
+    }
+    
+    // For professor users, use their userId directly
+    if (userRole === 'ROLE_PROFESSOR' || userRole === 'professor') {
+      return userId || authResponse.userId;
+    }
+    
+    // Fallback to userId for other cases
+    const finalId = userId || authResponse.userId;
     console.log('Final professor ID:', finalId);
     console.log('========================');
     
@@ -356,7 +361,7 @@ class ActivityFeedService {
   // Create event
   async createEvent(eventData) {
     try {
-      const createurId = this.getProfessorId();
+      const createurId = await this.getProfessorId();
       if (!createurId) {
         throw new Error("Professor ID not found. Please ensure you are logged in as a professor.");
       }
