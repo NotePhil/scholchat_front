@@ -60,10 +60,22 @@ const ActivityDisplay = ({
 
   const handleMediaDownload = async (media) => {
     try {
+      let downloadUrl;
       if (media.filePath) {
-        await minioS3Service.downloadFileByPath(media.filePath);
-      } else {
-        await minioS3Service.downloadFile(media.id);
+        downloadUrl = `http://localhost:8486/scholchat/media/download-by-path?filePath=${encodeURIComponent(media.filePath)}`;
+      } else if (media.id) {
+        downloadUrl = `http://localhost:8486/scholchat/media/${media.id}/download`;
+      }
+      
+      if (downloadUrl) {
+        // Create a temporary link to trigger download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = media.fileName || 'file';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
     } catch (error) {
       console.error("Erreur lors du téléchargement:", error);
@@ -81,42 +93,117 @@ const ActivityDisplay = ({
     return <FileText size={16} className="text-gray-600" />;
   };
 
-  const renderMediaPreview = (media) => {
-    if (media.type === "IMAGE" || media.contentType?.startsWith("image/")) {
+  const MediaImage = ({ media }) => {
+    const [imageUrl, setImageUrl] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+    const mediaKey = media.id || media.fileName;
+
+    React.useEffect(() => {
+      // Skip loading if already failed
+      if (imageLoadError[mediaKey]) {
+        setLoading(false);
+        setHasError(true);
+        return;
+      }
+
+      let isMounted = true;
+      
+      const loadImage = async () => {
+        try {
+          if (!media.filePath && !media.id) {
+            throw new Error('No file path or ID');
+          }
+
+          // Skip CORS-problematic URLs
+          if (media.filePath && (media.filePath.includes('users/') || media.filePath.includes('events/'))) {
+            throw new Error('CORS blocked path');
+          }
+
+          let url = null;
+          
+          if (media.filePath) {
+            url = `http://localhost:8486/scholchat/media/download-by-path?filePath=${encodeURIComponent(media.filePath)}`;
+          } else if (media.id) {
+            url = `http://localhost:8486/scholchat/media/${media.id}/download`;
+          }
+          
+          if (url && isMounted) {
+            // Direct image load without HEAD request to avoid CORS preflight
+            setImageUrl(url);
+          }
+        } catch (error) {
+          if (isMounted) {
+            setHasError(true);
+            setImageLoadError(prev => ({ ...prev, [mediaKey]: true }));
+          }
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
+      };
+      
+      loadImage();
+      
+      return () => {
+        isMounted = false;
+      };
+    }, [media.filePath, media.id, mediaKey, imageLoadError]);
+
+    if (loading) {
       return (
-        <div className="relative group">
-          <img
-            src={
-              media.filePath || media.downloadUrl || "/api/placeholder/400/300"
-            }
-            alt={media.fileName || "Image"}
-            className="w-full h-64 sm:h-80 object-cover rounded-lg"
-            onError={(e) => {
-              setImageLoadError((prev) => ({
-                ...prev,
-                [media.id || media.fileName]: true,
-              }));
-              e.target.style.display = "none";
-            }}
-          />
-          {imageLoadError[media.id || media.fileName] && (
-            <div className="w-full h-64 sm:h-80 bg-gray-100 rounded-lg flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <Image size={48} className="mx-auto mb-2" />
-                <p>Image non disponible</p>
-              </div>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-            <button
-              onClick={() => handleMediaDownload(media)}
-              className="bg-white text-gray-700 p-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
-            >
-              <Download size={20} />
-            </button>
+        <div className="w-full h-64 sm:h-80 bg-gray-100 rounded-lg flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+            <p>Chargement...</p>
           </div>
         </div>
       );
+    }
+
+    if (hasError || imageLoadError[mediaKey] || (!imageUrl && !loading)) {
+      return (
+        <div className="w-full h-64 sm:h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+          <div className="text-center text-gray-500">
+            <Image size={48} className="mx-auto mb-2 text-gray-400" />
+            <p className="font-medium">Image non disponible</p>
+            <p className="text-xs mt-1 text-gray-400">Fichier non accessible</p>
+            {media.fileName && (
+              <p className="text-xs mt-1 text-gray-400 truncate max-w-48">{media.fileName}</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative group">
+        <img
+          src={imageUrl}
+          alt={media.fileName || "Image"}
+          className="w-full h-64 sm:h-80 object-cover rounded-lg"
+          onError={() => {
+            setHasError(true);
+            setImageLoadError(prev => ({ ...prev, [mediaKey]: true }));
+          }}
+          crossOrigin="anonymous"
+        />
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+          <button
+            onClick={() => handleMediaDownload(media)}
+            className="bg-white text-gray-700 p-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
+          >
+            <Download size={20} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMediaPreview = (media) => {
+    if (media.type === "IMAGE" || media.mediaType === "IMAGE" || media.contentType?.startsWith("image/")) {
+      return <MediaImage media={media} />;
     }
 
     return (
@@ -149,17 +236,17 @@ const ActivityDisplay = ({
       <div className="p-4 sm:p-6">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
-            {activity.user.name.charAt(0).toUpperCase()}
+            {activity.user?.name?.charAt(0)?.toUpperCase() || "U"}
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
-                  {activity.user.name}
+                  {activity.user?.name || "Utilisateur"}
                 </h3>
                 <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-                  <span className="capitalize">{activity.user.role}</span>
+                  <span className="capitalize">{activity.user?.role || "user"}</span>
                   <span>•</span>
                   <span>{formatTimestamp(activity.timestamp)}</span>
                   {activity.type === "event" && activity.eventDetails && (

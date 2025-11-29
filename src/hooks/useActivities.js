@@ -96,26 +96,37 @@ export const useActivities = () => {
   const canCreateActivity = useMemo(() => {
     const allowedRoles = [
       "ROLE_ADMIN",
-      "ROLE_PROFESSOR",
+      "ROLE_PROFESSOR", 
+      "ROLE_PROFESSEUR",
       "admin",
       "professor",
       "professeur",
     ];
 
     // Vérifier le rôle unique
-    if (userRole && allowedRoles.includes(userRole.toLowerCase())) {
-      return true;
+    if (userRole) {
+      const normalizedRole = userRole.toLowerCase();
+      if (allowedRoles.some(role => role.toLowerCase() === normalizedRole)) {
+        return true;
+      }
     }
 
     // Vérifier le tableau de rôles
     if (userRoles && userRoles.length > 0) {
-      return userRoles.some((role) =>
-        allowedRoles.includes(role.toLowerCase())
-      );
+      return userRoles.some((role) => {
+        const normalizedRole = role.toLowerCase();
+        return allowedRoles.some(allowedRole => allowedRole.toLowerCase() === normalizedRole);
+      });
+    }
+
+    // Vérifier dans currentUser
+    if (activitiesState.currentUser?.role) {
+      const normalizedRole = activitiesState.currentUser.role.toLowerCase();
+      return allowedRoles.some(role => role.toLowerCase() === normalizedRole);
     }
 
     return false;
-  }, [userRole, userRoles]);
+  }, [userRole, userRoles, activitiesState.currentUser]);
 
   return {
     ...activitiesState,

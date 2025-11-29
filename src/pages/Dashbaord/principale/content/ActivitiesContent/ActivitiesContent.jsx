@@ -9,7 +9,7 @@ import {
   Calendar,
   MessageSquare,
 } from "lucide-react";
-import ActivityDisplay from "./ActivityDisplay";
+import SimpleActivityDisplay from "./SimpleActivityDisplay";
 import CreateEventContent from "./CreateEventContent";
 import { useActivities } from "../../../../../hooks/useActivities";
 
@@ -72,7 +72,6 @@ const ActivitiesContent = () => {
     loadActivities();
   }, [loadActivities]);
 
-  // Auto-clear messages
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => handleClearError(), 5000);
@@ -120,7 +119,6 @@ const ActivitiesContent = () => {
         />
       ) : (
         <>
-          {/* Messages de notification */}
           {error && (
             <div className="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
               <AlertCircle size={20} />
@@ -138,7 +136,6 @@ const ActivitiesContent = () => {
           )}
 
           <div className="max-w-4xl mx-auto px-4 py-6">
-            {/* En-tête */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
               <div className="flex justify-between items-center">
                 <div>
@@ -155,13 +152,12 @@ const ActivitiesContent = () => {
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
                   >
                     <Plus size={20} />
-                    <span>Créer</span>
+                    <span>Créer une activité</span>
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Filtres */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
               <div className="flex flex-wrap gap-2">
                 {filters.map((filter) => {
@@ -184,72 +180,28 @@ const ActivitiesContent = () => {
               </div>
             </div>
 
-            {/* Zone de création rapide */}
-            {canCreateActivity && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-                <div
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => handleShowCreateForm(true)}
-                >
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                    {currentUser?.name?.charAt(0)?.toUpperCase() || "U"}
-                  </div>
-                  <div className="flex-1 text-gray-500">
-                    Que souhaitez-vous partager aujourd'hui ?
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Liste des activités */}
-            <div className="space-y-6">
-              {filteredActivities.length > 0 ? (
-                filteredActivities.map((activity) => (
-                  <ActivityDisplay
+            {filteredActivities.length > 0 ? (
+              <div className="space-y-6">
+                {filteredActivities.map((activity) => (
+                  <SimpleActivityDisplay
                     key={activity.id}
                     activity={activity}
                     onReaction={handleReaction}
                     onComment={handleComment}
                     onShare={handleShare}
-                    onJoinEvent={handleJoinEvent}
                     currentUser={currentUser}
                   />
-                ))
-              ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-                  <div className="text-gray-400 mb-4">
-                    <Users size={64} className="mx-auto" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                    Aucune activité trouvée
-                  </h3>
-                  <p className="text-gray-500 mb-6">
-                    {activeFilter === "all"
-                      ? "Il n'y a pas encore d'activités."
-                      : `Aucune activité ne correspond au filtre "${
-                          filters.find((f) => f.id === activeFilter)?.label
-                        }".`}
-                  </p>
-                  {activeFilter === "all" && canCreateActivity && (
-                    <button
-                      onClick={() => handleShowCreateForm(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 mx-auto transition-all duration-200"
-                    >
-                      <Plus size={20} />
-                      Créer un événement
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Chargement supplémentaire */}
-            {loading && filteredActivities.length > 0 && (
-              <div className="text-center py-8">
-                <Loader2
-                  className="animate-spin text-blue-600 mx-auto"
-                  size={32}
-                />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <Users size={64} className="mx-auto text-gray-400 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  Aucune activité trouvée
+                </h3>
+                <p className="text-gray-500">
+                  Aucune activité ne correspond aux filtres sélectionnés.
+                </p>
               </div>
             )}
           </div>

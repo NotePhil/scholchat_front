@@ -86,6 +86,37 @@ class ActivityFeedService {
     return finalUserId;
   }
 
+  getProfessorId() {
+    // Try to get professor ID from different storage locations
+    const professorId = localStorage.getItem("professorId") || 
+                       localStorage.getItem("professeurId") ||
+                       localStorage.getItem("userId");
+    
+    const authResponse = JSON.parse(
+      localStorage.getItem("authResponse") || "{}"
+    );
+    
+    const userRole = localStorage.getItem("userRole") || authResponse.userType;
+    
+    let finalId = professorId || authResponse.professorId || authResponse.professeurId || authResponse.userId;
+    
+    // For admin users, use their userId as professor ID
+    if (userRole === 'admin' || userRole === 'ROLE_ADMIN') {
+      finalId = localStorage.getItem("userId") || authResponse.userId;
+    }
+    
+    console.log('=== PROFESSOR ID DEBUG ===');
+    console.log('userRole:', userRole);
+    console.log('professorId from localStorage:', localStorage.getItem("professorId"));
+    console.log('professeurId from localStorage:', localStorage.getItem("professeurId"));
+    console.log('userId from localStorage:', localStorage.getItem("userId"));
+    console.log('authResponse:', authResponse);
+    console.log('Final professor ID:', finalId);
+    console.log('========================');
+    
+    return finalId;
+  }
+
   // Get all activities with proper data structure
   async getActivities(filter = "all") {
     try {
@@ -188,19 +219,23 @@ class ActivityFeedService {
 
       // For likes, check current status first
       if (reactionType === "like") {
-        const hasLiked = await this.hasUserLikedEvent(activityId, userId);
-
-        if (hasLiked) {
-          // This will remove the like (dislike)
-          const interaction = {
-            type: "LIKE",
-            content: "liked this",
-            createdById: userId,
-            eventId: activityId,
-          };
-
-          await activityFeedApi.post("/interactions", interaction);
-          return false; // Return false to indicate removal
+        try {
+          const hasLiked = await this.hasUserLikedEvent(activityId, userId);
+          if (hasLiked) {
+            // Remove like
+            await activityFeedApi.delete(`/interactions/event/${activityId}/user/${userId}/like`).catch(() => {
+              // Fallback: create unlike interaction
+              return activityFeedApi.post("/interactions", {
+                type: "UNLIKE",
+                content: "unliked this",
+                createdById: userId,
+                eventId: activityId,
+              });
+            });
+            return false;
+          }
+        } catch (err) {
+          console.warn("Could not check like status:", err);
         }
       }
 
@@ -212,9 +247,17 @@ class ActivityFeedService {
         eventId: activityId,
       };
 
-      console.log("Sending interaction:", interaction);
-      await activityFeedApi.post("/interactions", interaction);
-      return true; // Return true to indicate creation
+      try {
+        await activityFeedApi.post("/interactions", interaction);
+      } catch (err) {
+        if (err.response?.status === 404) {
+          // Try alternative endpoint
+          await activityFeedApi.post(`/events/${activityId}/like`, { userId });
+        } else {
+          throw err;
+        }
+      }
+      return true;
     } catch (error) {
       console.error("Failed to add reaction:", error);
       throw error;
@@ -236,15 +279,28 @@ class ActivityFeedService {
   // Comment on activity
   async commentOnActivity(activityId, comment) {
     try {
+      const userId = this.getValidUserId();
       const interaction = {
         type: "COMMENT",
         content: comment,
-        createdById: this.getValidUserId(),
+        createdById: userId,
         eventId: activityId,
       };
 
-      console.log("Sending comment interaction:", interaction);
-      const response = await activityFeedApi.post("/interactions", interaction);
+      let response;
+      try {
+        response = await activityFeedApi.post("/interactions", interaction);
+      } catch (err) {
+        if (err.response?.status === 404) {
+          // Try alternative endpoint
+          response = await activityFeedApi.post(`/events/${activityId}/comments`, {
+            content: comment,
+            userId: userId
+          });
+        } else {
+          throw err;
+        }
+      }
 
       const currentUser = this.getCurrentUser();
       return {
@@ -255,7 +311,7 @@ class ActivityFeedService {
       };
     } catch (error) {
       console.error("Failed to comment:", error);
-      throw new Error("Failed to post comment");
+      throw new Error(`Failed to post comment: ${error.response?.data?.message || error.message}`);
     }
   }
 
@@ -300,17 +356,58 @@ class ActivityFeedService {
   // Create event
   async createEvent(eventData) {
     try {
+      const createurId = this.getProfessorId();
+      if (!createurId) {
+        throw new Error("Professor ID not found. Please ensure you are logged in as a professor.");
+      }
+
+      // Clean and validate media data
+      let cleanedMedias = [];
+      if (eventData.medias && eventData.medias.length > 0) {
+        cleanedMedias = eventData.medias.map(media => ({
+          fileName: media.fileName,
+          filePath: media.filePath,
+          fileType: media.fileType || media.mediaType || "IMAGE",
+          contentType: media.contentType,
+          fileSize: media.fileSize,
+          mediaType: media.mediaType || "IMAGE",
+          bucketName: media.bucketName || "ressources"
+        }));
+        
+        console.log('Cleaned medias:', cleanedMedias);
+      }
+
       const eventPayload = {
-        ...eventData,
-        createurId: this.getValidUserId(),
+        titre: eventData.titre,
+        description: eventData.description,
+        lieu: eventData.lieu,
+        heureDebut: eventData.heureDebut,
+        heureFin: eventData.heureFin,
+        etat: eventData.etat || "PLANIFIE",
+        createurId: createurId,
+        participantsIds: eventData.participantsIds || [],
+        medias: cleanedMedias
       };
 
       console.log("Creating event with payload:", eventPayload);
+      
       const response = await activityFeedApi.post("/evenements", eventPayload);
+      
+      console.log('Event creation response:', response.data);
+      
       return response.data;
     } catch (error) {
       console.error("Failed to create event:", error);
-      throw new Error("Failed to create event");
+      console.error("Error details:", error.response?.data);
+      
+      // If it's a media-related error, try creating without media
+      if (error.response?.status === 400 && eventData.medias?.length > 0) {
+        console.warn('Retrying event creation without media due to error');
+        const eventWithoutMedia = { ...eventData, medias: [] };
+        return this.createEvent(eventWithoutMedia);
+      }
+      
+      throw new Error(`Failed to create event: ${error.response?.data?.message || error.message}`);
     }
   }
 
@@ -375,18 +472,37 @@ class ActivityFeedService {
   transformEventToActivity(event) {
     const currentUser = this.getCurrentUser();
 
+    // Ensure user object is always present
+    const eventUser = {
+      id: event.createurId || currentUser?.id || "unknown",
+      name: event.createurNom || currentUser?.name || "Créateur d'événement",
+      role: "professor",
+      avatar: "/api/placeholder/48/48",
+    };
+
+    // Filter out invalid media and add proper structure
+    let validMedia = [];
+    if (event.medias && Array.isArray(event.medias)) {
+      validMedia = event.medias
+        .filter(media => media && (media.filePath || media.id))
+        .map(media => ({
+          id: media.id || media.fileName,
+          fileName: media.fileName,
+          filePath: media.filePath,
+          type: media.fileType || media.mediaType || "IMAGE",
+          mediaType: media.mediaType || "IMAGE",
+          contentType: media.contentType,
+          fileSize: media.fileSize
+        }));
+    }
+
     return {
       id: event.id,
       type: "event",
-      user: {
-        id: event.createurId || currentUser.id,
-        name: event.createurNom || "Event Creator",
-        role: "professor",
-        avatar: "/api/placeholder/48/48",
-      },
+      user: eventUser,
       timestamp:
         event.heureDebut || event.dateCreation || new Date().toISOString(),
-      content: `${event.titre}: ${event.description || "New event created"}`,
+      content: `${event.titre}: ${event.description || "Nouvel événement créé"}`,
       eventDetails: {
         title: event.titre,
         description: event.description,
@@ -396,10 +512,10 @@ class ActivityFeedService {
         endTime: event.heureFin,
         participantsCount: event.participantsIds?.length || 0,
       },
-      media: event.medias || [],
-      likes: event.likesCount || Math.floor(Math.random() * 50),
+      media: validMedia,
+      likes: event.likesCount || 0,
       comments: event.comments || [],
-      shares: event.sharesCount || Math.floor(Math.random() * 20),
+      shares: event.sharesCount || 0,
       isLiked: false,
       isShared: false,
     };
@@ -409,21 +525,24 @@ class ActivityFeedService {
   transformInteractionToActivity(interaction) {
     const currentUser = this.getCurrentUser();
 
+    // Ensure user object is always present
+    const interactionUser = {
+      id: interaction.createdById || currentUser?.id || "unknown",
+      name: interaction.createdByName || currentUser?.name || "Utilisateur",
+      role: interaction.createdByRole || "user",
+      avatar: "/api/placeholder/48/48",
+    };
+
     return {
       id: interaction.id,
       type: interaction.type === "COMMENT" ? "post" : "interaction",
-      user: {
-        id: interaction.createdById || currentUser.id,
-        name: interaction.createdByName || "User",
-        role: interaction.createdByRole || "user",
-        avatar: "/api/placeholder/48/48",
-      },
+      user: interactionUser,
       timestamp: interaction.creationDate || new Date().toISOString(),
       content: interaction.content,
       interactionType: interaction.type,
-      likes: interaction.likesCount || Math.floor(Math.random() * 30),
+      likes: interaction.likesCount || 0,
       comments: interaction.comments || [],
-      shares: interaction.sharesCount || Math.floor(Math.random() * 10),
+      shares: interaction.sharesCount || 0,
       isLiked: false,
       isShared: false,
     };

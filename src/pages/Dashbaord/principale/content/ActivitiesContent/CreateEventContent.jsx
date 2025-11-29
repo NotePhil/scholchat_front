@@ -99,19 +99,20 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
                     new File([blob], img.fileName, { type: img.contentType })
                 ));
 
-            const uploadResult = await window.minioS3Service.uploadImage(
+            const { minioS3Service } = await import("../../../../../services/minioS3");
+            const uploadResult = await minioS3Service.uploadImage(
               file,
               "event_images"
             );
 
             uploadedMedia.push({
-              fileName: uploadResult.fileName,
+              fileName: uploadResult.fileName || img.fileName,
               filePath: uploadResult.filePath,
               fileType: "IMAGE",
-              contentType: img.contentType,
-              fileSize: img.size,
+              contentType: img.contentType || "image/jpeg",
+              fileSize: img.size || 0,
               mediaType: "IMAGE",
-              bucketName: "ressources",
+              bucketName: uploadResult.bucketName || "ressources"
             });
           } catch (uploadError) {
             console.error(`Error uploading ${img.fileName}:`, uploadError);
@@ -124,9 +125,38 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
         medias: uploadedMedia,
       };
 
-      console.log("Submitting event data:", eventData);
-      await onSubmit(eventData);
-      handleClose();
+      console.log("=== ACTIVITY CREATION DATA ===");
+      console.log("Event Data:", JSON.stringify(eventData, null, 2));
+      console.log("Required fields:");
+      console.log("- titre:", eventData.titre);
+      console.log("- description:", eventData.description);
+      console.log("- lieu:", eventData.lieu);
+      console.log("- heureDebut:", eventData.heureDebut);
+      console.log("- heureFin:", eventData.heureFin);
+      console.log("- etat:", eventData.etat);
+      console.log("- medias count:", eventData.medias.length);
+      console.log("==============================");
+      
+      try {
+        await onSubmit(eventData);
+        alert("Événement créé avec succès!");
+        handleClose();
+      } catch (error) {
+        console.error("Event creation failed:", error);
+        let errorMessage = "Erreur lors de la création de l'événement";
+        
+        if (error.message.includes('404')) {
+          errorMessage = "Endpoint /evenements non trouvé. Vérifiez que le serveur backend est démarré.";
+        } else if (error.message.includes('500')) {
+          errorMessage = "Erreur serveur. Vérifiez les logs du backend.";
+        } else if (error.message.includes('DUPLICATE_RESOURCE')) {
+          errorMessage = "Un événement avec ce titre existe déjà.";
+        } else if (error.message.includes('NOT_FOUND')) {
+          errorMessage = "Professeur non trouvé. Vérifiez votre authentification.";
+        }
+        
+        alert(`${errorMessage}\n\nDétails: ${error.message}`);
+      }
     } catch (error) {
       console.error("Erreur lors de la création de l'événement:", error);
       throw error;
@@ -214,7 +244,8 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
   const downloadImage = async (image) => {
     try {
       if (image.filePath && image.filePath !== `temp/${image.fileName}`) {
-        await window.minioS3Service.downloadFileByPath(image.filePath);
+        const { minioS3Service } = await import("../../../../../services/minioS3");
+        await minioS3Service.downloadFileByPath(image.filePath);
       } else {
         const response = await fetch(image.previewUrl);
         const blob = await response.blob();
