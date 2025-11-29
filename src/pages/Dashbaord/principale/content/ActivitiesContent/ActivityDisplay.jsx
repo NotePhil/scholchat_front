@@ -29,6 +29,32 @@ const ActivityDisplay = ({
   const [newComment, setNewComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [imageLoadError, setImageLoadError] = useState({});
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [expandedImage, setExpandedImage] = useState(null);
+
+  // Reset image index when activity changes
+  React.useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [activity.id]);
+
+  // Handle keyboard events for image modal
+  React.useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && expandedImage) {
+        setExpandedImage(null);
+      }
+    };
+
+    if (expandedImage) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [expandedImage]);
 
   const formatTimestamp = (timestamp) => {
     return activityFeedService.formatTimestamp(timestamp);
@@ -176,17 +202,22 @@ const ActivityDisplay = ({
     }
 
     return (
-      <div className="relative">
+      <div className="relative cursor-pointer" onClick={() => setExpandedImage(imageUrl)}>
         <img
           src={imageUrl}
           alt={media.fileName || "Image"}
-          className="w-full h-64 sm:h-80 object-cover rounded-lg"
+          className="w-full h-auto max-h-96 object-contain rounded-lg"
           onError={() => {
             console.error('Image failed to load:', imageUrl);
             setHasError(true);
             setImageLoadError(prev => ({ ...prev, [mediaKey]: true }));
           }}
         />
+        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
+          <div className="opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm">
+            Cliquer pour agrandir
+          </div>
+        </div>
       </div>
     );
   };
@@ -319,11 +350,26 @@ const ActivityDisplay = ({
 
       {activity.media && activity.media.length > 0 && (
         <div className="px-4 sm:px-6 pb-4">
-          <div className="space-y-3">
-            {activity.media.map((media, index) => (
-              <div key={media.id || index}>{renderMediaPreview(media)}</div>
-            ))}
-          </div>
+          {activity.media.length === 1 ? (
+            <div>{renderMediaPreview(activity.media[0])}</div>
+          ) : (
+            <div className="relative">
+              <div>{renderMediaPreview(activity.media[currentImageIndex])}</div>
+              <div className="flex justify-center mt-3 gap-2">
+                {activity.media.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`w-3 h-3 rounded-full transition-colors ${
+                      index === currentImageIndex
+                        ? "bg-blue-600"
+                        : "bg-gray-300 hover:bg-gray-400"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -447,6 +493,29 @@ const ActivityDisplay = ({
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Image Expansion Modal */}
+      {expandedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setExpandedImage(null)}
+        >
+          <div className="relative max-w-full max-h-full">
+            <img
+              src={expandedImage}
+              alt="Image agrandie"
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setExpandedImage(null)}
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
