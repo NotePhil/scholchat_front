@@ -89,6 +89,9 @@ class MinioS3Service {
     documentType = "general"
   ) {
     try {
+      console.log('=== GENERATING UPLOAD URL ===');
+      console.log('Request params:', { fileName, contentType, mediaType, documentType });
+      
       const request = {
         fileName: fileName,
         contentType: contentType,
@@ -97,7 +100,9 @@ class MinioS3Service {
         documentType: documentType,
       };
 
+      console.log('Sending request to /media/presigned-url:', request);
       const response = await minioApi.post("/media/presigned-url", request);
+      console.log('Presigned URL response:', response.data);
 
       return {
         uploadUrl: response.data.url,
@@ -108,6 +113,10 @@ class MinioS3Service {
         success: true,
       };
     } catch (error) {
+      console.error('=== UPLOAD URL GENERATION ERROR ===');
+      console.error('Error response:', error.response?.data);
+      console.error('Error message:', error.message);
+      console.error('===================================');
       throw new Error(
         `Failed to generate upload URL: ${
           error.response?.data?.message || error.message
@@ -118,13 +127,21 @@ class MinioS3Service {
 
   async uploadFileToMinio(presignedUrl, file, contentType) {
     try {
+      console.log('=== UPLOADING TO MINIO ===');
+      console.log('Presigned URL:', presignedUrl);
+      console.log('File size:', file.size, 'Content-Type:', contentType);
+      
       const uploadResponse = await axios.put(presignedUrl, file, {
         headers: {
           "Content-Type": contentType,
         },
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
+        timeout: 30000, // 30 second timeout
       });
+
+      console.log('Upload response status:', uploadResponse.status);
+      console.log('=== MINIO UPLOAD SUCCESS ===');
 
       return {
         success: true,
@@ -132,6 +149,11 @@ class MinioS3Service {
         statusText: uploadResponse.statusText,
       };
     } catch (error) {
+      console.error('=== MINIO UPLOAD ERROR ===');
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      console.error('Error message:', error.message);
+      console.error('==========================');
       throw new Error(
         `Failed to upload file: ${
           error.response?.data?.message || error.message
@@ -142,12 +164,17 @@ class MinioS3Service {
 
   async uploadFile(file, mediaType = "DOCUMENT", documentType = "general") {
     try {
+      console.log('=== MINIO UPLOAD FILE START ===');
+      console.log('File:', file.name, 'MediaType:', mediaType, 'DocumentType:', documentType);
+      
       const uploadUrlData = await this.generateUploadUrl(
         file.name,
         file.type,
         mediaType,
         documentType
       );
+
+      console.log('Generated upload URL data:', uploadUrlData);
 
       await this.uploadFileToMinio(uploadUrlData.uploadUrl, file, file.type);
 
@@ -156,7 +183,7 @@ class MinioS3Service {
         uploadUrlData.fileName
       }`;
 
-      return {
+      const result = {
         success: true,
         fileName: uploadUrlData.fileName,
         mediaType: uploadUrlData.mediaType,
@@ -166,21 +193,28 @@ class MinioS3Service {
         contentType: file.type,
         filePath: expectedFilePath,
       };
+      
+      console.log('Upload successful, returning:', result);
+      console.log('=== MINIO UPLOAD FILE END ===');
+      
+      return result;
     } catch (error) {
+      console.error('=== MINIO UPLOAD FILE ERROR ===');
+      console.error('Error details:', error);
+      console.error('===============================');
       throw error;
     }
   }
 
   async generateDownloadUrl(mediaId) {
     try {
-      // Use backend media endpoint directly to avoid CORS issues
-      const downloadUrl = `${BASE_URL}/media/${mediaId}/download`;
+      const response = await minioApi.get(`/media/${mediaId}/download-url`);
       
       return {
-        downloadUrl: downloadUrl,
-        fileName: `media_${mediaId}`,
-        contentType: 'application/octet-stream',
-        ownerId: this.getValidUserId(),
+        downloadUrl: response.data.url,
+        fileName: response.data.fileName,
+        contentType: response.data.contentType,
+        ownerId: response.data.ownerId,
       };
     } catch (error) {
       throw new Error(
@@ -273,8 +307,57 @@ class MinioS3Service {
     }
   }
 
-  async uploadImage(file, documentType = "images") {
-    return this.uploadFile(file, "IMAGE", documentType);
+  async uploadImage(file, documentType = "event_images") {
+    try {
+      console.log('=== MINIO UPLOAD IMAGE START ===');
+      console.log('File:', file.name, 'Size:', file.size, 'Type:', file.type);
+      console.log('Document Type:', documentType);
+
+      // Generate unique filename for events
+      const timestamp = Date.now() + Math.random();
+      const extension = file.name.split('.').pop();
+      const uniqueFileName = `${documentType}_${timestamp}.${extension}`;
+      
+      console.log('Generated filename:', uniqueFileName);
+
+      // Step 1: Get presigned upload URL
+      const uploadUrlData = await this.generateUploadUrl(
+        uniqueFileName,
+        file.type,
+        "IMAGE",
+        documentType
+      );
+
+      console.log('Upload URL data:', uploadUrlData);
+
+      // Step 2: Upload file to MinIO
+      await this.uploadFileToMinio(uploadUrlData.uploadUrl, file, file.type);
+
+      // Step 3: Return the expected format for event creation
+      const userId = this.getValidUserId();
+      const filePath = `users/${userId}/image/${documentType}/${uniqueFileName}`;
+      
+      const result = {
+        fileName: uniqueFileName,
+        filePath: filePath,
+        fileType: "IMAGE",
+        contentType: file.type,
+        fileSize: file.size,
+        mediaType: "IMAGE",
+        bucketName: "scholchat"
+      };
+
+      console.log('Upload successful, returning:', result);
+      console.log('=== MINIO UPLOAD IMAGE END ===');
+      
+      return result;
+      
+    } catch (error) {
+      console.error('=== MINIO UPLOAD IMAGE ERROR ===');
+      console.error('Error details:', error);
+      console.error('================================');
+      throw new Error(`Image upload failed: ${error.message}`);
+    }
   }
 
   async getMediaUrlByPath(filePath) {

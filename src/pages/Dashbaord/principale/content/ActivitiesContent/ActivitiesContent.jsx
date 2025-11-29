@@ -9,7 +9,7 @@ import {
   Calendar,
   MessageSquare,
 } from "lucide-react";
-import SimpleActivityDisplay from "./SimpleActivityDisplay";
+import ActivityDisplay from "./ActivityDisplay";
 import CreateEventContent from "./CreateEventContent";
 import { useActivities } from "../../../../../hooks/useActivities";
 
@@ -183,12 +183,13 @@ const ActivitiesContent = () => {
             {filteredActivities.length > 0 ? (
               <div className="space-y-6">
                 {filteredActivities.map((activity) => (
-                  <SimpleActivityDisplay
+                  <ActivityDisplay
                     key={activity.id}
                     activity={activity}
                     onReaction={handleReaction}
                     onComment={handleComment}
                     onShare={handleShare}
+                    onJoinEvent={handleJoinEvent}
                     currentUser={currentUser}
                   />
                 ))}

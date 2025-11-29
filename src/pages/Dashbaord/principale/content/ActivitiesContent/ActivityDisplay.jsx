@@ -8,7 +8,6 @@ import {
   Users,
   Calendar,
   UserPlus,
-  ExternalLink,
   Download,
   FileText,
   Image,
@@ -68,7 +67,6 @@ const ActivityDisplay = ({
       }
       
       if (downloadUrl) {
-        // Create a temporary link to trigger download
         const link = document.createElement('a');
         link.href = downloadUrl;
         link.download = media.fileName || 'file';
@@ -100,13 +98,6 @@ const ActivityDisplay = ({
     const mediaKey = media.id || media.fileName;
 
     React.useEffect(() => {
-      // Skip loading if already failed
-      if (imageLoadError[mediaKey]) {
-        setLoading(false);
-        setHasError(true);
-        return;
-      }
-
       let isMounted = true;
       
       const loadImage = async () => {
@@ -115,27 +106,34 @@ const ActivityDisplay = ({
             throw new Error('No file path or ID');
           }
 
-          // Skip CORS-problematic URLs
-          if (media.filePath && (media.filePath.includes('users/') || media.filePath.includes('events/'))) {
-            throw new Error('CORS blocked path');
-          }
-
           let url = null;
           
-          if (media.filePath) {
-            url = `http://localhost:8486/scholchat/media/download-by-path?filePath=${encodeURIComponent(media.filePath)}`;
-          } else if (media.id) {
-            url = `http://localhost:8486/scholchat/media/${media.id}/download`;
+          // Try to get presigned URL from MinIO service first
+          if (media.id) {
+            try {
+              const downloadData = await minioS3Service.generateDownloadUrl(media.id);
+              url = downloadData.downloadUrl;
+            } catch (error) {
+              console.warn('Failed to get presigned URL, falling back to direct URL');
+            }
+          }
+          
+          // Fallback to direct URL
+          if (!url) {
+            if (media.filePath) {
+              url = `http://localhost:8486/scholchat/media/download-by-path?filePath=${encodeURIComponent(media.filePath)}`;
+            } else if (media.id) {
+              url = `http://localhost:8486/scholchat/media/${media.id}/download`;
+            }
           }
           
           if (url && isMounted) {
-            // Direct image load without HEAD request to avoid CORS preflight
             setImageUrl(url);
           }
         } catch (error) {
+          console.error('Image loading error:', error);
           if (isMounted) {
             setHasError(true);
-            setImageLoadError(prev => ({ ...prev, [mediaKey]: true }));
           }
         } finally {
           if (isMounted) {
@@ -149,7 +147,7 @@ const ActivityDisplay = ({
       return () => {
         isMounted = false;
       };
-    }, [media.filePath, media.id, mediaKey, imageLoadError]);
+    }, [media.filePath, media.id, mediaKey]);
 
     if (loading) {
       return (
@@ -184,10 +182,10 @@ const ActivityDisplay = ({
           alt={media.fileName || "Image"}
           className="w-full h-64 sm:h-80 object-cover rounded-lg"
           onError={() => {
+            console.error('Image failed to load:', imageUrl);
             setHasError(true);
             setImageLoadError(prev => ({ ...prev, [mediaKey]: true }));
           }}
-          crossOrigin="anonymous"
         />
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
           <button
@@ -232,7 +230,6 @@ const ActivityDisplay = ({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      {/* En-tête de l'activité */}
       <div className="p-4 sm:p-6">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
@@ -270,13 +267,11 @@ const ActivityDisplay = ({
           </div>
         </div>
 
-        {/* Contenu de l'activité */}
         <div className="mt-4">
           <p className="text-gray-800 text-sm sm:text-base leading-relaxed">
             {activity.content}
           </p>
 
-          {/* Détails de l'événement */}
           {activity.type === "event" && activity.eventDetails && (
             <div className="mt-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-100">
               <div className="flex items-start gap-3">
@@ -293,9 +288,7 @@ const ActivityDisplay = ({
                       <div className="flex items-center gap-2">
                         <Clock size={14} />
                         <span>
-                          {new Date(
-                            activity.eventDetails.startTime
-                          ).toLocaleString("fr-FR")}
+                          {new Date(activity.eventDetails.startTime).toLocaleString("fr-FR")}
                         </span>
                       </div>
                     )}
@@ -311,8 +304,7 @@ const ActivityDisplay = ({
                       <div className="flex items-center gap-2">
                         <Users size={14} />
                         <span>
-                          {activity.eventDetails.participantsCount}{" "}
-                          participant(s)
+                          {activity.eventDetails.participantsCount} participant(s)
                         </span>
                       </div>
                     )}
@@ -324,7 +316,6 @@ const ActivityDisplay = ({
                     </p>
                   )}
 
-                  {/* Bouton de participation */}
                   {activity.eventDetails.status === "PLANIFIE" && (
                     <button
                       onClick={() => onJoinEvent(activity.id)}
@@ -341,7 +332,6 @@ const ActivityDisplay = ({
         </div>
       </div>
 
-      {/* Médias */}
       {activity.media && activity.media.length > 0 && (
         <div className="px-4 sm:px-6 pb-4">
           <div className="space-y-3">
@@ -352,10 +342,7 @@ const ActivityDisplay = ({
         </div>
       )}
 
-      {/* Statistiques des interactions */}
-      {(activity.likes > 0 ||
-        activity.comments?.length > 0 ||
-        activity.shares > 0) && (
+      {(activity.likes > 0 || activity.comments?.length > 0 || activity.shares > 0) && (
         <div className="px-4 sm:px-6 py-2 border-t border-gray-100">
           <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500">
             <div className="flex items-center gap-4">
@@ -372,8 +359,7 @@ const ActivityDisplay = ({
             <div className="flex items-center gap-4">
               {activity.comments?.length > 0 && (
                 <span>
-                  {activity.comments.length} commentaire
-                  {activity.comments.length > 1 ? "s" : ""}
+                  {activity.comments.length} commentaire{activity.comments.length > 1 ? "s" : ""}
                 </span>
               )}
               {activity.shares > 0 && (
@@ -386,7 +372,6 @@ const ActivityDisplay = ({
         </div>
       )}
 
-      {/* Actions */}
       <div className="px-4 sm:px-6 py-3 border-t border-gray-100">
         <div className="flex items-center justify-between">
           <button
@@ -397,10 +382,7 @@ const ActivityDisplay = ({
                 : "text-gray-600 hover:bg-gray-50"
             }`}
           >
-            <Heart
-              size={18}
-              className={activity.isLiked ? "fill-current" : ""}
-            />
+            <Heart size={18} className={activity.isLiked ? "fill-current" : ""} />
             <span className="hidden sm:inline">J'aime</span>
           </button>
 
@@ -426,10 +408,8 @@ const ActivityDisplay = ({
         </div>
       </div>
 
-      {/* Section des commentaires */}
       {showComments && (
         <div className="border-t border-gray-100">
-          {/* Commentaires existants */}
           {activity.comments && activity.comments.length > 0 && (
             <div className="px-4 sm:px-6 py-3 max-h-64 overflow-y-auto">
               <div className="space-y-3">
@@ -457,7 +437,6 @@ const ActivityDisplay = ({
             </div>
           )}
 
-          {/* Formulaire de nouveau commentaire */}
           <div className="px-4 sm:px-6 py-3 border-t border-gray-50">
             <form onSubmit={handleCommentSubmit} className="flex gap-3">
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
