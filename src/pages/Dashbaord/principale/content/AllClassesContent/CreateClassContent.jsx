@@ -506,7 +506,7 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
     nom: "",
     niveau: "",
     etablissement: "",
-    codeActivation: "",
+    etablissementToken: "",
     moderator: "",
   });
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -515,6 +515,7 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
   const [selectedProfessorName, setSelectedProfessorName] = useState("");
   const [establishments, setEstablishments] = useState([]);
   const [professors, setProfessors] = useState([]);
+  const [selectedEstablishment, setSelectedEstablishment] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingEstablishments, setLoadingEstablishments] = useState(true);
   const [loadingProfessors, setLoadingProfessors] = useState(true);
@@ -551,18 +552,14 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
     loadData();
   }, []);
 
-  const generateActivationCode = () => {
+  const generateToken = () => {
     const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let code = "";
+    let token = "";
     for (let i = 0; i < 6; i++) {
-      code += characters.charAt(Math.floor(Math.random() * characters.length));
+      token += characters.charAt(Math.floor(Math.random() * characters.length));
     }
-    setFormData((prev) => ({ ...prev, codeActivation: code }));
+    return token;
   };
-
-  useEffect(() => {
-    generateActivationCode();
-  }, []);
 
   const handleManualRedirect = () => {
     if (setActiveTab) {
@@ -603,6 +600,14 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
           ? `${selectedProfessor.nom} ${selectedProfessor.prenom}`
           : ""
       );
+    } else if (name === "etablissement") {
+      const establishment = establishments.find((etab) => etab.id === value);
+      setSelectedEstablishment(establishment);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        etablissementToken: establishment?.optionTokenGeneral || establishment?.codeUnique ? generateToken() : "",
+      }));
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -628,11 +633,12 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
       newErrors.niveau = "Le niveau est requis";
     }
 
-    if (!formData.codeActivation.trim()) {
-      newErrors.codeActivation = "Le code d'activation est requis";
-    } else if (formData.codeActivation.length !== 6) {
-      newErrors.codeActivation =
-        "Le code d'activation doit contenir 6 caractères";
+    if (!formData.moderator) {
+      newErrors.moderator = "Un modérateur est requis";
+    }
+
+    if (selectedEstablishment?.optionTokenGeneral && !formData.etablissementToken.trim()) {
+      newErrors.etablissementToken = "Le token est requis pour cet établissement";
     }
 
     setErrors(newErrors);
@@ -666,46 +672,29 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
     }
   };
 
-  // MODIFIED: Updated createClass function to handle auto-approval
   const createClass = async (shouldAutoApprove = false) => {
     setLoading(true);
     try {
-      const classData = {
+      let classData = {
         nom: formData.nom.trim(),
         niveau: formData.niveau.trim(),
-        dateCreation: new Date().toISOString(),
-        codeActivation: formData.codeActivation.trim(),
-        etat: shouldAutoApprove
-          ? EtatClasse.ACTIF
-          : EtatClasse.EN_ATTENTE_APPROBATION,
-        ...(formData.etablissement && {
-          etablissement: { id: formData.etablissement },
-        }),
-        ...(formData.moderator && {
-          moderator: { id: formData.moderator },
-        }),
-        parents: [],
-        eleves: [],
+        etablissement: {
+          id: formData.etablissement
+        },
+        moderator: {
+          id: formData.moderator
+        }
       };
+
+      // Add etablissementToken based on establishment options
+      if (selectedEstablishment?.optionTokenGeneral || selectedEstablishment?.codeUnique) {
+        classData.etablissementToken = formData.etablissementToken;
+      }
 
       console.log("Creating class with data:", classData);
       const createdClass = await classService.creerClasse(classData);
       console.log("Class created:", createdClass);
       setCreatedClassId(createdClass.id);
-
-      // If auto-approval is needed and class was not automatically approved during creation
-      if (shouldAutoApprove && createdClass.etat !== EtatClasse.ACTIF) {
-        console.log("Auto-approving class after payment...");
-        try {
-          const approvedClass = await classService.approuverClasse(
-            createdClass.id
-          );
-          console.log("Class auto-approved:", approvedClass);
-        } catch (approvalError) {
-          console.error("Failed to auto-approve class:", approvalError);
-          // Don't throw the error, just log it - the class was still created
-        }
-      }
 
       // Assign publication rights to creator
       if (currentUserId) {
@@ -739,10 +728,10 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
     }
 
     if (formData.etablissement) {
-      // Class with establishment - no payment needed, no auto-approval
+      // Class with establishment
       await createClass(false);
     } else {
-      // Independent class - payment required
+      // No establishment selected - show payment modal
       setShowPaymentModal(true);
     }
   };
@@ -898,41 +887,43 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
                       )}
                     </div>
 
-                    {/* Activation Code */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Code d'activation *
-                      </label>
-                      <div className="relative">
-                        <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                          type="text"
-                          name="codeActivation"
-                          value={formData.codeActivation}
-                          onChange={handleInputChange}
-                          maxLength="6"
-                          className={`w-full pl-12 pr-20 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                            errors.codeActivation
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                          placeholder="A1B2C3"
-                        />
-                        <button
-                          type="button"
-                          onClick={generateActivationCode}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
-                        >
-                          Générer
-                        </button>
+                    {/* Token Field - Only show if establishment is selected and requires it */}
+                    {formData.etablissement && (selectedEstablishment?.optionTokenGeneral || selectedEstablishment?.codeUnique) && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Token d'établissement *
+                        </label>
+                        <div className="relative">
+                          <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                          <input
+                            type="text"
+                            name="etablissementToken"
+                            value={formData.etablissementToken}
+                            onChange={handleInputChange}
+                            maxLength="6"
+                            className={`w-full pl-12 pr-20 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                              errors.etablissementToken
+                                ? "border-red-500"
+                                : "border-gray-300"
+                            }`}
+                            placeholder="A1B2C3"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, etablissementToken: generateToken() }))}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                          >
+                            Générer
+                          </button>
+                        </div>
+                        {errors.etablissementToken && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" />
+                            {errors.etablissementToken}
+                          </p>
+                        )}
                       </div>
-                      {errors.codeActivation && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                          <AlertCircle className="w-4 h-4" />
-                          {errors.codeActivation}
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
 
                   {/* Right Column */}
@@ -976,7 +967,7 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
                     {/* Moderator (Professor) */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Modérateur (Optionnel)
+                        Modérateur *
                       </label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -985,12 +976,14 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
                           value={formData.moderator}
                           onChange={handleInputChange}
                           disabled={loadingProfessors}
-                          className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
+                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed ${
+                            errors.moderator ? "border-red-500" : "border-gray-300"
+                          }`}
                         >
                           <option value="">
                             {loadingProfessors
                               ? "Chargement des professeurs..."
-                              : "Aucun modérateur (Optionnel)"}
+                              : "Sélectionner un modérateur"}
                           </option>
                           {professors.map((professor) => (
                             <option key={professor.id} value={professor.id}>
@@ -999,6 +992,12 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
                           ))}
                         </select>
                       </div>
+                      {errors.moderator && (
+                        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.moderator}
+                        </p>
+                      )}
                       {formData.moderator && (
                         <p className="mt-1 text-xs text-gray-500">
                           Sélectionné: {selectedProfessorName}
@@ -1015,9 +1014,16 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
                             Information importante
                           </p>
                           <p>
-                            Les champs marqués d'un * sont obligatoires. Un code
-                            d'activation unique sera généré pour que les élèves
-                            puissent rejoindre la classe.
+                            Les champs marqués d'un * sont obligatoires. 
+                            {selectedEstablishment?.optionEnvoiMailVersClasse && (
+                              <span className="block mt-1">✉️ Cet établissement envoie des emails aux classes.</span>
+                            )}
+                            {selectedEstablishment?.optionTokenGeneral && (
+                              <span className="block mt-1">🔑 Un token général est requis pour cet établissement.</span>
+                            )}
+                            {selectedEstablishment?.codeUnique && (
+                              <span className="block mt-1">🎯 Un code unique est requis pour cet établissement.</span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -1030,11 +1036,11 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
                           <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                           <div className="text-sm text-amber-800">
                             <p className="font-semibold mb-1">
-                              Classe indépendante - Paiement requis
+                              Aucun établissement sélectionné - Paiement requis
                             </p>
                             <p>
                               La création d'une classe sans établissement
-                              nécessite un paiement unique de 5000.000 FCFA pour
+                              nécessite un paiement unique de 5000 FCFA pour
                               l'activation immédiate.
                             </p>
                           </div>

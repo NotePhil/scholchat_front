@@ -19,6 +19,8 @@ import PasswordPage from "./pages/PasswordPage";
 import ResetPassword from "./pages/ResetPassword";
 import Principal from "./pages/Dashbaord/principale/Principal";
 import ManageClass from "./pages/Dashbaord/principale/ManageClass/ManageClass";
+import ClassApprovalConfirmation from "./pages/ClassApprovalConfirmation";
+import ClassApproval from "./pages/ClassApproval";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -126,6 +128,14 @@ function App() {
             <Route
               path="/schoolchat/reset-password"
               element={<ResetPassword />}
+            />
+            <Route
+              path="/scholchat/etablissements/approve-class/:establishmentId/:classId"
+              element={<ClassApprovalConfirmation />}
+            />
+            <Route
+              path="/schoolchat/class-approval"
+              element={<ClassApproval />}
             />
 
             <Route element={<ProtectedRoute />}>
