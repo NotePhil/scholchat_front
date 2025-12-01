@@ -21,6 +21,7 @@ import Principal from "./pages/Dashbaord/principale/Principal";
 import ManageClass from "./pages/Dashbaord/principale/ManageClass/ManageClass";
 import ClassApprovalConfirmation from "./pages/ClassApprovalConfirmation";
 import ClassApproval from "./pages/ClassApproval";
+import ClassRejection from "./pages/ClassRejection";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -136,6 +137,18 @@ function App() {
             <Route
               path="/schoolchat/class-approval"
               element={<ClassApproval />}
+            />
+            <Route
+              path="/schoolchat/class-approval/:classeId/:etablissementId"
+              element={<ClassApproval />}
+            />
+            <Route
+              path="/schoolchat/class-rejection"
+              element={<ClassRejection />}
+            />
+            <Route
+              path="/schoolchat/class-rejection/:classeId/:etablissementId"
+              element={<ClassRejection />}
             />
 
             <Route element={<ProtectedRoute />}>
