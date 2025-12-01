@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import {
   CheckCircle,
   AlertCircle,
@@ -32,6 +34,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState("CM");
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -133,6 +136,60 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
     if (errors.gestionnaire) {
       setErrors((prev) => ({ ...prev, gestionnaire: null }));
     }
+  };
+
+  const handlePhoneChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      telephone: value || "",
+    }));
+
+    if (value) {
+      if (value.startsWith("+237")) {
+        setSelectedCountry("CM");
+      } else if (value.startsWith("+33")) {
+        setSelectedCountry("FR");
+      }
+    }
+
+    if (errors.telephone) {
+      setErrors((prev) => ({ ...prev, telephone: null }));
+    }
+  };
+
+  const CountrySelect = ({ value, onChange, options, ...restProps }) => {
+    const countryToFlag = (countryCode) => {
+      return countryCode
+        .toUpperCase()
+        .replace(/./g, (char) =>
+          String.fromCodePoint(127397 + char.charCodeAt())
+        );
+    };
+
+    return (
+      <select
+        {...restProps}
+        value={value}
+        onChange={(event) => onChange(event.target.value || undefined)}
+        style={{
+          width: "60px",
+          backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='feather feather-chevron-down'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 0.5rem center",
+          backgroundSize: "1rem",
+          appearance: "none",
+        }}
+      >
+        {options?.map(({ value, label }) => (
+          <option key={value} value={value}>
+            {countryToFlag(value)} {label}
+          </option>
+        ))}
+        <option value={value} style={{ display: "none" }}>
+          {value ? countryToFlag(value) : ""}
+        </option>
+      </select>
+    );
   };
 
   const validateForm = () => {
@@ -373,17 +430,18 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Téléphone
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="tel"
-                      name="telephone"
+                  <div className={`relative phone-input-container ${
+                    errors.telephone ? "border-red-500" : "border-gray-300"
+                  }`}>
+                    <PhoneInput
+                      defaultCountry={selectedCountry}
                       value={formData.telephone}
-                      onChange={handleInputChange}
-                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        errors.telephone ? "border-red-500" : "border-gray-300"
-                      }`}
-                      placeholder="+33 1 23 45 67 89"
+                      onChange={handlePhoneChange}
+                      countrySelectComponent={CountrySelect}
+                      placeholder="Entrez le numéro de téléphone"
+                      international
+                      countryCallingCodeEditable={false}
+                      className="w-full"
                     />
                   </div>
                   {errors.telephone && (

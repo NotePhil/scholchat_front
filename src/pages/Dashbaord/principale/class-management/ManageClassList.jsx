@@ -38,6 +38,7 @@ import {
 import AccederService, {
   EtatDemandeAcces,
 } from "../../../../services/accederService";
+import ClassEditModal from "./ClassEditPage";
 import "./ManageClassList.css";
 
 const ManageClassList = ({
@@ -124,47 +125,39 @@ const ManageClassList = ({
 
     try {
       setLoadingRequests(true);
-      console.log("Loading pending requests for", classes.length, "classes");
-
-      const requestsPromises = classes.map(async (classe) => {
-        try {
-          const requests = await AccederService.obtenirDemandesAccesPourClasse(
-            classe.id
-          );
-          console.log(`Raw requests for class ${classe.nom}:`, requests);
-          
-          const pendingCount = requests.filter(
-            (req) => {
-              console.log(`Request ${req.id}: status = ${req.etat}`);
-              return req.etat === EtatDemandeAcces.EN_ATTENTE ||
-                     req.etat === "EN_ATTENTE";
-            }
-          ).length;
-
-          console.log(
-            `Class ${classe.nom} (${classe.id}): ${pendingCount} pending requests out of ${requests.length} total`
-          );
-          return { classId: classe.id, count: pendingCount };
-        } catch (error) {
-          console.error(
-            `Error loading requests for class ${classe.id}:`,
-            error
-          );
-          return { classId: classe.id, count: 0 };
-        }
-      });
-
-      const requestsResults = await Promise.all(requestsPromises);
+      const classIds = classes.map(c => c.id);
+      
+      // Use bulk API call to get all access requests at once
+      const allAccessRequests = await AccederService.obtenirUtilisateursAvecAccesMultiple(classIds);
+      
       const requestsMap = {};
-
-      requestsResults.forEach(({ classId, count }) => {
-        requestsMap[classId] = count;
+      
+      // Count pending requests for each class
+      classes.forEach((classe) => {
+        const classRequests = allAccessRequests.filter(req => 
+          req.classeId === classe.id && 
+          (req.etat === EtatDemandeAcces.EN_ATTENTE || req.etat === "EN_ATTENTE")
+        );
+        requestsMap[classe.id] = classRequests.length;
       });
 
-      console.log("Final requests map:", requestsMap);
       setPendingRequests(requestsMap);
     } catch (error) {
       console.error("Error loading pending requests:", error);
+      // Fallback: try individual API calls
+      const requestsMap = {};
+      for (const classe of classes) {
+        try {
+          const requests = await AccederService.obtenirDemandesAccesPourClasse(classe.id);
+          const pendingCount = requests.filter(req => 
+            req.etat === EtatDemandeAcces.EN_ATTENTE || req.etat === "EN_ATTENTE"
+          ).length;
+          requestsMap[classe.id] = pendingCount;
+        } catch (err) {
+          requestsMap[classe.id] = 0;
+        }
+      }
+      setPendingRequests(requestsMap);
     } finally {
       setLoadingRequests(false);
     }
@@ -256,11 +249,12 @@ const ManageClassList = ({
     0
   );
 
-  // Calculate total pending requests across all classes
-  const totalPendingRequests = Object.values(pendingRequests).reduce(
+  // Calculate total pending requests (access requests + pending class approvals)
+  const totalAccessRequests = Object.values(pendingRequests).reduce(
     (sum, count) => sum + count,
     0
   );
+  const totalPendingRequests = totalAccessRequests + pendingClasses;
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -290,6 +284,15 @@ const ManageClassList = ({
     }
     // Reload pending requests after refresh
     await loadPendingRequestsForAllClasses();
+  };
+
+  const handleEditClass = (classe) => {
+    setEditingClass(classe);
+  };
+
+  const handleSaveEdit = async () => {
+    await onRefresh();
+    setEditingClass(null);
   };
 
   if (loading && classes.length === 0) {
@@ -578,6 +581,13 @@ const ManageClassList = ({
 
                         <div className="card-actions">
                           <button
+                            onClick={() => handleEditClass(classe)}
+                            className="action-btn action-primary"
+                          >
+                            <Edit className="action-icon" />
+                            <span>Modifier</span>
+                          </button>
+                          <button
                             onClick={() => handleManageClass(classe)}
                             className="action-btn action-secondary"
                           >
@@ -670,6 +680,16 @@ const ManageClassList = ({
           )}
         </div>
       </div>
+
+      {/* Edit Class Modal */}
+      {editingClass && (
+        <ClassEditModal
+          classe={editingClass}
+          onClose={() => setEditingClass(null)}
+          onSave={handleSaveEdit}
+          userRole={userRole}
+        />
+      )}
     </div>
   );
 };
