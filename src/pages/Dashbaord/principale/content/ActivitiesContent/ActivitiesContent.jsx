@@ -24,6 +24,8 @@ const ActivitiesContent = () => {
     currentUser,
     loadActivities,
     handleCreateEvent,
+    handleEditEvent,
+    handleDeleteEvent,
     handleReaction,
     handleComment,
     handleShare,
@@ -92,6 +94,24 @@ const ActivitiesContent = () => {
       handleShowCreateForm(false);
     } catch (err) {
       console.error("Erreur lors de la création:", err);
+    }
+  };
+
+  const onEditEvent = async (activity) => {
+    // For now, just show an alert. You can implement a proper edit modal later
+    alert(`Modifier l'activité: ${activity.eventDetails?.title || activity.content}`);
+    // TODO: Implement edit modal
+    // const updatedData = await showEditModal(activity);
+    // if (updatedData) {
+    //   await handleEditEvent(activity.id, updatedData);
+    // }
+  };
+
+  const onDeleteEvent = async (eventId) => {
+    try {
+      await handleDeleteEvent(eventId);
+    } catch (err) {
+      console.error("Erreur lors de la suppression:", err);
     }
   };
 
@@ -190,6 +210,8 @@ const ActivitiesContent = () => {
                     onComment={handleComment}
                     onShare={handleShare}
                     onJoinEvent={handleJoinEvent}
+                    onEdit={onEditEvent}
+                    onDelete={onDeleteEvent}
                     currentUser={currentUser}
                   />
                 ))}

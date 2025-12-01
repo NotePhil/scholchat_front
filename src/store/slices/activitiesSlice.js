@@ -24,6 +24,30 @@ export const createEvent = createAsyncThunk(
   }
 );
 
+export const editEvent = createAsyncThunk(
+  "activities/editEvent",
+  async ({ eventId, eventData }, { rejectWithValue }) => {
+    try {
+      const updatedEvent = await activityFeedService.editEvent(eventId, eventData);
+      return { eventId, updatedEvent };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const deleteEvent = createAsyncThunk(
+  "activities/deleteEvent",
+  async (eventId, { rejectWithValue }) => {
+    try {
+      await activityFeedService.deleteEvent(eventId);
+      return eventId;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 export const addReaction = createAsyncThunk(
   "activities/addReaction",
   async ({ activityId, reactionType }, { rejectWithValue }) => {
@@ -194,6 +218,47 @@ const activitiesSlice = createSlice({
             (activity.eventDetails.participantsCount || 0) + 1;
           state.success = "Vous avez rejoint l'événement !";
         }
+      })
+      // Edit Event
+      .addCase(editEvent.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(editEvent.fulfilled, (state, action) => {
+        state.loading = false;
+        const { eventId, updatedEvent } = action.payload;
+        const index = state.activities.findIndex((a) => a.id === eventId);
+        if (index !== -1) {
+          state.activities[index] = updatedEvent;
+          state.filteredActivities = activityFeedService.applyFilter(
+            state.activities,
+            state.activeFilter
+          );
+        }
+        state.success = "Activité modifiée avec succès !";
+      })
+      .addCase(editEvent.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Delete Event
+      .addCase(deleteEvent.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteEvent.fulfilled, (state, action) => {
+        state.loading = false;
+        const eventId = action.payload;
+        state.activities = state.activities.filter((a) => a.id !== eventId);
+        state.filteredActivities = activityFeedService.applyFilter(
+          state.activities,
+          state.activeFilter
+        );
+        state.success = "Activité supprimée avec succès !";
+      })
+      .addCase(deleteEvent.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });

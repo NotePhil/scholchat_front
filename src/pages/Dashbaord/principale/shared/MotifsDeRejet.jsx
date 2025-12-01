@@ -32,13 +32,6 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   const theme = isDark ? themes.dark : themes.light;
   const colors = colorSchemes[currentTheme];
 
-  useEffect(() => {
-    const userRole = localStorage.getItem("userRole");
-    if (userRole !== "admin") {
-      navigate("/schoolchat/admin/dashboard");
-    }
-  }, [navigate]);
-
   // Fetch motifs from API using the appropriate service
   const fetchMotifs = async () => {
     try {
@@ -113,13 +106,6 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   };
 
   useEffect(() => {
-    // Verify token validity on component mount
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
     fetchMotifs();
   }, [selectedType]); // Re-fetch when type changes
 

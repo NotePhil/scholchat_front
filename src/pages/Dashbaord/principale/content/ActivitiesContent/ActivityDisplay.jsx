@@ -13,6 +13,8 @@ import {
   Image,
   Video,
   MoreHorizontal,
+  Edit3,
+  Trash2,
 } from "lucide-react";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
 import { minioS3Service } from "../../../../../services/minioS3";
@@ -23,6 +25,8 @@ const ActivityDisplay = ({
   onComment,
   onShare,
   onJoinEvent,
+  onEdit,
+  onDelete,
   currentUser,
 }) => {
   const [showComments, setShowComments] = useState(false);
@@ -31,33 +35,69 @@ const ActivityDisplay = ({
   const [imageLoadError, setImageLoadError] = useState({});
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [expandedImage, setExpandedImage] = useState(null);
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
   
-  // Local state for likes and comments with persistence
+  // Check if current user is admin
+  const isAdmin = currentUser?.role === 'ROLE_ADMIN' || currentUser?.role === 'admin';
+  
+  // Local state for likes and comments - prioritize backend data
   const [localState, setLocalState] = useState(() => {
-    const cached = localStorage.getItem(`activity_${activity.id}`);
-    if (cached) {
-      try {
-        const data = JSON.parse(cached);
-        return {
-          likes: data.likes ?? activity.likes ?? 0,
-          isLiked: data.isLiked ?? activity.isLiked ?? false,
-          comments: data.comments ?? activity.comments ?? [],
-        };
-      } catch (e) {
-        console.warn('Failed to parse cached data');
-      }
-    }
-    return {
+    // Always use backend data first, then fallback to cache
+    const backendData = {
       likes: activity.likes ?? 0,
       isLiked: activity.isLiked ?? false,
       comments: activity.comments ?? [],
     };
+    
+    // Only use cache if backend data is empty/default
+    if (backendData.likes === 0 && backendData.comments.length === 0) {
+      const cached = localStorage.getItem(`activity_${activity.id}`);
+      if (cached) {
+        try {
+          const data = JSON.parse(cached);
+          return {
+            likes: data.likes ?? backendData.likes,
+            isLiked: data.isLiked ?? backendData.isLiked,
+            comments: data.comments ?? backendData.comments,
+          };
+        } catch (e) {
+          console.warn('Failed to parse cached data');
+        }
+      }
+    }
+    
+    return backendData;
   });
 
-  // Save to localStorage whenever state changes
+  // Update local state when activity data changes from backend
   React.useEffect(() => {
-    localStorage.setItem(`activity_${activity.id}`, JSON.stringify(localState));
-  }, [activity.id, localState]);
+    console.log('=== BACKEND DATA DEBUG ===');
+    console.log('Activity ID:', activity.id);
+    console.log('Backend likes:', activity.likes);
+    console.log('Backend isLiked:', activity.isLiked);
+    console.log('Backend comments:', activity.comments);
+    console.log('Current local state:', localState);
+    
+    const backendData = {
+      likes: activity.likes ?? 0,
+      isLiked: activity.isLiked ?? false,
+      comments: activity.comments ?? [],
+    };
+    
+    // Update local state if backend has newer data
+    if (backendData.likes !== localState.likes || 
+        backendData.isLiked !== localState.isLiked || 
+        backendData.comments.length !== localState.comments.length) {
+      console.log('Updating from backend data:', backendData);
+      setLocalState(backendData);
+    }
+    console.log('=== END BACKEND DEBUG ===');
+  }, [activity.likes, activity.isLiked, activity.comments]);
+
+  // Save to localStorage only for user interactions (not backend updates)
+  const saveToCache = React.useCallback((newState) => {
+    localStorage.setItem(`activity_${activity.id}`, JSON.stringify(newState));
+  }, [activity.id]);
 
   // Reset image index when activity changes
   React.useEffect(() => {
@@ -83,6 +123,23 @@ const ActivityDisplay = ({
     };
   }, [expandedImage]);
 
+  // Close admin menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showAdminMenu && !event.target.closest('.admin-menu-container')) {
+        setShowAdminMenu(false);
+      }
+    };
+
+    if (showAdminMenu) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showAdminMenu]);
+
   const formatTimestamp = (timestamp) => {
     return activityFeedService.formatTimestamp(timestamp);
   };
@@ -101,32 +158,38 @@ const ActivityDisplay = ({
     e.stopPropagation();
     
     const wasLiked = localState.isLiked;
+    const newState = {
+      ...localState,
+      isLiked: !wasLiked,
+      likes: wasLiked ? Math.max(0, localState.likes - 1) : localState.likes + 1
+    };
     
     // Optimistic update
-    setLocalState(prev => ({
-      ...prev,
-      isLiked: !wasLiked,
-      likes: wasLiked ? Math.max(0, prev.likes - 1) : prev.likes + 1
-    }));
+    setLocalState(newState);
+    saveToCache(newState);
 
     try {
       const result = await activityFeedService.addReaction(activity.id, "like");
-      // Sync with server result if different
-      setLocalState(prev => ({
-        ...prev,
+      // Sync with server result
+      const finalState = {
+        ...localState,
         isLiked: result,
-        likes: result ? (wasLiked ? prev.likes + 1 : prev.likes) : (wasLiked ? prev.likes : prev.likes - 1)
-      }));
+        likes: result ? (wasLiked ? localState.likes : localState.likes + 1) : (wasLiked ? localState.likes - 1 : localState.likes)
+      };
+      setLocalState(finalState);
+      saveToCache(finalState);
     } catch (error) {
       // Revert on error
-      setLocalState(prev => ({
-        ...prev,
+      const revertState = {
+        ...localState,
         isLiked: wasLiked,
-        likes: wasLiked ? prev.likes + 1 : prev.likes - 1
-      }));
+        likes: localState.likes
+      };
+      setLocalState(revertState);
+      saveToCache(revertState);
       console.error("Error liking:", error);
     }
-  }, [activity.id, localState.isLiked]);
+  }, [activity.id, localState, saveToCache]);
 
   const handleCommentSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -136,21 +199,34 @@ const ActivityDisplay = ({
 
     try {
       setSubmittingComment(true);
+      console.log('=== COMMENT SUBMIT DEBUG ===');
+      console.log('Activity ID:', activity.id);
+      console.log('Comment text:', newComment.trim());
+      console.log('Current comments:', localState.comments);
+      
       const newCommentObj = await activityFeedService.commentOnActivity(activity.id, newComment.trim());
       
+      console.log('New comment response:', newCommentObj);
+      
       if (newCommentObj) {
-        setLocalState(prev => ({
-          ...prev,
-          comments: [...prev.comments, newCommentObj]
-        }));
+        const newState = {
+          ...localState,
+          comments: [...localState.comments, newCommentObj]
+        };
+        console.log('Updated comments state:', newState.comments);
+        setLocalState(newState);
+        saveToCache(newState);
+      } else {
+        console.error('No comment object returned from API');
       }
       setNewComment("");
     } catch (error) {
       console.error("Error commenting:", error);
+      console.error("Error details:", error.response?.data);
     } finally {
       setSubmittingComment(false);
     }
-  }, [activity.id, newComment, submittingComment]);
+  }, [activity.id, newComment, submittingComment, localState, saveToCache]);
 
   const handleMediaDownload = async (media) => {
     try {
@@ -351,9 +427,42 @@ const ActivityDisplay = ({
                   )}
                 </div>
               </div>
-              <button className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
-                <MoreHorizontal size={20} className="text-gray-400" />
-              </button>
+              <div className="relative admin-menu-container">
+                <button 
+                  onClick={() => setShowAdminMenu(!showAdminMenu)}
+                  className="p-2 hover:bg-gray-50 rounded-xl transition-colors"
+                >
+                  <MoreHorizontal size={20} className="text-gray-400" />
+                </button>
+                
+                {/* Admin Menu */}
+                {showAdminMenu && isAdmin && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10">
+                    <button
+                      onClick={() => {
+                        setShowAdminMenu(false);
+                        onEdit?.(activity);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
+                    >
+                      <Edit3 size={16} className="text-blue-600" />
+                      Modifier l'activité
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAdminMenu(false);
+                        if (window.confirm('Êtes-vous sûr de vouloir supprimer cette activité ?')) {
+                          onDelete?.(activity.id);
+                        }
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
+                    >
+                      <Trash2 size={16} className="text-red-600" />
+                      Supprimer l'activité
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

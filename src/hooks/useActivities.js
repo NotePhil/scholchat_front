@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   fetchActivities,
   createEvent,
+  editEvent,
+  deleteEvent,
   addReaction,
   addComment,
   shareActivity,
@@ -39,6 +41,20 @@ export const useActivities = () => {
   const handleCreateEvent = useCallback(
     (eventData) => {
       return dispatch(createEvent(eventData)).unwrap();
+    },
+    [dispatch]
+  );
+
+  const handleEditEvent = useCallback(
+    (eventId, eventData) => {
+      return dispatch(editEvent({ eventId, eventData })).unwrap();
+    },
+    [dispatch]
+  );
+
+  const handleDeleteEvent = useCallback(
+    (eventId) => {
+      return dispatch(deleteEvent(eventId)).unwrap();
     },
     [dispatch]
   );
@@ -132,6 +148,8 @@ export const useActivities = () => {
     ...activitiesState,
     loadActivities,
     handleCreateEvent,
+    handleEditEvent,
+    handleDeleteEvent,
     handleReaction,
     handleComment,
     handleShare,

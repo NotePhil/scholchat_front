@@ -152,6 +152,10 @@ function App() {
                 path="/schoolchat/principal/:dashboardType"
                 element={<Principal />}
               />
+              <Route
+                path="/schoolchat/principal/:dashboardType/:section"
+                element={<Principal />}
+              />
             </Route>
           </Routes>
         </AuthProvider>

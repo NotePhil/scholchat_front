@@ -358,6 +358,73 @@ class ActivityFeedService {
     }
   }
 
+  // Edit event
+  async editEvent(eventId, eventData) {
+    try {
+      const createurId = await this.getProfessorId();
+      if (!createurId) {
+        throw new Error("Professor ID not found. Please ensure you are logged in as a professor.");
+      }
+
+      // Clean and validate media data
+      let cleanedMedias = [];
+      if (eventData.medias && eventData.medias.length > 0) {
+        cleanedMedias = eventData.medias.map(media => ({
+          fileName: media.fileName,
+          filePath: media.filePath,
+          fileType: media.fileType || media.mediaType || "IMAGE",
+          contentType: media.contentType,
+          fileSize: media.fileSize,
+          mediaType: media.mediaType || "IMAGE",
+          bucketName: media.bucketName || "ressources"
+        }));
+      }
+
+      const eventPayload = {
+        titre: eventData.titre,
+        description: eventData.description,
+        lieu: eventData.lieu,
+        heureDebut: eventData.heureDebut,
+        heureFin: eventData.heureFin,
+        etat: eventData.etat || "PLANIFIE",
+        createurId: createurId,
+        participantsIds: eventData.participantsIds || [],
+        medias: cleanedMedias
+      };
+
+      console.log("Updating event with payload:", eventPayload);
+      
+      const response = await activityFeedApi.put(`/evenements/${eventId}`, eventPayload);
+      
+      console.log('Event update response:', response.data);
+      
+      return response.data;
+    } catch (error) {
+      console.error("Failed to update event:", error);
+      console.error("Error details:", error.response?.data);
+      
+      throw new Error(`Failed to update event: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  // Delete event
+  async deleteEvent(eventId) {
+    try {
+      console.log("Deleting event with ID:", eventId);
+      
+      const response = await activityFeedApi.delete(`/evenements/${eventId}`);
+      
+      console.log('Event deletion response:', response.data);
+      
+      return response.data;
+    } catch (error) {
+      console.error("Failed to delete event:", error);
+      console.error("Error details:", error.response?.data);
+      
+      throw new Error(`Failed to delete event: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
   // Create event
   async createEvent(eventData) {
     try {
@@ -477,6 +544,12 @@ class ActivityFeedService {
   transformEventToActivity(event) {
     const currentUser = this.getCurrentUser();
 
+    console.log('=== TRANSFORM EVENT DEBUG ===');
+    console.log('Raw event object:', event);
+    console.log('Event likes:', event.likesCount);
+    console.log('Event comments:', event.comments);
+    console.log('Event isLiked:', event.isLiked);
+
     // Ensure user object is always present
     const eventUser = {
       id: event.createurId || currentUser?.id || "unknown",
@@ -519,11 +592,27 @@ class ActivityFeedService {
       },
       media: validMedia,
       likes: event.likesCount || 0,
-      comments: event.comments || [],
+      comments: this.transformComments(event.comments || []),
       shares: event.sharesCount || 0,
-      isLiked: false,
+      isLiked: event.isLiked || false,
       isShared: false,
     };
+  }
+
+  // Transform comments from backend format
+  transformComments(comments) {
+    if (!Array.isArray(comments)) return [];
+    
+    return comments.map(comment => ({
+      id: comment.id || Date.now().toString(),
+      content: comment.content || comment.contenu || '',
+      user: {
+        id: comment.userId || comment.createdById || 'unknown',
+        name: comment.userName || comment.createdByName || 'Utilisateur',
+        avatar: '/api/placeholder/32/32'
+      },
+      timestamp: comment.timestamp || comment.creationDate || new Date().toISOString()
+    }));
   }
 
   // Transform interaction to activity

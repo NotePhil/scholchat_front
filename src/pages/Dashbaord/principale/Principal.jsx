@@ -75,7 +75,7 @@ const Principal = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-  const { dashboardType } = useParams();
+  const { dashboardType, section } = useParams();
 
   // Use the useAuth hook for clean role handling
   const {
@@ -201,6 +201,8 @@ const Principal = () => {
 
   useEffect(() => {
     if (!normalizedUserRole) return;
+    // Don't do any navigation if we already have both dashboardType and section
+    if (dashboardType && section) return;
 
     let expectedDashboard;
 
@@ -218,11 +220,13 @@ const Principal = () => {
       }Dashboard`;
     }
 
+    // Only redirect if we don't have a dashboardType at all
     if (!dashboardType) {
-      navigate(`/schoolchat/Principal/${expectedDashboard}`);
+      navigate(`/schoolchat/Principal/${expectedDashboard}/dashboard`);
     }
   }, [
     dashboardType,
+    section,
     navigate,
     normalizedUserRole,
     isAdmin,
@@ -230,6 +234,14 @@ const Principal = () => {
     isParent,
     isStudent,
   ]);
+
+  // Set active tab based on URL section parameter
+  useEffect(() => {
+    const targetTab = section || 'dashboard';
+    if (targetTab !== activeTab) {
+      dispatch(setActiveTabAction(targetTab));
+    }
+  }, [section, activeTab, dispatch]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -250,11 +262,22 @@ const Principal = () => {
       setShowManageClass(false);
       dispatch(setActiveTabAction(tab));
 
+      // Update URL to reflect current section
+      const currentPath = location.pathname;
+      const pathParts = currentPath.split('/');
+      
+      // Ensure we have at least the base path parts
+      if (pathParts.length >= 4) {
+        const basePath = pathParts.slice(0, 4).join('/'); // /schoolchat/principal/AdminDashboard
+        const newPath = `${basePath}/${tab}`;
+        navigate(newPath, { replace: true });
+      }
+
       if (isMobile || isCustomBreakpoint) {
         dispatch(setSidebar(false));
       }
     },
-    [dispatch, isMobile, isCustomBreakpoint]
+    [dispatch, isMobile, isCustomBreakpoint, navigate, location.pathname]
   );
 
   const handleManageClass = useCallback(() => {
