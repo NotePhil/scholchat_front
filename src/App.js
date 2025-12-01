@@ -23,6 +23,7 @@ import ClassApprovalConfirmation from "./pages/ClassApprovalConfirmation";
 import ClassApproval from "./pages/ClassApproval";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import "./CSS/themes.css";
 
 function ScrollToTop() {
   const { pathname } = useLocation();

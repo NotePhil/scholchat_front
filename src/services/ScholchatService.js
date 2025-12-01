@@ -800,6 +800,28 @@ class ScholchatService {
   getToken() {
     return localStorage.getItem("authToken");
   }
+
+  // ============ Password Management ============
+  async changePassword(passwordData) {
+    try {
+      const response = await api.post("/auth/change-password", {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getCurrentUser() {
+    try {
+      const response = await api.get("/auth/me");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
   async patchUser(id, partialUpdate) {
     try {
       // Ensure email is lowercase if provided
