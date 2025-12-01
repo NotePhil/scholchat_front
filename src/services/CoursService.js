@@ -91,9 +91,9 @@ class CoursService {
         etat: coursData.etat,
         restriction: coursData.restriction,
         references: coursData.references || "",
-        redacteurId: parseInt(coursData.redacteurId),
+        redacteurId: coursData.redacteurId,
         matieres: coursData.matieres.map((matiere) => ({
-          id: parseInt(matiere.id),
+          id: matiere.id,
         })),
         chapitres: coursData.chapitres.map((chapitre) => ({
           titre: chapitre.titre,

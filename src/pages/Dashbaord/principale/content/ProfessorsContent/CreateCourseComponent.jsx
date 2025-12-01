@@ -39,10 +39,6 @@ const courseSchema = yup.object().shape({
     .min(1, "Au moins une matière est requise"),
   references: yup.string(),
   restriction: yup.string().required("La restriction est requise"),
-  chapitres: yup
-    .array()
-    .of(chapterSchema)
-    .min(1, "Au moins un chapitre est requis"),
 });
 
 const RichTextEditor = ({
@@ -915,6 +911,10 @@ const CreateCourseComponent = ({
   };
 
   const onSubmit = async (data) => {
+    console.log('Form submitted with data:', data);
+    console.log('Saved chapters:', savedChapters);
+    console.log('Selected matiere IDs:', selectedMatiereIds);
+    
     try {
       setIsSubmitting(true);
       setLoading(true);
@@ -923,6 +923,10 @@ const CreateCourseComponent = ({
 
       if (savedChapters.length === 0) {
         throw new Error("Au moins un chapitre est requis");
+      }
+
+      if (selectedMatiereIds.length === 0) {
+        throw new Error("Au moins une matière est requise");
       }
 
       const professorId = localStorage.getItem("userId");
@@ -955,12 +959,12 @@ const CreateCourseComponent = ({
         };
       });
 
-      const matieresData = selectedMatiereIds.map((id) => ({ id }));
+      const matieresData = selectedMatiereIds.map((id) => ({ id: String(id) }));
 
       const courseData = {
         titre: data.titre,
         description: data.description,
-        redacteurId: professorId,
+        redacteurId: String(professorId),
         etat: "BROUILLON",
         references: data.references || "",
         restriction: data.restriction || "PRIVE",
