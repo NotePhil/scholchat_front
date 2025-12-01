@@ -916,6 +916,7 @@ const CreateCourseComponent = ({
 
   const onSubmit = async (data) => {
     try {
+      console.log("ONSUBMIT CALLED with data:", data);
       setIsSubmitting(true);
       setLoading(true);
       setError("");
@@ -1201,7 +1202,20 @@ const CreateCourseComponent = ({
               Annuler
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={async () => {
+                console.log("BUTTON CLICKED - Starting form submission");
+                const formData = {
+                  titre: document.querySelector('input[placeholder="Introduction à la programmation"]').value,
+                  description: document.querySelector('textarea[placeholder="Décrivez le contenu général de ce cours..."]').value,
+                  restriction: document.querySelector('select').value,
+                  references: document.querySelector('textarea[placeholder="Livres, articles, liens utiles..."]').value,
+                  matieres: selectedMatiereIds,
+                  chapitres: savedChapters
+                };
+                console.log("FORM DATA:", formData);
+                await onSubmit(formData);
+              }}
               disabled={savedChapters.length === 0 || isSubmitting}
               className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >

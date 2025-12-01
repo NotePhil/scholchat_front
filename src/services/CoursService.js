@@ -91,14 +91,14 @@ class CoursService {
         etat: coursData.etat,
         restriction: coursData.restriction,
         references: coursData.references || "",
-        redacteurId: parseInt(coursData.redacteurId),
+        redacteurId: coursData.redacteurId.toString(),
         matieres: coursData.matieres.map((matiere) => ({
-          id: parseInt(matiere.id),
+          id: matiere.id.toString(),
         })),
         chapitres: coursData.chapitres.map((chapitre) => ({
           titre: chapitre.titre,
           description: chapitre.description || "",
-          ordre: parseInt(chapitre.ordre),
+          ordre: chapitre.ordre,
           contenu: chapitre.contenu,
         })),
       };
@@ -107,10 +107,8 @@ class CoursService {
       console.log("CoursService - Request headers:", coursApi.defaults.headers);
       console.log("CoursService - Making POST request to /cours");
 
-      alert("Envoi vers API: " + JSON.stringify(formattedData).substring(0, 100));
       const response = await coursApi.post("/cours", formattedData);
       console.log("CoursService - Response received:", response.data);
-      alert("Réponse API reçue!");
       return response.data;
     } catch (error) {
       console.error("CoursService - Create course error:", error);
