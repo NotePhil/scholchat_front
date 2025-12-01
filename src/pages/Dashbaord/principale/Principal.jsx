@@ -51,6 +51,7 @@ import NotificationIcon from "./modals/NotificationIcon";
 import ProfessorCoursesContent from "./content/ProfessorsContent/ProfessorCoursesContent";
 import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgrammerContent";
 import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
+import MatiereContent from "./content/MatiereContent/MatiereContent";
 
 import "../../../CSS/Principal.css";
 
@@ -409,6 +410,8 @@ const Principal = () => {
         return <AdminContent {...contentProps} />;
       case "professors":
         return <ProfessorsContent {...contentProps} />;
+      case "matieres":
+        return <MatiereContent {...contentProps} />;
       case "motifs-de-rejet":
         return <MotifsDeRejet {...contentProps} />;
       case "parents":
@@ -493,6 +496,7 @@ const Principal = () => {
       messages: "Messages",
       admin: "Gérer Administrateurs",
       professors: "Gérer Professeurs",
+      matieres: "Gestion des Matières",
       "motifs-de-rejet": "Motifs de Rejet",
       parents: "Gérer Parents",
       students: "Gérer Élèves",

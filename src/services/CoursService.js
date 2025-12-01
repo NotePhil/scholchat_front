@@ -12,15 +12,48 @@ const coursApi = axios.create({
 
 coursApi.interceptors.request.use(
   (config) => {
-    const token =
+    const token = 
+      localStorage.getItem("accessToken") ||
       localStorage.getItem("authToken") ||
       localStorage.getItem("cmr.notep.business.business.token");
+    
+    console.log("CoursService - Token found:", !!token);
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    console.log("CoursService - Request config:", {
+      url: config.url,
+      method: config.method,
+      hasAuth: !!config.headers.Authorization,
+      data: config.data
+    });
+    
     return config;
   },
   (error) => {
+    console.error("CoursService - Request interceptor error:", error);
+    return Promise.reject(error);
+  }
+);
+
+coursApi.interceptors.response.use(
+  (response) => {
+    console.log("CoursService - Response interceptor:", {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data
+    });
+    return response;
+  },
+  (error) => {
+    console.error("CoursService - Response interceptor error:", {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
     return Promise.reject(error);
   }
 );
@@ -28,6 +61,10 @@ coursApi.interceptors.request.use(
 class CoursService {
   async createCours(coursData) {
     try {
+      console.log("CoursService - createCours called with:", coursData);
+      console.log("CoursService - Raw chapitres:", coursData.chapitres);
+      console.log("CoursService - Raw matieres:", coursData.matieres);
+      
       if (
         !coursData.titre ||
         !coursData.description ||
@@ -54,24 +91,31 @@ class CoursService {
         etat: coursData.etat,
         restriction: coursData.restriction,
         references: coursData.references || "",
-        redacteurId: coursData.redacteurId,
+        redacteurId: parseInt(coursData.redacteurId),
         matieres: coursData.matieres.map((matiere) => ({
-          id: matiere.id,
+          id: parseInt(matiere.id),
         })),
         chapitres: coursData.chapitres.map((chapitre) => ({
           titre: chapitre.titre,
           description: chapitre.description || "",
-          ordre: chapitre.ordre,
+          ordre: parseInt(chapitre.ordre),
           contenu: chapitre.contenu,
         })),
       };
 
-      console.log("Sending to API:", JSON.stringify(formattedData, null, 2));
+      console.log("CoursService - Formatted data:", JSON.stringify(formattedData, null, 2));
+      console.log("CoursService - Request headers:", coursApi.defaults.headers);
+      console.log("CoursService - Making POST request to /cours");
 
+      alert("Envoi vers API: " + JSON.stringify(formattedData).substring(0, 100));
       const response = await coursApi.post("/cours", formattedData);
+      console.log("CoursService - Response received:", response.data);
+      alert("Réponse API reçue!");
       return response.data;
     } catch (error) {
-      console.error("Create course error:", error);
+      console.error("CoursService - Create course error:", error);
+      console.error("CoursService - Error response:", error.response?.data);
+      console.error("CoursService - Error status:", error.response?.status);
       this.handleError(error);
     }
   }
@@ -246,27 +290,32 @@ class CoursService {
   }
 
   handleError(error) {
+    console.error("CoursService - handleError called with:", error);
+    
     if (error.response) {
       const errorMessage =
         error.response.data?.message ||
         error.response.data?.error ||
+        error.response.data?.details ||
         `HTTP ${error.response.status}: ${error.response.statusText}`;
 
-      console.error("API Error Response:", {
+      console.error("CoursService - API Error Response:", {
         status: error.response.status,
         statusText: error.response.statusText,
         data: error.response.data,
         headers: error.response.headers,
+        url: error.config?.url,
+        method: error.config?.method
       });
 
       throw new Error(errorMessage);
     } else if (error.request) {
-      console.error("Network Error:", error.request);
+      console.error("CoursService - Network Error:", error.request);
       throw new Error(
         "Network error. Please check your connection and server status."
       );
     } else {
-      console.error("Request Setup Error:", error.message);
+      console.error("CoursService - Request Setup Error:", error.message);
       throw new Error("Request setup error: " + error.message);
     }
   }

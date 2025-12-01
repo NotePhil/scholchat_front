@@ -17,6 +17,7 @@ import {
   X,
   FileText,
   ClipboardList,
+  GraduationCap,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -100,6 +101,11 @@ const Sidebar = ({
           ],
         },
         {
+          name: "Matières",
+          icon: GraduationCap,
+          tab: "matieres",
+        },
+        {
           name: "Motifs de Rejet",
           icon: BookOpen,
           tab: "motifs-de-rejet",
@@ -138,6 +144,11 @@ const Sidebar = ({
             { name: "Cours", tab: "create-course" },
             { name: "Programmer le Cours", tab: "schedule-course" },
           ],
+        },
+        {
+          name: "Matières",
+          icon: GraduationCap,
+          tab: "matieres",
         },
         {
           name: "Exercices",

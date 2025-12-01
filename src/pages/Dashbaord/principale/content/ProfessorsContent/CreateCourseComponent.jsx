@@ -392,7 +392,7 @@ const RichTextEditor = ({
         multiple
       />
 
-      <style jsx>{`
+      <style>{`
         [contenteditable]:empty:before {
           content: attr(data-placeholder);
           color: #9ca3af;
@@ -1213,7 +1213,7 @@ const CreateCourseComponent = ({
               ) : (
                 <>
                   <Save size={16} />
-                  Créer le cours
+                  Créer le cour
                 </>
               )}
             </button>
