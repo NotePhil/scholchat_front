@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Heart,
   MessageCircle,
@@ -31,6 +31,33 @@ const ActivityDisplay = ({
   const [imageLoadError, setImageLoadError] = useState({});
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [expandedImage, setExpandedImage] = useState(null);
+  
+  // Local state for likes and comments with persistence
+  const [localState, setLocalState] = useState(() => {
+    const cached = localStorage.getItem(`activity_${activity.id}`);
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        return {
+          likes: data.likes ?? activity.likes ?? 0,
+          isLiked: data.isLiked ?? activity.isLiked ?? false,
+          comments: data.comments ?? activity.comments ?? [],
+        };
+      } catch (e) {
+        console.warn('Failed to parse cached data');
+      }
+    }
+    return {
+      likes: activity.likes ?? 0,
+      isLiked: activity.isLiked ?? false,
+      comments: activity.comments ?? [],
+    };
+  });
+
+  // Save to localStorage whenever state changes
+  React.useEffect(() => {
+    localStorage.setItem(`activity_${activity.id}`, JSON.stringify(localState));
+  }, [activity.id, localState]);
 
   // Reset image index when activity changes
   React.useEffect(() => {
@@ -68,20 +95,62 @@ const ActivityDisplay = ({
     return activityFeedService.getStatusLabel(status);
   };
 
-  const handleCommentSubmit = async (e) => {
+  // Handle like with optimistic updates
+  const handleLikeClick = useCallback(async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    const wasLiked = localState.isLiked;
+    
+    // Optimistic update
+    setLocalState(prev => ({
+      ...prev,
+      isLiked: !wasLiked,
+      likes: wasLiked ? Math.max(0, prev.likes - 1) : prev.likes + 1
+    }));
+
+    try {
+      const result = await activityFeedService.addReaction(activity.id, "like");
+      // Sync with server result if different
+      setLocalState(prev => ({
+        ...prev,
+        isLiked: result,
+        likes: result ? (wasLiked ? prev.likes + 1 : prev.likes) : (wasLiked ? prev.likes : prev.likes - 1)
+      }));
+    } catch (error) {
+      // Revert on error
+      setLocalState(prev => ({
+        ...prev,
+        isLiked: wasLiked,
+        likes: wasLiked ? prev.likes + 1 : prev.likes - 1
+      }));
+      console.error("Error liking:", error);
+    }
+  }, [activity.id, localState.isLiked]);
+
+  const handleCommentSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!newComment.trim() || submittingComment) return;
 
     try {
       setSubmittingComment(true);
-      await onComment(activity.id, newComment.trim());
+      const newCommentObj = await activityFeedService.commentOnActivity(activity.id, newComment.trim());
+      
+      if (newCommentObj) {
+        setLocalState(prev => ({
+          ...prev,
+          comments: [...prev.comments, newCommentObj]
+        }));
+      }
       setNewComment("");
     } catch (error) {
-      console.error("Erreur lors de l'envoi du commentaire:", error);
+      console.error("Error commenting:", error);
     } finally {
       setSubmittingComment(false);
     }
-  };
+  }, [activity.id, newComment, submittingComment]);
 
   const handleMediaDownload = async (media) => {
     try {
@@ -177,10 +246,10 @@ const ActivityDisplay = ({
 
     if (loading) {
       return (
-        <div className="w-full h-64 sm:h-80 bg-gray-100 rounded-lg flex items-center justify-center">
-          <div className="text-center text-gray-500">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p>Chargement...</p>
+        <div className="w-full aspect-video bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm text-gray-500 font-medium">Chargement...</p>
           </div>
         </div>
       );
@@ -188,34 +257,36 @@ const ActivityDisplay = ({
 
     if (hasError || imageLoadError[mediaKey] || (!imageUrl && !loading)) {
       return (
-        <div className="w-full h-64 sm:h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-          <div className="text-center text-gray-500">
-            <Image size={48} className="mx-auto mb-2 text-gray-400" />
-            <p className="font-medium">Image non disponible</p>
-            <p className="text-xs mt-1 text-gray-400">Fichier non accessible</p>
-            {media.fileName && (
-              <p className="text-xs mt-1 text-gray-400 truncate max-w-48">{media.fileName}</p>
-            )}
+        <div className="w-full aspect-video bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl flex items-center justify-center border-2 border-dashed border-gray-200">
+          <div className="text-center p-6">
+            <Image size={48} className="mx-auto mb-3 text-gray-300" />
+            <p className="font-semibold text-gray-400 mb-1">Image indisponible</p>
+            <p className="text-xs text-gray-400">{media.fileName}</p>
           </div>
         </div>
       );
     }
 
     return (
-      <div className="relative cursor-pointer" onClick={() => setExpandedImage(imageUrl)}>
+      <div 
+        className="relative group cursor-pointer overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
+        onClick={() => setExpandedImage(imageUrl)}
+      >
         <img
           src={imageUrl}
           alt={media.fileName || "Image"}
-          className="w-full h-auto max-h-96 object-contain rounded-lg"
+          className="w-full aspect-video object-cover transition-transform duration-300 group-hover:scale-105"
           onError={() => {
             console.error('Image failed to load:', imageUrl);
             setHasError(true);
             setImageLoadError(prev => ({ ...prev, [mediaKey]: true }));
           }}
         />
-        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
-          <div className="opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm">
-            Cliquer pour agrandir
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute bottom-4 left-4 right-4">
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 text-sm font-medium text-gray-800 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+              Cliquer pour agrandir
+            </div>
           </div>
         </div>
       </div>
@@ -228,7 +299,7 @@ const ActivityDisplay = ({
     }
 
     return (
-      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+      <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50">
         <div className="flex items-center gap-3">
           {getMediaIcon(media.type, media.contentType)}
           <div className="flex-1">
@@ -245,124 +316,136 @@ const ActivityDisplay = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 sm:p-6">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
-            {activity.user?.name?.charAt(0)?.toUpperCase() || "U"}
+    <article className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-300 mb-6">
+      {/* Header */}
+      <header className="p-6 pb-4">
+        <div className="flex items-start gap-4">
+          <div className="relative">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
+              {activity.user?.name?.charAt(0)?.toUpperCase() || "U"}
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
+                <h3 className="font-bold text-gray-900 text-lg leading-tight">
                   {activity.user?.name || "Utilisateur"}
                 </h3>
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-                  <span className="capitalize">{activity.user?.role || "user"}</span>
-                  <span>•</span>
-                  <span>{formatTimestamp(activity.timestamp)}</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-gray-500 capitalize font-medium">
+                    {activity.user?.role || "user"}
+                  </span>
+                  <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                  <time className="text-sm text-gray-500">
+                    {formatTimestamp(activity.timestamp)}
+                  </time>
                   {activity.type === "event" && activity.eventDetails && (
                     <>
-                      <span>•</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                          activity.eventDetails.status
-                        )}`}
-                      >
+                      <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(activity.eventDetails.status)}`}>
                         {getStatusLabel(activity.eventDetails.status)}
                       </span>
                     </>
                   )}
                 </div>
               </div>
-              <button className="text-gray-400 hover:text-gray-600 p-1">
-                <MoreHorizontal size={20} />
+              <button className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
+                <MoreHorizontal size={20} className="text-gray-400" />
               </button>
             </div>
           </div>
         </div>
+      </header>
 
-        <div className="mt-4">
-          <p className="text-gray-800 text-sm sm:text-base leading-relaxed">
-            {activity.content}
-          </p>
+      {/* Content */}
+      <div className="px-6 pb-4">
+        <p className="text-gray-800 text-base leading-relaxed font-medium">
+          {activity.content}
+        </p>
 
-          {activity.type === "event" && activity.eventDetails && (
-            <div className="mt-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-100">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Calendar size={16} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-2">
-                    {activity.eventDetails.title}
-                  </h4>
+        {/* Event Details */}
+        {activity.type === "event" && activity.eventDetails && (
+          <div className="mt-6 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-2xl p-5 border border-blue-100/50">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Calendar size={20} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-gray-900 text-lg mb-3">
+                  {activity.eventDetails.title}
+                </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-gray-600">
-                    {activity.eventDetails.startTime && (
-                      <div className="flex items-center gap-2">
-                        <Clock size={14} />
-                        <span>
-                          {new Date(activity.eventDetails.startTime).toLocaleString("fr-FR")}
-                        </span>
-                      </div>
-                    )}
-
-                    {activity.eventDetails.location && (
-                      <div className="flex items-center gap-2">
-                        <MapPin size={14} />
-                        <span>{activity.eventDetails.location}</span>
-                      </div>
-                    )}
-
-                    {activity.eventDetails.participantsCount !== undefined && (
-                      <div className="flex items-center gap-2">
-                        <Users size={14} />
-                        <span>
-                          {activity.eventDetails.participantsCount} participant(s)
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {activity.eventDetails.description && (
-                    <p className="mt-3 text-gray-700 text-xs sm:text-sm">
-                      {activity.eventDetails.description}
-                    </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  {activity.eventDetails.startTime && (
+                    <div className="flex items-center gap-3">
+                      <Clock size={16} className="text-blue-600" />
+                      <span className="text-sm text-gray-700 font-medium">
+                        {new Date(activity.eventDetails.startTime).toLocaleString("fr-FR")}
+                      </span>
+                    </div>
                   )}
 
-                  {activity.eventDetails.status === "PLANIFIE" && (
-                    <button
-                      onClick={() => onJoinEvent(activity.id)}
-                      className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
-                    >
-                      <UserPlus size={16} />
-                      Participer
-                    </button>
+                  {activity.eventDetails.location && (
+                    <div className="flex items-center gap-3">
+                      <MapPin size={16} className="text-blue-600" />
+                      <span className="text-sm text-gray-700 font-medium">
+                        {activity.eventDetails.location}
+                      </span>
+                    </div>
+                  )}
+
+                  {activity.eventDetails.participantsCount !== undefined && (
+                    <div className="flex items-center gap-3">
+                      <Users size={16} className="text-blue-600" />
+                      <span className="text-sm text-gray-700 font-medium">
+                        {activity.eventDetails.participantsCount} participant(s)
+                      </span>
+                    </div>
                   )}
                 </div>
+
+                {activity.eventDetails.description && (
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                    {activity.eventDetails.description}
+                  </p>
+                )}
+
+                {activity.eventDetails.status === "PLANIFIE" && (
+                  <button
+                    onClick={() => onJoinEvent(activity.id)}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <UserPlus size={18} />
+                    Participer à l'événement
+                  </button>
+                )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
+      {/* Media */}
       {activity.media && activity.media.length > 0 && (
-        <div className="px-4 sm:px-6 pb-4">
+        <div className="px-6 pb-6">
           {activity.media.length === 1 ? (
             <div>{renderMediaPreview(activity.media[0])}</div>
           ) : (
             <div className="relative">
               <div>{renderMediaPreview(activity.media[currentImageIndex])}</div>
-              <div className="flex justify-center mt-3 gap-2">
+              <div className="flex justify-center mt-4 gap-2">
                 {activity.media.map((_, index) => (
                   <button
                     key={index}
-                    onClick={() => setCurrentImageIndex(index)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentImageIndex(index);
+                    }}
                     className={`w-3 h-3 rounded-full transition-colors ${
                       index === currentImageIndex
-                        ? "bg-blue-600"
+                        ? "bg-blue-600 shadow-lg"
                         : "bg-gray-300 hover:bg-gray-400"
                     }`}
                   />
@@ -373,28 +456,31 @@ const ActivityDisplay = ({
         </div>
       )}
 
-      {(activity.likes > 0 || activity.comments?.length > 0 || activity.shares > 0) && (
-        <div className="px-4 sm:px-6 py-2 border-t border-gray-100">
-          <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500">
+      {/* Stats */}
+      {(localState.likes > 0 || localState.comments.length > 0 || activity.shares > 0) && (
+        <div className="px-6 py-3 border-t border-gray-50">
+          <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-4">
-              {activity.likes > 0 && (
-                <span className="flex items-center gap-1">
-                  <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                    <Heart size={10} className="text-white fill-current" />
+              {localState.likes > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-1">
+                    <div className="w-6 h-6 bg-gradient-to-br from-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
+                      <Heart size={12} className="text-white fill-current" />
+                    </div>
                   </div>
-                  {activity.likes}
-                </span>
+                  <span className="font-semibold text-gray-700">{localState.likes}</span>
+                </div>
               )}
             </div>
 
-            <div className="flex items-center gap-4">
-              {activity.comments?.length > 0 && (
-                <span>
-                  {activity.comments.length} commentaire{activity.comments.length > 1 ? "s" : ""}
+            <div className="flex items-center gap-4 text-gray-500">
+              {localState.comments.length > 0 && (
+                <span className="font-medium">
+                  {localState.comments.length} commentaire{localState.comments.length > 1 ? "s" : ""}
                 </span>
               )}
               {activity.shares > 0 && (
-                <span>
+                <span className="font-medium">
                   {activity.shares} partage{activity.shares > 1 ? "s" : ""}
                 </span>
               )}
@@ -403,123 +489,133 @@ const ActivityDisplay = ({
         </div>
       )}
 
-      <div className="px-4 sm:px-6 py-3 border-t border-gray-100">
+      {/* Actions */}
+      <div className="px-6 py-4 border-t border-gray-50">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => onReaction(activity.id, "like")}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              activity.isLiked
-                ? "text-red-600 bg-red-50 hover:bg-red-100"
-                : "text-gray-600 hover:bg-gray-50"
+            onClick={handleLikeClick}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-300 ${
+              localState.isLiked
+                ? "text-red-600 bg-red-50 hover:bg-red-100 shadow-sm"
+                : "text-gray-600 hover:bg-gray-50 hover:text-red-500"
             }`}
           >
-            <Heart size={18} className={activity.isLiked ? "fill-current" : ""} />
-            <span className="hidden sm:inline">J'aime</span>
+            <Heart size={20} className={localState.isLiked ? "fill-current" : ""} />
+            <span>J'aime</span>
           </button>
 
           <button
-            onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowComments(!showComments);
+            }}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition-all duration-300"
           >
-            <MessageCircle size={18} />
-            <span className="hidden sm:inline">Commenter</span>
+            <MessageCircle size={20} />
+            <span>Commenter</span>
           </button>
 
           <button
             onClick={() => onShare(activity.id)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-300 ${
               activity.isShared
-                ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
-                : "text-gray-600 hover:bg-gray-50"
+                ? "text-blue-600 bg-blue-50 hover:bg-blue-100 shadow-sm"
+                : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
             }`}
           >
-            <Share2 size={18} />
-            <span className="hidden sm:inline">Partager</span>
+            <Share2 size={20} />
+            <span>Partager</span>
           </button>
         </div>
       </div>
 
+      {/* Comments Section */}
       {showComments && (
-        <div className="border-t border-gray-100">
-          {activity.comments && activity.comments.length > 0 && (
-            <div className="px-4 sm:px-6 py-3 max-h-64 overflow-y-auto">
-              <div className="space-y-3">
-                {activity.comments.map((comment) => (
+        <div className="border-t border-gray-50 bg-gray-50/50">
+          {localState.comments.length > 0 && (
+            <div className="px-6 py-4 max-h-80 overflow-y-auto">
+              <div className="space-y-4">
+                {localState.comments.slice(0, 3).map((comment) => (
                   <div key={comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                      {comment.user.name.charAt(0).toUpperCase()}
+                    <div className="w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-600 rounded-xl flex items-center justify-center text-white text-xs font-bold">
+                      {comment.user?.name?.charAt(0)?.toUpperCase() || "U"}
                     </div>
                     <div className="flex-1">
-                      <div className="bg-gray-50 rounded-lg px-3 py-2">
-                        <p className="font-medium text-sm text-gray-900">
-                          {comment.user.name}
+                      <div className="bg-white rounded-2xl px-4 py-3 shadow-sm">
+                        <p className="font-semibold text-gray-900 text-sm mb-1">
+                          {comment.user?.name || "Utilisateur"}
                         </p>
-                        <p className="text-sm text-gray-700">
+                        <p className="text-gray-700 text-sm leading-relaxed">
                           {comment.content}
                         </p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-2 ml-4">
                         {formatTimestamp(comment.timestamp)}
                       </p>
                     </div>
                   </div>
                 ))}
+                
+                {localState.comments.length > 3 && (
+                  <button className="text-blue-600 text-sm font-semibold hover:text-blue-700 ml-11">
+                    Voir les {localState.comments.length - 3} autres commentaires
+                  </button>
+                )}
               </div>
             </div>
           )}
 
-          <div className="px-4 sm:px-6 py-3 border-t border-gray-50">
+          <div className="px-6 py-4 border-t border-gray-100">
             <form onSubmit={handleCommentSubmit} className="flex gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-xs font-bold">
                 {currentUser?.name?.charAt(0)?.toUpperCase() || "U"}
               </div>
-              <div className="flex-1">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Écrivez un commentaire..."
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={submittingComment}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newComment.trim() || submittingComment}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {submittingComment ? "..." : "Publier"}
-                  </button>
-                </div>
+              <div className="flex-1 flex gap-3">
+                <input
+                  type="text"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Écrivez un commentaire..."
+                  className="flex-1 bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                  disabled={submittingComment}
+                />
+                <button
+                  type="submit"
+                  disabled={!newComment.trim() || submittingComment}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-sm hover:shadow-md"
+                >
+                  {submittingComment ? "..." : "Publier"}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Image Expansion Modal */}
+      {/* Image Modal */}
       {expandedImage && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={() => setExpandedImage(null)}
         >
           <div className="relative max-w-full max-h-full">
             <img
               src={expandedImage}
               alt="Image agrandie"
-              className="max-w-full max-h-full object-contain"
+              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
             <button
               onClick={() => setExpandedImage(null)}
-              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+              className="absolute top-4 right-4 w-12 h-12 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
             >
               ×
             </button>
           </div>
         </div>
       )}
-    </div>
+    </article>
   );
 };
 

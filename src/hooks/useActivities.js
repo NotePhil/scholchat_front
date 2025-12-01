@@ -45,14 +45,14 @@ export const useActivities = () => {
 
   const handleReaction = useCallback(
     (activityId, reactionType) => {
-      dispatch(addReaction({ activityId, reactionType }));
+      return dispatch(addReaction({ activityId, reactionType })).unwrap();
     },
     [dispatch]
   );
 
   const handleComment = useCallback(
     (activityId, comment) => {
-      dispatch(addComment({ activityId, comment }));
+      return dispatch(addComment({ activityId, comment })).unwrap();
     },
     [dispatch]
   );
