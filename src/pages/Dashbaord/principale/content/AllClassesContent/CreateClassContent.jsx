@@ -606,7 +606,7 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
       setFormData((prev) => ({
         ...prev,
         [name]: value,
-        etablissementToken: establishment?.optionTokenGeneral || establishment?.codeUnique ? generateToken() : "",
+        etablissementToken: "",
       }));
     } else {
       setFormData((prev) => ({
@@ -637,8 +637,12 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
       newErrors.moderator = "Un modérateur est requis";
     }
 
-    if (selectedEstablishment?.optionTokenGeneral && !formData.etablissementToken.trim()) {
+    if ((selectedEstablishment?.optionTokenGeneral || selectedEstablishment?.codeUnique) && !formData.etablissementToken.trim()) {
       newErrors.etablissementToken = "Le token est requis pour cet établissement";
+    } else if (selectedEstablishment?.optionTokenGeneral && formData.etablissementToken.trim().length !== 8) {
+      newErrors.etablissementToken = "Le token général doit contenir exactement 8 caractères";
+    } else if (selectedEstablishment?.codeUnique && formData.etablissementToken.trim().length !== 6) {
+      newErrors.etablissementToken = "Le code unique doit contenir exactement 6 caractères";
     }
 
     setErrors(newErrors);
@@ -900,21 +904,14 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
                             name="etablissementToken"
                             value={formData.etablissementToken}
                             onChange={handleInputChange}
-                            maxLength="6"
-                            className={`w-full pl-12 pr-20 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                            maxLength={selectedEstablishment?.optionTokenGeneral ? "8" : "6"}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                               errors.etablissementToken
                                 ? "border-red-500"
                                 : "border-gray-300"
                             }`}
-                            placeholder="A1B2C3"
+                            placeholder={selectedEstablishment?.optionTokenGeneral ? "A1B2C3D4" : "A1B2C3"}
                           />
-                          <button
-                            type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, etablissementToken: generateToken() }))}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
-                          >
-                            Générer
-                          </button>
                         </div>
                         {errors.etablissementToken && (
                           <p className="mt-1 text-sm text-red-600 flex items-center gap-1">

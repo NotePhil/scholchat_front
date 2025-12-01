@@ -181,6 +181,38 @@ const EstablishmentModal = ({
                       </div>
                     </div>
                   )}
+
+                  {selectedEstablishment?.tokenGeneral && (
+                    <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
+                        <Settings className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-500">
+                          Token Général
+                        </p>
+                        <p className="text-gray-900 font-medium font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                          {selectedEstablishment.tokenGeneral}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEstablishment?.codeUniqueValue && (
+                    <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                        <Settings className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-500">
+                          Code Unique
+                        </p>
+                        <p className="text-gray-900 font-medium font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                          {selectedEstablishment.codeUniqueValue}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Options Section */}

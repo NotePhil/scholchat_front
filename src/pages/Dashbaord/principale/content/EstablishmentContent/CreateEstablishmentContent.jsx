@@ -88,10 +88,38 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    
+    if (type === "checkbox") {
+      // For boolean options, make them mutually exclusive
+      const booleanOptions = ['optionEnvoiMailVersClasse', 'optionTokenGeneral', 'codeUnique'];
+      
+      if (booleanOptions.includes(name)) {
+        // If checking this option, uncheck all others
+        if (checked) {
+          const newFormData = { ...formData };
+          booleanOptions.forEach(option => {
+            newFormData[option] = option === name;
+          });
+          setFormData(newFormData);
+        } else {
+          // If unchecking, just uncheck this one
+          setFormData((prev) => ({
+            ...prev,
+            [name]: false,
+          }));
+        }
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: checked,
+        }));
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
 
     // Clear error when user starts typing
     if (errors[name]) {
@@ -439,6 +467,9 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                       Options de Configuration
                     </h4>
                   </div>
+                  <p className="text-xs text-gray-600">
+                    Sélectionnez une seule option. Les tokens/codes seront générés automatiquement.
+                  </p>
 
                   <div className="space-y-3">
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -462,9 +493,14 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                         onChange={handleInputChange}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
-                      <span className="text-sm text-gray-700">
-                        Token général
-                      </span>
+                      <div className="flex-1">
+                        <span className="text-sm text-gray-700">
+                          Token général
+                        </span>
+                        <p className="text-xs text-gray-500">
+                          Un token général sera généré automatiquement
+                        </p>
+                      </div>
                     </label>
 
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -475,7 +511,12 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                         onChange={handleInputChange}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
-                      <span className="text-sm text-gray-700">Code unique</span>
+                      <div className="flex-1">
+                        <span className="text-sm text-gray-700">Code unique</span>
+                        <p className="text-xs text-gray-500">
+                          Un code unique sera généré automatiquement
+                        </p>
+                      </div>
                     </label>
                   </div>
                 </div>

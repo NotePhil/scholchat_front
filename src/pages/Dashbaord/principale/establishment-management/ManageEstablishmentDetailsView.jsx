@@ -788,6 +788,16 @@ const ManageEstablishmentDetailsView = ({
                   <Text type="secondary">N/A</Text>
                 )}
               </Descriptions.Item>
+              {establishment.tokenGeneral && (
+                <Descriptions.Item label="Token Général">
+                  <Text code copyable>{establishment.tokenGeneral}</Text>
+                </Descriptions.Item>
+              )}
+              {establishment.codeUniqueValue && (
+                <Descriptions.Item label="Code Unique">
+                  <Text code copyable>{establishment.codeUniqueValue}</Text>
+                </Descriptions.Item>
+              )}
               <Descriptions.Item label="Statut">
                 {getStatusTag(establishment)}
               </Descriptions.Item>
