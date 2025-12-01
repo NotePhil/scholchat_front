@@ -393,27 +393,43 @@ const ProfessorsContent = () => {
                 />
               </div>
 
-              <div className="flex bg-slate-100 rounded-lg sm:rounded-xl p-1 self-center min-[480px]:self-auto">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "grid"
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Grille
-                </button>
-                <button
-                  onClick={() => setViewMode("table")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "table"
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Table
-                </button>
+              <div className="flex items-center gap-2 sm:gap-3">
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setModalMode("create");
+                      setSelectedProfessor(null);
+                      setShowModal(true);
+                    }}
+                    className="px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1 sm:gap-2"
+                  >
+                    <Users size={14} className="sm:w-4 sm:h-4" />
+                    Ajouter
+                  </button>
+                )}
+                
+                <div className="flex bg-slate-100 rounded-lg sm:rounded-xl p-1">
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
+                      viewMode === "grid"
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Grille
+                  </button>
+                  <button
+                    onClick={() => setViewMode("table")}
+                    className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
+                      viewMode === "table"
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Table
+                  </button>
+                </div>
               </div>
             </div>
           </div>

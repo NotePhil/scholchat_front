@@ -141,7 +141,7 @@ export const useClasses = () => {
     if (classState.currentTab !== "all") {
       const statusMap = {
         active: "ACTIF",
-        inactive: "INACTIF",
+        inactive: "EN_ATTENTE_APPROBATION",
         pending: "EN_ATTENTE",
       };
       filtered = filtered.filter(

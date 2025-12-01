@@ -96,7 +96,7 @@ const ClassesContent = ({ onManageClass }) => {
     else if (currentTab === "active") statusMatch = cls.statut === "ACTIF";
     else if (currentTab === "inactive") statusMatch = cls.statut === "INACTIF";
     else if (currentTab === "pending")
-      statusMatch = cls.statut === "EN_ATTENTE";
+      statusMatch = cls.statut === "EN_ATTENTE_APPROBATION";
 
     let roleMatch = true;
     if (user.role === "PROFESSEUR") {

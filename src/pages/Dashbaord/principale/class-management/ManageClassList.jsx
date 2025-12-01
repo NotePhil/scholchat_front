@@ -131,14 +131,18 @@ const ManageClassList = ({
           const requests = await AccederService.obtenirDemandesAccesPourClasse(
             classe.id
           );
+          console.log(`Raw requests for class ${classe.nom}:`, requests);
+          
           const pendingCount = requests.filter(
-            (req) =>
-              req.etat === EtatDemandeAcces.EN_ATTENTE ||
-              req.etat === "EN_ATTENTE"
+            (req) => {
+              console.log(`Request ${req.id}: status = ${req.etat}`);
+              return req.etat === EtatDemandeAcces.EN_ATTENTE ||
+                     req.etat === "EN_ATTENTE";
+            }
           ).length;
 
           console.log(
-            `Class ${classe.nom} (${classe.id}): ${pendingCount} pending requests`
+            `Class ${classe.nom} (${classe.id}): ${pendingCount} pending requests out of ${requests.length} total`
           );
           return { classId: classe.id, count: pendingCount };
         } catch (error) {
