@@ -28,8 +28,9 @@ import { classService } from "../../../../../services/ClassService";
 import ProfessorModal from "../../modals/ProfessorModal";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import UserViewModal from "../../modals/UserViewModal";
+import { getDarkModeClasses } from "../../../../../utils/darkModeUtils";
 
-const ProfessorsContent = () => {
+const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const [professors, setProfessors] = useState([]);
   const [classes, setClasses] = useState([]);
   const [filteredProfessors, setFilteredProfessors] = useState([]);
@@ -191,10 +192,11 @@ const ProfessorsContent = () => {
   };
 
   const isAdmin = userRole === "ADMIN";
+  const darkClasses = getDarkModeClasses(isDark);
 
   if (loading && professors.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'} flex items-center justify-center`}>
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
             <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
@@ -203,7 +205,7 @@ const ProfessorsContent = () => {
               style={{ clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)" }}
             ></div>
           </div>
-          <p className="text-slate-600 font-medium text-sm sm:text-base">
+          <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} font-medium text-sm sm:text-base`}>
             Chargement des données...
           </p>
         </div>
@@ -212,7 +214,7 @@ const ProfessorsContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'}`}>
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
@@ -220,10 +222,10 @@ const ProfessorsContent = () => {
               <GraduationCap className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              <h1 className={`text-xl sm:text-3xl font-bold ${isDark ? 'text-white' : 'bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent'}`}>
                 Gestion des Professeurs
               </h1>
-              <p className="text-slate-600 mt-1 text-xs sm:text-sm">
+              <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} mt-1 text-xs sm:text-sm`}>
                 Gérez efficacement vos professeurs
               </p>
             </div>
@@ -232,7 +234,7 @@ const ProfessorsContent = () => {
 
         {error && (
           <div className="mb-4 sm:mb-6 relative">
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 sm:p-4 shadow-sm">
+            <div className={`${isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'} rounded-xl p-3 sm:p-4 shadow-sm`}>
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   <div className="w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center">
@@ -240,8 +242,8 @@ const ProfessorsContent = () => {
                   </div>
                 </div>
                 <div className="ml-3 flex-1">
-                  <p className="text-red-800 font-medium text-sm">Erreur</p>
-                  <p className="text-red-700 text-xs sm:text-sm mt-1">
+                  <p className={`${isDark ? 'text-red-400' : 'text-red-800'} font-medium text-sm`}>Erreur</p>
+                  <p className={`${isDark ? 'text-red-300' : 'text-red-700'} text-xs sm:text-sm mt-1`}>
                     {error}
                   </p>
                 </div>
@@ -257,13 +259,13 @@ const ProfessorsContent = () => {
         )}
 
         <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div className={`${isDark ? 'bg-gray-800/70 border-gray-700/50' : 'bg-white/70 border-white/50'} backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-600 text-xs sm:text-sm font-medium">
+                <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} text-xs sm:text-sm font-medium`}>
                   Total
                 </p>
-                <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1">
+                <p className={`text-lg sm:text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'} mt-1`}>
                   {professors.length}
                 </p>
               </div>
@@ -273,7 +275,7 @@ const ProfessorsContent = () => {
             </div>
             <div className="mt-2 sm:mt-4 flex items-center">
               <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2" />
-              <span className="text-slate-500 text-xs sm:text-sm">
+              <span className={`${isDark ? 'text-gray-400' : 'text-slate-500'} text-xs sm:text-sm`}>
                 Professeurs
               </span>
             </div>
@@ -605,25 +607,25 @@ const ProfessorsContent = () => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50/50">
                   <tr>
-                    <th className="px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Professeur
                     </th>
-                    <th className="px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Contact
                     </th>
-                    <th className="hidden md:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`hidden md:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Matricule
                     </th>
-                    <th className="hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Classes
                     </th>
-                    <th className="px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Statut
                     </th>
-                    <th className="hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Droits
                     </th>
-                    <th className="px-3 sm:px-6 py-2 sm:py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`px-3 sm:px-6 py-2 sm:py-4 text-right text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Actions
                     </th>
                   </tr>

@@ -652,7 +652,7 @@ export const useAdmins = () => {
   };
 };
 
-const AdminContent = () => {
+const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const {
     admins,
     filteredAdmins,
@@ -758,7 +758,7 @@ const AdminContent = () => {
   // FIX: Update loading condition to handle undefined admins
   if (loading && (!admins || admins.length === 0)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50 flex items-center justify-center">
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50'} flex items-center justify-center`}>
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="animate-spin text-purple-600" size={48} />
           <p className="text-slate-600 font-medium">
@@ -770,7 +770,7 @@ const AdminContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
@@ -794,7 +794,7 @@ const AdminContent = () => {
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent'}`}>
                 Gestion des Administrateurs
               </h1>
               <p className="text-slate-600 mt-1">

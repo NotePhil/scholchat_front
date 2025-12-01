@@ -501,7 +501,7 @@ const PaymentModal = ({
   );
 };
 
-const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
+const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, currentTheme, themes, colorSchemes }) => {
   const [formData, setFormData] = useState({
     nom: "",
     niveau: "",
@@ -755,15 +755,15 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-green-50 to-blue-50'} flex items-center justify-center p-4`}>
+        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl p-8 max-w-md w-full text-center`}>
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
             Classe créée avec succès!
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'} mb-6`}>
             {formData.etablissement
               ? "Votre classe a été créée et est en attente d'approbation."
               : "Votre classe premium a été créée et approuvée automatiquement!"}
@@ -801,9 +801,9 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab }) => {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'} py-8 px-4`}>
         <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl overflow-hidden`}>
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
               <div className="flex items-center gap-3">

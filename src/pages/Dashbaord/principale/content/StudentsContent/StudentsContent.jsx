@@ -29,7 +29,7 @@ import StudentModal from "../../modals/StudentModal";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import UserViewEleve from "../../modals/UserViewEleve";
 
-const StudentsContent = () => {
+const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
@@ -182,7 +182,7 @@ const StudentsContent = () => {
 
   if (loading && students.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'} flex items-center justify-center`}>
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
             <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
@@ -191,7 +191,7 @@ const StudentsContent = () => {
               style={{ clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)" }}
             ></div>
           </div>
-          <p className="text-slate-600 font-medium text-sm sm:text-base">
+          <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} font-medium text-sm sm:text-base`}>
             Chargement des données...
           </p>
         </div>
@@ -200,7 +200,7 @@ const StudentsContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'}`}>
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
@@ -208,10 +208,10 @@ const StudentsContent = () => {
               <School className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              <h1 className={`text-xl sm:text-3xl font-bold ${isDark ? 'text-white' : 'bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent'}`}>
                 Gestion des Élèves
               </h1>
-              <p className="text-slate-600 mt-1 text-xs sm:text-sm">
+              <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} mt-1 text-xs sm:text-sm`}>
                 Gérez efficacement les élèves et leurs associations aux classes
               </p>
             </div>

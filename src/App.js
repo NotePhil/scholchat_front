@@ -24,6 +24,7 @@ import ClassApproval from "./pages/ClassApproval";
 import ClassRejection from "./pages/ClassRejection";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import "./CSS/themes.css";
 
 function ScrollToTop() {
   const { pathname } = useLocation();

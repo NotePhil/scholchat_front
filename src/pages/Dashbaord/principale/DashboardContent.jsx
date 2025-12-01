@@ -120,7 +120,7 @@ class MatiereService {
 
 const matiereService = new MatiereService();
 
-const DashboardContent = () => {
+const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const [dashboardData, setDashboardData] = useState({
     users: [],
     professors: [],
@@ -315,17 +315,17 @@ const DashboardContent = () => {
   ];
 
   const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 lg:p-6 hover:shadow-md transition-shadow">
+    <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-3 sm:p-4 lg:p-6 hover:shadow-md transition-shadow`}>
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0 pr-2">
-          <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">
+          <p className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'} truncate`}>
             {title}
           </p>
-          <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
+          <p className={`text-lg sm:text-2xl lg:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} mt-1 sm:mt-2`}>
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {subtitle && (
-            <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">
+            <p className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1 truncate`}>
               {subtitle}
             </p>
           )}
@@ -396,9 +396,9 @@ const DashboardContent = () => {
     ];
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+      <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
         <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+          <h3 className={`text-base sm:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Activités Récentes
           </h3>
           <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
@@ -406,16 +406,16 @@ const DashboardContent = () => {
         <div className="space-y-3 sm:space-y-4">
           {recentActivities.map((activity) => (
             <div key={activity.id} className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-gray-50 rounded-full flex items-center justify-center">
+              <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 ${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-full flex items-center justify-center`}>
                 <activity.icon
                   className={`h-3 w-3 sm:h-4 sm:w-4 ${activity.color}`}
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-900 leading-tight">
+                <p className={`text-xs sm:text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'} leading-tight`}>
                   {activity.title}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">{activity.user}</p>
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1`}>{activity.user}</p>
               </div>
               <div className="flex-shrink-0 text-xs text-gray-400">
                 {activity.time}
@@ -431,10 +431,10 @@ const DashboardContent = () => {
 
   if (dashboardData.loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center p-4`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-sm sm:text-base text-gray-600">
+          <p className={`mt-4 text-sm sm:text-base ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
             Chargement du tableau de bord...
           </p>
         </div>
@@ -444,10 +444,10 @@ const DashboardContent = () => {
 
   if (dashboardData.error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center p-4`}>
         <div className="text-center">
           <div className="text-red-500 text-xl mb-4">⚠️</div>
-          <p className="text-gray-600 mb-4">{dashboardData.error}</p>
+          <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'} mb-4`}>{dashboardData.error}</p>
           <button
             onClick={fetchDashboardData}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
@@ -460,16 +460,16 @@ const DashboardContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
+      <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-sm border-b`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6">
             <div className="mb-3 sm:mb-0">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+              <h1 className={`text-xl sm:text-2xl lg:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Tableau de Bord Éducatif
               </h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">
+              <p className={`text-sm sm:text-base ${isDark ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
                 Gestion des cours, exercices et progression des élèves
               </p>
             </div>
@@ -523,9 +523,9 @@ const DashboardContent = () => {
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Course Distribution */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">
+              <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Répartition des Cours par Matière
               </h3>
               <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
@@ -557,9 +557,9 @@ const DashboardContent = () => {
           </div>
 
           {/* Student Progress by Class */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">
+              <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Progression des Élèves par Classe
               </h3>
               <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
@@ -590,9 +590,9 @@ const DashboardContent = () => {
         </div>
 
         {/* Monthly Activity Trends */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
+        <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6 mb-6 sm:mb-8`}>
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">
+            <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               Activité Éducative Mensuelle
             </h3>
             <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
@@ -639,9 +639,9 @@ const DashboardContent = () => {
         {/* Bottom Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Exercise Completion Status */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">
+              <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 État des Exercices
               </h3>
               <Target className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />

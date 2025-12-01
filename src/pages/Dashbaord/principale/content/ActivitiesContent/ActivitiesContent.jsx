@@ -13,7 +13,7 @@ import ActivityDisplay from "./ActivityDisplay";
 import CreateEventContent from "./CreateEventContent";
 import { useActivities } from "../../../../../hooks/useActivities";
 
-const ActivitiesContent = () => {
+const ActivitiesContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const {
     filteredActivities,
     loading,
@@ -117,20 +117,20 @@ const ActivitiesContent = () => {
 
   if (loading && filteredActivities.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
         <div className="text-center">
           <Loader2
             className="animate-spin text-blue-600 mx-auto mb-4"
             size={48}
           />
-          <p className="text-gray-600">Chargement des activités...</p>
+          <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Chargement des activités...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {showCreateForm && canCreateActivity ? (
         <CreateEventContent
           onClose={() => handleShowCreateForm(false)}
@@ -156,13 +156,13 @@ const ActivitiesContent = () => {
           )}
 
           <div className="max-w-4xl mx-auto px-4 py-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-6 mb-6`}>
               <div className="flex justify-between items-center">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
                     Fil d'activité
                   </h1>
-                  <p className="text-gray-600">
+                  <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                     Découvrez les dernières activités et événements
                   </p>
                 </div>
@@ -178,7 +178,7 @@ const ActivitiesContent = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-4 mb-6`}>
               <div className="flex flex-wrap gap-2">
                 {filters.map((filter) => {
                   const Icon = filter.icon;
@@ -189,7 +189,7 @@ const ActivitiesContent = () => {
                       className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
                         activeFilter === filter.id
                           ? filter.color + " shadow-sm"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          : isDark ? "bg-gray-700 text-gray-300 hover:bg-gray-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                     >
                       <Icon size={16} />
@@ -217,12 +217,12 @@ const ActivitiesContent = () => {
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+              <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-12 text-center`}>
                 <Users size={64} className="mx-auto text-gray-400 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                <h3 className={`text-xl font-semibold ${isDark ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
                   Aucune activité trouvée
                 </h3>
-                <p className="text-gray-500">
+                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   Aucune activité ne correspond aux filtres sélectionnés.
                 </p>
               </div>

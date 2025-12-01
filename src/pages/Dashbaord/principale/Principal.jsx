@@ -57,13 +57,63 @@ import "../../../CSS/Principal.css";
 Modal.setAppElement("#root");
 
 const themes = {
-  light: { cardBg: "bg-white", border: "border-gray-200" },
-  dark: { cardBg: "bg-gray-800", border: "border-gray-700" },
+  light: {
+    background: "bg-gray-100",
+    cardBg: "bg-white",
+    text: "text-gray-800",
+    border: "border-gray-200",
+    hover: "hover:bg-gray-50",
+    chartBg: "#ffffff",
+    gridColor: "#e5e7eb",
+  },
+  dark: {
+    background: "bg-slate-900",
+    cardBg: "bg-slate-800",
+    text: "text-gray-100",
+    border: "border-gray-700",
+    hover: "hover:bg-slate-700",
+    chartBg: "#1e293b",
+    gridColor: "#374151",
+  },
 };
 
 const colorSchemes = {
-  blue: { primary: "#4a6da7", light: "#6889c3" },
-  green: { primary: "#2e7d32", light: "#4caf50" },
+  blue: {
+    name: "Bleu",
+    primary: "#3b82f6",
+    secondary: "#1d4ed8",
+    accent: "#60a5fa",
+    hover: "#2563eb",
+    light: "#dbeafe",
+    gradient: "from-blue-500 to-blue-600",
+  },
+  green: {
+    name: "Vert",
+    primary: "#10b981",
+    secondary: "#047857",
+    accent: "#34d399",
+    hover: "#059669",
+    light: "#d1fae5",
+    gradient: "from-green-500 to-green-600",
+  },
+  purple: {
+    name: "Violet",
+    primary: "#8b5cf6",
+    secondary: "#6d28d9",
+    accent: "#a78bfa",
+    hover: "#7c3aed",
+    light: "#ede9fe",
+    gradient: "from-purple-500 to-purple-600",
+  },
+  orange: {
+    name: "Orange",
+    primary: "#f97316",
+    secondary: "#c2410c",
+    accent: "#fb923c",
+    hover: "#ea580c",
+    light: "#ffedd5",
+    gradient: "from-orange-500 to-orange-600",
+  },
 };
 
 const languages = {
@@ -465,8 +515,26 @@ const Principal = () => {
     );
   };
 
+  // Apply theme colors to document root for global CSS variables
+  useEffect(() => {
+    const root = document.documentElement;
+    const scheme = colorSchemes[currentTheme] || colorSchemes.blue;
+    
+    root.style.setProperty('--primary-color', scheme.primary);
+    root.style.setProperty('--secondary-color', scheme.secondary);
+    root.style.setProperty('--accent-color', scheme.accent);
+    root.style.setProperty('--hover-color', scheme.hover);
+    root.style.setProperty('--light-color', scheme.light);
+  }, [currentTheme]);
+
   return (
-    <div className={`principal-container ${isDark ? "dark-mode" : ""}`}>
+    <div className={`principal-container ${isDark ? "dark-mode" : ""}`} style={{
+      '--primary-color': colorSchemes[currentTheme]?.primary || colorSchemes.blue.primary,
+      '--secondary-color': colorSchemes[currentTheme]?.secondary || colorSchemes.blue.secondary,
+      '--accent-color': colorSchemes[currentTheme]?.accent || colorSchemes.blue.accent,
+      '--hover-color': colorSchemes[currentTheme]?.hover || colorSchemes.blue.hover,
+      '--light-color': colorSchemes[currentTheme]?.light || colorSchemes.blue.light,
+    }}>
       {showSidebar && (isMobile || isCustomBreakpoint) && (
         <div
           className="sidebar-overlay"
