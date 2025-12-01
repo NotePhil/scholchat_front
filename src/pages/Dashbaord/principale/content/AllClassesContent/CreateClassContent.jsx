@@ -682,17 +682,21 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, cur
       let classData = {
         nom: formData.nom.trim(),
         niveau: formData.niveau.trim(),
-        etablissement: {
-          id: formData.etablissement
-        },
-        moderator: {
-          id: formData.moderator
-        }
+        moderator: formData.moderator,
+        parents: [],
+        eleves: []
       };
 
-      // Add etablissementToken based on establishment options
-      if (selectedEstablishment?.optionTokenGeneral || selectedEstablishment?.codeUnique) {
-        classData.etablissementToken = formData.etablissementToken;
+      // Only add etablissement if one is selected
+      if (formData.etablissement) {
+        classData.etablissement = {
+          id: formData.etablissement
+        };
+        
+        // Add etablissementToken based on establishment options
+        if (selectedEstablishment?.optionTokenGeneral || selectedEstablishment?.codeUnique) {
+          classData.etablissementToken = formData.etablissementToken;
+        }
       }
 
       console.log("Creating class with data:", classData);
