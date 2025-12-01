@@ -17,43 +17,22 @@ coursApi.interceptors.request.use(
       localStorage.getItem("authToken") ||
       localStorage.getItem("cmr.notep.business.business.token");
     
-    console.log("CoursService - Token found:", !!token);
-    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    console.log("CoursService - Request config:", {
-      url: config.url,
-      method: config.method,
-      hasAuth: !!config.headers.Authorization,
-      data: config.data
-    });
-    
     return config;
   },
   (error) => {
-    console.error("CoursService - Request interceptor error:", error);
     return Promise.reject(error);
   }
 );
 
 coursApi.interceptors.response.use(
   (response) => {
-    console.log("CoursService - Response interceptor:", {
-      status: response.status,
-      statusText: response.statusText,
-      data: response.data
-    });
     return response;
   },
   (error) => {
-    console.error("CoursService - Response interceptor error:", {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message
-    });
     return Promise.reject(error);
   }
 );
@@ -61,10 +40,6 @@ coursApi.interceptors.response.use(
 class CoursService {
   async createCours(coursData) {
     try {
-      console.log("CoursService - createCours called with:", coursData);
-      console.log("CoursService - Raw chapitres:", coursData.chapitres);
-      console.log("CoursService - Raw matieres:", coursData.matieres);
-      
       if (
         !coursData.titre ||
         !coursData.description ||
@@ -103,19 +78,9 @@ class CoursService {
         })),
       };
 
-      console.log("CoursService - Formatted data:", JSON.stringify(formattedData, null, 2));
-      console.log("CoursService - Request headers:", coursApi.defaults.headers);
-      console.log("CoursService - Making POST request to /cours");
-
-      alert("Envoi vers API: " + JSON.stringify(formattedData).substring(0, 100));
       const response = await coursApi.post("/cours", formattedData);
-      console.log("CoursService - Response received:", response.data);
-      alert("Réponse API reçue!");
       return response.data;
     } catch (error) {
-      console.error("CoursService - Create course error:", error);
-      console.error("CoursService - Error response:", error.response?.data);
-      console.error("CoursService - Error status:", error.response?.status);
       this.handleError(error);
     }
   }

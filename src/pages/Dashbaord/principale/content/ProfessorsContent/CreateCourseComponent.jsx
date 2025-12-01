@@ -911,10 +911,6 @@ const CreateCourseComponent = ({
   };
 
   const onSubmit = async (data) => {
-    console.log('Form submitted with data:', data);
-    console.log('Saved chapters:', savedChapters);
-    console.log('Selected matiere IDs:', selectedMatiereIds);
-    
     try {
       setIsSubmitting(true);
       setLoading(true);
@@ -978,7 +974,6 @@ const CreateCourseComponent = ({
       loadCourses();
       setTimeout(() => onBack(), 2000);
     } catch (err) {
-      console.error("Error in onSubmit:", err);
       const errorMessage = err.message || "Erreur lors de l'enregistrement";
       setError(errorMessage);
       setSubmitError(errorMessage);
