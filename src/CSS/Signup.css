@@ -196,6 +196,8 @@ textarea {
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.3s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 input:focus,
@@ -508,12 +510,39 @@ textarea:focus {
   }
 }
 
+/* Animation for spinner */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Enhanced button styles */
+.prev-button,
+.submit-button,
+.next-button {
+  min-height: 48px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.next-button.loading,
+.submit-button.loading {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .signup-container {
-    margin: 1rem;
+  .signup-page {
     padding: 1rem;
+    align-items: flex-start;
+    padding-top: 1rem;
+  }
+  
+  .signup-container {
+    margin: 0;
+    padding: 1.5rem;
     max-width: 100%;
+    border-radius: 8px;
   }
 
   .form-three-columns,
@@ -537,6 +566,8 @@ textarea:focus {
   .next-button {
     width: 100%;
     justify-content: center;
+    min-height: 48px;
+    font-size: 16px; /* Prevents zoom on iOS */
   }
 
   .step-labels {
@@ -545,7 +576,8 @@ textarea:focus {
   }
 
   .step-line {
-    width: 80px;
+    width: 60px;
+    margin: 0 0.5rem;
   }
 
   .step-circle {
@@ -561,6 +593,41 @@ textarea:focus {
   .image-preview {
     max-width: 100%;
     height: 160px;
+  }
+  
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 1rem 0.75rem;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .signup-container {
+    padding: 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.25rem;
+  }
+  
+  .step-labels span {
+    font-size: 0.7rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  
+  .alert-message {
+    left: 1rem;
+    right: 1rem;
+    top: 1rem;
   }
 }
 

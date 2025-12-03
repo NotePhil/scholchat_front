@@ -471,6 +471,9 @@ const SignUp = () => {
   const createBasicProfile = async () => {
     try {
       setIsSubmitting(true);
+      
+      // Add small delay to prevent UI blocking
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const payloadData = {
         type: formData.type,
@@ -515,6 +518,9 @@ const SignUp = () => {
     try {
       if (!validateStep3()) return;
       setIsSubmitting(true);
+      
+      // Add small delay to prevent UI blocking
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       let userId;
 
@@ -656,17 +662,20 @@ const SignUp = () => {
     );
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
+    // Prevent multiple submissions
+    if (isSubmitting) return;
+    
     if (currentStep === 1 && validateStep1()) {
       setCurrentStep(2);
     } else if (currentStep === 2 && validateStep2()) {
       if (formData.type === "professeur") {
         setCurrentStep(3);
       } else {
-        createBasicProfile();
+        await createBasicProfile();
       }
     } else if (currentStep === 3) {
-      handleDocumentSubmission();
+      await handleDocumentSubmission();
     }
   };
 
@@ -930,17 +939,51 @@ const SignUp = () => {
               </button>
               <button
                 type="button"
-                className="next-button"
+                className={`next-button ${isSubmitting ? 'loading' : ''}`}
                 onClick={handleNextStep}
                 disabled={isSubmitting}
+                style={{
+                  minHeight: '48px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                  opacity: isSubmitting ? '0.8' : '1',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer'
+                }}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader size={16} className="spinner" /> Traitement...
+                    <svg 
+                      className="animate-spin" 
+                      style={{ width: '20px', height: '20px' }}
+                      xmlns="http://www.w3.org/2000/svg" 
+                      fill="none" 
+                      viewBox="0 0 24 24"
+                    >
+                      <circle 
+                        className="opacity-25" 
+                        cx="12" 
+                        cy="12" 
+                        r="10" 
+                        stroke="currentColor" 
+                        strokeWidth="4"
+                      />
+                      <path 
+                        className="opacity-75" 
+                        fill="currentColor" 
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span className="hidden sm:inline">Traitement...</span>
+                    <span className="sm:hidden">En cours...</span>
                   </>
                 ) : (
                   <>
-                    {getSubmitButtonText()}
+                    <span>{getSubmitButtonText()}</span>
                     <ArrowRight size={16} />
                   </>
                 )}
@@ -1034,13 +1077,47 @@ const SignUp = () => {
               </button>
               <button
                 type="button"
-                className="submit-button"
+                className={`submit-button ${isSubmitting ? 'loading' : ''}`}
                 onClick={handleNextStep}
                 disabled={isSubmitting}
+                style={{
+                  minHeight: '48px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                  opacity: isSubmitting ? '0.8' : '1',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer'
+                }}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader size={16} className="spinner" /> Traitement...
+                    <svg 
+                      className="animate-spin" 
+                      style={{ width: '20px', height: '20px' }}
+                      xmlns="http://www.w3.org/2000/svg" 
+                      fill="none" 
+                      viewBox="0 0 24 24"
+                    >
+                      <circle 
+                        className="opacity-25" 
+                        cx="12" 
+                        cy="12" 
+                        r="10" 
+                        stroke="currentColor" 
+                        strokeWidth="4"
+                      />
+                      <path 
+                        className="opacity-75" 
+                        fill="currentColor" 
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span className="hidden sm:inline">Traitement...</span>
+                    <span className="sm:hidden">En cours...</span>
                   </>
                 ) : (
                   getSubmitButtonText()
