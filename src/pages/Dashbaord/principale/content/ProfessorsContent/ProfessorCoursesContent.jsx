@@ -61,6 +61,8 @@ const ProfessorCoursesContent = () => {
   const [selectedMatiereIds, setSelectedMatiereIds] = useState([]);
   const [viewingCourse, setViewingCourse] = useState(null);
   const [showCourseContent, setShowCourseContent] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   useEffect(() => {
     loadCourses();
@@ -131,8 +133,13 @@ const ProfessorCoursesContent = () => {
   };
 
   const handleEditCourse = (course) => {
-    // TODO: Implement edit functionality
-    console.log("Edit course:", course);
+    setEditingCourse(course);
+    setShowEditForm(true);
+  };
+
+  const handleBackFromEdit = () => {
+    setShowEditForm(false);
+    setEditingCourse(null);
   };
 
   const handleViewCourse = (course) => {
@@ -199,6 +206,21 @@ const ProfessorCoursesContent = () => {
         setError={setError}
         loadCourses={loadCourses}
         setLoading={setLoading}
+      />
+    );
+  }
+
+  if (showEditForm && editingCourse) {
+    return (
+      <CreateCourseComponent
+        onBack={handleBackFromEdit}
+        subjects={subjects}
+        setSuccess={setSuccess}
+        setError={setError}
+        loadCourses={loadCourses}
+        setLoading={setLoading}
+        editMode={true}
+        courseToEdit={editingCourse}
       />
     );
   }

@@ -23,12 +23,12 @@ const schedulingSchema = yup.object().shape({
   classeId: yup.string().nullable(),
   dateCoursPrevue: yup
     .string()
-    .required("La date prévue est obligatoire")
+    .nullable()
     .test(
       "future-date",
       "La date ne peut pas être dans le passé",
       function (value) {
-        if (!value) return false;
+        if (!value) return true;
         const selectedDate = new Date(value);
         const now = new Date();
         return selectedDate > now;
@@ -59,20 +59,11 @@ const schedulingSchema = yup.object().shape({
     .string()
     .nullable()
     .test(
-      "required-for-status",
-      "La date de fin effective est requise",
-      function (value) {
-        const { etatCoursProgramme } = this.parent;
-        return etatCoursProgramme !== "PLANIFIE" ? !!value : true;
-      }
-    )
-    .test(
       "after-start",
       "La date de fin ne peut pas être avant la date de début",
       function (value) {
-        const { dateDebutEffectif, etatCoursProgramme } = this.parent;
-        if (!value || !dateDebutEffectif || etatCoursProgramme === "PLANIFIE")
-          return true;
+        const { dateDebutEffectif } = this.parent;
+        if (!value || !dateDebutEffectif) return true;
         return new Date(value) >= new Date(dateDebutEffectif);
       }
     ),
@@ -583,7 +574,7 @@ const CoursProgrammerForm = ({
                     className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                   >
                     <Calendar size={16} className="mr-2 text-blue-600" />
-                    Date prévue *
+                    Date prévue
                   </label>
                   <input
                     id="dateCoursPrevue"
@@ -616,7 +607,7 @@ const CoursProgrammerForm = ({
                       className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                     >
                       <Activity size={16} className="mr-2 text-green-600" />
-                      Date début effectif *
+                      Date début effectif (optionnel)
                     </label>
                     <input
                       id="dateDebutEffectif"
@@ -647,7 +638,7 @@ const CoursProgrammerForm = ({
                       className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                     >
                       <BookOpen size={16} className="mr-2 text-gray-600" />
-                      Date fin effectif *
+                      Date fin effectif (optionnel)
                     </label>
                     <input
                       id="dateFinEffectif"

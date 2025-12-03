@@ -91,27 +91,87 @@ const RichTextEditor = ({
       const fileId = `file_${timestamp}`;
 
       if (file.type.startsWith("image/")) {
+        const imgContainer = document.createElement("div");
+        imgContainer.dataset.fileId = fileId;
+        imgContainer.style.position = "relative";
+        imgContainer.style.display = "inline-block";
+        imgContainer.style.margin = "8px";
+        
         const img = document.createElement("img");
         img.src = URL.createObjectURL(file);
         img.alt = file.name;
-        img.dataset.fileId = fileId;
-        img.style.maxWidth = "300px";
+        img.style.maxWidth = "250px";
         img.style.maxHeight = "200px";
         img.style.width = "auto";
         img.style.height = "auto";
         img.style.objectFit = "contain";
         img.style.borderRadius = "8px";
-        img.style.margin = "8px 0";
-        img.style.display = "block";
         img.style.border = "1px solid #e2e8f0";
         img.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.1)";
+        img.style.display = "block";
+        
+        const controls = document.createElement("div");
+        controls.style.position = "absolute";
+        controls.style.top = "4px";
+        controls.style.right = "4px";
+        controls.style.display = "flex";
+        controls.style.gap = "2px";
+        controls.style.opacity = "0";
+        controls.style.transition = "opacity 0.2s";
+        controls.style.zIndex = "10";
+        
+        const floatLeft = document.createElement("button");
+        floatLeft.innerHTML = "⬅️";
+        floatLeft.style.cssText = "background: rgba(0,0,0,0.7); color: white; border: none; padding: 2px 4px; border-radius: 3px; font-size: 10px; cursor: pointer;";
+        floatLeft.title = "Texte à droite";
+        floatLeft.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          imgContainer.style.float = "left";
+          imgContainer.style.marginRight = "12px";
+          imgContainer.style.marginBottom = "8px";
+        };
+        
+        const floatRight = document.createElement("button");
+        floatRight.innerHTML = "➡️";
+        floatRight.style.cssText = "background: rgba(0,0,0,0.7); color: white; border: none; padding: 2px 4px; border-radius: 3px; font-size: 10px; cursor: pointer;";
+        floatRight.title = "Texte à gauche";
+        floatRight.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          imgContainer.style.float = "right";
+          imgContainer.style.marginLeft = "12px";
+          imgContainer.style.marginBottom = "8px";
+        };
+        
+        const noFloat = document.createElement("button");
+        noFloat.innerHTML = "⬆️";
+        noFloat.style.cssText = "background: rgba(0,0,0,0.7); color: white; border: none; padding: 2px 4px; border-radius: 3px; font-size: 10px; cursor: pointer;";
+        noFloat.title = "Centrer (pas de texte autour)";
+        noFloat.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          imgContainer.style.float = "none";
+          imgContainer.style.display = "block";
+          imgContainer.style.margin = "8px auto";
+        };
+        
+        controls.appendChild(floatLeft);
+        controls.appendChild(noFloat);
+        controls.appendChild(floatRight);
+        
+        imgContainer.appendChild(img);
+        imgContainer.appendChild(controls);
+        
+        imgContainer.onmouseenter = () => controls.style.opacity = "1";
+        imgContainer.onmouseleave = () => controls.style.opacity = "0";
 
         if (range) {
-          range.insertNode(img);
-          range.setStartAfter(img);
+          range.insertNode(imgContainer);
+          range.setStartAfter(imgContainer);
           range.collapse(false);
         } else {
-          editorRef.current.appendChild(img);
+          editorRef.current.appendChild(imgContainer);
         }
       } else {
         const linkContainer = document.createElement("div");
@@ -239,6 +299,26 @@ const RichTextEditor = ({
     handleContentChange();
   };
 
+  const handleDoubleClick = (e) => {
+    e.stopPropagation();
+    
+    // Get click position
+    const rect = editorRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Create a range at the click position
+    const range = document.caretRangeFromPoint(x + rect.left, y + rect.top);
+    if (range) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      // Focus the editor
+      editorRef.current.focus();
+    }
+  };
+
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
       {pendingFiles.length > 0 && (
@@ -339,6 +419,49 @@ const RichTextEditor = ({
         <button
           type="button"
           onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            execCommand("justifyLeft");
+          }}
+          className="p-2 hover:bg-slate-200 rounded text-slate-600"
+          title="Aligner à gauche"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v2H3V3zm0 4h12v2H3V7zm0 4h18v2H3v-2zm0 4h12v2H3v-2zm0 4h18v2H3v-2z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            execCommand("justifyCenter");
+          }}
+          className="p-2 hover:bg-slate-200 rounded text-slate-600"
+          title="Centrer"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v2H3V3zm4 4h10v2H7V7zm-4 4h18v2H3v-2zm4 4h10v2H7v-2zm-4 4h18v2H3v-2z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            execCommand("justifyRight");
+          }}
+          className="p-2 hover:bg-slate-200 rounded text-slate-600"
+          title="Aligner à droite"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v2H3V3zm6 4h12v2H9V7zm-6 4h18v2H3v-2zm6 4h12v2H9v-2zm-6 4h18v2H3v-2z" />
+          </svg>
+        </button>
+        <div className="w-px bg-slate-300 mx-1"></div>
+        <button
+          type="button"
+          onClick={(e) => {
             e.stopPropagation();
             fileInputRef.current?.click();
           }}
@@ -368,6 +491,7 @@ const RichTextEditor = ({
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         onClick={(e) => e.stopPropagation()}
+        onDoubleClick={handleDoubleClick}
         className="w-full min-h-[150px] p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-inset"
         style={{
           minHeight: "150px",
@@ -409,16 +533,33 @@ const RichTextEditor = ({
           margin: 0.25em 0;
         }
         [contenteditable] img {
-          max-width: 300px;
+          max-width: 250px;
           max-height: 200px;
           width: auto;
           height: auto;
           object-fit: contain;
           border-radius: 8px;
-          margin: 8px 0;
-          display: block;
           border: 1px solid #e2e8f0;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          display: block;
+        }
+        [contenteditable] div[data-file-id] {
+          position: relative;
+          display: inline-block;
+          margin: 8px;
+        }
+        [contenteditable] div[data-file-id]:hover button {
+          opacity: 1 !important;
+        }
+        [contenteditable] div[data-file-id][style*="float: left"] {
+          float: left;
+          margin-right: 12px;
+          margin-bottom: 8px;
+        }
+        [contenteditable] div[data-file-id][style*="float: right"] {
+          float: right;
+          margin-left: 12px;
+          margin-bottom: 8px;
         }
         [contenteditable] br {
           display: block;
@@ -482,7 +623,9 @@ const ChapterCard = ({
         <div className="flex items-center gap-1 ml-2 flex-shrink-0">
           {canMoveUp && (
             <button
+              type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onMoveUp();
               }}
@@ -494,7 +637,9 @@ const ChapterCard = ({
           )}
           {canMoveDown && (
             <button
+              type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onMoveDown();
               }}
@@ -505,7 +650,9 @@ const ChapterCard = ({
             </button>
           )}
           <button
+            type="button"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onEdit();
             }}
@@ -515,9 +662,13 @@ const ChapterCard = ({
             <Edit3 size={14} />
           </button>
           <button
+            type="button"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
-              onDelete();
+              if (window.confirm('Êtes-vous sûr de vouloir supprimer ce chapitre ?')) {
+                onDelete();
+              }
             }}
             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             title="Supprimer"
@@ -607,7 +758,9 @@ const ChapterEditor = ({
           </span>
         </h4>
         <button
+          type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onCancel();
           }}
@@ -685,6 +838,7 @@ const ChapterEditor = ({
         <button
           type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onCancel();
           }}
@@ -695,6 +849,7 @@ const ChapterEditor = ({
         <button
           type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             handleSave();
           }}
@@ -736,6 +891,8 @@ const CreateCourseComponent = ({
   setError,
   loadCourses,
   setLoading,
+  editMode = false,
+  courseToEdit = null,
 }) => {
   const [selectedMatiereIds, setSelectedMatiereIds] = useState([]);
   const [savedChapters, setSavedChapters] = useState([]);
@@ -768,6 +925,25 @@ const CreateCourseComponent = ({
   useEffect(() => {
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
+
+  // Initialize form with existing course data in edit mode
+  useEffect(() => {
+    if (editMode && courseToEdit) {
+      setValue("titre", courseToEdit.titre || "");
+      setValue("description", courseToEdit.description || "");
+      setValue("restriction", courseToEdit.restriction || "PRIVE");
+      setValue("references", courseToEdit.references || "");
+      
+      const matiereIds = courseToEdit.matieres?.map(m => String(m.id)) || [];
+      setSelectedMatiereIds(matiereIds);
+      setValue("matieres", matiereIds);
+      
+      if (courseToEdit.chapitres && courseToEdit.chapitres.length > 0) {
+        const sortedChapters = [...courseToEdit.chapitres].sort((a, b) => a.ordre - b.ordre);
+        setSavedChapters(sortedChapters);
+      }
+    }
+  }, [editMode, courseToEdit, setValue]);
 
   const handleFileAdd = (fileId, file) => {
     setPendingFiles((prev) => new Map(prev.set(fileId, file)));
@@ -962,14 +1138,19 @@ const CreateCourseComponent = ({
         titre: data.titre,
         description: data.description,
         redacteurId: String(professorId),
-        etat: "BROUILLON",
+        etat: editMode ? courseToEdit.etat : "BROUILLON",
         references: data.references || "",
         restriction: data.restriction || "PRIVE",
         matieres: matieresData,
         chapitres: chapitresData,
       };
 
-      await coursService.createCours(courseData);
+      if (editMode && courseToEdit) {
+        courseData.id = courseToEdit.id;
+        await coursService.updateCours(courseToEdit.id, courseData);
+      } else {
+        await coursService.createCours(courseData);
+      }
 
       setShowSuccessModal(true);
       loadCourses();
@@ -1003,10 +1184,10 @@ const CreateCourseComponent = ({
             </button>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                Créer un nouveau cours
+                {editMode ? "Modifier le cours" : "Créer un nouveau cours"}
               </h1>
               <p className="text-slate-600 mt-1">
-                Créez et organisez votre contenu pédagogique
+                {editMode ? "Modifiez et organisez votre contenu pédagogique" : "Créez et organisez votre contenu pédagogique"}
               </p>
             </div>
           </div>
@@ -1226,7 +1407,7 @@ const CreateCourseComponent = ({
               ) : (
                 <>
                   <Save size={16} />
-                  Créer le cour
+                  {editMode ? "Modifier le cours" : "Créer le cours"}
                 </>
               )}
             </button>
@@ -1236,7 +1417,7 @@ const CreateCourseComponent = ({
 
       <SuccessModal
         show={showSuccessModal}
-        message="Cours créé avec succès !"
+        message={editMode ? "Cours modifié avec succès !" : "Cours créé avec succès !"}
         onClose={() => setShowSuccessModal(false)}
       />
     </div>
