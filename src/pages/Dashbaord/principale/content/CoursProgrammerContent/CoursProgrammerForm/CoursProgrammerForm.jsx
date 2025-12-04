@@ -24,6 +24,7 @@ const schedulingSchema = yup.object().shape({
   dateCoursPrevue: yup
     .string()
     .nullable()
+    .optional()
     .test(
       "future-date",
       "La date ne peut pas être dans le passé",
@@ -37,27 +38,38 @@ const schedulingSchema = yup.object().shape({
   dateDebutEffectif: yup
     .string()
     .nullable()
+    .optional()
     .test(
-      "required-for-status",
-      "La date de début effective est requise",
+      "both-or-neither",
+      "Si vous fournissez une date de début, vous devez aussi fournir une date de fin",
       function (value) {
-        const { etatCoursProgramme } = this.parent;
-        return etatCoursProgramme !== "PLANIFIE" ? !!value : true;
+        const { dateFinEffectif } = this.parent;
+        if (value && !dateFinEffectif) return false;
+        return true;
       }
     )
     .test(
       "after-planned",
       "La date de début ne peut pas être avant la date prévue",
       function (value) {
-        const { dateCoursPrevue, etatCoursProgramme } = this.parent;
-        if (!value || !dateCoursPrevue || etatCoursProgramme === "PLANIFIE")
-          return true;
+        const { dateCoursPrevue } = this.parent;
+        if (!value || !dateCoursPrevue) return true;
         return new Date(value) >= new Date(dateCoursPrevue);
       }
     ),
   dateFinEffectif: yup
     .string()
     .nullable()
+    .optional()
+    .test(
+      "both-or-neither",
+      "Si vous fournissez une date de fin, vous devez aussi fournir une date de début",
+      function (value) {
+        const { dateDebutEffectif } = this.parent;
+        if (value && !dateDebutEffectif) return false;
+        return true;
+      }
+    )
     .test(
       "after-start",
       "La date de fin ne peut pas être avant la date de début",

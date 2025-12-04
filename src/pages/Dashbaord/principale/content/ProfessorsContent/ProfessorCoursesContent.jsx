@@ -63,6 +63,7 @@ const ProfessorCoursesContent = () => {
   const [showCourseContent, setShowCourseContent] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
     loadCourses();
@@ -119,8 +120,12 @@ const ProfessorCoursesContent = () => {
     setFilteredCourses(filtered);
   };
 
-  const handleCreateCourse = () => {
+  const handleCreateCourse = async () => {
+    setCreateLoading(true);
+    // Small delay to show loading state
+    await new Promise(resolve => setTimeout(resolve, 300));
     setShowCreateForm(true);
+    setCreateLoading(false);
   };
 
   const handleBackFromCreate = () => {
@@ -427,10 +432,20 @@ const ProfessorCoursesContent = () => {
 
               <button
                 onClick={handleCreateCourse}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium text-sm sm:text-base"
+                disabled={createLoading}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-indigo-400 disabled:to-purple-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium text-sm sm:text-base"
               >
-                <Plus size={16} className="sm:w-5 sm:h-5" />
-                Nouveau Cours
+                {createLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Chargement...
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} className="sm:w-5 sm:h-5" />
+                    Nouveau Cours
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -506,10 +521,20 @@ const ProfessorCoursesContent = () => {
               {!searchTerm && filterStatus === "all" && (
                 <button
                   onClick={handleCreateCourse}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto text-sm sm:text-base"
+                  disabled={createLoading}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-indigo-400 disabled:to-purple-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto text-sm sm:text-base"
                 >
-                  <Plus size={16} className="sm:w-5 sm:h-5" />
-                  Créer mon premier cours
+                  {createLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Chargement...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} className="sm:w-5 sm:h-5" />
+                      Créer mon premier cours
+                    </>
+                  )}
                 </button>
               )}
             </div>

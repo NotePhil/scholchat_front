@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useReturnToPage } from "../hooks/useReturnToPage";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../store/slices/authSlice";
 import { encryptPassword } from "../utils/crypto";
@@ -32,6 +33,7 @@ const decodeJWT = (token) => {
 export const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { navigateToStoredPage } = useReturnToPage();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -93,8 +95,16 @@ export const Login = () => {
         throw new Error("Token d'accès manquant dans la réponse");
       }
 
+      // Store returnToPage before clearing localStorage
+      const returnToPage = localStorage.getItem('returnToPage');
+      
       // Clear localStorage
       localStorage.clear();
+      
+      // Restore returnToPage
+      if (returnToPage) {
+        localStorage.setItem('returnToPage', returnToPage);
+      }
 
       const decodedToken = decodeJWT(accessToken);
       if (!decodedToken) {
@@ -181,7 +191,7 @@ export const Login = () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
       window.dispatchEvent(new Event("storage"));
 
-      // Navigate based on role - backend sends ROLE_ADMIN, ROLE_PROFESSOR, etc.
+      // Determine default dashboard path based on role
       let dashboardPath = "/schoolchat/Principal/AdminDashboard/dashboard";
 
       if (primaryRole === "ROLE_ADMIN") {
@@ -196,8 +206,9 @@ export const Login = () => {
         dashboardPath = "/schoolchat/Principal/ProfessorDashboard/dashboard";
       }
 
-      console.log("Navigating to:", dashboardPath);
-      navigate(dashboardPath, { replace: true });
+      // Use hook to navigate to stored page or default
+      const navigatedToStoredPage = navigateToStoredPage(primaryRole, dashboardPath);
+      console.log("Navigated to stored page:", navigatedToStoredPage);
     } catch (err) {
       console.error("Login error:", err);
       setError(
@@ -225,7 +236,8 @@ export const Login = () => {
   };
 
   useEffect(() => {
-    // Clear all authentication data on mount
+    // Clear all authentication data on mount (but keep returnToPage)
+    const returnToPage = localStorage.getItem("returnToPage");
     localStorage.removeItem("rememberedEmail");
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("accessToken");
@@ -239,6 +251,10 @@ export const Login = () => {
     localStorage.removeItem("decodedToken");
     localStorage.removeItem("authResponse");
     localStorage.removeItem("loginTime");
+    // Restore returnToPage if it existed
+    if (returnToPage) {
+      localStorage.setItem("returnToPage", returnToPage);
+    }
   }, []);
 
   return (

@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useReturnToPage } from "../../../hooks/useReturnToPage";
 import { useDispatch, useSelector } from "react-redux";
 import Modal from "react-modal";
 import {
@@ -127,6 +128,7 @@ const Principal = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { dashboardType, section } = useParams();
+  const { storeCurrentPage, hasStoredPage } = useReturnToPage();
 
   // Use the useAuth hook for clean role handling
   const {
@@ -160,6 +162,9 @@ const Principal = () => {
   const [showUserProfile, setShowUserProfile] = useState(false);
 
   const handleLogout = useCallback(() => {
+    // Store current page before logout using hook
+    storeCurrentPage();
+
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("authToken");
@@ -174,7 +179,7 @@ const Principal = () => {
 
     dispatch(logoutAction());
     navigate("/schoolchat/login");
-  }, [dispatch, navigate]);
+  }, [dispatch, navigate, storeCurrentPage]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -256,6 +261,8 @@ const Principal = () => {
     if (dashboardType && section) return;
     // Don't redirect if we're already on a valid dashboard path
     if (location.pathname.includes('/schoolchat/Principal/') && dashboardType) return;
+    // Don't redirect if user just logged in and we're navigating to their return page
+    if (hasStoredPage()) return;
 
     let expectedDashboard;
 
@@ -287,6 +294,7 @@ const Principal = () => {
     isParent,
     isStudent,
     location.pathname,
+    hasStoredPage,
   ]);
 
   // Set active tab based on URL section parameter
