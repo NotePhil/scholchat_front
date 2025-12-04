@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Card, Space, Typography, Alert, Button, message, Spin } from "antd";
-import { BuildOutlined } from "@ant-design/icons"; // This is correct
+import { Building } from "lucide-react";
 import EstablishmentService from "../../../../../services/EstablishmentService";
 import ManageEstablishmentList from "../../establishment-management/ManageEstablishmentList";
 import ManageEstablishmentDetailsView from "../../establishment-management/ManageEstablishmentDetailsView";
 import CreateEstablishmentContent from "./CreateEstablishmentContent";
-
-const { Text, Title } = Typography;
 
 const ManageEstablishmentContent = ({ onBack }) => {
   const [establishments, setEstablishments] = useState([]);
@@ -120,7 +117,7 @@ const ManageEstablishmentContent = ({ onBack }) => {
         padding: "24px",
       }}
     >
-      <Card
+      <div
         style={{
           background: "white",
           borderRadius: "16px",
@@ -132,37 +129,63 @@ const ManageEstablishmentContent = ({ onBack }) => {
         {!selectedEstablishmentId && !editingEstablishment ? (
           <div style={{ padding: "24px" }}>
             <div style={{ marginBottom: "24px" }}>
-              <Space align="center" style={{ marginBottom: "16px" }}>
-                <BuildOutlined style={{ fontSize: "24px", color: "#4a6da7" }} />
-                <Title level={2} style={{ margin: 0, color: "#2c3e50" }}>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
+                <Building style={{ fontSize: "24px", color: "#4a6da7", marginRight: "8px" }} />
+                <h2 style={{ margin: 0, color: "#2c3e50" }}>
                   Gérer les Établissements
-                </Title>
-              </Space>
-              <Text type="secondary" style={{ fontSize: "16px" }}>
+                </h2>
+              </div>
+              <p style={{ color: "#666", fontSize: "16px" }}>
                 Gérez et supervisez tous les établissements du système
-              </Text>
+              </p>
             </div>
 
             {error && (
-              <Alert
-                message={error}
-                type="error"
-                showIcon
-                closable
-                style={{ marginBottom: "16px", borderRadius: "8px" }}
-                onClose={() => setError("")}
-              />
+              <div
+                style={{
+                  backgroundColor: "#fee",
+                  border: "1px solid #fcc",
+                  color: "#c33",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}
+              >
+                <span>{error}</span>
+                <button
+                  onClick={() => setError("")}
+                  style={{ background: "none", border: "none", color: "#c33", cursor: "pointer" }}
+                >
+                  ×
+                </button>
+              </div>
             )}
 
             {successMessage && (
-              <Alert
-                message={successMessage}
-                type="success"
-                showIcon
-                closable
-                style={{ marginBottom: "16px", borderRadius: "8px" }}
-                onClose={() => setSuccessMessage("")}
-              />
+              <div
+                style={{
+                  backgroundColor: "#efe",
+                  border: "1px solid #cfc",
+                  color: "#3c3",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}
+              >
+                <span>{successMessage}</span>
+                <button
+                  onClick={() => setSuccessMessage("")}
+                  style={{ background: "none", border: "none", color: "#3c3", cursor: "pointer" }}
+                >
+                  ×
+                </button>
+              </div>
             )}
 
             <ManageEstablishmentList
@@ -196,7 +219,7 @@ const ManageEstablishmentContent = ({ onBack }) => {
             onEdit={handleEditEstablishment}
           />
         )}
-      </Card>
+      </div>
     </div>
   );
 };

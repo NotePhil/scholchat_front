@@ -184,26 +184,31 @@ const ManageClassDetails = ({
             Actualiser
           </Button>
 
-          {classData.etat === "EN_ATTENTE_APPROBATION" && classData.etablissement && (
-            <>
-              <Button
-                type="primary"
-                icon={<CheckOutlined />}
-                onClick={() => onApprove(classData.id, classData.etablissement.id)}
-                loading={actionLoading === "approve"}
-              >
-                Valider
-              </Button>
-              <Button
-                danger
-                icon={<CloseOutlined />}
-                onClick={() => onReject(classData.id, classData.etablissement.id)}
-                loading={actionLoading === "reject"}
-              >
-                Rejeter
-              </Button>
-            </>
-          )}
+          {classData.etat === "EN_ATTENTE_APPROBATION" &&
+            classData.etablissement && (
+              <>
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  onClick={() =>
+                    onApprove(classData.id, classData.etablissement.id)
+                  }
+                  loading={actionLoading === "approve"}
+                >
+                  Valider
+                </Button>
+                <Button
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={() =>
+                    onReject(classData.id, classData.etablissement.id)
+                  }
+                  loading={actionLoading === "reject"}
+                >
+                  Rejeter
+                </Button>
+              </>
+            )}
 
           <Popconfirm
             title="Êtes-vous sûr de vouloir supprimer cette classe ?"

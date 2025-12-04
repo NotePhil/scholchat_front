@@ -254,6 +254,8 @@ const Principal = () => {
     if (!normalizedUserRole) return;
     // Don't do any navigation if we already have both dashboardType and section
     if (dashboardType && section) return;
+    // Don't redirect if we're already on a valid dashboard path
+    if (location.pathname.includes('/schoolchat/Principal/') && dashboardType) return;
 
     let expectedDashboard;
 
@@ -271,9 +273,9 @@ const Principal = () => {
       }Dashboard`;
     }
 
-    // Only redirect if we don't have a dashboardType at all
-    if (!dashboardType) {
-      navigate(`/schoolchat/Principal/${expectedDashboard}/dashboard`);
+    // Only redirect if we don't have a dashboardType at all and we're not already on the right path
+    if (!dashboardType && !location.pathname.includes(expectedDashboard)) {
+      navigate(`/schoolchat/Principal/${expectedDashboard}/dashboard`, { replace: true });
     }
   }, [
     dashboardType,
@@ -284,6 +286,7 @@ const Principal = () => {
     isProfessor,
     isParent,
     isStudent,
+    location.pathname,
   ]);
 
   // Set active tab based on URL section parameter
@@ -550,19 +553,23 @@ const Principal = () => {
         isOpen={showTokenExpiredModal}
         onRequestClose={() => {}}
         contentLabel="Session expirée"
-        className="modal"
-        overlayClassName="modal-overlay"
+        className="session-expired-modal"
+        overlayClassName="session-expired-overlay"
         shouldCloseOnOverlayClick={false}
       >
-        <div className={`modal-content ${isDark ? "dark-mode" : ""}`}>
-          <h2>Session expirée</h2>
-          <p>
-            Votre session a expiré en raison d'une inactivité prolongée ou d'un
-            problème d'authentification. Veuillez vous reconnecter pour
-            continuer.
+        <div className={`session-expired-content ${isDark ? "dark-mode" : ""}`}>
+          <div className="session-expired-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" stroke="#f59e0b" strokeWidth="2" fill="#fef3c7"/>
+              <path d="M12 8v4l3 3" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h2 className="session-expired-title">Session Expirée</h2>
+          <p className="session-expired-message">
+            Votre session a expiré. Veuillez vous reconnecter pour continuer à utiliser l'application.
           </p>
-          <div className="modal-actions">
-            <button onClick={handleLogout} className="logout-button">
+          <div className="session-expired-actions">
+            <button onClick={handleLogout} className="reconnect-button">
               Se reconnecter
             </button>
           </div>

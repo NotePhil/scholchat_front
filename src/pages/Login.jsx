@@ -182,18 +182,18 @@ export const Login = () => {
       window.dispatchEvent(new Event("storage"));
 
       // Navigate based on role - backend sends ROLE_ADMIN, ROLE_PROFESSOR, etc.
-      let dashboardPath = "/schoolchat/principal";
+      let dashboardPath = "/schoolchat/Principal/AdminDashboard/dashboard";
 
       if (primaryRole === "ROLE_ADMIN") {
-        dashboardPath = "/schoolchat/principal/AdminDashboard";
+        dashboardPath = "/schoolchat/Principal/AdminDashboard/dashboard";
       } else if (primaryRole === "ROLE_PROFESSOR") {
-        dashboardPath = "/schoolchat/principal/ProfessorDashboard";
+        dashboardPath = "/schoolchat/Principal/ProfessorDashboard/dashboard";
       } else if (primaryRole === "ROLE_PARENT") {
-        dashboardPath = "/schoolchat/principal/ParentDashboard";
+        dashboardPath = "/schoolchat/Principal/ParentDashboard/dashboard";
       } else if (primaryRole === "ROLE_STUDENT") {
-        dashboardPath = "/schoolchat/principal/StudentDashboard";
+        dashboardPath = "/schoolchat/Principal/StudentDashboard/dashboard";
       } else if (primaryRole === "ROLE_TUTOR") {
-        dashboardPath = "/schoolchat/principal/ProfessorDashboard";
+        dashboardPath = "/schoolchat/Principal/ProfessorDashboard/dashboard";
       }
 
       console.log("Navigating to:", dashboardPath);
