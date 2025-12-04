@@ -922,6 +922,34 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
     }
   };
 
+  const handleApproveByEstablishment = async (classeId, etablissementId) => {
+    try {
+      setActionLoading("approve");
+      await classService.approuverClasseParEtablissement(classeId, etablissementId);
+      message.success("Classe validée avec succès");
+      await loadClassDetails();
+    } catch (error) {
+      console.error("Error approving class by establishment:", error);
+      message.error("Erreur lors de la validation de la classe");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectByEstablishment = async (classeId, etablissementId) => {
+    try {
+      setActionLoading("reject");
+      await classService.rejeterClasseParEtablissement(classeId, etablissementId);
+      message.success("Classe rejetée avec succès");
+      await loadClassDetails();
+    } catch (error) {
+      console.error("Error rejecting class by establishment:", error);
+      message.error("Erreur lors du rejet de la classe");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // NEW: Handle self-approval (creator approving their own class)
   const handleSelfApprove = async () => {
     if (!classId) return;
@@ -1335,6 +1363,10 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
       canSelfManage,
       classState: classDetails.etat,
       canSelfApproveReject: canSelfApproveReject(),
+      userRole,
+      currentUserId,
+      classDetails,
+      etablissement: classDetails.etablissement,
     });
 
     return (
@@ -1393,28 +1425,59 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
             classDetails.etat === "EN_ATTENTE_APPROBATION" &&
             !canSelfManage && (
               <>
-                <Button
-                  type="primary"
-                  icon={<CheckOutlined />}
-                  onClick={handleApprove}
-                  loading={actionLoading === "approve"}
-                  style={{
-                    borderRadius: "8px",
-                    background: "#52c41a",
-                    borderColor: "#52c41a",
-                  }}
-                >
-                  Approuver
-                </Button>
-                <Button
-                  danger
-                  icon={<CloseOutlined />}
-                  onClick={showRejectConfirm}
-                  loading={actionLoading === "reject"}
-                  style={{ borderRadius: "8px" }}
-                >
-                  Rejeter
-                </Button>
+                {classDetails.etablissement && classDetails.etablissement.id ? (
+                  // Establishment-specific buttons
+                  <>
+                    <Button
+                      type="primary"
+                      icon={<CheckOutlined />}
+                      onClick={() => handleApproveByEstablishment(classDetails.id, classDetails.etablissement.id)}
+                      loading={actionLoading === "approve"}
+                      style={{
+                        borderRadius: "8px",
+                        background: "#52c41a",
+                        borderColor: "#52c41a",
+                      }}
+                    >
+                      Valider
+                    </Button>
+                    <Button
+                      danger
+                      icon={<CloseOutlined />}
+                      onClick={() => handleRejectByEstablishment(classDetails.id, classDetails.etablissement.id)}
+                      loading={actionLoading === "reject"}
+                      style={{ borderRadius: "8px" }}
+                    >
+                      Rejeter
+                    </Button>
+                  </>
+                ) : (
+                  // General approval/rejection buttons for classes without establishment
+                  <>
+                    <Button
+                      type="primary"
+                      icon={<CheckOutlined />}
+                      onClick={handleApprove}
+                      loading={actionLoading === "approve"}
+                      style={{
+                        borderRadius: "8px",
+                        background: "#52c41a",
+                        borderColor: "#52c41a",
+                      }}
+                    >
+                      Approuver
+                    </Button>
+                    <Button
+                      danger
+                      icon={<CloseOutlined />}
+                      onClick={showRejectConfirm}
+                      loading={actionLoading === "reject"}
+                      style={{ borderRadius: "8px" }}
+                    >
+                      Rejeter
+                    </Button>
+                  </>
+                )}
               </>
             )}
 

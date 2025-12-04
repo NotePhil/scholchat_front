@@ -17,7 +17,7 @@ import establishmentService from "../../../../../services/EstablishmentService";
 import { userService } from "../../../../../services/userService";
 import { useNavigate } from "react-router-dom";
 
-const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
+const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingEstablishment = null }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nom: "",
@@ -25,11 +25,12 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
     pays: "",
     email: "",
     telephone: "",
-    optionEnvoiMailVersClasse: false,
+    optionEnvoiMailNewClasse: false,
     optionTokenGeneral: false,
-    codeUnique: false,
     gestionnaire: null,
   });
+
+  const isEditMode = !!editingEstablishment;
 
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -41,13 +42,35 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(5);
 
-  // Load users on component mount
+  // Load users on component mount and populate form if editing
   useEffect(() => {
     const loadUsers = async () => {
       setLoadingUsers(true);
       try {
         const usersData = await userService.getAllUsers();
         setUsers(usersData);
+        
+        // If editing, populate form with existing data
+        if (editingEstablishment) {
+          setFormData({
+            nom: editingEstablishment.nom || "",
+            localisation: editingEstablishment.localisation || "",
+            pays: editingEstablishment.pays || "",
+            email: editingEstablishment.email || "",
+            telephone: editingEstablishment.telephone || "",
+            optionEnvoiMailNewClasse: editingEstablishment.optionEnvoiMailNewClasse || false,
+            optionTokenGeneral: editingEstablishment.optionTokenGeneral || false,
+            gestionnaire: null, // Will be loaded separately
+          });
+          
+          // Load gestionnaire data
+          try {
+            const gestionnaireData = await establishmentService.getEstablishmentGestionnaire(editingEstablishment.id);
+            setFormData(prev => ({ ...prev, gestionnaire: gestionnaireData }));
+          } catch (error) {
+            console.error("Error loading gestionnaire:", error);
+          }
+        }
       } catch (error) {
         console.error("Error loading users:", error);
         setErrors({ users: "Erreur lors du chargement des utilisateurs" });
@@ -56,7 +79,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
       }
     };
     loadUsers();
-  }, []);
+  }, [editingEstablishment]);
 
   // Manual redirect function for the button
   const handleManualRedirect = () => {
@@ -91,32 +114,12 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     if (type === "checkbox") {
-      // For boolean options, make them mutually exclusive
-      const booleanOptions = ['optionEnvoiMailVersClasse', 'optionTokenGeneral', 'codeUnique'];
-      
-      if (booleanOptions.includes(name)) {
-        // If checking this option, uncheck all others
-        if (checked) {
-          const newFormData = { ...formData };
-          booleanOptions.forEach(option => {
-            newFormData[option] = option === name;
-          });
-          setFormData(newFormData);
-        } else {
-          // If unchecking, just uncheck this one
-          setFormData((prev) => ({
-            ...prev,
-            [name]: false,
-          }));
-        }
-      } else {
-        setFormData((prev) => ({
-          ...prev,
-          [name]: checked,
-        }));
-      }
+      setFormData((prev) => ({
+        ...prev,
+        [name]: checked,
+      }));
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -233,15 +236,21 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
         ...formData,
         gestionnaire: {
           type: formData.gestionnaire.type,
-          id: formData.gestionnaire.id
-        }
+          id: formData.gestionnaire.id,
+        },
       };
-      await establishmentService.createEstablishment(establishmentData);
+      
+      if (isEditMode) {
+        await establishmentService.updateEstablishment(editingEstablishment.id, establishmentData);
+      } else {
+        await establishmentService.createEstablishment(establishmentData);
+      }
+      
       setSuccess(true);
       setCountdown(5);
     } catch (error) {
-      console.error("Error creating establishment:", error);
-      setErrors({ submit: "Erreur lors de la création de l'établissement" });
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} establishment:`, error);
+      setErrors({ submit: `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} de l'établissement` });
     } finally {
       setLoading(false);
     }
@@ -255,10 +264,10 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Établissement créé avec succès!
+            Établissement {isEditMode ? 'modifié' : 'créé'} avec succès!
           </h2>
           <p className="text-gray-600 mb-6">
-            Votre établissement a été créé avec succès. Redirection automatique
+            Votre établissement a été {isEditMode ? 'modifié' : 'créé'} avec succès. Redirection automatique
             vers la gestion des établissements dans {countdown} seconde
             {countdown !== 1 ? "s" : ""}.
           </p>
@@ -299,10 +308,10 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">
-                  Créer un Établissement
+                  {isEditMode ? 'Modifier l\'Établissement' : 'Créer un Établissement'}
                 </h1>
                 <p className="text-blue-100">
-                  Ajoutez un nouvel établissement à votre système
+                  {isEditMode ? 'Modifiez les informations de l\'établissement' : 'Ajoutez un nouvel établissement à votre système'}
                 </p>
               </div>
             </div>
@@ -430,9 +439,11 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Téléphone
                   </label>
-                  <div className={`relative phone-input-container ${
-                    errors.telephone ? "border-red-500" : "border-gray-300"
-                  }`}>
+                  <div
+                    className={`relative phone-input-container ${
+                      errors.telephone ? "border-red-500" : "border-gray-300"
+                    }`}
+                  >
                     <PhoneInput
                       defaultCountry={selectedCountry}
                       value={formData.telephone}
@@ -462,15 +473,21 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                       type="button"
                       onClick={() => setShowUserDropdown(!showUserDropdown)}
                       className={`w-full pl-12 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-left ${
-                        errors.gestionnaire ? "border-red-500" : "border-gray-300"
+                        errors.gestionnaire
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                     >
                       {formData.gestionnaire
-                        ? `${formData.gestionnaire.nom} ${formData.gestionnaire.prenom} (${formData.gestionnaire.email}) - ${formData.gestionnaire.type || 'N/A'}`
+                        ? `${formData.gestionnaire.nom} ${
+                            formData.gestionnaire.prenom
+                          } (${formData.gestionnaire.email}) - ${
+                            formData.gestionnaire.type || "N/A"
+                          }`
                         : "Sélectionner un gestionnaire"}
                     </button>
                     <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    
+
                     {showUserDropdown && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                         {loadingUsers ? (
@@ -496,7 +513,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                                 {user.email}
                               </div>
                               <div className="text-xs text-blue-600 font-medium">
-                                {user.type || 'Type non défini'}
+                                {user.type || "Type non défini"}
                               </div>
                             </button>
                           ))
@@ -525,21 +542,17 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                       Options de Configuration
                     </h4>
                   </div>
-                  <p className="text-xs text-gray-600">
-                    Sélectionnez une seule option. Les tokens/codes seront générés automatiquement.
-                  </p>
-
                   <div className="space-y-3">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
-                        name="optionEnvoiMailVersClasse"
-                        checked={formData.optionEnvoiMailVersClasse}
+                        name="optionEnvoiMailNewClasse"
+                        checked={formData.optionEnvoiMailNewClasse}
                         onChange={handleInputChange}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">
-                        Envoi d'email vers les classes
+                        Envoi d'email pour nouvelles classes
                       </span>
                     </label>
 
@@ -551,30 +564,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                         onChange={handleInputChange}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
-                      <div className="flex-1">
-                        <span className="text-sm text-gray-700">
-                          Token général
-                        </span>
-                        <p className="text-xs text-gray-500">
-                          Un token général sera généré automatiquement
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="codeUnique"
-                        checked={formData.codeUnique}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm text-gray-700">Code unique</span>
-                        <p className="text-xs text-gray-500">
-                          Un code unique sera généré automatiquement
-                        </p>
-                      </div>
+                      <span className="text-sm text-gray-700">Code unique</span>
                     </label>
                   </div>
                 </div>
@@ -592,7 +582,17 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
             )}
 
             {/* Submit Button */}
-            <div className="mt-8 flex justify-end">
+            <div className="mt-8 flex justify-end gap-4">
+              {isEditMode && (
+                <button
+                  type="button"
+                  onClick={handleManualRedirect}
+                  disabled={loading}
+                  className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
+                >
+                  Annuler
+                </button>
+              )}
               <button
                 onClick={handleSubmit}
                 disabled={loading}
@@ -601,7 +601,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab }) => {
                 {loading && (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 )}
-                {loading ? "Création en cours..." : "Créer l'établissement"}
+                {loading ? `${isEditMode ? 'Modification' : 'Création'} en cours...` : `${isEditMode ? 'Modifier les informations' : 'Créer l\'établissement'}`}
               </button>
             </div>
           </div>

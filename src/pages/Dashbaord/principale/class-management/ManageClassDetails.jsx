@@ -184,20 +184,20 @@ const ManageClassDetails = ({
             Actualiser
           </Button>
 
-          {classData.etat === "EN_ATTENTE_APPROBATION" && (
+          {classData.etat === "EN_ATTENTE_APPROBATION" && classData.etablissement && (
             <>
               <Button
                 type="primary"
                 icon={<CheckOutlined />}
-                onClick={onApprove}
+                onClick={() => onApprove(classData.id, classData.etablissement.id)}
                 loading={actionLoading === "approve"}
               >
-                Approuver
+                Valider
               </Button>
               <Button
                 danger
                 icon={<CloseOutlined />}
-                onClick={() => setRejectModalVisible(true)}
+                onClick={() => onReject(classData.id, classData.etablissement.id)}
                 loading={actionLoading === "reject"}
               >
                 Rejeter

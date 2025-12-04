@@ -58,9 +58,8 @@ const PaymentModal = ({
 
     if (!paymentData.phone.trim()) {
       errors.phone = "Le numéro de téléphone est requis";
-    } else if (!paymentData.phone.match(/^(6|7)\d{7}$/)) {
-      errors.phone =
-        "Numéro de téléphone invalide (8 chiffres, commence par 6 ou 7)";
+    } else if (paymentData.phone.length < 8) {
+      errors.phone = "Numéro de téléphone trop court (minimum 8 chiffres)";
     }
 
     if (!paymentData.operator) {
@@ -117,13 +116,20 @@ const PaymentModal = ({
 
     setPaymentStep(4); // Success
 
+    // Prepare payment data to pass to parent
+    const paymentResult = {
+      method: paymentMethod,
+      phone: paymentData.phone,
+      cardData: cardData,
+    };
+
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    onPaymentSuccess();
+    onPaymentSuccess(paymentResult);
   };
 
   const handlePhoneInputChange = (value) => {
-    // Nettoyer et formater le numéro
-    const cleaned = value.replace(/\D/g, "").slice(0, 8);
+    // Nettoyer le numéro sans restriction de longueur
+    const cleaned = value.replace(/\D/g, "");
     setPaymentData((prev) => ({ ...prev, phone: cleaned }));
 
     if (paymentErrors.phone) {
@@ -501,7 +507,14 @@ const PaymentModal = ({
   );
 };
 
-const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, currentTheme, themes, colorSchemes }) => {
+const CreateClassContent = ({
+  onNavigateToClassesList,
+  setActiveTab,
+  isDark,
+  currentTheme,
+  themes,
+  colorSchemes,
+}) => {
   const [formData, setFormData] = useState({
     nom: "",
     niveau: "",
@@ -637,12 +650,12 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, cur
       newErrors.moderator = "Un modérateur est requis";
     }
 
-    if ((selectedEstablishment?.optionTokenGeneral || selectedEstablishment?.codeUnique) && !formData.etablissementToken.trim()) {
-      newErrors.etablissementToken = "Le token est requis pour cet établissement";
-    } else if (selectedEstablishment?.optionTokenGeneral && formData.etablissementToken.trim().length !== 8) {
-      newErrors.etablissementToken = "Le token général doit contenir exactement 8 caractères";
-    } else if (selectedEstablishment?.codeUnique && formData.etablissementToken.trim().length !== 6) {
-      newErrors.etablissementToken = "Le code unique doit contenir exactement 6 caractères";
+    if (
+      selectedEstablishment?.optionTokenGeneral &&
+      !formData.etablissementToken.trim()
+    ) {
+      newErrors.etablissementToken =
+        "Le token est requis pour cet établissement";
     }
 
     setErrors(newErrors);
@@ -676,7 +689,7 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, cur
     }
   };
 
-  const createClass = async (shouldAutoApprove = false) => {
+  const createClass = async (paymentInfo = null) => {
     setLoading(true);
     try {
       let classData = {
@@ -684,19 +697,22 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, cur
         niveau: formData.niveau.trim(),
         moderator: formData.moderator,
         parents: [],
-        eleves: []
+        eleves: [],
       };
 
       // Only add etablissement if one is selected
       if (formData.etablissement) {
         classData.etablissement = {
-          id: formData.etablissement
+          id: formData.etablissement,
         };
-        
+
         // Add etablissementToken based on establishment options
-        if (selectedEstablishment?.optionTokenGeneral || selectedEstablishment?.codeUnique) {
+        if (selectedEstablishment?.optionTokenGeneral) {
           classData.etablissementToken = formData.etablissementToken;
         }
+      } else if (paymentInfo) {
+        // Add payment info for classes without establishment
+        classData.paymentInfo = paymentInfo;
       }
 
       console.log("Creating class with data:", classData);
@@ -737,37 +753,76 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, cur
 
     if (formData.etablissement) {
       // Class with establishment
-      await createClass(false);
+      await createClass();
     } else {
       // No establishment selected - show payment modal
       setShowPaymentModal(true);
     }
   };
 
-  // MODIFIED: Updated handlePaymentSuccess to auto-approve the class
-  const handlePaymentSuccess = async () => {
+  const handlePaymentSuccess = async (paymentData) => {
     setIsProcessingPayment(true);
     setShowPaymentModal(false);
 
-    console.log("Payment successful, creating and auto-approving class...");
+    console.log("Payment successful, creating class with payment info...");
 
-    // Create class with auto-approval since payment was successful
-    await createClass(true);
+    // Prepare payment info based on payment method
+    let paymentInfo = {
+      amount: 50.0,
+    };
+
+    if (paymentData.method === "card") {
+      paymentInfo = {
+        ...paymentInfo,
+        paymentMethod: "CARD",
+        cardNumber: paymentData.cardData.number.replace(/\s/g, ""),
+        expiryDate: paymentData.cardData.expiry,
+        cvv: paymentData.cardData.cvv,
+        cardHolderName: paymentData.cardData.name,
+      };
+    } else if (paymentData.method === "orange") {
+      paymentInfo = {
+        ...paymentInfo,
+        paymentMethod: "OM",
+        phoneNumber: `+237${paymentData.phone}`,
+      };
+    } else if (paymentData.method === "mtn") {
+      paymentInfo = {
+        ...paymentInfo,
+        paymentMethod: "MOMO",
+        phoneNumber: `+237${paymentData.phone}`,
+      };
+    }
+
+    // Create class with payment info
+    await createClass(paymentInfo);
 
     setIsProcessingPayment(false);
   };
 
   if (success) {
     return (
-      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-green-50 to-blue-50'} flex items-center justify-center p-4`}>
-        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl p-8 max-w-md w-full text-center`}>
+      <div
+        className={`min-h-screen ${
+          isDark ? "bg-gray-900" : "bg-gradient-to-br from-green-50 to-blue-50"
+        } flex items-center justify-center p-4`}
+      >
+        <div
+          className={`${
+            isDark ? "bg-gray-800" : "bg-white"
+          } rounded-2xl shadow-xl p-8 max-w-md w-full text-center`}
+        >
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
-          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+          <h2
+            className={`text-2xl font-bold ${
+              isDark ? "text-white" : "text-gray-900"
+            } mb-4`}
+          >
             Classe créée avec succès!
           </h2>
-          <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'} mb-6`}>
+          <p className={`${isDark ? "text-gray-300" : "text-gray-600"} mb-6`}>
             {formData.etablissement
               ? "Votre classe a été créée et est en attente d'approbation."
               : "Votre classe premium a été créée et approuvée automatiquement!"}
@@ -805,9 +860,19 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, cur
 
   return (
     <>
-      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'} py-8 px-4`}>
+      <div
+        className={`min-h-screen ${
+          isDark
+            ? "bg-gray-900"
+            : "bg-gradient-to-br from-blue-50 to-indigo-100"
+        } py-8 px-4`}
+      >
         <div className="max-w-6xl mx-auto">
-          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl overflow-hidden`}>
+          <div
+            className={`${
+              isDark ? "bg-gray-800" : "bg-white"
+            } rounded-2xl shadow-xl overflow-hidden`}
+          >
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
               <div className="flex items-center gap-3">
@@ -896,35 +961,35 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, cur
                     </div>
 
                     {/* Token Field - Only show if establishment is selected and requires it */}
-                    {formData.etablissement && (selectedEstablishment?.optionTokenGeneral || selectedEstablishment?.codeUnique) && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Token d'établissement *
-                        </label>
-                        <div className="relative">
-                          <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <input
-                            type="text"
-                            name="etablissementToken"
-                            value={formData.etablissementToken}
-                            onChange={handleInputChange}
-                            maxLength={selectedEstablishment?.optionTokenGeneral ? "8" : "6"}
-                            className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              errors.etablissementToken
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                            placeholder={selectedEstablishment?.optionTokenGeneral ? "A1B2C3D4" : "A1B2C3"}
-                          />
+                    {formData.etablissement &&
+                      selectedEstablishment?.optionTokenGeneral && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Token d'établissement *
+                          </label>
+                          <div className="relative">
+                            <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                              type="text"
+                              name="etablissementToken"
+                              value={formData.etablissementToken}
+                              onChange={handleInputChange}
+                              className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                                errors.etablissementToken
+                                  ? "border-red-500"
+                                  : "border-gray-300"
+                              }`}
+                              placeholder="A1B2C3D4"
+                            />
+                          </div>
+                          {errors.etablissementToken && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                              <AlertCircle className="w-4 h-4" />
+                              {errors.etablissementToken}
+                            </p>
+                          )}
                         </div>
-                        {errors.etablissementToken && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                            <AlertCircle className="w-4 h-4" />
-                            {errors.etablissementToken}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                      )}
                   </div>
 
                   {/* Right Column */}
@@ -978,7 +1043,9 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, cur
                           onChange={handleInputChange}
                           disabled={loadingProfessors}
                           className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed ${
-                            errors.moderator ? "border-red-500" : "border-gray-300"
+                            errors.moderator
+                              ? "border-red-500"
+                              : "border-gray-300"
                           }`}
                         >
                           <option value="">
@@ -1015,15 +1082,24 @@ const CreateClassContent = ({ onNavigateToClassesList, setActiveTab, isDark, cur
                             Information importante
                           </p>
                           <p>
-                            Les champs marqués d'un * sont obligatoires. 
+                            Les champs marqués d'un * sont obligatoires.
                             {selectedEstablishment?.optionEnvoiMailVersClasse && (
-                              <span className="block mt-1">✉️ Cet établissement envoie des emails aux classes.</span>
+                              <span className="block mt-1">
+                                ✉️ Cet établissement envoie des emails aux
+                                classes.
+                              </span>
                             )}
                             {selectedEstablishment?.optionTokenGeneral && (
-                              <span className="block mt-1">🔑 Un token général est requis pour cet établissement.</span>
+                              <span className="block mt-1">
+                                🔑 Un token général est requis pour cet
+                                établissement.
+                              </span>
                             )}
                             {selectedEstablishment?.codeUnique && (
-                              <span className="block mt-1">🎯 Un code unique est requis pour cet établissement.</span>
+                              <span className="block mt-1">
+                                🎯 Un code unique est requis pour cet
+                                établissement.
+                              </span>
                             )}
                           </p>
                         </div>

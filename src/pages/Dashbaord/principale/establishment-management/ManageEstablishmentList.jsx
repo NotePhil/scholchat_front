@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Activity,
   Star,
+  Edit2,
 } from "lucide-react";
 
 const ManageEstablishmentList = ({
@@ -36,6 +37,7 @@ const ManageEstablishmentList = ({
   onDelete,
   onBack,
   onNavigateToCreate,
+  onEditEstablishment,
 }) => {
   // State Management
   const [filteredEstablishments, setFilteredEstablishments] = useState([]);
@@ -161,8 +163,8 @@ const ManageEstablishmentList = ({
   // Statistics
   const totalEstablishments = establishments.length;
   const establishmentsWithEmail = establishments.filter((e) => e.email).length;
-  const establishmentsWithTokenGeneral = establishments.filter(
-    (e) => e.optionTokenGeneral
+  const establishmentsWithCodeUnique = establishments.filter(
+    (e) => e.codeUnique
   ).length;
 
   if (loading && establishments.length === 0) {
@@ -306,10 +308,10 @@ const ManageEstablishmentList = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
-                  Token Général
+                  Code Unique
                 </p>
                 <p className="text-lg sm:text-3xl font-bold text-purple-600 mt-1">
-                  {establishmentsWithTokenGeneral}
+                  {establishmentsWithCodeUnique}
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg sm:rounded-xl">
@@ -319,7 +321,7 @@ const ManageEstablishmentList = ({
             <div className="mt-2 sm:mt-4 flex items-center">
               <Star className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2" />
               <span className="text-slate-500 text-xs sm:text-sm">
-                Token activé
+                Code activé
               </span>
             </div>
           </div>
@@ -515,18 +517,13 @@ const ManageEstablishmentList = ({
                   {/* Options/Features */}
                   <div className="mb-3 sm:mb-4">
                     <div className="flex flex-wrap gap-1 sm:gap-2">
-                      {establishment.optionEnvoiMailVersClasse && (
+                      {establishment.optionEnvoiMailNewClasse && (
                         <span className="px-2 py-0.5 sm:py-1 text-xs bg-green-100 text-green-800 rounded-full">
                           Email Classes
                         </span>
                       )}
                       {establishment.optionTokenGeneral && (
                         <span className="px-2 py-0.5 sm:py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                          Token Général
-                        </span>
-                      )}
-                      {establishment.codeUnique && (
-                        <span className="px-2 py-0.5 sm:py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
                           Code Unique
                         </span>
                       )}
@@ -542,6 +539,14 @@ const ManageEstablishmentList = ({
                     >
                       <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                       Voir
+                    </button>
+
+                    {/* Edit Button */}
+                    <button
+                      onClick={() => onEditEstablishment && onEditEstablishment(establishment)}
+                      className="bg-green-50 hover:bg-green-100 text-green-600 py-2 px-3 rounded-lg sm:rounded-xl transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium"
+                    >
+                      <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
                     </button>
 
                     {/* Delete Button */}

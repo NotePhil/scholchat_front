@@ -64,6 +64,7 @@ const ManageEstablishmentDetailsView = ({
   onSuccess,
   onUpdate,
   onDelete,
+  onEdit,
 }) => {
   const [establishment, setEstablishment] = useState(null);
   const [gestionnaire, setGestionnaire] = useState(null);
@@ -118,9 +119,9 @@ const ManageEstablishmentDetailsView = ({
         pays: data.pays || "",
         email: data.email || "",
         telephone: data.telephone || "",
-        optionEnvoiMailVersClasse: data.optionEnvoiMailVersClasse || false,
+        optionEnvoiMailNewClasse: data.optionEnvoiMailNewClasse || false,
         optionTokenGeneral: data.optionTokenGeneral || false,
-        codeUnique: data.codeUnique || false,
+
       });
     } catch (error) {
       console.error("Error fetching establishment details:", error);
@@ -223,10 +224,14 @@ const ManageEstablishmentDetailsView = ({
   };
 
   const handleEdit = () => {
-    setEditing(true);
-    setError(null);
-    setSuccessMessage(null);
-    setSelectedGestionnaire(gestionnaire);
+    if (onEdit) {
+      onEdit(establishment);
+    } else {
+      setEditing(true);
+      setError(null);
+      setSuccessMessage(null);
+      setSelectedGestionnaire(gestionnaire);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -241,10 +246,9 @@ const ManageEstablishmentDetailsView = ({
       pays: establishment.pays || "",
       email: establishment.email || "",
       telephone: establishment.telephone || "",
-      optionEnvoiMailVersClasse:
-        establishment.optionEnvoiMailVersClasse || false,
+      optionEnvoiMailNewClasse:
+        establishment.optionEnvoiMailNewClasse || false,
       optionTokenGeneral: establishment.optionTokenGeneral || false,
-      codeUnique: establishment.codeUnique || false,
     });
   };
 
@@ -748,7 +752,7 @@ const ManageEstablishmentDetailsView = ({
       <Card title="Informations de l'établissement" className="mb-6">
         <Row gutter={[24, 16]}>
           <Col xs={24} md={12}>
-            <Descriptions column={1} size="small">
+            <Descriptions column={1} size="small" labelStyle={{ color: "#1a1a1a", fontWeight: "700" }}>
               <Descriptions.Item label="Nom">
                 {establishment.nom || "N/A"}
               </Descriptions.Item>
@@ -767,7 +771,7 @@ const ManageEstablishmentDetailsView = ({
             </Descriptions>
           </Col>
           <Col xs={24} md={12}>
-            <Descriptions column={1} size="small">
+            <Descriptions column={1} size="small" labelStyle={{ color: "#1a1a1a", fontWeight: "700" }}>
               <Descriptions.Item label="Email">
                 {establishment.email ? (
                   <Space>
@@ -788,14 +792,15 @@ const ManageEstablishmentDetailsView = ({
                   <Text type="secondary">N/A</Text>
                 )}
               </Descriptions.Item>
-              {establishment.tokenGeneral && (
-                <Descriptions.Item label="Token Général">
-                  <Text code copyable>{establishment.tokenGeneral}</Text>
-                </Descriptions.Item>
-              )}
-              {establishment.codeUniqueValue && (
+              {establishment.codeUnique && (
                 <Descriptions.Item label="Code Unique">
-                  <Text code copyable>{establishment.codeUniqueValue}</Text>
+                  <div className="flex items-center gap-2">
+                    <div className="px-3 py-1 bg-gradient-to-r from-purple-100 to-purple-200 border border-purple-300 rounded-lg">
+                      <Text strong style={{ color: "#7c3aed", fontSize: "16px" }} copyable>
+                        {establishment.codeUnique}
+                      </Text>
+                    </div>
+                  </div>
                 </Descriptions.Item>
               )}
               <Descriptions.Item label="Statut">
@@ -816,7 +821,7 @@ const ManageEstablishmentDetailsView = ({
             </Divider>
             <Row gutter={[24, 16]}>
               <Col xs={24} md={12}>
-                <Descriptions column={1} size="small">
+                <Descriptions column={1} size="small" labelStyle={{ color: "#1a1a1a", fontWeight: "700" }}>
                   <Descriptions.Item label="Nom">
                     <Text strong>{gestionnaire.nom} {gestionnaire.prenom}</Text>
                   </Descriptions.Item>
@@ -832,7 +837,7 @@ const ManageEstablishmentDetailsView = ({
                 </Descriptions>
               </Col>
               <Col xs={24} md={12}>
-                <Descriptions column={1} size="small">
+                <Descriptions column={1} size="small" labelStyle={{ color: "#1a1a1a", fontWeight: "700" }}>
                   <Descriptions.Item label="Téléphone">
                     {gestionnaire.telephone ? (
                       <Space>
@@ -955,7 +960,7 @@ const ManageEstablishmentDetailsView = ({
                   </Divider>
 
                   <Form.Item
-                    name="optionEnvoiMailVersClasse"
+                    name="optionEnvoiMailNewClasse"
                     valuePropName="checked"
                   >
                     <div
@@ -965,7 +970,7 @@ const ManageEstablishmentDetailsView = ({
                         alignItems: "center",
                       }}
                     >
-                      <span>Envoi d'email vers les classes</span>
+                      <span>Envoi d'email pour nouvelles classes</span>
                       <Switch />
                     </div>
                   </Form.Item>
@@ -978,23 +983,12 @@ const ManageEstablishmentDetailsView = ({
                         alignItems: "center",
                       }}
                     >
-                      <span>Token général</span>
-                      <Switch />
-                    </div>
-                  </Form.Item>
-
-                  <Form.Item name="codeUnique" valuePropName="checked">
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
                       <span>Code unique</span>
                       <Switch />
                     </div>
                   </Form.Item>
+
+
                 </Card>
               </Col>
             </Row>
@@ -1096,36 +1090,35 @@ const ManageEstablishmentDetailsView = ({
           <Row gutter={[24, 16]}>
             <Col xs={24} md={8}>
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <Text>Envoi d'email vers les classes</Text>
+                <Text>Envoi d'email pour nouvelles classes</Text>
                 <Tag
                   color={
-                    establishment.optionEnvoiMailVersClasse
+                    establishment.optionEnvoiMailNewClasse
                       ? "green"
                       : "default"
                   }
                 >
-                  {establishment.optionEnvoiMailVersClasse
+                  {establishment.optionEnvoiMailNewClasse
                     ? "Activé"
                     : "Désactivé"}
                 </Tag>
               </div>
             </Col>
             <Col xs={24} md={8}>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <Text>Token général</Text>
-                <Tag
-                  color={establishment.optionTokenGeneral ? "blue" : "default"}
-                >
-                  {establishment.optionTokenGeneral ? "Activé" : "Désactivé"}
-                </Tag>
-              </div>
-            </Col>
-            <Col xs={24} md={8}>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <Text>Code unique</Text>
-                <Tag color={establishment.codeUnique ? "purple" : "default"}>
-                  {establishment.codeUnique ? "Activé" : "Désactivé"}
-                </Tag>
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <Text strong style={{ color: "#7c3aed", fontSize: "16px" }}>Code Unique</Text>
+                  <Tag color={establishment.codeUnique ? "purple" : "default"}>
+                    {establishment.codeUnique ? "Activé" : "Désactivé"}
+                  </Tag>
+                </div>
+                {establishment.codeUnique && (
+                  <div className="mt-2 p-2 bg-white border border-purple-200 rounded">
+                    <Text code copyable style={{ fontSize: "14px", fontWeight: "600" }}>
+                      {establishment.codeUnique}
+                    </Text>
+                  </div>
+                )}
               </div>
             </Col>
           </Row>

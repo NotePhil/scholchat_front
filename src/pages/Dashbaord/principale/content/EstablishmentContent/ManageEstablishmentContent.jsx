@@ -4,12 +4,14 @@ import { BuildOutlined } from "@ant-design/icons"; // This is correct
 import EstablishmentService from "../../../../../services/EstablishmentService";
 import ManageEstablishmentList from "../../establishment-management/ManageEstablishmentList";
 import ManageEstablishmentDetailsView from "../../establishment-management/ManageEstablishmentDetailsView";
+import CreateEstablishmentContent from "./CreateEstablishmentContent";
 
 const { Text, Title } = Typography;
 
 const ManageEstablishmentContent = ({ onBack }) => {
   const [establishments, setEstablishments] = useState([]);
   const [selectedEstablishmentId, setSelectedEstablishmentId] = useState(null);
+  const [editingEstablishment, setEditingEstablishment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -73,6 +75,14 @@ const ManageEstablishmentContent = ({ onBack }) => {
 
   const handleBackToList = () => {
     setSelectedEstablishmentId(null);
+    setEditingEstablishment(null);
+    setError("");
+    setSuccessMessage("");
+  };
+
+  const handleEditEstablishment = (establishment) => {
+    setEditingEstablishment(establishment);
+    setSelectedEstablishmentId(null);
     setError("");
     setSuccessMessage("");
   };
@@ -119,7 +129,7 @@ const ManageEstablishmentContent = ({ onBack }) => {
           overflow: "hidden",
         }}
       >
-        {!selectedEstablishmentId ? (
+        {!selectedEstablishmentId && !editingEstablishment ? (
           <div style={{ padding: "24px" }}>
             <div style={{ marginBottom: "24px" }}>
               <Space align="center" style={{ marginBottom: "16px" }}>
@@ -162,11 +172,18 @@ const ManageEstablishmentContent = ({ onBack }) => {
               successMessage={successMessage}
               refreshing={refreshing}
               onSelectEstablishment={handleSelectEstablishment}
+              onEditEstablishment={handleEditEstablishment}
               onRefresh={handleRefresh}
               onDelete={handleDeleteEstablishment}
               onBack={onBack}
             />
           </div>
+        ) : editingEstablishment ? (
+          <CreateEstablishmentContent
+            editingEstablishment={editingEstablishment}
+            onNavigateToManage={handleBackToList}
+            setActiveTab={() => handleBackToList()}
+          />
         ) : (
           <ManageEstablishmentDetailsView
             establishmentId={selectedEstablishmentId}
@@ -176,6 +193,7 @@ const ManageEstablishmentContent = ({ onBack }) => {
             onSuccess={setSuccessMessage}
             onUpdate={handleUpdateEstablishment}
             onDelete={handleDeleteEstablishment}
+            onEdit={handleEditEstablishment}
           />
         )}
       </Card>
