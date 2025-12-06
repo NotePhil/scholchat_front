@@ -1,0 +1,459 @@
+{
+  "common": {
+    "actions": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "view": "Voir",
+      "create": "Créer",
+      "update": "Mettre à jour",
+      "search": "Rechercher",
+      "filter": "Filtrer",
+      "loading": "Chargement...",
+      "submit": "Soumettre",
+      "close": "Fermer",
+      "confirm": "Confirmer",
+      "back": "Retour"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "rejected": "Rejeté",
+      "draft": "Brouillon",
+      "published": "Publié",
+      "completed": "Terminé",
+      "cancelled": "Annulé"
+    },
+    "messages": {
+      "success": "Succès",
+      "error": "Erreur",
+      "warning": "Avertissement",
+      "info": "Information",
+      "noData": "Aucune donnée disponible",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
+      "operationSuccess": "Opération effectuée avec succès",
+      "operationFailed": "Échec de l'opération"
+    }
+  },
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "courses": "Cours",
+    "classes": "Classes",
+    "users": "Utilisateurs",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "profile": "Profil",
+    "home": "Accueil",
+    "about": "À propos",
+    "products": "Nos produits",
+    "faq": "FAQ",
+    "pricing": "Nos tarifs",
+    "nurseries": "Crèches",
+    "kindergartens": "Écoles maternelles",
+    "primarySchools": "Écoles primaires",
+    "highSchools": "Lycées"
+  },
+  "auth": {
+    "login": {
+      "title": "Bienvenue",
+      "subtitle": "Connectez-vous à votre compte ou",
+      "createAccount": "créer un compte",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "forgotPassword": "Mot de passe oublié ?",
+      "signIn": "Se connecter",
+      "signingIn": "Connexion en cours...",
+      "emailPlaceholder": "Entrez votre adresse e-mail",
+      "passwordPlaceholder": "Entrez votre mot de passe",
+      "showPassword": "Afficher",
+      "hidePassword": "Masquer",
+      "signUp": "S'inscrire",
+      "termsPrefix": "En vous connectant, vous acceptez nos",
+      "termsLink": "Conditions d'utilisation",
+      "termsAnd": "et notre",
+      "privacyLink": "Politique de confidentialité"
+    },
+    "errors": {
+      "invalidCredentials": "Identifiants invalides. Veuillez vérifier et réessayer.",
+      "authenticationFailed": "Échec de l'authentification",
+      "missingToken": "Jeton d'accès manquant dans la réponse",
+      "invalidToken": "Jeton invalide",
+      "missingUserId": "Erreur d'authentification : ID utilisateur manquant",
+      "invalidUserId": "Erreur d'authentification : ID utilisateur invalide"
+    }
+  },
+  "courses": {
+    "management": {
+      "title": "Mes Cours",
+      "subtitle": "Gérez vos cours et suivez vos programmes d'enseignement",
+      "createNew": "Nouveau Cours",
+      "createFirst": "Créer mon premier cours",
+      "noCoursesFound": "Aucun cours trouvé",
+      "noCourses": "Aucun cours créé",
+      "searchPlaceholder": "Rechercher par titre, description, matière...",
+      "allStatuses": "Tous les statuts",
+      "totalCourses": "Cours Total",
+      "draftCourses": "Brouillon",
+      "publishedCourses": "Publié",
+      "unpublished": "Non publié",
+      "available": "Disponible"
+    },
+    "scheduling": {
+      "title": "Planifier un cours",
+      "editTitle": "Modifier la planification",
+      "course": "Cours",
+      "selectCourse": "Sélectionner un cours",
+      "state": "État",
+      "class": "Classe",
+      "selectClass": "Sélectionner une classe (optionnel)",
+      "maxCapacity": "Capacité maximale",
+      "capacityPlaceholder": "30 (optionnel)",
+      "location": "Lieu",
+      "locationPlaceholder": "Salle 203, Bâtiment A",
+      "description": "Description / Notes",
+      "descriptionPlaceholder": "Notes spéciales pour cette session...",
+      "participants": "Participants (optionnel)",
+      "selectParticipants": "Sélectionner un ou plusieurs participants...",
+      "selectClassFirst": "Sélectionnez d'abord une classe",
+      "participantsSelected": "sélectionné(s)",
+      "loadingParticipants": "Chargement des participants...",
+      "selectedParticipants": "Participants sélectionnés :",
+      "others": "autres",
+      "dateScheduling": "Planification des dates",
+      "plannedDate": "Date prévue",
+      "effectiveStartDate": "Date de début effective (optionnel)",
+      "effectiveEndDate": "Date de fin effective (optionnel)",
+      "schedule": "Planifier",
+      "scheduling": "Planification en cours...",
+      "inProgress": "En cours...",
+      "states": {
+        "planned": "Planifié",
+        "inProgress": "En cours",
+        "completed": "Terminé",
+        "cancelled": "Annulé"
+      }
+    },
+    "validation": {
+      "courseRequired": "Le cours est requis",
+      "stateRequired": "L'état est requis",
+      "locationRequired": "Le lieu est requis",
+      "pastDate": "La date ne peut pas être dans le passé",
+      "bothDatesRequired": "Si vous fournissez une date de début, vous devez également fournir une date de fin",
+      "bothDatesRequiredEnd": "Si vous fournissez une date de fin, vous devez également fournir une date de début",
+      "startAfterPlanned": "La date de début ne peut pas être avant la date prévue",
+      "endAfterStart": "La date de fin ne peut pas être avant la date de début",
+      "positiveCapacity": "La capacité doit être positive",
+      "integerCapacity": "La capacité doit être un nombre entier"
+    }
+  },
+  "users": {
+    "management": {
+      "professors": "Professeurs ayant accès à la classe",
+      "students": "Étudiants ayant accès à la classe",
+      "parents": "Parents ayant accès à la classe",
+      "users": "Utilisateurs ayant accès à la classe",
+      "accessRequests": "Demandes d'accès en attente d'approbation",
+      "noProfessors": "Aucun professeur n'a accès à cette classe",
+      "noStudents": "Aucun étudiant n'a accès à cette classe",
+      "noParents": "Aucun parent n'a accès à cette classe",
+      "noUsers": "Aucun utilisateur n'a accès à cette classe",
+      "noAccessRequests": "Aucune demande d'accès en attente",
+      "viewDetails": "Voir les détails",
+      "approveRequest": "Approuver la demande",
+      "rejectRequest": "Rejeter la demande",
+      "removeAccess": "Retirer l'accès à la classe",
+      "deleteUser": "Supprimer l'utilisateur du système",
+      "removeAccessConfirm": "Retirer l'accès de cet utilisateur ?",
+      "removeAccessDescription": "Cette action retirera l'accès de l'utilisateur à cette classe.",
+      "deleteUserConfirm": "Supprimer définitivement cet utilisateur ?",
+      "deleteUserDescription": "Cette action supprimera complètement l'utilisateur du système. Cette action est irréversible.",
+      "requestDate": "Date de demande",
+      "requestStatus": "Statut de la demande",
+      "creationDate": "Date de création",
+      "admin": "Administrateur",
+      "yes": "Oui",
+      "no": "Non",
+      "userTypes": {
+        "professor": "Professeur",
+        "student": "Étudiant",
+        "parent": "Parent",
+        "user": "Utilisateur"
+      }
+    }
+  },
+  "pages": {
+    "home": {
+      "badge": "Plateforme Éducative",
+      "animatedTexts": {
+        "text1": "La réussite scolaire commence par une bonne communication",
+        "text2": "Simplifier les échanges pour la réussite de vos enfants",
+        "text3": "Un lien direct pour mieux accompagner vos enfants"
+      },
+      "subtitle": "Facilitez la communication pour un meilleur accompagnement éducatif",
+      "stats": {
+        "success": "Réussite",
+        "families": "Familles",
+        "support": "Support"
+      },
+      "cta": "Découvrir",
+      "floatingBadges": {
+        "innovation": "Innovation",
+        "technological": "Technologique",
+        "excellence": "Excellence",
+        "guaranteed": "Garantie"
+      }
+    },
+    "about": {
+      "badge": "Guide Étudiant Révolutionnaire",
+      "title": {
+        "line1": "EXCELLENCE",
+        "line2": "ACADÉMIQUE",
+        "line3": "GARANTIE"
+      },
+      "subtitle": "Rejoignez la révolution éducative qui transforme des milliers d'étudiants en leaders de demain",
+      "stats": {
+        "students": "Étudiants",
+        "success": "Réussite",
+        "support": "Support",
+        "countries": "Pays"
+      },
+      "services": {
+        "academic": {
+          "title": "Orientation académique",
+          "desc": "Conseils pour choisir votre parcours avec des experts de renommée mondiale",
+          "stats": "98% de réussite"
+        },
+        "psychological": {
+          "title": "Soutien psychologique",
+          "desc": "Un accompagnement personnalisé par des psychologues certifiés",
+          "stats": "24/7 disponible"
+        },
+        "tutoring": {
+          "title": "Tutorat en ligne",
+          "desc": "Des cours particuliers avec les meilleurs professeurs du monde",
+          "stats": "1000+ tuteurs"
+        },
+        "resources": {
+          "title": "Ressources pédagogiques",
+          "desc": "Une bibliothèque numérique avec contenu interactif et IA",
+          "stats": "50k+ ressources"
+        }
+      },
+      "content": {
+        "badge": "Révolution Éducative",
+        "title": {
+          "line1": "TRANSFORMEZ",
+          "line2": "VOTRE AVENIR"
+        },
+        "description": "Notre plateforme révolutionnaire utilise l'intelligence artificielle et des méthodes d'apprentissage de pointe pour garantir votre succès académique absolu !",
+        "features": {
+          "feature1": "Développez vos compétences avec l'IA et des experts mondiaux",
+          "feature2": "Accédez à 50k+ ressources interactives et exclusives",
+          "feature3": "Bénéficiez d'un coaching personnalisé 24/7 par IA"
+        },
+        "cta": "COMMENCER LA TRANSFORMATION",
+        "trust": {
+          "guarantee": {
+            "label": "100% Garanti",
+            "desc": "Ou remboursé"
+          },
+          "security": {
+            "label": "Ultra Sécurisé",
+            "desc": "Données protégées"
+          },
+          "support": {
+            "label": "Support VIP",
+            "desc": "Assistance premium"
+          }
+        },
+        "videoPlaceholder": "Transformation en cours...",
+        "floatingStats": "Étudiants transformés"
+      }
+    },
+    "blog": {
+      "badge": "Blog Éducatif",
+      "title": {
+        "line1": "Nous partageons nos",
+        "line2": "Idées Éducatives"
+      },
+      "subtitle": "Vous n'êtes pas seul dans votre parcours, nous vous offrons notre soutien et notre guidance pour réussir ensemble",
+      "stats": {
+        "readers": "Lecteurs",
+        "articles": "Articles",
+        "satisfaction": "Satisfaction"
+      },
+      "readMore": "Lire plus",
+      "viewAll": "Voir tous les articles"
+    },
+    "courses": {
+      "badge": "Formations SchoolChat",
+      "title": {
+        "line1": "Découvrez Nos Formations",
+        "line2": "SchoolChat Pro"
+      },
+      "subtitle": "Maîtrisez la communication éducative moderne et optimisez le suivi scolaire de vos enfants",
+      "stats": {
+        "students": "Étudiants",
+        "courses": "Cours",
+        "satisfaction": "Satisfaction"
+      },
+      "courseDetails": {
+        "lessons": "leçons",
+        "duration": "Durée",
+        "level": "Niveau",
+        "instructor": "Formateur Expert",
+        "popular": "Populaire",
+        "start": "Commencer"
+      },
+      "cta": {
+        "title": "Prêt à transformer votre communication scolaire ?",
+        "subtitle": "Rejoignez plus de 1500 familles qui ont révolutionné leur suivi scolaire avec SchoolChat",
+        "startFree": "Commencer gratuitement",
+        "demo": "Démonstration"
+      }
+    },
+    "instructor": {
+      "badge": "Qu'est-ce que SchoolChat ?",
+      "title": {
+        "line1": "La Révolution de la",
+        "line2": "Communication Éducative"
+      },
+      "subtitle": "Transformez la relation école-famille avec notre plateforme innovante de communication scolaire moderne et intuitive",
+      "features": {
+        "communication": {
+          "title": "Communication Instantanée",
+          "desc": "Échangez en temps réel avec les enseignants et suivez les progrès de vos enfants",
+          "cta": "Commencer maintenant"
+        },
+        "mobile": {
+          "title": "Application Mobile",
+          "desc": "Accédez à toutes les informations scolaires depuis votre smartphone",
+          "cta": "Télécharger l'app"
+        }
+      },
+      "stats": {
+        "badge": "Nous Sommes Fiers",
+        "title": "Des Résultats qui Parlent",
+        "subtitle": "Rejoignez des milliers de familles qui ont transformé leur communication scolaire avec SchoolChat",
+        "families": "Familles Connectées",
+        "messages": "Messages Échangés",
+        "schools": "Établissements Partenaires",
+        "satisfaction": "Taux de Satisfaction"
+      },
+      "cta": {
+        "title": "Prêt à révolutionner votre communication scolaire ?",
+        "subtitle": "Plus de 2800 familles nous font confiance. Rejoignez la révolution éducative dès aujourd'hui !",
+        "startFree": "Commencer gratuitement",
+        "demo": "Demander une démo"
+      }
+    },
+    "functionalities": {
+      "badge": "Fonctionnalités",
+      "title": "Nos Fonctionnalités",
+      "subtitle": "Découvrez les outils magiques qui transformeront votre expérience éducative",
+      "features": {
+        "textbook": {
+          "title": "Cahier de texte",
+          "desc": "Organisez et accédez facilement aux notes de cours et au contenu de chaque sujet."
+        },
+        "messaging": {
+          "title": "Messagerie",
+          "desc": "Communiquez facilement avec les enseignants et les autres élèves."
+        },
+        "homework": {
+          "title": "Devoirs",
+          "desc": "Suivez les devoirs assignés et gérez les dates de rendu efficacement."
+        },
+        "attendance": {
+          "title": "Suivi des absences",
+          "desc": "Gardez un enregistrement des absences et suivez les retards."
+        },
+        "goals": {
+          "title": "Objectifs scolaires",
+          "desc": "Définissez et suivez les objectifs scolaires de manière structurée."
+        },
+        "schedule": {
+          "title": "Planning & Emploi du temps",
+          "desc": "Gérez votre emploi du temps et planifiez vos activités scolaires."
+        }
+      },
+      "learnMore": "En savoir plus"
+    },
+    "accountActivation": {
+      "title": "Activation du compte",
+      "loading": "Veuillez patienter pendant que nous vérifions votre compte...",
+      "success": {
+        "title": "Compte activé avec succès !",
+        "message": "Votre compte a été vérifié et activé.",
+        "redirect": "Vous serez redirigé vers la page de mot de passe dans {countdown} secondes...",
+        "setPassword": "Définir le mot de passe maintenant"
+      },
+      "error": {
+        "title": "Échec de l'activation",
+        "regeneratePrompt": "Veuillez saisir votre adresse e-mail pour régénérer le token",
+        "emailPlaceholder": "Entrez votre email",
+        "send": "Envoyer",
+        "regenerateSuccess": "Token régénéré avec succès. Redirection en cours...",
+        "regenerateError": "Échec de la régénération du token",
+        "goToLogin": "Aller à la connexion",
+        "contactSupport": "Contacter le support"
+      },
+      "footer": {
+        "copyright": "Tous droits réservés.",
+        "terms": "Conditions d'utilisation",
+        "privacy": "Politique de confidentialité"
+      }
+    },
+    "forgotPassword": {
+      "title": "Mot de passe oublié",
+      "subtitle": "Entrez votre adresse e-mail pour réinitialiser votre mot de passe",
+      "email": "Adresse e-mail",
+      "emailPlaceholder": "Entrez votre adresse e-mail",
+      "send": "Envoyer le lien de réinitialisation",
+      "sending": "Envoi en cours...",
+      "backToLogin": "Retour à la connexion",
+      "success": "Un lien de réinitialisation a été envoyé à votre adresse e-mail",
+      "error": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "resetPassword": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Entrez votre nouveau mot de passe",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "reset": "Réinitialiser le mot de passe",
+      "resetting": "Réinitialisation en cours...",
+      "success": "Mot de passe réinitialisé avec succès",
+      "error": "Une erreur s'est produite. Veuillez réessayer.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas"
+    },
+    "verifyEmail": {
+      "title": "Vérifiez votre e-mail",
+      "message": "Nous avons envoyé un lien de vérification à votre adresse e-mail",
+      "checkInbox": "Vérifiez votre boîte de réception et cliquez sur le lien pour activer votre compte",
+      "noEmail": "Vous n'avez pas reçu l'e-mail ?",
+      "resend": "Renvoyer",
+      "backToLogin": "Retour à la connexion"
+    },
+    "passwordPage": {
+      "title": "Définir votre mot de passe",
+      "subtitle": "Créez un mot de passe sécurisé pour votre compte",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "requirements": {
+        "title": "Exigences du mot de passe :",
+        "length": "Au moins 8 caractères",
+        "uppercase": "Une lettre majuscule",
+        "lowercase": "Une lettre minuscule",
+        "number": "Un chiffre",
+        "special": "Un caractère spécial"
+      },
+      "create": "Créer le mot de passe",
+      "creating": "Création en cours...",
+      "success": "Mot de passe créé avec succès",
+      "error": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  }
+}

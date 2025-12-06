@@ -5,6 +5,7 @@ import { Courses } from "./Courses";
 import { Instructor } from "./Instructor";
 import { Blog } from "./Blog";
 import FunctionalitiesSection from "./FunctionalitiesSection";
+import { useTranslation } from "../hooks/useTranslation";
 import "../CSS/animations.css";
 
 const AnimatedText = ({ texts, theme }) => {
@@ -62,14 +63,15 @@ const AnimatedText = ({ texts, theme }) => {
 };
 
 export const HomeContent = ({ theme }) => {
+  const { t } = useTranslation();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
 
   const texts = [
-    "La réussite scolaire commence par une bonne communication",
-    "Simplifier les échanges pour la réussite de vos enfants",
-    "Un lien direct pour mieux accompagner vos enfants",
+    t("pages.home.animatedTexts.text1"),
+    t("pages.home.animatedTexts.text2"),
+    t("pages.home.animatedTexts.text3"),
   ];
 
   useEffect(() => {
@@ -255,7 +257,7 @@ export const HomeContent = ({ theme }) => {
                     : "text-white"
                 }`}
               >
-                🌟 Plateforme Éducative
+🌟 {t("pages.home.badge")}
               </span>
               <div
                 className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full animate-pulse ${
@@ -279,16 +281,15 @@ export const HomeContent = ({ theme }) => {
                   : "text-gray-200"
               }`}
             >
-              ✨ Facilitez la communication pour un meilleur accompagnement
-              éducatif ⚡
+✨ {t("pages.home.subtitle")} ⚡
             </p>
 
             {/* Animated Stats */}
             <div className="flex justify-center gap-2 sm:gap-4 md:gap-6 lg:gap-8 mt-4 sm:mt-8">
               {[
-                { number: "98%", label: "Réussite", icon: "🏆" },
-                { number: "10K+", label: "Familles", icon: "👨‍👩‍👧‍👦" },
-                { number: "24/7", label: "Support", icon: "💬" },
+                { number: "98%", label: t("pages.home.stats.success"), icon: "🏆" },
+                { number: "10K+", label: t("pages.home.stats.families"), icon: "👨‍👩‍👧‍👦" },
+                { number: "24/7", label: t("pages.home.stats.support"), icon: "💬" },
               ].map((stat, i) => (
                 <div
                   key={i}
@@ -468,7 +469,7 @@ export const HomeContent = ({ theme }) => {
                           : "bg-gradient-to-r from-emerald-400 to-cyan-400"
                       }`}
                     >
-                      Innovation
+                      {t("pages.home.floatingBadges.innovation")}
                     </div>
                     <div
                       className={`text-2xs sm:text-xs font-medium ${
@@ -479,7 +480,7 @@ export const HomeContent = ({ theme }) => {
                           : "text-gray-300"
                       }`}
                     >
-                      Technologique
+                      {t("pages.home.floatingBadges.technological")}
                     </div>
                   </div>
                 </div>
@@ -516,7 +517,7 @@ export const HomeContent = ({ theme }) => {
                           : "bg-gradient-to-r from-purple-400 to-pink-400"
                       }`}
                     >
-                      Excellence
+                      {t("pages.home.floatingBadges.excellence")}
                     </div>
                     <div
                       className={`text-2xs sm:text-xs font-medium ${
@@ -527,7 +528,7 @@ export const HomeContent = ({ theme }) => {
                           : "text-gray-300"
                       }`}
                     >
-                      Garantie
+                      {t("pages.home.floatingBadges.guaranteed")}
                     </div>
                   </div>
                 </div>
@@ -562,7 +563,7 @@ export const HomeContent = ({ theme }) => {
                 }`}
               ></div>
               <span className="relative flex items-center gap-1 sm:gap-2">
-                🌟 Découvrir
+                🌟 {t("pages.home.cta")}
                 <span className="group-hover:translate-x-1 sm:group-hover:translate-x-2 group-hover:scale-110 sm:group-hover:scale-125 transition-all duration-300">
                   →
                 </span>

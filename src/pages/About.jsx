@@ -12,43 +12,46 @@ import {
   FaInfinity,
 } from "react-icons/fa";
 import { AiOutlineCheck } from "react-icons/ai";
+import { useTranslation } from "../hooks/useTranslation";
 
 export const About = ({ theme = "default" }) => {
+  const { t } = useTranslation();
+  
   const cards = [
     {
       gradient: "from-cyan-400 via-blue-500 to-purple-600",
       shadowColor: "shadow-cyan-500/50",
       icon: <FaGraduationCap size={40} />,
-      title: "Orientation académique",
-      desc: "Conseils pour choisir votre parcours avec des experts de renommée mondiale",
-      stats: "98% de réussite",
+      title: t("pages.about.services.academic.title"),
+      desc: t("pages.about.services.academic.desc"),
+      stats: t("pages.about.services.academic.stats"),
       bgPattern: "⚡",
     },
     {
       gradient: "from-pink-400 via-red-500 to-orange-500",
       shadowColor: "shadow-pink-500/50",
       icon: <FaUserFriends size={40} />,
-      title: "Soutien psychologique",
-      desc: "Un accompagnement personnalisé par des psychologues certifiés",
-      stats: "24/7 disponible",
+      title: t("pages.about.services.psychological.title"),
+      desc: t("pages.about.services.psychological.desc"),
+      stats: t("pages.about.services.psychological.stats"),
       bgPattern: "🎯",
     },
     {
       gradient: "from-purple-500 via-indigo-500 to-blue-600",
       shadowColor: "shadow-purple-500/50",
       icon: <FaChalkboardTeacher size={40} />,
-      title: "Tutorat en ligne",
-      desc: "Des cours particuliers avec les meilleurs professeurs du monde",
-      stats: "1000+ tuteurs",
+      title: t("pages.about.services.tutoring.title"),
+      desc: t("pages.about.services.tutoring.desc"),
+      stats: t("pages.about.services.tutoring.stats"),
       bgPattern: "🚀",
     },
     {
       gradient: "from-emerald-400 via-teal-500 to-cyan-600",
       shadowColor: "shadow-emerald-500/50",
       icon: <FaBookOpen size={40} />,
-      title: "Ressources pédagogiques",
-      desc: "Une bibliothèque numérique avec contenu interactif et IA",
-      stats: "50k+ ressources",
+      title: t("pages.about.services.resources.title"),
+      desc: t("pages.about.services.resources.desc"),
+      stats: t("pages.about.services.resources.stats"),
       bgPattern: "✨",
     },
   ];
@@ -250,7 +253,7 @@ export const About = ({ theme = "default" }) => {
                       : "text-white"
                   }`}
                 >
-                  Guide Étudiant Révolutionnaire
+                  {t("pages.about.badge")}
                 </span>
                 <FaInfinity
                   className={`text-purple-400 animate-spin`}
@@ -265,21 +268,21 @@ export const About = ({ theme = "default" }) => {
                     theme === "light" ? "text-shadow-sm" : ""
                   }`}
                 >
-                  EXCELLENCE
+                  {t("pages.about.title.line1")}
                 </span>
                 <span
                   className={`block bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent drop-shadow-2xl transform hover:scale-105 transition-transform duration-700 ${
                     theme === "light" ? "text-shadow-sm" : ""
                   }`}
                 >
-                  ACADÉMIQUE
+                  {t("pages.about.title.line2")}
                 </span>
                 <span
                   className={`block bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-2xl transform hover:scale-105 transition-transform duration-700 ${
                     theme === "light" ? "text-shadow-sm" : ""
                   }`}
                 >
-                  GARANTIE
+                  {t("pages.about.title.line3")}
                 </span>
               </h1>
 

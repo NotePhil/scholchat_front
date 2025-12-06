@@ -1,0 +1,455 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "view": "View",
+      "create": "Create",
+      "update": "Update",
+      "search": "Search",
+      "filter": "Filter",
+      "loading": "Loading...",
+      "submit": "Submit",
+      "close": "Close",
+      "confirm": "Confirm",
+      "back": "Back"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "draft": "Draft",
+      "published": "Published",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "messages": {
+      "success": "Success",
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Information",
+      "noData": "No data available",
+      "confirmDelete": "Are you sure you want to delete this item?",
+      "operationSuccess": "Operation completed successfully",
+      "operationFailed": "Operation failed"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "courses": "Courses",
+    "classes": "Classes",
+    "users": "Users",
+    "settings": "Settings",
+    "logout": "Logout",
+    "profile": "Profile",
+    "home": "Home",
+    "about": "About",
+    "products": "Our Products",
+    "faq": "FAQ",
+    "pricing": "Our Pricing",
+    "nurseries": "Nurseries",
+    "kindergartens": "Kindergartens",
+    "primarySchools": "Primary Schools",
+    "highSchools": "High Schools"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome",
+      "subtitle": "Sign in to your account or",
+      "createAccount": "create an account",
+      "email": "Email address",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "signIn": "Sign In",
+      "signingIn": "Signing in...",
+      "emailPlaceholder": "Enter your email address",
+      "passwordPlaceholder": "Enter your password",
+      "showPassword": "Show",
+      "hidePassword": "Hide",
+      "signUp": "Sign Up"
+    },
+    "errors": {
+      "invalidCredentials": "Invalid credentials. Please check and try again.",
+      "authenticationFailed": "Authentication failed",
+      "missingToken": "Missing access token in response",
+      "invalidToken": "Invalid token",
+      "missingUserId": "Authentication error: Missing user ID",
+      "invalidUserId": "Authentication error: Invalid user ID"
+    }
+  },
+  "courses": {
+    "management": {
+      "title": "My Courses",
+      "subtitle": "Manage your courses and track your teaching programs",
+      "createNew": "New Course",
+      "createFirst": "Create my first course",
+      "noCoursesFound": "No courses found",
+      "noCourses": "No courses created",
+      "searchPlaceholder": "Search by title, description, subject...",
+      "allStatuses": "All statuses",
+      "totalCourses": "Total Courses",
+      "draftCourses": "Draft",
+      "publishedCourses": "Published",
+      "unpublished": "Unpublished",
+      "available": "Available"
+    },
+    "scheduling": {
+      "title": "Schedule a Course",
+      "editTitle": "Edit Schedule",
+      "course": "Course",
+      "selectCourse": "Select a course",
+      "state": "State",
+      "class": "Class",
+      "selectClass": "Select a class (optional)",
+      "maxCapacity": "Maximum capacity",
+      "capacityPlaceholder": "30 (optional)",
+      "location": "Location",
+      "locationPlaceholder": "Room 203, Building A",
+      "description": "Description / Notes",
+      "descriptionPlaceholder": "Special notes for this session...",
+      "participants": "Participants (optional)",
+      "selectParticipants": "Select one or more participants...",
+      "selectClassFirst": "Select a class first",
+      "participantsSelected": "selected",
+      "loadingParticipants": "Loading participants...",
+      "selectedParticipants": "Selected participants:",
+      "others": "others",
+      "dateScheduling": "Date scheduling",
+      "plannedDate": "Planned date",
+      "effectiveStartDate": "Effective start date (optional)",
+      "effectiveEndDate": "Effective end date (optional)",
+      "schedule": "Schedule",
+      "scheduling": "Scheduling...",
+      "inProgress": "In progress...",
+      "states": {
+        "planned": "Planned",
+        "inProgress": "In Progress",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "validation": {
+      "courseRequired": "Course is required",
+      "stateRequired": "State is required",
+      "locationRequired": "Location is required",
+      "pastDate": "Date cannot be in the past",
+      "bothDatesRequired": "If you provide a start date, you must also provide an end date",
+      "bothDatesRequiredEnd": "If you provide an end date, you must also provide a start date",
+      "startAfterPlanned": "Start date cannot be before planned date",
+      "endAfterStart": "End date cannot be before start date",
+      "positiveCapacity": "Capacity must be positive",
+      "integerCapacity": "Capacity must be an integer"
+    }
+  },
+  "users": {
+    "management": {
+      "professors": "Professors with class access",
+      "students": "Students with class access",
+      "parents": "Parents with class access",
+      "users": "Users with class access",
+      "accessRequests": "Access requests pending approval",
+      "noProfessors": "No professors have access to this class",
+      "noStudents": "No students have access to this class",
+      "noParents": "No parents have access to this class",
+      "noUsers": "No users have access to this class",
+      "noAccessRequests": "No pending access requests",
+      "viewDetails": "View details",
+      "approveRequest": "Approve request",
+      "rejectRequest": "Reject request",
+      "removeAccess": "Remove class access",
+      "deleteUser": "Delete user from system",
+      "removeAccessConfirm": "Remove this user's access?",
+      "removeAccessDescription": "This action will remove the user's access to this class.",
+      "deleteUserConfirm": "Permanently delete this user?",
+      "deleteUserDescription": "This action will completely remove the user from the system. This action is irreversible.",
+      "requestDate": "Request Date",
+      "requestStatus": "Request Status",
+      "creationDate": "Creation Date",
+      "admin": "Admin",
+      "yes": "Yes",
+      "no": "No",
+      "userTypes": {
+        "professor": "Professor",
+        "student": "Student",
+        "parent": "Parent",
+        "user": "User"
+      }
+    }
+  },
+  "pages": {
+    "home": {
+      "badge": "Educational Platform",
+      "animatedTexts": {
+        "text1": "Academic success starts with good communication",
+        "text2": "Simplifying exchanges for your children's success",
+        "text3": "A direct link to better support your children"
+      },
+      "subtitle": "Facilitate communication for better educational support",
+      "stats": {
+        "success": "Success",
+        "families": "Families",
+        "support": "Support"
+      },
+      "cta": "Discover",
+      "floatingBadges": {
+        "innovation": "Innovation",
+        "technological": "Technological",
+        "excellence": "Excellence",
+        "guaranteed": "Guaranteed"
+      }
+    },
+    "about": {
+      "badge": "Revolutionary Student Guide",
+      "title": {
+        "line1": "ACADEMIC",
+        "line2": "EXCELLENCE",
+        "line3": "GUARANTEED"
+      },
+      "subtitle": "Join the educational revolution that transforms thousands of students into tomorrow's leaders",
+      "stats": {
+        "students": "Students",
+        "success": "Success",
+        "support": "Support",
+        "countries": "Countries"
+      },
+      "services": {
+        "academic": {
+          "title": "Academic guidance",
+          "desc": "Advice to choose your path with world-renowned experts",
+          "stats": "98% success rate"
+        },
+        "psychological": {
+          "title": "Psychological support",
+          "desc": "Personalized support by certified psychologists",
+          "stats": "24/7 available"
+        },
+        "tutoring": {
+          "title": "Online tutoring",
+          "desc": "Private lessons with the world's best teachers",
+          "stats": "1000+ tutors"
+        },
+        "resources": {
+          "title": "Educational resources",
+          "desc": "A digital library with interactive content and AI",
+          "stats": "50k+ resources"
+        }
+      },
+      "content": {
+        "badge": "Educational Revolution",
+        "title": {
+          "line1": "TRANSFORM",
+          "line2": "YOUR FUTURE"
+        },
+        "description": "Our revolutionary platform uses artificial intelligence and cutting-edge learning methods to guarantee your absolute academic success!",
+        "features": {
+          "feature1": "Develop your skills with AI and global experts",
+          "feature2": "Access 50k+ interactive and exclusive resources",
+          "feature3": "Benefit from personalized 24/7 AI coaching"
+        },
+        "cta": "START THE TRANSFORMATION",
+        "trust": {
+          "guarantee": {
+            "label": "100% Guaranteed",
+            "desc": "Or refunded"
+          },
+          "security": {
+            "label": "Ultra Secure",
+            "desc": "Protected data"
+          },
+          "support": {
+            "label": "VIP Support",
+            "desc": "Premium assistance"
+          }
+        },
+        "videoPlaceholder": "Transformation in progress...",
+        "floatingStats": "Students transformed"
+      }
+    },
+    "blog": {
+      "badge": "Educational Blog",
+      "title": {
+        "line1": "We share our",
+        "line2": "Educational Ideas"
+      },
+      "subtitle": "You are not alone in your journey, we offer our support and guidance to succeed together",
+      "stats": {
+        "readers": "Readers",
+        "articles": "Articles",
+        "satisfaction": "Satisfaction"
+      },
+      "readMore": "Read more",
+      "viewAll": "View all articles"
+    },
+    "courses": {
+      "badge": "SchoolChat Training",
+      "title": {
+        "line1": "Discover Our Training",
+        "line2": "SchoolChat Pro"
+      },
+      "subtitle": "Master modern educational communication and optimize your children's school monitoring",
+      "stats": {
+        "students": "Students",
+        "courses": "Courses",
+        "satisfaction": "Satisfaction"
+      },
+      "courseDetails": {
+        "lessons": "lessons",
+        "duration": "Duration",
+        "level": "Level",
+        "instructor": "Expert Trainer",
+        "popular": "Popular",
+        "start": "Start"
+      },
+      "cta": {
+        "title": "Ready to transform your school communication?",
+        "subtitle": "Join over 1500 families who have revolutionized their school monitoring with SchoolChat",
+        "startFree": "Start for free",
+        "demo": "Request demo"
+      }
+    },
+    "instructor": {
+      "badge": "What is SchoolChat?",
+      "title": {
+        "line1": "The Revolution of",
+        "line2": "Educational Communication"
+      },
+      "subtitle": "Transform the school-family relationship with our innovative platform for modern and intuitive school communication",
+      "features": {
+        "communication": {
+          "title": "Instant Communication",
+          "desc": "Exchange in real time with teachers and track your children's progress",
+          "cta": "Start now"
+        },
+        "mobile": {
+          "title": "Mobile Application",
+          "desc": "Access all school information from your smartphone",
+          "cta": "Download the app"
+        }
+      },
+      "stats": {
+        "badge": "We Are Proud",
+        "title": "Results That Speak",
+        "subtitle": "Join thousands of families who have transformed their school communication with SchoolChat",
+        "families": "Connected Families",
+        "messages": "Messages Exchanged",
+        "schools": "Partner Schools",
+        "satisfaction": "Satisfaction Rate"
+      },
+      "cta": {
+        "title": "Ready to revolutionize your school communication?",
+        "subtitle": "Over 2800 families trust us. Join the educational revolution today!",
+        "startFree": "Start for free",
+        "demo": "Request a demo"
+      }
+    },
+    "functionalities": {
+      "badge": "Features",
+      "title": "Our Features",
+      "subtitle": "Discover the magical tools that will transform your educational experience",
+      "features": {
+        "textbook": {
+          "title": "Textbook",
+          "desc": "Organize and easily access course notes and content for each subject."
+        },
+        "messaging": {
+          "title": "Messaging",
+          "desc": "Communicate easily with teachers and other students."
+        },
+        "homework": {
+          "title": "Homework",
+          "desc": "Track assigned homework and manage due dates efficiently."
+        },
+        "attendance": {
+          "title": "Attendance tracking",
+          "desc": "Keep a record of absences and track tardiness."
+        },
+        "goals": {
+          "title": "Academic goals",
+          "desc": "Define and track academic goals in a structured way."
+        },
+        "schedule": {
+          "title": "Planning & Schedule",
+          "desc": "Manage your schedule and plan your school activities."
+        }
+      },
+      "learnMore": "Learn more"
+    },
+    "accountActivation": {
+      "title": "Account Activation",
+      "loading": "Please wait while we verify your account...",
+      "success": {
+        "title": "Account activated successfully!",
+        "message": "Your account has been verified and activated.",
+        "redirect": "You will be redirected to the password page in {countdown} seconds...",
+        "setPassword": "Set password now"
+      },
+      "error": {
+        "title": "Activation Failed",
+        "regeneratePrompt": "Please enter your email address to regenerate the token",
+        "emailPlaceholder": "Enter your email",
+        "send": "Send",
+        "regenerateSuccess": "Token regenerated successfully. Redirecting...",
+        "regenerateError": "Failed to regenerate token",
+        "goToLogin": "Go to login",
+        "contactSupport": "Contact support"
+      },
+      "footer": {
+        "copyright": "All rights reserved.",
+        "terms": "Terms of Service",
+        "privacy": "Privacy Policy"
+      }
+    },
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "subtitle": "Enter your email address to reset your password",
+      "email": "Email Address",
+      "emailPlaceholder": "Enter your email address",
+      "send": "Send Reset Link",
+      "sending": "Sending...",
+      "backToLogin": "Back to Login",
+      "success": "A reset link has been sent to your email address",
+      "error": "An error occurred. Please try again."
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "subtitle": "Enter your new password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password",
+      "reset": "Reset Password",
+      "resetting": "Resetting...",
+      "success": "Password reset successfully",
+      "error": "An error occurred. Please try again.",
+      "passwordMismatch": "Passwords do not match"
+    },
+    "verifyEmail": {
+      "title": "Verify Your Email",
+      "message": "We've sent a verification link to your email address",
+      "checkInbox": "Check your inbox and click the link to activate your account",
+      "noEmail": "Didn't receive the email?",
+      "resend": "Resend",
+      "backToLogin": "Back to Login"
+    },
+    "passwordPage": {
+      "title": "Set Your Password",
+      "subtitle": "Create a secure password for your account",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "requirements": {
+        "title": "Password requirements:",
+        "length": "At least 8 characters",
+        "uppercase": "One uppercase letter",
+        "lowercase": "One lowercase letter",
+        "number": "One number",
+        "special": "One special character"
+      },
+      "create": "Create Password",
+      "creating": "Creating...",
+      "success": "Password created successfully",
+      "error": "An error occurred. Please try again."
+    }
+  }
+}

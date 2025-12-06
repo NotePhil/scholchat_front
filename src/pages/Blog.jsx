@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Calendar, ArrowRight } from "lucide-react";
+import { useTranslation } from "../hooks/useTranslation";
 
 // Educational blog data
 const educationalBlogPosts = [
@@ -117,6 +118,7 @@ const AnimatedCounter = ({ end, duration = 2000 }) => {
 };
 
 export const Blog = ({ theme = "default" }) => {
+  const { t } = useTranslation();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
@@ -315,16 +317,16 @@ export const Blog = ({ theme = "default" }) => {
             <span
               className={`${textColors.badge} font-semibold text-sm sm:text-lg`}
             >
-              📚 Blog Éducatif
+              📚 {t("pages.blog.badge")}
             </span>
             <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-pulse"></div>
           </div>
 
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400 bg-clip-text text-transparent drop-shadow-2xl">
-            Nous partageons nos
+            {t("pages.blog.title.line1")}
             <br className="hidden sm:block" />
             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Idées Éducatives
+              {t("pages.blog.title.line2")}
             </span>
           </h2>
 

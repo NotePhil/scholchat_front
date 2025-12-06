@@ -6,16 +6,19 @@ import { NavLink } from "react-router-dom";
 import { HiOutlineMenuAlt3, HiX } from "react-icons/hi";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
 import { FiGlobe, FiSun, FiMoon } from "react-icons/fi";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export const Header = ({ theme, setTheme }) => {
   const [open, setOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState("Nos produits");
-  const [language, setLanguage] = useState("Français");
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, language, changeLanguage } = useTranslation();
+
+  // Dynamic product selector label based on language
+  const [selectedProduct, setSelectedProduct] = useState(t("navigation.products"));
 
   // Routes existantes basées sur votre App.js
   const existingRoutes = [
@@ -31,6 +34,11 @@ export const Header = ({ theme, setTheme }) => {
     "/schoolchat/activity",
     "/schoolchat/single-blog",
   ];
+
+  // Update selected product label when language changes
+  useEffect(() => {
+    setSelectedProduct(t("navigation.products"));
+  }, [language, t]);
 
   // Handle scroll effect
   useEffect(() => {
@@ -73,9 +81,32 @@ export const Header = ({ theme, setTheme }) => {
         link.options.some((option) => option.url === location.pathname)
     );
     if (!isSelectOption) {
-      setSelectedProduct("Nos produits");
+      setSelectedProduct(t("navigation.products"));
     }
-  }, [location.pathname]);
+  }, [location.pathname, language, t]);
+
+  // Function to get translated navigation title
+  const getNavTitle = (linkTitle) => {
+    const titleMap = {
+      "accueil": t("navigation.home"),
+      "À propos": t("navigation.about"),
+      "Nos produits": t("navigation.products"),
+      "FAQ": t("navigation.faq")
+    };
+    return titleMap[linkTitle] || linkTitle;
+  };
+
+  // Function to get translated option title
+  const getOptionTitle = (optionTitle) => {
+    const optionMap = {
+      "Nos tarifs": t("navigation.pricing"),
+      "Crèches": t("navigation.nurseries"),
+      "écoles maternelles": t("navigation.kindergartens"),
+      "écoles primaires": t("navigation.primarySchools"),
+      "lycées": t("navigation.highSchools")
+    };
+    return optionMap[optionTitle] || optionTitle;
+  };
 
   // Close mobile menu when clicking outside
   useEffect(() => {
@@ -181,9 +212,9 @@ export const Header = ({ theme, setTheme }) => {
   const getThemeLabel = () => {
     switch (theme) {
       case "dark":
-        return "Sombre";
+        return language === "fr" ? "Sombre" : "Dark";
       case "light":
-        return "Clair";
+        return language === "fr" ? "Clair" : "Light";
       default:
         return "Auto";
     }
@@ -228,7 +259,7 @@ export const Header = ({ theme, setTheme }) => {
                       <option value="">{selectedProduct}</option>
                       {link.options.map((option) => (
                         <option key={option.id} value={option.url}>
-                          {option.title}
+                          {getOptionTitle(option.title)}
                         </option>
                       ))}
                     </select>
@@ -258,7 +289,7 @@ export const Header = ({ theme, setTheme }) => {
                   >
                     {({ isActive }) => (
                       <>
-                        {link.title}
+                        {getNavTitle(link.title)}
                         {isActive && (
                           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
                         )}
@@ -303,19 +334,22 @@ export const Header = ({ theme, setTheme }) => {
                     {[
                       {
                         key: "default",
-                        label: "Auto",
+                        labelFr: "Auto",
+                        labelEn: "Auto",
                         icon: (
                           <div className="w-4 h-4 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-full"></div>
                         ),
                       },
                       {
                         key: "light",
-                        label: "Clair",
+                        labelFr: "Clair",
+                        labelEn: "Light",
                         icon: <FiSun className="w-4 h-4" />,
                       },
                       {
                         key: "dark",
-                        label: "Sombre",
+                        labelFr: "Sombre",
+                        labelEn: "Dark",
                         icon: <FiMoon className="w-4 h-4" />,
                       },
                     ].map((themeOption) => (
@@ -330,7 +364,9 @@ export const Header = ({ theme, setTheme }) => {
                         <div className="mr-2 sm:mr-3 transition-transform duration-200 hover:rotate-12">
                           {themeOption.icon}
                         </div>
-                        {themeOption.label}
+                        {language === "fr"
+                          ? themeOption.labelFr
+                          : themeOption.labelEn}
                       </button>
                     ))}
                   </div>
@@ -348,7 +384,7 @@ export const Header = ({ theme, setTheme }) => {
                   <div className="relative overflow-hidden rounded-sm group-hover:scale-110 transition-transform duration-300">
                     <img
                       src={
-                        language === "Français"
+                        language === "fr"
                           ? require("../assets/images/fr.jpeg")
                           : require("../assets/images/en.jpeg")
                       }
@@ -359,12 +395,12 @@ export const Header = ({ theme, setTheme }) => {
                   <span
                     className={`text-xs sm:text-sm font-medium ${themeClasses.text} hidden md:block`}
                   >
-                    {language}
+                    {language === "fr" ? "Français" : "English"}
                   </span>
                   <span
                     className={`text-xs font-medium ${themeClasses.text} md:hidden`}
                   >
-                    {language === "Français" ? "FR" : "EN"}
+                    {language === "fr" ? "FR" : "EN"}
                   </span>
                   {isLanguageDropdownOpen ? (
                     <IoIosArrowUp
@@ -382,14 +418,14 @@ export const Header = ({ theme, setTheme }) => {
                     className={`absolute top-12 sm:top-14 right-0 ${themeClasses.dropdown} rounded-xl sm:rounded-2xl shadow-2xl border overflow-hidden z-50 min-w-[140px] sm:min-w-[160px] animate-in slide-in-from-top-2 duration-300`}
                   >
                     {[
-                      { key: "Français", flag: "fr.jpeg", label: "Français" },
-                      { key: "English", flag: "en.jpeg", label: "English" },
+                      { key: "fr", flag: "fr.jpeg", label: "Français" },
+                      { key: "en", flag: "en.jpeg", label: "English" },
                     ].map((lang) => (
                       <button
                         key={lang.key}
                         className={`flex items-center w-full px-3 sm:px-4 py-2.5 sm:py-3 ${themeClasses.dropdownItem} text-xs sm:text-sm font-medium transition-all duration-200 ${themeClasses.text} hover:scale-105 active:scale-95`}
                         onClick={() => {
-                          setLanguage(lang.key);
+                          changeLanguage(lang.key);
                           setIsLanguageDropdownOpen(false);
                         }}
                       >
@@ -417,7 +453,7 @@ export const Header = ({ theme, setTheme }) => {
                       : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
                   }`}
                 >
-                  Connexion
+                  {t("auth.login.signIn")}
                 </button>
                 <button
                   onClick={() => navigate("/schoolchat/signup")}
@@ -427,7 +463,7 @@ export const Header = ({ theme, setTheme }) => {
                       : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
                   }`}
                 >
-                  Inscription
+                  {t("auth.login.signUp")}
                 </button>
               </div>
 
@@ -476,7 +512,7 @@ export const Header = ({ theme, setTheme }) => {
                       <option value="">{selectedProduct}</option>
                       {link.options.map((option) => (
                         <option key={option.id} value={option.url}>
-                          {option.title}
+                          {getOptionTitle(option.title)}
                         </option>
                       ))}
                     </select>
@@ -507,7 +543,7 @@ export const Header = ({ theme, setTheme }) => {
                         }
                       }}
                     >
-                      {link.title}
+                      {getNavTitle(link.title)}
                     </NavLink>
                   </div>
                 )
@@ -530,7 +566,7 @@ export const Header = ({ theme, setTheme }) => {
                       : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
                   }`}
                 >
-                  Connexion
+                  {t("auth.login.signIn")}
                 </button>
                 <button
                   onClick={() => {
@@ -543,7 +579,7 @@ export const Header = ({ theme, setTheme }) => {
                       : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
                   }`}
                 >
-                  Inscription
+                  {t("auth.login.signUp")}
                 </button>
               </div>
             </div>

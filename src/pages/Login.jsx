@@ -4,6 +4,7 @@ import { useReturnToPage } from "../hooks/useReturnToPage";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../store/slices/authSlice";
 import { encryptPassword } from "../utils/crypto";
+import { useTranslation } from "../hooks/useTranslation";
 import "../CSS/Login.css";
 
 const decodeJWT = (token) => {
@@ -34,6 +35,7 @@ export const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { navigateToStoredPage } = useReturnToPage();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -57,15 +59,15 @@ export const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Prevent multiple submissions
     if (loading) return;
-    
+
     setLoading(true);
     setError("");
-    
+
     // Add small delay to prevent UI blocking
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     try {
       const response = await fetch(
@@ -84,7 +86,9 @@ export const Login = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Échec de l'authentification");
+        throw new Error(
+          errorData.message || t("auth.errors.authenticationFailed")
+        );
       }
 
       const authData = await response.json();
@@ -92,23 +96,23 @@ export const Login = () => {
       const refreshToken = authData.refreshToken;
 
       if (!accessToken) {
-        throw new Error("Token d'accès manquant dans la réponse");
+        throw new Error(t("auth.errors.missingToken"));
       }
 
       // Store returnToPage before clearing localStorage
-      const returnToPage = localStorage.getItem('returnToPage');
-      
+      const returnToPage = localStorage.getItem("returnToPage");
+
       // Clear localStorage
       localStorage.clear();
-      
+
       // Restore returnToPage
       if (returnToPage) {
-        localStorage.setItem('returnToPage', returnToPage);
+        localStorage.setItem("returnToPage", returnToPage);
       }
 
       const decodedToken = decodeJWT(accessToken);
       if (!decodedToken) {
-        throw new Error("Token invalide");
+        throw new Error(t("auth.errors.invalidToken"));
       }
 
       console.log("Decoded Token:", decodedToken);
@@ -121,11 +125,11 @@ export const Login = () => {
         authData.username || decodedToken.username || userEmail.split("@")[0];
 
       if (!userId) {
-        throw new Error("Erreur d'authentification: ID utilisateur manquant");
+        throw new Error(t("auth.errors.missingUserId"));
       }
 
       if (userId.includes("@")) {
-        throw new Error("Erreur d'authentification: ID utilisateur invalide");
+        throw new Error(t("auth.errors.invalidUserId"));
       }
 
       // Extract roles from token - roles come as array from backend
@@ -207,13 +211,14 @@ export const Login = () => {
       }
 
       // Use hook to navigate to stored page or default
-      const navigatedToStoredPage = navigateToStoredPage(primaryRole, dashboardPath);
+      const navigatedToStoredPage = navigateToStoredPage(
+        primaryRole,
+        dashboardPath
+      );
       console.log("Navigated to stored page:", navigatedToStoredPage);
     } catch (err) {
       console.error("Login error:", err);
-      setError(
-        err.message || "Identifiants invalides. Veuillez vérifier et réessayer."
-      );
+      setError(err.message || t("auth.errors.invalidCredentials"));
 
       // Clear storage on error
       localStorage.removeItem("accessToken");
@@ -260,14 +265,14 @@ export const Login = () => {
   return (
     <div className="login-page">
       <div className="login-container">
-        <h2 className="login-title">Bienvenue</h2>
+        <h2 className="login-title">{t("auth.login.title")}</h2>
         <p className="login-subtitle">
-          Connectez-vous à votre compte ou{" "}
+          {t("auth.login.subtitle")}{" "}
           <span
             className="create-account"
             onClick={() => navigate("/schoolchat/signup")}
           >
-            créez un compte
+            {t("auth.login.createAccount")}
           </span>
         </p>
 
@@ -281,7 +286,7 @@ export const Login = () => {
 
             <div className="input-group">
               <label htmlFor="email" className="login-label">
-                Adresse e-mail
+                {t("auth.login.email")}
               </label>
               <input
                 type="email"
@@ -289,7 +294,7 @@ export const Login = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Entrez votre adresse e-mail"
+                placeholder={t("auth.login.emailPlaceholder")}
                 className="login-input"
                 required
               />
@@ -297,7 +302,7 @@ export const Login = () => {
 
             <div className="input-group password-group">
               <label htmlFor="password" className="login-label">
-                Mot de passe
+                {t("auth.login.password")}
               </label>
               <div className="password-input-container">
                 <input
@@ -306,7 +311,7 @@ export const Login = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Entrez votre mot de passe"
+                  placeholder={t("auth.login.passwordPlaceholder")}
                   className="login-input"
                   required
                 />
@@ -315,70 +320,73 @@ export const Login = () => {
                   className="password-toggle"
                   onClick={togglePasswordVisibility}
                 >
-                  {showPassword ? "Masquer" : "Afficher"}
+                  {showPassword
+                    ? t("auth.login.hidePassword")
+                    : t("auth.login.showPassword")}
                 </button>
               </div>
             </div>
 
             <div className="flex-container">
               <a href="/schoolchat/forgot-password" className="forgot-password">
-                Mot de passe oublié ?
+                {t("auth.login.forgotPassword")}
               </a>
             </div>
 
-            <button 
-              type="submit" 
-              className={`login-button ${loading ? 'loading' : ''}`} 
+            <button
+              type="submit"
+              className={`login-button ${loading ? "loading" : ""}`}
               disabled={loading}
               style={{
-                minHeight: '48px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                fontSize: '16px',
-                fontWeight: '600',
-                transition: 'all 0.2s ease',
-                opacity: loading ? '0.8' : '1',
-                cursor: loading ? 'not-allowed' : 'pointer'
+                minHeight: "48px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                fontSize: "16px",
+                fontWeight: "600",
+                transition: "all 0.2s ease",
+                opacity: loading ? "0.8" : "1",
+                cursor: loading ? "not-allowed" : "pointer",
               }}
             >
               {loading ? (
                 <>
-                  <svg 
-                    className="animate-spin" 
-                    style={{ width: '20px', height: '20px' }}
-                    xmlns="http://www.w3.org/2000/svg" 
-                    fill="none" 
+                  <svg
+                    className="animate-spin"
+                    style={{ width: "20px", height: "20px" }}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
                     viewBox="0 0 24 24"
                   >
-                    <circle 
-                      className="opacity-25" 
-                      cx="12" 
-                      cy="12" 
-                      r="10" 
-                      stroke="currentColor" 
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
                       strokeWidth="4"
                     />
-                    <path 
-                      className="opacity-75" 
-                      fill="currentColor" 
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  <span>Connexion...</span>
+                  <span>{t("auth.login.signingIn")}</span>
                 </>
               ) : (
-                "Se connecter"
+                t("auth.login.signIn")
               )}
             </button>
           </form>
 
           <div className="login-footer">
             <p>
-              En vous connectant, vous acceptez nos{" "}
-              <a href="/terms">Conditions d'utilisation</a> et notre{" "}
-              <a href="/privacy">Politique de confidentialité</a>
+              {t("auth.login.termsPrefix")}{" "}
+              <a href="/terms">{t("auth.login.termsLink")}</a>{" "}
+              {t("auth.login.termsAnd")}{" "}
+              <a href="/privacy">{t("auth.login.privacyLink")}</a>
             </p>
           </div>
         </div>
