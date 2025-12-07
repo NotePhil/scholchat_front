@@ -296,31 +296,7 @@ export const About = ({ theme = "default" }) => {
                       : "text-gray-200"
                   }`}
                 >
-                  🌟 Rejoignez la{" "}
-                  <span
-                    className={`font-bold ${
-                      theme === "dark"
-                        ? "text-cyan-400"
-                        : theme === "light"
-                        ? "text-blue-600"
-                        : "text-cyan-400"
-                    }`}
-                  >
-                    révolution éducative
-                  </span>{" "}
-                  qui transforme des milliers d'étudiants en{" "}
-                  <span
-                    className={`font-bold ${
-                      theme === "dark"
-                        ? "text-purple-400"
-                        : theme === "light"
-                        ? "text-purple-600"
-                        : "text-purple-400"
-                    }`}
-                  >
-                    leaders de demain
-                  </span>{" "}
-                  🚀
+                  🌟 {t("pages.about.subtitle")} 🚀
                 </p>
               </div>
 
@@ -574,6 +550,7 @@ export const About = ({ theme = "default" }) => {
 };
 
 export const AboutContent = ({ theme }) => {
+  const { t } = useTranslation();
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const contentRef = useRef(null);
@@ -795,7 +772,7 @@ export const AboutContent = ({ theme }) => {
                             : "text-white"
                         }`}
                       >
-                        Transformation en cours...
+                        {t("pages.about.content.videoPlaceholder")}
                       </span>
                     </div>
                   </div>
@@ -846,7 +823,7 @@ export const AboutContent = ({ theme }) => {
                         : "text-gray-300"
                     }`}
                   >
-                    Étudiants transformés
+                    {t("pages.about.content.stats.students")}
                   </div>
                 </div>
               </div>
@@ -923,7 +900,7 @@ export const AboutContent = ({ theme }) => {
                       : "text-white"
                   }`}
                 >
-                  Révolution Éducative
+                  {t("pages.about.content.badge")}
                 </span>
                 <FaRocket
                   className={`text-cyan-400 animate-bounce`}
@@ -937,14 +914,14 @@ export const AboutContent = ({ theme }) => {
                     theme === "light" ? "text-shadow-sm" : ""
                   }`}
                 >
-                  TRANSFORMEZ
+                  {t("pages.about.content.title.line1")}
                 </span>
                 <span
                   className={`block bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent drop-shadow-xl hover:scale-105 transition-transform duration-500 ${
                     theme === "light" ? "text-shadow-sm" : ""
                   }`}
                 >
-                  VOTRE AVENIR
+                  {t("pages.about.content.title.line2")}
                 </span>
               </h2>
 
@@ -957,43 +934,7 @@ export const AboutContent = ({ theme }) => {
                     : "text-gray-200"
                 }`}
               >
-                🎯 Notre plateforme révolutionnaire utilise l'
-                <span
-                  className={`font-bold ${
-                    theme === "dark"
-                      ? "text-cyan-400"
-                      : theme === "light"
-                      ? "text-blue-600"
-                      : "text-cyan-400"
-                  }`}
-                >
-                  intelligence artificielle
-                </span>{" "}
-                et des{" "}
-                <span
-                  className={`font-bold ${
-                    theme === "dark"
-                      ? "text-purple-400"
-                      : theme === "light"
-                      ? "text-purple-600"
-                      : "text-purple-400"
-                  }`}
-                >
-                  méthodes d'apprentissage
-                </span>{" "}
-                de pointe pour garantir votre{" "}
-                <span
-                  className={`font-bold ${
-                    theme === "dark"
-                      ? "text-emerald-400"
-                      : theme === "light"
-                      ? "text-emerald-600"
-                      : "text-emerald-400"
-                  }`}
-                >
-                  succès académique absolu
-                </span>{" "}
-                ! ⚡
+                {t("pages.about.content.description")}
               </p>
             </div>
 
@@ -1001,15 +942,15 @@ export const AboutContent = ({ theme }) => {
             <div className="space-y-3 md:space-y-6">
               {[
                 {
-                  text: "🚀 Développez vos compétences avec l'IA et des experts mondiaux",
+                  text: `🚀 ${t("pages.about.content.features.feature1")}`,
                   gradient: "from-cyan-400 to-blue-500",
                 },
                 {
-                  text: "⚡ Accédez à 50k+ ressources interactives et exclusives",
+                  text: `⚡ ${t("pages.about.content.features.feature2")}`,
                   gradient: "from-purple-400 to-pink-500",
                 },
                 {
-                  text: "🎯 Bénéficiez d'un coaching personnalisé 24/7 par IA",
+                  text: `🎯 ${t("pages.about.content.features.feature3")}`,
                   gradient: "from-emerald-400 to-cyan-500",
                 },
               ].map((feature, index) => (
@@ -1060,7 +1001,7 @@ export const AboutContent = ({ theme }) => {
                 <span className="relative flex items-center gap-2 md:gap-4">
                   <FaRocket className="text-sm md:text-2xl group-hover:rotate-12 transition-transform duration-300" />
                   <span className="text-xs md:text-base">
-                    COMMENCER LA TRANSFORMATION
+                    {t("pages.about.content.cta")}
                   </span>
                   <FaArrowRight className="group-hover:translate-x-2 group-hover:scale-125 transition-all duration-300" />
                 </span>
@@ -1081,16 +1022,16 @@ export const AboutContent = ({ theme }) => {
             {/* Enhanced Trust Indicators */}
             <div className="pt-6 md:pt-10 grid grid-cols-3 gap-2 md:gap-6">
               {[
-                { icon: "🏆", label: "100% Garanti", desc: "Ou remboursé" },
+                { icon: "🏆", labelKey: "pages.about.content.trust.guarantee.label", descKey: "pages.about.content.trust.guarantee.desc" },
                 {
                   icon: "🔒",
-                  label: "Ultra Sécurisé",
-                  desc: "Données protégées",
+                  labelKey: "pages.about.content.trust.secure.label",
+                  descKey: "pages.about.content.trust.secure.desc",
                 },
                 {
                   icon: "🌟",
-                  label: "Support VIP",
-                  desc: "Assistance premium",
+                  labelKey: "pages.about.content.trust.support.label",
+                  descKey: "pages.about.content.trust.support.desc",
                 },
               ].map((item, i) => (
                 <div
@@ -1109,7 +1050,7 @@ export const AboutContent = ({ theme }) => {
                         : "text-white"
                     }`}
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                   </div>
                   <div
                     className={`text-xs ${
@@ -1120,7 +1061,7 @@ export const AboutContent = ({ theme }) => {
                         : "text-gray-400"
                     }`}
                   >
-                    {item.desc}
+                    {t(item.descKey)}
                   </div>
                 </div>
               ))}

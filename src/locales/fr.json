@@ -286,33 +286,137 @@
         "satisfaction": "Satisfaction"
       },
       "readMore": "Lire plus",
-      "viewAll": "Voir tous les articles"
+      "viewAll": "📖 Voir tous les articles",
+      "posts": {
+        "post1": {
+          "title": "L'excellence éducative : Entre tradition et innovation",
+          "category": "Éducation",
+          "author": "Aminata Diallo",
+          "date": "15 Nov 2024",
+          "excerpt": "Découvrez comment l'éducation moderne évolue avec les changements technologiques"
+        },
+        "post2": {
+          "title": "Méthodes pédagogiques innovantes dans les écoles modernes",
+          "category": "Innovation",
+          "author": "Kwame Nkrumah",
+          "date": "28 Oct 2024",
+          "excerpt": "Nouvelles méthodologies qui transforment les expériences éducatives"
+        },
+        "post3": {
+          "title": "Construire des communautés éducatives solides",
+          "category": "Communauté",
+          "author": "Fatoumata Bâ",
+          "date": "10 Oct 2024",
+          "excerpt": "Comment les environnements collaboratifs améliorent la réussite des élèves"
+        },
+        "post4": {
+          "title": "L'impact des technologies numériques sur l'apprentissage",
+          "category": "Technologie",
+          "author": "Jean Koffi",
+          "date": "5 Oct 2024",
+          "excerpt": "Exploration des outils numériques qui révolutionnent l'enseignement"
+        },
+        "post5": {
+          "title": "Stratégies pour engager les parents dans l'éducation",
+          "category": "Engagement",
+          "author": "Sophie Laurent",
+          "date": "22 Sep 2024",
+          "excerpt": "Techniques pour améliorer la participation des parents dans le parcours scolaire"
+        },
+        "post6": {
+          "title": "Évaluation des compétences au 21ème siècle",
+          "category": "Pédagogie",
+          "author": "Thomas Bernard",
+          "date": "14 Sep 2024",
+          "excerpt": "Nouvelles approches pour évaluer les compétences des élèves aujourd'hui"
+        }
+      }
     },
     "courses": {
-      "badge": "Formations SchoolChat",
+      "badge": "📚 Formations SchoolChat",
       "title": {
         "line1": "Découvrez Nos Formations",
         "line2": "SchoolChat Pro"
       },
-      "subtitle": "Maîtrisez la communication éducative moderne et optimisez le suivi scolaire de vos enfants",
+      "subtitle": "🚀 Maîtrisez la communication éducative moderne et optimisez le suivi scolaire de vos enfants ✨",
       "stats": {
         "students": "Étudiants",
         "courses": "Cours",
         "satisfaction": "Satisfaction"
       },
-      "courseDetails": {
+      "card": {
         "lessons": "leçons",
-        "duration": "Durée",
-        "level": "Niveau",
         "instructor": "Formateur Expert",
-        "popular": "Populaire",
-        "start": "Commencer"
+        "cta": "Commencer"
+      },
+      "badgePopular": "Populaire",
+      "courses": {
+        "course1": {
+          "title": "Communication Parents-École Moderne",
+          "description": "Maîtrisez les outils de communication numérique pour un suivi optimal",
+          "category": "Communication",
+          "subcategory": "Digital",
+          "instructor": "Marie Dubois",
+          "price": "Gratuit",
+          "duration": "3 semaines",
+          "level": "Débutant"
+        },
+        "course2": {
+          "title": "Suivi Scolaire Numérique",
+          "description": "Optimisez le suivi des résultats et progrès de vos enfants",
+          "category": "Suivi",
+          "subcategory": "Éducatif",
+          "instructor": "Pierre Martin",
+          "price": "29€",
+          "duration": "4 semaines",
+          "level": "Intermédiaire"
+        },
+        "course3": {
+          "title": "Gestion des Notifications Intelligentes",
+          "description": "Restez informé sans être submergé par les alertes",
+          "category": "Gestion",
+          "subcategory": "Productivité",
+          "instructor": "Sophie Laurent",
+          "price": "Gratuit",
+          "duration": "2 semaines",
+          "level": "Tous niveaux"
+        },
+        "course4": {
+          "title": "Application Mobile SchoolChat",
+          "description": "Maîtrisez toutes les fonctionnalités de l'app mobile",
+          "category": "Mobile",
+          "subcategory": "Application",
+          "instructor": "Lucas Moreau",
+          "price": "19€",
+          "duration": "2 semaines",
+          "level": "Débutant"
+        },
+        "course5": {
+          "title": "Collaboration Parents-Enseignants",
+          "description": "Créez un environnement collaboratif pour la réussite",
+          "category": "Collaboration",
+          "subcategory": "Pédagogie",
+          "instructor": "Anne Rousseau",
+          "price": "39€",
+          "duration": "5 semaines",
+          "level": "Avancé"
+        },
+        "course6": {
+          "title": "Tableaux de Bord et Analyses",
+          "description": "Exploitez les données pour un meilleur accompagnement",
+          "category": "Analyse",
+          "subcategory": "Données",
+          "instructor": "Thomas Bernard",
+          "price": "49€",
+          "duration": "3 semaines",
+          "level": "Intermédiaire"
+        }
       },
       "cta": {
         "title": "Prêt à transformer votre communication scolaire ?",
         "subtitle": "Rejoignez plus de 1500 familles qui ont révolutionné leur suivi scolaire avec SchoolChat",
-        "startFree": "Commencer gratuitement",
-        "demo": "Démonstration"
+        "button1": "🚀 Commencer gratuitement",
+        "button2": "📞 Démonstration"
       }
     },
     "instructor": {
@@ -454,6 +558,35 @@
       "creating": "Création en cours...",
       "success": "Mot de passe créé avec succès",
       "error": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "signup": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Email"
     }
+  },
+  "footer": {
+    "about": {
+      "description": "Plateforme éducative connectant étudiants, enseignants et parents."
+    },
+    "contact": {
+      "title": "Contact",
+      "contactUs": "Nous Contacter",
+      "support": "Support",
+      "helpCenter": "Centre d'Aide"
+    },
+    "legal": {
+      "title": "Légal",
+      "privacy": "Confidentialité",
+      "terms": "Conditions",
+      "legalNotice": "Mentions Légales"
+    },
+    "resources": {
+      "title": "Ressources",
+      "userGuide": "Guide Utilisateur",
+      "blog": "Blog",
+      "faq": "FAQ"
+    },
+    "copyright": "Tous droits réservés."
   }
 }

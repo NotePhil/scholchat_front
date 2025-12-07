@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa";
 import { GiEvilBook, GiWorld } from "react-icons/gi";
 import { AiOutlineCheck } from "react-icons/ai";
+import { useTranslation } from "../hooks/useTranslation";
 
 const AnimatedCounter = ({ end, duration = 2000, suffix = "" }) => {
   const [count, setCount] = useState(0);
@@ -200,6 +201,7 @@ export const InstructorCard = ({
 };
 
 export const Instructor = ({ theme = "default" }) => {
+  const { t } = useTranslation();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
@@ -264,28 +266,28 @@ export const Instructor = ({ theme = "default" }) => {
     {
       icon: <FaUsers />,
       title: 2840,
-      desc: "Familles Connectées",
+      desc: t("pages.instructor.stats.families"),
       gradient: "from-blue-500 to-cyan-500",
       delay: 0,
     },
     {
       icon: <FaComments />,
       title: 15600,
-      desc: "Messages Échangés",
+      desc: t("pages.instructor.stats.messages"),
       gradient: "from-purple-500 to-pink-500",
       delay: 100,
     },
     {
       icon: <FaGraduationCap />,
       title: 450,
-      desc: "Établissements Partenaires",
+      desc: t("pages.instructor.stats.schools"),
       gradient: "from-emerald-500 to-teal-500",
       delay: 200,
     },
     {
       icon: <FaMobile />,
       title: 98,
-      desc: "Taux de Satisfaction",
+      desc: t("pages.instructor.stats.satisfaction"),
       gradient: "from-orange-500 to-red-500",
       delay: 300,
     },
@@ -378,7 +380,7 @@ export const Instructor = ({ theme = "default" }) => {
                 theme === "light" ? "text-gray-800" : "text-white"
               }`}
             >
-              🎯 Qu'est-ce que SchoolChat ?
+              🎯 {t("pages.instructor.badge")}
             </span>
             <div
               className={`w-3 h-3 rounded-full animate-pulse ${
@@ -394,10 +396,10 @@ export const Instructor = ({ theme = "default" }) => {
               theme === "light" ? "text-shadow-sm" : ""
             }`}
           >
-            La Révolution de la
+            {t("pages.instructor.title.line1")}
             <br />
             <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
-              Communication Éducative
+              {t("pages.instructor.title.line2")}
             </span>
           </h1>
 
@@ -406,8 +408,7 @@ export const Instructor = ({ theme = "default" }) => {
               theme === "light" ? "text-gray-700" : "text-gray-200"
             }`}
           >
-            🚀 Transformez la relation école-famille avec notre plateforme
-            innovante de communication scolaire moderne et intuitive ✨
+            🚀 {t("pages.instructor.subtitle")} ✨
           </p>
         </div>
 
@@ -466,7 +467,7 @@ export const Instructor = ({ theme = "default" }) => {
                     theme === "light" ? "text-white" : "text-white"
                   }`}
                 >
-                  Communication Instantanée
+                  {t("pages.instructor.features.communication.title")}
                 </h2>
 
                 <p
@@ -474,15 +475,14 @@ export const Instructor = ({ theme = "default" }) => {
                     theme === "light" ? "text-gray-200" : "text-gray-200"
                   }`}
                 >
-                  Échangez en temps réel avec les enseignants et suivez les
-                  progrès de vos enfants
+                  {t("pages.instructor.features.communication.desc")}
                 </p>
 
                 <button
                   className={`group/btn bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 md:px-6 md:py-3 rounded-xl font-semibold hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300`}
                 >
                   <span className="flex items-center gap-2 text-sm md:text-base">
-                    🚀 Commencer maintenant
+                    🚀 {t("pages.instructor.features.communication.cta")}
                   </span>
                 </button>
               </div>
@@ -549,7 +549,7 @@ export const Instructor = ({ theme = "default" }) => {
                     theme === "light" ? "text-white" : "text-white"
                   }`}
                 >
-                  Application Mobile
+                  {t("pages.instructor.features.mobile.title")}
                 </h2>
 
                 <p
@@ -557,15 +557,14 @@ export const Instructor = ({ theme = "default" }) => {
                     theme === "light" ? "text-gray-200" : "text-gray-200"
                   }`}
                 >
-                  Accédez à toutes les informations scolaires depuis votre
-                  smartphone
+                  {t("pages.instructor.features.mobile.desc")}
                 </p>
 
                 <button
                   className={`group/btn bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 md:px-6 md:py-3 rounded-xl font-semibold hover:scale-105 hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-300`}
                 >
                   <span className="flex items-center gap-2 text-sm md:text-base">
-                    📱 Télécharger l'app
+                    📱 {t("pages.instructor.features.mobile.cta")}
                   </span>
                 </button>
               </div>
@@ -607,7 +606,7 @@ export const Instructor = ({ theme = "default" }) => {
                   theme === "light" ? "text-gray-800" : "text-white"
                 }`}
               >
-                📊 Nous Sommes Fiers
+                📊 {t("pages.instructor.stats.badge")}
               </span>
               <div
                 className={`w-3 h-3 rounded-full animate-pulse ${
@@ -623,7 +622,7 @@ export const Instructor = ({ theme = "default" }) => {
                 theme === "light" ? "text-shadow-sm" : ""
               }`}
             >
-              Des Résultats qui Parlent
+              {t("pages.instructor.stats.title")}
             </h2>
 
             <p
@@ -631,8 +630,7 @@ export const Instructor = ({ theme = "default" }) => {
                 theme === "light" ? "text-gray-700" : "text-gray-200"
               }`}
             >
-              ✨ Rejoignez des milliers de familles qui ont transformé leur
-              communication scolaire avec SchoolChat 🎯
+              ✨ {t("pages.instructor.stats.subtitle")} 🎯
             </p>
           </div>
 
@@ -674,7 +672,7 @@ export const Instructor = ({ theme = "default" }) => {
                   theme === "light" ? "text-shadow-sm" : ""
                 }`}
               >
-                Prêt à révolutionner votre communication scolaire ?
+                {t("pages.instructor.cta.title")}
               </h3>
               <div
                 className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg animate-bounce"
@@ -689,8 +687,7 @@ export const Instructor = ({ theme = "default" }) => {
                 theme === "light" ? "text-gray-600" : "text-gray-300"
               }`}
             >
-              Plus de 2800 familles nous font confiance. Rejoignez la révolution
-              éducative dès aujourd'hui !
+              {t("pages.instructor.cta.subtitle")}
             </p>
 
             <div className="flex flex-wrap justify-center gap-3 md:gap-4">
@@ -699,7 +696,7 @@ export const Instructor = ({ theme = "default" }) => {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                 <span className="relative flex items-center gap-2 md:gap-3">
-                  🌟 Commencer gratuitement
+                  🌟 {t("pages.instructor.cta.startFree")}
                 </span>
               </button>
 
@@ -712,7 +709,7 @@ export const Instructor = ({ theme = "default" }) => {
                   theme === "light" ? "text-gray-800" : "text-white"
                 }`}
               >
-                📞 Demander une démo
+                📞 {t("pages.instructor.cta.demo")}
               </button>
             </div>
           </div>

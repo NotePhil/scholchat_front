@@ -236,6 +236,10 @@ const Sidebar = ({
   };
 
   const confirmLogout = () => {
+    // Save current page before logout
+    const currentPath = window.location.pathname;
+    localStorage.setItem("returnToPage", currentPath);
+
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("authToken");

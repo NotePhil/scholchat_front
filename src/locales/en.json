@@ -70,7 +70,11 @@
       "passwordPlaceholder": "Enter your password",
       "showPassword": "Show",
       "hidePassword": "Hide",
-      "signUp": "Sign Up"
+      "signUp": "Sign Up",
+      "termsPrefix": "By signing in, you agree to our",
+      "termsLink": "Terms of Service",
+      "termsAnd": "and",
+      "privacyLink": "Privacy Policy"
     },
     "errors": {
       "invalidCredentials": "Invalid credentials. Please check and try again.",
@@ -282,33 +286,137 @@
         "satisfaction": "Satisfaction"
       },
       "readMore": "Read more",
-      "viewAll": "View all articles"
+      "viewAll": "📖 View all articles",
+      "posts": {
+        "post1": {
+          "title": "Educational Excellence: Between Tradition and Innovation",
+          "category": "Education",
+          "author": "Aminata Diallo",
+          "date": "Nov 15, 2024",
+          "excerpt": "Discover how modern education evolves with technological changes"
+        },
+        "post2": {
+          "title": "Innovative Teaching Methods in Modern Schools",
+          "category": "Innovation",
+          "author": "Kwame Nkrumah",
+          "date": "Oct 28, 2024",
+          "excerpt": "New methodologies transforming educational experiences"
+        },
+        "post3": {
+          "title": "Building Strong Educational Communities",
+          "category": "Community",
+          "author": "Fatoumata Bâ",
+          "date": "Oct 10, 2024",
+          "excerpt": "How collaborative environments improve student success"
+        },
+        "post4": {
+          "title": "The Impact of Digital Technologies on Learning",
+          "category": "Technology",
+          "author": "Jean Koffi",
+          "date": "Oct 5, 2024",
+          "excerpt": "Exploring digital tools revolutionizing teaching"
+        },
+        "post5": {
+          "title": "Strategies to Engage Parents in Education",
+          "category": "Engagement",
+          "author": "Sophie Laurent",
+          "date": "Sep 22, 2024",
+          "excerpt": "Techniques to improve parental participation in the academic journey"
+        },
+        "post6": {
+          "title": "Assessing 21st Century Skills",
+          "category": "Pedagogy",
+          "author": "Thomas Bernard",
+          "date": "Sep 14, 2024",
+          "excerpt": "New approaches to evaluate student skills today"
+        }
+      }
     },
     "courses": {
-      "badge": "SchoolChat Training",
+      "badge": "📚 SchoolChat Training",
       "title": {
         "line1": "Discover Our Training",
         "line2": "SchoolChat Pro"
       },
-      "subtitle": "Master modern educational communication and optimize your children's school monitoring",
+      "subtitle": "🚀 Master modern educational communication and optimize your children's school monitoring ✨",
       "stats": {
         "students": "Students",
         "courses": "Courses",
         "satisfaction": "Satisfaction"
       },
-      "courseDetails": {
+      "card": {
         "lessons": "lessons",
-        "duration": "Duration",
-        "level": "Level",
         "instructor": "Expert Trainer",
-        "popular": "Popular",
-        "start": "Start"
+        "cta": "Start"
+      },
+      "badgePopular": "Popular",
+      "courses": {
+        "course1": {
+          "title": "Modern Parent-School Communication",
+          "description": "Master digital communication tools for optimal monitoring",
+          "category": "Communication",
+          "subcategory": "Digital",
+          "instructor": "Marie Dubois",
+          "price": "Free",
+          "duration": "3 weeks",
+          "level": "Beginner"
+        },
+        "course2": {
+          "title": "Digital School Monitoring",
+          "description": "Optimize tracking of your children's results and progress",
+          "category": "Monitoring",
+          "subcategory": "Educational",
+          "instructor": "Pierre Martin",
+          "price": "$29",
+          "duration": "4 weeks",
+          "level": "Intermediate"
+        },
+        "course3": {
+          "title": "Smart Notification Management",
+          "description": "Stay informed without being overwhelmed by alerts",
+          "category": "Management",
+          "subcategory": "Productivity",
+          "instructor": "Sophie Laurent",
+          "price": "Free",
+          "duration": "2 weeks",
+          "level": "All levels"
+        },
+        "course4": {
+          "title": "SchoolChat Mobile Application",
+          "description": "Master all the features of the mobile app",
+          "category": "Mobile",
+          "subcategory": "Application",
+          "instructor": "Lucas Moreau",
+          "price": "$19",
+          "duration": "2 weeks",
+          "level": "Beginner"
+        },
+        "course5": {
+          "title": "Parent-Teacher Collaboration",
+          "description": "Create a collaborative environment for success",
+          "category": "Collaboration",
+          "subcategory": "Pedagogy",
+          "instructor": "Anne Rousseau",
+          "price": "$39",
+          "duration": "5 weeks",
+          "level": "Advanced"
+        },
+        "course6": {
+          "title": "Dashboards and Analytics",
+          "description": "Leverage data for better support",
+          "category": "Analysis",
+          "subcategory": "Data",
+          "instructor": "Thomas Bernard",
+          "price": "$49",
+          "duration": "3 weeks",
+          "level": "Intermediate"
+        }
       },
       "cta": {
         "title": "Ready to transform your school communication?",
         "subtitle": "Join over 1500 families who have revolutionized their school monitoring with SchoolChat",
-        "startFree": "Start for free",
-        "demo": "Request demo"
+        "button1": "🚀 Start for free",
+        "button2": "📞 Request demo"
       }
     },
     "instructor": {
@@ -450,6 +558,35 @@
       "creating": "Creating...",
       "success": "Password created successfully",
       "error": "An error occurred. Please try again."
+    },
+    "signup": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email"
     }
+  },
+  "footer": {
+    "about": {
+      "description": "Educational platform connecting students, teachers and parents."
+    },
+    "contact": {
+      "title": "Contact",
+      "contactUs": "Contact Us",
+      "support": "Support",
+      "helpCenter": "Help Center"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "legalNotice": "Legal Notice"
+    },
+    "resources": {
+      "title": "Resources",
+      "userGuide": "User Guide",
+      "blog": "Blog",
+      "faq": "FAQ"
+    },
+    "copyright": "All rights reserved."
   }
 }

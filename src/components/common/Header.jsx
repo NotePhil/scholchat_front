@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LogoImg from "../assets/images/logo.png";
 import { LinkData } from "../assets/data/dummydata";
@@ -12,15 +12,14 @@ export const Header = ({ theme, setTheme }) => {
   const [open, setOpen] = useState(false);
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
+  const [isProductsDropdownOpen, setIsProductsDropdownOpen] = useState(false);
+  const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language, changeLanguage } = useTranslation();
+  const productsDropdownRef = useRef(null);
 
-  // Dynamic product selector label based on language
-  const [selectedProduct, setSelectedProduct] = useState(t("navigation.products"));
-
-  // Routes existantes basées sur votre App.js
   const existingRoutes = [
     "/",
     "/schoolchat/about",
@@ -35,12 +34,6 @@ export const Header = ({ theme, setTheme }) => {
     "/schoolchat/single-blog",
   ];
 
-  // Update selected product label when language changes
-  useEffect(() => {
-    setSelectedProduct(t("navigation.products"));
-  }, [language, t]);
-
-  // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
@@ -49,15 +42,15 @@ export const Header = ({ theme, setTheme }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleSelectChange = (e) => {
-    const selectedOption = e.target.options[e.target.selectedIndex].text;
-    setSelectedProduct(selectedOption);
-    const url = e.target.value;
+  const handleProductClick = (url) => {
     if (url && existingRoutes.includes(url)) {
       navigate(url);
     } else if (url) {
       navigate("/");
     }
+    setIsProductsDropdownOpen(false);
+    setMobileProductsOpen(false);
+    setOpen(false);
   };
 
   const handleNavClick = (url) => {
@@ -75,17 +68,15 @@ export const Header = ({ theme, setTheme }) => {
   };
 
   useEffect(() => {
-    const isSelectOption = LinkData.find(
-      (link) =>
-        link.isSelect &&
-        link.options.some((option) => option.url === location.pathname)
-    );
-    if (!isSelectOption) {
-      setSelectedProduct(t("navigation.products"));
-    }
-  }, [location.pathname, language, t]);
+    const handleClickOutside = (event) => {
+      if (productsDropdownRef.current && !productsDropdownRef.current.contains(event.target)) {
+        setIsProductsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  // Function to get translated navigation title
   const getNavTitle = (linkTitle) => {
     const titleMap = {
       "accueil": t("navigation.home"),
@@ -96,7 +87,6 @@ export const Header = ({ theme, setTheme }) => {
     return titleMap[linkTitle] || linkTitle;
   };
 
-  // Function to get translated option title
   const getOptionTitle = (optionTitle) => {
     const optionMap = {
       "Nos tarifs": t("navigation.pricing"),
@@ -108,7 +98,6 @@ export const Header = ({ theme, setTheme }) => {
     return optionMap[optionTitle] || optionTitle;
   };
 
-  // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -123,7 +112,6 @@ export const Header = ({ theme, setTheme }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".language-dropdown")) {
@@ -137,7 +125,6 @@ export const Header = ({ theme, setTheme }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Theme configurations
   const getThemeClasses = () => {
     switch (theme) {
       case "dark":
@@ -153,8 +140,6 @@ export const Header = ({ theme, setTheme }) => {
           dropdown: "bg-gray-800/95 backdrop-blur-md border-gray-700/50",
           dropdownItem: "hover:bg-gray-700/60",
           mobileMenu: "bg-gray-900",
-          select:
-            "bg-gray-800/60 text-white focus:ring-blue-500 focus:bg-gray-700/80",
           logo: "brightness-110 contrast-110",
         };
       case "light":
@@ -170,8 +155,6 @@ export const Header = ({ theme, setTheme }) => {
           dropdown: "bg-white/95 backdrop-blur-md border-gray-200/60",
           dropdownItem: "hover:bg-gray-50/80",
           mobileMenu: "bg-white",
-          select:
-            "bg-gray-50/80 text-gray-700 focus:ring-blue-500 focus:bg-white/90",
           logo: "brightness-100 contrast-100",
         };
       default:
@@ -187,8 +170,6 @@ export const Header = ({ theme, setTheme }) => {
           dropdown: "bg-white/95 backdrop-blur-md border-blue-100/60",
           dropdownItem: "hover:bg-blue-50/60",
           mobileMenu: "bg-white",
-          select:
-            "bg-blue-50/60 text-gray-700 focus:ring-blue-500 focus:bg-white/90",
           logo: "brightness-105 contrast-105",
         };
     }
@@ -220,13 +201,11 @@ export const Header = ({ theme, setTheme }) => {
     }
   };
 
-  // Check if current route is login or signup
   const isLoginActive = location.pathname === "/schoolchat/login";
   const isSignupActive = location.pathname === "/schoolchat/signup";
 
   return (
     <>
-      {/* Logo positioned in front of header - Fixed positioning */}
       <div
         className="fixed top-2 sm:top-3 md:top-4 left-2 sm:left-4 md:left-6 lg:left-8 z-[60] cursor-pointer group"
         onClick={handleLogoClick}
@@ -234,7 +213,7 @@ export const Header = ({ theme, setTheme }) => {
         <img
           src={LogoImg}
           alt="Scholchat"
-          className={`h-14 sm:h-16 md:h-20 lg:h-24 xl:h-28 w-auto object-contain transition-all duration-300 ${themeClasses.logo} group-hover:scale-110 group-hover:brightness-110 drop-shadow-lg`}
+          className={`h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 w-auto object-contain transition-all duration-300 ${themeClasses.logo} group-hover:scale-110 group-hover:brightness-110 drop-shadow-lg`}
         />
       </div>
 
@@ -242,36 +221,55 @@ export const Header = ({ theme, setTheme }) => {
         className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ease-out ${themeClasses.header}`}
       >
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8">
-          <div className="flex justify-between items-center h-16 sm:h-18 md:h-20 lg:h-24 xl:h-28">
-            {/* Logo space - Responsive width */}
-            <div className="flex-shrink-0 w-14 sm:w-16 md:w-20 lg:w-24 xl:w-28"></div>
+          <div className="flex justify-between items-center h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36">
+            <div className="flex-shrink-0 w-20 sm:w-24 md:w-28 lg:w-32 xl:w-36"></div>
 
-            {/* Desktop Navigation - Hidden on mobile and tablet */}
-            <nav className="hidden xl:flex items-center space-x-2 2xl:space-x-4">
+            <nav className="hidden xl:flex items-center space-x-3 2xl:space-x-5">
               {LinkData.map((link) =>
                 link.isSelect ? (
-                  <div key={link.id} className="relative group">
-                    <select
-                      value=""
-                      className={`appearance-none bg-transparent ${themeClasses.text} ${themeClasses.textHover} font-medium text-sm 2xl:text-base px-3 2xl:px-4 py-2 2xl:py-3 pr-8 2xl:pr-10 cursor-pointer focus:outline-none transition-all duration-300 rounded-lg ${themeClasses.button}`}
-                      onChange={handleSelectChange}
+                  <div 
+                    key={link.id} 
+                    className="relative"
+                    ref={productsDropdownRef}
+                    onMouseEnter={() => setIsProductsDropdownOpen(true)}
+                    onMouseLeave={() => setIsProductsDropdownOpen(false)}
+                  >
+                    <button
+                      className={`flex items-center space-x-2 px-4 2xl:px-5 py-3 2xl:py-4 font-semibold text-base 2xl:text-lg transition-all duration-300 rounded-lg ${themeClasses.text} ${themeClasses.textHover} ${themeClasses.button} group`}
                     >
-                      <option value="">{selectedProduct}</option>
-                      {link.options.map((option) => (
-                        <option key={option.id} value={option.url}>
+                      <span>{getNavTitle(link.title)}</span>
+                      <IoIosArrowDown
+                        className={`w-5 h-5 transition-transform duration-300 ${
+                          isProductsDropdownOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                    
+                    <div
+                      className={`absolute top-full left-0 mt-2 w-64 ${themeClasses.dropdown} rounded-xl shadow-2xl border overflow-hidden z-50 transition-all duration-300 origin-top ${
+                        isProductsDropdownOpen
+                          ? 'opacity-100 scale-100 visible'
+                          : 'opacity-0 scale-95 invisible'
+                      }`}
+                    >
+                      {link.options.map((option, index) => (
+                        <button
+                          key={option.id}
+                          onClick={() => handleProductClick(option.url)}
+                          className={`w-full text-left px-5 py-3.5 ${themeClasses.dropdownItem} ${themeClasses.text} text-base font-semibold transition-all duration-200 hover:pl-7 ${
+                            index !== link.options.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''
+                          }`}
+                        >
                           {getOptionTitle(option.title)}
-                        </option>
+                        </button>
                       ))}
-                    </select>
-                    <IoIosArrowDown
-                      className={`absolute right-2 2xl:right-3 top-1/2 transform -translate-y-1/2 ${themeClasses.textSecondary} pointer-events-none text-sm group-hover:text-blue-500 transition-colors duration-200`}
-                    />
+                    </div>
                   </div>
                 ) : (
                   <NavLink
                     key={link.id}
                     className={({ isActive }) =>
-                      `relative px-3 2xl:px-4 py-2 2xl:py-3 font-medium text-sm 2xl:text-base transition-all duration-300 rounded-lg ${
+                      `relative px-4 2xl:px-5 py-3 2xl:py-4 font-semibold text-base 2xl:text-lg transition-all duration-300 rounded-lg ${
                         isActive
                           ? `${themeClasses.textActive} bg-blue-50/50 ${
                               theme === "dark" ? "bg-blue-900/20" : ""
@@ -291,7 +289,7 @@ export const Header = ({ theme, setTheme }) => {
                       <>
                         {getNavTitle(link.title)}
                         {isActive && (
-                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
                         )}
                       </>
                     )}
@@ -300,36 +298,34 @@ export const Header = ({ theme, setTheme }) => {
               )}
             </nav>
 
-            {/* Right Side Actions - Responsive spacing */}
             <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
-              {/* Theme Selector - Responsive */}
               <div className="relative theme-dropdown">
                 <button
-                  className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl ${themeClasses.button} transition-all duration-300 focus:outline-none group`}
+                  className={`flex items-center space-x-2 sm:space-x-2.5 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl ${themeClasses.button} transition-all duration-300 focus:outline-none group`}
                   onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
                 >
                   <div className="group-hover:rotate-12 transition-transform duration-300">
                     {getThemeIcon()}
                   </div>
                   <span
-                    className={`text-xs sm:text-sm font-medium ${themeClasses.text} hidden md:block`}
+                    className={`text-sm sm:text-base font-semibold ${themeClasses.text} hidden md:block`}
                   >
                     {getThemeLabel()}
                   </span>
                   {isThemeDropdownOpen ? (
                     <IoIosArrowUp
-                      className={`w-3 h-3 ${themeClasses.textSecondary} transition-transform duration-200 hidden sm:block`}
+                      className={`w-4 h-4 ${themeClasses.textSecondary} transition-transform duration-200 hidden sm:block`}
                     />
                   ) : (
                     <IoIosArrowDown
-                      className={`w-3 h-3 ${themeClasses.textSecondary} transition-transform duration-200 hidden sm:block`}
+                      className={`w-4 h-4 ${themeClasses.textSecondary} transition-transform duration-200 hidden sm:block`}
                     />
                   )}
                 </button>
 
                 {isThemeDropdownOpen && (
                   <div
-                    className={`absolute top-12 sm:top-14 right-0 ${themeClasses.dropdown} rounded-xl sm:rounded-2xl shadow-2xl border overflow-hidden z-50 min-w-[140px] sm:min-w-[160px] animate-in slide-in-from-top-2 duration-300`}
+                    className={`absolute top-12 sm:top-14 right-0 ${themeClasses.dropdown} rounded-xl sm:rounded-2xl shadow-2xl border overflow-hidden z-50 min-w-[160px] sm:min-w-[180px] animate-in slide-in-from-top-2 duration-300`}
                   >
                     {[
                       {
@@ -355,7 +351,7 @@ export const Header = ({ theme, setTheme }) => {
                     ].map((themeOption) => (
                       <button
                         key={themeOption.key}
-                        className={`flex items-center w-full px-3 sm:px-4 py-2.5 sm:py-3 ${themeClasses.dropdownItem} text-xs sm:text-sm font-medium transition-all duration-200 ${themeClasses.text} hover:scale-105 active:scale-95`}
+                        className={`flex items-center w-full px-4 sm:px-5 py-3 sm:py-3.5 ${themeClasses.dropdownItem} text-sm sm:text-base font-semibold transition-all duration-200 ${themeClasses.text} hover:scale-105 active:scale-95`}
                         onClick={() => {
                           setTheme(themeOption.key);
                           setIsThemeDropdownOpen(false);
@@ -373,10 +369,9 @@ export const Header = ({ theme, setTheme }) => {
                 )}
               </div>
 
-              {/* Language Selector - Responsive */}
               <div className="relative language-dropdown">
                 <button
-                  className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl ${themeClasses.button} transition-all duration-300 focus:outline-none group`}
+                  className={`flex items-center space-x-2 sm:space-x-2.5 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl ${themeClasses.button} transition-all duration-300 focus:outline-none group`}
                   onClick={() =>
                     setIsLanguageDropdownOpen(!isLanguageDropdownOpen)
                   }
@@ -393,12 +388,12 @@ export const Header = ({ theme, setTheme }) => {
                     />
                   </div>
                   <span
-                    className={`text-xs sm:text-sm font-medium ${themeClasses.text} hidden md:block`}
+                    className={`text-sm sm:text-base font-semibold ${themeClasses.text} hidden md:block`}
                   >
                     {language === "fr" ? "Français" : "English"}
                   </span>
                   <span
-                    className={`text-xs font-medium ${themeClasses.text} md:hidden`}
+                    className={`text-sm font-semibold ${themeClasses.text} md:hidden`}
                   >
                     {language === "fr" ? "FR" : "EN"}
                   </span>
@@ -415,7 +410,7 @@ export const Header = ({ theme, setTheme }) => {
 
                 {isLanguageDropdownOpen && (
                   <div
-                    className={`absolute top-12 sm:top-14 right-0 ${themeClasses.dropdown} rounded-xl sm:rounded-2xl shadow-2xl border overflow-hidden z-50 min-w-[140px] sm:min-w-[160px] animate-in slide-in-from-top-2 duration-300`}
+                    className={`absolute top-12 sm:top-14 right-0 ${themeClasses.dropdown} rounded-xl sm:rounded-2xl shadow-2xl border overflow-hidden z-50 min-w-[160px] sm:min-w-[180px] animate-in slide-in-from-top-2 duration-300`}
                   >
                     {[
                       { key: "fr", flag: "fr.jpeg", label: "Français" },
@@ -423,7 +418,7 @@ export const Header = ({ theme, setTheme }) => {
                     ].map((lang) => (
                       <button
                         key={lang.key}
-                        className={`flex items-center w-full px-3 sm:px-4 py-2.5 sm:py-3 ${themeClasses.dropdownItem} text-xs sm:text-sm font-medium transition-all duration-200 ${themeClasses.text} hover:scale-105 active:scale-95`}
+                        className={`flex items-center w-full px-4 sm:px-5 py-3 sm:py-3.5 ${themeClasses.dropdownItem} text-sm sm:text-base font-semibold transition-all duration-200 ${themeClasses.text} hover:scale-105 active:scale-95`}
                         onClick={() => {
                           changeLanguage(lang.key);
                           setIsLanguageDropdownOpen(false);
@@ -443,11 +438,10 @@ export const Header = ({ theme, setTheme }) => {
                 )}
               </div>
 
-              {/* Auth Buttons - Desktop only (xl and up) */}
-              <div className="hidden xl:flex items-center space-x-2 2xl:space-x-3">
+              <div className="hidden xl:flex items-center space-x-3 2xl:space-x-4">
                 <button
                   onClick={() => navigate("/schoolchat/login")}
-                  className={`px-4 2xl:px-5 py-2 2xl:py-2.5 font-medium text-sm 2xl:text-base transition-all duration-300 rounded-lg 2xl:rounded-xl ${
+                  className={`px-5 2xl:px-6 py-3 2xl:py-3.5 font-semibold text-base 2xl:text-lg transition-all duration-300 rounded-lg 2xl:rounded-xl ${
                     isLoginActive
                       ? "bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg"
                       : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
@@ -457,7 +451,7 @@ export const Header = ({ theme, setTheme }) => {
                 </button>
                 <button
                   onClick={() => navigate("/schoolchat/signup")}
-                  className={`px-4 2xl:px-5 py-2 2xl:py-2.5 font-medium text-sm 2xl:text-base transition-all duration-300 rounded-lg 2xl:rounded-xl ${
+                  className={`px-5 2xl:px-6 py-3 2xl:py-3.5 font-semibold text-base 2xl:text-lg transition-all duration-300 rounded-lg 2xl:rounded-xl ${
                     isSignupActive
                       ? "bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg"
                       : `${themeClasses.text} ${themeClasses.textHover} hover:bg-transparent`
@@ -467,7 +461,6 @@ export const Header = ({ theme, setTheme }) => {
                 </button>
               </div>
 
-              {/* Mobile Menu Toggle - Visible on tablet and mobile */}
               <button
                 className={`xl:hidden p-2 sm:p-2.5 rounded-lg sm:rounded-xl ${themeClasses.button} transition-all duration-300 menu-toggle group`}
                 onClick={() => setOpen(!open)}
@@ -492,7 +485,6 @@ export const Header = ({ theme, setTheme }) => {
             </div>
           </div>
 
-          {/* Mobile Navigation - Responsive design */}
           <div
             className={`xl:hidden mobile-menu transition-all duration-500 ease-out ${
               open
@@ -503,19 +495,36 @@ export const Header = ({ theme, setTheme }) => {
             <div className="pt-4 sm:pt-6 space-y-2 sm:space-y-3">
               {LinkData.map((link) =>
                 link.isSelect ? (
-                  <div key={link.id} className="px-2 sm:px-4 py-1 sm:py-2">
-                    <select
-                      value=""
-                      className={`w-full ${themeClasses.select} font-medium text-sm sm:text-base px-3 sm:px-4 py-3 sm:py-4 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300`}
-                      onChange={handleSelectChange}
+                  <div key={link.id} className="px-2 sm:px-4">
+                    <button
+                      onClick={() => setMobileProductsOpen(!mobileProductsOpen)}
+                      className={`w-full flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4 font-medium text-sm sm:text-base rounded-lg sm:rounded-xl transition-all duration-300 ${themeClasses.text} ${themeClasses.button}`}
                     >
-                      <option value="">{selectedProduct}</option>
-                      {link.options.map((option) => (
-                        <option key={option.id} value={option.url}>
-                          {getOptionTitle(option.title)}
-                        </option>
-                      ))}
-                    </select>
+                      <span>{getNavTitle(link.title)}</span>
+                      {mobileProductsOpen ? (
+                        <IoIosArrowUp className="w-4 h-4" />
+                      ) : (
+                        <IoIosArrowDown className="w-4 h-4" />
+                      )}
+                    </button>
+                    
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ${
+                        mobileProductsOpen ? 'max-h-96 mt-2' : 'max-h-0'
+                      }`}
+                    >
+                      <div className="space-y-1 pl-4">
+                        {link.options.map((option) => (
+                          <button
+                            key={option.id}
+                            onClick={() => handleProductClick(option.url)}
+                            className={`w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-xs sm:text-sm rounded-lg transition-all duration-300 ${themeClasses.text} ${themeClasses.button} ${themeClasses.textHover} hover:scale-105 active:scale-95`}
+                          >
+                            {getOptionTitle(option.title)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div key={link.id} className="px-2 sm:px-4">
@@ -549,7 +558,6 @@ export const Header = ({ theme, setTheme }) => {
                 )
               )}
 
-              {/* Mobile Auth Buttons */}
               <div
                 className={`px-2 sm:px-4 pt-4 sm:pt-6 space-y-3 sm:space-y-4 border-t ${
                   theme === "dark" ? "border-gray-700/50" : "border-gray-200/50"
@@ -587,8 +595,7 @@ export const Header = ({ theme, setTheme }) => {
         </div>
       </header>
 
-      {/* Spacer to prevent content from being hidden behind fixed header */}
-      <div className="h-16 sm:h-18 md:h-20 lg:h-24 xl:h-28"></div>
+      <div className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36"></div>
     </>
   );
 };

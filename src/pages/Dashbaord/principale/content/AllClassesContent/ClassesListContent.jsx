@@ -35,24 +35,20 @@ const ClassesListContent = ({
   userRole = "professeur",
   onSelectClass,
 }) => {
-  // State Management
   const [classes, setClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [paginatedClasses, setPaginatedClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Search and Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("TOUS");
   const [etablissementFilter, setEtablissementFilter] = useState("TOUS");
 
-  // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(9);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Modal and Action States
   const [selectedClass, setSelectedClass] = useState(null);
   const [editingClass, setEditingClass] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(null);
@@ -63,7 +59,6 @@ const ClassesListContent = ({
   const [showPublicationRightsModal, setShowPublicationRightsModal] =
     useState(null);
 
-  // Form States
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -77,35 +72,36 @@ const ClassesListContent = ({
     cardHolder: "",
   });
 
-  // Publication Rights States
   const [publicationRights, setPublicationRights] = useState({});
   const [loadingRights, setLoadingRights] = useState({});
 
-  // Navigation States
+  const [accessRequestCounts, setAccessRequestCounts] = useState({});
+
   const [showEditPage, setShowEditPage] = useState(false);
   const [availableEtablissements, setAvailableEtablissements] = useState([]);
 
-  // Current user ID
   const currentUserId =
     localStorage.getItem("userId") || sessionStorage.getItem("userId");
 
-  // Load classes based on user role
   useEffect(() => {
     loadClasses();
     loadEtablissements();
   }, [userRole]);
 
-  // Filter and search effect
+  useEffect(() => {
+    if (classes.length > 0) {
+      loadAccessRequestCounts();
+    }
+  }, [classes]);
+
   useEffect(() => {
     applyFiltersAndSearch();
   }, [searchTerm, statusFilter, etablissementFilter, classes]);
 
-  // Pagination effect
   useEffect(() => {
     applyPagination();
   }, [filteredClasses, currentPage, itemsPerPage]);
 
-  // Auto-clear messages
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(""), 5000);
@@ -125,8 +121,7 @@ const ClassesListContent = ({
         case "etablissement":
           data = await classService.obtenirClassesEnAttente();
           break;
-        default: // professeur
-          // For professors, load classes where they have publication rights
+        default:
           if (currentUserId) {
             try {
               const rightsResponse =
@@ -134,7 +129,6 @@ const ClassesListContent = ({
                   currentUserId
                 );
               if (rightsResponse.success && rightsResponse.data) {
-                // Get class details for each class where user has rights
                 const classPromises = rightsResponse.data.map(
                   async (classId) => {
                     try {
@@ -164,7 +158,6 @@ const ClassesListContent = ({
           break;
       }
 
-      // Sort classes by creation date (newest first)
       data.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
 
       setClasses(data);
@@ -179,7 +172,6 @@ const ClassesListContent = ({
 
   const loadEtablissements = async () => {
     try {
-      // This would typically come from an etablissement service
       const etablissements = classes
         .filter((c) => c.etablissement)
         .map((c) => c.etablissement)
@@ -194,7 +186,6 @@ const ClassesListContent = ({
     }
   };
 
-  // Load publication rights for a specific class
   const loadPublicationRights = async (classId) => {
     if (!classId) return;
 
@@ -219,7 +210,37 @@ const ClassesListContent = ({
     }
   };
 
-  // Check if current user has publication rights for a class
+  const loadAccessRequestCounts = async () => {
+    try {
+      const counts = {};
+      await Promise.all(
+        classes.map(async (classe) => {
+          try {
+            const response = await fetch(
+              `http://localhost:8486/scholchat/acceder/demandes/classe/${classe.id}`
+            );
+            if (response.ok) {
+              const requests = await response.json();
+              const pendingCount = requests.filter(
+                (req) => req.etat === "EN_ATTENTE"
+              ).length;
+              counts[classe.id] = pendingCount;
+            }
+          } catch (error) {
+            console.error(
+              `Error loading access requests for class ${classe.id}:`,
+              error
+            );
+            counts[classe.id] = 0;
+          }
+        })
+      );
+      setAccessRequestCounts(counts);
+    } catch (error) {
+      console.error("Error loading access request counts:", error);
+    }
+  };
+
   const hasPublicationRights = (classId) => {
     if (!currentUserId || !publicationRights[classId]) return false;
 
@@ -229,7 +250,6 @@ const ClassesListContent = ({
   const applyFiltersAndSearch = () => {
     let filtered = [...classes];
 
-    // Apply search filter
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -240,12 +260,10 @@ const ClassesListContent = ({
       );
     }
 
-    // Apply status filter
     if (statusFilter !== "TOUS") {
       filtered = filtered.filter((cls) => cls.etat === statusFilter);
     }
 
-    // Apply etablissement filter
     if (etablissementFilter !== "TOUS") {
       filtered = filtered.filter(
         (cls) => cls.etablissement?.id === etablissementFilter
@@ -253,7 +271,7 @@ const ClassesListContent = ({
     }
 
     setFilteredClasses(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   };
 
   const applyPagination = () => {
@@ -331,7 +349,6 @@ const ClassesListContent = ({
   const handleDeactivation = async (classId, motif, commentaire) => {
     try {
       setActionLoading(classId);
-      // In real implementation, call deactivation service
       console.log("Deactivating class:", { classId, motif, commentaire });
       await loadClasses();
       setShowDeactivationModal(null);
@@ -393,6 +410,7 @@ const ClassesListContent = ({
       setActionLoading(classId);
       await classService.supprimerClasse(classId);
       await loadClasses();
+      await loadAccessRequestCounts();
       setShowDeleteModal(null);
       setSuccessMessage("Classe supprimée avec succès");
       setError("");
@@ -410,10 +428,8 @@ const ClassesListContent = ({
     }
   };
 
-  // Handle manage publication rights
   const handleManagePublicationRights = async (classe) => {
     setShowPublicationRightsModal(classe);
-    // Load publication rights for this class
     await loadPublicationRights(classe.id);
   };
 
@@ -443,31 +459,25 @@ const ClassesListContent = ({
     }
   };
 
-  // Handle manage class click - Show manage button based on role and class status
   const handleManageClass = (classe) => {
     if (onSelectClass) {
       onSelectClass(classe.id);
     } else {
       console.log("Managing class:", classe.id);
-      // Default behavior if onSelectClass is not provided
     }
   };
 
-  // Determine if manage button should be shown
   const shouldShowManageButton = (classe) => {
-    // For administrators, always show manage button regardless of status
     if (userRole === "administrateur") {
       return true;
     }
 
-    // For professors, only show manage button if class is ACTIF (approved) AND they have publication rights
     if (userRole === "professeur") {
       return (
         classe.etat === EtatClasse.ACTIF && hasPublicationRights(classe.id)
       );
     }
 
-    // For establishment users, show based on class status
     if (userRole === "etablissement") {
       return classe.etat === EtatClasse.ACTIF;
     }
@@ -489,7 +499,6 @@ const ClassesListContent = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
             <div className="flex items-center justify-between">
@@ -542,10 +551,8 @@ const ClassesListContent = ({
             </div>
           </div>
 
-          {/* Search and Filters */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search Bar */}
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
@@ -557,7 +564,6 @@ const ClassesListContent = ({
                 />
               </div>
 
-              {/* Filters */}
               <div className="flex gap-3">
                 <select
                   value={statusFilter}
@@ -602,7 +608,6 @@ const ClassesListContent = ({
           </div>
         </div>
 
-        {/* Success Message */}
         {successMessage && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-600" />
@@ -610,7 +615,6 @@ const ClassesListContent = ({
           </div>
         )}
 
-        {/* Error Message */}
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-red-600" />
@@ -618,7 +622,6 @@ const ClassesListContent = ({
           </div>
         )}
 
-        {/* Classes Grid */}
         {paginatedClasses.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
             <GraduationCap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -655,15 +658,30 @@ const ClassesListContent = ({
               {paginatedClasses.map((classe) => (
                 <div
                   key={classe.id}
-                  className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-shadow"
+                  className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative"
                 >
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
+                  {accessRequestCounts[classe.id] > 0 && (
+                    <div className="absolute top-3 right-3 z-20 animate-bounce">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"></div>
+                        <div className="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-full shadow-2xl border-4 border-white">
+                          <span className="text-white font-bold text-base">
+                            {accessRequestCounts[classe.id]}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="p-6 relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-indigo-50/0 group-hover:from-blue-50/50 group-hover:to-indigo-50/50 transition-all duration-300 pointer-events-none" />
+                    <div className="flex items-start justify-between mb-4 relative z-10">
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">
-                          {classe.nom}
-                        </h3>
-                        <div className="space-y-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                            {classe.nom}
+                          </h3>
+                        </div>
+                        <div className="space-y-2.5 text-sm text-slate-600">
                           <div className="flex items-center gap-2">
                             <GraduationCap className="w-4 h-4" />
                             <span>{classe.niveau}</span>
@@ -692,23 +710,21 @@ const ClassesListContent = ({
                       </div>
                     </div>
 
-                    {/* Status */}
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
+                    <div className="mb-4 p-4 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-xl border border-slate-200/50 relative z-10">
+                      <div className="flex items-center gap-2 mb-3">
                         {getStatusIcon(classe.etat)}
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="text-sm font-semibold text-slate-700">
                           Statut
                         </span>
                       </div>
                       <span
-                        className={`px-3 py-1 text-sm rounded-full ${getStatusColor(
+                        className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full shadow-sm ${getStatusColor(
                           classe.etat
                         )}`}
                       >
                         {classService.getEtatDisplayName(classe.etat)}
                       </span>
 
-                      {/* Publication Rights Status for Professors */}
                       {userRole === "professeur" && (
                         <div className="mt-2 text-xs flex items-center gap-1">
                           {hasPublicationRights(classe.id) ? (
@@ -729,7 +745,6 @@ const ClassesListContent = ({
                         </div>
                       )}
 
-                      {/* Status-specific messages */}
                       {classe.etat === EtatClasse.EN_ATTENTE_APPROBATION &&
                         userRole === "professeur" && (
                           <div className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
@@ -739,29 +754,30 @@ const ClassesListContent = ({
                         )}
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-2 flex-wrap">
-                      {/* View Button */}
+                    <div className="flex gap-2 flex-wrap relative z-10">
                       <button
                         onClick={() => setSelectedClass(classe)}
-                        className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 text-sm"
+                        className="flex-1 bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 py-2.5 px-3 rounded-xl hover:from-blue-100 hover:to-blue-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
                       >
                         <Eye className="w-4 h-4" />
                         Voir
                       </button>
 
-                      {/* Manage Button - Conditionally shown based on role and status */}
                       {shouldShowManageButton(classe) && (
                         <button
                           onClick={() => handleManageClass(classe)}
-                          className="flex-1 bg-indigo-50 text-indigo-600 py-2 px-3 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 text-sm"
+                          className="flex-1 bg-gradient-to-r from-indigo-50 to-indigo-100/50 text-indigo-700 py-2.5 px-3 rounded-xl hover:from-indigo-100 hover:to-indigo-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md relative"
                         >
                           <Settings className="w-4 h-4" />
                           Gérer
+                          {accessRequestCounts[classe.id] > 0 && (
+                            <span className="absolute -top-2 -right-2 inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse shadow-lg">
+                              {accessRequestCounts[classe.id]}
+                            </span>
+                          )}
                         </button>
                       )}
 
-                      {/* Publication Rights Button - For administrators */}
                       {userRole === "administrateur" &&
                         classe.etat === EtatClasse.ACTIF && (
                           <button
@@ -769,7 +785,7 @@ const ClassesListContent = ({
                               handleManagePublicationRights(classe)
                             }
                             disabled={loadingRights[classe.id]}
-                            className="flex-1 bg-purple-50 text-purple-600 py-2 px-3 rounded-lg hover:bg-purple-100 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                            className="flex-1 bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 py-2.5 px-3 rounded-xl hover:from-purple-100 hover:to-purple-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {loadingRights[classe.id] ? (
                               <Loader className="w-4 h-4 animate-spin" />
@@ -780,7 +796,6 @@ const ClassesListContent = ({
                           </button>
                         )}
 
-                      {/* Edit Button - Available for all roles with rights */}
                       <button
                         onClick={() => handleEdit(classe)}
                         disabled={
@@ -788,7 +803,7 @@ const ClassesListContent = ({
                           (userRole === "professeur" &&
                             !hasPublicationRights(classe.id))
                         }
-                        className="flex-1 bg-green-50 text-green-600 py-2 px-3 rounded-lg hover:bg-green-100 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 bg-gradient-to-r from-green-50 to-green-100/50 text-green-700 py-2.5 px-3 rounded-xl hover:from-green-100 hover:to-green-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {actionLoading === "edit" ? (
                           <Loader className="w-4 h-4 animate-spin" />
@@ -798,14 +813,13 @@ const ClassesListContent = ({
                         Modifier
                       </button>
 
-                      {/* Delete Button - Available for administrateur and professeur with rights */}
                       {(userRole === "administrateur" ||
                         (userRole === "professeur" &&
                           hasPublicationRights(classe.id))) && (
                         <button
                           onClick={() => setShowDeleteModal(classe)}
                           disabled={actionLoading === classe.id}
-                          className="bg-red-50 text-red-600 py-2 px-3 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="bg-gradient-to-r from-red-50 to-red-100/50 text-red-700 py-2.5 px-3 rounded-xl hover:from-red-100 hover:to-red-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {actionLoading === classe.id ? (
                             <Loader className="w-4 h-4 animate-spin" />
@@ -816,25 +830,23 @@ const ClassesListContent = ({
                         </button>
                       )}
 
-                      {/* Approval Button - Only for etablissement role */}
                       {userRole === "etablissement" &&
                         classe.etat === EtatClasse.EN_ATTENTE_APPROBATION && (
                           <button
                             onClick={() => setShowApprovalModal(classe)}
-                            className="bg-yellow-50 text-yellow-600 py-2 px-3 rounded-lg hover:bg-yellow-100 transition-colors flex items-center justify-center gap-2 text-sm"
+                            className="bg-gradient-to-r from-yellow-50 to-yellow-100/50 text-yellow-700 py-2.5 px-3 rounded-xl hover:from-yellow-100 hover:to-yellow-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
                           >
                             <Check className="w-4 h-4" />
                             Approuver
                           </button>
                         )}
 
-                      {/* Deactivation Button */}
                       {(userRole === "etablissement" ||
                         userRole === "administrateur") &&
                         classe.etat === EtatClasse.ACTIF && (
                           <button
                             onClick={() => setShowDeactivationModal(classe)}
-                            className="bg-orange-50 text-orange-600 py-2 px-3 rounded-lg hover:bg-orange-100 transition-colors flex items-center justify-center gap-2 text-sm"
+                            className="bg-gradient-to-r from-orange-50 to-orange-100/50 text-orange-700 py-2.5 px-3 rounded-xl hover:from-orange-100 hover:to-orange-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
                           >
                             <PowerOff className="w-4 h-4" />
                             Désactiver
@@ -846,7 +858,6 @@ const ClassesListContent = ({
               ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="bg-white rounded-2xl shadow-xl p-6">
                 <div className="flex items-center justify-between">
@@ -919,7 +930,6 @@ const ClassesListContent = ({
           </>
         )}
 
-        {/* Modals */}
         <ClassModals
           selectedClass={selectedClass}
           setSelectedClass={setSelectedClass}

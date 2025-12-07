@@ -3,72 +3,66 @@ import { Calendar, ArrowRight } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 
 // Educational blog data
-const educationalBlogPosts = [
+const getEducationalBlogPosts = (t) => [
   {
     id: 1,
-    title: "L'excellence éducative : Entre tradition et innovation",
+    titleKey: "pages.blog.posts.post1.title",
     image:
       "https://images.unsplash.com/photo-1588072432836-e10032774350?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    category: "Éducation",
-    author: "Aminata Diallo",
-    date: "15 Nov 2024",
-    excerpt:
-      "Découvrez comment l'éducation moderne évolue avec les changements technologiques",
+    categoryKey: "pages.blog.posts.post1.category",
+    authorKey: "pages.blog.posts.post1.author",
+    dateKey: "pages.blog.posts.post1.date",
+    excerptKey: "pages.blog.posts.post1.excerpt",
   },
   {
     id: 2,
-    title: "Méthodes pédagogiques innovantes dans les écoles modernes",
+    titleKey: "pages.blog.posts.post2.title",
     image:
       "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    category: "Innovation",
-    author: "Kwame Nkrumah",
-    date: "28 Oct 2024",
-    excerpt:
-      "Nouvelles méthodologies qui transforment les expériences éducatives",
+    categoryKey: "pages.blog.posts.post2.category",
+    authorKey: "pages.blog.posts.post2.author",
+    dateKey: "pages.blog.posts.post2.date",
+    excerptKey: "pages.blog.posts.post2.excerpt",
   },
   {
     id: 3,
-    title: "Construire des communautés éducatives solides",
+    titleKey: "pages.blog.posts.post3.title",
     image:
       "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80",
-    category: "Communauté",
-    author: "Fatoumata Bâ",
-    date: "10 Oct 2024",
-    excerpt:
-      "Comment les environnements collaboratifs améliorent la réussite des élèves",
+    categoryKey: "pages.blog.posts.post3.category",
+    authorKey: "pages.blog.posts.post3.author",
+    dateKey: "pages.blog.posts.post3.date",
+    excerptKey: "pages.blog.posts.post3.excerpt",
   },
   {
     id: 4,
-    title: "L'impact des technologies numériques sur l'apprentissage",
+    titleKey: "pages.blog.posts.post4.title",
     image:
       "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80",
-    category: "Technologie",
-    author: "Jean Koffi",
-    date: "5 Oct 2024",
-    excerpt:
-      "Exploration des outils numériques qui révolutionnent l'enseignement",
+    categoryKey: "pages.blog.posts.post4.category",
+    authorKey: "pages.blog.posts.post4.author",
+    dateKey: "pages.blog.posts.post4.date",
+    excerptKey: "pages.blog.posts.post4.excerpt",
   },
   {
     id: 5,
-    title: "Stratégies pour engager les parents dans l'éducation",
+    titleKey: "pages.blog.posts.post5.title",
     image:
       "https://images.unsplash.com/photo-1509062522246-3755977927d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    category: "Engagement",
-    author: "Sophie Laurent",
-    date: "22 Sep 2024",
-    excerpt:
-      "Techniques pour améliorer la participation des parents dans le parcours scolaire",
+    categoryKey: "pages.blog.posts.post5.category",
+    authorKey: "pages.blog.posts.post5.author",
+    dateKey: "pages.blog.posts.post5.date",
+    excerptKey: "pages.blog.posts.post5.excerpt",
   },
   {
     id: 6,
-    title: "Évaluation des compétences au 21ème siècle",
+    titleKey: "pages.blog.posts.post6.title",
     image:
       "https://images.unsplash.com/photo-1588072432836-e10032774350?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    category: "Pédagogie",
-    author: "Thomas Bernard",
-    date: "14 Sep 2024",
-    excerpt:
-      "Nouvelles approches pour évaluer les compétences des élèves aujourd'hui",
+    categoryKey: "pages.blog.posts.post6.category",
+    authorKey: "pages.blog.posts.post6.author",
+    dateKey: "pages.blog.posts.post6.date",
+    excerptKey: "pages.blog.posts.post6.excerpt",
   },
 ];
 
@@ -119,6 +113,7 @@ const AnimatedCounter = ({ end, duration = 2000 }) => {
 
 export const Blog = ({ theme = "default" }) => {
   const { t } = useTranslation();
+  const educationalBlogPosts = getEducationalBlogPosts(t);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
@@ -333,8 +328,7 @@ export const Blog = ({ theme = "default" }) => {
           <p
             className={`text-base sm:text-xl ${textColors.secondary} max-w-3xl mx-auto leading-relaxed px-4`}
           >
-            ✨ Vous n'êtes pas seul dans votre parcours, nous vous offrons notre
-            soutien et notre guidance pour réussir ensemble ⚡
+            {t("pages.blog.subtitle")}
           </p>
 
           {/* Animated Stats */}
@@ -399,7 +393,7 @@ export const Blog = ({ theme = "default" }) => {
 
                 {/* Category Badge */}
                 <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-gradient-to-r from-cyan-500 to-purple-600 text-white px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-semibold shadow-lg backdrop-blur-sm">
-                  {post.category}
+                  {t(post.categoryKey)}
                 </div>
 
                 {/* Floating Elements */}
@@ -411,13 +405,13 @@ export const Blog = ({ theme = "default" }) => {
                 <h3
                   className={`text-lg sm:text-xl font-bold ${textColors.card.title} mb-3 sm:mb-4 leading-tight group-hover:bg-gradient-to-r group-hover:from-cyan-400 group-hover:to-purple-400 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-500`}
                 >
-                  {post.title}
+                  {t(post.titleKey)}
                 </h3>
 
                 <p
                   className={`${textColors.card.excerpt} text-sm sm:text-base mb-4 sm:mb-6 leading-relaxed`}
                 >
-                  {post.excerpt}
+                  {t(post.excerptKey)}
                 </p>
 
                 {/* Author and Date */}
@@ -429,7 +423,7 @@ export const Blog = ({ theme = "default" }) => {
                   <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-0">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
                       <span className="text-white text-xs sm:text-sm font-bold">
-                        {post.author
+                        {t(post.authorKey)
                           .split(" ")
                           .map((n) => n[0])
                           .join("")}
@@ -438,7 +432,7 @@ export const Blog = ({ theme = "default" }) => {
                     <span
                       className={`${textColors.card.author} text-sm sm:text-base font-medium`}
                     >
-                      {post.author}
+                      {t(post.authorKey)}
                     </span>
                   </div>
 
@@ -446,7 +440,7 @@ export const Blog = ({ theme = "default" }) => {
                     className={`flex items-center gap-1 sm:gap-2 ${textColors.card.date} text-xs sm:text-sm`}
                   >
                     <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>{post.date}</span>
+                    <span>{t(post.dateKey)}</span>
                   </div>
                 </div>
 
@@ -461,7 +455,7 @@ export const Blog = ({ theme = "default" }) => {
                       : "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border-cyan-400/30 text-cyan-300"
                   } border px-4 py-2 sm:px-6 sm:py-3 rounded-full font-medium transition-all duration-500 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/25 cursor-pointer backdrop-blur-sm text-sm sm:text-base`}
                 >
-                  Lire plus
+                  {t("pages.blog.readMore")}
                   <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </button>
               </div>
@@ -484,7 +478,7 @@ export const Blog = ({ theme = "default" }) => {
           >
             <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
             <span className="relative flex items-center gap-2 sm:gap-3">
-              📖 Voir tous les articles
+              {t("pages.blog.viewAll")}
               <span className="group-hover:translate-x-2 group-hover:scale-110 transition-all duration-300">
                 <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </span>

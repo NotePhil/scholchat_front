@@ -5,8 +5,10 @@ import { ArrowRight, ArrowLeft, Loader, X } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../CSS/Signup.css";
 import axios from "axios";
+import { useTranslation } from "../hooks/useTranslation";
 
 const SignUp = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -787,7 +789,7 @@ const SignUp = () => {
             <div className="form-three-columns">
               <div className="form-group">
                 <label>
-                  Prénom <span className="required">*</span>
+                  {t('pages.signup.firstName')} <span className="required">*</span>
                 </label>
                 <input
                   type="text"
@@ -802,7 +804,7 @@ const SignUp = () => {
 
               <div className="form-group">
                 <label>
-                  Nom <span className="required">*</span>
+                  {t('pages.signup.lastName')} <span className="required">*</span>
                 </label>
                 <input
                   type="text"
@@ -817,7 +819,7 @@ const SignUp = () => {
 
               <div className="form-group">
                 <label>
-                  Email <span className="required">*</span>
+                  {t('pages.signup.email')} <span className="required">*</span>
                 </label>
                 <input
                   type="email"

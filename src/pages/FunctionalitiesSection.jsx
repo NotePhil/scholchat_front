@@ -8,8 +8,10 @@ import {
   ChevronRight,
   Calendar,
 } from "lucide-react";
+import { useTranslation } from "../hooks/useTranslation";
 
 const FunctionalitiesSection = ({ theme = "default" }) => {
+  const { t } = useTranslation();
   const [activeCard, setActiveCard] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -86,9 +88,8 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
   const functionalities = [
     {
       icon: BookOpen,
-      title: "Cahier de texte",
-      description:
-        "Organisez et accédez facilement aux notes de cours et au contenu de chaque sujet.",
+      title: t("pages.functionalities.features.textbook.title"),
+      description: t("pages.functionalities.features.textbook.desc"),
       color: "from-blue-500 to-blue-600",
       bgColor: theme === "dark" ? "bg-blue-900/30" : "bg-blue-50",
       textColor: "text-blue-600",
@@ -96,9 +97,8 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
     },
     {
       icon: Mail,
-      title: "Messagerie",
-      description:
-        "Communiquez facilement avec les enseignants et les autres élèves.",
+      title: t("pages.functionalities.features.messaging.title"),
+      description: t("pages.functionalities.features.messaging.desc"),
       color: "from-purple-500 to-purple-600",
       bgColor: theme === "dark" ? "bg-purple-900/30" : "bg-purple-50",
       textColor: "text-purple-600",
@@ -106,9 +106,8 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
     },
     {
       icon: ClipboardList,
-      title: "Devoirs",
-      description:
-        "Suivez les devoirs assignés et gérez les dates de rendu efficacement.",
+      title: t("pages.functionalities.features.homework.title"),
+      description: t("pages.functionalities.features.homework.desc"),
       color: "from-emerald-500 to-emerald-600",
       bgColor: theme === "dark" ? "bg-emerald-900/30" : "bg-emerald-50",
       textColor: "text-emerald-600",
@@ -116,9 +115,8 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
     },
     {
       icon: UserCheck,
-      title: "Suivi des absences",
-      description:
-        "Gardez un enregistrement des absences et suivez les retards.",
+      title: t("pages.functionalities.features.attendance.title"),
+      description: t("pages.functionalities.features.attendance.desc"),
       color: "from-orange-500 to-orange-600",
       bgColor: theme === "dark" ? "bg-orange-900/30" : "bg-orange-50",
       textColor: "text-orange-600",
@@ -126,9 +124,8 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
     },
     {
       icon: Target,
-      title: "Objectifs scolaires",
-      description:
-        "Définissez et suivez les objectifs scolaires de manière structurée.",
+      title: t("pages.functionalities.features.goals.title"),
+      description: t("pages.functionalities.features.goals.desc"),
       color: "from-rose-500 to-rose-600",
       bgColor: theme === "dark" ? "bg-rose-900/30" : "bg-rose-50",
       textColor: "text-rose-600",
@@ -136,9 +133,8 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
     },
     {
       icon: Calendar,
-      title: "Planning & Emploi du temps",
-      description:
-        "Gérez votre emploi du temps et planifiez vos activités scolaires.",
+      title: t("pages.functionalities.features.schedule.title"),
+      description: t("pages.functionalities.features.schedule.desc"),
       color: "from-indigo-500 to-indigo-600",
       bgColor: theme === "dark" ? "bg-indigo-900/30" : "bg-indigo-50",
       textColor: "text-indigo-600",
@@ -462,7 +458,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                     : "text-white"
                 }`}
               >
-                🚀 Fonctionnalités
+                🚀 {t("pages.functionalities.badge")}
               </span>
               <div
                 className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full animate-pulse ${
@@ -496,7 +492,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                   : "bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400"
               }`}
             >
-              Nos Fonctionnalités
+              {t("pages.functionalities.title")}
             </h2>
 
             <p
@@ -508,8 +504,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                   : "text-gray-200"
               }`}
             >
-              ✨ Découvrez les outils magiques qui transformeront votre
-              expérience éducative ⚡
+              ✨ {t("pages.functionalities.subtitle")} ⚡
             </p>
 
             <div
@@ -635,7 +630,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                           : "text-cyan-400 group-hover:text-cyan-300"
                       }`}
                     >
-                      <span>En savoir plus</span>
+                      <span>{t("pages.functionalities.learnMore")}</span>
                       <ChevronRight
                         className={`mobile-icon-sm sm:w-4 sm:h-4 lg:w-5 lg:h-5 ml-2 group-hover:translate-x-2 transition-transform duration-300 ${
                           theme === "dark"

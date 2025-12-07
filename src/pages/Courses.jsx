@@ -11,115 +11,115 @@ import {
 import { AiFillStar } from "react-icons/ai";
 import { NavLink } from "react-router-dom";
 import { HiOutlineArrowNarrowRight } from "react-icons/hi";
+import { useTranslation } from "../hooks/useTranslation";
 
 // Enhanced course data for SchoolChat theme
-const schoolChatCourses = [
+const getSchoolChatCourses = (t) => [
   {
     id: 1,
-    title: "Communication Parents-École Moderne",
-    description:
-      "Maîtrisez les outils de communication numérique pour un suivi optimal",
+    titleKey: "pages.courses.courses.course1.title",
+    descriptionKey: "pages.courses.courses.course1.description",
     cover:
       "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=250&fit=crop",
-    category: "Communication",
-    subcategory: "Digital",
+    categoryKey: "pages.courses.courses.course1.category",
+    subcategoryKey: "pages.courses.courses.course1.subcategory",
     lessons: 12,
     rating: 4.8,
     reviews: 156,
-    instructor: "Marie Dubois",
-    price: "Gratuit",
-    duration: "3 semaines",
-    level: "Débutant",
+    instructorKey: "pages.courses.courses.course1.instructor",
+    priceKey: "pages.courses.courses.course1.price",
+    durationKey: "pages.courses.courses.course1.duration",
+    levelKey: "pages.courses.courses.course1.level",
     icon: <FaComments />,
     color: "from-blue-500 to-cyan-500",
   },
   {
     id: 2,
-    title: "Suivi Scolaire Numérique",
-    description: "Optimisez le suivi des résultats et progrès de vos enfants",
+    titleKey: "pages.courses.courses.course2.title",
+    descriptionKey: "pages.courses.courses.course2.description",
     cover:
       "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=250&fit=crop",
-    category: "Suivi",
-    subcategory: "Éducatif",
+    categoryKey: "pages.courses.courses.course2.category",
+    subcategoryKey: "pages.courses.courses.course2.subcategory",
     lessons: 15,
     rating: 4.9,
     reviews: 203,
-    instructor: "Pierre Martin",
-    price: "29€",
-    duration: "4 semaines",
-    level: "Intermédiaire",
+    instructorKey: "pages.courses.courses.course2.instructor",
+    priceKey: "pages.courses.courses.course2.price",
+    durationKey: "pages.courses.courses.course2.duration",
+    levelKey: "pages.courses.courses.course2.level",
     icon: <FaGraduationCap />,
     color: "from-purple-500 to-pink-500",
   },
   {
     id: 3,
-    title: "Gestion des Notifications Intelligentes",
-    description: "Restez informé sans être submergé par les alertes",
+    titleKey: "pages.courses.courses.course3.title",
+    descriptionKey: "pages.courses.courses.course3.description",
     cover:
       "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop",
-    category: "Gestion",
-    subcategory: "Productivité",
+    categoryKey: "pages.courses.courses.course3.category",
+    subcategoryKey: "pages.courses.courses.course3.subcategory",
     lessons: 8,
     rating: 4.7,
     reviews: 89,
-    instructor: "Sophie Laurent",
-    price: "Gratuit",
-    duration: "2 semaines",
-    level: "Tous niveaux",
+    instructorKey: "pages.courses.courses.course3.instructor",
+    priceKey: "pages.courses.courses.course3.price",
+    durationKey: "pages.courses.courses.course3.duration",
+    levelKey: "pages.courses.courses.course3.level",
     icon: <FaBell />,
     color: "from-emerald-500 to-teal-500",
   },
   {
     id: 4,
-    title: "Application Mobile SchoolChat",
-    description: "Maîtrisez toutes les fonctionnalités de l'app mobile",
+    titleKey: "pages.courses.courses.course4.title",
+    descriptionKey: "pages.courses.courses.course4.description",
     cover:
       "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=250&fit=crop",
-    category: "Mobile",
-    subcategory: "Application",
+    categoryKey: "pages.courses.courses.course4.category",
+    subcategoryKey: "pages.courses.courses.course4.subcategory",
     lessons: 10,
     rating: 4.6,
     reviews: 124,
-    instructor: "Lucas Moreau",
-    price: "19€",
-    duration: "2 semaines",
-    level: "Débutant",
+    instructorKey: "pages.courses.courses.course4.instructor",
+    priceKey: "pages.courses.courses.course4.price",
+    durationKey: "pages.courses.courses.course4.duration",
+    levelKey: "pages.courses.courses.course4.level",
     icon: <FaMobile />,
     color: "from-orange-500 to-red-500",
   },
   {
     id: 5,
-    title: "Collaboration Parents-Enseignants",
-    description: "Créez un environnement collaboratif pour la réussite",
+    titleKey: "pages.courses.courses.course5.title",
+    descriptionKey: "pages.courses.courses.course5.description",
     cover:
       "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=400&h=250&fit=crop",
-    category: "Collaboration",
-    subcategory: "Pédagogie",
+    categoryKey: "pages.courses.courses.course5.category",
+    subcategoryKey: "pages.courses.courses.course5.subcategory",
     lessons: 14,
     rating: 4.9,
     reviews: 187,
-    instructor: "Anne Rousseau",
-    price: "39€",
-    duration: "5 semaines",
-    level: "Avancé",
+    instructorKey: "pages.courses.courses.course5.instructor",
+    priceKey: "pages.courses.courses.course5.price",
+    durationKey: "pages.courses.courses.course5.duration",
+    levelKey: "pages.courses.courses.course5.level",
     icon: <FaUsers />,
     color: "from-indigo-500 to-purple-500",
   },
   {
     id: 6,
-    title: "Tableaux de Bord et Analyses",
-    description: "Exploitez les données pour un meilleur accompagnement",
+    titleKey: "pages.courses.courses.course6.title",
+    descriptionKey: "pages.courses.courses.course6.description",
     cover:
       "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop",
-    category: "Analyse",
-    subcategory: "Données",
+    categoryKey: "pages.courses.courses.course6.category",
+    subcategoryKey: "pages.courses.courses.course6.subcategory",
     lessons: 11,
     rating: 4.8,
     reviews: 95,
-    instructor: "Thomas Bernard",
-    price: "49€",
-    duration: "3 semaines",
-    level: "Intermédiaire",
+    instructorKey: "pages.courses.courses.course6.instructor",
+    priceKey: "pages.courses.courses.course6.price",
+    durationKey: "pages.courses.courses.course6.duration",
+    levelKey: "pages.courses.courses.course6.level",
     icon: <FaBook />,
     color: "from-cyan-500 to-blue-500",
   },
@@ -170,6 +170,8 @@ const AnimatedCounter = ({ end, duration = 2000 }) => {
 };
 
 export const Courses = ({ theme = "default" }) => {
+  const { t } = useTranslation();
+  const schoolChatCourses = getSchoolChatCourses(t);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -364,7 +366,7 @@ export const Courses = ({ theme = "default" }) => {
               }`}
             ></div>
             <span className={`${themeStyles.badgeText} font-semibold text-lg`}>
-              📚 Formations SchoolChat
+              {t("pages.courses.badge")}
             </span>
             <div
               className={`w-3 h-3 rounded-full animate-pulse ${
@@ -380,7 +382,7 @@ export const Courses = ({ theme = "default" }) => {
           <h1
             className={`text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight bg-gradient-to-r ${themeStyles.titleGradient} bg-clip-text text-transparent drop-shadow-2xl`}
           >
-            Découvrez Nos Formations
+            {t("pages.courses.title.line1")}
             <br />
             <span
               className={`bg-gradient-to-r ${
@@ -391,23 +393,22 @@ export const Courses = ({ theme = "default" }) => {
                   : "from-purple-400 via-pink-400 to-red-400"
               } bg-clip-text text-transparent`}
             >
-              SchoolChat Pro
+              {t("pages.courses.title.line2")}
             </span>
           </h1>
 
           <p
             className={`text-xl md:text-2xl ${themeStyles.textColor} mt-8 leading-relaxed font-light max-w-4xl mx-auto`}
           >
-            🚀 Maîtrisez la communication éducative moderne et optimisez le
-            suivi scolaire de vos enfants ✨
+            {t("pages.courses.subtitle")}
           </p>
 
           {/* Animated Stats */}
           <div className="flex justify-center gap-8 md:gap-12 mt-12">
             {[
-              { number: 1500, suffix: "+", label: "Étudiants", icon: "👨‍🎓" },
-              { number: 25, suffix: "+", label: "Cours", icon: "📖" },
-              { number: 98, suffix: "%", label: "Satisfaction", icon: "⭐" },
+              { number: 1500, suffix: "+", labelKey: "pages.courses.stats.students", icon: "👨‍🎓" },
+              { number: 25, suffix: "+", labelKey: "pages.courses.stats.courses", icon: "📖" },
+              { number: 98, suffix: "%", labelKey: "pages.courses.stats.satisfaction", icon: "⭐" },
             ].map((stat, i) => (
               <div
                 key={i}
@@ -424,7 +425,7 @@ export const Courses = ({ theme = "default" }) => {
                   {stat.suffix}
                 </div>
                 <div className={`${themeStyles.statsText} text-sm font-medium`}>
-                  {stat.label}
+                  {t(stat.labelKey)}
                 </div>
               </div>
             ))}
@@ -498,7 +499,7 @@ export const Courses = ({ theme = "default" }) => {
                     <span
                       className={`text-xs bg-gradient-to-r ${course.color} px-3 py-1.5 text-white rounded-full font-semibold shadow-lg backdrop-blur-sm`}
                     >
-                      {course.category}
+                      {t(course.categoryKey)}
                     </span>
                     <span
                       className={`text-xs ${
@@ -515,7 +516,7 @@ export const Courses = ({ theme = "default" }) => {
                           : "text-white"
                       } rounded-full font-semibold shadow-lg`}
                     >
-                      {course.subcategory}
+                      {t(course.subcategoryKey)}
                     </span>
                   </div>
 
@@ -530,7 +531,7 @@ export const Courses = ({ theme = "default" }) => {
                           : "bg-black/50 text-white"
                       } backdrop-blur-sm px-3 py-1.5 rounded-full font-semibold`}
                     >
-                      {course.level}
+                      {t(course.levelKey)}
                     </span>
                   </div>
 
@@ -558,7 +559,7 @@ export const Courses = ({ theme = "default" }) => {
                       >
                         <FaBook className="text-cyan-400 mr-2" />
                         <span className="text-sm font-medium">
-                          {course.lessons} leçons
+                          {course.lessons} {t("pages.courses.card.lessons")}
                         </span>
                       </div>
                       <div
@@ -585,7 +586,7 @@ export const Courses = ({ theme = "default" }) => {
                           : "text-gray-300"
                       } font-medium`}
                     >
-                      {course.duration}
+                      {t(course.durationKey)}
                     </div>
                   </div>
 
@@ -605,7 +606,7 @@ export const Courses = ({ theme = "default" }) => {
                         : "group-hover:from-cyan-400 group-hover:to-purple-400"
                     } group-hover:bg-clip-text transition-all duration-300`}
                   >
-                    {course.title}
+                    {t(course.titleKey)}
                   </h3>
 
                   <p
@@ -617,7 +618,7 @@ export const Courses = ({ theme = "default" }) => {
                         : "text-gray-300"
                     } text-sm leading-relaxed mb-4 line-clamp-2`}
                   >
-                    {course.description}
+                    {t(course.descriptionKey)}
                   </p>
 
                   {/* Instructor */}
@@ -632,7 +633,7 @@ export const Courses = ({ theme = "default" }) => {
                       } rounded-full flex items-center justify-center mr-3`}
                     >
                       <span className="text-white font-bold text-sm">
-                        {course.instructor
+                        {t(course.instructorKey)
                           .split(" ")
                           .map((n) => n[0])
                           .join("")}
@@ -648,7 +649,7 @@ export const Courses = ({ theme = "default" }) => {
                             : "text-white"
                         } text-sm font-medium`}
                       >
-                        {course.instructor}
+                        {t(course.instructorKey)}
                       </div>
                       <div
                         className={`${
@@ -659,7 +660,7 @@ export const Courses = ({ theme = "default" }) => {
                             : "text-gray-400"
                         } text-xs`}
                       >
-                        Formateur Expert
+                        {t("pages.courses.card.instructor")}
                       </div>
                     </div>
                   </div>
@@ -678,7 +679,7 @@ export const Courses = ({ theme = "default" }) => {
                       <span
                         className={`text-lg font-bold bg-gradient-to-r ${course.color} bg-clip-text text-transparent`}
                       >
-                        {course.price}
+                        {t(course.priceKey)}
                       </span>
                     </div>
 
@@ -698,7 +699,7 @@ export const Courses = ({ theme = "default" }) => {
                           : "hover:shadow-cyan-500/25"
                       } transition-all duration-300`}
                     >
-                      Commencer
+                      {t("pages.courses.card.cta")}
                       <HiOutlineArrowNarrowRight className="group-hover/btn:translate-x-1 transition-transform duration-300" />
                     </NavLink>
                   </div>
@@ -763,7 +764,7 @@ export const Courses = ({ theme = "default" }) => {
                             : "from-emerald-400 to-cyan-400"
                         } bg-clip-text text-transparent`}
                       >
-                        Populaire
+                        {t("pages.courses.badgePopular")}
                       </div>
                     </div>
                   </div>
@@ -791,7 +792,7 @@ export const Courses = ({ theme = "default" }) => {
                   : "from-cyan-400 via-purple-400 to-pink-400"
               } bg-clip-text text-transparent mb-3 md:mb-4`}
             >
-              Prêt à transformer votre communication scolaire ?
+              {t("pages.courses.cta.title")}
             </h3>
             <p
               className={`${
@@ -802,8 +803,7 @@ export const Courses = ({ theme = "default" }) => {
                   : "text-gray-300"
               } text-sm md:text-lg mb-4 md:mb-6`}
             >
-              Rejoignez plus de 1500 familles qui ont révolutionné leur suivi
-              scolaire avec SchoolChat
+              {t("pages.courses.cta.subtitle")}
             </p>
 
             <div className="flex flex-col sm:flex-row justify-center gap-2 md:gap-4">
@@ -826,7 +826,7 @@ export const Courses = ({ theme = "default" }) => {
                   } translate-y-full group-hover:translate-y-0 transition-transform duration-500`}
                 ></div>
                 <span className="relative flex items-center justify-center gap-1 md:gap-2">
-                  🚀 Commencer gratuitement
+                  {t("pages.courses.cta.button1")}
                 </span>
               </button>
 
@@ -845,7 +845,7 @@ export const Courses = ({ theme = "default" }) => {
                     : "text-white"
                 }`}
               >
-                📞 Démonstration
+                {t("pages.courses.cta.button2")}
               </button>
             </div>
           </div>

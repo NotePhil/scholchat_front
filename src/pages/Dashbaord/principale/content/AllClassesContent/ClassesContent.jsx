@@ -41,6 +41,7 @@ const ClassesContent = ({ onManageClass }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [requestRole, setRequestRole] = useState("eleve");
+  const [accessRequestCounts, setAccessRequestCounts] = useState({});
 
   const [newClass, setNewClass] = useState({
     nom: "",
@@ -80,6 +81,40 @@ const ClassesContent = ({ onManageClass }) => {
 
     fetchData();
   }, []);
+  
+  // Load access request counts
+  useEffect(() => {
+    if (classes.length > 0) {
+      loadAccessRequestCounts();
+    }
+  }, [classes]);
+  
+  const loadAccessRequestCounts = async () => {
+    try {
+      const counts = {};
+      await Promise.all(
+        classes.map(async (classe) => {
+          try {
+            const response = await fetch(
+              `http://localhost:8486/scholchat/acceder/demandes/classe/${classe.id}`
+            );
+            if (response.ok) {
+              const requests = await response.json();
+              const pendingCount = requests.filter(
+                (req) => req.etat === "EN_ATTENTE"
+              ).length;
+              counts[classe.id] = pendingCount;
+            }
+          } catch (error) {
+            counts[classe.id] = 0;
+          }
+        })
+      );
+      setAccessRequestCounts(counts);
+    } catch (error) {
+      console.error("Error loading access request counts:", error);
+    }
+  };
 
   // Filter classes based on search term, tab, and user role
   const filteredClasses = classes.filter((cls) => {
@@ -444,7 +479,14 @@ const ClassesContent = ({ onManageClass }) => {
                 }`}
               >
                 <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-semibold">{cls.nom}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold">{cls.nom}</h3>
+                    {accessRequestCounts[cls.id] > 0 && (
+                      <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse shadow-lg">
+                        {accessRequestCounts[cls.id]}
+                      </span>
+                    )}
+                  </div>
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
                       cls.statut === "ACTIF"
