@@ -68,12 +68,6 @@ class CoursProgrammerService {
       if (!coursProgrammerData.lieu) {
         throw new Error("Le lieu est requis");
       }
-      if (!coursProgrammerData.dateDebutEffectif) {
-        throw new Error("La date de début effective est requise");
-      }
-      if (!coursProgrammerData.dateFinEffectif) {
-        throw new Error("La date de fin effective est requise");
-      }
 
       const token =
         localStorage.getItem("authToken") ||
@@ -89,12 +83,12 @@ class CoursProgrammerService {
         dateCoursPrevue: this.formatDateToBackend(
           coursProgrammerData.dateCoursPrevue
         ),
-        dateDebutEffectif: this.formatDateToBackend(
-          coursProgrammerData.dateDebutEffectif
-        ),
-        dateFinEffectif: this.formatDateToBackend(
-          coursProgrammerData.dateFinEffectif
-        ),
+        dateDebutEffectif: coursProgrammerData.dateDebutEffectif
+          ? this.formatDateToBackend(coursProgrammerData.dateDebutEffectif)
+          : null,
+        dateFinEffectif: coursProgrammerData.dateFinEffectif
+          ? this.formatDateToBackend(coursProgrammerData.dateFinEffectif)
+          : null,
         lieu: coursProgrammerData.lieu.trim(),
         description: coursProgrammerData.description?.trim() || null,
         etatCoursProgramme:
