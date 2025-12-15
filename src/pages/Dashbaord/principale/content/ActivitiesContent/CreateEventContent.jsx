@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
   Calendar,
@@ -13,6 +13,8 @@ import {
   Eye,
   Download,
   Plus,
+  CheckCircle,
+  X,
 } from "lucide-react";
 
 const CreateEventContent = ({ onClose, onSubmit, loading }) => {
@@ -31,6 +33,8 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
   const [previewImage, setPreviewImage] = useState(null);
+  const [notification, setNotification] = useState(null);
+  const [imageGallery, setImageGallery] = useState({ isOpen: false, currentIndex: 0 });
   const fileInputRef = useRef(null);
 
   const handleInputChange = (field, value) => {
@@ -139,8 +143,11 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
       
       try {
         await onSubmit(eventData);
-        alert("Événement créé avec succès!");
-        handleClose();
+        setNotification({
+          type: 'success',
+          title: 'Succès',
+          message: 'Événement créé avec succès!'
+        });
       } catch (error) {
         console.error("Event creation failed:", error);
         let errorMessage = "Erreur lors de la création de l'événement";
@@ -155,7 +162,11 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
           errorMessage = "Professeur non trouvé. Vérifiez votre authentification.";
         }
         
-        alert(`${errorMessage}\n\nDétails: ${error.message}`);
+        setNotification({
+          type: 'error',
+          title: 'Erreur',
+          message: `${errorMessage}\n\nDétails: ${error.message}`
+        });
       }
     } catch (error) {
       console.error("Erreur lors de la création de l'événement:", error);
@@ -170,7 +181,11 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
     const imageFiles = files.filter((file) => file.type.startsWith("image/"));
 
     if (imageFiles.length === 0) {
-      alert("Veuillez sélectionner des fichiers image (JPG, PNG, GIF)");
+      setNotification({
+        type: 'error',
+        title: 'Erreur',
+        message: 'Veuillez sélectionner des fichiers image (JPG, PNG, GIF)'
+      });
       return;
     }
 
@@ -184,7 +199,11 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
         }
 
         if (file.size > 5 * 1024 * 1024) {
-          alert(`${file.name} est trop volumineux (max 5MB)`);
+          setNotification({
+            type: 'error',
+            title: 'Erreur',
+            message: `${file.name} est trop volumineux (max 5MB)`
+          });
           continue;
         }
 
@@ -211,12 +230,20 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
           setUploadedImages((prev) => [...prev, imageData]);
         } catch (error) {
           console.error(`Erreur traitement ${file.name}:`, error);
-          alert(`Erreur lors du traitement de ${file.name}: ${error.message}`);
+          setNotification({
+            type: 'error',
+            title: 'Erreur',
+            message: `Erreur lors du traitement de ${file.name}: ${error.message}`
+          });
         }
       }
     } catch (error) {
       console.error("Erreur générale de traitement:", error);
-      alert("Erreur lors du traitement des images");
+      setNotification({
+        type: 'error',
+        title: 'Erreur',
+        message: 'Erreur lors du traitement des images'
+      });
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -241,6 +268,88 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
     setPreviewImage(null);
   };
 
+  const openImageGallery = (index) => {
+    setImageGallery({ isOpen: true, currentIndex: index });
+  };
+
+  const closeImageGallery = () => {
+    setImageGallery({ isOpen: false, currentIndex: 0 });
+  };
+
+  const navigateGallery = (direction) => {
+    const newIndex = direction === 'next' 
+      ? (imageGallery.currentIndex + 1) % uploadedImages.length
+      : (imageGallery.currentIndex - 1 + uploadedImages.length) % uploadedImages.length;
+    setImageGallery(prev => ({ ...prev, currentIndex: newIndex }));
+  };
+
+  const renderImageLayout = () => {
+    const imageCount = uploadedImages.length;
+    
+    if (imageCount === 0) return null;
+    
+    if (imageCount === 1) {
+      return (
+        <div className="w-full h-64 rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
+          <img src={uploadedImages[0].previewUrl} alt={uploadedImages[0].originalFileName} className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    
+    if (imageCount === 2) {
+      return (
+        <div className="grid grid-cols-2 gap-2 h-64">
+          {uploadedImages.slice(0, 2).map((image, index) => (
+            <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index)}>
+              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-full object-cover" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    if (imageCount === 3) {
+      return (
+        <div className="grid grid-cols-2 gap-2 h-64">
+          <div className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
+            <img src={uploadedImages[0].previewUrl} alt={uploadedImages[0].originalFileName} className="w-full h-full object-cover" />
+          </div>
+          <div className="grid grid-rows-2 gap-2">
+            {uploadedImages.slice(1, 3).map((image, index) => (
+              <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index + 1)}>
+                <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-full object-cover" />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
+    // 4 or more images
+    return (
+      <div className="grid grid-cols-2 gap-2 h-64">
+        <div className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
+          <img src={uploadedImages[0].previewUrl} alt={uploadedImages[0].originalFileName} className="w-full h-full object-cover" />
+        </div>
+        <div className="grid grid-rows-2 gap-2">
+          {uploadedImages.slice(1, 3).map((image, index) => (
+            <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index + 1)}>
+              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-full object-cover" />
+            </div>
+          ))}
+          <div className="relative rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(3)}>
+            <img src={uploadedImages[3].previewUrl} alt={uploadedImages[3].originalFileName} className="w-full h-full object-cover" />
+            {imageCount > 4 && (
+              <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                <div className="text-white text-xl font-bold">+{imageCount - 4}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const downloadImage = async (image) => {
     try {
       if (image.filePath && image.filePath !== `temp/${image.fileName}`) {
@@ -260,7 +369,11 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
       }
     } catch (error) {
       console.error("Erreur lors du téléchargement:", error);
-      alert("Erreur lors du téléchargement de l'image");
+      setNotification({
+        type: 'error',
+        title: 'Erreur',
+        message: 'Erreur lors du téléchargement de l\'image'
+      });
     }
   };
 
@@ -299,6 +412,27 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
     handleReset();
     onClose();
   };
+
+  const closeNotification = () => {
+    setNotification(null);
+    if (notification?.type === 'success') {
+      handleClose();
+    }
+  };
+
+  // Keyboard navigation for gallery
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (imageGallery.isOpen) {
+        if (e.key === 'ArrowLeft') navigateGallery('prev');
+        if (e.key === 'ArrowRight') navigateGallery('next');
+        if (e.key === 'Escape') closeImageGallery();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [imageGallery.isOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -547,75 +681,24 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
 
             {uploadedImages.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
-                  <Image size={16} />
-                  Images sélectionnées ({uploadedImages.length})
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {uploadedImages.map((image) => (
-                    <div
-                      key={image.id}
-                      className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-                    >
-                      <div className="relative group">
-                        <img
-                          src={image.previewUrl}
-                          alt={image.originalFileName}
-                          className="w-full h-32 object-cover cursor-pointer"
-                          onClick={() =>
-                            openImagePreview(
-                              image.previewUrl,
-                              image.originalFileName
-                            )
-                          }
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <button
-                            onClick={() =>
-                              openImagePreview(
-                                image.previewUrl,
-                                image.originalFileName
-                              )
-                            }
-                            className="bg-white text-gray-700 p-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors mr-2"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          <button
-                            onClick={() => downloadImage(image)}
-                            className="bg-white text-gray-700 p-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
-                          >
-                            <Download size={16} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <p
-                              className="text-sm font-medium text-gray-900 truncate"
-                              title={image.originalFileName}
-                            >
-                              {image.originalFileName}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {formatFileSize(image.size)} • Prêt à être uploadé
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => removeImage(image.id)}
-                            className="text-red-500 hover:text-red-700 p-1 rounded transition-colors ml-2"
-                            title="Supprimer cette image"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Image size={16} />
+                    Images sélectionnées ({uploadedImages.length})
+                  </h4>
+                  <button
+                    onClick={() => {
+                      uploadedImages.forEach(img => {
+                        if (img.previewUrl) URL.revokeObjectURL(img.previewUrl);
+                      });
+                      setUploadedImages([]);
+                    }}
+                    className="text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
+                  >
+                    Supprimer tout
+                  </button>
                 </div>
+                {renderImageLayout()}
               </div>
             )}
           </div>
@@ -651,23 +734,118 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
         </div>
       </div>
 
-      {/* Image Preview Modal */}
-      {previewImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-          <div className="relative max-w-4xl max-h-[90vh] w-full">
+      {/* Image Gallery Modal */}
+      {imageGallery.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+          <div className="relative max-w-4xl max-h-[90vh] w-full mx-4">
             <button
-              onClick={closeImagePreview}
+              onClick={closeImageGallery}
               className="absolute top-4 right-4 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
             >
-              <ArrowLeft size={24} />
+              <X size={24} />
             </button>
+            
+            {uploadedImages.length > 1 && (
+              <>
+                <button
+                  onClick={() => navigateGallery('prev')}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
+                >
+                  <ArrowLeft size={24} />
+                </button>
+                <button
+                  onClick={() => navigateGallery('next')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
+                >
+                  <ArrowLeft size={24} className="rotate-180" />
+                </button>
+              </>
+            )}
+            
             <img
-              src={previewImage.url}
-              alt={previewImage.name}
+              src={uploadedImages[imageGallery.currentIndex]?.previewUrl}
+              alt={uploadedImages[imageGallery.currentIndex]?.originalFileName}
               className="w-full h-full object-contain rounded-lg"
             />
+            
             <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded-lg">
-              <p className="text-sm font-medium">{previewImage.name}</p>
+              <p className="text-sm font-medium">
+                {uploadedImages[imageGallery.currentIndex]?.originalFileName}
+              </p>
+              <p className="text-xs text-gray-300">
+                {imageGallery.currentIndex + 1} / {uploadedImages.length}
+              </p>
+            </div>
+            
+            <div className="absolute bottom-4 right-4 flex gap-2">
+              <button
+                onClick={() => downloadImage(uploadedImages[imageGallery.currentIndex])}
+                className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-lg transition-all"
+              >
+                <Download size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  removeImage(uploadedImages[imageGallery.currentIndex].id);
+                  if (uploadedImages.length === 1) {
+                    closeImageGallery();
+                  } else if (imageGallery.currentIndex >= uploadedImages.length - 1) {
+                    setImageGallery(prev => ({ ...prev, currentIndex: 0 }));
+                  }
+                }}
+                className="bg-red-500 bg-opacity-80 hover:bg-opacity-100 text-white p-2 rounded-lg transition-all"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Modal */}
+      {notification && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                  notification.type === 'success' ? 'bg-green-100' : 'bg-red-100'
+                }`}>
+                  {notification.type === 'success' ? (
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className={`text-lg font-semibold ${
+                    notification.type === 'success' ? 'text-green-900' : 'text-red-900'
+                  }`}>
+                    {notification.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-600 whitespace-pre-line">
+                    {notification.message}
+                  </p>
+                </div>
+                <button
+                  onClick={closeNotification}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={closeNotification}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    notification.type === 'success'
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                >
+                  {notification.type === 'success' ? 'Continuer' : 'Fermer'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -33,8 +33,8 @@ const ActivityDisplay = ({
   const [newComment, setNewComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [imageLoadError, setImageLoadError] = useState({});
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [expandedImage, setExpandedImage] = useState(null);
+  const [imageGallery, setImageGallery] = useState({ isOpen: false, currentIndex: 0 });
   const [showAdminMenu, setShowAdminMenu] = useState(false);
   
   // Check if current user is admin
@@ -99,20 +99,19 @@ const ActivityDisplay = ({
     localStorage.setItem(`activity_${activity.id}`, JSON.stringify(newState));
   }, [activity.id]);
 
-  // Reset image index when activity changes
-  React.useEffect(() => {
-    setCurrentImageIndex(0);
-  }, [activity.id]);
 
-  // Handle keyboard events for image modal
+
+  // Handle keyboard events for image gallery
   React.useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && expandedImage) {
-        setExpandedImage(null);
+      if (imageGallery.isOpen) {
+        if (event.key === 'ArrowLeft') navigateGallery('prev');
+        if (event.key === 'ArrowRight') navigateGallery('next');
+        if (event.key === 'Escape') closeImageGallery();
       }
     };
 
-    if (expandedImage) {
+    if (imageGallery.isOpen) {
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
@@ -121,7 +120,7 @@ const ActivityDisplay = ({
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [expandedImage]);
+  }, [imageGallery.isOpen]);
 
   // Close admin menu when clicking outside
   React.useEffect(() => {
@@ -262,7 +261,7 @@ const ActivityDisplay = ({
     return <FileText size={16} className="text-gray-600" />;
   };
 
-  const MediaImage = ({ media }) => {
+  const MediaImage = React.memo(({ media }) => {
     const [imageUrl, setImageUrl] = useState(null);
     const [loading, setLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
@@ -318,7 +317,7 @@ const ActivityDisplay = ({
       return () => {
         isMounted = false;
       };
-    }, [media.filePath, media.id, mediaKey]);
+    }, [media.filePath, media.id]);
 
     if (loading) {
       return (
@@ -346,12 +345,12 @@ const ActivityDisplay = ({
     return (
       <div 
         className="relative group cursor-pointer overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
-        onClick={() => setExpandedImage(imageUrl)}
+        onClick={() => openImageGallery(media.index || 0)}
       >
         <img
           src={imageUrl}
           alt={media.fileName || "Image"}
-          className="w-full aspect-video object-cover transition-transform duration-300 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           onError={() => {
             console.error('Image failed to load:', imageUrl);
             setHasError(true);
@@ -363,6 +362,89 @@ const ActivityDisplay = ({
             <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 text-sm font-medium text-gray-800 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
               Cliquer pour agrandir
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  });
+
+  const openImageGallery = (index) => {
+    setImageGallery({ isOpen: true, currentIndex: index });
+  };
+
+  const closeImageGallery = () => {
+    setImageGallery({ isOpen: false, currentIndex: 0 });
+  };
+
+  const navigateGallery = (direction) => {
+    const newIndex = direction === 'next' 
+      ? (imageGallery.currentIndex + 1) % activity.media.length
+      : (imageGallery.currentIndex - 1 + activity.media.length) % activity.media.length;
+    setImageGallery(prev => ({ ...prev, currentIndex: newIndex }));
+  };
+
+  const renderImageLayout = () => {
+    const images = activity.media.filter(m => m.type === "IMAGE" || m.mediaType === "IMAGE" || m.contentType?.startsWith("image/"));
+    const imageCount = images.length;
+    
+    if (imageCount === 0) return null;
+    
+    if (imageCount === 1) {
+      return (
+        <div className="w-full h-64 rounded-2xl overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
+          <MediaImage media={{...images[0], index: 0}} />
+        </div>
+      );
+    }
+    
+    if (imageCount === 2) {
+      return (
+        <div className="grid grid-cols-2 gap-2 h-64">
+          {images.slice(0, 2).map((image, index) => (
+            <div key={image.id || index} className="rounded-2xl overflow-hidden cursor-pointer" onClick={() => openImageGallery(index)}>
+              <MediaImage media={{...image, index}} />
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    if (imageCount === 3) {
+      return (
+        <div className="grid grid-cols-2 gap-2 h-64">
+          <div className="rounded-2xl overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
+            <MediaImage media={{...images[0], index: 0}} />
+          </div>
+          <div className="grid grid-rows-2 gap-2">
+            {images.slice(1, 3).map((image, index) => (
+              <div key={image.id || index} className="rounded-2xl overflow-hidden cursor-pointer" onClick={() => openImageGallery(index + 1)}>
+                <MediaImage media={{...image, index: index + 1}} />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
+    // 4 or more images
+    return (
+      <div className="grid grid-cols-2 gap-2 h-64">
+        <div className="rounded-2xl overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
+          <MediaImage media={{...images[0], index: 0}} />
+        </div>
+        <div className="grid grid-rows-2 gap-2">
+          {images.slice(1, 3).map((image, index) => (
+            <div key={image.id || index} className="rounded-2xl overflow-hidden cursor-pointer" onClick={() => openImageGallery(index + 1)}>
+              <MediaImage media={{...image, index: index + 1}} />
+            </div>
+          ))}
+          <div className="relative rounded-2xl overflow-hidden cursor-pointer" onClick={() => openImageGallery(3)}>
+            <MediaImage media={{...images[3], index: 3}} />
+            {imageCount > 4 && (
+              <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                <div className="text-white text-xl font-bold">+{imageCount - 4}</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -539,29 +621,7 @@ const ActivityDisplay = ({
       {/* Media */}
       {activity.media && activity.media.length > 0 && (
         <div className="px-6 pb-6">
-          {activity.media.length === 1 ? (
-            <div>{renderMediaPreview(activity.media[0])}</div>
-          ) : (
-            <div className="relative">
-              <div>{renderMediaPreview(activity.media[currentImageIndex])}</div>
-              <div className="flex justify-center mt-4 gap-2">
-                {activity.media.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentImageIndex(index);
-                    }}
-                    className={`w-3 h-3 rounded-full transition-colors ${
-                      index === currentImageIndex
-                        ? "bg-blue-600 shadow-lg"
-                        : "bg-gray-300 hover:bg-gray-400"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          {renderImageLayout()}
         </div>
       )}
 
@@ -702,25 +762,44 @@ const ActivityDisplay = ({
         </div>
       )}
 
-      {/* Image Modal */}
-      {expandedImage && (
-        <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setExpandedImage(null)}
-        >
-          <div className="relative max-w-full max-h-full">
-            <img
-              src={expandedImage}
-              alt="Image agrandie"
-              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
+      {/* Image Gallery Modal */}
+      {imageGallery.isOpen && activity.media && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+          <div className="relative max-w-4xl max-h-[90vh] w-full mx-4">
             <button
-              onClick={() => setExpandedImage(null)}
-              className="absolute top-4 right-4 w-12 h-12 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
+              onClick={closeImageGallery}
+              className="absolute top-4 right-4 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
             >
               ×
             </button>
+            
+            {activity.media.length > 1 && (
+              <>
+                <button
+                  onClick={() => navigateGallery('prev')}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => navigateGallery('next')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
+                >
+                  →
+                </button>
+              </>
+            )}
+            
+            <MediaImage media={{...activity.media[imageGallery.currentIndex], index: imageGallery.currentIndex}} />
+            
+            <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded-lg">
+              <p className="text-sm font-medium">
+                {activity.media[imageGallery.currentIndex]?.fileName || 'Image'}
+              </p>
+              <p className="text-xs text-gray-300">
+                {imageGallery.currentIndex + 1} / {activity.media.length}
+              </p>
+            </div>
           </div>
         </div>
       )}
