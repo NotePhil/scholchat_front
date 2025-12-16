@@ -126,7 +126,7 @@ const SettingsContent = ({
       setMessage({ text: "", type: "" });
 
       const userId = localStorage.getItem("userId");
-      await scholchatService.updateUser(userId, profileData);
+      await scholchatService.patchUser(userId, profileData);
 
       setMessage({ text: "Profil mis à jour avec succès", type: "success" });
       setEditMode(false);

@@ -976,7 +976,7 @@ const CourseContentView = ({ course, onBack }) => {
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="text-sm text-slate-600">
-                ID: {course?.id || "Non défini"}
+                Détails du cours
               </div>
 
               <div className="flex items-center space-x-3">

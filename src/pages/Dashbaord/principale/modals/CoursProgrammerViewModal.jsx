@@ -131,27 +131,46 @@ const CoursProgrammerViewModal = ({
 
   useEffect(() => {
     const fetchParticipants = async () => {
+      console.log("=== FETCHING PARTICIPANTS ===");
+      console.log("Scheduled Course:", scheduledCourse);
+      console.log("Participants IDs:", scheduledCourse?.participantsIds);
+      console.log("Classe ID:", scheduledCourse?.classeId);
+      
+      const classId = getClassId(scheduledCourse);
+      
       if (
         !scheduledCourse?.participantsIds?.length ||
-        !scheduledCourse?.classeId
+        !classId
       ) {
+        console.log("No participants IDs or classe ID found");
+        console.log("Class ID:", classId);
+        console.log("Participants IDs:", scheduledCourse?.participantsIds);
         setParticipants([]);
         return;
       }
 
       try {
         setLoadingParticipants(true);
+        console.log("Fetching class participants for classe:", classId);
+        
         const classParticipants =
           await AccederService.obtenirUtilisateursAvecAcces(
-            scheduledCourse.classeId
+            classId
           );
+          
+        console.log("Class participants received:", classParticipants);
 
         const participantDetails = scheduledCourse.participantsIds
           .map((participantId) => {
+            console.log(`Looking for participant ID: ${participantId}`);
+            
             const participant = classParticipants.find(
-              (user) =>
-                (user.utilisateurId || user.id) === participantId &&
-                user.etat === "APPROUVEE"
+              (user) => {
+                const userId = user.utilisateurId || user.id;
+                const matches = userId === participantId && user.etat === "APPROUVEE";
+                console.log(`Checking user ${userId} (${user.prenom} ${user.nom}) - matches: ${matches}`);
+                return matches;
+              }
             );
 
             if (participant) {
@@ -166,19 +185,25 @@ const CoursProgrammerViewModal = ({
                 participant.email ||
                 `User ${participant.utilisateurId || participant.id}`;
 
-              return {
+              const participantInfo = {
                 id: participant.utilisateurId || participant.id,
                 name: displayName,
                 email: participant.email || participant.utilisateurEmail || "",
                 type: participant.type || participant.role || "MEMBER",
                 originalData: participant,
               };
+              
+              console.log("Participant found:", participantInfo);
+              return participantInfo;
             }
+            
+            console.log(`Participant ${participantId} not found in class participants`);
             return null;
           })
           .filter(Boolean)
           .sort((a, b) => a.name.localeCompare(b.name));
 
+        console.log("Final participants list:", participantDetails);
         setParticipants(participantDetails);
       } catch (error) {
         console.error("Error fetching participants:", error);
@@ -197,15 +222,21 @@ const CoursProgrammerViewModal = ({
     return null;
   }
 
-  const getClassName = (classeId) => {
+  const getClassName = (scheduledCourse) => {
+    const classeId = scheduledCourse?.classeId;
     if (!classeId || !classes.length) return "Classe non définie";
     const classe = classes.find((c) => c.id === classeId);
     return classe ? classe.nom : "Classe non définie";
   };
 
-  const getClassDetails = (classeId) => {
+  const getClassDetails = (scheduledCourse) => {
+    const classeId = scheduledCourse?.classeId;
     if (!classeId || !classes.length) return null;
     return classes.find((c) => c.id === classeId);
+  };
+  
+  const getClassId = (scheduledCourse) => {
+    return scheduledCourse?.classeId || null;
   };
 
   const handleCancelWithReason = () => {
@@ -215,7 +246,8 @@ const CoursProgrammerViewModal = ({
     onClose();
   };
 
-  const classDetails = getClassDetails(scheduledCourse.classeId);
+  const classDetails = getClassDetails(scheduledCourse);
+  const currentClassId = getClassId(scheduledCourse);
 
   return (
     <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -339,8 +371,9 @@ const CoursProgrammerViewModal = ({
                             {scheduledCourse.cours?.titre}
                           </div>
                           <div className="text-slate-600 font-medium mt-1">
-                            {getClassName(scheduledCourse.classeId)}
+                            Classe: {getClassName(scheduledCourse)}
                           </div>
+
                         </div>
                       </div>
                     </div>
@@ -462,19 +495,22 @@ const CoursProgrammerViewModal = ({
                   )}
 
                   {/* Class Information */}
-                  {classDetails && (
-                    <div className="mt-8 pt-6 border-t border-slate-200">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <School className="w-5 h-5 mr-2 text-indigo-600" />
-                        Classe Associée
-                      </h4>
+                  <div className="mt-8 pt-6 border-t border-slate-200">
+                    <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                      <School className="w-5 h-5 mr-2 text-indigo-600" />
+                      Classe Associée
+                    </h4>
 
-                      <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                    <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                      {classDetails ? (
                         <div className="flex items-start justify-between">
                           <div>
                             <h5 className="font-medium text-slate-900">
-                              {classDetails.nom} ({classDetails.niveau})
+                              {classDetails.nom} {classDetails.niveau && `(${classDetails.niveau})`}
                             </h5>
+                            <div className="mt-2 text-sm text-slate-600">
+                              <span className="font-medium">ID:</span> {currentClassId}
+                            </div>
                             {classDetails.etablissement && (
                               <div className="mt-2 space-y-2">
                                 <div className="flex items-center text-sm text-slate-600">
@@ -501,9 +537,19 @@ const CoursProgrammerViewModal = ({
                             {classDetails.etat}
                           </span>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <div className="text-slate-600">
+                            <p className="font-medium">Classe: {getClassName(scheduledCourse)}</p>
+                            <p className="text-sm mt-1">ID: {currentClassId}</p>
+                            <p className="text-xs text-amber-600 mt-2">
+                              ⚠️ Détails de la classe non disponibles
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             )}
@@ -544,6 +590,18 @@ const CoursProgrammerViewModal = ({
                     <p className="text-slate-600">
                       Les étudiants pourront s'inscrire à ce cours programmé.
                     </p>
+                    <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                      <p className="text-xs text-red-700">
+                        <strong>⚠️ Problème de données:</strong><br/>
+                        • Aucune classe associée au cours programmé<br/>
+                        • Les participants ne peuvent pas être récupérés sans classe<br/>
+                        • Vérifiez la programmation du cours dans l'API backend<br/><br/>
+                        <strong>Données reçues:</strong><br/>
+                        Classe ID: {currentClassId || "❌ Manquant"}<br/>
+                        Participants IDs: {JSON.stringify(scheduledCourse.participantsIds)}<br/>
+                        Note: DB utilise 'classe_id' (singulier), pas 'classes_ids'
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -555,10 +613,19 @@ const CoursProgrammerViewModal = ({
                         <h4 className="text-lg font-medium text-slate-900 mb-2">
                           Participants non trouvés
                         </h4>
-                        <p className="text-slate-600">
+                        <p className="text-slate-600 mb-4">
                           Les informations des participants ne sont pas
                           disponibles ou ils ont été supprimés de la classe.
                         </p>
+                        <div className="p-4 bg-amber-50 rounded-lg text-left">
+                          <p className="text-xs text-amber-700">
+                            <strong>Informations de débogage:</strong><br/>
+                            Classe ID: {currentClassId}<br/>
+                            Participants attendus: {scheduledCourse.participantsIds?.length || 0}<br/>
+                            IDs: {JSON.stringify(scheduledCourse.participantsIds)}<br/>
+                            Classe trouvée: {getClassName(scheduledCourse)}
+                          </p>
+                        </div>
                       </div>
                     ) : (
                       participants.map((participant, index) => (
@@ -726,7 +793,7 @@ const CoursProgrammerViewModal = ({
         <div className="bg-slate-50 px-8 py-6 border-t border-slate-200">
           <div className="flex items-center justify-between">
             <div className="text-sm text-slate-600">
-              ID: {scheduledCourse.id}
+              Cours programmé
             </div>
 
             <div className="flex items-center space-x-3">
