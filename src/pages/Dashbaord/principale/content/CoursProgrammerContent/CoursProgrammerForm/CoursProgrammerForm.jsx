@@ -346,7 +346,7 @@ const CoursProgrammerForm = ({
 
       const scheduleData = {
         coursId: data.coursId,
-        classeId: data.classeId || null,
+        professeurId: "550e8400-e29b-41d4-a716-446655440007", // TODO: Get from user context
         dateCoursPrevue: formatDate(data.dateCoursPrevue),
         dateDebutEffectif: isPlanifie
           ? formatDate(data.dateCoursPrevue)
@@ -354,10 +354,10 @@ const CoursProgrammerForm = ({
         dateFinEffectif: isPlanifie
           ? calculateEndDate(data.dateCoursPrevue, 2)
           : formatDate(data.dateFinEffectif),
-        etatCoursProgramme: data.etatCoursProgramme,
         lieu: data.lieu.trim(),
         description: data.description?.trim() || null,
-        capaciteMax: data.capaciteMax ? parseInt(data.capaciteMax) : null,
+        etatCoursProgramme: data.etatCoursProgramme,
+        classesIds: data.classeId ? [data.classeId] : [],
         participantsIds: selectedParticipants.filter((id) => id),
       };
 

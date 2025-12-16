@@ -134,7 +134,8 @@ const CoursProgrammerViewModal = ({
       console.log("=== FETCHING PARTICIPANTS ===");
       console.log("Scheduled Course:", scheduledCourse);
       console.log("Participants IDs:", scheduledCourse?.participantsIds);
-      console.log("Classe ID:", scheduledCourse?.classeId);
+      console.log("Classe ID (old format):", scheduledCourse?.classeId);
+      console.log("Classes IDs (new format):", scheduledCourse?.classesIds);
       
       const classId = getClassId(scheduledCourse);
       
@@ -223,20 +224,27 @@ const CoursProgrammerViewModal = ({
   }
 
   const getClassName = (scheduledCourse) => {
-    const classeId = scheduledCourse?.classeId;
+    const classeId = getClassId(scheduledCourse);
     if (!classeId || !classes.length) return "Classe non définie";
     const classe = classes.find((c) => c.id === classeId);
     return classe ? classe.nom : "Classe non définie";
   };
 
   const getClassDetails = (scheduledCourse) => {
-    const classeId = scheduledCourse?.classeId;
+    const classeId = getClassId(scheduledCourse);
     if (!classeId || !classes.length) return null;
     return classes.find((c) => c.id === classeId);
   };
   
   const getClassId = (scheduledCourse) => {
-    return scheduledCourse?.classeId || null;
+    // Handle both old format (classeId) and new format (classesIds array)
+    if (scheduledCourse?.classeId) {
+      return scheduledCourse.classeId;
+    }
+    if (scheduledCourse?.classesIds && scheduledCourse.classesIds.length > 0) {
+      return scheduledCourse.classesIds[0]; // Take first class if multiple
+    }
+    return null;
   };
 
   const handleCancelWithReason = () => {
