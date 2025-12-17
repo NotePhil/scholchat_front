@@ -42,7 +42,6 @@ const MessageDetailPanel = ({
     try {
       const accessToken = localStorage.getItem('accessToken');
       const senderId = localStorage.getItem('userId');
-      const messageContent = `[${replySubject}] ${replyContent}`;
       const recipient = selectedMessage.expediteur;
       const response = await fetch('http://localhost:8486/scholchat/messages', {
         method: 'POST',
@@ -51,7 +50,8 @@ const MessageDetailPanel = ({
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          contenu: messageContent,
+          objet: replySubject,
+          contenu: replyContent,
           dateCreation: new Date().toISOString(),
           etat: "envoyé",
           expediteur: {
@@ -103,14 +103,6 @@ const MessageDetailPanel = ({
     <div className={`w-96 border-l flex flex-col ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}>
       <div className={`p-6 border-b ${isDark ? "border-gray-700" : "border-gray-200"}`}>
         <div className="flex items-center justify-between mb-4">
-<div className={`p-6 flex-1 overflow-y-auto ${isDark ? "text-gray-300" : "text-gray-800"}`}>
-  <div className="whitespace-pre-wrap">
-    <h4 className={`font-medium text-lg mb-2 ${isDark ? "text-gray-200" : "text-gray-800"}`}>
-      {selectedMessage?.objet || "Sans objet"}
-    </h4>
-    <p>{selectedMessage?.contenu}</p>
-  </div>
-</div>
 
           <button
             className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
@@ -152,7 +144,39 @@ const MessageDetailPanel = ({
         </div>
       </div>
       <div className={`p-6 flex-1 overflow-y-auto ${isDark ? "text-gray-300" : "text-gray-800"}`}>
-        <div className="whitespace-pre-wrap">{selectedMessage?.contenu}</div>
+        <div className="mb-4">
+          <div className={`text-sm font-medium mb-2 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+            Objet:
+          </div>
+          <div className={`font-medium text-lg mb-4 ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+            {selectedMessage?.objet || "Sans objet"}
+          </div>
+        </div>
+        
+        {selectedMessage?.thread && selectedMessage.thread.length > 1 ? (
+          <div className="space-y-4">
+            {selectedMessage.thread.map((msg, index) => (
+              <div key={msg.id} className={`border rounded-lg p-4 ${isDark ? "border-gray-600 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${isDark ? "bg-gray-600 text-gray-300" : "bg-gray-200 text-gray-700"}`}>
+                    {getUserInitials(msg.expediteur)}
+                  </div>
+                  <div>
+                    <div className={`font-medium text-sm ${isDark ? "text-white" : "text-gray-900"}`}>
+                      {getUserDisplay(msg.expediteur)}
+                    </div>
+                    <div className={`text-xs ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                      {formatDate(msg.dateCreation)}
+                    </div>
+                  </div>
+                </div>
+                <div className="whitespace-pre-wrap text-sm">{msg.contenu}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap">{selectedMessage?.contenu}</div>
+        )}
       </div>
       {showReplyField && (
         <div className={`border-t p-4 ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-gray-50"}`}>

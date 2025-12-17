@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, RefreshCw, X, Mail, AlertCircle, Star, StarOff, CheckCircle, Circle, Trash2, Users } from "lucide-react";
+import { Search, RefreshCw, X, Mail, AlertCircle, Star, StarOff, CheckCircle, Circle, Trash2, Users, Undo2 } from "lucide-react";
 
 const MessageList = ({
   isDark,
@@ -13,6 +13,9 @@ const MessageList = ({
   handleMarkAsRead,
   handleDeleteMessage,
   handleBulkDelete,
+  handleEmptyTrash,
+  handleRestoreMessage,
+  filterType,
   loading,
   searchTerm,
   setSearchTerm,
@@ -39,7 +42,7 @@ const MessageList = ({
               <span className="text-sm text-gray-600">{selectedMessages.size} sélectionné(s)</span>
               <button
                 className={`p-2 rounded-full text-red-600 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
-                onClick={handleBulkDelete}
+                onClick={filterType === 'trash' ? handleEmptyTrash : handleBulkDelete}
               >
                 <Trash2 size={16} />
               </button>
@@ -155,10 +158,15 @@ const MessageList = ({
       {formatDate(message.dateCreation)}
     </span>
   </div>
-  <div className="flex items-center gap-2 mb-1">
-    <span className={`font-medium text-sm ${!message.read ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+  <div className="flex items-center justify-between mb-1">
+    <span className={`font-medium text-sm ${!message.read ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"} truncate`}>
       {message.objet || "Sans objet"}
     </span>
+    {message.isConversation && (
+      <span className={`text-xs px-2 py-1 rounded-full ml-2 ${isDark ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-800"}`}>
+        {message.thread.length}
+      </span>
+    )}
   </div>
   <p className={`text-sm truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}>
     {message.contenu}
@@ -174,7 +182,7 @@ const MessageList = ({
 </div>
 
 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className={`flex items-center gap-1 ${filterType === 'trash' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
                   <button
                     className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
                     onClick={(e) => {
@@ -184,15 +192,28 @@ const MessageList = ({
                   >
                     {message.read ? <Circle size={14} /> : <CheckCircle size={14} />}
                   </button>
-                  <button
-                    className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteMessage(message.id);
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {filterType === 'trash' ? (
+                    <button
+                      className={`p-2 rounded-full text-green-600 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRestoreMessage(message.id);
+                      }}
+                      title="Restaurer le message"
+                    >
+                      <Undo2 size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteMessage(message.id);
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

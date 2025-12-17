@@ -131,81 +131,56 @@ const CoursProgrammerViewModal = ({
 
   useEffect(() => {
     const fetchParticipants = async () => {
-      console.log("=== FETCHING PARTICIPANTS ===");
-      console.log("Scheduled Course:", scheduledCourse);
-      console.log("Participants IDs:", scheduledCourse?.participantsIds);
-      console.log("Classe ID (old format):", scheduledCourse?.classeId);
-      console.log("Classes IDs (new format):", scheduledCourse?.classesIds);
-      
-      const classId = getClassId(scheduledCourse);
-      
-      if (
-        !scheduledCourse?.participantsIds?.length ||
-        !classId
-      ) {
-        console.log("No participants IDs or classe ID found");
-        console.log("Class ID:", classId);
-        console.log("Participants IDs:", scheduledCourse?.participantsIds);
+      if (!scheduledCourse?.participantsIds?.length) {
         setParticipants([]);
         return;
       }
 
       try {
         setLoadingParticipants(true);
-        console.log("Fetching class participants for classe:", classId);
+        const accessToken = localStorage.getItem('accessToken');
         
-        const classParticipants =
-          await AccederService.obtenirUtilisateursAvecAcces(
-            classId
-          );
-          
-        console.log("Class participants received:", classParticipants);
-
-        const participantDetails = scheduledCourse.participantsIds
-          .map((participantId) => {
-            console.log(`Looking for participant ID: ${participantId}`);
-            
-            const participant = classParticipants.find(
-              (user) => {
-                const userId = user.utilisateurId || user.id;
-                const matches = userId === participantId && user.etat === "APPROUVEE";
-                console.log(`Checking user ${userId} (${user.prenom} ${user.nom}) - matches: ${matches}`);
-                return matches;
-              }
-            );
-
-            if (participant) {
-              const firstName = participant.prenom || "";
-              const lastName =
-                participant.nom || participant.utilisateurNom || "";
-              const fullName = `${firstName} ${lastName}`.trim();
-
-              const displayName =
-                fullName ||
-                participant.nomComplet ||
-                participant.email ||
-                `User ${participant.utilisateurId || participant.id}`;
-
-              const participantInfo = {
-                id: participant.utilisateurId || participant.id,
-                name: displayName,
-                email: participant.email || participant.utilisateurEmail || "",
-                type: participant.type || participant.role || "MEMBER",
-                originalData: participant,
-              };
+        const participantDetails = await Promise.all(
+          scheduledCourse.participantsIds.map(async (participantId) => {
+            try {
+              const response = await fetch(
+                `http://localhost:8486/scholchat/utilisateurs/${participantId}`,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                  },
+                }
+              );
               
-              console.log("Participant found:", participantInfo);
-              return participantInfo;
+              if (!response.ok) {
+                console.warn(`Failed to fetch user ${participantId}`);
+                return null;
+              }
+              
+              const user = await response.json();
+              const firstName = user.prenom || "";
+              const lastName = user.nom || "";
+              const fullName = `${firstName} ${lastName}`.trim();
+              
+              return {
+                id: user.id,
+                name: fullName || user.email || `User ${user.id}`,
+                email: user.email || "",
+                type: user.role || user.type || "USER",
+                originalData: user,
+              };
+            } catch (error) {
+              console.error(`Error fetching user ${participantId}:`, error);
+              return null;
             }
-            
-            console.log(`Participant ${participantId} not found in class participants`);
-            return null;
           })
+        );
+
+        const validParticipants = participantDetails
           .filter(Boolean)
           .sort((a, b) => a.name.localeCompare(b.name));
 
-        console.log("Final participants list:", participantDetails);
-        setParticipants(participantDetails);
+        setParticipants(validParticipants);
       } catch (error) {
         console.error("Error fetching participants:", error);
         setParticipants([]);
@@ -347,145 +322,140 @@ const CoursProgrammerViewModal = ({
                     Informations du Cours
                   </h3>
 
-                  <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Course Avatar and basic info */}
-                    <div className="flex-shrink-0">
-                      <div className="flex items-center space-x-6">
-                        <div className="relative">
-                          <div className="h-24 w-24 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shadow-xl">
-                            <span className="text-white font-bold text-2xl">
-                              {getInitials(scheduledCourse.cours?.titre)}
-                            </span>
-                          </div>
-                          <div className="absolute -bottom-2 -right-2">
-                            <div
-                              className={`w-6 h-6 rounded-full border-4 border-white ${
-                                scheduledCourse.etatCoursProgramme ===
-                                "PLANIFIE"
-                                  ? "bg-blue-500"
-                                  : scheduledCourse.etatCoursProgramme ===
-                                    "EN_COURS"
-                                  ? "bg-green-500"
-                                  : scheduledCourse.etatCoursProgramme ===
-                                    "TERMINE"
-                                  ? "bg-gray-500"
-                                  : "bg-red-500"
-                              }`}
-                            ></div>
-                          </div>
+                  <div className="space-y-6">
+                    {/* Course Header */}
+                    <div className="flex items-center space-x-6">
+                      <div className="relative">
+                        <div className="h-24 w-24 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shadow-xl">
+                          <span className="text-white font-bold text-2xl">
+                            {getInitials(scheduledCourse.cours?.titre)}
+                          </span>
                         </div>
-                        <div>
-                          <div className="text-2xl font-bold text-slate-900">
-                            {scheduledCourse.cours?.titre}
-                          </div>
-                          <div className="text-slate-600 font-medium mt-1">
-                            Classe: {getClassName(scheduledCourse)}
-                          </div>
-
+                        <div className="absolute -bottom-2 -right-2">
+                          <div
+                            className={`w-6 h-6 rounded-full border-4 border-white ${
+                              scheduledCourse.etatCoursProgramme ===
+                              "PLANIFIE"
+                                ? "bg-blue-500"
+                                : scheduledCourse.etatCoursProgramme ===
+                                  "EN_COURS"
+                                ? "bg-green-500"
+                                : scheduledCourse.etatCoursProgramme ===
+                                  "TERMINE"
+                                ? "bg-gray-500"
+                                : "bg-red-500"
+                            }`}
+                          ></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-slate-900">
+                          {scheduledCourse.cours?.titre}
+                        </div>
+                        <div className="text-slate-600 font-medium mt-1">
+                          Classe: {getClassName(scheduledCourse)}
                         </div>
                       </div>
                     </div>
 
                     {/* Course Details Grid */}
-                    <div className="flex-1">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-blue-50 rounded-lg">
+                            <Calendar className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-slate-500 font-medium">
+                              Date Prévue
+                            </p>
+                            <p className="text-slate-900">
+                              {formatDate(scheduledCourse.dateCoursPrevue)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {scheduledCourse.dateDebutEffectif && (
                           <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-blue-50 rounded-lg">
-                              <Calendar className="w-4 h-4 text-blue-600" />
+                            <div className="p-2 bg-green-50 rounded-lg">
+                              <PlayCircle className="w-4 h-4 text-green-600" />
                             </div>
                             <div>
                               <p className="text-sm text-slate-500 font-medium">
-                                Date Prévue
+                                Début Effectif
                               </p>
                               <p className="text-slate-900">
-                                {formatDate(scheduledCourse.dateCoursPrevue)}
+                                {formatDate(
+                                  scheduledCourse.dateDebutEffectif
+                                )}
                               </p>
                             </div>
                           </div>
+                        )}
 
-                          {scheduledCourse.dateDebutEffectif && (
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-green-50 rounded-lg">
-                                <PlayCircle className="w-4 h-4 text-green-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-slate-500 font-medium">
-                                  Début Effectif
-                                </p>
-                                <p className="text-slate-900">
-                                  {formatDate(
-                                    scheduledCourse.dateDebutEffectif
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {scheduledCourse.dateFinEffectif && (
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-gray-50 rounded-lg">
-                                <CheckCircle className="w-4 h-4 text-gray-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-slate-500 font-medium">
-                                  Fin Effective
-                                </p>
-                                <p className="text-slate-900">
-                                  {formatDate(scheduledCourse.dateFinEffectif)}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-4">
+                        {scheduledCourse.dateFinEffectif && (
                           <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-purple-50 rounded-lg">
-                              <MapPin className="w-4 h-4 text-purple-600" />
+                            <div className="p-2 bg-gray-50 rounded-lg">
+                              <CheckCircle className="w-4 h-4 text-gray-600" />
                             </div>
                             <div>
                               <p className="text-sm text-slate-500 font-medium">
-                                Lieu
+                                Fin Effective
                               </p>
                               <p className="text-slate-900">
-                                {scheduledCourse.lieu || "Non défini"}
+                                {formatDate(scheduledCourse.dateFinEffectif)}
                               </p>
                             </div>
                           </div>
+                        )}
+                      </div>
 
-                          {scheduledCourse.capaciteMax && (
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-amber-50 rounded-lg">
-                                <Users className="w-4 h-4 text-amber-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-slate-500 font-medium">
-                                  Capacité
-                                </p>
-                                <p className="text-slate-900">
-                                  {scheduledCourse.capaciteMax} places
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {scheduledCourse.duree && (
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-indigo-50 rounded-lg">
-                                <Timer className="w-4 h-4 text-indigo-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-slate-500 font-medium">
-                                  Durée
-                                </p>
-                                <p className="text-slate-900">
-                                  {scheduledCourse.duree} minutes
-                                </p>
-                              </div>
-                            </div>
-                          )}
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-purple-50 rounded-lg">
+                            <MapPin className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-slate-500 font-medium">
+                              Lieu
+                            </p>
+                            <p className="text-slate-900">
+                              {scheduledCourse.lieu || "Non défini"}
+                            </p>
+                          </div>
                         </div>
+
+                        {scheduledCourse.capaciteMax && (
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-amber-50 rounded-lg">
+                              <Users className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-slate-500 font-medium">
+                                Capacité
+                              </p>
+                              <p className="text-slate-900">
+                                {scheduledCourse.capaciteMax} places
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {scheduledCourse.duree && (
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-indigo-50 rounded-lg">
+                              <Timer className="w-4 h-4 text-indigo-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-slate-500 font-medium">
+                                Durée
+                              </p>
+                              <p className="text-slate-900">
+                                {scheduledCourse.duree} minutes
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -516,9 +486,7 @@ const CoursProgrammerViewModal = ({
                             <h5 className="font-medium text-slate-900">
                               {classDetails.nom} {classDetails.niveau && `(${classDetails.niveau})`}
                             </h5>
-                            <div className="mt-2 text-sm text-slate-600">
-                              <span className="font-medium">ID:</span> {currentClassId}
-                            </div>
+
                             {classDetails.etablissement && (
                               <div className="mt-2 space-y-2">
                                 <div className="flex items-center text-sm text-slate-600">
@@ -596,20 +564,8 @@ const CoursProgrammerViewModal = ({
                       Aucun participant inscrit
                     </h4>
                     <p className="text-slate-600">
-                      Les étudiants pourront s'inscrire à ce cours programmé.
+                      Aucun participant n'a été sélectionné pour ce cours.
                     </p>
-                    <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
-                      <p className="text-xs text-red-700">
-                        <strong>⚠️ Problème de données:</strong><br/>
-                        • Aucune classe associée au cours programmé<br/>
-                        • Les participants ne peuvent pas être récupérés sans classe<br/>
-                        • Vérifiez la programmation du cours dans l'API backend<br/><br/>
-                        <strong>Données reçues:</strong><br/>
-                        Classe ID: {currentClassId || "❌ Manquant"}<br/>
-                        Participants IDs: {JSON.stringify(scheduledCourse.participantsIds)}<br/>
-                        Note: DB utilise 'classe_id' (singulier), pas 'classes_ids'
-                      </p>
-                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -625,15 +581,7 @@ const CoursProgrammerViewModal = ({
                           Les informations des participants ne sont pas
                           disponibles ou ils ont été supprimés de la classe.
                         </p>
-                        <div className="p-4 bg-amber-50 rounded-lg text-left">
-                          <p className="text-xs text-amber-700">
-                            <strong>Informations de débogage:</strong><br/>
-                            Classe ID: {currentClassId}<br/>
-                            Participants attendus: {scheduledCourse.participantsIds?.length || 0}<br/>
-                            IDs: {JSON.stringify(scheduledCourse.participantsIds)}<br/>
-                            Classe trouvée: {getClassName(scheduledCourse)}
-                          </p>
-                        </div>
+
                       </div>
                     ) : (
                       participants.map((participant, index) => (
@@ -664,9 +612,7 @@ const CoursProgrammerViewModal = ({
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                   {participant.type || "MEMBER"}
                                 </span>
-                                <span className="text-xs text-slate-500">
-                                  ID: {participant.id}
-                                </span>
+
                               </div>
                             </div>
                             <div className="flex-shrink-0">

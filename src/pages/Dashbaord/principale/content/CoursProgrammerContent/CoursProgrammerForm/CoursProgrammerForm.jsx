@@ -162,35 +162,22 @@ const CoursProgrammerForm = ({
 
         console.log("Raw participants data:", participants);
 
-        // Filter only approved users and format them properly
+        // Format users properly for the dropdown
         const approvedUsers = participants
-          .filter((user) => {
-            // Check different possible status field names
-            const status = user.etat || user.status || user.statut;
-            return (
-              status === "APPROUVEE" ||
-              status === "ACTIVE" ||
-              status === "ACTIF"
-            );
-          })
           .map((user) => {
             // Get the full name in a professional format
             const firstName = user.prenom || "";
-            const lastName = user.nom || user.utilisateurNom || "";
+            const lastName = user.nom || "";
             const fullName = `${firstName} ${lastName}`.trim();
 
             // Fallback to email or ID if no name is available
-            const displayName =
-              fullName ||
-              user.nomComplet ||
-              user.email ||
-              `User ${user.utilisateurId || user.id}`;
+            const displayName = fullName || user.email || `User ${user.id}`;
 
             return {
-              id: user.utilisateurId || user.id,
+              id: user.id,
               name: displayName,
-              email: user.email || user.utilisateurEmail || "",
-              type: user.type || user.role || user.typeUtilisateur || "MEMBER",
+              email: user.email || "",
+              type: user.type || "MEMBER",
               // Keep original data for reference
               originalData: user,
             };

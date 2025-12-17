@@ -27,6 +27,7 @@ const MessagingInterface = ({
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [trashMessages, setTrashMessages] = useState([]);
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -55,29 +56,18 @@ const MessagingInterface = ({
   };
 
   const fetchMessages = useCallback(async () => {
-    if (!currentUser?.id) return;
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
 
     setLoading(true);
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:8486/scholchat/messages/utilisateur/${currentUser.id}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      const transformedMessages = data.map(msg => {
-        const { subject, messageBody } = parseMessageContent(msg.contenu);
+      
+      const transformMessage = (msg) => {
         return {
           id: msg.id,
-          objet: subject,
-          contenu: messageBody,
+          objet: msg.objet || "Sans objet",
+          contenu: msg.contenu,
           dateCreation: msg.dateCreation,
           dateModification: msg.dateModification,
           etat: msg.etat,
@@ -106,9 +96,43 @@ const MessagingInterface = ({
           classes: [],
           isGeneral: false
         };
-      });
+      };
+      
+      // Fetch sent, received, and trash messages
+      const [sentResponse, receivedResponse, trashResponse] = await Promise.all([
+        fetch(`http://localhost:8486/scholchat/messages/utilisateur/${userId}/sent`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        }),
+        fetch(`http://localhost:8486/scholchat/messages/utilisateur/${userId}/received`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        }),
+        fetch(`http://localhost:8486/scholchat/messages/utilisateur/${userId}/trash`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        })
+      ]);
 
-      setAllMessages(transformedMessages);
+      if (!sentResponse.ok || !receivedResponse.ok) {
+        throw new Error('Failed to fetch messages');
+      }
+
+      const [sentData, receivedData] = await Promise.all([
+        sentResponse.json(),
+        receivedResponse.json()
+      ]);
+
+      // Handle trash messages separately
+      let trashData = [];
+      if (trashResponse.ok) {
+        trashData = await trashResponse.json();
+        setTrashMessages(trashData.map(transformMessage));
+      }
+
+      const allMessages = [
+        ...sentData.map(transformMessage),
+        ...receivedData.map(transformMessage)
+      ];
+
+      setAllMessages(allMessages);
       setError(null);
     } catch (err) {
       console.error("Error fetching messages:", err);
@@ -116,28 +140,54 @@ const MessagingInterface = ({
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.id]);
+  }, []);
+
+  const groupMessagesByConversation = (messages) => {
+    const conversations = {};
+    
+    messages.forEach(msg => {
+      const baseSubject = msg.objet?.replace(/^Re:\s*/i, '') || 'Sans objet';
+      if (!conversations[baseSubject]) {
+        conversations[baseSubject] = [];
+      }
+      conversations[baseSubject].push(msg);
+    });
+    
+    return Object.values(conversations).map(thread => {
+      thread.sort((a, b) => new Date(a.dateCreation) - new Date(b.dateCreation));
+      const latestMessage = thread[thread.length - 1];
+      return {
+        ...latestMessage,
+        thread,
+        isConversation: thread.length > 1
+      };
+    });
+  };
 
   const filterMessages = useCallback(() => {
+    const userId = localStorage.getItem('userId');
     let filteredMessages = [...allMessages];
     switch (filterType) {
       case "all":
         filteredMessages = filteredMessages.filter(msg =>
-          msg.destinataires.some(dest => dest.id === currentUser.id)
+          msg.destinataires.some(dest => dest.id === userId)
         );
         break;
       case "sent":
         filteredMessages = filteredMessages.filter(msg =>
-          msg.expediteur.id === currentUser.id
+          msg.expediteur.id === userId
         );
         break;
       case "unread":
         filteredMessages = filteredMessages.filter(msg =>
-          !msg.read && msg.destinataires.some(dest => dest.id === currentUser.id)
+          !msg.read && msg.destinataires.some(dest => dest.id === userId)
         );
         break;
       case "starred":
         filteredMessages = filteredMessages.filter(msg => msg.starred);
+        break;
+      case "trash":
+        filteredMessages = [...trashMessages];
         break;
       default:
         break;
@@ -153,9 +203,10 @@ const MessagingInterface = ({
       );
     }
 
-    filteredMessages.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
-    setMessages(filteredMessages);
-  }, [allMessages, filterType, searchTerm, currentUser?.id]);
+    const conversations = groupMessagesByConversation(filteredMessages);
+    conversations.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+    setMessages(conversations);
+  }, [allMessages, filterType, searchTerm]);
 
   useEffect(() => {
     fetchMessages();
@@ -173,21 +224,23 @@ const MessagingInterface = ({
   };
 
   const getMessageCounts = () => {
+    const userId = localStorage.getItem('userId');
     const receivedMessages = allMessages.filter(msg =>
-      msg.destinataires.some(dest => dest.id === currentUser.id)
+      msg.destinataires.some(dest => dest.id === userId)
     );
     const sentMessages = allMessages.filter(msg =>
-      msg.expediteur.id === currentUser.id
+      msg.expediteur.id === userId
     );
     const unreadMessages = allMessages.filter(msg =>
-      !msg.read && msg.destinataires.some(dest => dest.id === currentUser.id)
+      !msg.read && msg.destinataires.some(dest => dest.id === userId)
     );
     const starredMessages = allMessages.filter(msg => msg.starred);
     return {
       all: receivedMessages.length,
       sent: sentMessages.length,
       unread: unreadMessages.length,
-      starred: starredMessages.length
+      starred: starredMessages.length,
+      trash: trashMessages.length
     };
   };
 
@@ -276,19 +329,93 @@ const MessagingInterface = ({
   };
 
   const handleDeleteMessage = async (messageId) => {
-    setMessages(prev => prev.filter(msg => msg.id !== messageId));
-    setAllMessages(prev => prev.filter(msg => msg.id !== messageId));
-
-    if (selectedMessage?.id === messageId) {
-      setSelectedMessage(null);
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch(`http://localhost:8486/scholchat/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      
+      if (response.ok) {
+        setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        setAllMessages(prev => prev.filter(msg => msg.id !== messageId));
+        
+        if (selectedMessage?.id === messageId) {
+          setSelectedMessage(null);
+        }
+        
+        // Refresh to update trash
+        fetchMessages();
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      setError('Erreur lors de la suppression du message');
     }
   };
 
   const handleBulkDelete = async () => {
-    const messageIds = Array.from(selectedMessages);
-    setMessages(prev => prev.filter(msg => !messageIds.includes(msg.id)));
-    setAllMessages(prev => prev.filter(msg => !messageIds.includes(msg.id)));
-    setSelectedMessages(new Set());
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const messageIds = Array.from(selectedMessages);
+      
+      await Promise.all(messageIds.map(id => 
+        fetch(`http://localhost:8486/scholchat/messages/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        })
+      ));
+      
+      setMessages(prev => prev.filter(msg => !messageIds.includes(msg.id)));
+      setAllMessages(prev => prev.filter(msg => !messageIds.includes(msg.id)));
+      setSelectedMessages(new Set());
+      
+      // Refresh to update trash
+      fetchMessages();
+    } catch (error) {
+      console.error('Error bulk deleting messages:', error);
+      setError('Erreur lors de la suppression des messages');
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch('http://localhost:8486/scholchat/messages/trash/cleanup', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      
+      if (response.ok) {
+        setTrashMessages([]);
+        if (filterType === 'trash') {
+          setMessages([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error emptying trash:', error);
+      setError('Erreur lors du vidage de la corbeille');
+    }
+  };
+
+  const handleRestoreMessage = async (messageId) => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch(`http://localhost:8486/scholchat/messages/${messageId}/restore`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      
+      if (response.ok) {
+        setTrashMessages(prev => prev.filter(msg => msg.id !== messageId));
+        if (filterType === 'trash') {
+          setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        }
+        fetchMessages();
+      }
+    } catch (error) {
+      console.error('Error restoring message:', error);
+      setError('Erreur lors de la restauration du message');
+    }
   };
 
   const toggleStarMessage = async (messageId, isStarred) => {
@@ -352,6 +479,7 @@ const MessagingInterface = ({
         setFilterType={setFilterType}
         messageCounts={messageCounts}
         currentUser={currentUser}
+        handleEmptyTrash={handleEmptyTrash}
       />
       <MessageList
         isDark={isDark}
@@ -365,6 +493,9 @@ const MessagingInterface = ({
         handleMarkAsRead={handleMarkAsRead}
         handleDeleteMessage={handleDeleteMessage}
         handleBulkDelete={handleBulkDelete}
+        handleEmptyTrash={handleEmptyTrash}
+        handleRestoreMessage={handleRestoreMessage}
+        filterType={filterType}
         loading={loading}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}

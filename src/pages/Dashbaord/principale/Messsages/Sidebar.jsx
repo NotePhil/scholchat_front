@@ -1,5 +1,5 @@
 import React from "react";
-import { Send, Inbox, Edit, Star, Circle } from "lucide-react";
+import { Send, Inbox, Edit, Star, Circle, Trash2 } from "lucide-react";
 
 const Sidebar = ({
   isDark,
@@ -8,7 +8,8 @@ const Sidebar = ({
   filterType,
   setFilterType,
   messageCounts,
-  currentUser
+  currentUser,
+  handleEmptyTrash
 }) => {
   const sidebarItems = [
     {
@@ -32,6 +33,12 @@ const Sidebar = ({
       key: "unread",
       label: "Non lus",
       icon: Circle,
+    },
+    {
+      key: "trash",
+      label: "Corbeille",
+      icon: Trash2,
+      count: messageCounts.trash
     },
   ];
 
@@ -81,6 +88,18 @@ const Sidebar = ({
             )}
           </button>
         ))}
+        {filterType === 'trash' && messageCounts.trash > 0 && (
+          <button
+            className={`w-full mt-2 px-4 py-2 rounded-lg text-sm transition-colors ${
+              isDark
+                ? "bg-red-900 text-red-200 hover:bg-red-800"
+                : "bg-red-50 text-red-700 hover:bg-red-100"
+            }`}
+            onClick={handleEmptyTrash}
+          >
+            Vider la corbeille
+          </button>
+        )}
       </div>
     </div>
   );
