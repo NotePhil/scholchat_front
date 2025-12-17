@@ -92,6 +92,10 @@ const ActivitiesContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     try {
       await handleCreateEvent(eventData);
       handleShowCreateForm(false);
+      // Refresh activities after creation
+      setTimeout(() => {
+        loadActivities();
+      }, 500);
     } catch (err) {
       console.error("Erreur lors de la création:", err);
     }
@@ -200,33 +204,44 @@ const ActivitiesContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               </div>
             </div>
 
-            {filteredActivities.length > 0 ? (
-              <div className="space-y-6">
-                {filteredActivities.map((activity) => (
-                  <ActivityDisplay
-                    key={activity.id}
-                    activity={activity}
-                    onReaction={handleReaction}
-                    onComment={handleComment}
-                    onShare={handleShare}
-                    onJoinEvent={handleJoinEvent}
-                    onEdit={onEditEvent}
-                    onDelete={onDeleteEvent}
-                    currentUser={currentUser}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-12 text-center`}>
-                <Users size={64} className="mx-auto text-gray-400 mb-4" />
-                <h3 className={`text-xl font-semibold ${isDark ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
-                  Aucune activité trouvée
-                </h3>
-                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Aucune activité ne correspond aux filtres sélectionnés.
-                </p>
-              </div>
-            )}
+            <div className="relative">
+              {loading && filteredActivities.length > 0 && (
+                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-xl">
+                  <div className="text-center">
+                    <Loader2 className="animate-spin text-blue-600 mx-auto mb-2" size={32} />
+                    <p className="text-gray-600 text-sm">Actualisation...</p>
+                  </div>
+                </div>
+              )}
+              
+              {filteredActivities.length > 0 ? (
+                <div className="space-y-6">
+                  {filteredActivities.map((activity) => (
+                    <ActivityDisplay
+                      key={activity.id}
+                      activity={activity}
+                      onReaction={handleReaction}
+                      onComment={handleComment}
+                      onShare={handleShare}
+                      onJoinEvent={handleJoinEvent}
+                      onEdit={onEditEvent}
+                      onDelete={onDeleteEvent}
+                      currentUser={currentUser}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-12 text-center`}>
+                  <Users size={64} className="mx-auto text-gray-400 mb-4" />
+                  <h3 className={`text-xl font-semibold ${isDark ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
+                    Aucune activité trouvée
+                  </h3>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Aucune activité ne correspond aux filtres sélectionnés.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

@@ -620,7 +620,7 @@ const ActivityDisplay = ({
 
       {/* Media */}
       {activity.media && activity.media.length > 0 && (
-        <div className="px-6 pb-6">
+        <div className="px-6 pb-4 mb-4">
           {renderImageLayout()}
         </div>
       )}

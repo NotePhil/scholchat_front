@@ -148,6 +148,10 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
           title: 'Succès',
           message: 'Événement créé avec succès!'
         });
+        // Close form and refresh activities smoothly
+        setTimeout(() => {
+          handleClose();
+        }, 1500);
       } catch (error) {
         console.error("Event creation failed:", error);
         let errorMessage = "Erreur lors de la création de l'événement";
@@ -157,16 +161,17 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
         } else if (error.message.includes('500')) {
           errorMessage = "Erreur serveur. Vérifiez les logs du backend.";
         } else if (error.message.includes('DUPLICATE_RESOURCE')) {
-          errorMessage = "Un événement avec ce titre existe déjà.";
+          errorMessage = "Un événement avec ce titre existe déjà. Veuillez choisir un autre titre.";
         } else if (error.message.includes('NOT_FOUND')) {
           errorMessage = "Professeur non trouvé. Vérifiez votre authentification.";
         }
         
         setNotification({
           type: 'error',
-          title: 'Erreur',
-          message: `${errorMessage}\n\nDétails: ${error.message}`
+          title: 'Erreur de création',
+          message: errorMessage
         });
+        // Don't close the form on error, keep it open for user to fix
       }
     } catch (error) {
       console.error("Erreur lors de la création de l'événement:", error);
@@ -298,10 +303,10 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
     
     if (imageCount === 2) {
       return (
-        <div className="grid grid-cols-2 gap-2 h-32">
+        <div className="grid grid-cols-2 gap-2 h-20">
           {uploadedImages.slice(0, 2).map((image, index) => (
             <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index)}>
-              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-32 object-cover" />
+              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-20 object-cover" />
             </div>
           ))}
         </div>
@@ -310,10 +315,10 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
     
     if (imageCount === 3) {
       return (
-        <div className="grid grid-cols-3 gap-2 h-24">
+        <div className="grid grid-cols-3 gap-2 h-16">
           {uploadedImages.slice(0, 3).map((image, index) => (
             <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index)}>
-              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-24 object-cover" />
+              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-16 object-cover" />
             </div>
           ))}
         </div>
@@ -322,17 +327,17 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
     
     // 4 or more images
     return (
-      <div className="grid grid-cols-4 gap-2 h-20">
+      <div className="grid grid-cols-4 gap-2 h-14">
         {uploadedImages.slice(0, 3).map((image, index) => (
           <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index)}>
-            <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-20 object-cover" />
+            <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-14 object-cover" />
           </div>
         ))}
         <div className="relative rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(3)}>
-          <img src={uploadedImages[3]?.previewUrl} alt={uploadedImages[3]?.originalFileName} className="w-full h-20 object-cover" />
+          <img src={uploadedImages[3]?.previewUrl} alt={uploadedImages[3]?.originalFileName} className="w-full h-14 object-cover" />
           {imageCount > 4 && (
             <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-              <div className="text-white text-sm font-bold">+{imageCount - 4}</div>
+              <div className="text-white text-xs font-bold">+{imageCount - 4}</div>
             </div>
           )}
         </div>
@@ -405,6 +410,7 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
 
   const closeNotification = () => {
     setNotification(null);
+    // Only close form on success, keep open on error
     if (notification?.type === 'success') {
       handleClose();
     }
@@ -728,8 +734,14 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
 
       {/* Image Gallery Modal */}
       {imageGallery.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-          <div className="relative max-w-4xl max-h-[90vh] w-full mx-4">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+          onClick={closeImageGallery}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[90vh] w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={closeImageGallery}
               className="absolute top-4 right-4 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
