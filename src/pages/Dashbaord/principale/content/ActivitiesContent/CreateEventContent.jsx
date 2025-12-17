@@ -290,18 +290,18 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
     
     if (imageCount === 1) {
       return (
-        <div className="w-full h-64 rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
-          <img src={uploadedImages[0].previewUrl} alt={uploadedImages[0].originalFileName} className="w-full h-full object-cover" />
+        <div className="w-full h-32 rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
+          <img src={uploadedImages[0].previewUrl} alt={uploadedImages[0].originalFileName} className="w-full h-32 object-cover" />
         </div>
       );
     }
     
     if (imageCount === 2) {
       return (
-        <div className="grid grid-cols-2 gap-2 h-64">
+        <div className="grid grid-cols-2 gap-2 h-32">
           {uploadedImages.slice(0, 2).map((image, index) => (
             <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index)}>
-              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-full object-cover" />
+              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-32 object-cover" />
             </div>
           ))}
         </div>
@@ -310,41 +310,31 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
     
     if (imageCount === 3) {
       return (
-        <div className="grid grid-cols-2 gap-2 h-64">
-          <div className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
-            <img src={uploadedImages[0].previewUrl} alt={uploadedImages[0].originalFileName} className="w-full h-full object-cover" />
-          </div>
-          <div className="grid grid-rows-2 gap-2">
-            {uploadedImages.slice(1, 3).map((image, index) => (
-              <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index + 1)}>
-                <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-full object-cover" />
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-3 gap-2 h-24">
+          {uploadedImages.slice(0, 3).map((image, index) => (
+            <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index)}>
+              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-24 object-cover" />
+            </div>
+          ))}
         </div>
       );
     }
     
     // 4 or more images
     return (
-      <div className="grid grid-cols-2 gap-2 h-64">
-        <div className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(0)}>
-          <img src={uploadedImages[0].previewUrl} alt={uploadedImages[0].originalFileName} className="w-full h-full object-cover" />
-        </div>
-        <div className="grid grid-rows-2 gap-2">
-          {uploadedImages.slice(1, 3).map((image, index) => (
-            <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index + 1)}>
-              <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-full object-cover" />
-            </div>
-          ))}
-          <div className="relative rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(3)}>
-            <img src={uploadedImages[3].previewUrl} alt={uploadedImages[3].originalFileName} className="w-full h-full object-cover" />
-            {imageCount > 4 && (
-              <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-                <div className="text-white text-xl font-bold">+{imageCount - 4}</div>
-              </div>
-            )}
+      <div className="grid grid-cols-4 gap-2 h-20">
+        {uploadedImages.slice(0, 3).map((image, index) => (
+          <div key={image.id} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(index)}>
+            <img src={image.previewUrl} alt={image.originalFileName} className="w-full h-20 object-cover" />
           </div>
+        ))}
+        <div className="relative rounded-lg overflow-hidden cursor-pointer" onClick={() => openImageGallery(3)}>
+          <img src={uploadedImages[3]?.previewUrl} alt={uploadedImages[3]?.originalFileName} className="w-full h-20 object-cover" />
+          {imageCount > 4 && (
+            <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+              <div className="text-white text-sm font-bold">+{imageCount - 4}</div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -634,7 +624,7 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
                 Ajouter des images (optionnel)
               </label>
 
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors">
                 <div className="space-y-4">
                   <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center mx-auto">
                     <Image size={32} className="text-blue-600" />
@@ -698,7 +688,9 @@ const CreateEventContent = ({ onClose, onSubmit, loading }) => {
                     Supprimer tout
                   </button>
                 </div>
-                {renderImageLayout()}
+                <div className="max-w-md">
+                  {renderImageLayout()}
+                </div>
               </div>
             )}
           </div>
