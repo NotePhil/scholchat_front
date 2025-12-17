@@ -40,64 +40,10 @@ const ActivityDisplay = ({
   // Check if current user is admin
   const isAdmin = currentUser?.role === 'ROLE_ADMIN' || currentUser?.role === 'admin';
   
-  // Local state for likes and comments - prioritize backend data
-  const [localState, setLocalState] = useState(() => {
-    // Always use backend data first, then fallback to cache
-    const backendData = {
-      likes: activity.likes ?? 0,
-      isLiked: activity.isLiked ?? false,
-      comments: activity.comments ?? [],
-    };
-    
-    // Only use cache if backend data is empty/default
-    if (backendData.likes === 0 && backendData.comments.length === 0) {
-      const cached = localStorage.getItem(`activity_${activity.id}`);
-      if (cached) {
-        try {
-          const data = JSON.parse(cached);
-          return {
-            likes: data.likes ?? backendData.likes,
-            isLiked: data.isLiked ?? backendData.isLiked,
-            comments: data.comments ?? backendData.comments,
-          };
-        } catch (e) {
-          console.warn('Failed to parse cached data');
-        }
-      }
-    }
-    
-    return backendData;
-  });
-
-  // Update local state when activity data changes from backend
-  React.useEffect(() => {
-    console.log('=== BACKEND DATA DEBUG ===');
-    console.log('Activity ID:', activity.id);
-    console.log('Backend likes:', activity.likes);
-    console.log('Backend isLiked:', activity.isLiked);
-    console.log('Backend comments:', activity.comments);
-    console.log('Current local state:', localState);
-    
-    const backendData = {
-      likes: activity.likes ?? 0,
-      isLiked: activity.isLiked ?? false,
-      comments: activity.comments ?? [],
-    };
-    
-    // Update local state if backend has newer data
-    if (backendData.likes !== localState.likes || 
-        backendData.isLiked !== localState.isLiked || 
-        backendData.comments.length !== localState.comments.length) {
-      console.log('Updating from backend data:', backendData);
-      setLocalState(backendData);
-    }
-    console.log('=== END BACKEND DEBUG ===');
-  }, [activity.likes, activity.isLiked, activity.comments]);
-
-  // Save to localStorage only for user interactions (not backend updates)
-  const saveToCache = React.useCallback((newState) => {
-    localStorage.setItem(`activity_${activity.id}`, JSON.stringify(newState));
-  }, [activity.id]);
+  // Use activity data directly from props
+  const displayLikes = activity.likes || 0;
+  const displayIsLiked = activity.isLiked || false;
+  const displayComments = activity.comments || [];
 
 
 
@@ -151,44 +97,21 @@ const ActivityDisplay = ({
     return activityFeedService.getStatusLabel(status);
   };
 
-  // Handle like with optimistic updates
+  // Handle like with reload
   const handleLikeClick = useCallback(async (e) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const wasLiked = localState.isLiked;
-    const newState = {
-      ...localState,
-      isLiked: !wasLiked,
-      likes: wasLiked ? Math.max(0, localState.likes - 1) : localState.likes + 1
-    };
-    
-    // Optimistic update
-    setLocalState(newState);
-    saveToCache(newState);
-
     try {
-      const result = await activityFeedService.addReaction(activity.id, "like");
-      // Sync with server result
-      const finalState = {
-        ...localState,
-        isLiked: result,
-        likes: result ? (wasLiked ? localState.likes : localState.likes + 1) : (wasLiked ? localState.likes - 1 : localState.likes)
-      };
-      setLocalState(finalState);
-      saveToCache(finalState);
+      await activityFeedService.addReaction(activity.id, "like");
+      // Trigger reload via onReaction callback
+      if (onReaction) {
+        onReaction(activity.id, "like");
+      }
     } catch (error) {
-      // Revert on error
-      const revertState = {
-        ...localState,
-        isLiked: wasLiked,
-        likes: localState.likes
-      };
-      setLocalState(revertState);
-      saveToCache(revertState);
       console.error("Error liking:", error);
     }
-  }, [activity.id, localState, saveToCache]);
+  }, [activity.id, onReaction]);
 
   const handleCommentSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -198,34 +121,20 @@ const ActivityDisplay = ({
 
     try {
       setSubmittingComment(true);
-      console.log('=== COMMENT SUBMIT DEBUG ===');
-      console.log('Activity ID:', activity.id);
-      console.log('Comment text:', newComment.trim());
-      console.log('Current comments:', localState.comments);
       
-      const newCommentObj = await activityFeedService.commentOnActivity(activity.id, newComment.trim());
+      await activityFeedService.commentOnActivity(activity.id, newComment.trim());
       
-      console.log('New comment response:', newCommentObj);
-      
-      if (newCommentObj) {
-        const newState = {
-          ...localState,
-          comments: [...localState.comments, newCommentObj]
-        };
-        console.log('Updated comments state:', newState.comments);
-        setLocalState(newState);
-        saveToCache(newState);
-      } else {
-        console.error('No comment object returned from API');
-      }
       setNewComment("");
+      // Trigger reload via onComment callback
+      if (onComment) {
+        onComment(activity.id, newComment.trim());
+      }
     } catch (error) {
       console.error("Error commenting:", error);
-      console.error("Error details:", error.response?.data);
     } finally {
       setSubmittingComment(false);
     }
-  }, [activity.id, newComment, submittingComment, localState, saveToCache]);
+  }, [activity.id, newComment, submittingComment, onComment]);
 
   const handleMediaDownload = async (media) => {
     try {
@@ -626,26 +535,26 @@ const ActivityDisplay = ({
       )}
 
       {/* Stats */}
-      {(localState.likes > 0 || localState.comments.length > 0 || activity.shares > 0) && (
+      {(displayLikes > 0 || displayComments.length > 0 || activity.shares > 0) && (
         <div className="px-6 py-3 border-t border-gray-50">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-4">
-              {localState.likes > 0 && (
+              {displayLikes > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-1">
                     <div className="w-6 h-6 bg-gradient-to-br from-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
                       <Heart size={12} className="text-white fill-current" />
                     </div>
                   </div>
-                  <span className="font-semibold text-gray-700">{localState.likes}</span>
+                  <span className="font-semibold text-gray-700">{displayLikes}</span>
                 </div>
               )}
             </div>
 
             <div className="flex items-center gap-4 text-gray-500">
-              {localState.comments.length > 0 && (
+              {displayComments.length > 0 && (
                 <span className="font-medium">
-                  {localState.comments.length} commentaire{localState.comments.length > 1 ? "s" : ""}
+                  {displayComments.length} commentaire{displayComments.length > 1 ? "s" : ""}
                 </span>
               )}
               {activity.shares > 0 && (
@@ -664,12 +573,12 @@ const ActivityDisplay = ({
           <button
             onClick={handleLikeClick}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-300 ${
-              localState.isLiked
+              displayIsLiked
                 ? "text-red-600 bg-red-50 hover:bg-red-100 shadow-sm"
                 : "text-gray-600 hover:bg-gray-50 hover:text-red-500"
             }`}
           >
-            <Heart size={20} className={localState.isLiked ? "fill-current" : ""} />
+            <Heart size={20} className={displayIsLiked ? "fill-current" : ""} />
             <span>J'aime</span>
           </button>
 
@@ -702,35 +611,35 @@ const ActivityDisplay = ({
       {/* Comments Section */}
       {showComments && (
         <div className="border-t border-gray-50 bg-gray-50/50">
-          {localState.comments.length > 0 && (
+          {displayComments.length > 0 && (
             <div className="px-6 py-4 max-h-80 overflow-y-auto">
-              <div className="space-y-4">
-                {localState.comments.slice(0, 3).map((comment) => (
-                  <div key={comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-600 rounded-xl flex items-center justify-center text-white text-xs font-bold">
-                      {comment.user?.name?.charAt(0)?.toUpperCase() || "U"}
-                    </div>
-                    <div className="flex-1">
-                      <div className="bg-white rounded-2xl px-4 py-3 shadow-sm">
-                        <p className="font-semibold text-gray-900 text-sm mb-1">
-                          {comment.user?.name || "Utilisateur"}
-                        </p>
-                        <p className="text-gray-700 text-sm leading-relaxed">
-                          {comment.content}
+              <div className="space-y-3">
+                {displayComments.map((comment) => {
+                  const isCurrentUser = comment.createdById === currentUser?.id;
+                  return (
+                    <div key={comment.id} className={`flex gap-3 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
+                      <div className="w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        {isCurrentUser ? (currentUser?.name?.charAt(0)?.toUpperCase() || "U") : "U"}
+                      </div>
+                      <div className={`flex-1 max-w-xs ${isCurrentUser ? 'text-right' : ''}`}>
+                        <div className={`inline-block rounded-2xl px-4 py-3 shadow-sm max-w-full ${
+                          isCurrentUser 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-white text-gray-700'
+                        }`}>
+                          <p className="text-sm leading-relaxed break-words">
+                            {comment.content}
+                          </p>
+                        </div>
+                        <p className={`text-xs text-gray-500 mt-1 ${
+                          isCurrentUser ? 'text-right mr-4' : 'ml-4'
+                        }`}>
+                          {formatTimestamp(comment.creationDate)}
                         </p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-2 ml-4">
-                        {formatTimestamp(comment.timestamp)}
-                      </p>
                     </div>
-                  </div>
-                ))}
-                
-                {localState.comments.length > 3 && (
-                  <button className="text-blue-600 text-sm font-semibold hover:text-blue-700 ml-11">
-                    Voir les {localState.comments.length - 3} autres commentaires
-                  </button>
-                )}
+                  );
+                })}
               </div>
             </div>
           )}

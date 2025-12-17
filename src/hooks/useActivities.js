@@ -60,15 +60,19 @@ export const useActivities = () => {
   );
 
   const handleReaction = useCallback(
-    (activityId, reactionType) => {
-      return dispatch(addReaction({ activityId, reactionType })).unwrap();
+    async (activityId, reactionType) => {
+      await dispatch(addReaction({ activityId, reactionType })).unwrap();
+      // Reload activities to get updated state
+      dispatch(fetchActivities());
     },
     [dispatch]
   );
 
   const handleComment = useCallback(
-    (activityId, comment) => {
-      return dispatch(addComment({ activityId, comment })).unwrap();
+    async (activityId, comment) => {
+      await dispatch(addComment({ activityId, comment })).unwrap();
+      // Reload activities to get updated state
+      dispatch(fetchActivities());
     },
     [dispatch]
   );

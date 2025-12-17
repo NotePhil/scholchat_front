@@ -221,48 +221,19 @@ class ActivityFeedService {
   async addReaction(activityId, reactionType) {
     try {
       const userId = this.getValidUserId();
-
-      // For likes, check current status first
-      if (reactionType === "like") {
-        try {
-          const hasLiked = await this.hasUserLikedEvent(activityId, userId);
-          if (hasLiked) {
-            // Remove like
-            await activityFeedApi.delete(`/interactions/event/${activityId}/user/${userId}/like`).catch(() => {
-              // Fallback: create unlike interaction
-              return activityFeedApi.post("/interactions", {
-                type: "UNLIKE",
-                content: "unliked this",
-                createdById: userId,
-                eventId: activityId,
-              });
-            });
-            return false;
-          }
-        } catch (err) {
-          console.warn("Could not check like status:", err);
-        }
+      
+      // Check current like status
+      const hasLiked = await this.hasUserLikedEvent(activityId, userId);
+      
+      if (hasLiked) {
+        // Unlike the event - use DELETE endpoint
+        await activityFeedApi.delete(`/interactions/event/${activityId}/user/${userId}/like`);
+        return false;
+      } else {
+        // Like the event - use POST endpoint  
+        await activityFeedApi.post(`/interactions/event/${activityId}/user/${userId}/like`);
+        return true;
       }
-
-      // Create new interaction
-      const interaction = {
-        type: reactionType.toUpperCase(),
-        content: `${reactionType} this`,
-        createdById: userId,
-        eventId: activityId,
-      };
-
-      try {
-        await activityFeedApi.post("/interactions", interaction);
-      } catch (err) {
-        if (err.response?.status === 404) {
-          // Try alternative endpoint
-          await activityFeedApi.post(`/events/${activityId}/like`, { userId });
-        } else {
-          throw err;
-        }
-      }
-      return true;
     } catch (error) {
       console.error("Failed to add reaction:", error);
       throw error;
@@ -285,35 +256,13 @@ class ActivityFeedService {
   async commentOnActivity(activityId, comment) {
     try {
       const userId = this.getValidUserId();
-      const interaction = {
-        type: "COMMENT",
-        content: comment,
-        createdById: userId,
-        eventId: activityId,
-      };
+      
+      // Post comment to event
+      await activityFeedApi.post(`/interactions/event/${activityId}/user/${userId}/comment`, {
+        content: comment
+      });
 
-      let response;
-      try {
-        response = await activityFeedApi.post("/interactions", interaction);
-      } catch (err) {
-        if (err.response?.status === 404) {
-          // Try alternative endpoint
-          response = await activityFeedApi.post(`/events/${activityId}/comments`, {
-            content: comment,
-            userId: userId
-          });
-        } else {
-          throw err;
-        }
-      }
-
-      const currentUser = this.getCurrentUser();
-      return {
-        id: response.data.id || Date.now().toString(),
-        content: comment,
-        user: currentUser,
-        timestamp: new Date().toISOString(),
-      };
+      return true;
     } catch (error) {
       console.error("Failed to comment:", error);
       throw new Error(`Failed to post comment: ${error.response?.data?.message || error.message}`);
@@ -574,7 +523,16 @@ class ActivityFeedService {
         }));
     }
 
-    return {
+    console.log('About to transform comments, interactions:', event.interactions);
+    
+    // Direct test - manually extract comments
+    const directComments = (event.interactions || []).filter(i => i.type === 'COMMENT');
+    console.log('Direct comment extraction:', directComments);
+    
+    const transformedComments = this.transformComments(event.interactions || []);
+    console.log('Transformed comments result:', transformedComments);
+    
+    const activity = {
       id: event.id,
       type: "event",
       user: eventUser,
@@ -592,27 +550,59 @@ class ActivityFeedService {
       },
       media: validMedia,
       likes: event.likesCount || 0,
-      comments: this.transformComments(event.comments || []),
+      comments: transformedComments,
       shares: event.sharesCount || 0,
       isLiked: event.isLiked || false,
       isShared: false,
     };
+    
+    console.log('Final activity with comments:', activity.comments);
+    console.log('==============================');
+    
+    return activity;
   }
 
   // Transform comments from backend format
-  transformComments(comments) {
-    if (!Array.isArray(comments)) return [];
+  transformComments(interactions) {
+    console.log('=== TRANSFORM COMMENTS DEBUG ===');
+    console.log('Raw interactions:', interactions);
+    console.log('Interactions length:', interactions?.length);
     
-    return comments.map(comment => ({
-      id: comment.id || Date.now().toString(),
-      content: comment.content || comment.contenu || '',
-      user: {
-        id: comment.userId || comment.createdById || 'unknown',
-        name: comment.userName || comment.createdByName || 'Utilisateur',
-        avatar: '/api/placeholder/32/32'
-      },
-      timestamp: comment.timestamp || comment.creationDate || new Date().toISOString()
-    }));
+    if (!Array.isArray(interactions)) {
+      console.log('Interactions is not an array:', interactions);
+      return [];
+    }
+    
+    // Debug each interaction
+    interactions.forEach((interaction, index) => {
+      console.log(`Interaction ${index}:`, interaction.type, interaction.content);
+    });
+    
+    const comments = interactions
+      .filter(interaction => {
+        console.log('Filtering interaction:', interaction.type, interaction.type === 'COMMENT');
+        return interaction.type === 'COMMENT';
+      })
+      .map(comment => {
+        console.log('Mapping comment:', comment);
+        return {
+          id: comment.id,
+          content: comment.content,
+          createdById: comment.createdById,
+          user: {
+            id: comment.createdById,
+            name: 'Utilisateur',
+            avatar: '/api/placeholder/32/32'
+          },
+          creationDate: comment.creationDate
+        };
+      });
+    
+    console.log('Filtered comments result:', comments);
+    console.log('Comments length:', comments.length);
+    console.log('================================');
+    
+    return comments;
   }
 
   // Transform interaction to activity
