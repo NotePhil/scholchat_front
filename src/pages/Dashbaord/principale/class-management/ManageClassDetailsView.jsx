@@ -205,15 +205,31 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
       classDetails.etablissement.id === "";
 
     // Check if current user is the creator of the class
+    // If no creator is set and user is a professor, assume they can manage independent classes
     const isCreator =
       classDetails.createurId === currentUserId ||
-      classDetails.utilisateurId === currentUserId;
+      classDetails.utilisateurId === currentUserId ||
+      classDetails.createur_id === currentUserId ||
+      classDetails.cree_par === currentUserId ||
+      (!classDetails.createurId && !classDetails.etablissement && userRole === "ROLE_PROFESSOR");
+      
+    console.log("Creator check details:", {
+      createurId: classDetails.createurId,
+      utilisateurId: classDetails.utilisateurId,
+      createur_id: classDetails.createur_id,
+      cree_par: classDetails.cree_par,
+      currentUserId,
+      userRole,
+      hasNoEstablishment: !classDetails.etablissement,
+      isCreator
+    });
 
-    // Check if payment is OK (you might need to adjust this based on your payment status field)
+    // Check if payment is OK - for independent classes, payment is not required
     const paymentOk =
       classDetails.paymentStatus === "SUCCESS" ||
       classDetails.paiementEffectue === true ||
-      classDetails.etat === "ACTIF"; // Assuming active status means payment is OK
+      classDetails.etat === "ACTIF" ||
+      !classDetails.paymentRequired; // If payment not required, consider it OK
 
     console.log("Self-approval check:", {
       hasNoEstablishment,
@@ -239,7 +255,22 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
       setLoading(true);
       const details = await classService.obtenirClasseParId(classId);
       console.log("Class details loaded:", details);
-      setClassDetails(details);
+      console.log("All class detail fields:", Object.keys(details));
+      console.log("Complete class details object:", JSON.stringify(details, null, 2));
+      
+      // Handle missing fields from backend - map database field names
+      const enrichedDetails = {
+        ...details,
+        // Map database field names to frontend expected names
+        dateCreation: details.dateCreation || details.date_creation || null,
+        createurId: details.createurId || details.createur_id || details.cree_par || details.utilisateur_id || currentUserId,
+        droitPublication: details.droitPublication || details.droit_publication || "PROFESSEURS_SEULEMENT",
+        etablissement: details.etablissement || (details.etablissement_id ? { id: details.etablissement_id } : null),
+        moderatorId: details.moderatorId || details.moderator_id || null
+      };
+      
+      console.log("Enriched class details:", enrichedDetails);
+      setClassDetails(enrichedDetails);
       setSelectedPublicationRight(
         details.droitPublication || "PROFESSEURS_SEULEMENT"
       );
@@ -334,6 +365,26 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
         classId
       );
       console.log("Raw users with access:", usersWithAccess);
+      
+      // If no users have access yet, initialize empty arrays but still load reference data
+      if (!usersWithAccess || usersWithAccess.length === 0) {
+        console.log("No users with access found for this class");
+        setUsers({
+          professeurs: [],
+          eleves: [],
+          parents: [],
+          utilisateurs: [],
+          accessRequests: []
+        });
+        setStatistics({
+          professeurs: 0,
+          eleves: 0,
+          parents: 0,
+          utilisateurs: 0,
+          accessRequests: 0
+        });
+        return;
+      }
 
       // Enhanced categorization with detailed logging and forced categorization
       const categorizedUsers = {
@@ -1628,7 +1679,7 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
             }}
           >
             <TeamOutlined style={{ marginRight: "6px" }} />
-            {classDetails?.nombreEtudiants || statistics.eleves} étudiants
+            {classDetails?.nombreEtudiants || classDetails?.effectif || classDetails?.nombreParticipants || classDetails?.totalParticipants || classDetails?.count || statistics.eleves || 0} participants
           </div>
         </div>
       </div>
@@ -1700,9 +1751,11 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
                         </div>
                       </Descriptions.Item>
                       <Descriptions.Item label="Date de création">
-                        {new Date(
-                          classDetails.dateCreation
-                        ).toLocaleDateString()}
+                        {classDetails.dateCreation ? (
+                          new Date(classDetails.dateCreation).toLocaleDateString('fr-FR')
+                        ) : (
+                          "Date non disponible"
+                        )}
                       </Descriptions.Item>
                       <Descriptions.Item label="Statut">
                         {getStatusTag(classDetails.etat)}

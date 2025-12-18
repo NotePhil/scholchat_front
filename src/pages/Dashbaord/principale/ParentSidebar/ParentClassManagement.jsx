@@ -265,6 +265,7 @@ const ParentClassManagement = () => {
   const [classCourses, setClassCourses] = useState([]);
   const [courseLoading, setCourseLoading] = useState(false);
   const [courseCounts, setCourseCounts] = useState({});
+  const [participantCounts, setParticipantCounts] = useState({});
   const [showCourseManagement, setShowCourseManagement] = useState(false);
   const userId = localStorage.getItem("userId");
   const userEmail = localStorage.getItem("userEmail");
@@ -359,6 +360,26 @@ const ParentClassManagement = () => {
     }
   };
 
+  const fetchParticipantCounts = async (classIds) => {
+    try {
+      const counts = {};
+      await Promise.all(
+        classIds.map(async (classId) => {
+          try {
+            const usersWithAccess = await AccederService.obtenirUtilisateursAvecAcces(classId);
+            counts[classId] = usersWithAccess ? usersWithAccess.length : 0;
+          } catch (error) {
+            console.error(`Error fetching participants for class ${classId}:`, error);
+            counts[classId] = 0;
+          }
+        })
+      );
+      setParticipantCounts(counts);
+    } catch (error) {
+      console.error("Error fetching participant counts:", error);
+    }
+  };
+
   const fetchClassCourses = async (classId) => {
     try {
       setCourseLoading(true);
@@ -427,13 +448,19 @@ const ParentClassManagement = () => {
 
       setUserClasses(userClassesData);
 
-      // Fetch course counts for approved classes only
+      // Fetch course counts and participant counts for approved classes only
       const approvedClassIds = userClassesData
         .filter((classe) => hasApprovedAccess(classe.id))
         .map((classe) => classe.id);
 
       if (approvedClassIds.length > 0) {
-        await fetchCourseCountsForUser(approvedClassIds);
+        await Promise.all([
+          fetchCourseCountsForUser(approvedClassIds),
+          fetchParticipantCounts(userClassesData.map(classe => classe.id))
+        ]);
+      } else if (userClassesData.length > 0) {
+        // Still fetch participant counts even if no approved classes
+        await fetchParticipantCounts(userClassesData.map(classe => classe.id));
       }
     } catch (err) {
       setError(err.message);
@@ -843,7 +870,7 @@ const ParentClassManagement = () => {
                           sx={{ fontSize: 18, color: "text.secondary" }}
                         />
                         <Typography variant="body2" color="text.secondary">
-                          {classe.effectif || 0} élèves
+                          {participantCounts[classe.id] || classe.nombreEtudiants || classe.effectif || classe.nombreParticipants || classe.totalParticipants || 0} participants
                         </Typography>
                       </Box>
 

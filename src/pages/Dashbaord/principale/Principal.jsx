@@ -51,6 +51,7 @@ import ParentClassManagementClass from "./ParentSidebar/ParentClassManagementCla
 import NotificationIcon from "./modals/NotificationIcon";
 import ProfessorCoursesContent from "./content/ProfessorsContent/ProfessorCoursesContent";
 import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgrammerContent";
+import CoursProgrammeManagement from "./content/InterfaceCours/CoursProgrammeManagement";
 import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
 import MatiereContent from "./content/MatiereContent/MatiereContent";
 
@@ -448,6 +449,14 @@ const Principal = () => {
         ) : (
           <ClassesContent {...contentProps} />
         );
+      case "cours":
+        return (
+          <CoursProgrammeManagement 
+            {...contentProps} 
+            selectedClass={null}
+            onBack={() => handleTabChange('classes')}
+          />
+        );
       case "create-class":
         return (
           <CreateClassContent
@@ -520,6 +529,7 @@ const Principal = () => {
       "manage-class": "Gérer une Classe",
       "create-establishment": "Créer un Établissement",
       "manage-establishment": "Gérer un Établissement",
+      "cours": "Cours Programmés",
     };
 
     return (

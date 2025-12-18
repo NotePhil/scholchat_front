@@ -562,6 +562,55 @@ class ClassService {
   }
 
   /**
+   * Gets all professors
+   * @returns {Promise<Array>} List of all professors
+   */
+  async obtenirProfesseurs() {
+    try {
+      return await this.axiosRequest("/professeurs", {
+        method: "get",
+      });
+    } catch (error) {
+      console.error("Error getting professors:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Assigns a moderator to a class
+   * @param {string} classId - The class ID
+   * @param {string} moderatorId - The moderator ID
+   * @returns {Promise<Object>} The updated class
+   */
+  async assignerModerateur(classId, moderatorId) {
+    try {
+      return await this.axiosRequest(`/classes/${classId}/moderator`, {
+        method: "patch",
+        data: { moderatorId },
+      });
+    } catch (error) {
+      console.error("Error assigning moderator:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Removes moderator from a class
+   * @param {string} classId - The class ID
+   * @returns {Promise<Object>} The updated class
+   */
+  async retirerModerateur(classId) {
+    try {
+      return await this.axiosRequest(`/classes/${classId}/moderator`, {
+        method: "delete",
+      });
+    } catch (error) {
+      console.error("Error removing moderator:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Test API connection
    * @returns {Promise<boolean>} True if API is accessible
    */

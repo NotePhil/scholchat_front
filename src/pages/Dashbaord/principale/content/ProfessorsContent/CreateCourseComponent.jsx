@@ -587,6 +587,7 @@ const ChapterCard = ({
   onMoveDown,
   canMoveUp,
   canMoveDown,
+  loading = false,
 }) => {
   const truncateText = (text, length) => {
     if (text.length <= length) return text;
@@ -600,7 +601,12 @@ const ChapterCard = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow relative group">
+    <div className={`bg-white border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow relative group ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg z-10">
+          <Loader className="animate-spin text-indigo-600" size={20} />
+        </div>
+      )}
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
@@ -1350,6 +1356,7 @@ const CreateCourseComponent = ({
                     onMoveDown={() => moveChapter(index, "down")}
                     canMoveUp={index > 0}
                     canMoveDown={index < savedChapters.length - 1}
+                    loading={isSubmitting}
                   />
                 </div>
               ))}

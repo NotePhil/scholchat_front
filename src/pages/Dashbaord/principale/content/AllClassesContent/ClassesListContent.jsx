@@ -694,7 +694,9 @@ const ClassesListContent = ({
                           )}
                           <div className="flex items-center gap-2">
                             <Users className="w-4 h-4" />
-                            <span>{classe.eleves?.length || 0} élèves</span>
+                            <span>
+                              {classe.nombreEtudiants || classe.eleves?.length || classe.participants?.length || 0} participants
+                            </span>
                           </div>
                           {classe.dateCreation && (
                             <div className="flex items-center gap-2">

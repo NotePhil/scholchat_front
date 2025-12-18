@@ -188,6 +188,7 @@ const Sidebar = ({
           tab: "manage-exercises",
         },
         { name: "Classes", icon: Building2, tab: "classes" },
+        { name: "Cours", icon: Book, tab: "cours" },
         {
           name: "Messagerie",
           icon: Mail,

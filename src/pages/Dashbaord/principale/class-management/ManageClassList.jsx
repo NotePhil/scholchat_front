@@ -126,11 +126,13 @@ const ManageClassList = ({
     try {
       setLoadingRequests(true);
       const requestsMap = {};
-      
+
       // Use AccederService like ClassAccessRequests does
       for (const classe of classes) {
         try {
-          const requests = await AccederService.obtenirDemandesAccesPourClasse(classe.id);
+          const requests = await AccederService.obtenirDemandesAccesPourClasse(
+            classe.id
+          );
           const pendingCount = (requests || []).filter(
             (req) => req.etat === "EN_ATTENTE"
           ).length;
@@ -141,8 +143,8 @@ const ManageClassList = ({
           requestsMap[classe.id] = 0;
         }
       }
-      
-      console.log('All pending requests:', requestsMap);
+
+      console.log("All pending requests:", requestsMap);
       setPendingRequests(requestsMap);
     } catch (error) {
       console.error("Error loading pending requests:", error);
@@ -190,18 +192,18 @@ const ManageClassList = ({
     filtered.sort((a, b) => {
       const aPendingCount = pendingRequests[a.id] || 0;
       const bPendingCount = pendingRequests[b.id] || 0;
-      
+
       // First priority: classes with pending requests
       if (aPendingCount > 0 && bPendingCount === 0) return -1;
       if (aPendingCount === 0 && bPendingCount > 0) return 1;
-      
+
       // If both have pending requests, sort by count (highest first)
       if (aPendingCount > 0 && bPendingCount > 0) {
         if (aPendingCount !== bPendingCount) {
           return bPendingCount - aPendingCount;
         }
       }
-      
+
       // Then apply normal sorting
       let aValue = a[sortBy];
       let bValue = b[sortBy];
@@ -543,25 +545,34 @@ const ManageClassList = ({
                         <div className="date-section">
                           <Calendar className="date-icon" />
                           <span className="date-text">
-                            {classe.dateCreation && !isNaN(new Date(classe.dateCreation).getTime()) ? (
-                              `Créée le ${new Date(classe.dateCreation).toLocaleDateString(
-                                "fr-FR",
-                                {
+                            {classe.dateCreation &&
+                            classe.dateCreation !== null &&
+                            classe.dateCreation !== ""
+                              ? `Créée le ${new Date(
+                                  classe.dateCreation
+                                ).toLocaleDateString("fr-FR", {
                                   day: "numeric",
                                   month: "long",
                                   year: "numeric",
-                                }
-                              )}`
-                            ) : (
-                              "Date non disponible"
-                            )}
+                                })}`
+                              : "Date non disponible"}
                           </span>
                         </div>
 
-                        <div className="date-section" style={{ marginTop: '8px', marginBottom: '12px' }}>
+                        <div
+                          className="date-section"
+                          style={{ marginTop: "8px", marginBottom: "12px" }}
+                        >
                           <span className="date-text">
-                            Demandes: {loadingRequests ? (
-                              <Loader className="loading-mini-stat" style={{ display: 'inline-block', marginLeft: '4px' }} />
+                            Demandes:{" "}
+                            {loadingRequests ? (
+                              <Loader
+                                className="loading-mini-stat"
+                                style={{
+                                  display: "inline-block",
+                                  marginLeft: "4px",
+                                }}
+                              />
                             ) : (
                               <strong>{pendingCount}</strong>
                             )}
