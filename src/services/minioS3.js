@@ -377,6 +377,26 @@ class MinioS3Service {
       return null;
     }
   }
+
+  async getPresignedUploadUrl(filePath, contentType) {
+    try {
+      const response = await minioApi.post("/media/presigned-url", {
+        filePath: filePath,
+        contentType: contentType
+      });
+      
+      return {
+        presignedUrl: response.data.presignedUrl,
+        filePath: response.data.filePath
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to get presigned URL: ${
+          error.response?.data?.message || error.message
+        }`
+      );
+    }
+  }
 }
 
 export const minioS3Service = new MinioS3Service();
