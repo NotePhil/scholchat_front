@@ -24,223 +24,102 @@ import { minioS3Service } from "../../../../../services/minioS3";
 const ActivitiesContent = () => {
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
-  const [staticActivities] = useState([
-    {
-      id: 1,
-      user: { name: "Jean Dupont", avatar: "JD" },
-      content:
-        "Excellente conférence sur l'IA aujourd'hui ! Les nouvelles technologies nous ouvrent de nombreuses perspectives.",
-      timestamp: "Il y a 2 heures",
-      likes: 12,
-      isLiked: false,
-      participants: 5,
-      isParticipating: false,
-      images: ["https://picsum.photos/600/400?random=1"],
-      comments: [
-        {
-          id: 1,
-          user: "Marie Martin",
-          content: "Très intéressant ! Merci pour le partage",
-          time: "Il y a 1h",
-        },
-        {
-          id: 2,
-          user: "Paul Kenzo",
-          content: "J'aurais aimé y être présent",
-          time: "Il y a 30min",
-        },
-      ],
-      showComments: false,
-    },
-    {
-      id: 2,
-      user: { name: "Sophie Laurent", avatar: "SL" },
-      content:
-        "Nouveau projet de recherche lancé ! Nous recherchons des étudiants motivés pour rejoindre notre équipe.",
-      timestamp: "Il y a 4 heures",
-      likes: 8,
-      isLiked: true,
-      participants: 12,
-      isParticipating: true,
-      images: [
-        "https://picsum.photos/600/400?random=2",
-        "https://picsum.photos/600/400?random=3",
-      ],
-      comments: [
-        {
-          id: 1,
-          user: "Alex Chen",
-          content: "Je suis très intéressé ! Comment puis-je postuler ?",
-          time: "Il y a 2h",
-        },
-      ],
-      showComments: false,
-    },
-    {
-      id: 3,
-      user: { name: "Dr. Martin Rousseau", avatar: "MR" },
-      content:
-        "Félicitations à tous les étudiants qui ont participé au hackathon ce weekend ! Les projets présentés étaient remarquables.",
-      timestamp: "Il y a 1 jour",
-      likes: 25,
-      isLiked: false,
-      participants: 8,
-      isParticipating: false,
-      images: [
-        "https://picsum.photos/600/400?random=4",
-        "https://picsum.photos/600/400?random=5",
-        "https://picsum.photos/600/400?random=6",
-      ],
-      comments: [],
-      showComments: false,
-    },
-    {
-      id: 4,
-      user: { name: "Emma Wilson", avatar: "EW" },
-      content:
-        "Sortie étudiante au musée des sciences ! Une journée enrichissante avec de belles découvertes.",
-      timestamp: "Il y a 2 jours",
-      likes: 18,
-      isLiked: false,
-      participants: 15,
-      isParticipating: false,
-      images: [
-        "https://picsum.photos/600/400?random=7",
-        "https://picsum.photos/600/400?random=8",
-        "https://picsum.photos/600/400?random=9",
-        "https://picsum.photos/600/400?random=10",
-      ],
-      comments: [
-        {
-          id: 1,
-          user: "Lucas Martin",
-          content: "J'aurais aimé être là !",
-          time: "Il y a 1 jour",
-        },
-      ],
-      showComments: false,
-    },
-    {
-      id: 5,
-      user: { name: "Prof. Claire Dubois", avatar: "CD" },
-      content:
-        "Présentation des projets de fin d'année. Bravo à tous les étudiants pour leur créativité et leur travail acharné !",
-      timestamp: "Il y a 3 jours",
-      likes: 32,
-      isLiked: true,
-      participants: 22,
-      isParticipating: true,
-      images: [
-        "https://picsum.photos/600/400?random=11",
-        "https://picsum.photos/600/400?random=12",
-        "https://picsum.photos/600/400?random=13",
-        "https://picsum.photos/600/400?random=14",
-        "https://picsum.photos/600/400?random=15",
-      ],
-      comments: [
-        {
-          id: 1,
-          user: "Sarah Johnson",
-          content: "Merci pour cette belle expérience !",
-          time: "Il y a 2 jours",
-        },
-        {
-          id: 2,
-          user: "Tom Anderson",
-          content: "Les projets étaient impressionnants",
-          time: "Il y a 2 jours",
-        },
-      ],
-      showComments: false,
-    },
-    {
-      id: 6,
-      user: { name: "Association Étudiante", avatar: "AE" },
-      content:
-        "Événement de networking réussi ! Merci à tous les participants et aux entreprises partenaires.",
-      timestamp: "Il y a 4 jours",
-      likes: 45,
-      isLiked: false,
-      participants: 35,
-      isParticipating: false,
-      images: [
-        "https://picsum.photos/600/400?random=16",
-        "https://picsum.photos/600/400?random=17",
-        "https://picsum.photos/600/400?random=18",
-        "https://picsum.photos/600/400?random=19",
-        "https://picsum.photos/600/400?random=20",
-        "https://picsum.photos/600/400?random=21",
-      ],
-      comments: [
-        {
-          id: 1,
-          user: "Marie Leroy",
-          content: "Super événement, très enrichissant !",
-          time: "Il y a 3 jours",
-        },
-      ],
-      showComments: false,
-    },
-  ]);
+  const [staticActivities] = useState([]);
+  const [likingActivities, setLikingActivities] = useState({});
+  const [localLikes, setLocalLikes] = useState({}); // Track likes locally
+  const [localComments, setLocalComments] = useState({}); // Track comments locally
+  const [likedByUsers, setLikedByUsers] = useState({}); // Track who liked each post
 
   useEffect(() => {
     loadEvents();
   }, []);
 
+  const getImageUrl = async (media) => {
+    try {
+      console.log('Getting image URL for media:', media);
+      console.log('Media ID:', media.id);
+      
+      if (!media.id) {
+        console.error('No ID in media:', media);
+        return null;
+      }
+      
+      // Use the same method as UserViewModal - by media ID
+      const downloadData = await minioS3Service.generateDownloadUrl(media.id);
+      console.log('Download data received:', downloadData);
+      console.log('Final image URL:', downloadData.downloadUrl);
+      return downloadData.downloadUrl;
+    } catch (error) {
+      console.error('Failed to get image URL for media:', media, 'Error:', error);
+      return null;
+    }
+  };
+
   const loadEvents = async () => {
     try {
       setLoadingActivities(true);
-      const events = await activityFeedService.getEvents();
+      console.log('Loading activities...');
+      const activities = await activityFeedService.getActivities();
+      console.log('Received activities:', activities);
       
+      // Process activities to add image URLs
       const activitiesWithImages = await Promise.all(
-        events.map(async (event) => {
+        activities.map(async (activity) => {
+          console.log('=== PROCESSING ACTIVITY ===');
+          console.log('Activity ID:', activity.id);
+          console.log('Activity type:', activity.type);
+          console.log('Activity media:', activity.media);
+          console.log('Media length:', activity.media?.length);
+          
           const images = [];
           
-          if (event.medias && event.medias.length > 0) {
-            for (const media of event.medias) {
-              if (media.mediaType === 'IMAGE' && media.filePath) {
-                try {
-                  const downloadUrl = await minioS3Service.getMediaUrlByPath(media.filePath);
-                  if (downloadUrl) {
-                    images.push(downloadUrl);
-                  }
-                } catch (error) {
-                  console.error(`Error getting image URL for ${media.filePath}:`, error);
-                }
-              }
-            }
+          if (activity.media && activity.media.length > 0) {
+            console.log('Activity has media, processing...');
+            
+            const imageUrls = await Promise.all(
+              activity.media
+                .filter(media => {
+                  console.log('Filtering media:', media.mediaType, media.id);
+                  return media.mediaType === 'IMAGE' && media.id;
+                })
+                .map(async (media) => {
+                  console.log('Getting URL for media ID:', media.id);
+                  const imageUrl = await getImageUrl(media);
+                  console.log('Received image URL:', imageUrl);
+                  return imageUrl;
+                })
+            );
+            
+            const validUrls = imageUrls.filter(url => url !== null);
+            console.log('Valid image URLs:', validUrls);
+            images.push(...validUrls);
+          } else {
+            console.log('No media found for activity:', activity.id);
           }
           
-          const likes = event.interactions?.filter(i => i.type === 'LIKE').length || 0;
-          const participants = event.participantsIds?.length || 0;
+          console.log('Final images for activity:', activity.id, ':', images);
+          console.log('==============================');
           
           return {
-            id: event.id,
-            user: { name: "Organisateur", avatar: "O" },
-            content: `${event.titre} - ${event.description}`,
-            timestamp: new Date(event.heureDebut).toLocaleString('fr-FR'),
-            likes,
-            isLiked: false,
-            participants,
-            isParticipating: false,
+            ...activity,
             images,
-            comments: [],
+            // Ensure required properties exist
+            participants: activity.eventDetails?.participantsCount || 0,
+            isParticipating: false,
             showComments: false,
-            eventDetails: {
-              title: event.titre,
-              location: event.lieu,
-              startTime: event.heureDebut,
-              endTime: event.heureFin,
-              status: event.etat
-            }
+            // Merge with local state
+            isLiked: localLikes[activity.id] ?? activity.isLiked ?? false,
+            comments: [...(activity.comments || []), ...(localComments[activity.id] || [])],
+            likedBy: likedByUsers[activity.id] || []
           };
         })
       );
       
-      setActivities([...activitiesWithImages, ...staticActivities]);
+      console.log('Final activities with images:', activitiesWithImages);
+      setActivities(activitiesWithImages);
     } catch (error) {
-      console.error('Error loading events:', error);
-      setActivities(staticActivities);
+      console.error('Error loading activities:', error);
+      setActivities([]);
     } finally {
       setLoadingActivities(false);
     }
@@ -261,7 +140,7 @@ const ActivitiesContent = () => {
     etat: "PLANIFIE",
     heureDebut: "",
     heureFin: "",
-    createurId: "user-id-123",
+    createurId: localStorage.getItem("userId") || "user-id-123",
   });
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -284,18 +163,148 @@ const ActivitiesContent = () => {
     setImagePreview((prev) => ({ ...prev, currentIndex: newIndex }));
   };
 
-  const handleLike = (activityId) => {
-    setActivities((prev) =>
-      prev.map((activity) =>
-        activity.id === activityId
-          ? {
-              ...activity,
-              isLiked: !activity.isLiked,
-              likes: activity.isLiked ? activity.likes - 1 : activity.likes + 1,
-            }
-          : activity
-      )
-    );
+  const handleImageUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadPromises = files.map(async (file) => {
+        const uploadResult = await minioS3Service.uploadFile(file, 'images');
+        return {
+          file,
+          path: uploadResult.filePath,
+          url: URL.createObjectURL(file)
+        };
+      });
+
+      const results = await Promise.all(uploadPromises);
+      setUploadedImages(prev => [...prev, ...results]);
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      alert('Erreur lors du téléchargement des images');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (index) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.titre || !formData.description) {
+      alert('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const eventData = {
+        ...formData,
+        medias: uploadedImages.map(img => ({
+          mediaType: 'IMAGE',
+          filePath: img.path
+        }))
+      };
+
+      await activityFeedService.createEvent(eventData);
+      
+      setFormData({
+        titre: "",
+        description: "",
+        lieu: "",
+        etat: "PLANIFIE",
+        heureDebut: "",
+        heureFin: "",
+        createurId: localStorage.getItem("userId") || "user-id-123",
+      });
+      setUploadedImages([]);
+      setShowCreateForm(false);
+      
+      await loadEvents();
+    } catch (error) {
+      console.error('Error creating event:', error);
+      alert('Erreur lors de la création de l\'événement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLike = async (activityId) => {
+    // Prevent multiple simultaneous like requests
+    if (likingActivities[activityId]) return;
+    
+    setLikingActivities(prev => ({ ...prev, [activityId]: true }));
+    
+    try {
+      // Get current user info
+      const currentUser = JSON.parse(localStorage.getItem('authResponse') || '{}');
+      const userName = localStorage.getItem('username') || currentUser.username || 'Vous';
+      const firstName = userName.split(' ')[0];
+      
+      // Get current local state
+      const currentActivity = activities.find(a => a.id === activityId);
+      const currentLiked = localLikes[activityId] ?? currentActivity?.isLiked ?? false;
+      const currentLikeCount = currentActivity?.likes ?? 0;
+      const currentLikedBy = likedByUsers[activityId] || [];
+      
+      // Update local state immediately for better UX
+      const newLiked = !currentLiked;
+      let newLikeCount;
+      let newLikedBy;
+      
+      if (newLiked) {
+        // Add like
+        newLikeCount = currentLikeCount + 1;
+        newLikedBy = [firstName, ...currentLikedBy];
+      } else {
+        // Remove like
+        newLikeCount = Math.max(0, currentLikeCount - 1);
+        newLikedBy = currentLikedBy.filter(name => name !== firstName);
+      }
+      
+      setLocalLikes(prev => ({ ...prev, [activityId]: newLiked }));
+      setLikedByUsers(prev => ({ ...prev, [activityId]: newLikedBy }));
+      
+      setActivities((prev) =>
+        prev.map((activity) =>
+          activity.id === activityId
+            ? {
+                ...activity,
+                isLiked: newLiked,
+                likes: newLikeCount,
+                likedBy: newLikedBy
+              }
+            : activity
+        )
+      );
+      
+      // Try to sync with backend (will use mock behavior for now)
+      try {
+        await activityFeedService.addReaction(activityId, 'like');
+        const serverLikeCount = await activityFeedService.getEventLikeCount(activityId);
+        
+        // Update with server response if available
+        setActivities((prev) =>
+          prev.map((activity) =>
+            activity.id === activityId
+              ? {
+                  ...activity,
+                  likes: serverLikeCount,
+                }
+              : activity
+          )
+        );
+      } catch (error) {
+        console.log('Backend sync failed, using local state');
+      }
+    } catch (error) {
+      console.error('Error handling like:', error);
+    } finally {
+      setLikingActivities(prev => ({ ...prev, [activityId]: false }));
+    }
   };
 
   const handleParticipate = (activityId) => {
@@ -324,97 +333,97 @@ const ActivitiesContent = () => {
     );
   };
 
-  const addComment = (activityId) => {
+  const addComment = async (activityId) => {
     const comment = newComment[activityId];
     if (!comment?.trim()) return;
 
-    setActivities((prev) =>
-      prev.map((activity) =>
-        activity.id === activityId
-          ? {
-              ...activity,
-              comments: [
-                ...activity.comments,
-                {
-                  id: Date.now(),
-                  user: "Vous",
-                  content: comment,
-                  time: "À l'instant",
-                },
-              ],
-            }
-          : activity
-      )
-    );
-    setNewComment((prev) => ({ ...prev, [activityId]: "" }));
-  };
-
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-
-    if (imageFiles.length === 0) {
-      alert('Veuillez sélectionner des fichiers image (JPG, PNG, GIF)');
-      return;
-    }
-
-    setUploading(true);
-
     try {
-      for (const file of imageFiles) {
-        if (!file.name || file.name.trim() === "") {
-          console.error("Fichier sans nom valide:", file);
-          continue;
+      // Add comment to local state immediately
+      const currentUser = JSON.parse(localStorage.getItem('authResponse') || '{}');
+      const userName = localStorage.getItem('username') || currentUser.username || 'Vous';
+      
+      const newCommentObj = {
+        id: Date.now(),
+        content: comment,
+        user: {
+          id: localStorage.getItem('userId') || currentUser.userId,
+          name: userName,
+          avatar: '/api/placeholder/32/32'
+        },
+        creationDate: new Date().toISOString(),
+        isLocal: true // Mark as local until synced
+      };
+      
+      // Update local comments state
+      setLocalComments(prev => ({
+        ...prev,
+        [activityId]: [...(prev[activityId] || []), newCommentObj]
+      }));
+      
+      setActivities((prev) =>
+        prev.map((activity) =>
+          activity.id === activityId
+            ? {
+                ...activity,
+                comments: [...activity.comments, newCommentObj],
+              }
+            : activity
+        )
+      );
+      
+      setNewComment((prev) => ({ ...prev, [activityId]: "" }));
+      
+      // Try to sync with backend
+      try {
+        const success = await activityFeedService.commentOnActivity(activityId, comment);
+        if (success) {
+          // Mark comment as synced
+          setActivities((prev) =>
+            prev.map((activity) =>
+              activity.id === activityId
+                ? {
+                    ...activity,
+                    comments: activity.comments.map(c => 
+                      c.id === newCommentObj.id ? { ...c, isLocal: false } : c
+                    ),
+                  }
+                : activity
+            )
+          );
+          console.log('Comment synced with backend');
         }
-
-        if (file.size > 5 * 1024 * 1024) {
-          alert(`${file.name} est trop volumineux (max 5MB)`);
-          continue;
-        }
-
-        try {
-          const timestamp = Date.now() + Math.random();
-          const extension = file.name.split(".").pop();
-          const uniqueFileName = `event_image_${timestamp}.${extension}`;
-
-          const previewUrl = URL.createObjectURL(file);
-
-          const imageData = {
-            id: timestamp,
-            fileName: uniqueFileName,
-            originalFileName: file.name,
-            filePath: `temp/${uniqueFileName}`,
-            type: "IMAGE",
-            contentType: file.type,
-            size: file.size,
-            previewUrl: previewUrl,
-            uploadedAt: new Date().toISOString(),
-            file: file,
-          };
-
-          setUploadedImages((prev) => [...prev, imageData]);
-        } catch (error) {
-          console.error(`Erreur traitement ${file.name}:`, error);
-          alert(`Erreur lors du traitement de ${file.name}: ${error.message}`);
-        }
+      } catch (error) {
+        console.log('Backend sync failed, comment saved locally only');
       }
     } catch (error) {
-      console.error("Erreur générale de traitement:", error);
-      alert("Erreur lors du traitement des images");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      console.error('Error adding comment:', error);
     }
   };
 
-  const removeImage = (imageId) => {
-    const imageToRemove = uploadedImages.find((img) => img.id === imageId);
-    if (imageToRemove && imageToRemove.previewUrl) {
-      URL.revokeObjectURL(imageToRemove.previewUrl);
+  const handleShare = async (activityId) => {
+    try {
+      await activityFeedService.shareActivity(activityId);
+      
+      // Update local state to reflect the share
+      setActivities((prev) =>
+        prev.map((activity) =>
+          activity.id === activityId
+            ? {
+                ...activity,
+                shares: activity.shares + 1,
+                isShared: true,
+              }
+            : activity
+        )
+      );
+    } catch (error) {
+      console.error('Error sharing activity:', error);
+      alert('Erreur lors du partage');
     }
-    setUploadedImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleCreateEvent = async () => {
@@ -426,7 +435,35 @@ const ActivitiesContent = () => {
     setLoading(true);
     
     try {
-      // Step 1: Create event without media
+      // First upload images if any
+      const uploadedMedia = [];
+      if (uploadedImages.length > 0) {
+        setUploading(true);
+        
+        for (const img of uploadedImages) {
+          try {
+            const result = await minioS3Service.uploadFile(
+              img.file,
+              "images"
+            );
+            
+            uploadedMedia.push({
+              fileName: result.fileName,
+              filePath: result.filePath,
+              contentType: result.contentType,
+              fileSize: result.fileSize,
+              mediaType: "IMAGE",
+              bucketName: "scholchat"
+            });
+          } catch (uploadError) {
+            console.error(`Error uploading ${img.fileName}:`, uploadError);
+          }
+        }
+        
+        setUploading(false);
+      }
+
+      // Create event with media
       const eventData = {
         titre: formData.titre,
         description: formData.description,
@@ -436,68 +473,13 @@ const ActivitiesContent = () => {
         heureFin: formData.heureFin,
         createurId: formData.createurId,
         participantsIds: [],
-        medias: [],
+        medias: uploadedMedia,
         interactions: []
       };
 
-      const createdEvent = await activityFeedService.createEvent(eventData);
+      console.log('Creating event with media:', eventData);
+      await activityFeedService.createEvent(eventData);
 
-      // Step 2: Upload images using minioS3Service.uploadFile
-      const uploadedMedia = [];
-      if (uploadedImages.length > 0) {
-        setUploading(true);
-        
-        for (const img of uploadedImages) {
-          try {
-            const result = await minioS3Service.uploadFile(
-              img.file,
-              "IMAGE",
-              "event_images"
-            );
-            
-            uploadedMedia.push({
-              fileName: result.fileName,
-              filePath: result.filePath,
-              contentType: result.contentType,
-              fileSize: result.fileSize,
-              mediaType: "IMAGE",
-              bucketName: "scholchat",
-              ownerId: formData.createurId
-            });
-          } catch (uploadError) {
-            console.error(`Error uploading ${img.fileName}:`, uploadError);
-          }
-        }
-        
-        // Step 3: Update event with media
-        if (uploadedMedia.length > 0) {
-          await activityFeedService.editEvent(createdEvent.id, {
-            ...eventData,
-            medias: uploadedMedia
-          });
-        }
-        
-        setUploading(false);
-      }
-
-      // Add to activities list
-      const newActivity = {
-        id: createdEvent.id,
-        user: { name: "Vous", avatar: "V" },
-        content: `${formData.titre} - ${formData.description}`,
-        timestamp: "À l'instant",
-        likes: 0,
-        isLiked: false,
-        participants: 1,
-        isParticipating: true,
-        images: uploadedImages.map(img => img.previewUrl),
-        comments: [],
-        showComments: false
-      };
-      
-      setActivities(prev => [newActivity, ...prev]);
-      
-      // Reset form
       setShowCreateForm(false);
       setFormData({
         titre: "",
@@ -506,9 +488,11 @@ const ActivitiesContent = () => {
         etat: "PLANIFIE",
         heureDebut: "",
         heureFin: "",
-        createurId: "user-id-123"
+        createurId: localStorage.getItem("userId") || "user-id-123"
       });
       setUploadedImages([]);
+      
+      await loadEvents();
       
     } catch (error) {
       console.error('Error creating event:', error);
@@ -517,10 +501,6 @@ const ActivitiesContent = () => {
       setLoading(false);
       setUploading(false);
     }
-  };
-
-  const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -725,27 +705,27 @@ const ActivitiesContent = () => {
                     Images sélectionnées ({uploadedImages.length})
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {uploadedImages.map((image) => (
-                      <div key={image.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                    {uploadedImages.map((image, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                         <div className="relative group">
                           <img
-                            src={image.previewUrl}
-                            alt={image.originalFileName}
+                            src={image.url}
+                            alt={`Upload ${index + 1}`}
                             className="w-full h-32 object-cover"
                           />
                         </div>
                         <div className="p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate" title={image.originalFileName}>
-                                {image.originalFileName}
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                Image {index + 1}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {(image.size / 1024).toFixed(1)} KB • Prêt à être uploadé
+                                Prêt à être uploadé
                               </p>
                             </div>
                             <button
-                              onClick={() => removeImage(image.id)}
+                              onClick={() => removeImage(index)}
                               className="text-red-500 hover:text-red-700 p-1 rounded transition-colors ml-2"
                               title="Supprimer cette image"
                             >
@@ -786,13 +766,37 @@ const ActivitiesContent = () => {
         ) : (
           /* Activities List */
           <div className="space-y-4">
-            {activities.map((activity) => (
+            {loadingActivities ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 size={32} className="animate-spin text-blue-600" />
+              </div>
+            ) : activities.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar size={32} className="text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Aucune activité disponible
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Soyez le premier à créer un événement et à partager vos activités avec la communauté.
+                </p>
+                <button
+                  onClick={() => setShowCreateForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
+                >
+                  <Plus size={20} />
+                  Créer le premier événement
+                </button>
+              </div>
+            ) : (
+              activities.map((activity) => (
               <div key={activity.id} className="bg-white rounded-lg shadow-sm">
                 {/* Post Header */}
                 <div className="p-4">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                      {activity.user.avatar}
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                      {activity.user.name?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">
@@ -813,13 +817,18 @@ const ActivitiesContent = () => {
                   <div>
                     {activity.images.length === 1 && (
                       <div
-                        className="w-full cursor-pointer"
+                        className="w-full cursor-pointer bg-gray-50"
                         onClick={() => openImagePreview(activity.images, 0)}
                       >
                         <img
                           src={activity.images[0]}
                           alt="Post image"
-                          className="w-full h-96 object-cover"
+                          className="w-full h-96 object-contain"
+                          onError={(e) => {
+                            console.error('Image failed to load:', activity.images[0]);
+                            e.target.style.display = 'none';
+                          }}
+                          onLoad={() => console.log('Image loaded successfully:', activity.images[0])}
                         />
                       </div>
                     )}
@@ -827,40 +836,47 @@ const ActivitiesContent = () => {
                     {activity.images.length === 2 && (
                       <div className="grid grid-cols-2 gap-1">
                         {activity.images.map((img, idx) => (
-                          <img
-                            key={idx}
-                            src={img}
-                            alt={`Post image ${idx + 1}`}
-                            className="w-full h-48 object-cover cursor-pointer"
-                            onClick={() =>
-                              openImagePreview(activity.images, idx)
-                            }
-                          />
+                          <div key={idx} className="bg-gray-50">
+                            <img
+                              src={img}
+                              alt={`Post image ${idx + 1}`}
+                              className="w-full h-64 object-contain cursor-pointer"
+                              onClick={() =>
+                                openImagePreview(activity.images, idx)
+                              }
+                            />
+                          </div>
                         ))}
                       </div>
                     )}
 
                     {activity.images.length === 3 && (
-                      <div className="grid grid-cols-2 gap-1 h-96">
-                        <img
-                          src={activity.images[0]}
-                          alt="Post image 1"
-                          className="w-full h-full object-cover cursor-pointer"
-                          onClick={() => openImagePreview(activity.images, 0)}
-                        />
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="bg-gray-50">
+                          <img
+                            src={activity.images[0]}
+                            alt="Post image 1"
+                            className="w-full h-64 object-contain cursor-pointer"
+                            onClick={() => openImagePreview(activity.images, 0)}
+                          />
+                        </div>
                         <div className="grid grid-rows-2 gap-1">
-                          <img
-                            src={activity.images[1]}
-                            alt="Post image 2"
-                            className="w-full h-full object-cover cursor-pointer"
-                            onClick={() => openImagePreview(activity.images, 1)}
-                          />
-                          <img
-                            src={activity.images[2]}
-                            alt="Post image 3"
-                            className="w-full h-full object-cover cursor-pointer"
-                            onClick={() => openImagePreview(activity.images, 2)}
-                          />
+                          <div className="bg-gray-50">
+                            <img
+                              src={activity.images[1]}
+                              alt="Post image 2"
+                              className="w-full h-32 object-contain cursor-pointer"
+                              onClick={() => openImagePreview(activity.images, 1)}
+                            />
+                          </div>
+                          <div className="bg-gray-50">
+                            <img
+                              src={activity.images[2]}
+                              alt="Post image 3"
+                              className="w-full h-32 object-contain cursor-pointer"
+                              onClick={() => openImagePreview(activity.images, 2)}
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
@@ -868,24 +884,25 @@ const ActivitiesContent = () => {
                     {activity.images.length >= 4 && (
                       <div className="grid grid-cols-2 gap-1">
                         {activity.images.slice(0, 3).map((img, idx) => (
-                          <img
-                            key={idx}
-                            src={img}
-                            alt={`Post image ${idx + 1}`}
-                            className="w-full h-48 object-cover cursor-pointer"
-                            onClick={() =>
-                              openImagePreview(activity.images, idx)
-                            }
-                          />
+                          <div key={idx} className="bg-gray-50">
+                            <img
+                              src={img}
+                              alt={`Post image ${idx + 1}`}
+                              className="w-full h-48 object-contain cursor-pointer"
+                              onClick={() =>
+                                openImagePreview(activity.images, idx)
+                              }
+                            />
+                          </div>
                         ))}
                         <div
-                          className="relative cursor-pointer"
+                          className="relative cursor-pointer bg-gray-50"
                           onClick={() => openImagePreview(activity.images, 3)}
                         >
                           <img
                             src={activity.images[3]}
                             alt="Post image 4"
-                            className="w-full h-48 object-cover"
+                            className="w-full h-48 object-contain"
                           />
                           {activity.images.length > 4 && (
                             <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
@@ -908,7 +925,25 @@ const ActivitiesContent = () => {
                     <div className="flex items-center justify-between text-sm text-gray-500">
                       <div className="flex items-center gap-4">
                         {activity.likes > 0 && (
-                          <span>{activity.likes} J'aime</span>
+                          <button className="hover:underline">
+                            <span className="flex items-center gap-1">
+                              <Heart size={14} className="text-red-500 fill-current" />
+                              {(() => {
+                                const likedBy = activity.likedBy || [];
+                                const totalLikes = activity.likes;
+                                
+                                if (totalLikes === 0) return null;
+                                
+                                if (totalLikes === 1) {
+                                  return likedBy[0] || 'Quelqu\'un';
+                                } else if (totalLikes === 2) {
+                                  return likedBy[0] ? `${likedBy[0]} et 1 autre` : `${totalLikes} J'aime`;
+                                } else {
+                                  return likedBy[0] ? `${likedBy[0]} et ${totalLikes - 1} autres` : `${totalLikes} J'aime`;
+                                }
+                              })()} 
+                            </span>
+                          </button>
                         )}
                         {activity.participants > 0 && (
                           <span>
@@ -932,16 +967,21 @@ const ActivitiesContent = () => {
                   <div className="flex items-center justify-around">
                     <button
                       onClick={() => handleLike(activity.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                      disabled={likingActivities[activity.id]}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors disabled:opacity-50 ${
                         activity.isLiked
                           ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
                           : "text-gray-600 hover:bg-gray-100"
                       }`}
                     >
-                      <Heart
-                        size={18}
-                        className={activity.isLiked ? "fill-current" : ""}
-                      />
+                      {likingActivities[activity.id] ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        <Heart
+                          size={18}
+                          className={activity.isLiked ? "fill-current" : ""}
+                        />
+                      )}
                       J'aime
                     </button>
 
@@ -965,7 +1005,10 @@ const ActivitiesContent = () => {
                       Participer
                     </button>
 
-                    <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
+                    <button 
+                      onClick={() => handleShare(activity.id)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                    >
                       <Share2 size={18} />
                       Partager
                     </button>
@@ -978,26 +1021,48 @@ const ActivitiesContent = () => {
                     {/* Existing Comments */}
                     {activity.comments.length > 0 && (
                       <div className="p-4 space-y-3">
-                        {activity.comments.map((comment) => (
-                          <div key={comment.id} className="flex gap-3">
-                            <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                              {comment.user.charAt(0)}
-                            </div>
-                            <div className="flex-1">
-                              <div className="bg-white rounded-lg px-3 py-2">
-                                <p className="font-semibold text-sm text-gray-900">
-                                  {comment.user}
-                                </p>
-                                <p className="text-gray-800">
-                                  {comment.content}
+                        {activity.comments.map((comment) => {
+                          const userName = comment.user?.name || comment.user || 'Utilisateur';
+                          const userInitial = userName.charAt(0).toUpperCase();
+                          const commentTime = comment.creationDate ? 
+                            new Date(comment.creationDate).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit', 
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : comment.time || 'À l\'instant';
+                          
+                          return (
+                            <div key={comment.id} className="flex gap-3">
+                              <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                                {userInitial}
+                              </div>
+                              <div className="flex-1">
+                                <div className={`bg-white rounded-lg px-3 py-2 ${comment.isLocal ? 'border border-blue-200' : ''}`}>
+                                  <p className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                                    {userName}
+                                    {comment.isLocal && (
+                                      <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                                        Local
+                                      </span>
+                                    )}
+                                  </p>
+                                  <p className="text-gray-800">
+                                    {comment.content}
+                                  </p>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1 ml-3">
+                                  {commentTime}
+                                  {comment.isLocal && (
+                                    <span className="text-blue-500 ml-2">
+                                      • Sauvegardé localement
+                                    </span>
+                                  )}
                                 </p>
                               </div>
-                              <p className="text-xs text-gray-500 mt-1 ml-3">
-                                {comment.time}
-                              </p>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 
@@ -1035,7 +1100,8 @@ const ActivitiesContent = () => {
                   </div>
                 )}
               </div>
-            ))}
+              ))
+            )}
           </div>
         )}
       </div>

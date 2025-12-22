@@ -186,6 +186,7 @@ class ClassService {
       // Prepare moderator data - send only ID if exists
       const classData = {
         ...classe,
+        dateCreation: classe.dateCreation || new Date().toISOString(),
         moderator: classe.moderator ? classe.moderator.id : null,
         etablissement: classe.etablissement
           ? { id: classe.etablissement.id }

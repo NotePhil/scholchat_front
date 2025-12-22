@@ -227,14 +227,12 @@ class MinioS3Service {
 
   async generateDownloadUrlByPath(filePath) {
     try {
-      // Use backend media endpoint directly to avoid CORS issues
-      const downloadUrl = `${BASE_URL}/media/download-by-path?filePath=${encodeURIComponent(filePath)}`;
-      
+      const response = await minioApi.get(`/media/download-by-path?filePath=${encodeURIComponent(filePath)}`);
       return {
-        downloadUrl: downloadUrl,
-        fileName: filePath.split('/').pop() || 'file',
-        contentType: 'application/octet-stream',
-        ownerId: this.getValidUserId(),
+        downloadUrl: response.data.url,
+        fileName: response.data.fileName,
+        contentType: response.data.contentType,
+        ownerId: response.data.ownerId,
       };
     } catch (error) {
       if (error.response?.status === 404) {
