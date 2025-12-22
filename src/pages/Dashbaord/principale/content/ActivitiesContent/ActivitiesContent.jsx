@@ -58,64 +58,79 @@ const ActivitiesContent = () => {
   const loadEvents = async () => {
     try {
       setLoadingActivities(true);
-      console.log('Loading activities...');
-      const activities = await activityFeedService.getActivities();
-      console.log('Received activities:', activities);
+      const events = await activityFeedService.getActivities();
       
-      // Process activities to add image URLs
+      // Process events directly in component
       const activitiesWithImages = await Promise.all(
-        activities.map(async (activity) => {
-          console.log('=== PROCESSING ACTIVITY ===');
-          console.log('Activity ID:', activity.id);
-          console.log('Activity type:', activity.type);
-          console.log('Activity media:', activity.media);
-          console.log('Media length:', activity.media?.length);
-          
+        events.map(async (event) => {
           const images = [];
           
-          if (activity.media && activity.media.length > 0) {
-            console.log('Activity has media, processing...');
-            
+          if (event.medias && event.medias.length > 0) {
             const imageUrls = await Promise.all(
-              activity.media
-                .filter(media => {
-                  console.log('Filtering media:', media.mediaType, media.id);
-                  return media.mediaType === 'IMAGE' && media.id;
-                })
+              event.medias
+                .filter(media => media.mediaType === 'IMAGE' && media.id)
                 .map(async (media) => {
-                  console.log('Getting URL for media ID:', media.id);
                   const imageUrl = await getImageUrl(media);
-                  console.log('Received image URL:', imageUrl);
                   return imageUrl;
                 })
             );
             
             const validUrls = imageUrls.filter(url => url !== null);
-            console.log('Valid image URLs:', validUrls);
             images.push(...validUrls);
-          } else {
-            console.log('No media found for activity:', activity.id);
           }
           
-          console.log('Final images for activity:', activity.id, ':', images);
-          console.log('==============================');
+          const currentUserId = localStorage.getItem('userId');
+          
+          // Process interactions - FIXED
+          const interactions = event.interactions || [];
+          const likes = interactions.filter(i => i.type === 'LIKE').length;
+          
+          // Get only COMMENT type interactions
+          const comments = interactions
+            .filter(i => i.type === 'COMMENT')
+            .map(comment => ({
+              id: comment.id,
+              content: comment.content,
+              createdById: comment.createdById,
+              creationDate: comment.creationDate,
+              isCurrentUser: comment.createdById === currentUserId
+            }));
+          
+          const isLiked = interactions.some(i => 
+            i.type === 'LIKE' && i.createdById === currentUserId
+          );
+          
+          // Participants count should come from participantsIds array
+          const participants = event.participantsIds?.length || 0;
+          const isParticipating = event.participantsIds?.includes(currentUserId) || false;
           
           return {
-            ...activity,
+            id: event.id,
+            type: 'event',
             images,
-            // Ensure required properties exist
-            participants: activity.eventDetails?.participantsCount || 0,
-            isParticipating: false,
+            likes, // This now correctly counts only LIKE interactions
+            comments, // This now contains only COMMENT interactions
+            isLiked,
+            participants, // Using participantsIds length
+            isParticipating,
             showComments: false,
-            // Merge with local state
-            isLiked: localLikes[activity.id] ?? activity.isLiked ?? false,
-            comments: [...(activity.comments || []), ...(localComments[activity.id] || [])],
-            likedBy: likedByUsers[activity.id] || []
+            user: { name: 'Event Creator' },
+            content: `${event.titre}: ${event.description}`,
+            timestamp: new Date(event.heureDebut).toLocaleString(),
+            eventDetails: {
+              title: event.titre,
+              description: event.description,
+              location: event.lieu,
+              status: event.etat,
+              startTime: event.heureDebut,
+              endTime: event.heureFin,
+              participantsCount: participants,
+            },
+            participantsIds: event.participantsIds || []
           };
         })
       );
       
-      console.log('Final activities with images:', activitiesWithImages);
       setActivities(activitiesWithImages);
     } catch (error) {
       console.error('Error loading activities:', error);
@@ -233,104 +248,100 @@ const ActivitiesContent = () => {
   };
 
   const handleLike = async (activityId) => {
-    // Prevent multiple simultaneous like requests
     if (likingActivities[activityId]) return;
     
     setLikingActivities(prev => ({ ...prev, [activityId]: true }));
     
     try {
-      // Get current user info
-      const currentUser = JSON.parse(localStorage.getItem('authResponse') || '{}');
-      const userName = localStorage.getItem('username') || currentUser.username || 'Vous';
-      const firstName = userName.split(' ')[0];
-      
-      // Get current local state
       const currentActivity = activities.find(a => a.id === activityId);
-      const currentLiked = localLikes[activityId] ?? currentActivity?.isLiked ?? false;
-      const currentLikeCount = currentActivity?.likes ?? 0;
-      const currentLikedBy = likedByUsers[activityId] || [];
+      const currentUserId = localStorage.getItem('userId');
+      const isCurrentlyLiked = currentActivity?.isLiked || false;
       
-      // Update local state immediately for better UX
-      const newLiked = !currentLiked;
-      let newLikeCount;
-      let newLikedBy;
+      // Update UI optimistically
+      setActivities(prev => prev.map(activity => 
+        activity.id === activityId 
+          ? { 
+              ...activity, 
+              likes: isCurrentlyLiked ? activity.likes - 1 : activity.likes + 1,
+              isLiked: !isCurrentlyLiked 
+            }
+          : activity
+      ));
       
-      if (newLiked) {
-        // Add like
-        newLikeCount = currentLikeCount + 1;
-        newLikedBy = [firstName, ...currentLikedBy];
-      } else {
-        // Remove like
-        newLikeCount = Math.max(0, currentLikeCount - 1);
-        newLikedBy = currentLikedBy.filter(name => name !== firstName);
-      }
-      
-      setLocalLikes(prev => ({ ...prev, [activityId]: newLiked }));
-      setLikedByUsers(prev => ({ ...prev, [activityId]: newLikedBy }));
-      
-      setActivities((prev) =>
-        prev.map((activity) =>
-          activity.id === activityId
-            ? {
-                ...activity,
-                isLiked: newLiked,
-                likes: newLikeCount,
-                likedBy: newLikedBy
-              }
-            : activity
-        )
-      );
-      
-      // Try to sync with backend (will use mock behavior for now)
-      try {
-        await activityFeedService.addReaction(activityId, 'like');
-        const serverLikeCount = await activityFeedService.getEventLikeCount(activityId);
-        
-        // Update with server response if available
-        setActivities((prev) =>
-          prev.map((activity) =>
-            activity.id === activityId
-              ? {
-                  ...activity,
-                  likes: serverLikeCount,
-                }
-              : activity
-          )
-        );
-      } catch (error) {
-        console.log('Backend sync failed, using local state');
-      }
+      // Send API request
+      await activityFeedService.likeEvent(activityId);
     } catch (error) {
       console.error('Error handling like:', error);
+      // Revert optimistic update on error
+      const currentActivity = activities.find(a => a.id === activityId);
+      const isCurrentlyLiked = currentActivity?.isLiked || false;
+      setActivities(prev => prev.map(activity => 
+        activity.id === activityId 
+          ? { 
+              ...activity, 
+              likes: isCurrentlyLiked ? activity.likes + 1 : activity.likes - 1,
+              isLiked: !isCurrentlyLiked 
+            }
+          : activity
+      ));
     } finally {
       setLikingActivities(prev => ({ ...prev, [activityId]: false }));
     }
   };
 
-  const handleParticipate = (activityId) => {
-    setActivities((prev) =>
-      prev.map((activity) =>
-        activity.id === activityId
-          ? {
-              ...activity,
-              isParticipating: !activity.isParticipating,
-              participants: activity.isParticipating
-                ? activity.participants - 1
-                : activity.participants + 1,
-            }
-          : activity
-      )
-    );
+  const toggleComments = (activityId) => {
+    setActivities(prev => prev.map(activity => 
+      activity.id === activityId 
+        ? { ...activity, showComments: !activity.showComments }
+        : activity
+    ));
   };
 
-  const toggleComments = (activityId) => {
-    setActivities((prev) =>
-      prev.map((activity) =>
-        activity.id === activityId
-          ? { ...activity, showComments: !activity.showComments }
+  const handleParticipate = async (activityId) => {
+    try {
+      const currentActivity = activities.find(a => a.id === activityId);
+      const currentUserId = localStorage.getItem('userId');
+      const isCurrentlyParticipating = currentActivity?.isParticipating || false;
+      
+      // Update UI optimistically
+      setActivities(prev => prev.map(activity => 
+        activity.id === activityId 
+          ? { 
+              ...activity, 
+              participants: isCurrentlyParticipating ? activity.participants - 1 : activity.participants + 1,
+              isParticipating: !isCurrentlyParticipating,
+              participantsIds: isCurrentlyParticipating 
+                ? activity.participantsIds.filter(id => id !== currentUserId)
+                : [...activity.participantsIds, currentUserId]
+            }
           : activity
-      )
-    );
+      ));
+      
+      // Send API request
+      if (isCurrentlyParticipating) {
+        await activityFeedService.unjoinEvent(activityId);
+      } else {
+        await activityFeedService.joinEvent(activityId);
+      }
+    } catch (error) {
+      console.error('Error handling participation:', error);
+      // Revert optimistic update on error
+      const currentActivity = activities.find(a => a.id === activityId);
+      const currentUserId = localStorage.getItem('userId');
+      const isCurrentlyParticipating = currentActivity?.isParticipating || false;
+      setActivities(prev => prev.map(activity => 
+        activity.id === activityId 
+          ? { 
+              ...activity, 
+              participants: isCurrentlyParticipating ? activity.participants + 1 : activity.participants - 1,
+              isParticipating: !isCurrentlyParticipating,
+              participantsIds: isCurrentlyParticipating 
+                ? [...activity.participantsIds, currentUserId]
+                : activity.participantsIds.filter(id => id !== currentUserId)
+            }
+          : activity
+      ));
+    }
   };
 
   const addComment = async (activityId) => {
@@ -338,88 +349,46 @@ const ActivitiesContent = () => {
     if (!comment?.trim()) return;
 
     try {
-      // Add comment to local state immediately
-      const currentUser = JSON.parse(localStorage.getItem('authResponse') || '{}');
-      const userName = localStorage.getItem('username') || currentUser.username || 'Vous';
-      
+      const userId = localStorage.getItem('userId');
       const newCommentObj = {
-        id: Date.now(),
+        id: `temp-${Date.now()}`,
         content: comment,
-        user: {
-          id: localStorage.getItem('userId') || currentUser.userId,
-          name: userName,
-          avatar: '/api/placeholder/32/32'
-        },
+        createdById: userId,
         creationDate: new Date().toISOString(),
-        isLocal: true // Mark as local until synced
+        isCurrentUser: true
       };
       
-      // Update local comments state
-      setLocalComments(prev => ({
-        ...prev,
-        [activityId]: [...(prev[activityId] || []), newCommentObj]
-      }));
+      // Update UI optimistically
+      setActivities(prev => prev.map(activity => 
+        activity.id === activityId 
+          ? { 
+              ...activity, 
+              comments: [...activity.comments, newCommentObj]
+            }
+          : activity
+      ));
       
-      setActivities((prev) =>
-        prev.map((activity) =>
-          activity.id === activityId
-            ? {
-                ...activity,
-                comments: [...activity.comments, newCommentObj],
-              }
-            : activity
-        )
-      );
+      // Clear the input
+      setNewComment(prev => ({ ...prev, [activityId]: '' }));
       
-      setNewComment((prev) => ({ ...prev, [activityId]: "" }));
-      
-      // Try to sync with backend
-      try {
-        const success = await activityFeedService.commentOnActivity(activityId, comment);
-        if (success) {
-          // Mark comment as synced
-          setActivities((prev) =>
-            prev.map((activity) =>
-              activity.id === activityId
-                ? {
-                    ...activity,
-                    comments: activity.comments.map(c => 
-                      c.id === newCommentObj.id ? { ...c, isLocal: false } : c
-                    ),
-                  }
-                : activity
-            )
-          );
-          console.log('Comment synced with backend');
-        }
-      } catch (error) {
-        console.log('Backend sync failed, comment saved locally only');
-      }
+      // Send API request
+      await activityFeedService.commentOnEvent(activityId, comment);
     } catch (error) {
       console.error('Error adding comment:', error);
+      // Revert optimistic update on error
+      setActivities(prev => prev.map(activity => 
+        activity.id === activityId 
+          ? { 
+              ...activity, 
+              comments: activity.comments.filter(c => !c.id.startsWith('temp-'))
+            }
+          : activity
+      ));
     }
   };
 
-  const handleShare = async (activityId) => {
-    try {
-      await activityFeedService.shareActivity(activityId);
-      
-      // Update local state to reflect the share
-      setActivities((prev) =>
-        prev.map((activity) =>
-          activity.id === activityId
-            ? {
-                ...activity,
-                shares: activity.shares + 1,
-                isShared: true,
-              }
-            : activity
-        )
-      );
-    } catch (error) {
-      console.error('Error sharing activity:', error);
-      alert('Erreur lors du partage');
-    }
+  const handleShare = (activityId) => {
+    alert('Fonctionnalité de partage (demo)');
   };
 
   const handleInputChange = (field, value) => {
@@ -918,49 +887,30 @@ const ActivitiesContent = () => {
                 )}
 
                 {/* Engagement Stats */}
-                {(activity.likes > 0 ||
-                  activity.comments.length > 0 ||
-                  activity.participants > 0) && (
-                  <div className="px-4 py-2 border-t border-gray-100">
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <div className="flex items-center gap-4">
-                        {activity.likes > 0 && (
-                          <button className="hover:underline">
-                            <span className="flex items-center gap-1">
-                              <Heart size={14} className="text-red-500 fill-current" />
-                              {(() => {
-                                const likedBy = activity.likedBy || [];
-                                const totalLikes = activity.likes;
-                                
-                                if (totalLikes === 0) return null;
-                                
-                                if (totalLikes === 1) {
-                                  return likedBy[0] || 'Quelqu\'un';
-                                } else if (totalLikes === 2) {
-                                  return likedBy[0] ? `${likedBy[0]} et 1 autre` : `${totalLikes} J'aime`;
-                                } else {
-                                  return likedBy[0] ? `${likedBy[0]} et ${totalLikes - 1} autres` : `${totalLikes} J'aime`;
-                                }
-                              })()} 
-                            </span>
-                          </button>
-                        )}
-                        {activity.participants > 0 && (
-                          <span>
-                            {activity.participants} participant
-                            {activity.participants > 1 ? "s" : ""}
-                          </span>
-                        )}
-                      </div>
-                      <span>
-                        {activity.comments.length > 0 &&
-                          `${activity.comments.length} commentaire${
-                            activity.comments.length > 1 ? "s" : ""
-                          }`}
-                      </span>
+                <div className="px-4 py-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <div className="flex items-center gap-4">
+                      {activity.likes > 0 && (
+                        <button className="hover:underline flex items-center gap-1">
+                          <Heart size={14} className="text-red-500 fill-current" />
+                          {activity.likes} J'aime
+                        </button>
+                      )}
+                      {activity.participants > 0 && (
+                        <span>
+                          {activity.participants} participant
+                          {activity.participants > 1 ? "s" : ""}
+                        </span>
+                      )}
                     </div>
+                    {activity.comments.length > 0 && (
+                      <span>
+                        {activity.comments.length} commentaire
+                        {activity.comments.length > 1 ? "s" : ""}
+                      </span>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {/* Action Buttons */}
                 <div className="px-4 py-3 border-t border-gray-100">
@@ -970,7 +920,7 @@ const ActivitiesContent = () => {
                       disabled={likingActivities[activity.id]}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors disabled:opacity-50 ${
                         activity.isLiked
-                          ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                          ? "text-red-600 bg-red-50 hover:bg-red-100"
                           : "text-gray-600 hover:bg-gray-100"
                       }`}
                     >
@@ -979,10 +929,10 @@ const ActivitiesContent = () => {
                       ) : (
                         <Heart
                           size={18}
-                          className={activity.isLiked ? "fill-current" : ""}
+                          className={activity.isLiked ? "fill-current text-red-600" : ""}
                         />
                       )}
-                      J'aime
+                      J'aime {activity.likes > 0 && `(${activity.likes})`}
                     </button>
 
                     <button
@@ -990,7 +940,7 @@ const ActivitiesContent = () => {
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
                     >
                       <MessageCircle size={18} />
-                      Commenter
+                      Commenter {activity.comments.length > 0 && `(${activity.comments.length})`}
                     </button>
 
                     <button
@@ -1002,7 +952,7 @@ const ActivitiesContent = () => {
                       }`}
                     >
                       <UserPlus size={18} />
-                      Participer
+                      Participer {activity.participants > 0 && `(${activity.participants})`}
                     </button>
 
                     <button 
@@ -1017,47 +967,38 @@ const ActivitiesContent = () => {
 
                 {/* Comments Section */}
                 {activity.showComments && (
-                  <div className="border-t border-gray-100 bg-gray-50">
+                  <div className="border-t border-gray-100">
                     {/* Existing Comments */}
                     {activity.comments.length > 0 && (
-                      <div className="p-4 space-y-3">
+                      <div className="px-4 py-3 space-y-2">
                         {activity.comments.map((comment) => {
-                          const userName = comment.user?.name || comment.user || 'Utilisateur';
-                          const userInitial = userName.charAt(0).toUpperCase();
                           const commentTime = comment.creationDate ? 
                             new Date(comment.creationDate).toLocaleString('fr-FR', {
                               day: '2-digit',
                               month: '2-digit', 
                               hour: '2-digit',
                               minute: '2-digit'
-                            }) : comment.time || 'À l\'instant';
+                            }) : 'À l\'instant';
                           
                           return (
-                            <div key={comment.id} className="flex gap-3">
-                              <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                {userInitial}
+                            <div key={comment.id} className={`flex gap-2 ${comment.isCurrentUser ? 'flex-row-reverse' : ''}`}>
+                              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                                {comment.isCurrentUser ? 'V' : 'U'}
                               </div>
-                              <div className="flex-1">
-                                <div className={`bg-white rounded-lg px-3 py-2 ${comment.isLocal ? 'border border-blue-200' : ''}`}>
-                                  <p className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-                                    {userName}
-                                    {comment.isLocal && (
-                                      <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
-                                        Local
-                                      </span>
-                                    )}
-                                  </p>
-                                  <p className="text-gray-800">
+                              <div className={`flex-1 ${comment.isCurrentUser ? 'text-right' : ''}`}>
+                                <div className={`rounded-2xl px-3 py-2 inline-block max-w-xs ${
+                                  comment.isCurrentUser 
+                                    ? 'bg-blue-500 text-white ml-auto' 
+                                    : 'bg-gray-100 text-gray-900'
+                                }`}>
+                                  <p className="text-sm">
                                     {comment.content}
                                   </p>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1 ml-3">
+                                <p className={`text-xs text-gray-500 mt-1 ${
+                                  comment.isCurrentUser ? 'mr-3' : 'ml-3'
+                                }`}>
                                   {commentTime}
-                                  {comment.isLocal && (
-                                    <span className="text-blue-500 ml-2">
-                                      • Sauvegardé localement
-                                    </span>
-                                  )}
                                 </p>
                               </div>
                             </div>
@@ -1067,12 +1008,12 @@ const ActivitiesContent = () => {
                     )}
 
                     {/* Add Comment */}
-                    <div className="p-4 border-t border-gray-200">
-                      <div className="flex gap-3">
-                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                    <div className="px-4 py-3 border-t border-gray-200">
+                      <div className="flex gap-2">
+                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                           V
                         </div>
-                        <div className="flex-1 flex gap-2">
+                        <div className="flex-1 relative">
                           <input
                             type="text"
                             placeholder="Écrivez un commentaire..."
@@ -1086,11 +1027,11 @@ const ActivitiesContent = () => {
                             onKeyPress={(e) =>
                               e.key === "Enter" && addComment(activity.id)
                             }
-                            className="flex-1 bg-white border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            className="w-full bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 pr-10"
                           />
                           <button
                             onClick={() => addComment(activity.id)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full transition-colors"
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-600"
                           >
                             <Send size={16} />
                           </button>

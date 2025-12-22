@@ -122,207 +122,78 @@ class ActivityFeedService {
     return finalId;
   }
 
-  // Get all activities with proper data structure
-  async getActivities(filter = "all") {
+  // Get raw events from API
+  async getActivities() {
     try {
-      console.log("Fetching activities with filter:", filter);
-
-      const [eventsResponse, interactionsResponse] = await Promise.all([
-        activityFeedApi.get("/evenements").catch((err) => {
-          console.warn("Failed to fetch events:", err);
-          return { data: [] };
-        }),
-        activityFeedApi.get("/interactions").catch((err) => {
-          console.warn("Failed to fetch interactions:", err);
-          return { data: [] };
-        }),
-      ]);
-
-      const events = eventsResponse.data || [];
-      const interactions = interactionsResponse.data || [];
-
-      console.log("Fetched events:", events.length);
-      console.log("Fetched interactions:", interactions.length);
-
-      // Get current user ID for checking likes
-      const currentUserId = this.getValidUserId();
-
-      // Transform events to activities with like status
-      const eventActivities = await Promise.all(
-        events.map(async (event) => {
-          const activity = this.transformEventToActivity(event);
-
-          // Check if current user has liked this event
-          try {
-            const hasLiked = await this.hasUserLikedEvent(
-              event.id,
-              currentUserId
-            );
-            activity.isLiked = hasLiked;
-          } catch (error) {
-            console.error("Error checking like status:", error);
-            activity.isLiked = false;
-          }
-
-          return activity;
-        })
-      );
-
-      // Transform interactions to activities
-      const interactionActivities = interactions.map((interaction) =>
-        this.transformInteractionToActivity(interaction)
-      );
-
-      // Combine and sort by timestamp
-      const allActivities = [...eventActivities, ...interactionActivities].sort(
-        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-      );
-
-      console.log("Total activities before filter:", allActivities.length);
-
-      const filteredActivities = this.applyFilter(allActivities, filter);
-
-      console.log("Activities after filter:", filteredActivities.length);
-
-      return filteredActivities;
+      const response = await activityFeedApi.get("/evenements");
+      return response.data || [];
     } catch (error) {
-      console.error("Failed to fetch activities:", error);
-      return this.getMockActivities(filter);
-    }
-  }
-
-  // Check if user has liked an event
-  async hasUserLikedEvent(eventId, userId) {
-    try {
-      const response = await activityFeedApi.get(
-        `/interactions/event/${eventId}/user/${userId}/has-liked`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Failed to check like status:", error);
-      // Return false as default until backend is implemented
-      return false;
-    }
-  }
-
-  // Get like count for event
-  async getEventLikeCount(eventId) {
-    try {
-      const response = await activityFeedApi.get(
-        `/interactions/event/${eventId}/likes/count`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Failed to get like count:", error);
-      // Return mock count until backend is implemented
-      return Math.floor(Math.random() * 10);
-    }
-  }
-
-  // Like/Dislike an activity
-  async addReaction(activityId, reactionType) {
-    try {
-      const userId = this.getValidUserId();
-      
-      // Check current like status
-      const hasLiked = await this.hasUserLikedEvent(activityId, userId);
-      
-      if (hasLiked) {
-        // Unlike the event - use DELETE endpoint
-        await activityFeedApi.delete(`/interactions/event/${activityId}/user/${userId}/like`);
-        return false;
-      } else {
-        // Like the event - use POST endpoint  
-        await activityFeedApi.post(`/interactions/event/${activityId}/user/${userId}/like`);
-        return true;
-      }
-    } catch (error) {
-      console.error("Failed to add reaction:", error);
-      // For now, return mock behavior until backend endpoints are implemented
-      console.warn("Like endpoints not implemented yet, using mock behavior");
-      const userId = this.getValidUserId();
-      return !await this.hasUserLikedEvent(activityId, userId).catch(() => false);
-    }
-  }
-
-  // Remove reaction (dislike)
-  async removeReaction(activityId) {
-    try {
-      // The removal is handled in addReaction by checking existing likes
-      // This method is kept for backward compatibility
-      return await this.addReaction(activityId, "like");
-    } catch (error) {
-      console.error("Failed to remove reaction:", error);
-      throw error;
-    }
-  }
-
-  // Get comments for a specific event
-  async getEventComments(eventId) {
-    try {
-      const response = await activityFeedApi.get(`/interactions/event/${eventId}/comments`);
-      return this.transformComments(response.data);
-    } catch (error) {
-      console.error("Failed to get event comments:", error);
-      // Return empty array until backend is implemented
+      console.error("Failed to fetch events:", error);
       return [];
     }
   }
 
-  // Comment on activity
-  async commentOnActivity(activityId, comment) {
+
+
+  // Like an event
+  async likeEvent(eventId) {
     try {
       const userId = this.getValidUserId();
-      
-      // Post comment to event
-      await activityFeedApi.post(`/interactions/event/${activityId}/user/${userId}/comment`, {
-        content: comment
-      });
-
-      return true;
-    } catch (error) {
-      console.error("Failed to comment:", error);
-      // For now, return success until backend endpoints are implemented
-      console.warn("Comment endpoints not implemented yet, comment saved locally only");
-      return true;
-    }
-  }
-
-  // Share activity
-  async shareActivity(activityId) {
-    try {
       const interaction = {
-        type: "SHARE",
-        content: "shared this",
-        createdById: this.getValidUserId(),
-        eventId: activityId,
+        type: "LIKE",
+        content: "",
+        niveau: "INFO",
+        createdById: userId,
+        eventId: eventId
       };
-
-      console.log("Sending share interaction:", interaction);
       await activityFeedApi.post("/interactions", interaction);
       return true;
     } catch (error) {
-      console.error("Failed to share:", error);
-      return false;
+      console.error("Failed to like event:", error);
+      throw error;
+    }
+  }
+
+  // Comment on event
+  async commentOnEvent(eventId, comment) {
+    try {
+      const userId = this.getValidUserId();
+      const interaction = {
+        type: "COMMENT",
+        content: comment,
+        niveau: "INFO",
+        createdById: userId,
+        eventId: eventId
+      };
+      await activityFeedApi.post("/interactions", interaction);
+      return true;
+    } catch (error) {
+      console.error("Failed to comment on event:", error);
+      throw error;
     }
   }
 
   // Join event
   async joinEvent(eventId) {
     try {
-      const interaction = {
-        type: "JOIN",
-        content: "joined this event",
-        createdById: this.getValidUserId(),
-        eventId: eventId,
-      };
-
-      console.log("Sending join interaction:", interaction);
-      await activityFeedApi.post("/interactions", interaction);
+      const userId = this.getValidUserId();
+      await activityFeedApi.post(`/interactions/join/${eventId}/${userId}`);
       return true;
     } catch (error) {
       console.error("Failed to join event:", error);
-      return false;
+      throw error;
+    }
+  }
+
+  // Leave event (unjoin)
+  async unjoinEvent(eventId) {
+    try {
+      const userId = this.getValidUserId();
+      await activityFeedApi.post(`/interactions/unjoin/${eventId}/${userId}`);
+      return true;
+    } catch (error) {
+      console.error("Failed to unjoin event:", error);
+      throw error;
     }
   }
 
@@ -451,266 +322,6 @@ class ActivityFeedService {
     }
   }
 
-  // Mock data for development/testing
-  getMockActivities(filter) {
-    const currentUser = this.getCurrentUser();
-
-    const mockActivities = [
-      {
-        id: "event_1",
-        type: "event",
-        user: {
-          id: "prof_1",
-          name: "Dr. Sarah Johnson",
-          role: "professor",
-          avatar: "/api/placeholder/48/48",
-        },
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        content: "Physics Lab Session - Quantum Mechanics Experiments",
-        eventDetails: {
-          title: "Advanced Physics Lab",
-          description:
-            "Hands-on experiments with quantum mechanics principles.",
-          location: "Science Building - Lab 204",
-          status: "PLANIFIE",
-          startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          endTime: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
-          participantsCount: 24,
-        },
-        media: [
-          {
-            id: "1",
-            fileName: "lab-equipment.jpg",
-            filePath: "/api/placeholder/400/300",
-            type: "IMAGE",
-          },
-        ],
-        likes: 15,
-        comments: [
-          {
-            id: "c1",
-            content: "Can't wait for this session!",
-            user: {
-              id: "student_1",
-              name: "Alex Chen",
-              avatar: "/api/placeholder/32/32",
-            },
-            timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          },
-        ],
-        shares: 3,
-        isLiked: false,
-        isShared: false,
-      },
-      // ... other mock activities
-    ];
-
-    return this.applyFilter(mockActivities, filter);
-  }
-
-  // Transform event to activity
-  transformEventToActivity(event) {
-    const currentUser = this.getCurrentUser();
-
-    console.log('=== TRANSFORM EVENT DEBUG ===');
-    console.log('Raw event object:', event);
-    console.log('Event likes:', event.likesCount);
-    console.log('Event comments:', event.comments);
-    console.log('Event isLiked:', event.isLiked);
-
-    // Ensure user object is always present
-    const eventUser = {
-      id: event.createurId || currentUser?.id || "unknown",
-      name: event.createurNom || currentUser?.name || "Créateur d'événement",
-      role: "professor",
-      avatar: "/api/placeholder/48/48",
-    };
-
-    // Filter out invalid media and add proper structure
-    let validMedia = [];
-    if (event.medias && Array.isArray(event.medias)) {
-      validMedia = event.medias
-        .filter(media => media && (media.filePath || media.id))
-        .map(media => ({
-          id: media.id || media.fileName,
-          fileName: media.fileName,
-          filePath: media.filePath,
-          type: media.fileType || media.mediaType || "IMAGE",
-          mediaType: media.mediaType || "IMAGE",
-          contentType: media.contentType,
-          fileSize: media.fileSize
-        }));
-    }
-
-    console.log('About to transform comments, interactions:', event.interactions);
-    
-    // Direct test - manually extract comments
-    const directComments = (event.interactions || []).filter(i => i.type === 'COMMENT');
-    console.log('Direct comment extraction:', directComments);
-    
-    const transformedComments = this.transformComments(event.interactions || []);
-    console.log('Transformed comments result:', transformedComments);
-    
-    const activity = {
-      id: event.id,
-      type: "event",
-      user: eventUser,
-      timestamp:
-        event.heureDebut || event.dateCreation || new Date().toISOString(),
-      content: `${event.titre}: ${event.description || "Nouvel événement créé"}`,
-      eventDetails: {
-        title: event.titre,
-        description: event.description,
-        location: event.lieu,
-        status: event.etat,
-        startTime: event.heureDebut,
-        endTime: event.heureFin,
-        participantsCount: event.participantsIds?.length || 0,
-      },
-      media: validMedia,
-      likes: event.likesCount || 0,
-      comments: transformedComments,
-      shares: event.sharesCount || 0,
-      isLiked: event.isLiked || false,
-      isShared: false,
-    };
-    
-    console.log('Final activity with comments:', activity.comments);
-    console.log('==============================');
-    
-    return activity;
-  }
-
-  // Transform comments from backend format
-  transformComments(interactions) {
-    console.log('=== TRANSFORM COMMENTS DEBUG ===');
-    console.log('Raw interactions:', interactions);
-    console.log('Interactions length:', interactions?.length);
-    
-    if (!Array.isArray(interactions)) {
-      console.log('Interactions is not an array:', interactions);
-      return [];
-    }
-    
-    // Debug each interaction
-    interactions.forEach((interaction, index) => {
-      console.log(`Interaction ${index}:`, interaction.type, interaction.content);
-    });
-    
-    const comments = interactions
-      .filter(interaction => {
-        console.log('Filtering interaction:', interaction.type, interaction.type === 'COMMENT');
-        return interaction.type === 'COMMENT';
-      })
-      .map(comment => {
-        console.log('Mapping comment:', comment);
-        return {
-          id: comment.id,
-          content: comment.content,
-          createdById: comment.createdById,
-          user: {
-            id: comment.createdById,
-            name: 'Utilisateur',
-            avatar: '/api/placeholder/32/32'
-          },
-          creationDate: comment.creationDate
-        };
-      });
-    
-    console.log('Filtered comments result:', comments);
-    console.log('Comments length:', comments.length);
-    console.log('================================');
-    
-    return comments;
-  }
-
-  // Transform interaction to activity
-  transformInteractionToActivity(interaction) {
-    const currentUser = this.getCurrentUser();
-
-    // Ensure user object is always present
-    const interactionUser = {
-      id: interaction.createdById || currentUser?.id || "unknown",
-      name: interaction.createdByName || currentUser?.name || "Utilisateur",
-      role: interaction.createdByRole || "user",
-      avatar: "/api/placeholder/48/48",
-    };
-
-    return {
-      id: interaction.id,
-      type: interaction.type === "COMMENT" ? "post" : "interaction",
-      user: interactionUser,
-      timestamp: interaction.creationDate || new Date().toISOString(),
-      content: interaction.content,
-      interactionType: interaction.type,
-      likes: interaction.likesCount || 0,
-      comments: interaction.comments || [],
-      shares: interaction.sharesCount || 0,
-      isLiked: false,
-      isShared: false,
-    };
-  }
-
-  // Apply filters with proper logic
-  applyFilter(activities, filter) {
-    switch (filter) {
-      case "events":
-        return activities.filter((activity) => activity.type === "event");
-      case "posts":
-        return activities.filter((activity) => activity.type === "post");
-      case "interactions":
-        return activities.filter(
-          (activity) =>
-            activity.type === "interaction" || activity.type === "post"
-        );
-      case "popular":
-        return activities.filter((activity) => activity.likes > 20);
-      case "recent":
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        return activities.filter(
-          (activity) => new Date(activity.timestamp) > oneDayAgo
-        );
-      default:
-        return activities;
-    }
-  }
-
-  // Format timestamp
-  formatTimestamp(dateTime) {
-    const date = new Date(dateTime);
-    const now = new Date();
-    const diff = now - date;
-
-    if (diff < 60000) return "Just now";
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
-    if (diff < 604800000) return `${Math.floor(diff / 86400000)}d`;
-    return date.toLocaleDateString();
-  }
-
-  // Get status color
-  getStatusColor(status) {
-    const statusMap = {
-      PLANIFIE: "bg-blue-100 text-blue-800",
-      EN_COURS: "bg-green-100 text-green-800",
-      TERMINE: "bg-gray-100 text-gray-800",
-      ANNULE: "bg-red-100 text-red-800",
-      default: "bg-gray-100 text-gray-800",
-    };
-    return statusMap[status] || statusMap.default;
-  }
-
-  // Get status label
-  getStatusLabel(status) {
-    const statusMap = {
-      PLANIFIE: "Scheduled",
-      EN_COURS: "Live",
-      TERMINE: "Completed",
-      ANNULE: "Cancelled",
-      default: "Scheduled",
-    };
-    return statusMap[status] || statusMap.default;
-  }
 }
 
 export const activityFeedService = new ActivityFeedService();
