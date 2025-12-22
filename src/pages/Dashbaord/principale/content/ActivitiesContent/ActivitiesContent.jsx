@@ -970,7 +970,9 @@ const ActivitiesContent = () => {
                   <div className="border-t border-gray-100">
                     {/* Existing Comments */}
                     {activity.comments.length > 0 && (
-                      <div className="px-4 py-3 space-y-2">
+                      <div className={`px-4 py-3 space-y-2 ${
+                        activity.comments.length > 4 ? 'max-h-48 overflow-y-auto' : ''
+                      }`}>
                         {activity.comments.map((comment) => {
                           const commentTime = comment.creationDate ? 
                             new Date(comment.creationDate).toLocaleString('fr-FR', {
