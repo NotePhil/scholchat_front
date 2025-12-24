@@ -20,8 +20,12 @@ import {
 } from "lucide-react";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
 import { minioS3Service } from "../../../../../services/minioS3";
+import { useTranslation } from "../../../../../hooks/useTranslation";
+import { useSelector } from "react-redux";
 
 const ActivitiesContent = () => {
+  const { t } = useTranslation();
+  const language = useSelector((state) => state.language?.currentLanguage || 'fr');
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [staticActivities] = useState([]);
@@ -197,7 +201,7 @@ const ActivitiesContent = () => {
       setUploadedImages(prev => [...prev, ...results]);
     } catch (error) {
       console.error('Error uploading images:', error);
-      alert('Erreur lors du téléchargement des images');
+      alert(t('activities.errors.imageUploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -210,7 +214,7 @@ const ActivitiesContent = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.titre || !formData.description) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      alert(t('activities.validation.requiredFields'));
       return;
     }
 
@@ -241,7 +245,7 @@ const ActivitiesContent = () => {
       await loadEvents();
     } catch (error) {
       console.error('Error creating event:', error);
-      alert('Erreur lors de la création de l\'événement');
+      alert(t('activities.errors.createEventFailed'));
     } finally {
       setLoading(false);
     }
@@ -388,7 +392,7 @@ const ActivitiesContent = () => {
   };
 
   const handleShare = (activityId) => {
-    alert('Fonctionnalité de partage (demo)');
+    alert(t('activities.actions.shareDemo'));
   };
 
   const handleInputChange = (field, value) => {
@@ -397,7 +401,7 @@ const ActivitiesContent = () => {
 
   const handleCreateEvent = async () => {
     if (!formData.titre || !formData.description || !formData.lieu || !formData.heureDebut || !formData.heureFin) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      alert(t('activities.validation.requiredFields'));
       return;
     }
 
@@ -465,7 +469,7 @@ const ActivitiesContent = () => {
       
     } catch (error) {
       console.error('Error creating event:', error);
-      alert(`Erreur lors de la création de l'événement: ${error.message}`);
+      alert(`${t('activities.errors.createEventFailed')}: ${error.message}`);
     } finally {
       setLoading(false);
       setUploading(false);
@@ -479,14 +483,14 @@ const ActivitiesContent = () => {
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold text-gray-900">
-              Fil d'actualité
+              {t('activities.title')}
             </h1>
             <button
               onClick={() => setShowCreateForm(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
             >
               <Plus size={20} />
-              Créer
+              {t('activities.actions.create')}
             </button>
           </div>
         </div>
@@ -507,10 +511,10 @@ const ActivitiesContent = () => {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">
-                    Créer un événement
+                    {t('activities.createEvent.title')}
                   </h2>
                   <p className="text-sm text-gray-600">
-                    Remplissez les informations de votre événement
+                    {t('activities.createEvent.subtitle')}
                   </p>
                 </div>
               </div>
@@ -519,20 +523,20 @@ const ActivitiesContent = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Titre *
+                  {t('activities.form.title')} *
                 </label>
                 <input
                   type="text"
                   value={formData.titre}
                   onChange={(e) => handleInputChange("titre", e.target.value)}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Mon événement"
+                  placeholder={t('activities.form.titlePlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description *
+                  {t('activities.form.description')} *
                 </label>
                 <textarea
                   value={formData.description}
@@ -541,13 +545,13 @@ const ActivitiesContent = () => {
                   }
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder="Description de l'événement"
+                  placeholder={t('activities.form.descriptionPlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lieu *
+                  {t('activities.form.location')} *
                 </label>
                 <div className="relative">
                   <MapPin
@@ -559,7 +563,7 @@ const ActivitiesContent = () => {
                     value={formData.lieu}
                     onChange={(e) => handleInputChange("lieu", e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Salle de conférence"
+                    placeholder={t('activities.form.locationPlaceholder')}
                   />
                 </div>
               </div>
@@ -567,7 +571,7 @@ const ActivitiesContent = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Début *
+                    {t('activities.form.startTime')} *
                   </label>
                   <div className="relative">
                     <Clock
@@ -587,7 +591,7 @@ const ActivitiesContent = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fin *
+                    {t('activities.form.endTime')} *
                   </label>
                   <div className="relative">
                     <Clock
@@ -608,23 +612,23 @@ const ActivitiesContent = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  État
+                  {t('activities.form.status')}
                 </label>
                 <select
                   value={formData.etat}
                   onChange={(e) => handleInputChange("etat", e.target.value)}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="PLANIFIE">Planifié</option>
-                  <option value="EN_COURS">En cours</option>
-                  <option value="TERMINE">Terminé</option>
-                  <option value="ANNULE">Annulé</option>
+                  <option value="PLANIFIE">{t('activities.status.planned')}</option>
+                  <option value="EN_COURS">{t('activities.status.inProgress')}</option>
+                  <option value="TERMINE">{t('activities.status.completed')}</option>
+                  <option value="ANNULE">{t('activities.status.cancelled')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Images (optionnel)
+                  {t('activities.form.images')}
                 </label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
                   <div className="space-y-3">
@@ -640,10 +644,10 @@ const ActivitiesContent = () => {
                     </div>
                     <div>
                       <p className="font-medium text-gray-700">
-                        Ajouter des images
+                        {t('activities.form.addImages')}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Cliquez pour sélectionner des fichiers
+                        {t('activities.form.selectFiles')}
                       </p>
                     </div>
                     <button
@@ -653,7 +657,7 @@ const ActivitiesContent = () => {
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
                     >
                       <Upload size={18} />
-                      Sélectionner
+                      {t('activities.actions.select')}
                     </button>
                   </div>
                 </div>
@@ -671,7 +675,7 @@ const ActivitiesContent = () => {
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
                     <Image size={16} />
-                    Images sélectionnées ({uploadedImages.length})
+                    {t('activities.form.selectedImages', { count: uploadedImages.length })}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {uploadedImages.map((image, index) => (
@@ -687,16 +691,16 @@ const ActivitiesContent = () => {
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 truncate">
-                                Image {index + 1}
+                                {t('activities.form.imageNumber', { number: index + 1 })}
                               </p>
                               <p className="text-xs text-gray-500">
-                                Prêt à être uploadé
+                                {t('activities.form.readyToUpload')}
                               </p>
                             </div>
                             <button
                               onClick={() => removeImage(index)}
                               className="text-red-500 hover:text-red-700 p-1 rounded transition-colors ml-2"
-                              title="Supprimer cette image"
+                              title={t('activities.actions.delete')}
                             >
                               <Trash2 size={16} />
                             </button>
@@ -714,7 +718,7 @@ const ActivitiesContent = () => {
                 onClick={() => setShowCreateForm(false)}
                 className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors"
               >
-                Annuler
+                {t('common.actions.cancel')}
               </button>
               <button
                 onClick={handleCreateEvent}
@@ -724,10 +728,10 @@ const ActivitiesContent = () => {
                 {loading || uploading ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    {uploading ? 'Traitement...' : 'Création...'}
+                    {uploading ? t('activities.actions.processing') : t('activities.actions.creating')}
                   </>
                 ) : (
-                  "Créer l'événement"
+                  t('activities.actions.createEvent')
                 )}
               </button>
             </div>
@@ -745,17 +749,17 @@ const ActivitiesContent = () => {
                   <Calendar size={32} className="text-gray-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Aucune activité disponible
+                  {t('activities.noActivities.title')}
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Soyez le premier à créer un événement et à partager vos activités avec la communauté.
+                  {t('activities.noActivities.description')}
                 </p>
                 <button
                   onClick={() => setShowCreateForm(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
                 >
                   <Plus size={20} />
-                  Créer le premier événement
+                  {t('activities.noActivities.createFirst')}
                 </button>
               </div>
             ) : (
@@ -893,20 +897,18 @@ const ActivitiesContent = () => {
                       {activity.likes > 0 && (
                         <button className="hover:underline flex items-center gap-1">
                           <Heart size={14} className="text-red-500 fill-current" />
-                          {activity.likes} J'aime
+                          {activity.likes} {t('activities.actions.like')}
                         </button>
                       )}
                       {activity.participants > 0 && (
                         <span>
-                          {activity.participants} participant
-                          {activity.participants > 1 ? "s" : ""}
+                          {t('activities.participants', { count: activity.participants })}
                         </span>
                       )}
                     </div>
                     {activity.comments.length > 0 && (
                       <span>
-                        {activity.comments.length} commentaire
-                        {activity.comments.length > 1 ? "s" : ""}
+                        {t('activities.comments', { count: activity.comments.length })}
                       </span>
                     )}
                   </div>
@@ -932,7 +934,7 @@ const ActivitiesContent = () => {
                           className={activity.isLiked ? "fill-current text-red-600" : ""}
                         />
                       )}
-                      J'aime {activity.likes > 0 && `(${activity.likes})`}
+                      {t('activities.actions.like')} {activity.likes > 0 && `(${activity.likes})`}
                     </button>
 
                     <button
@@ -940,7 +942,7 @@ const ActivitiesContent = () => {
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
                     >
                       <MessageCircle size={18} />
-                      Commenter {activity.comments.length > 0 && `(${activity.comments.length})`}
+                      {t('activities.actions.comment')} {activity.comments.length > 0 && `(${activity.comments.length})`}
                     </button>
 
                     <button
@@ -952,7 +954,7 @@ const ActivitiesContent = () => {
                       }`}
                     >
                       <UserPlus size={18} />
-                      Participer {activity.participants > 0 && `(${activity.participants})`}
+                      {t('activities.actions.participate')} {activity.participants > 0 && `(${activity.participants})`}
                     </button>
 
                     <button 
@@ -960,7 +962,7 @@ const ActivitiesContent = () => {
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
                     >
                       <Share2 size={18} />
-                      Partager
+                      {t('activities.actions.share')}
                     </button>
                   </div>
                 </div>
@@ -1018,7 +1020,7 @@ const ActivitiesContent = () => {
                         <div className="flex-1 relative">
                           <input
                             type="text"
-                            placeholder="Écrivez un commentaire..."
+                            placeholder={t('activities.form.commentPlaceholder')}
                             value={newComment[activity.id] || ""}
                             onChange={(e) =>
                               setNewComment((prev) => ({

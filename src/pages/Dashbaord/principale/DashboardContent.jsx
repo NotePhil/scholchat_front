@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from '../../../hooks/useTranslation';
+import { useSelector } from 'react-redux';
 import {
   BarChart,
   Bar,
@@ -121,6 +123,15 @@ class MatiereService {
 const matiereService = new MatiereService();
 
 const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
+  const { t, changeLanguage } = useTranslation();
+  const currentLanguage = useSelector((state) => state.ui.currentLanguage);
+  
+  // Sync Redux language with translation hook
+  useEffect(() => {
+    if (currentLanguage) {
+      changeLanguage(currentLanguage);
+    }
+  }, [currentLanguage, changeLanguage]);
   const [dashboardData, setDashboardData] = useState({
     users: [],
     professors: [],
@@ -238,7 +249,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
       setDashboardData((prev) => ({
         ...prev,
         loading: false,
-        error: "Failed to load dashboard data",
+        error: t('dashboard.errors.loadFailed'),
       }));
     }
   };
@@ -246,7 +257,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   // Prepare chart data
   const courseDistributionData = dashboardData.matieres.map(
     (matiere, index) => ({
-      name: matiere.nom || `Matière ${index + 1}`,
+      name: matiere.nom || `${t('dashboard.charts.subject')} ${index + 1}`,
       courses: Math.floor(Math.random() * 50) + 10,
       color: [
         "#3B82F6",
@@ -264,44 +275,44 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const studentProgressData = dashboardData.classes
     .slice(0, 8)
     .map((classe) => ({
-      class: classe.nom || "Classe",
+      class: classe.nom || t('dashboard.charts.class'),
       progress: Math.floor(Math.random() * 30) + 70,
       students: Math.floor(Math.random() * 15) + 20,
     }));
 
   const monthlyTrendsData = [
     {
-      month: "Jan",
+      month: t('dashboard.months.jan'),
       courses: Math.floor(stats.totalCourses * 0.1),
       exercises: Math.floor(stats.totalExercises * 0.08),
       completions: Math.floor(stats.totalStudents * 2.3),
     },
     {
-      month: "Fév",
+      month: t('dashboard.months.feb'),
       courses: Math.floor(stats.totalCourses * 0.15),
       exercises: Math.floor(stats.totalExercises * 0.12),
       completions: Math.floor(stats.totalStudents * 3.1),
     },
     {
-      month: "Mar",
+      month: t('dashboard.months.mar'),
       courses: Math.floor(stats.totalCourses * 0.2),
       exercises: Math.floor(stats.totalExercises * 0.18),
       completions: Math.floor(stats.totalStudents * 2.8),
     },
     {
-      month: "Avr",
+      month: t('dashboard.months.apr'),
       courses: Math.floor(stats.totalCourses * 0.25),
       exercises: Math.floor(stats.totalExercises * 0.22),
       completions: Math.floor(stats.totalStudents * 3.5),
     },
     {
-      month: "Mai",
+      month: t('dashboard.months.may'),
       courses: Math.floor(stats.totalCourses * 0.3),
       exercises: Math.floor(stats.totalExercises * 0.28),
       completions: Math.floor(stats.totalStudents * 4.2),
     },
     {
-      month: "Juin",
+      month: t('dashboard.months.jun'),
       courses: stats.totalCourses,
       exercises: stats.totalExercises,
       completions: Math.floor(stats.totalStudents * 4.8),
@@ -309,9 +320,9 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   ];
 
   const exerciseCompletionData = [
-    { name: "Terminés", value: 78.5, color: "#10B981" },
-    { name: "En Cours", value: 15.3, color: "#F59E0B" },
-    { name: "Non Commencés", value: 6.2, color: "#EF4444" },
+    { name: t('dashboard.completion.completed'), value: 78.5, color: "#10B981" },
+    { name: t('dashboard.completion.inProgress'), value: 15.3, color: "#F59E0B" },
+    { name: t('dashboard.completion.notStarted'), value: 6.2, color: "#EF4444" },
   ];
 
   const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }) => (
@@ -338,7 +349,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         <div className="flex items-center mt-3 sm:mt-4 text-xs sm:text-sm">
           <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 mr-1 flex-shrink-0" />
           <span className="text-green-600 font-medium">{trend}</span>
-          <span className="text-gray-500 ml-1">ce mois</span>
+          <span className="text-gray-500 ml-1">{t('dashboard.stats.thisMonth')}</span>
         </div>
       )}
     </div>
@@ -349,47 +360,45 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
       {
         id: 1,
         type: "course_created",
-        title: "Nouveau cours: Algèbre Linéaire",
+        title: t('dashboard.activities.newCourse'),
         user: dashboardData.professors[0]?.nom || "Prof. Martin",
-        time: "Il y a 2h",
+        time: t('dashboard.activities.hoursAgo', { count: 2 }),
         icon: BookOpen,
         color: "text-blue-600",
       },
       {
         id: 2,
         type: "exercise_completed",
-        title: `Exercice complété par ${Math.floor(
-          Math.random() * 30 + 15
-        )} élèves`,
+        title: t('dashboard.activities.exerciseCompleted', { count: Math.floor(Math.random() * 30 + 15) }),
         user: dashboardData.classes[0]?.nom || "Classe 3ème A",
-        time: "Il y a 3h",
+        time: t('dashboard.activities.hoursAgo', { count: 3 }),
         icon: CheckCircle,
         color: "text-green-600",
       },
       {
         id: 3,
         type: "class_created",
-        title: "Nouvelle classe créée",
+        title: t('dashboard.activities.newClass'),
         user: "Admin",
-        time: "Il y a 5h",
+        time: t('dashboard.activities.hoursAgo', { count: 5 }),
         icon: Users,
         color: "text-purple-600",
       },
       {
         id: 4,
         type: "progress_milestone",
-        title: "Progression atteint 80%",
-        user: "Système",
-        time: "Il y a 1j",
+        title: t('dashboard.activities.progressReached'),
+        user: t('dashboard.activities.system'),
+        time: t('dashboard.activities.daysAgo', { count: 1 }),
         icon: Award,
         color: "text-yellow-600",
       },
       {
         id: 5,
         type: "subject_updated",
-        title: "Matière mise à jour",
+        title: t('dashboard.activities.subjectUpdated'),
         user: dashboardData.professors[1]?.nom || "Prof. Dubois",
-        time: "Il y a 2j",
+        time: t('dashboard.activities.daysAgo', { count: 2 }),
         icon: FileText,
         color: "text-indigo-600",
       },
@@ -399,7 +408,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <h3 className={`text-base sm:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Activités Récentes
+            {t('dashboard.recentActivities')}
           </h3>
           <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
         </div>
@@ -435,7 +444,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className={`mt-4 text-sm sm:text-base ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-            Chargement du tableau de bord...
+            {t('dashboard.loading')}
           </p>
         </div>
       </div>
@@ -452,7 +461,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             onClick={fetchDashboardData}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
           >
-            Réessayer
+            {t('dashboard.retry')}
           </button>
         </div>
       </div>
@@ -467,17 +476,17 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6">
             <div className="mb-3 sm:mb-0">
               <h1 className={`text-xl sm:text-2xl lg:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Tableau de Bord Éducatif
+                {t('dashboard.title')}
               </h1>
               <p className={`text-sm sm:text-base ${isDark ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
-                Gestion des cours, exercices et progression des élèves
+                {t('dashboard.subtitle')}
               </p>
             </div>
             <button
               onClick={fetchDashboardData}
               className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm sm:text-base self-start sm:self-auto"
             >
-              <span>Actualiser</span>
+              <span>{t('dashboard.refresh')}</span>
             </button>
           </div>
         </div>
@@ -487,36 +496,36 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
           <StatCard
-            title="Cours Disponibles"
+            title={t('dashboard.stats.availableCourses')}
             value={stats.totalCourses}
             icon={BookOpen}
             color="bg-blue-500"
             trend="+12%"
-            subtitle={`${stats.totalMatieres} matières`}
+            subtitle={t('dashboard.stats.subjects', { count: stats.totalMatieres })}
           />
           <StatCard
-            title="Exercices"
+            title={t('dashboard.stats.exercises')}
             value={stats.totalExercises}
             icon={Target}
             color="bg-green-500"
             trend="+18%"
-            subtitle={`${stats.completionRate}% terminés`}
+            subtitle={t('dashboard.stats.completed', { percent: stats.completionRate })}
           />
           <StatCard
-            title="Classes Actives"
+            title={t('dashboard.stats.activeClasses')}
             value={stats.activeClasses}
             icon={Users}
             color="bg-purple-500"
             trend="+8%"
-            subtitle={`${stats.totalStudents} élèves`}
+            subtitle={t('dashboard.stats.students', { count: stats.totalStudents })}
           />
           <StatCard
-            title="Progression Moy."
+            title={t('dashboard.stats.avgProgress')}
             value={`${stats.averageProgress}%`}
             icon={BarChart3}
             color="bg-orange-500"
             trend="+5%"
-            subtitle="Toutes classes"
+            subtitle={t('dashboard.stats.allClasses')}
           />
         </div>
 
@@ -526,7 +535,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Répartition des Cours par Matière
+                {t('dashboard.charts.courseDistribution')}
               </h3>
               <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </div>
@@ -560,7 +569,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Progression des Élèves par Classe
+                {t('dashboard.charts.studentProgress')}
               </h3>
               <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </div>
@@ -581,7 +590,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                     dataKey="progress"
                     fill="#3B82F6"
                     radius={[4, 4, 0, 0]}
-                    name="Progression (%)"
+                    name={t('dashboard.charts.progressPercent')}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -593,7 +602,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6 mb-6 sm:mb-8`}>
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Activité Éducative Mensuelle
+              {t('dashboard.charts.monthlyActivity')}
             </h3>
             <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
           </div>
@@ -611,7 +620,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   stroke="#3B82F6"
                   fill="#3B82F6"
                   fillOpacity={0.6}
-                  name="Cours créés"
+                  name={t('dashboard.charts.coursesCreated')}
                 />
                 <Area
                   type="monotone"
@@ -620,7 +629,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   stroke="#10B981"
                   fill="#10B981"
                   fillOpacity={0.6}
-                  name="Exercices ajoutés"
+                  name={t('dashboard.charts.exercisesAdded')}
                 />
                 <Area
                   type="monotone"
@@ -629,7 +638,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   stroke="#F59E0B"
                   fill="#F59E0B"
                   fillOpacity={0.6}
-                  name="Completions"
+                  name={t('dashboard.charts.completions')}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -642,7 +651,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                État des Exercices
+                {t('dashboard.charts.exerciseStatus')}
               </h3>
               <Target className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </div>

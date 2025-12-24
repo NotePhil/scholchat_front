@@ -17,8 +17,12 @@ import {
 } from "lucide-react";
 import { matiereService } from "../../../../../services/MatiereService";
 import { useAuth } from "../../../../../hooks/useAuth";
+import { useTranslation } from "../../../../../hooks/useTranslation";
+import { useSelector } from "react-redux";
 
 const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
+  const { t } = useTranslation();
+  const language = useSelector((state) => state.language?.currentLanguage || 'fr');
   const [matieres, setMatieres] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,7 +65,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
       setMessage({ text: "", type: "" });
     } catch (error) {
       console.error("Error loading matieres:", error);
-      setMessage({ text: "Erreur lors du chargement des matières", type: "error" });
+      setMessage({ text: t('subjects.messages.loadError'), type: "error" });
       setMatieres([]);
     } finally {
       setLoading(false);
@@ -228,8 +232,8 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className={`text-3xl font-bold ${textClass}`}>Gestion des Matières</h1>
-                <p className={textSecondaryClass}>Gérez les matières scolaires de votre établissement</p>
+                <h1 className={`text-3xl font-bold ${textClass}`}>{t('subjects.title')}</h1>
+                <p className={textSecondaryClass}>{t('subjects.subtitle')}</p>
               </div>
             </div>
             {canManage && (
@@ -238,7 +242,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} text-white text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105`}
               >
                 <Plus className="w-5 h-5" />
-                Nouvelle Matière
+                {t('subjects.actions.new')}
               </button>
             )}
           </div>
@@ -273,7 +277,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${textSecondaryClass}`} />
               <input
                 type="text"
-                placeholder="Rechercher une matière..."
+                placeholder={t('subjects.search.placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={`w-full pl-10 pr-4 py-3 rounded-xl border ${borderClass} ${inputBgClass} ${inputTextClass} focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300`}
@@ -285,7 +289,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               className={`flex items-center gap-2 px-4 py-3 border ${borderClass} rounded-xl ${textClass} hover:${isDark ? "bg-gray-700" : "bg-gray-50"} transition-colors`}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-              Actualiser
+              {t('subjects.actions.refresh')}
             </button>
           </div>
         </div>
@@ -295,18 +299,18 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           {loading ? (
             <div className="p-12 text-center">
               <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-              <p className={textSecondaryClass}>Chargement des matières...</p>
+              <p className={textSecondaryClass}>{t('common.actions.loading')}</p>
             </div>
           ) : currentMatieres.length === 0 ? (
             <div className="p-12 text-center">
               <BookOpen className={`w-16 h-16 ${textSecondaryClass} mx-auto mb-4`} />
               <h3 className={`text-xl font-semibold ${textClass} mb-2`}>
-                {searchTerm ? "Aucune matière trouvée" : "Aucune matière"}
+                {searchTerm ? t('subjects.search.noResults') : t('subjects.search.empty')}
               </h3>
               <p className={textSecondaryClass}>
                 {searchTerm 
-                  ? "Essayez de modifier vos critères de recherche"
-                  : "Commencez par créer votre première matière"
+                  ? t('subjects.search.noResultsDesc')
+                  : t('subjects.search.emptyDesc')
                 }
               </p>
             </div>
@@ -315,10 +319,10 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               <table className="w-full">
                 <thead className={`${isDark ? "bg-gray-700" : "bg-gray-50"} border-b ${borderClass}`}>
                   <tr>
-                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>Matière</th>
-                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>Description</th>
-                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>Date de Création</th>
-                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>État</th>
+                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>{t('subjects.table.subject')}</th>
+                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>{t('subjects.table.description')}</th>
+                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>{t('subjects.table.creationDate')}</th>
+                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>{t('subjects.table.status')}</th>
                     {canManage && (
                       <th className={`px-6 py-4 text-right text-sm font-semibold ${textClass}`}>Actions</th>
                     )}
@@ -423,7 +427,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           <div className={`${cardBgClass} rounded-2xl shadow-xl w-full max-w-md`}>
             <div className={`p-6 border-b ${borderClass}`}>
               <div className="flex items-center justify-between">
-                <h2 className={`text-xl font-bold ${textClass}`}>Nouvelle Matière</h2>
+                <h2 className={`text-xl font-bold ${textClass}`}>{t('subjects.modals.create')}</h2>
                 <button
                   onClick={closeModals}
                   className={`p-2 rounded-lg ${textSecondaryClass} hover:${isDark ? "bg-gray-700" : "bg-gray-100"} transition-colors`}
@@ -435,26 +439,26 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             <div className="p-6 space-y-4">
               <div>
                 <label className={`block text-sm font-semibold ${textClass} mb-2`}>
-                  Nom de la matière *
+                  {t('subjects.form.name')} *
                 </label>
                 <input
                   type="text"
                   value={formData.nom}
                   onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                   className={`w-full px-4 py-3 rounded-xl border ${borderClass} ${inputBgClass} ${inputTextClass} focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300`}
-                  placeholder="Ex: Mathématiques"
+                  placeholder={t('subjects.form.namePlaceholder')}
                 />
               </div>
               <div>
                 <label className={`block text-sm font-semibold ${textClass} mb-2`}>
-                  Description
+                  {t('subjects.form.description')}
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
                   className={`w-full px-4 py-3 rounded-xl border ${borderClass} ${inputBgClass} ${inputTextClass} focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 resize-none`}
-                  placeholder="Description de la matière..."
+                  placeholder={t('subjects.form.descriptionPlaceholder')}
                 />
               </div>
             </div>
@@ -463,7 +467,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 onClick={closeModals}
                 className={`px-6 py-3 border ${borderClass} rounded-xl ${textClass} hover:${isDark ? "bg-gray-700" : "bg-gray-50"} transition-colors`}
               >
-                Annuler
+                {t('common.actions.cancel')}
               </button>
               <button
                 onClick={handleCreate}
@@ -475,7 +479,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                {saving ? "Création..." : "Créer"}
+                {saving ? t('subjects.modals.creating') : t('common.actions.create')}
               </button>
             </div>
           </div>

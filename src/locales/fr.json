@@ -181,7 +181,19 @@
         "student": "Étudiant",
         "parent": "Parent",
         "user": "Utilisateur"
-      }
+      },
+      "userDetails": "Détails de l'utilisateur",
+      "user": "Utilisateur",
+      "personalInfo": "Informations personnelles",
+      "notProvided": "Non fourni",
+      "registrationDate": "Date d'inscription",
+      "notAvailable": "Non disponible",
+      "rejectionReason": "Motif de rejet",
+      "userDocuments": "Documents de l'utilisateur",
+      "loadingDocuments": "Chargement des documents...",
+      "noDocumentsFound": "Aucun document trouvé",
+      "noDocumentsUploaded": "Cet utilisateur n'a téléchargé aucun document",
+      "images": "Images"
     }
   },
   "pages": {
@@ -588,5 +600,448 @@
       "faq": "FAQ"
     },
     "copyright": "Tous droits réservés."
+  },
+  "dashboard": {
+    "title": "Tableau de Bord Éducatif",
+    "subtitle": "Gestion des cours, exercices et progression des élèves",
+    "loading": "Chargement du tableau de bord...",
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "recentActivities": "Activités Récentes",
+    "stats": {
+      "availableCourses": "Cours Disponibles",
+      "exercises": "Exercices",
+      "activeClasses": "Classes Actives",
+      "avgProgress": "Progression Moy.",
+      "subjects": "{count} matières",
+      "completed": "{percent}% terminés",
+      "students": "{count} élèves",
+      "allClasses": "Toutes classes",
+      "thisMonth": "ce mois"
+    },
+    "charts": {
+      "courseDistribution": "Répartition des Cours par Matière",
+      "studentProgress": "Progression des Élèves par Classe",
+      "monthlyActivity": "Activité Éducative Mensuelle",
+      "exerciseStatus": "État des Exercices",
+      "subject": "Matière",
+      "class": "Classe",
+      "progressPercent": "Progression (%)",
+      "coursesCreated": "Cours créés",
+      "exercisesAdded": "Exercices ajoutés",
+      "completions": "Completions"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Fév",
+      "mar": "Mar",
+      "apr": "Avr",
+      "may": "Mai",
+      "jun": "Juin"
+    },
+    "completion": {
+      "completed": "Terminés",
+      "inProgress": "En Cours",
+      "notStarted": "Non Commencés"
+    },
+    "activities": {
+      "newCourse": "Nouveau cours: Algèbre Linéaire",
+      "exerciseCompleted": "Exercice complété par {count} élèves",
+      "newClass": "Nouvelle classe créée",
+      "progressReached": "Progression atteint 80%",
+      "subjectUpdated": "Matière mise à jour",
+      "system": "Système",
+      "hoursAgo": "Il y a {count}h",
+      "daysAgo": "Il y a {count}j"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des données du tableau de bord",
+      "subjectNameRequired": "Le nom de la matière est requis",
+      "genericError": "Une erreur s'est produite",
+      "networkError": "Erreur réseau. Veuillez vérifier votre connexion.",
+      "requestError": "Erreur de configuration de la requête: "
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de Bord Éducatif",
+    "subtitle": "Gestion des cours, exercices et progression des élèves",
+    "loading": "Chargement du tableau de bord...",
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "recentActivities": "Activités Récentes",
+    "stats": {
+      "availableCourses": "Cours Disponibles",
+      "exercises": "Exercices",
+      "activeClasses": "Classes Actives",
+      "avgProgress": "Progression Moy.",
+      "subjects": "{count} matières",
+      "completed": "{percent}% terminés",
+      "students": "{count} élèves",
+      "allClasses": "Toutes classes",
+      "thisMonth": "ce mois"
+    },
+    "charts": {
+      "courseDistribution": "Répartition des Cours par Matière",
+      "studentProgress": "Progression des Élèves par Classe",
+      "monthlyActivity": "Activité Éducative Mensuelle",
+      "exerciseStatus": "État des Exercices",
+      "subject": "Matière",
+      "class": "Classe",
+      "progressPercent": "Progression (%)",
+      "coursesCreated": "Cours créés",
+      "exercisesAdded": "Exercices ajoutés",
+      "completions": "Completions"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Fév",
+      "mar": "Mar",
+      "apr": "Avr",
+      "may": "Mai",
+      "jun": "Juin"
+    },
+    "completion": {
+      "completed": "Terminés",
+      "inProgress": "En Cours",
+      "notStarted": "Non Commencés"
+    },
+    "activities": {
+      "newCourse": "Nouveau cours: Algèbre Linéaire",
+      "exerciseCompleted": "Exercice complété par {count} élèves",
+      "newClass": "Nouvelle classe créée",
+      "progressReached": "Progression atteint 80%",
+      "subjectUpdated": "Matière mise à jour",
+      "system": "Système",
+      "hoursAgo": "Il y a {count}h",
+      "daysAgo": "Il y a {count}j"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des données du tableau de bord",
+      "subjectNameRequired": "Le nom de la matière est requis",
+      "genericError": "Une erreur s'est produite",
+      "networkError": "Erreur réseau. Veuillez vérifier votre connexion.",
+      "requestError": "Erreur de configuration de la requête: "
+    }
+  },
+  "activities": {
+    "title": "Fil d'actualité",
+    "actions": {
+      "create": "Créer",
+      "like": "J'aime",
+      "comment": "Commenter",
+      "participate": "Participer",
+      "share": "Partager",
+      "select": "Sélectionner",
+      "processing": "Traitement...",
+      "creating": "Création...",
+      "createEvent": "Créer l'événement",
+      "shareDemo": "Fonctionnalité de partage (demo)"
+    },
+    "createEvent": {
+      "title": "Créer un événement",
+      "subtitle": "Remplissez les informations de votre événement"
+    },
+    "form": {
+      "title": "Titre",
+      "titlePlaceholder": "Mon événement",
+      "description": "Description",
+      "descriptionPlaceholder": "Description de l'événement",
+      "location": "Lieu",
+      "locationPlaceholder": "Salle de conférence",
+      "startTime": "Début",
+      "endTime": "Fin",
+      "status": "État",
+      "images": "Images (optionnel)",
+      "addImages": "Ajouter des images",
+      "selectFiles": "Cliquez pour sélectionner des fichiers",
+      "selectedImages": "Images sélectionnées ({count})",
+      "imageNumber": "Image {number}",
+      "readyToUpload": "Prêt à être uploadé",
+      "commentPlaceholder": "Écrivez un commentaire..."
+    },
+    "status": {
+      "planned": "Planifié",
+      "inProgress": "En cours",
+      "completed": "Terminé",
+      "cancelled": "Annulé"
+    },
+    "noActivities": {
+      "title": "Aucune activité disponible",
+      "description": "Soyez le premier à créer un événement et à partager vos activités avec la communauté.",
+      "createFirst": "Créer le premier événement"
+    },
+    "participants": "{count} participant{count, plural, one {} other {s}}",
+    "comments": "{count} commentaire{count, plural, one {} other {s}}",
+    "validation": {
+      "requiredFields": "Veuillez remplir tous les champs obligatoires"
+    },
+    "errors": {
+      "imageUploadFailed": "Erreur lors du téléchargement des images",
+      "createEventFailed": "Erreur lors de la création de l'événement"
+    }
+  },
+  "subjects": {
+    "title": "Gestion des Matières",
+    "subtitle": "Gérez les matières scolaires de votre établissement",
+    "actions": {
+      "new": "Nouvelle Matière",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "refresh": "Actualiser",
+      "create": "Créer",
+      "update": "Modifier",
+      "cancel": "Annuler",
+      "confirm": "Confirmer"
+    },
+    "form": {
+      "name": "Nom de la matière",
+      "namePlaceholder": "Ex: Mathématiques",
+      "description": "Description",
+      "descriptionPlaceholder": "Description de la matière...",
+      "nameRequired": "Le nom de la matière est requis"
+    },
+    "table": {
+      "subject": "Matière",
+      "description": "Description",
+      "creationDate": "Date de Création",
+      "status": "État",
+      "actions": "Actions",
+      "noDescription": "Aucune description"
+    },
+    "status": {
+      "active": "ACTIF",
+      "inactive": "INACTIF"
+    },
+    "messages": {
+      "loadError": "Erreur lors du chargement des matières",
+      "createSuccess": "Matière créée avec succès",
+      "createError": "Erreur lors de la création",
+      "updateSuccess": "Matière modifiée avec succès",
+      "updateError": "Erreur lors de la modification",
+      "deleteSuccess": "Matière supprimée avec succès",
+      "deleteError": "Erreur lors de la suppression",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer la matière",
+      "deleteWarning": "Cette action est irréversible."
+    },
+    "search": {
+      "placeholder": "Rechercher une matière...",
+      "noResults": "Aucune matière trouvée",
+      "noResultsDesc": "Essayez de modifier vos critères de recherche",
+      "empty": "Aucune matière",
+      "emptyDesc": "Commencez par créer votre première matière"
+    },
+    "pagination": {
+      "showing": "Affichage de {start} à {end} sur {total} matières"
+    },
+    "modals": {
+      "create": "Nouvelle Matière",
+      "edit": "Modifier la Matière",
+      "delete": "Confirmer la suppression",
+      "creating": "Création...",
+      "updating": "Modification...",
+      "deleting": "Suppression..."
+    },
+    "access": {
+      "restricted": "Accès Restreint",
+      "restrictedDesc": "Vous n'avez pas les permissions nécessaires pour accéder à cette section. Seuls les administrateurs et professeurs peuvent gérer les matières."
+    }
+  },
+  "professors": {
+    "title": "Gestion des Professeurs",
+    "subtitle": "Gérez efficacement vos professeurs",
+    "stats": {
+      "total": "Total",
+      "active": "Actifs",
+      "pending": "En attente",
+      "inactive": "Inactifs",
+      "validated": "Validés",
+      "validation": "Validation",
+      "deactivated": "Désactivés"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "awaiting": "En attente",
+      "suspect": "Suspect",
+      "reported": "Signalé",
+      "pending": "En cours",
+      "rejected": "Rejeté"
+    },
+    "actions": {
+      "add": "Ajouter",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "view": "Voir les détails",
+      "grid": "Grille",
+      "table": "Table"
+    },
+    "search": {
+      "placeholder": "Rechercher...",
+      "all": "Tous",
+      "noResults": "Aucun résultat trouvé",
+      "noResultsDesc": "Essayez de modifier vos critères de recherche.",
+      "noProfessors": "Aucun professeur enregistré",
+      "noProfessorsDesc": "Il n'y a actuellement aucun professeur dans le système."
+    },
+    "table": {
+      "professor": "Professeur",
+      "contact": "Contact",
+      "matricule": "Matricule",
+      "classes": "Classes",
+      "status": "Statut",
+      "rights": "Droits",
+      "actions": "Actions",
+      "none": "Aucune",
+      "notSpecified": "Non renseigné"
+    },
+    "rights": {
+      "publish": "Publier",
+      "moderate": "Modérer",
+      "none": "Aucun"
+    },
+    "loading": {
+      "data": "Chargement des données...",
+      "processing": "Traitement en cours..."
+    },
+    "errors": {
+      "loadData": "Erreur lors du chargement des données: ",
+      "delete": "Erreur lors de la suppression: "
+    }
+  },
+  "admin": {
+    "title": "Gestion des Administrateurs",
+    "subtitle": "Gérez efficacement les comptes administrateurs du système",
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "pending": "En attente"
+    },
+    "actions": {
+      "view": "Voir",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "create": "Créer",
+      "cancel": "Annuler",
+      "close": "Fermer"
+    },
+    "loading": "Chargement des données...",
+    "stats": {
+      "total": "Total Admins",
+      "active": "Actifs",
+      "pending": "En attente",
+      "systemAdmins": "Administrateurs système",
+      "validatedAccounts": "Comptes validés",
+      "validationRequired": "Validation requise"
+    },
+    "search": {
+      "placeholder": "Rechercher par nom, email...",
+      "allStatuses": "Tous les statuts",
+      "grid": "Grille",
+      "table": "Table",
+      "newAdmin": "Nouvel Admin"
+    },
+    "table": {
+      "administrator": "Administrateur",
+      "contact": "Contact",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "empty": {
+      "noResults": "Aucun résultat trouvé",
+      "noAdmins": "Aucun administrateur enregistré",
+      "noResultsDesc": "Essayez de modifier vos critères de recherche ou de filtrage pour voir plus de résultats.",
+      "noAdminsDesc": "Commencez par ajouter votre premier administrateur au système.",
+      "addAdmin": "Ajouter un administrateur"
+    },
+    "processing": "Traitement en cours...",
+    "modals": {
+      "create": "Nouvel Administrateur",
+      "edit": "Modifier l'Administrateur",
+      "createDesc": "Ajouter un nouvel administrateur au système",
+      "editDesc": "Modifier les informations de l'administrateur"
+    },
+    "form": {
+      "lastName": "Nom",
+      "firstName": "Prénom",
+      "lastNamePlaceholder": "Entrez le nom",
+      "firstNamePlaceholder": "Entrez le prénom",
+      "email": "Email",
+      "phone": "Téléphone",
+      "address": "Adresse",
+      "status": "Statut",
+      "creationDate": "Date de Création"
+    },
+    "modal": {
+      "contactInfo": "Informations de Contact",
+      "accountInfo": "Informations du Compte",
+      "confirmDelete": "Confirmer la suppression",
+      "irreversible": "Cette action est irréversible",
+      "deleteConfirmText": "Êtes-vous sûr de vouloir supprimer l'administrateur",
+      "dataLossWarning": "Toutes les données associées seront définitivement perdues."
+    },
+    "role": {
+      "administrator": "Administrateur"
+    }
+  },
+  "parents": {
+    "title": "Gestion des Parents",
+    "subtitle": "Gérez efficacement les parents et leurs associations aux classes",
+    "stats": {
+      "total": "Total",
+      "active": "Actifs",
+      "pending": "En attente",
+      "inactive": "Inactifs",
+      "registered": "Parents enregistrés",
+      "validated": "Comptes validés",
+      "validation": "Validation requise",
+      "deactivated": "Comptes désactivés"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "pending": "En attente",
+      "awaitingValidation": "En attente de validation"
+    },
+    "actions": {
+      "add": "Ajouter",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "view": "Voir les détails",
+      "grid": "Grille",
+      "table": "Table"
+    },
+    "search": {
+      "placeholder": "Rechercher par nom, email, téléphone...",
+      "allStatuses": "Tous les statuts",
+      "noResults": "Aucun résultat trouvé",
+      "noResultsDesc": "Essayez de modifier vos critères de recherche ou de filtrage pour voir plus de résultats.",
+      "noParents": "Aucun parent enregistré",
+      "noParentsDesc": "Il n'y a actuellement aucun parent dans le système.",
+      "addParent": "Ajouter un parent"
+    },
+    "table": {
+      "parent": "Parent",
+      "contact": "Contact",
+      "registrationDate": "Date d'inscription",
+      "associatedClasses": "Classes Associées",
+      "status": "Statut",
+      "actions": "Actions",
+      "none": "Aucune",
+      "notSpecified": "Non renseigné",
+      "noClass": "Aucune classe"
+    },
+    "card": {
+      "registeredOn": "Inscrit le",
+      "associatedClasses": "Classes associées",
+      "noClassAssociated": "Aucune classe associée"
+    },
+    "loading": {
+      "data": "Chargement des données...",
+      "processing": "Traitement en cours..."
+    },
+    "errors": {
+      "loadData": "Erreur lors du chargement des données : ",
+      "delete": "Erreur lors de la suppression : "
+    }
   }
 }

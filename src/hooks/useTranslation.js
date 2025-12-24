@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setLanguage } from "../store/slices/uiSlice";
 
 // Import translation files
 import enTranslations from "../locales/en.json";
@@ -9,27 +11,9 @@ const translations = {
   fr: frTranslations,
 };
 
-// Global state for language - Default to French
-let globalLanguage = localStorage.getItem("language") || "fr";
-let listeners = [];
-
-const notifyListeners = () => {
-  listeners.forEach((listener) => listener(globalLanguage));
-};
-
 export const useTranslation = () => {
-  const [language, setLanguage] = useState(globalLanguage);
-
-  useEffect(() => {
-    const listener = (newLanguage) => {
-      setLanguage(newLanguage);
-    };
-    listeners.push(listener);
-
-    return () => {
-      listeners = listeners.filter((l) => l !== listener);
-    };
-  }, []);
+  const dispatch = useDispatch();
+  const language = useSelector((state) => state.ui?.currentLanguage || 'fr');
 
   const t = useCallback(
     (key, params = {}) => {
@@ -55,12 +39,11 @@ export const useTranslation = () => {
   );
 
   const changeLanguage = useCallback((newLanguage) => {
-    if (translations[newLanguage] && newLanguage !== globalLanguage) {
-      globalLanguage = newLanguage;
+    if (translations[newLanguage]) {
+      dispatch(setLanguage(newLanguage));
       localStorage.setItem("language", newLanguage);
-      notifyListeners();
     }
-  }, []);
+  }, [dispatch]);
 
   return {
     t,

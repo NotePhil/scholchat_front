@@ -29,8 +29,12 @@ import ProfessorModal from "../../modals/ProfessorModal";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import UserViewModal from "../../modals/UserViewModal";
 import { getDarkModeClasses } from "../../../../../utils/darkModeUtils";
+import { useTranslation } from "../../../../../hooks/useTranslation";
+import { useSelector } from "react-redux";
 
 const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
+  const { t } = useTranslation();
+  const language = useSelector((state) => state.language?.currentLanguage || 'fr');
   const [professors, setProfessors] = useState([]);
   const [classes, setClasses] = useState([]);
   const [filteredProfessors, setFilteredProfessors] = useState([]);
@@ -223,10 +227,10 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
             <div>
               <h1 className={`text-xl sm:text-3xl font-bold ${isDark ? 'text-white' : 'bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent'}`}>
-                Gestion des Professeurs
+                {t('professors.title')}
               </h1>
               <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} mt-1 text-xs sm:text-sm`}>
-                Gérez efficacement vos professeurs
+                {t('professors.subtitle')}
               </p>
             </div>
           </div>

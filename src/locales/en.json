@@ -181,7 +181,19 @@
         "student": "Student",
         "parent": "Parent",
         "user": "User"
-      }
+      },
+      "userDetails": "User Details",
+      "user": "User",
+      "personalInfo": "Personal Information",
+      "notProvided": "Not provided",
+      "registrationDate": "Registration Date",
+      "notAvailable": "Not available",
+      "rejectionReason": "Rejection Reason",
+      "userDocuments": "User Documents",
+      "loadingDocuments": "Loading documents...",
+      "noDocumentsFound": "No documents found",
+      "noDocumentsUploaded": "This user has not uploaded any documents",
+      "images": "Images"
     }
   },
   "pages": {
@@ -588,5 +600,387 @@
       "faq": "FAQ"
     },
     "copyright": "All rights reserved."
+  },
+  "dashboard": {
+    "title": "Educational Dashboard",
+    "subtitle": "Manage courses, exercises and student progress",
+    "loading": "Loading dashboard...",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "recentActivities": "Recent Activities",
+    "stats": {
+      "availableCourses": "Available Courses",
+      "exercises": "Exercises",
+      "activeClasses": "Active Classes",
+      "avgProgress": "Avg. Progress",
+      "subjects": "{count} subjects",
+      "completed": "{percent}% completed",
+      "students": "{count} students",
+      "allClasses": "All classes",
+      "thisMonth": "this month"
+    },
+    "charts": {
+      "courseDistribution": "Course Distribution by Subject",
+      "studentProgress": "Student Progress by Class",
+      "monthlyActivity": "Monthly Educational Activity",
+      "exerciseStatus": "Exercise Status",
+      "subject": "Subject",
+      "class": "Class",
+      "progressPercent": "Progress (%)",
+      "coursesCreated": "Courses created",
+      "exercisesAdded": "Exercises added",
+      "completions": "Completions"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun"
+    },
+    "completion": {
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "notStarted": "Not Started"
+    },
+    "activities": {
+      "newCourse": "New course: Linear Algebra",
+      "exerciseCompleted": "Exercise completed by {count} students",
+      "newClass": "New class created",
+      "progressReached": "Progress reached 80%",
+      "subjectUpdated": "Subject updated",
+      "system": "System",
+      "hoursAgo": "{count}h ago",
+      "daysAgo": "{count}d ago"
+    },
+    "errors": {
+      "loadFailed": "Failed to load dashboard data",
+      "subjectNameRequired": "Subject name is required",
+      "genericError": "An error occurred",
+      "networkError": "Network error. Please check your connection.",
+      "requestError": "Request setup error: "
+    }
+  },
+  "activities": {
+    "title": "Activity Feed",
+    "actions": {
+      "create": "Create",
+      "like": "Like",
+      "comment": "Comment",
+      "participate": "Participate",
+      "share": "Share",
+      "select": "Select",
+      "processing": "Processing...",
+      "creating": "Creating...",
+      "createEvent": "Create Event",
+      "shareDemo": "Share functionality (demo)"
+    },
+    "createEvent": {
+      "title": "Create an Event",
+      "subtitle": "Fill in your event information"
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "My event",
+      "description": "Description",
+      "descriptionPlaceholder": "Event description",
+      "location": "Location",
+      "locationPlaceholder": "Conference room",
+      "startTime": "Start",
+      "endTime": "End",
+      "status": "Status",
+      "images": "Images (optional)",
+      "addImages": "Add images",
+      "selectFiles": "Click to select files",
+      "selectedImages": "Selected images ({count})",
+      "imageNumber": "Image {number}",
+      "readyToUpload": "Ready to upload",
+      "commentPlaceholder": "Write a comment..."
+    },
+    "status": {
+      "planned": "Planned",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "noActivities": {
+      "title": "No activities available",
+      "description": "Be the first to create an event and share your activities with the community.",
+      "createFirst": "Create the first event"
+    },
+    "participants": "{count} participant{count, plural, one {} other {s}}",
+    "comments": "{count} comment{count, plural, one {} other {s}}",
+    "validation": {
+      "requiredFields": "Please fill in all required fields"
+    },
+    "errors": {
+      "imageUploadFailed": "Error uploading images",
+      "createEventFailed": "Error creating event"
+    }
+  },
+  "subjects": {
+    "title": "Subject Management",
+    "subtitle": "Manage your institution's academic subjects",
+    "actions": {
+      "new": "New Subject",
+      "edit": "Edit",
+      "delete": "Delete",
+      "refresh": "Refresh",
+      "create": "Create",
+      "update": "Update",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    },
+    "form": {
+      "name": "Subject name",
+      "namePlaceholder": "e.g. Mathematics",
+      "description": "Description",
+      "descriptionPlaceholder": "Subject description...",
+      "nameRequired": "Subject name is required"
+    },
+    "table": {
+      "subject": "Subject",
+      "description": "Description",
+      "creationDate": "Creation Date",
+      "status": "Status",
+      "actions": "Actions",
+      "noDescription": "No description"
+    },
+    "status": {
+      "active": "ACTIVE",
+      "inactive": "INACTIVE"
+    },
+    "messages": {
+      "loadError": "Error loading subjects",
+      "createSuccess": "Subject created successfully",
+      "createError": "Error creating subject",
+      "updateSuccess": "Subject updated successfully",
+      "updateError": "Error updating subject",
+      "deleteSuccess": "Subject deleted successfully",
+      "deleteError": "Error deleting subject",
+      "deleteConfirm": "Are you sure you want to delete the subject",
+      "deleteWarning": "This action is irreversible."
+    },
+    "search": {
+      "placeholder": "Search for a subject...",
+      "noResults": "No subjects found",
+      "noResultsDesc": "Try modifying your search criteria",
+      "empty": "No subjects",
+      "emptyDesc": "Start by creating your first subject"
+    },
+    "pagination": {
+      "showing": "Showing {start} to {end} of {total} subjects"
+    },
+    "modals": {
+      "create": "New Subject",
+      "edit": "Edit Subject",
+      "delete": "Confirm deletion",
+      "creating": "Creating...",
+      "updating": "Updating...",
+      "deleting": "Deleting..."
+    },
+    "access": {
+      "restricted": "Restricted Access",
+      "restrictedDesc": "You do not have the necessary permissions to access this section. Only administrators and professors can manage subjects."
+    }
+  },
+  "professors": {
+    "title": "Professor Management",
+    "subtitle": "Efficiently manage your professors",
+    "stats": {
+      "total": "Total",
+      "active": "Active",
+      "pending": "Pending",
+      "inactive": "Inactive",
+      "validated": "Validated",
+      "validation": "Validation",
+      "deactivated": "Deactivated"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "awaiting": "Pending",
+      "suspect": "Suspect",
+      "reported": "Reported",
+      "pending": "In Progress",
+      "rejected": "Rejected"
+    },
+    "actions": {
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View details",
+      "grid": "Grid",
+      "table": "Table"
+    },
+    "search": {
+      "placeholder": "Search...",
+      "all": "All",
+      "noResults": "No results found",
+      "noResultsDesc": "Try modifying your search criteria.",
+      "noProfessors": "No professors registered",
+      "noProfessorsDesc": "There are currently no professors in the system."
+    },
+    "table": {
+      "professor": "Professor",
+      "contact": "Contact",
+      "matricule": "ID Number",
+      "classes": "Classes",
+      "status": "Status",
+      "rights": "Rights",
+      "actions": "Actions",
+      "none": "None",
+      "notSpecified": "Not specified"
+    },
+    "rights": {
+      "publish": "Publish",
+      "moderate": "Moderate",
+      "none": "None"
+    },
+    "loading": {
+      "data": "Loading data...",
+      "processing": "Processing..."
+    },
+    "errors": {
+      "loadData": "Error loading data: ",
+      "delete": "Error deleting: "
+    }
+  },
+  "admin": {
+    "title": "Administrator Management",
+    "subtitle": "Efficiently manage system administrator accounts",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete",
+      "create": "Create",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "loading": "Loading data...",
+    "stats": {
+      "total": "Total Admins",
+      "active": "Active",
+      "pending": "Pending",
+      "systemAdmins": "System administrators",
+      "validatedAccounts": "Validated accounts",
+      "validationRequired": "Validation required"
+    },
+    "search": {
+      "placeholder": "Search by name, email...",
+      "allStatuses": "All statuses",
+      "grid": "Grid",
+      "table": "Table",
+      "newAdmin": "New Admin"
+    },
+    "table": {
+      "administrator": "Administrator",
+      "contact": "Contact",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "empty": {
+      "noResults": "No results found",
+      "noAdmins": "No administrators registered",
+      "noResultsDesc": "Try modifying your search or filter criteria to see more results.",
+      "noAdminsDesc": "Start by adding your first administrator to the system.",
+      "addAdmin": "Add an administrator"
+    },
+    "processing": "Processing...",
+    "modals": {
+      "create": "New Administrator",
+      "edit": "Edit Administrator",
+      "createDesc": "Add a new administrator to the system",
+      "editDesc": "Modify administrator information"
+    },
+    "form": {
+      "lastName": "Last Name",
+      "firstName": "First Name",
+      "lastNamePlaceholder": "Enter last name",
+      "firstNamePlaceholder": "Enter first name",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "status": "Status",
+      "creationDate": "Creation Date"
+    },
+    "modal": {
+      "contactInfo": "Contact Information",
+      "accountInfo": "Account Information",
+      "confirmDelete": "Confirm Deletion",
+      "irreversible": "This action is irreversible",
+      "deleteConfirmText": "Are you sure you want to delete the administrator",
+      "dataLossWarning": "All associated data will be permanently lost."
+    },
+    "role": {
+      "administrator": "Administrator"
+    }
+  },
+  "parents": {
+    "title": "Parent Management",
+    "subtitle": "Efficiently manage parents and their class associations",
+    "stats": {
+      "total": "Total",
+      "active": "Active",
+      "pending": "Pending",
+      "inactive": "Inactive",
+      "registered": "Registered parents",
+      "validated": "Validated accounts",
+      "validation": "Validation required",
+      "deactivated": "Deactivated accounts"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending",
+      "awaitingValidation": "Awaiting Validation"
+    },
+    "actions": {
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View details",
+      "grid": "Grid",
+      "table": "Table"
+    },
+    "search": {
+      "placeholder": "Search by name, email, phone...",
+      "allStatuses": "All statuses",
+      "noResults": "No results found",
+      "noResultsDesc": "Try modifying your search or filter criteria to see more results.",
+      "noParents": "No parents registered",
+      "noParentsDesc": "There are currently no parents in the system.",
+      "addParent": "Add a parent"
+    },
+    "table": {
+      "parent": "Parent",
+      "contact": "Contact",
+      "registrationDate": "Registration Date",
+      "associatedClasses": "Associated Classes",
+      "status": "Status",
+      "actions": "Actions",
+      "none": "None",
+      "notSpecified": "Not specified",
+      "noClass": "No class"
+    },
+    "card": {
+      "registeredOn": "Registered on",
+      "associatedClasses": "Associated classes",
+      "noClassAssociated": "No class associated"
+    },
+    "loading": {
+      "data": "Loading data...",
+      "processing": "Processing..."
+    },
+    "errors": {
+      "loadData": "Error loading data: ",
+      "delete": "Error deleting: "
+    }
   }
 }

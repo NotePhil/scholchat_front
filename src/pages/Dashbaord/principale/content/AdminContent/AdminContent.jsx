@@ -27,6 +27,8 @@ import {
   clearError,
   clearSuccess,
 } from "../../../../../store/slices/adminSlice";
+import { useTranslation } from "../../../../../hooks/useTranslation";
+import { useSelector as useReduxSelector } from "react-redux";
 
 const AdminModal = ({
   showModal,
@@ -37,6 +39,7 @@ const AdminModal = ({
   onError,
   loading,
 }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     nom: "",
@@ -108,13 +111,13 @@ const AdminModal = ({
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
                   {modalMode === "create"
-                    ? "Nouvel Administrateur"
-                    : "Modifier l'Administrateur"}
+                    ? t('admin.modals.create')
+                    : t('admin.modals.edit')}
                 </h2>
                 <p className="text-slate-600">
                   {modalMode === "create"
-                    ? "Ajouter un nouvel administrateur au système"
-                    : "Modifier les informations de l'administrateur"}
+                    ? t('admin.modals.createDesc')
+                    : t('admin.modals.editDesc')}
                 </p>
               </div>
             </div>
@@ -132,7 +135,7 @@ const AdminModal = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Nom *
+                {t('admin.form.lastName')} *
               </label>
               <input
                 type="text"
@@ -140,14 +143,14 @@ const AdminModal = ({
                 value={formData.nom}
                 onChange={(e) => handleInputChange("nom", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
-                placeholder="Entrez le nom"
+                placeholder={t('admin.form.lastNamePlaceholder')}
                 disabled={loading}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Prénom *
+                {t('admin.form.firstName')} *
               </label>
               <input
                 type="text"
@@ -155,7 +158,7 @@ const AdminModal = ({
                 value={formData.prenom}
                 onChange={(e) => handleInputChange("prenom", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
-                placeholder="Entrez le prénom"
+                placeholder={t('admin.form.firstNamePlaceholder')}
                 disabled={loading}
               />
             </div>
@@ -164,7 +167,7 @@ const AdminModal = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Email *
+                {t('admin.form.email')} *
               </label>
               <input
                 type="email"
@@ -179,7 +182,7 @@ const AdminModal = ({
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Téléphone
+                {t('admin.form.phone')}
               </label>
               <input
                 type="tel"
@@ -195,7 +198,7 @@ const AdminModal = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Adresse
+                {t('admin.form.address')}
               </label>
               <textarea
                 value={formData.adresse}
@@ -209,7 +212,7 @@ const AdminModal = ({
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Statut
+                {t('admin.form.status')}
               </label>
               <select
                 value={formData.etat}
@@ -217,9 +220,9 @@ const AdminModal = ({
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                 disabled={loading}
               >
-                <option value="ACTIVE">Actif</option>
-                <option value="INACTIVE">Inactif</option>
-                <option value="PENDING">En attente</option>
+                <option value="ACTIVE">{t('admin.status.active')}</option>
+                <option value="INACTIVE">{t('admin.status.inactive')}</option>
+                <option value="PENDING">{t('admin.status.pending')}</option>
               </select>
             </div>
           </div>
@@ -231,7 +234,7 @@ const AdminModal = ({
               className="px-6 py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium"
               disabled={loading}
             >
-              Annuler
+              {t('admin.actions.cancel')}
             </button>
             <button
               type="submit"
@@ -239,7 +242,7 @@ const AdminModal = ({
               className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>{modalMode === "create" ? "Créer" : "Modifier"}</span>
+              <span>{modalMode === "create" ? t('admin.actions.create') : t('admin.actions.edit')}</span>
             </button>
           </div>
         </form>
@@ -255,6 +258,7 @@ const DeleteConfirmationModal = ({
   onConfirm,
   loading,
 }) => {
+  const { t } = useTranslation();
   if (!showDeleteConfirm) return null;
 
   return (
@@ -267,24 +271,24 @@ const DeleteConfirmationModal = ({
             </div>
             <div>
               <h3 className="text-xl font-semibold text-slate-900">
-                Confirmer la suppression
+                {t('admin.modal.confirmDelete')}
               </h3>
               <p className="text-slate-600 mt-1">
-                Cette action est irréversible
+                {t('admin.modal.irreversible')}
               </p>
             </div>
           </div>
 
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
             <p className="text-red-800">
-              Êtes-vous sûr de vouloir supprimer l'administrateur{" "}
+              {t('admin.modal.deleteConfirmText')} {" "}
               <span className="font-semibold">
                 {selectedAdmin?.prenom} {selectedAdmin?.nom}
               </span>{" "}
               ?
             </p>
             <p className="text-red-700 text-sm mt-2">
-              Toutes les données associées seront définitivement perdues.
+              {t('admin.modal.dataLossWarning')}
             </p>
           </div>
 
@@ -294,7 +298,7 @@ const DeleteConfirmationModal = ({
               disabled={loading}
               className="px-6 py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium disabled:opacity-50"
             >
-              Annuler
+              {t('admin.actions.cancel')}
             </button>
             <button
               onClick={onConfirm}
@@ -302,7 +306,7 @@ const DeleteConfirmationModal = ({
               className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center space-x-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>Supprimer</span>
+              <span>{t('admin.actions.delete')}</span>
             </button>
           </div>
         </div>
@@ -312,6 +316,7 @@ const DeleteConfirmationModal = ({
 };
 
 const AdminViewModal = ({ admin, onClose }) => {
+  const { t } = useTranslation();
   if (!admin) return null;
 
   const getStatusBadge = (status) => {
@@ -324,12 +329,7 @@ const AdminViewModal = ({ admin, onClose }) => {
   };
 
   const getStatusText = (status) => {
-    const texts = {
-      ACTIVE: "Actif",
-      INACTIVE: "Inactif",
-      PENDING: "En attente",
-    };
-    return texts[status] || status;
+    return t(`admin.status.${status?.toLowerCase()}`) || status;
   };
 
   const getInitials = (firstName, lastName) => {
@@ -368,7 +368,7 @@ const AdminViewModal = ({ admin, onClose }) => {
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-50 text-purple-700 border border-purple-200">
                     <Shield className="w-3 h-3 mr-1" />
-                    Administrateur
+                    {t('admin.role.administrator')}
                   </span>
                 </div>
               </div>
@@ -385,19 +385,19 @@ const AdminViewModal = ({ admin, onClose }) => {
         <div className="p-6 space-y-6">
           <div className="bg-slate-50 rounded-2xl p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              Informations de Contact
+              {t('admin.modal.contactInfo')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">
-                  Email
+                  {t('admin.form.email')}
                 </label>
                 <div className="text-slate-900">{admin.email}</div>
               </div>
               {admin.telephone && (
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">
-                    Téléphone
+                    {t('admin.form.phone')}
                   </label>
                   <div className="text-slate-900">{admin.telephone}</div>
                 </div>
@@ -406,7 +406,7 @@ const AdminViewModal = ({ admin, onClose }) => {
             {admin.adresse && (
               <div className="mt-4">
                 <label className="block text-sm font-medium text-slate-600 mb-1">
-                  Adresse
+                  {t('admin.form.address')}
                 </label>
                 <div className="text-slate-900">{admin.adresse}</div>
               </div>
@@ -415,20 +415,12 @@ const AdminViewModal = ({ admin, onClose }) => {
 
           <div className="bg-slate-50 rounded-2xl p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              Informations du Compte
+              {t('admin.modal.accountInfo')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">
-                  ID Utilisateur
-                </label>
-                <div className="text-slate-900 font-mono text-sm">
-                  {admin.id}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
-                  Date de Création
+                  {t('admin.form.creationDate')}
                 </label>
                 <div className="text-slate-900">
                   {new Date(admin.creationDate).toLocaleDateString("fr-FR", {
@@ -449,7 +441,7 @@ const AdminViewModal = ({ admin, onClose }) => {
             onClick={onClose}
             className="w-full bg-slate-600 hover:bg-slate-700 text-white py-3 rounded-xl font-medium transition-colors"
           >
-            Fermer
+            {t('admin.actions.close')}
           </button>
         </div>
       </div>
@@ -476,6 +468,7 @@ const StatsCard = ({ title, value, icon: Icon, gradient, subtext, color }) => (
 );
 
 const AdminCard = ({ admin, onView, onEdit, onDelete }) => {
+  const { t } = useTranslation();
   const getInitials = (firstName, lastName) => {
     return `${firstName?.charAt(0) || ""}${
       lastName?.charAt(0) || ""
@@ -492,12 +485,7 @@ const AdminCard = ({ admin, onView, onEdit, onDelete }) => {
   };
 
   const getStatusText = (status) => {
-    const texts = {
-      ACTIVE: "Actif",
-      INACTIVE: "Inactif",
-      PENDING: "En attente",
-    };
-    return texts[status] || status;
+    return t(`admin.status.${status?.toLowerCase()}`) || status;
   };
 
   return (
@@ -533,21 +521,21 @@ const AdminCard = ({ admin, onView, onEdit, onDelete }) => {
         <button
           onClick={() => onView(admin)}
           className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
-          title="Voir"
+          title={t('admin.actions.view')}
         >
           <Eye size={16} />
         </button>
         <button
           onClick={() => onEdit(admin)}
           className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-          title="Modifier"
+          title={t('admin.actions.edit')}
         >
           <Edit2 size={16} />
         </button>
         <button
           onClick={() => onDelete(admin)}
           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-          title="Supprimer"
+          title={t('admin.actions.delete')}
         >
           <Trash2 size={16} />
         </button>
@@ -653,6 +641,8 @@ export const useAdmins = () => {
 };
 
 const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
+  const { t } = useTranslation();
+  const language = useReduxSelector((state) => state.ui?.currentLanguage || 'fr');
   const {
     admins,
     filteredAdmins,
@@ -762,7 +752,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="animate-spin text-purple-600" size={48} />
           <p className="text-slate-600 font-medium">
-            Chargement des données...
+            {t('admin.loading')}
           </p>
         </div>
       </div>
@@ -795,10 +785,10 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
             <div>
               <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent'}`}>
-                Gestion des Administrateurs
+                {t('admin.title')}
               </h1>
               <p className="text-slate-600 mt-1">
-                Gérez efficacement les comptes administrateurs du système
+                {t('admin.subtitle')}
               </p>
             </div>
           </div>
@@ -806,28 +796,28 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatsCard
-            title="Total Admins"
+            title={t('admin.stats.total')}
             value={stats.total}
             icon={Shield}
             gradient="from-purple-500 to-purple-600"
             color="text-slate-900"
-            subtext="Administrateurs système"
+            subtext={t('admin.stats.systemAdmins')}
           />
           <StatsCard
-            title="Actifs"
+            title={t('admin.stats.active')}
             value={stats.active}
             icon={UserCheck}
             gradient="from-emerald-500 to-emerald-600"
             color="text-emerald-600"
-            subtext="Comptes validés"
+            subtext={t('admin.stats.validatedAccounts')}
           />
           <StatsCard
-            title="En attente"
+            title={t('admin.stats.pending')}
             value={stats.pending}
             icon={Users}
             gradient="from-amber-500 to-amber-600"
             color="text-amber-600"
-            subtext="Validation requise"
+            subtext={t('admin.stats.validationRequired')}
           />
         </div>
 
@@ -840,7 +830,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               />
               <input
                 type="text"
-                placeholder="Rechercher par nom, email..."
+                placeholder={t('admin.search.placeholder')}
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm"
@@ -858,10 +848,10 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   onChange={(e) => handleFilterChange(e.target.value)}
                   className="pl-12 pr-8 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
                 >
-                  <option value="all">Tous les statuts</option>
-                  <option value="ACTIVE">Actifs</option>
-                  <option value="INACTIVE">Inactifs</option>
-                  <option value="PENDING">En attente</option>
+                  <option value="all">{t('admin.search.allStatuses')}</option>
+                  <option value="ACTIVE">{t('admin.status.active')}</option>
+                  <option value="INACTIVE">{t('admin.status.inactive')}</option>
+                  <option value="PENDING">{t('admin.status.pending')}</option>
                 </select>
                 <ChevronDown
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
@@ -878,7 +868,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  Grille
+                  {t('admin.search.grid')}
                 </button>
                 <button
                   onClick={() => handleViewModeChange("table")}
@@ -888,7 +878,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  Table
+                  {t('admin.search.table')}
                 </button>
               </div>
 
@@ -898,7 +888,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
                 >
                   <Plus size={20} />
-                  Nouvel Admin
+                  {t('admin.search.newAdmin')}
                 </button>
               )}
             </div>
@@ -924,16 +914,16 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 <thead className="bg-slate-50/50">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Administrateur
+                      {t('admin.table.administrator')}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Contact
+                      {t('admin.table.contact')}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Statut
+                      {t('admin.table.status')}
                     </th>
                     <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Actions
+                      {t('admin.table.actions')}
                     </th>
                   </tr>
                 </thead>
@@ -955,9 +945,6 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                           <div className="ml-4">
                             <div className="text-sm font-semibold text-slate-900">
                               {admin.prenom} {admin.nom}
-                            </div>
-                            <div className="text-sm text-slate-500">
-                              ID: {admin.id}
                             </div>
                           </div>
                         </div>
@@ -984,11 +971,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                               : "bg-amber-50 text-amber-700 border-amber-200"
                           }`}
                         >
-                          {admin.etat === "ACTIVE"
-                            ? "Actif"
-                            : admin.etat === "INACTIVE"
-                            ? "Inactif"
-                            : "En attente"}
+                          {t(`admin.status.${admin.etat?.toLowerCase()}`) || admin.etat}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -996,7 +979,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                           <button
                             onClick={() => handleViewAdmin(admin)}
                             className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
-                            title="Voir"
+                            title={t('admin.actions.view')}
                           >
                             <Eye size={16} />
                           </button>
@@ -1005,14 +988,14 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                               <button
                                 onClick={() => handleEditAdmin(admin)}
                                 className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
-                                title="Modifier"
+                                title={t('admin.actions.edit')}
                               >
                                 <Edit2 size={16} />
                               </button>
                               <button
                                 onClick={() => handleDeleteClick(admin)}
                                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                                title="Supprimer"
+                                title={t('admin.actions.delete')}
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -1036,13 +1019,13 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-2">
                 {searchTerm || filterStatus !== "all"
-                  ? "Aucun résultat trouvé"
-                  : "Aucun administrateur enregistré"}
+                  ? t('admin.empty.noResults')
+                  : t('admin.empty.noAdmins')}
               </h3>
               <p className="text-slate-600 mb-6 max-w-md mx-auto">
                 {searchTerm || filterStatus !== "all"
-                  ? "Essayez de modifier vos critères de recherche ou de filtrage pour voir plus de résultats."
-                  : "Commencez par ajouter votre premier administrateur au système."}
+                  ? t('admin.empty.noResultsDesc')
+                  : t('admin.empty.noAdminsDesc')}
               </p>
               {!searchTerm && filterStatus === "all" && canManageAdmins && (
                 <button
@@ -1050,7 +1033,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto"
                 >
                   <Plus size={20} />
-                  Ajouter un administrateur
+                  {t('admin.empty.addAdmin')}
                 </button>
               )}
             </div>
@@ -1063,7 +1046,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               <div className="flex items-center space-x-4">
                 <Loader2 className="animate-spin text-purple-600" size={24} />
                 <p className="text-slate-700 font-medium">
-                  Traitement en cours...
+                  {t('admin.processing')}
                 </p>
               </div>
             </div>

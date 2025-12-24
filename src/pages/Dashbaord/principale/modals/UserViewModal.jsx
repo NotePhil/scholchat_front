@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { rejectionService } from "../../../../services/RejectionService";
 import { minioS3Service } from "../../../../services/minioS3";
+import { useTranslation } from "../../../../hooks/useTranslation";
 
 // Image Modal Component for zooming - Updated with better z-index
 const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
@@ -204,6 +205,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
 };
 
 const UserViewModal = ({ user, onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [showRejectionOptions, setShowRejectionOptions] = useState(false);
   const [rejectionMotifs, setRejectionMotifs] = useState([]);
   const [selectedMotifs, setSelectedMotifs] = useState([]);
@@ -555,14 +557,14 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
               <Check className="h-6 w-6 text-green-600" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Succès</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.messages.success')}</h3>
             <div className="text-sm text-gray-500 mb-4">{successMessage}</div>
             <button
               type="button"
               className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
               onClick={handleSuccess}
             >
-              Fermer
+              {t('common.actions.close')}
             </button>
           </div>
         </div>
@@ -585,9 +587,9 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
                 <User className="mr-2 sm:mr-3 text-indigo-600" size={24} />
                 <span className="hidden sm:inline">
-                  Détails de l'utilisateur
+                  {t('users.management.userDetails')}
                 </span>
-                <span className="sm:hidden">Utilisateur</span>
+                <span className="sm:hidden">{t('users.management.user')}</span>
               </h2>
               <div className="flex items-center space-x-3 sm:space-x-4">
                 {getVerificationStatusBadge()}
@@ -630,7 +632,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                 <div className="bg-slate-50 rounded-xl p-4 sm:p-6 mb-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
                     <Shield size={18} className="mr-2 text-indigo-600" />
-                    Informations personnelles
+                    {t('users.management.personalInfo')}
                   </h3>
 
                   {/* User Avatar and Name */}
@@ -655,7 +657,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
                         <Mail size={14} className="mr-1" />
-                        Email
+                        {t('admin.form.email')}
                       </p>
                       <p className="font-medium text-slate-900 break-all">
                         {user?.email}
@@ -664,23 +666,23 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
                         <Phone size={14} className="mr-1" />
-                        Téléphone
+                        {t('admin.form.phone')}
                       </p>
                       <p className="font-medium text-slate-900">
-                        {user?.telephone || "Non fourni"}
+                        {user?.telephone || t('users.management.notProvided')}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
                         <Shield size={14} className="mr-1" />
-                        Statut
+                        {t('admin.table.status')}
                       </p>
                       <div>{getVerificationStatusBadge()}</div>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
                         <Calendar size={14} className="mr-1" />
-                        Date d'inscription
+                        {t('users.management.registrationDate')}
                       </p>
                       <p className="font-medium text-slate-900">
                         {user?.dateCreation
@@ -692,13 +694,13 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                 day: "numeric",
                               }
                             )
-                          : "Non disponible"}
+                          : t('users.management.notAvailable')}
                       </p>
                     </div>
                     {user?.motif && (
                       <div className="col-span-2 space-y-1">
                         <p className="text-sm font-medium text-slate-500">
-                          Motif de rejet
+                          {t('users.management.rejectionReason')}
                         </p>
                         <p className="font-medium text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
                           {user.motif}
@@ -712,22 +714,22 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                 <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
                     <FileText size={18} className="mr-2 text-indigo-600" />
-                    Documents de l'utilisateur ({userDocuments.length})
+                    {t('users.management.userDocuments')} ({userDocuments.length})
                   </h3>
 
                   {isLoadingDocuments ? (
                     <div className="flex justify-center items-center p-8 text-slate-500">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                      <span className="ml-3">Chargement des documents...</span>
+                      <span className="ml-3">{t('users.management.loadingDocuments')}</span>
                     </div>
                   ) : userDocuments.length === 0 ? (
                     <div className="bg-white p-8 rounded-lg text-center text-slate-500 border-2 border-dashed border-slate-300">
                       <FileText className="mx-auto h-12 w-12 text-slate-400 mb-3" />
                       <p className="text-lg font-medium mb-1">
-                        Aucun document trouvé
+                        {t('users.management.noDocumentsFound')}
                       </p>
                       <p className="text-sm">
-                        Cet utilisateur n'a téléchargé aucun document
+                        {t('users.management.noDocumentsUploaded')}
                       </p>
                     </div>
                   ) : (
@@ -740,7 +742,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                               size={16}
                               className="mr-2 text-indigo-600"
                             />
-                            Images ({images.length})
+                            {t('users.management.images')} ({images.length})
                           </h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {images.map((doc, index) => (
