@@ -20,6 +20,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
+import { useTranslation } from "../../../hooks/useTranslation";
 
 const Sidebar = ({
   showSidebar,
@@ -33,6 +34,7 @@ const Sidebar = ({
   toggleSidebar,
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [openDropdown, setOpenDropdown] = useState({
     users: false,
@@ -80,8 +82,8 @@ const Sidebar = ({
 
   const getMenuItems = () => {
     const baseItems = [
-      { name: "Tableau de Bord", icon: Menu, tab: "dashboard" },
-      { name: "Activités", icon: Activity, tab: "activities" },
+      { name: t('sidebar.dashboard'), icon: Menu, tab: "dashboard" },
+      { name: t('sidebar.activities'), icon: Activity, tab: "activities" },
     ];
 
     let roleItems = [];
@@ -89,47 +91,47 @@ const Sidebar = ({
     if (isAdmin) {
       roleItems = [
         {
-          name: "Gérer Utilisateur",
+          name: t('sidebar.manageUsers'),
           icon: Users,
           dropdown: "users",
           items: [
-            { name: "Admin", tab: "admin" },
-            { name: "Professeurs", tab: "professors" },
-            { name: "Parents", tab: "parents" },
-            { name: "Élèves", tab: "students" },
-            { name: "Autres", tab: "others" },
+            { name: t('sidebar.admin'), tab: "admin" },
+            { name: t('sidebar.professors'), tab: "professors" },
+            { name: t('sidebar.parents'), tab: "parents" },
+            { name: t('sidebar.students'), tab: "students" },
+            { name: t('sidebar.others'), tab: "others" },
           ],
         },
         {
-          name: "Matières",
+          name: t('sidebar.subjects'),
           icon: GraduationCap,
           tab: "matieres",
         },
         {
-          name: "Motifs de Rejet",
+          name: t('sidebar.rejectionReasons'),
           icon: BookOpen,
           tab: "motifs-de-rejet",
         },
         {
-          name: "Classes",
+          name: t('sidebar.classes'),
           icon: Building2,
           dropdown: "classes",
           items: [
-            { name: "Créer une Classe", tab: "create-class" },
-            { name: "Gérer une Classe", tab: "manage-class" },
+            { name: t('sidebar.createClass'), tab: "create-class" },
+            { name: t('sidebar.manageClass'), tab: "manage-class" },
           ],
         },
         {
-          name: "Établissements",
+          name: t('sidebar.establishments'),
           icon: School,
           dropdown: "establishments",
           items: [
-            { name: "Créer un Établissement", tab: "create-establishment" },
-            { name: "Gérer un Établissement", tab: "manage-establishment" },
+            { name: t('sidebar.createEstablishment'), tab: "create-establishment" },
+            { name: t('sidebar.manageEstablishment'), tab: "manage-establishment" },
           ],
         },
         {
-          name: "Messagerie",
+          name: t('sidebar.messaging'),
           icon: Mail,
           tab: "messages",
         },
@@ -137,45 +139,45 @@ const Sidebar = ({
     } else if (isProfessor || isTutor) {
       roleItems = [
         {
-          name: "Gérer les Cours",
+          name: t('sidebar.manageCourses'),
           icon: Book,
           dropdown: "courses",
           items: [
-            { name: "Cours", tab: "create-course" },
-            { name: "Programmer le Cours", tab: "schedule-course" },
+            { name: t('sidebar.courses'), tab: "create-course" },
+            { name: t('sidebar.scheduleCourse'), tab: "schedule-course" },
           ],
         },
         {
-          name: "Matières",
+          name: t('sidebar.subjects'),
           icon: GraduationCap,
           tab: "matieres",
         },
         {
-          name: "Exercices",
+          name: t('sidebar.exercises'),
           icon: ClipboardList,
           tab: "manage-exercises",
         },
         {
-          name: "Gérer Utilisateur",
+          name: t('sidebar.manageUsers'),
           icon: Users,
           dropdown: "users",
           items: [
-            { name: "Professeurs", tab: "professors" },
-            { name: "Parents", tab: "parents" },
-            { name: "Élèves", tab: "students" },
+            { name: t('sidebar.professors'), tab: "professors" },
+            { name: t('sidebar.parents'), tab: "parents" },
+            { name: t('sidebar.students'), tab: "students" },
           ],
         },
         {
-          name: "Classes",
+          name: t('sidebar.classes'),
           icon: Building2,
           dropdown: "classes",
           items: [
-            { name: "Créer une Classe", tab: "create-class" },
-            { name: "Gérer une Classe", tab: "manage-class" },
+            { name: t('sidebar.createClass'), tab: "create-class" },
+            { name: t('sidebar.manageClass'), tab: "manage-class" },
           ],
         },
         {
-          name: "Messagerie",
+          name: t('sidebar.messaging'),
           icon: Mail,
           tab: "messages",
         },
@@ -183,28 +185,28 @@ const Sidebar = ({
     } else if (isParentOrStudent) {
       roleItems = [
         {
-          name: "Exercices",
+          name: t('sidebar.exercises'),
           icon: ClipboardList,
           tab: "manage-exercises",
         },
-        { name: "Classes", icon: Building2, tab: "classes" },
-        { name: "Cours", icon: Book, tab: "cours" },
+        { name: t('sidebar.classes'), icon: Building2, tab: "classes" },
+        { name: t('sidebar.courses'), icon: Book, tab: "cours" },
         {
-          name: "Messagerie",
+          name: t('sidebar.messaging'),
           icon: Mail,
           tab: "messages",
         },
       ];
     } else {
       roleItems = [
-        { name: "Classes", icon: Building2, tab: "classes" },
+        { name: t('sidebar.classes'), icon: Building2, tab: "classes" },
         {
-          name: "Motifs de Rejet",
+          name: t('sidebar.rejectionReasons'),
           icon: BookOpen,
           tab: "motifs-de-rejet",
         },
         {
-          name: "Messagerie",
+          name: t('sidebar.messaging'),
           icon: Mail,
           tab: "messages",
         },
@@ -212,7 +214,7 @@ const Sidebar = ({
     }
 
     const bottomItems = [
-      { name: "Paramètres", icon: Settings, tab: "settings" },
+      { name: t('sidebar.settings'), icon: Settings, tab: "settings" },
     ];
 
     return [...baseItems, ...roleItems, ...bottomItems];
@@ -378,7 +380,7 @@ const Sidebar = ({
             <span className="icon">
               <LogOut size={18} />
             </span>
-            <span className="menu-text">Déconnexion</span>
+            <span className="menu-text">{t('sidebar.logout')}</span>
           </button>
         </div>
       </aside>
@@ -390,14 +392,14 @@ const Sidebar = ({
               isDark ? "bg-gray-800 text-white" : "bg-white text-gray-800"
             }`}
           >
-            <h3 className="text-xl font-semibold mb-4">Confirmation</h3>
-            <p className="mb-6">Êtes-vous sûr de vouloir vous déconnecter?</p>
+            <h3 className="text-xl font-semibold mb-4">{t('sidebar.logoutConfirmation.title')}</h3>
+            <p className="mb-6">{t('sidebar.logoutConfirmation.message')}</p>
             <div className="flex justify-end space-x-4">
               <button
                 onClick={cancelLogout}
                 className="px-4 py-2 rounded-md bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors"
               >
-                Annuler
+                {t('sidebar.logoutConfirmation.cancel')}
               </button>
               <button
                 onClick={confirmLogout}
@@ -406,7 +408,7 @@ const Sidebar = ({
                   backgroundColor: colorSchemes?.[currentTheme]?.primary,
                 }}
               >
-                Confirmer
+                {t('sidebar.logoutConfirmation.confirm')}
               </button>
             </div>
           </div>

@@ -1043,5 +1043,36 @@
       "loadData": "Erreur lors du chargement des données : ",
       "delete": "Erreur lors de la suppression : "
     }
+  },
+  "sidebar": {
+    "dashboard": "Tableau de Bord",
+    "activities": "Activités",
+    "manageUsers": "Gérer Utilisateur",
+    "admin": "Admin",
+    "professors": "Professeurs",
+    "parents": "Parents",
+    "students": "Élèves",
+    "others": "Autres",
+    "subjects": "Matières",
+    "rejectionReasons": "Motifs de Rejet",
+    "classes": "Classes",
+    "createClass": "Créer une Classe",
+    "manageClass": "Gérer une Classe",
+    "establishments": "Établissements",
+    "createEstablishment": "Créer un Établissement",
+    "manageEstablishment": "Gérer un Établissement",
+    "messaging": "Messagerie",
+    "manageCourses": "Gérer les Cours",
+    "courses": "Cours",
+    "scheduleCourse": "Programmer le Cours",
+    "exercises": "Exercices",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "logoutConfirmation": {
+      "title": "Confirmation",
+      "message": "Êtes-vous sûr de vouloir vous déconnecter?",
+      "cancel": "Annuler",
+      "confirm": "Confirmer"
+    }
   }
 }

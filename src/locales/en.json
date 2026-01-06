@@ -982,5 +982,36 @@
       "loadData": "Error loading data: ",
       "delete": "Error deleting: "
     }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "activities": "Activities",
+    "manageUsers": "Manage Users",
+    "admin": "Admin",
+    "professors": "Professors",
+    "parents": "Parents",
+    "students": "Students",
+    "others": "Others",
+    "subjects": "Subjects",
+    "rejectionReasons": "Rejection Reasons",
+    "classes": "Classes",
+    "createClass": "Create Class",
+    "manageClass": "Manage Class",
+    "establishments": "Establishments",
+    "createEstablishment": "Create Establishment",
+    "manageEstablishment": "Manage Establishment",
+    "messaging": "Messaging",
+    "manageCourses": "Manage Courses",
+    "courses": "Courses",
+    "scheduleCourse": "Schedule Course",
+    "exercises": "Exercises",
+    "settings": "Settings",
+    "logout": "Logout",
+    "logoutConfirmation": {
+      "title": "Confirmation",
+      "message": "Are you sure you want to logout?",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    }
   }
 }
