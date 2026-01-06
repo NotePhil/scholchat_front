@@ -38,7 +38,7 @@ const VerifyEmail = () => {
     try {
       setIsResendingEmail(true);
 
-      const resendUrl = `http://localhost:8486/scholchat/utilisateurs/regenerate-activation?email=${encodeURIComponent(
+      const resendUrl = `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/regenerate-activation?email=${encodeURIComponent(
         email
       )}`;
 

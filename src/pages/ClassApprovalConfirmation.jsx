@@ -12,14 +12,14 @@ const ClassApprovalConfirmation = () => {
     const approveClass = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8486/scholchat/etablissements/approve-class/${establishmentId}/${classId}`
+          `${process.env.REACT_APP_API_BASE_URL}/etablissements/approve-class/${establishmentId}/${classId}`
         );
         
         setStatus('success');
         setMessage('Classe validée avec succès par l\'établissement !');
       } catch (error) {
         setStatus('error');
-        setMessage(error.response?.data?.message || 'Erreur lors de la validation de la classe');
+        setMessage('Erreur lors de la validation de la classe');
       }
     };
 

@@ -14,7 +14,7 @@ const NotificationIcon = () => {
       try {
         // Fetch access requests for classes
         const response = await fetch(
-          "http://localhost:8486/scholchat/acceder/classes/utilisateurs?classeIds=550e8400-e29b-41d4-a716-446655440400"
+          `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/utilisateurs?classeIds=550e8400-e29b-41d4-a716-446655440400`
         );
 
         if (!response.ok) {

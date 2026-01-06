@@ -74,7 +74,7 @@ const SignUp = () => {
         try {
           setIsSubmitting(true);
           const response = await axios.get(
-            `http://localhost:8486/scholchat/auth/users/byEmail`,
+            `${process.env.REACT_APP_API_BASE_URL}/auth/users/byEmail`,
             {
               params: { email: emailParam, token: tokenParam },
             }
@@ -426,7 +426,7 @@ const SignUp = () => {
 
       // Generate presigned URL
       const presignedResponse = await axios.post(
-        "http://localhost:8486/scholchat/media/presigned-url",
+        `${process.env.REACT_APP_API_BASE_URL}/media/presigned-url`,
         {
           fileName: fileName,
           contentType: file.type,
@@ -492,7 +492,7 @@ const SignUp = () => {
       }
 
       const response = await axios.post(
-        "http://localhost:8486/scholchat/utilisateurs",
+        `${process.env.REACT_APP_API_BASE_URL}/utilisateurs`,
         payloadData
       );
 
@@ -542,7 +542,7 @@ const SignUp = () => {
           };
 
           const response = await axios.post(
-            "http://localhost:8486/scholchat/utilisateurs",
+            `${process.env.REACT_APP_API_BASE_URL}/utilisateurs`,
             payloadData
           );
 
@@ -615,7 +615,7 @@ const SignUp = () => {
       // Update user with the collected URLs and hasUploaded status
       if (isUpdateMode) {
         await axios.post(
-          "http://localhost:8486/scholchat/auth/users/update",
+          `${process.env.REACT_APP_API_BASE_URL}/auth/users/update`,
           updatePayload,
           {
             params: {
@@ -633,7 +633,7 @@ const SignUp = () => {
         }, 2000);
       } else {
         await axios.patch(
-          `http://localhost:8486/scholchat/utilisateurs/${userId}`,
+          `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${userId}`,
           updatePayload
         );
         completeRegistration();

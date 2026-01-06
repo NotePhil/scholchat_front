@@ -53,7 +53,7 @@ const ClassAccessRequests = ({
         classId
       );
       const membersResponse = await fetch(
-        `http://localhost:8486/scholchat/acceder/classes/utilisateurs?classeIds=${classId}`
+        `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/utilisateurs?classeIds=${classId}`
       );
 
       if (!membersResponse.ok) {

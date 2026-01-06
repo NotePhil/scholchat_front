@@ -35,7 +35,7 @@ const AccountActivation = () => {
       setRegenerationStatus("");
 
       const response = await fetch(
-        "http://localhost:8486/scholchat/utilisateurs/regenerate-activation",
+        `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/regenerate-activation`,
         {
           method: "POST",
           headers: {
@@ -83,7 +83,7 @@ const AccountActivation = () => {
       setUserEmail(email);
       setActivationToken(token);
 
-      const apiUrl = `http://localhost:8486/scholchat/auth/activate?activationToken=${token}`;
+      const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/auth/activate?activationToken=${token}`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {

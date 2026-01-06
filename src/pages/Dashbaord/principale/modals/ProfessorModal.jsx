@@ -380,7 +380,7 @@ const ProfessorModal = ({
 
       // Step 1: Get presigned URL from backend
       const presignedResponse = await axios.post(
-        "http://localhost:8486/scholchat/media/presigned-url",
+        `${process.env.REACT_APP_API_BASE_URL}/media/presigned-url`,
         {
           fileName: fileName,
           contentType: file.type,
@@ -445,7 +445,7 @@ const ProfessorModal = ({
 
             // Get the download URL
             const downloadResponse = await axios.get(
-              `http://localhost:8486/scholchat/media/download-by-path`,
+              `${process.env.REACT_APP_API_BASE_URL}/media/download-by-path`,
               { params: { filePath: fileName } }
             );
 

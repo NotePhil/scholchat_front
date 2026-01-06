@@ -2,10 +2,7 @@ import axios from "axios";
 
 class PublicationRightsService {
   constructor(baseUrl = null) {
-    this.baseUrl =
-      baseUrl ||
-      process.env.REACT_APP_API_BASE_URL ||
-      "http://localhost:8486/scholchat";
+    this.baseUrl = baseUrl || process.env.REACT_APP_API_BASE_URL;
 
     this.axiosInstance = axios.create({
       baseURL: this.baseUrl,

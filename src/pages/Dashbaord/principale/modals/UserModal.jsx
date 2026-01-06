@@ -348,7 +348,7 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
       }
 
       // Use the specified API endpoint directly
-      const apiUrl = "http://localhost:8486/scholchat/utilisateurs";
+      const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/utilisateurs`;
 
       // For update operations (if needed)
       const method = type === "edit" && user?.id ? "PUT" : "POST";

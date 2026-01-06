@@ -1,8 +1,8 @@
 // services/EstablishmentService.js
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8486/scholchat/etablissements";
-const USER_API_BASE_URL = "http://localhost:8486/scholchat";
+const API_BASE_URL = `${process.env.REACT_APP_API_BASE_URL}/etablissements`;
+const USER_API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Create axios instance with interceptor to handle dynamic token
 const api = axios.create({

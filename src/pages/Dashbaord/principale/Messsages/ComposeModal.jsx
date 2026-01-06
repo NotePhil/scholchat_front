@@ -49,9 +49,9 @@ const ComposeModal = ({
           currentUser.role === "ROLE_PROFESSOR" ||
           currentUser.admin === false
         ) {
-          endpoint = `http://localhost:8486/scholchat/droits-publication/utilisateurs/${userId}/classes`;
+          endpoint = `${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`;
         } else {
-          endpoint = `http://localhost:8486/scholchat/acceder/utilisateurs/${userId}/classes`;
+          endpoint = `${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`;
         }
 
         const response = await fetch(endpoint, {
@@ -82,7 +82,7 @@ const ComposeModal = ({
 
         for (const classeId of selectedClasses) {
           const response = await fetch(
-            `http://localhost:8486/scholchat/acceder/classes/${classeId}/utilisateurs`,
+            `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/${classeId}/utilisateurs`,
             {
               headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -144,7 +144,7 @@ const ComposeModal = ({
         }
 
         const response = await fetch(
-          "http://localhost:8486/scholchat/messages/group",
+          `${process.env.REACT_APP_API_BASE_URL}/messages/group`,
           {
             method: "POST",
             headers: {
@@ -177,7 +177,7 @@ const ComposeModal = ({
         });
 
         const response = await fetch(
-          "http://localhost:8486/scholchat/messages",
+          `${process.env.REACT_APP_API_BASE_URL}/messages`,
           {
             method: "POST",
             headers: {

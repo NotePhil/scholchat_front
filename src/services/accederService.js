@@ -8,10 +8,7 @@ export const EtatDemandeAcces = {
 
 class AccederService {
   constructor(baseUrl = null) {
-    this.baseUrl =
-      baseUrl ||
-      process.env.REACT_APP_API_BASE_URL ||
-      "http://localhost:8486/scholchat";
+    this.baseUrl = baseUrl || process.env.REACT_APP_API_BASE_URL;
     this.apiUrl = `${this.baseUrl}/acceder`;
   }
 

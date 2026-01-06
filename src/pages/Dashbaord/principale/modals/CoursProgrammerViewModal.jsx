@@ -144,7 +144,7 @@ const CoursProgrammerViewModal = ({
           scheduledCourse.participantsIds.map(async (participantId) => {
             try {
               const response = await fetch(
-                `http://localhost:8486/scholchat/utilisateurs/${participantId}`,
+                `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${participantId}`,
                 {
                   headers: {
                     'Authorization': `Bearer ${accessToken}`,

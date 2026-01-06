@@ -46,7 +46,7 @@ import { coursService } from "../../../services/CoursService";
 // MatiereService (inline since you provided it)
 import axios from "axios";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const matiereApi = axios.create({
   baseURL: BASE_URL,
@@ -58,9 +58,7 @@ const matiereApi = axios.create({
 
 matiereApi.interceptors.request.use(
   (config) => {
-    const token =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("cmr.notep.business.business.token");
+    const token = localStorage.getItem("authToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -107,10 +105,7 @@ class MatiereService {
 
   handleError(error) {
     if (error.response) {
-      const errorMessage =
-        error.response.data?.message ||
-        error.response.data?.error ||
-        "An error occurred";
+      const errorMessage = "An error occurred";
       throw new Error(errorMessage);
     } else if (error.request) {
       throw new Error("Network error. Please check your connection.");

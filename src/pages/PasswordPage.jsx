@@ -67,7 +67,7 @@ const PasswordPage = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:8486/scholchat/auth/registerPassword",
+        `${process.env.REACT_APP_API_BASE_URL}/auth/registerPassword`,
         {
           method: "POST",
           headers: {

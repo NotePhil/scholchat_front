@@ -192,7 +192,7 @@ const ParentClassManagementModalUpdate = ({
         };
       }
       const response = await axios.get(
-        "http://localhost:8486/scholchat/parent-access/infos-classe",
+        `${process.env.REACT_APP_API_BASE_URL}/parent-access/infos-classe`,
         config
       );
       setClassInfo(response.data);
@@ -291,7 +291,7 @@ const ParentClassManagementModalUpdate = ({
         config.headers["Authorization"] = `Bearer ${authToken}`;
       }
       const response = await axios.post(
-        "http://localhost:8486/scholchat/parent-access/demande",
+        `${process.env.REACT_APP_API_BASE_URL}/parent-access/demande`,
         requestData,
         config
       );

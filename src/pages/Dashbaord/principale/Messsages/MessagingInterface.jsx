@@ -100,13 +100,13 @@ const MessagingInterface = ({
       
       // Fetch sent, received, and trash messages
       const [sentResponse, receivedResponse, trashResponse] = await Promise.all([
-        fetch(`http://localhost:8486/scholchat/messages/utilisateur/${userId}/sent`, {
+        fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/utilisateur/${userId}/sent`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         }),
-        fetch(`http://localhost:8486/scholchat/messages/utilisateur/${userId}/received`, {
+        fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/utilisateur/${userId}/received`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         }),
-        fetch(`http://localhost:8486/scholchat/messages/utilisateur/${userId}/trash`, {
+        fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/utilisateur/${userId}/trash`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         })
       ]);
@@ -331,7 +331,7 @@ const MessagingInterface = ({
   const handleDeleteMessage = async (messageId) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:8486/scholchat/messages/${messageId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/${messageId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
@@ -359,7 +359,7 @@ const MessagingInterface = ({
       const messageIds = Array.from(selectedMessages);
       
       await Promise.all(messageIds.map(id => 
-        fetch(`http://localhost:8486/scholchat/messages/${id}`, {
+        fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${accessToken}` }
         })
@@ -380,7 +380,7 @@ const MessagingInterface = ({
   const handleEmptyTrash = async () => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:8486/scholchat/messages/trash/cleanup', {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/trash/cleanup`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
@@ -400,7 +400,7 @@ const MessagingInterface = ({
   const handleRestoreMessage = async (messageId) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:8486/scholchat/messages/${messageId}/restore`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/${messageId}/restore`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });

@@ -17,7 +17,7 @@ const ClassApproval = () => {
     const approveClass = async () => {
       try {
         const response = await axios.post(
-          `http://localhost:8486/scholchat/etablissements/approve-class/${classeId}/${etablissementId}`
+          `${process.env.REACT_APP_API_BASE_URL}/etablissements/approve-class/${classeId}/${etablissementId}`
         );
 
         setStatus("success");

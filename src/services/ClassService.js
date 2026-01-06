@@ -18,10 +18,7 @@ export const DroitPublication = {
 class ClassService {
   constructor(baseUrl = null) {
     // Default to your backend URL, but allow override
-    this.baseUrl =
-      baseUrl ||
-      process.env.REACT_APP_API_BASE_URL ||
-      "http://localhost:8486/scholchat";
+    this.baseUrl = baseUrl || process.env.REACT_APP_API_BASE_URL;
     this.apiUrl = `${this.baseUrl}/classes`;
 
     // Configure axios defaults
@@ -41,10 +38,7 @@ class ClassService {
         console.error("API Error:", error);
         if (error.response) {
           // Server responded with error status
-          const message =
-            error.response.data?.message ||
-            error.response.statusText ||
-            `HTTP Error: ${error.response.status}`;
+          const message = "Server error";
           throw new Error(message);
         } else if (error.request) {
           // Request was made but no response received
@@ -60,9 +54,7 @@ class ClassService {
     this.axiosInstance.interceptors.request.use(
       (config) => {
         // Get auth token from localStorage or sessionStorage
-        const token =
-          localStorage.getItem("accessToken") ||
-          sessionStorage.getItem("accessToken");
+        const token = localStorage.getItem("accessToken");
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -100,7 +92,7 @@ class ClassService {
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
             const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
+            errorMessage = "Server error";
           } else {
             // If not JSON, get text content for debugging
             const textResponse = await response.text();

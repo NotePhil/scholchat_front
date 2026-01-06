@@ -217,7 +217,7 @@ const ClassesListContent = ({
         classes.map(async (classe) => {
           try {
             const response = await fetch(
-              `http://localhost:8486/scholchat/acceder/demandes/classe/${classe.id}`
+              `${process.env.REACT_APP_API_BASE_URL}/acceder/demandes/classe/${classe.id}`
             );
             if (response.ok) {
               const requests = await response.json();

@@ -17,7 +17,7 @@ const ClassRejection = () => {
     const rejectClass = async () => {
       try {
         const response = await axios.post(
-          `http://localhost:8486/scholchat/etablissements/reject-class/${classeId}/${etablissementId}`
+          `${process.env.REACT_APP_API_BASE_URL}/etablissements/reject-class/${classeId}/${etablissementId}`
         );
 
         setStatus("success");
@@ -28,9 +28,7 @@ const ClassRejection = () => {
         if (error.response?.status === 404) {
           setMessage("Classe introuvable. Vérifiez que l'ID de la classe est correct.");
         } else {
-          setMessage(
-            error.response?.data?.message || "Erreur lors du rejet de la classe"
-          );
+          setMessage("Erreur lors du rejet de la classe");
         }
       }
     };

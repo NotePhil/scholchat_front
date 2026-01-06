@@ -43,7 +43,7 @@ const MessageDetailPanel = ({
       const accessToken = localStorage.getItem('accessToken');
       const senderId = localStorage.getItem('userId');
       const recipient = selectedMessage.expediteur;
-      const response = await fetch('http://localhost:8486/scholchat/messages', {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
