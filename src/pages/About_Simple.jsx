@@ -183,7 +183,7 @@ export const AboutContent = ({ theme }) => {
   return (
     <section className="flex flex-col lg:flex-row gap-20 items-center">
       {/* Left Side - Media */}
-      <div className="w-full lg:w-1/2 relative">
+      <div className="w-full lg:w-1/2">
         <div className={`${themeClasses.cardBg} border ${themeClasses.cardBorder} rounded-3xl p-8`}>
           <div className="aspect-video rounded-2xl bg-gradient-to-br from-gray-800 to-blue-900 flex items-center justify-center">
             <button className="bg-white/20 backdrop-blur-xl border-2 border-white/30 rounded-full p-8 hover:scale-110 transition-transform">

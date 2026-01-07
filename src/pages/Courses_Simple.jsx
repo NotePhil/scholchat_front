@@ -186,7 +186,7 @@ export const Courses = ({ theme = "default" }) => {
           {schoolChatCourses.map((course) => (
             <div
               key={course.id}
-              className={`${themeClasses.cardBg} border ${themeClasses.cardBorder} rounded-3xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 relative`}
+              className={`${themeClasses.cardBg} border ${themeClasses.cardBorder} rounded-3xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300`}
             >
               {/* Image Section */}
               <div className="relative overflow-hidden h-48">
