@@ -1,0 +1,315 @@
+/* Login Page Background */
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a365d, #2d3748);
+}
+
+/* Login Container */
+.login-container {
+  background: #ffffff;
+  width: 100%;
+  max-width: 500px;
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+/* Title and Subtitle */
+.login-title {
+  font-size: 2rem;
+  color: #1a365d;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.login-subtitle {
+  color: #4a5568;
+  font-size: 1rem;
+  margin-bottom: 2rem;
+}
+
+.create-account {
+  color: #5a67d8;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.create-account:hover {
+  color: #4c51bf;
+  text-decoration: underline;
+}
+
+/* Form */
+.login-form {
+  text-align: left;
+}
+
+.login-form form {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.login-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 0.5rem;
+}
+
+.login-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.3s;
+  background-color: #f8fafc;
+}
+
+.login-input:focus {
+  border-color: #5a67d8;
+  box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.15);
+  outline: none;
+  background-color: #fff;
+}
+
+/* Password input container */
+.password-input-container {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #5a67d8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Flex container for remember me and forgot password */
+.flex-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Update to Remember Me section */
+.remember-me {
+  display: flex;
+  align-items: center;
+  white-space: nowrap; /* Prevent wrapping */
+}
+
+.remember-checkbox {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.remember-label {
+  font-size: 0.875rem;
+  color: #4a5568;
+  cursor: pointer;
+  display: inline-block; /* Change from flex to inline-block */
+  font-weight: 500; /* Add slightly more weight for professionalism */
+}
+
+/* Additional refinements for a more professional look */
+.flex-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Make the checkbox more consistent */
+input[type="checkbox"] {
+  accent-color: #5a67d8; /* Match brand color */
+  width: 16px;
+  height: 16px;
+}
+/* Forgot Password Link */
+.forgot-password {
+  color: #5a67d8;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.forgot-password:hover {
+  color: #4c51bf;
+  text-decoration: underline;
+}
+
+/* Button */
+.login-button {
+  width: 100%;
+  padding: 0.875rem;
+  background-color: #5a67d8;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(90, 103, 216, 0.12);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.login-button:hover {
+  background-color: #4c51bf;
+  transform: translateY(-1px);
+}
+
+.login-button:active {
+  transform: translateY(1px);
+}
+
+.login-button:disabled {
+  background-color: #cbd5e0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Loading spinner */
+.loading-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error message */
+.error-message {
+  width: 100%;
+  text-align: center;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+/* Footer */
+.login-footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.login-footer a {
+  color: #5a67d8;
+  text-decoration: none;
+}
+
+.login-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Animation for spinner */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .login-page {
+    padding: 1rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+  
+  .login-container {
+    padding: 1.5rem;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    border-radius: 8px;
+  }
+
+  .login-title {
+    font-size: 1.75rem;
+  }
+  
+  .login-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .login-input {
+    padding: 1rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .login-button {
+    padding: 1rem;
+    font-size: 16px;
+    min-height: 48px;
+  }
+  
+  .flex-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .remember-me {
+    align-self: flex-start;
+  }
+  
+  .forgot-password {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    padding: 1rem;
+  }
+  
+  .login-title {
+    font-size: 1.5rem;
+  }
+  
+  .input-group {
+    margin-bottom: 1.25rem;
+  }
+}

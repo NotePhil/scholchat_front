@@ -1,0 +1,1017 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "view": "View",
+      "create": "Create",
+      "update": "Update",
+      "search": "Search",
+      "filter": "Filter",
+      "loading": "Loading...",
+      "submit": "Submit",
+      "close": "Close",
+      "confirm": "Confirm",
+      "back": "Back"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "draft": "Draft",
+      "published": "Published",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "messages": {
+      "success": "Success",
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Information",
+      "noData": "No data available",
+      "confirmDelete": "Are you sure you want to delete this item?",
+      "operationSuccess": "Operation completed successfully",
+      "operationFailed": "Operation failed"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "courses": "Courses",
+    "classes": "Classes",
+    "users": "Users",
+    "settings": "Settings",
+    "logout": "Logout",
+    "profile": "Profile",
+    "home": "Home",
+    "about": "About",
+    "products": "Our Products",
+    "faq": "FAQ",
+    "pricing": "Our Pricing",
+    "nurseries": "Nurseries",
+    "kindergartens": "Kindergartens",
+    "primarySchools": "Primary Schools",
+    "highSchools": "High Schools"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome",
+      "subtitle": "Sign in to your account or",
+      "createAccount": "create an account",
+      "email": "Email address",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "signIn": "Sign In",
+      "signingIn": "Signing in...",
+      "emailPlaceholder": "Enter your email address",
+      "passwordPlaceholder": "Enter your password",
+      "showPassword": "Show",
+      "hidePassword": "Hide",
+      "signUp": "Sign Up",
+      "termsPrefix": "By signing in, you agree to our",
+      "termsLink": "Terms of Service",
+      "termsAnd": "and",
+      "privacyLink": "Privacy Policy"
+    },
+    "errors": {
+      "invalidCredentials": "Invalid credentials. Please check and try again.",
+      "authenticationFailed": "Authentication failed",
+      "missingToken": "Missing access token in response",
+      "invalidToken": "Invalid token",
+      "missingUserId": "Authentication error: Missing user ID",
+      "invalidUserId": "Authentication error: Invalid user ID"
+    }
+  },
+  "courses": {
+    "management": {
+      "title": "My Courses",
+      "subtitle": "Manage your courses and track your teaching programs",
+      "createNew": "New Course",
+      "createFirst": "Create my first course",
+      "noCoursesFound": "No courses found",
+      "noCourses": "No courses created",
+      "searchPlaceholder": "Search by title, description, subject...",
+      "allStatuses": "All statuses",
+      "totalCourses": "Total Courses",
+      "draftCourses": "Draft",
+      "publishedCourses": "Published",
+      "unpublished": "Unpublished",
+      "available": "Available"
+    },
+    "scheduling": {
+      "title": "Schedule a Course",
+      "editTitle": "Edit Schedule",
+      "course": "Course",
+      "selectCourse": "Select a course",
+      "state": "State",
+      "class": "Class",
+      "selectClass": "Select a class (optional)",
+      "maxCapacity": "Maximum capacity",
+      "capacityPlaceholder": "30 (optional)",
+      "location": "Location",
+      "locationPlaceholder": "Room 203, Building A",
+      "description": "Description / Notes",
+      "descriptionPlaceholder": "Special notes for this session...",
+      "participants": "Participants (optional)",
+      "selectParticipants": "Select one or more participants...",
+      "selectClassFirst": "Select a class first",
+      "participantsSelected": "selected",
+      "loadingParticipants": "Loading participants...",
+      "selectedParticipants": "Selected participants:",
+      "others": "others",
+      "dateScheduling": "Date scheduling",
+      "plannedDate": "Planned date",
+      "effectiveStartDate": "Effective start date (optional)",
+      "effectiveEndDate": "Effective end date (optional)",
+      "schedule": "Schedule",
+      "scheduling": "Scheduling...",
+      "inProgress": "In progress...",
+      "states": {
+        "planned": "Planned",
+        "inProgress": "In Progress",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "validation": {
+      "courseRequired": "Course is required",
+      "stateRequired": "State is required",
+      "locationRequired": "Location is required",
+      "pastDate": "Date cannot be in the past",
+      "bothDatesRequired": "If you provide a start date, you must also provide an end date",
+      "bothDatesRequiredEnd": "If you provide an end date, you must also provide a start date",
+      "startAfterPlanned": "Start date cannot be before planned date",
+      "endAfterStart": "End date cannot be before start date",
+      "positiveCapacity": "Capacity must be positive",
+      "integerCapacity": "Capacity must be an integer"
+    }
+  },
+  "users": {
+    "management": {
+      "professors": "Professors with class access",
+      "students": "Students with class access",
+      "parents": "Parents with class access",
+      "users": "Users with class access",
+      "accessRequests": "Access requests pending approval",
+      "noProfessors": "No professors have access to this class",
+      "noStudents": "No students have access to this class",
+      "noParents": "No parents have access to this class",
+      "noUsers": "No users have access to this class",
+      "noAccessRequests": "No pending access requests",
+      "viewDetails": "View details",
+      "approveRequest": "Approve request",
+      "rejectRequest": "Reject request",
+      "removeAccess": "Remove class access",
+      "deleteUser": "Delete user from system",
+      "removeAccessConfirm": "Remove this user's access?",
+      "removeAccessDescription": "This action will remove the user's access to this class.",
+      "deleteUserConfirm": "Permanently delete this user?",
+      "deleteUserDescription": "This action will completely remove the user from the system. This action is irreversible.",
+      "requestDate": "Request Date",
+      "requestStatus": "Request Status",
+      "creationDate": "Creation Date",
+      "admin": "Admin",
+      "yes": "Yes",
+      "no": "No",
+      "userTypes": {
+        "professor": "Professor",
+        "student": "Student",
+        "parent": "Parent",
+        "user": "User"
+      },
+      "userDetails": "User Details",
+      "user": "User",
+      "personalInfo": "Personal Information",
+      "notProvided": "Not provided",
+      "registrationDate": "Registration Date",
+      "notAvailable": "Not available",
+      "rejectionReason": "Rejection Reason",
+      "userDocuments": "User Documents",
+      "loadingDocuments": "Loading documents...",
+      "noDocumentsFound": "No documents found",
+      "noDocumentsUploaded": "This user has not uploaded any documents",
+      "images": "Images"
+    }
+  },
+  "pages": {
+    "home": {
+      "badge": "Educational Platform",
+      "animatedTexts": {
+        "text1": "Academic success starts with good communication",
+        "text2": "Simplifying exchanges for your children's success",
+        "text3": "A direct link to better support your children"
+      },
+      "subtitle": "Facilitate communication for better educational support",
+      "stats": {
+        "success": "Success",
+        "families": "Families",
+        "support": "Support"
+      },
+      "cta": "Discover",
+      "floatingBadges": {
+        "innovation": "Innovation",
+        "technological": "Technological",
+        "excellence": "Excellence",
+        "guaranteed": "Guaranteed"
+      }
+    },
+    "about": {
+      "badge": "Revolutionary Student Guide",
+      "title": {
+        "line1": "ACADEMIC",
+        "line2": "EXCELLENCE",
+        "line3": "GUARANTEED"
+      },
+      "subtitle": "Join the educational revolution that transforms thousands of students into tomorrow's leaders",
+      "stats": {
+        "students": "Students",
+        "success": "Success",
+        "support": "Support",
+        "countries": "Countries"
+      },
+      "services": {
+        "academic": {
+          "title": "Academic guidance",
+          "desc": "Advice to choose your path with world-renowned experts",
+          "stats": "98% success rate"
+        },
+        "psychological": {
+          "title": "Psychological support",
+          "desc": "Personalized support by certified psychologists",
+          "stats": "24/7 available"
+        },
+        "tutoring": {
+          "title": "Online tutoring",
+          "desc": "Private lessons with the world's best teachers",
+          "stats": "1000+ tutors"
+        },
+        "resources": {
+          "title": "Educational resources",
+          "desc": "A digital library with interactive content and AI",
+          "stats": "50k+ resources"
+        }
+      },
+      "content": {
+        "badge": "Educational Revolution",
+        "title": {
+          "line1": "TRANSFORM",
+          "line2": "YOUR FUTURE"
+        },
+        "description": "Our revolutionary platform uses artificial intelligence and cutting-edge learning methods to guarantee your absolute academic success!",
+        "features": {
+          "feature1": "Develop your skills with AI and global experts",
+          "feature2": "Access 50k+ interactive and exclusive resources",
+          "feature3": "Benefit from personalized 24/7 AI coaching"
+        },
+        "cta": "START THE TRANSFORMATION",
+        "trust": {
+          "guarantee": {
+            "label": "100% Guaranteed",
+            "desc": "Or refunded"
+          },
+          "security": {
+            "label": "Ultra Secure",
+            "desc": "Protected data"
+          },
+          "support": {
+            "label": "VIP Support",
+            "desc": "Premium assistance"
+          }
+        },
+        "videoPlaceholder": "Transformation in progress...",
+        "floatingStats": "Students transformed"
+      }
+    },
+    "blog": {
+      "badge": "Educational Blog",
+      "title": {
+        "line1": "We share our",
+        "line2": "Educational Ideas"
+      },
+      "subtitle": "You are not alone in your journey, we offer our support and guidance to succeed together",
+      "stats": {
+        "readers": "Readers",
+        "articles": "Articles",
+        "satisfaction": "Satisfaction"
+      },
+      "readMore": "Read more",
+      "viewAll": "📖 View all articles",
+      "posts": {
+        "post1": {
+          "title": "Educational Excellence: Between Tradition and Innovation",
+          "category": "Education",
+          "author": "Aminata Diallo",
+          "date": "Nov 15, 2024",
+          "excerpt": "Discover how modern education evolves with technological changes"
+        },
+        "post2": {
+          "title": "Innovative Teaching Methods in Modern Schools",
+          "category": "Innovation",
+          "author": "Kwame Nkrumah",
+          "date": "Oct 28, 2024",
+          "excerpt": "New methodologies transforming educational experiences"
+        },
+        "post3": {
+          "title": "Building Strong Educational Communities",
+          "category": "Community",
+          "author": "Fatoumata Bâ",
+          "date": "Oct 10, 2024",
+          "excerpt": "How collaborative environments improve student success"
+        },
+        "post4": {
+          "title": "The Impact of Digital Technologies on Learning",
+          "category": "Technology",
+          "author": "Jean Koffi",
+          "date": "Oct 5, 2024",
+          "excerpt": "Exploring digital tools revolutionizing teaching"
+        },
+        "post5": {
+          "title": "Strategies to Engage Parents in Education",
+          "category": "Engagement",
+          "author": "Sophie Laurent",
+          "date": "Sep 22, 2024",
+          "excerpt": "Techniques to improve parental participation in the academic journey"
+        },
+        "post6": {
+          "title": "Assessing 21st Century Skills",
+          "category": "Pedagogy",
+          "author": "Thomas Bernard",
+          "date": "Sep 14, 2024",
+          "excerpt": "New approaches to evaluate student skills today"
+        }
+      }
+    },
+    "courses": {
+      "badge": "📚 SchoolChat Training",
+      "title": {
+        "line1": "Discover Our Training",
+        "line2": "SchoolChat Pro"
+      },
+      "subtitle": "🚀 Master modern educational communication and optimize your children's school monitoring ✨",
+      "stats": {
+        "students": "Students",
+        "courses": "Courses",
+        "satisfaction": "Satisfaction"
+      },
+      "card": {
+        "lessons": "lessons",
+        "instructor": "Expert Trainer",
+        "cta": "Start"
+      },
+      "badgePopular": "Popular",
+      "courses": {
+        "course1": {
+          "title": "Modern Parent-School Communication",
+          "description": "Master digital communication tools for optimal monitoring",
+          "category": "Communication",
+          "subcategory": "Digital",
+          "instructor": "Marie Dubois",
+          "price": "Free",
+          "duration": "3 weeks",
+          "level": "Beginner"
+        },
+        "course2": {
+          "title": "Digital School Monitoring",
+          "description": "Optimize tracking of your children's results and progress",
+          "category": "Monitoring",
+          "subcategory": "Educational",
+          "instructor": "Pierre Martin",
+          "price": "$29",
+          "duration": "4 weeks",
+          "level": "Intermediate"
+        },
+        "course3": {
+          "title": "Smart Notification Management",
+          "description": "Stay informed without being overwhelmed by alerts",
+          "category": "Management",
+          "subcategory": "Productivity",
+          "instructor": "Sophie Laurent",
+          "price": "Free",
+          "duration": "2 weeks",
+          "level": "All levels"
+        },
+        "course4": {
+          "title": "SchoolChat Mobile Application",
+          "description": "Master all the features of the mobile app",
+          "category": "Mobile",
+          "subcategory": "Application",
+          "instructor": "Lucas Moreau",
+          "price": "$19",
+          "duration": "2 weeks",
+          "level": "Beginner"
+        },
+        "course5": {
+          "title": "Parent-Teacher Collaboration",
+          "description": "Create a collaborative environment for success",
+          "category": "Collaboration",
+          "subcategory": "Pedagogy",
+          "instructor": "Anne Rousseau",
+          "price": "$39",
+          "duration": "5 weeks",
+          "level": "Advanced"
+        },
+        "course6": {
+          "title": "Dashboards and Analytics",
+          "description": "Leverage data for better support",
+          "category": "Analysis",
+          "subcategory": "Data",
+          "instructor": "Thomas Bernard",
+          "price": "$49",
+          "duration": "3 weeks",
+          "level": "Intermediate"
+        }
+      },
+      "cta": {
+        "title": "Ready to transform your school communication?",
+        "subtitle": "Join over 1500 families who have revolutionized their school monitoring with SchoolChat",
+        "button1": "🚀 Start for free",
+        "button2": "📞 Request demo"
+      }
+    },
+    "instructor": {
+      "badge": "What is SchoolChat?",
+      "title": {
+        "line1": "The Revolution of",
+        "line2": "Educational Communication"
+      },
+      "subtitle": "Transform the school-family relationship with our innovative platform for modern and intuitive school communication",
+      "features": {
+        "communication": {
+          "title": "Instant Communication",
+          "desc": "Exchange in real time with teachers and track your children's progress",
+          "cta": "Start now"
+        },
+        "mobile": {
+          "title": "Mobile Application",
+          "desc": "Access all school information from your smartphone",
+          "cta": "Download the app"
+        }
+      },
+      "stats": {
+        "badge": "We Are Proud",
+        "title": "Results That Speak",
+        "subtitle": "Join thousands of families who have transformed their school communication with SchoolChat",
+        "families": "Connected Families",
+        "messages": "Messages Exchanged",
+        "schools": "Partner Schools",
+        "satisfaction": "Satisfaction Rate"
+      },
+      "cta": {
+        "title": "Ready to revolutionize your school communication?",
+        "subtitle": "Over 2800 families trust us. Join the educational revolution today!",
+        "startFree": "Start for free",
+        "demo": "Request a demo"
+      }
+    },
+    "functionalities": {
+      "badge": "Features",
+      "title": "Our Features",
+      "subtitle": "Discover the magical tools that will transform your educational experience",
+      "features": {
+        "textbook": {
+          "title": "Textbook",
+          "desc": "Organize and easily access course notes and content for each subject."
+        },
+        "messaging": {
+          "title": "Messaging",
+          "desc": "Communicate easily with teachers and other students."
+        },
+        "homework": {
+          "title": "Homework",
+          "desc": "Track assigned homework and manage due dates efficiently."
+        },
+        "attendance": {
+          "title": "Attendance tracking",
+          "desc": "Keep a record of absences and track tardiness."
+        },
+        "goals": {
+          "title": "Academic goals",
+          "desc": "Define and track academic goals in a structured way."
+        },
+        "schedule": {
+          "title": "Planning & Schedule",
+          "desc": "Manage your schedule and plan your school activities."
+        }
+      },
+      "learnMore": "Learn more"
+    },
+    "accountActivation": {
+      "title": "Account Activation",
+      "loading": "Please wait while we verify your account...",
+      "success": {
+        "title": "Account activated successfully!",
+        "message": "Your account has been verified and activated.",
+        "redirect": "You will be redirected to the password page in {countdown} seconds...",
+        "setPassword": "Set password now"
+      },
+      "error": {
+        "title": "Activation Failed",
+        "regeneratePrompt": "Please enter your email address to regenerate the token",
+        "emailPlaceholder": "Enter your email",
+        "send": "Send",
+        "regenerateSuccess": "Token regenerated successfully. Redirecting...",
+        "regenerateError": "Failed to regenerate token",
+        "goToLogin": "Go to login",
+        "contactSupport": "Contact support"
+      },
+      "footer": {
+        "copyright": "All rights reserved.",
+        "terms": "Terms of Service",
+        "privacy": "Privacy Policy"
+      }
+    },
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "subtitle": "Enter your email address to reset your password",
+      "email": "Email Address",
+      "emailPlaceholder": "Enter your email address",
+      "send": "Send Reset Link",
+      "sending": "Sending...",
+      "backToLogin": "Back to Login",
+      "success": "A reset link has been sent to your email address",
+      "error": "An error occurred. Please try again."
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "subtitle": "Enter your new password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password",
+      "reset": "Reset Password",
+      "resetting": "Resetting...",
+      "success": "Password reset successfully",
+      "error": "An error occurred. Please try again.",
+      "passwordMismatch": "Passwords do not match"
+    },
+    "verifyEmail": {
+      "title": "Verify Your Email",
+      "message": "We've sent a verification link to your email address",
+      "checkInbox": "Check your inbox and click the link to activate your account",
+      "noEmail": "Didn't receive the email?",
+      "resend": "Resend",
+      "backToLogin": "Back to Login"
+    },
+    "passwordPage": {
+      "title": "Set Your Password",
+      "subtitle": "Create a secure password for your account",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "requirements": {
+        "title": "Password requirements:",
+        "length": "At least 8 characters",
+        "uppercase": "One uppercase letter",
+        "lowercase": "One lowercase letter",
+        "number": "One number",
+        "special": "One special character"
+      },
+      "create": "Create Password",
+      "creating": "Creating...",
+      "success": "Password created successfully",
+      "error": "An error occurred. Please try again."
+    },
+    "signup": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email"
+    }
+  },
+  "footer": {
+    "about": {
+      "description": "Educational platform connecting students, teachers and parents."
+    },
+    "contact": {
+      "title": "Contact",
+      "contactUs": "Contact Us",
+      "support": "Support",
+      "helpCenter": "Help Center"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "legalNotice": "Legal Notice"
+    },
+    "resources": {
+      "title": "Resources",
+      "userGuide": "User Guide",
+      "blog": "Blog",
+      "faq": "FAQ"
+    },
+    "copyright": "All rights reserved."
+  },
+  "dashboard": {
+    "title": "Educational Dashboard",
+    "subtitle": "Manage courses, exercises and student progress",
+    "loading": "Loading dashboard...",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "recentActivities": "Recent Activities",
+    "stats": {
+      "availableCourses": "Available Courses",
+      "exercises": "Exercises",
+      "activeClasses": "Active Classes",
+      "avgProgress": "Avg. Progress",
+      "subjects": "{count} subjects",
+      "completed": "{percent}% completed",
+      "students": "{count} students",
+      "allClasses": "All classes",
+      "thisMonth": "this month"
+    },
+    "charts": {
+      "courseDistribution": "Course Distribution by Subject",
+      "studentProgress": "Student Progress by Class",
+      "monthlyActivity": "Monthly Educational Activity",
+      "exerciseStatus": "Exercise Status",
+      "subject": "Subject",
+      "class": "Class",
+      "progressPercent": "Progress (%)",
+      "coursesCreated": "Courses created",
+      "exercisesAdded": "Exercises added",
+      "completions": "Completions"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun"
+    },
+    "completion": {
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "notStarted": "Not Started"
+    },
+    "activities": {
+      "newCourse": "New course: Linear Algebra",
+      "exerciseCompleted": "Exercise completed by {count} students",
+      "newClass": "New class created",
+      "progressReached": "Progress reached 80%",
+      "subjectUpdated": "Subject updated",
+      "system": "System",
+      "hoursAgo": "{count}h ago",
+      "daysAgo": "{count}d ago"
+    },
+    "errors": {
+      "loadFailed": "Failed to load dashboard data",
+      "subjectNameRequired": "Subject name is required",
+      "genericError": "An error occurred",
+      "networkError": "Network error. Please check your connection.",
+      "requestError": "Request setup error: "
+    }
+  },
+  "activities": {
+    "title": "Activity Feed",
+    "actions": {
+      "create": "Create",
+      "like": "Like",
+      "comment": "Comment",
+      "participate": "Participate",
+      "share": "Share",
+      "select": "Select",
+      "processing": "Processing...",
+      "creating": "Creating...",
+      "createEvent": "Create Event",
+      "shareDemo": "Share functionality (demo)"
+    },
+    "createEvent": {
+      "title": "Create an Event",
+      "subtitle": "Fill in your event information"
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "My event",
+      "description": "Description",
+      "descriptionPlaceholder": "Event description",
+      "location": "Location",
+      "locationPlaceholder": "Conference room",
+      "startTime": "Start",
+      "endTime": "End",
+      "status": "Status",
+      "images": "Images (optional)",
+      "addImages": "Add images",
+      "selectFiles": "Click to select files",
+      "selectedImages": "Selected images ({count})",
+      "imageNumber": "Image {number}",
+      "readyToUpload": "Ready to upload",
+      "commentPlaceholder": "Write a comment..."
+    },
+    "status": {
+      "planned": "Planned",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "noActivities": {
+      "title": "No activities available",
+      "description": "Be the first to create an event and share your activities with the community.",
+      "createFirst": "Create the first event"
+    },
+    "participants": "{count} participant{count, plural, one {} other {s}}",
+    "comments": "{count} comment{count, plural, one {} other {s}}",
+    "validation": {
+      "requiredFields": "Please fill in all required fields"
+    },
+    "errors": {
+      "imageUploadFailed": "Error uploading images",
+      "createEventFailed": "Error creating event"
+    }
+  },
+  "subjects": {
+    "title": "Subject Management",
+    "subtitle": "Manage your institution's academic subjects",
+    "actions": {
+      "new": "New Subject",
+      "edit": "Edit",
+      "delete": "Delete",
+      "refresh": "Refresh",
+      "create": "Create",
+      "update": "Update",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    },
+    "form": {
+      "name": "Subject name",
+      "namePlaceholder": "e.g. Mathematics",
+      "description": "Description",
+      "descriptionPlaceholder": "Subject description...",
+      "nameRequired": "Subject name is required"
+    },
+    "table": {
+      "subject": "Subject",
+      "description": "Description",
+      "creationDate": "Creation Date",
+      "status": "Status",
+      "actions": "Actions",
+      "noDescription": "No description"
+    },
+    "status": {
+      "active": "ACTIVE",
+      "inactive": "INACTIVE"
+    },
+    "messages": {
+      "loadError": "Error loading subjects",
+      "createSuccess": "Subject created successfully",
+      "createError": "Error creating subject",
+      "updateSuccess": "Subject updated successfully",
+      "updateError": "Error updating subject",
+      "deleteSuccess": "Subject deleted successfully",
+      "deleteError": "Error deleting subject",
+      "deleteConfirm": "Are you sure you want to delete the subject",
+      "deleteWarning": "This action is irreversible."
+    },
+    "search": {
+      "placeholder": "Search for a subject...",
+      "noResults": "No subjects found",
+      "noResultsDesc": "Try modifying your search criteria",
+      "empty": "No subjects",
+      "emptyDesc": "Start by creating your first subject"
+    },
+    "pagination": {
+      "showing": "Showing {start} to {end} of {total} subjects"
+    },
+    "modals": {
+      "create": "New Subject",
+      "edit": "Edit Subject",
+      "delete": "Confirm deletion",
+      "creating": "Creating...",
+      "updating": "Updating...",
+      "deleting": "Deleting..."
+    },
+    "access": {
+      "restricted": "Restricted Access",
+      "restrictedDesc": "You do not have the necessary permissions to access this section. Only administrators and professors can manage subjects."
+    }
+  },
+  "professors": {
+    "title": "Professor Management",
+    "subtitle": "Efficiently manage your professors",
+    "stats": {
+      "total": "Total",
+      "active": "Active",
+      "pending": "Pending",
+      "inactive": "Inactive",
+      "validated": "Validated",
+      "validation": "Validation",
+      "deactivated": "Deactivated"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "awaiting": "Pending",
+      "suspect": "Suspect",
+      "reported": "Reported",
+      "pending": "In Progress",
+      "rejected": "Rejected"
+    },
+    "actions": {
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View details",
+      "grid": "Grid",
+      "table": "Table"
+    },
+    "search": {
+      "placeholder": "Search...",
+      "all": "All",
+      "noResults": "No results found",
+      "noResultsDesc": "Try modifying your search criteria.",
+      "noProfessors": "No professors registered",
+      "noProfessorsDesc": "There are currently no professors in the system."
+    },
+    "table": {
+      "professor": "Professor",
+      "contact": "Contact",
+      "matricule": "ID Number",
+      "classes": "Classes",
+      "status": "Status",
+      "rights": "Rights",
+      "actions": "Actions",
+      "none": "None",
+      "notSpecified": "Not specified"
+    },
+    "rights": {
+      "publish": "Publish",
+      "moderate": "Moderate",
+      "none": "None"
+    },
+    "loading": {
+      "data": "Loading data...",
+      "processing": "Processing..."
+    },
+    "errors": {
+      "loadData": "Error loading data: ",
+      "delete": "Error deleting: "
+    }
+  },
+  "admin": {
+    "title": "Administrator Management",
+    "subtitle": "Efficiently manage system administrator accounts",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete",
+      "create": "Create",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "loading": "Loading data...",
+    "stats": {
+      "total": "Total Admins",
+      "active": "Active",
+      "pending": "Pending",
+      "systemAdmins": "System administrators",
+      "validatedAccounts": "Validated accounts",
+      "validationRequired": "Validation required"
+    },
+    "search": {
+      "placeholder": "Search by name, email...",
+      "allStatuses": "All statuses",
+      "grid": "Grid",
+      "table": "Table",
+      "newAdmin": "New Admin"
+    },
+    "table": {
+      "administrator": "Administrator",
+      "contact": "Contact",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "empty": {
+      "noResults": "No results found",
+      "noAdmins": "No administrators registered",
+      "noResultsDesc": "Try modifying your search or filter criteria to see more results.",
+      "noAdminsDesc": "Start by adding your first administrator to the system.",
+      "addAdmin": "Add an administrator"
+    },
+    "processing": "Processing...",
+    "modals": {
+      "create": "New Administrator",
+      "edit": "Edit Administrator",
+      "createDesc": "Add a new administrator to the system",
+      "editDesc": "Modify administrator information"
+    },
+    "form": {
+      "lastName": "Last Name",
+      "firstName": "First Name",
+      "lastNamePlaceholder": "Enter last name",
+      "firstNamePlaceholder": "Enter first name",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "status": "Status",
+      "creationDate": "Creation Date"
+    },
+    "modal": {
+      "contactInfo": "Contact Information",
+      "accountInfo": "Account Information",
+      "confirmDelete": "Confirm Deletion",
+      "irreversible": "This action is irreversible",
+      "deleteConfirmText": "Are you sure you want to delete the administrator",
+      "dataLossWarning": "All associated data will be permanently lost."
+    },
+    "role": {
+      "administrator": "Administrator"
+    }
+  },
+  "parents": {
+    "title": "Parent Management",
+    "subtitle": "Efficiently manage parents and their class associations",
+    "stats": {
+      "total": "Total",
+      "active": "Active",
+      "pending": "Pending",
+      "inactive": "Inactive",
+      "registered": "Registered parents",
+      "validated": "Validated accounts",
+      "validation": "Validation required",
+      "deactivated": "Deactivated accounts"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending",
+      "awaitingValidation": "Awaiting Validation"
+    },
+    "actions": {
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View details",
+      "grid": "Grid",
+      "table": "Table"
+    },
+    "search": {
+      "placeholder": "Search by name, email, phone...",
+      "allStatuses": "All statuses",
+      "noResults": "No results found",
+      "noResultsDesc": "Try modifying your search or filter criteria to see more results.",
+      "noParents": "No parents registered",
+      "noParentsDesc": "There are currently no parents in the system.",
+      "addParent": "Add a parent"
+    },
+    "table": {
+      "parent": "Parent",
+      "contact": "Contact",
+      "registrationDate": "Registration Date",
+      "associatedClasses": "Associated Classes",
+      "status": "Status",
+      "actions": "Actions",
+      "none": "None",
+      "notSpecified": "Not specified",
+      "noClass": "No class"
+    },
+    "card": {
+      "registeredOn": "Registered on",
+      "associatedClasses": "Associated classes",
+      "noClassAssociated": "No class associated"
+    },
+    "loading": {
+      "data": "Loading data...",
+      "processing": "Processing..."
+    },
+    "errors": {
+      "loadData": "Error loading data: ",
+      "delete": "Error deleting: "
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "activities": "Activities",
+    "manageUsers": "Manage Users",
+    "admin": "Admin",
+    "professors": "Professors",
+    "parents": "Parents",
+    "students": "Students",
+    "others": "Others",
+    "subjects": "Subjects",
+    "rejectionReasons": "Rejection Reasons",
+    "classes": "Classes",
+    "createClass": "Create Class",
+    "manageClass": "Manage Class",
+    "establishments": "Establishments",
+    "createEstablishment": "Create Establishment",
+    "manageEstablishment": "Manage Establishment",
+    "messaging": "Messaging",
+    "manageCourses": "Manage Courses",
+    "courses": "Courses",
+    "scheduleCourse": "Schedule Course",
+    "exercises": "Exercises",
+    "settings": "Settings",
+    "logout": "Logout",
+    "logoutConfirmation": {
+      "title": "Confirmation",
+      "message": "Are you sure you want to logout?",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    }
+  }
+}

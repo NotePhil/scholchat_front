@@ -1,0 +1,1078 @@
+{
+  "common": {
+    "actions": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "view": "Voir",
+      "create": "Créer",
+      "update": "Mettre à jour",
+      "search": "Rechercher",
+      "filter": "Filtrer",
+      "loading": "Chargement...",
+      "submit": "Soumettre",
+      "close": "Fermer",
+      "confirm": "Confirmer",
+      "back": "Retour"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "rejected": "Rejeté",
+      "draft": "Brouillon",
+      "published": "Publié",
+      "completed": "Terminé",
+      "cancelled": "Annulé"
+    },
+    "messages": {
+      "success": "Succès",
+      "error": "Erreur",
+      "warning": "Avertissement",
+      "info": "Information",
+      "noData": "Aucune donnée disponible",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
+      "operationSuccess": "Opération effectuée avec succès",
+      "operationFailed": "Échec de l'opération"
+    }
+  },
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "courses": "Cours",
+    "classes": "Classes",
+    "users": "Utilisateurs",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "profile": "Profil",
+    "home": "Accueil",
+    "about": "À propos",
+    "products": "Nos produits",
+    "faq": "FAQ",
+    "pricing": "Nos tarifs",
+    "nurseries": "Crèches",
+    "kindergartens": "Écoles maternelles",
+    "primarySchools": "Écoles primaires",
+    "highSchools": "Lycées"
+  },
+  "auth": {
+    "login": {
+      "title": "Bienvenue",
+      "subtitle": "Connectez-vous à votre compte ou",
+      "createAccount": "créer un compte",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "forgotPassword": "Mot de passe oublié ?",
+      "signIn": "Se connecter",
+      "signingIn": "Connexion en cours...",
+      "emailPlaceholder": "Entrez votre adresse e-mail",
+      "passwordPlaceholder": "Entrez votre mot de passe",
+      "showPassword": "Afficher",
+      "hidePassword": "Masquer",
+      "signUp": "S'inscrire",
+      "termsPrefix": "En vous connectant, vous acceptez nos",
+      "termsLink": "Conditions d'utilisation",
+      "termsAnd": "et notre",
+      "privacyLink": "Politique de confidentialité"
+    },
+    "errors": {
+      "invalidCredentials": "Identifiants invalides. Veuillez vérifier et réessayer.",
+      "authenticationFailed": "Échec de l'authentification",
+      "missingToken": "Jeton d'accès manquant dans la réponse",
+      "invalidToken": "Jeton invalide",
+      "missingUserId": "Erreur d'authentification : ID utilisateur manquant",
+      "invalidUserId": "Erreur d'authentification : ID utilisateur invalide"
+    }
+  },
+  "courses": {
+    "management": {
+      "title": "Mes Cours",
+      "subtitle": "Gérez vos cours et suivez vos programmes d'enseignement",
+      "createNew": "Nouveau Cours",
+      "createFirst": "Créer mon premier cours",
+      "noCoursesFound": "Aucun cours trouvé",
+      "noCourses": "Aucun cours créé",
+      "searchPlaceholder": "Rechercher par titre, description, matière...",
+      "allStatuses": "Tous les statuts",
+      "totalCourses": "Cours Total",
+      "draftCourses": "Brouillon",
+      "publishedCourses": "Publié",
+      "unpublished": "Non publié",
+      "available": "Disponible"
+    },
+    "scheduling": {
+      "title": "Planifier un cours",
+      "editTitle": "Modifier la planification",
+      "course": "Cours",
+      "selectCourse": "Sélectionner un cours",
+      "state": "État",
+      "class": "Classe",
+      "selectClass": "Sélectionner une classe (optionnel)",
+      "maxCapacity": "Capacité maximale",
+      "capacityPlaceholder": "30 (optionnel)",
+      "location": "Lieu",
+      "locationPlaceholder": "Salle 203, Bâtiment A",
+      "description": "Description / Notes",
+      "descriptionPlaceholder": "Notes spéciales pour cette session...",
+      "participants": "Participants (optionnel)",
+      "selectParticipants": "Sélectionner un ou plusieurs participants...",
+      "selectClassFirst": "Sélectionnez d'abord une classe",
+      "participantsSelected": "sélectionné(s)",
+      "loadingParticipants": "Chargement des participants...",
+      "selectedParticipants": "Participants sélectionnés :",
+      "others": "autres",
+      "dateScheduling": "Planification des dates",
+      "plannedDate": "Date prévue",
+      "effectiveStartDate": "Date de début effective (optionnel)",
+      "effectiveEndDate": "Date de fin effective (optionnel)",
+      "schedule": "Planifier",
+      "scheduling": "Planification en cours...",
+      "inProgress": "En cours...",
+      "states": {
+        "planned": "Planifié",
+        "inProgress": "En cours",
+        "completed": "Terminé",
+        "cancelled": "Annulé"
+      }
+    },
+    "validation": {
+      "courseRequired": "Le cours est requis",
+      "stateRequired": "L'état est requis",
+      "locationRequired": "Le lieu est requis",
+      "pastDate": "La date ne peut pas être dans le passé",
+      "bothDatesRequired": "Si vous fournissez une date de début, vous devez également fournir une date de fin",
+      "bothDatesRequiredEnd": "Si vous fournissez une date de fin, vous devez également fournir une date de début",
+      "startAfterPlanned": "La date de début ne peut pas être avant la date prévue",
+      "endAfterStart": "La date de fin ne peut pas être avant la date de début",
+      "positiveCapacity": "La capacité doit être positive",
+      "integerCapacity": "La capacité doit être un nombre entier"
+    }
+  },
+  "users": {
+    "management": {
+      "professors": "Professeurs ayant accès à la classe",
+      "students": "Étudiants ayant accès à la classe",
+      "parents": "Parents ayant accès à la classe",
+      "users": "Utilisateurs ayant accès à la classe",
+      "accessRequests": "Demandes d'accès en attente d'approbation",
+      "noProfessors": "Aucun professeur n'a accès à cette classe",
+      "noStudents": "Aucun étudiant n'a accès à cette classe",
+      "noParents": "Aucun parent n'a accès à cette classe",
+      "noUsers": "Aucun utilisateur n'a accès à cette classe",
+      "noAccessRequests": "Aucune demande d'accès en attente",
+      "viewDetails": "Voir les détails",
+      "approveRequest": "Approuver la demande",
+      "rejectRequest": "Rejeter la demande",
+      "removeAccess": "Retirer l'accès à la classe",
+      "deleteUser": "Supprimer l'utilisateur du système",
+      "removeAccessConfirm": "Retirer l'accès de cet utilisateur ?",
+      "removeAccessDescription": "Cette action retirera l'accès de l'utilisateur à cette classe.",
+      "deleteUserConfirm": "Supprimer définitivement cet utilisateur ?",
+      "deleteUserDescription": "Cette action supprimera complètement l'utilisateur du système. Cette action est irréversible.",
+      "requestDate": "Date de demande",
+      "requestStatus": "Statut de la demande",
+      "creationDate": "Date de création",
+      "admin": "Administrateur",
+      "yes": "Oui",
+      "no": "Non",
+      "userTypes": {
+        "professor": "Professeur",
+        "student": "Étudiant",
+        "parent": "Parent",
+        "user": "Utilisateur"
+      },
+      "userDetails": "Détails de l'utilisateur",
+      "user": "Utilisateur",
+      "personalInfo": "Informations personnelles",
+      "notProvided": "Non fourni",
+      "registrationDate": "Date d'inscription",
+      "notAvailable": "Non disponible",
+      "rejectionReason": "Motif de rejet",
+      "userDocuments": "Documents de l'utilisateur",
+      "loadingDocuments": "Chargement des documents...",
+      "noDocumentsFound": "Aucun document trouvé",
+      "noDocumentsUploaded": "Cet utilisateur n'a téléchargé aucun document",
+      "images": "Images"
+    }
+  },
+  "pages": {
+    "home": {
+      "badge": "Plateforme Éducative",
+      "animatedTexts": {
+        "text1": "La réussite scolaire commence par une bonne communication",
+        "text2": "Simplifier les échanges pour la réussite de vos enfants",
+        "text3": "Un lien direct pour mieux accompagner vos enfants"
+      },
+      "subtitle": "Facilitez la communication pour un meilleur accompagnement éducatif",
+      "stats": {
+        "success": "Réussite",
+        "families": "Familles",
+        "support": "Support"
+      },
+      "cta": "Découvrir",
+      "floatingBadges": {
+        "innovation": "Innovation",
+        "technological": "Technologique",
+        "excellence": "Excellence",
+        "guaranteed": "Garantie"
+      }
+    },
+    "about": {
+      "badge": "Guide Étudiant Révolutionnaire",
+      "title": {
+        "line1": "EXCELLENCE",
+        "line2": "ACADÉMIQUE",
+        "line3": "GARANTIE"
+      },
+      "subtitle": "Rejoignez la révolution éducative qui transforme des milliers d'étudiants en leaders de demain",
+      "stats": {
+        "students": "Étudiants",
+        "success": "Réussite",
+        "support": "Support",
+        "countries": "Pays"
+      },
+      "services": {
+        "academic": {
+          "title": "Orientation académique",
+          "desc": "Conseils pour choisir votre parcours avec des experts de renommée mondiale",
+          "stats": "98% de réussite"
+        },
+        "psychological": {
+          "title": "Soutien psychologique",
+          "desc": "Un accompagnement personnalisé par des psychologues certifiés",
+          "stats": "24/7 disponible"
+        },
+        "tutoring": {
+          "title": "Tutorat en ligne",
+          "desc": "Des cours particuliers avec les meilleurs professeurs du monde",
+          "stats": "1000+ tuteurs"
+        },
+        "resources": {
+          "title": "Ressources pédagogiques",
+          "desc": "Une bibliothèque numérique avec contenu interactif et IA",
+          "stats": "50k+ ressources"
+        }
+      },
+      "content": {
+        "badge": "Révolution Éducative",
+        "title": {
+          "line1": "TRANSFORMEZ",
+          "line2": "VOTRE AVENIR"
+        },
+        "description": "Notre plateforme révolutionnaire utilise l'intelligence artificielle et des méthodes d'apprentissage de pointe pour garantir votre succès académique absolu !",
+        "features": {
+          "feature1": "Développez vos compétences avec l'IA et des experts mondiaux",
+          "feature2": "Accédez à 50k+ ressources interactives et exclusives",
+          "feature3": "Bénéficiez d'un coaching personnalisé 24/7 par IA"
+        },
+        "cta": "COMMENCER LA TRANSFORMATION",
+        "trust": {
+          "guarantee": {
+            "label": "100% Garanti",
+            "desc": "Ou remboursé"
+          },
+          "security": {
+            "label": "Ultra Sécurisé",
+            "desc": "Données protégées"
+          },
+          "support": {
+            "label": "Support VIP",
+            "desc": "Assistance premium"
+          }
+        },
+        "videoPlaceholder": "Transformation en cours...",
+        "floatingStats": "Étudiants transformés"
+      }
+    },
+    "blog": {
+      "badge": "Blog Éducatif",
+      "title": {
+        "line1": "Nous partageons nos",
+        "line2": "Idées Éducatives"
+      },
+      "subtitle": "Vous n'êtes pas seul dans votre parcours, nous vous offrons notre soutien et notre guidance pour réussir ensemble",
+      "stats": {
+        "readers": "Lecteurs",
+        "articles": "Articles",
+        "satisfaction": "Satisfaction"
+      },
+      "readMore": "Lire plus",
+      "viewAll": "📖 Voir tous les articles",
+      "posts": {
+        "post1": {
+          "title": "L'excellence éducative : Entre tradition et innovation",
+          "category": "Éducation",
+          "author": "Aminata Diallo",
+          "date": "15 Nov 2024",
+          "excerpt": "Découvrez comment l'éducation moderne évolue avec les changements technologiques"
+        },
+        "post2": {
+          "title": "Méthodes pédagogiques innovantes dans les écoles modernes",
+          "category": "Innovation",
+          "author": "Kwame Nkrumah",
+          "date": "28 Oct 2024",
+          "excerpt": "Nouvelles méthodologies qui transforment les expériences éducatives"
+        },
+        "post3": {
+          "title": "Construire des communautés éducatives solides",
+          "category": "Communauté",
+          "author": "Fatoumata Bâ",
+          "date": "10 Oct 2024",
+          "excerpt": "Comment les environnements collaboratifs améliorent la réussite des élèves"
+        },
+        "post4": {
+          "title": "L'impact des technologies numériques sur l'apprentissage",
+          "category": "Technologie",
+          "author": "Jean Koffi",
+          "date": "5 Oct 2024",
+          "excerpt": "Exploration des outils numériques qui révolutionnent l'enseignement"
+        },
+        "post5": {
+          "title": "Stratégies pour engager les parents dans l'éducation",
+          "category": "Engagement",
+          "author": "Sophie Laurent",
+          "date": "22 Sep 2024",
+          "excerpt": "Techniques pour améliorer la participation des parents dans le parcours scolaire"
+        },
+        "post6": {
+          "title": "Évaluation des compétences au 21ème siècle",
+          "category": "Pédagogie",
+          "author": "Thomas Bernard",
+          "date": "14 Sep 2024",
+          "excerpt": "Nouvelles approches pour évaluer les compétences des élèves aujourd'hui"
+        }
+      }
+    },
+    "courses": {
+      "badge": "📚 Formations SchoolChat",
+      "title": {
+        "line1": "Découvrez Nos Formations",
+        "line2": "SchoolChat Pro"
+      },
+      "subtitle": "🚀 Maîtrisez la communication éducative moderne et optimisez le suivi scolaire de vos enfants ✨",
+      "stats": {
+        "students": "Étudiants",
+        "courses": "Cours",
+        "satisfaction": "Satisfaction"
+      },
+      "card": {
+        "lessons": "leçons",
+        "instructor": "Formateur Expert",
+        "cta": "Commencer"
+      },
+      "badgePopular": "Populaire",
+      "courses": {
+        "course1": {
+          "title": "Communication Parents-École Moderne",
+          "description": "Maîtrisez les outils de communication numérique pour un suivi optimal",
+          "category": "Communication",
+          "subcategory": "Digital",
+          "instructor": "Marie Dubois",
+          "price": "Gratuit",
+          "duration": "3 semaines",
+          "level": "Débutant"
+        },
+        "course2": {
+          "title": "Suivi Scolaire Numérique",
+          "description": "Optimisez le suivi des résultats et progrès de vos enfants",
+          "category": "Suivi",
+          "subcategory": "Éducatif",
+          "instructor": "Pierre Martin",
+          "price": "29€",
+          "duration": "4 semaines",
+          "level": "Intermédiaire"
+        },
+        "course3": {
+          "title": "Gestion des Notifications Intelligentes",
+          "description": "Restez informé sans être submergé par les alertes",
+          "category": "Gestion",
+          "subcategory": "Productivité",
+          "instructor": "Sophie Laurent",
+          "price": "Gratuit",
+          "duration": "2 semaines",
+          "level": "Tous niveaux"
+        },
+        "course4": {
+          "title": "Application Mobile SchoolChat",
+          "description": "Maîtrisez toutes les fonctionnalités de l'app mobile",
+          "category": "Mobile",
+          "subcategory": "Application",
+          "instructor": "Lucas Moreau",
+          "price": "19€",
+          "duration": "2 semaines",
+          "level": "Débutant"
+        },
+        "course5": {
+          "title": "Collaboration Parents-Enseignants",
+          "description": "Créez un environnement collaboratif pour la réussite",
+          "category": "Collaboration",
+          "subcategory": "Pédagogie",
+          "instructor": "Anne Rousseau",
+          "price": "39€",
+          "duration": "5 semaines",
+          "level": "Avancé"
+        },
+        "course6": {
+          "title": "Tableaux de Bord et Analyses",
+          "description": "Exploitez les données pour un meilleur accompagnement",
+          "category": "Analyse",
+          "subcategory": "Données",
+          "instructor": "Thomas Bernard",
+          "price": "49€",
+          "duration": "3 semaines",
+          "level": "Intermédiaire"
+        }
+      },
+      "cta": {
+        "title": "Prêt à transformer votre communication scolaire ?",
+        "subtitle": "Rejoignez plus de 1500 familles qui ont révolutionné leur suivi scolaire avec SchoolChat",
+        "button1": "🚀 Commencer gratuitement",
+        "button2": "📞 Démonstration"
+      }
+    },
+    "instructor": {
+      "badge": "Qu'est-ce que SchoolChat ?",
+      "title": {
+        "line1": "La Révolution de la",
+        "line2": "Communication Éducative"
+      },
+      "subtitle": "Transformez la relation école-famille avec notre plateforme innovante de communication scolaire moderne et intuitive",
+      "features": {
+        "communication": {
+          "title": "Communication Instantanée",
+          "desc": "Échangez en temps réel avec les enseignants et suivez les progrès de vos enfants",
+          "cta": "Commencer maintenant"
+        },
+        "mobile": {
+          "title": "Application Mobile",
+          "desc": "Accédez à toutes les informations scolaires depuis votre smartphone",
+          "cta": "Télécharger l'app"
+        }
+      },
+      "stats": {
+        "badge": "Nous Sommes Fiers",
+        "title": "Des Résultats qui Parlent",
+        "subtitle": "Rejoignez des milliers de familles qui ont transformé leur communication scolaire avec SchoolChat",
+        "families": "Familles Connectées",
+        "messages": "Messages Échangés",
+        "schools": "Établissements Partenaires",
+        "satisfaction": "Taux de Satisfaction"
+      },
+      "cta": {
+        "title": "Prêt à révolutionner votre communication scolaire ?",
+        "subtitle": "Plus de 2800 familles nous font confiance. Rejoignez la révolution éducative dès aujourd'hui !",
+        "startFree": "Commencer gratuitement",
+        "demo": "Demander une démo"
+      }
+    },
+    "functionalities": {
+      "badge": "Fonctionnalités",
+      "title": "Nos Fonctionnalités",
+      "subtitle": "Découvrez les outils magiques qui transformeront votre expérience éducative",
+      "features": {
+        "textbook": {
+          "title": "Cahier de texte",
+          "desc": "Organisez et accédez facilement aux notes de cours et au contenu de chaque sujet."
+        },
+        "messaging": {
+          "title": "Messagerie",
+          "desc": "Communiquez facilement avec les enseignants et les autres élèves."
+        },
+        "homework": {
+          "title": "Devoirs",
+          "desc": "Suivez les devoirs assignés et gérez les dates de rendu efficacement."
+        },
+        "attendance": {
+          "title": "Suivi des absences",
+          "desc": "Gardez un enregistrement des absences et suivez les retards."
+        },
+        "goals": {
+          "title": "Objectifs scolaires",
+          "desc": "Définissez et suivez les objectifs scolaires de manière structurée."
+        },
+        "schedule": {
+          "title": "Planning & Emploi du temps",
+          "desc": "Gérez votre emploi du temps et planifiez vos activités scolaires."
+        }
+      },
+      "learnMore": "En savoir plus"
+    },
+    "accountActivation": {
+      "title": "Activation du compte",
+      "loading": "Veuillez patienter pendant que nous vérifions votre compte...",
+      "success": {
+        "title": "Compte activé avec succès !",
+        "message": "Votre compte a été vérifié et activé.",
+        "redirect": "Vous serez redirigé vers la page de mot de passe dans {countdown} secondes...",
+        "setPassword": "Définir le mot de passe maintenant"
+      },
+      "error": {
+        "title": "Échec de l'activation",
+        "regeneratePrompt": "Veuillez saisir votre adresse e-mail pour régénérer le token",
+        "emailPlaceholder": "Entrez votre email",
+        "send": "Envoyer",
+        "regenerateSuccess": "Token régénéré avec succès. Redirection en cours...",
+        "regenerateError": "Échec de la régénération du token",
+        "goToLogin": "Aller à la connexion",
+        "contactSupport": "Contacter le support"
+      },
+      "footer": {
+        "copyright": "Tous droits réservés.",
+        "terms": "Conditions d'utilisation",
+        "privacy": "Politique de confidentialité"
+      }
+    },
+    "forgotPassword": {
+      "title": "Mot de passe oublié",
+      "subtitle": "Entrez votre adresse e-mail pour réinitialiser votre mot de passe",
+      "email": "Adresse e-mail",
+      "emailPlaceholder": "Entrez votre adresse e-mail",
+      "send": "Envoyer le lien de réinitialisation",
+      "sending": "Envoi en cours...",
+      "backToLogin": "Retour à la connexion",
+      "success": "Un lien de réinitialisation a été envoyé à votre adresse e-mail",
+      "error": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "resetPassword": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Entrez votre nouveau mot de passe",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "reset": "Réinitialiser le mot de passe",
+      "resetting": "Réinitialisation en cours...",
+      "success": "Mot de passe réinitialisé avec succès",
+      "error": "Une erreur s'est produite. Veuillez réessayer.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas"
+    },
+    "verifyEmail": {
+      "title": "Vérifiez votre e-mail",
+      "message": "Nous avons envoyé un lien de vérification à votre adresse e-mail",
+      "checkInbox": "Vérifiez votre boîte de réception et cliquez sur le lien pour activer votre compte",
+      "noEmail": "Vous n'avez pas reçu l'e-mail ?",
+      "resend": "Renvoyer",
+      "backToLogin": "Retour à la connexion"
+    },
+    "passwordPage": {
+      "title": "Définir votre mot de passe",
+      "subtitle": "Créez un mot de passe sécurisé pour votre compte",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "requirements": {
+        "title": "Exigences du mot de passe :",
+        "length": "Au moins 8 caractères",
+        "uppercase": "Une lettre majuscule",
+        "lowercase": "Une lettre minuscule",
+        "number": "Un chiffre",
+        "special": "Un caractère spécial"
+      },
+      "create": "Créer le mot de passe",
+      "creating": "Création en cours...",
+      "success": "Mot de passe créé avec succès",
+      "error": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "signup": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Email"
+    }
+  },
+  "footer": {
+    "about": {
+      "description": "Plateforme éducative connectant étudiants, enseignants et parents."
+    },
+    "contact": {
+      "title": "Contact",
+      "contactUs": "Nous Contacter",
+      "support": "Support",
+      "helpCenter": "Centre d'Aide"
+    },
+    "legal": {
+      "title": "Légal",
+      "privacy": "Confidentialité",
+      "terms": "Conditions",
+      "legalNotice": "Mentions Légales"
+    },
+    "resources": {
+      "title": "Ressources",
+      "userGuide": "Guide Utilisateur",
+      "blog": "Blog",
+      "faq": "FAQ"
+    },
+    "copyright": "Tous droits réservés."
+  },
+  "dashboard": {
+    "title": "Tableau de Bord Éducatif",
+    "subtitle": "Gestion des cours, exercices et progression des élèves",
+    "loading": "Chargement du tableau de bord...",
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "recentActivities": "Activités Récentes",
+    "stats": {
+      "availableCourses": "Cours Disponibles",
+      "exercises": "Exercices",
+      "activeClasses": "Classes Actives",
+      "avgProgress": "Progression Moy.",
+      "subjects": "{count} matières",
+      "completed": "{percent}% terminés",
+      "students": "{count} élèves",
+      "allClasses": "Toutes classes",
+      "thisMonth": "ce mois"
+    },
+    "charts": {
+      "courseDistribution": "Répartition des Cours par Matière",
+      "studentProgress": "Progression des Élèves par Classe",
+      "monthlyActivity": "Activité Éducative Mensuelle",
+      "exerciseStatus": "État des Exercices",
+      "subject": "Matière",
+      "class": "Classe",
+      "progressPercent": "Progression (%)",
+      "coursesCreated": "Cours créés",
+      "exercisesAdded": "Exercices ajoutés",
+      "completions": "Completions"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Fév",
+      "mar": "Mar",
+      "apr": "Avr",
+      "may": "Mai",
+      "jun": "Juin"
+    },
+    "completion": {
+      "completed": "Terminés",
+      "inProgress": "En Cours",
+      "notStarted": "Non Commencés"
+    },
+    "activities": {
+      "newCourse": "Nouveau cours: Algèbre Linéaire",
+      "exerciseCompleted": "Exercice complété par {count} élèves",
+      "newClass": "Nouvelle classe créée",
+      "progressReached": "Progression atteint 80%",
+      "subjectUpdated": "Matière mise à jour",
+      "system": "Système",
+      "hoursAgo": "Il y a {count}h",
+      "daysAgo": "Il y a {count}j"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des données du tableau de bord",
+      "subjectNameRequired": "Le nom de la matière est requis",
+      "genericError": "Une erreur s'est produite",
+      "networkError": "Erreur réseau. Veuillez vérifier votre connexion.",
+      "requestError": "Erreur de configuration de la requête: "
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de Bord Éducatif",
+    "subtitle": "Gestion des cours, exercices et progression des élèves",
+    "loading": "Chargement du tableau de bord...",
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "recentActivities": "Activités Récentes",
+    "stats": {
+      "availableCourses": "Cours Disponibles",
+      "exercises": "Exercices",
+      "activeClasses": "Classes Actives",
+      "avgProgress": "Progression Moy.",
+      "subjects": "{count} matières",
+      "completed": "{percent}% terminés",
+      "students": "{count} élèves",
+      "allClasses": "Toutes classes",
+      "thisMonth": "ce mois"
+    },
+    "charts": {
+      "courseDistribution": "Répartition des Cours par Matière",
+      "studentProgress": "Progression des Élèves par Classe",
+      "monthlyActivity": "Activité Éducative Mensuelle",
+      "exerciseStatus": "État des Exercices",
+      "subject": "Matière",
+      "class": "Classe",
+      "progressPercent": "Progression (%)",
+      "coursesCreated": "Cours créés",
+      "exercisesAdded": "Exercices ajoutés",
+      "completions": "Completions"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Fév",
+      "mar": "Mar",
+      "apr": "Avr",
+      "may": "Mai",
+      "jun": "Juin"
+    },
+    "completion": {
+      "completed": "Terminés",
+      "inProgress": "En Cours",
+      "notStarted": "Non Commencés"
+    },
+    "activities": {
+      "newCourse": "Nouveau cours: Algèbre Linéaire",
+      "exerciseCompleted": "Exercice complété par {count} élèves",
+      "newClass": "Nouvelle classe créée",
+      "progressReached": "Progression atteint 80%",
+      "subjectUpdated": "Matière mise à jour",
+      "system": "Système",
+      "hoursAgo": "Il y a {count}h",
+      "daysAgo": "Il y a {count}j"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des données du tableau de bord",
+      "subjectNameRequired": "Le nom de la matière est requis",
+      "genericError": "Une erreur s'est produite",
+      "networkError": "Erreur réseau. Veuillez vérifier votre connexion.",
+      "requestError": "Erreur de configuration de la requête: "
+    }
+  },
+  "activities": {
+    "title": "Fil d'actualité",
+    "actions": {
+      "create": "Créer",
+      "like": "J'aime",
+      "comment": "Commenter",
+      "participate": "Participer",
+      "share": "Partager",
+      "select": "Sélectionner",
+      "processing": "Traitement...",
+      "creating": "Création...",
+      "createEvent": "Créer l'événement",
+      "shareDemo": "Fonctionnalité de partage (demo)"
+    },
+    "createEvent": {
+      "title": "Créer un événement",
+      "subtitle": "Remplissez les informations de votre événement"
+    },
+    "form": {
+      "title": "Titre",
+      "titlePlaceholder": "Mon événement",
+      "description": "Description",
+      "descriptionPlaceholder": "Description de l'événement",
+      "location": "Lieu",
+      "locationPlaceholder": "Salle de conférence",
+      "startTime": "Début",
+      "endTime": "Fin",
+      "status": "État",
+      "images": "Images (optionnel)",
+      "addImages": "Ajouter des images",
+      "selectFiles": "Cliquez pour sélectionner des fichiers",
+      "selectedImages": "Images sélectionnées ({count})",
+      "imageNumber": "Image {number}",
+      "readyToUpload": "Prêt à être uploadé",
+      "commentPlaceholder": "Écrivez un commentaire..."
+    },
+    "status": {
+      "planned": "Planifié",
+      "inProgress": "En cours",
+      "completed": "Terminé",
+      "cancelled": "Annulé"
+    },
+    "noActivities": {
+      "title": "Aucune activité disponible",
+      "description": "Soyez le premier à créer un événement et à partager vos activités avec la communauté.",
+      "createFirst": "Créer le premier événement"
+    },
+    "participants": "{count} participant{count, plural, one {} other {s}}",
+    "comments": "{count} commentaire{count, plural, one {} other {s}}",
+    "validation": {
+      "requiredFields": "Veuillez remplir tous les champs obligatoires"
+    },
+    "errors": {
+      "imageUploadFailed": "Erreur lors du téléchargement des images",
+      "createEventFailed": "Erreur lors de la création de l'événement"
+    }
+  },
+  "subjects": {
+    "title": "Gestion des Matières",
+    "subtitle": "Gérez les matières scolaires de votre établissement",
+    "actions": {
+      "new": "Nouvelle Matière",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "refresh": "Actualiser",
+      "create": "Créer",
+      "update": "Modifier",
+      "cancel": "Annuler",
+      "confirm": "Confirmer"
+    },
+    "form": {
+      "name": "Nom de la matière",
+      "namePlaceholder": "Ex: Mathématiques",
+      "description": "Description",
+      "descriptionPlaceholder": "Description de la matière...",
+      "nameRequired": "Le nom de la matière est requis"
+    },
+    "table": {
+      "subject": "Matière",
+      "description": "Description",
+      "creationDate": "Date de Création",
+      "status": "État",
+      "actions": "Actions",
+      "noDescription": "Aucune description"
+    },
+    "status": {
+      "active": "ACTIF",
+      "inactive": "INACTIF"
+    },
+    "messages": {
+      "loadError": "Erreur lors du chargement des matières",
+      "createSuccess": "Matière créée avec succès",
+      "createError": "Erreur lors de la création",
+      "updateSuccess": "Matière modifiée avec succès",
+      "updateError": "Erreur lors de la modification",
+      "deleteSuccess": "Matière supprimée avec succès",
+      "deleteError": "Erreur lors de la suppression",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer la matière",
+      "deleteWarning": "Cette action est irréversible."
+    },
+    "search": {
+      "placeholder": "Rechercher une matière...",
+      "noResults": "Aucune matière trouvée",
+      "noResultsDesc": "Essayez de modifier vos critères de recherche",
+      "empty": "Aucune matière",
+      "emptyDesc": "Commencez par créer votre première matière"
+    },
+    "pagination": {
+      "showing": "Affichage de {start} à {end} sur {total} matières"
+    },
+    "modals": {
+      "create": "Nouvelle Matière",
+      "edit": "Modifier la Matière",
+      "delete": "Confirmer la suppression",
+      "creating": "Création...",
+      "updating": "Modification...",
+      "deleting": "Suppression..."
+    },
+    "access": {
+      "restricted": "Accès Restreint",
+      "restrictedDesc": "Vous n'avez pas les permissions nécessaires pour accéder à cette section. Seuls les administrateurs et professeurs peuvent gérer les matières."
+    }
+  },
+  "professors": {
+    "title": "Gestion des Professeurs",
+    "subtitle": "Gérez efficacement vos professeurs",
+    "stats": {
+      "total": "Total",
+      "active": "Actifs",
+      "pending": "En attente",
+      "inactive": "Inactifs",
+      "validated": "Validés",
+      "validation": "Validation",
+      "deactivated": "Désactivés"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "awaiting": "En attente",
+      "suspect": "Suspect",
+      "reported": "Signalé",
+      "pending": "En cours",
+      "rejected": "Rejeté"
+    },
+    "actions": {
+      "add": "Ajouter",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "view": "Voir les détails",
+      "grid": "Grille",
+      "table": "Table"
+    },
+    "search": {
+      "placeholder": "Rechercher...",
+      "all": "Tous",
+      "noResults": "Aucun résultat trouvé",
+      "noResultsDesc": "Essayez de modifier vos critères de recherche.",
+      "noProfessors": "Aucun professeur enregistré",
+      "noProfessorsDesc": "Il n'y a actuellement aucun professeur dans le système."
+    },
+    "table": {
+      "professor": "Professeur",
+      "contact": "Contact",
+      "matricule": "Matricule",
+      "classes": "Classes",
+      "status": "Statut",
+      "rights": "Droits",
+      "actions": "Actions",
+      "none": "Aucune",
+      "notSpecified": "Non renseigné"
+    },
+    "rights": {
+      "publish": "Publier",
+      "moderate": "Modérer",
+      "none": "Aucun"
+    },
+    "loading": {
+      "data": "Chargement des données...",
+      "processing": "Traitement en cours..."
+    },
+    "errors": {
+      "loadData": "Erreur lors du chargement des données: ",
+      "delete": "Erreur lors de la suppression: "
+    }
+  },
+  "admin": {
+    "title": "Gestion des Administrateurs",
+    "subtitle": "Gérez efficacement les comptes administrateurs du système",
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "pending": "En attente"
+    },
+    "actions": {
+      "view": "Voir",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "create": "Créer",
+      "cancel": "Annuler",
+      "close": "Fermer"
+    },
+    "loading": "Chargement des données...",
+    "stats": {
+      "total": "Total Admins",
+      "active": "Actifs",
+      "pending": "En attente",
+      "systemAdmins": "Administrateurs système",
+      "validatedAccounts": "Comptes validés",
+      "validationRequired": "Validation requise"
+    },
+    "search": {
+      "placeholder": "Rechercher par nom, email...",
+      "allStatuses": "Tous les statuts",
+      "grid": "Grille",
+      "table": "Table",
+      "newAdmin": "Nouvel Admin"
+    },
+    "table": {
+      "administrator": "Administrateur",
+      "contact": "Contact",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "empty": {
+      "noResults": "Aucun résultat trouvé",
+      "noAdmins": "Aucun administrateur enregistré",
+      "noResultsDesc": "Essayez de modifier vos critères de recherche ou de filtrage pour voir plus de résultats.",
+      "noAdminsDesc": "Commencez par ajouter votre premier administrateur au système.",
+      "addAdmin": "Ajouter un administrateur"
+    },
+    "processing": "Traitement en cours...",
+    "modals": {
+      "create": "Nouvel Administrateur",
+      "edit": "Modifier l'Administrateur",
+      "createDesc": "Ajouter un nouvel administrateur au système",
+      "editDesc": "Modifier les informations de l'administrateur"
+    },
+    "form": {
+      "lastName": "Nom",
+      "firstName": "Prénom",
+      "lastNamePlaceholder": "Entrez le nom",
+      "firstNamePlaceholder": "Entrez le prénom",
+      "email": "Email",
+      "phone": "Téléphone",
+      "address": "Adresse",
+      "status": "Statut",
+      "creationDate": "Date de Création"
+    },
+    "modal": {
+      "contactInfo": "Informations de Contact",
+      "accountInfo": "Informations du Compte",
+      "confirmDelete": "Confirmer la suppression",
+      "irreversible": "Cette action est irréversible",
+      "deleteConfirmText": "Êtes-vous sûr de vouloir supprimer l'administrateur",
+      "dataLossWarning": "Toutes les données associées seront définitivement perdues."
+    },
+    "role": {
+      "administrator": "Administrateur"
+    }
+  },
+  "parents": {
+    "title": "Gestion des Parents",
+    "subtitle": "Gérez efficacement les parents et leurs associations aux classes",
+    "stats": {
+      "total": "Total",
+      "active": "Actifs",
+      "pending": "En attente",
+      "inactive": "Inactifs",
+      "registered": "Parents enregistrés",
+      "validated": "Comptes validés",
+      "validation": "Validation requise",
+      "deactivated": "Comptes désactivés"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "pending": "En attente",
+      "awaitingValidation": "En attente de validation"
+    },
+    "actions": {
+      "add": "Ajouter",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "view": "Voir les détails",
+      "grid": "Grille",
+      "table": "Table"
+    },
+    "search": {
+      "placeholder": "Rechercher par nom, email, téléphone...",
+      "allStatuses": "Tous les statuts",
+      "noResults": "Aucun résultat trouvé",
+      "noResultsDesc": "Essayez de modifier vos critères de recherche ou de filtrage pour voir plus de résultats.",
+      "noParents": "Aucun parent enregistré",
+      "noParentsDesc": "Il n'y a actuellement aucun parent dans le système.",
+      "addParent": "Ajouter un parent"
+    },
+    "table": {
+      "parent": "Parent",
+      "contact": "Contact",
+      "registrationDate": "Date d'inscription",
+      "associatedClasses": "Classes Associées",
+      "status": "Statut",
+      "actions": "Actions",
+      "none": "Aucune",
+      "notSpecified": "Non renseigné",
+      "noClass": "Aucune classe"
+    },
+    "card": {
+      "registeredOn": "Inscrit le",
+      "associatedClasses": "Classes associées",
+      "noClassAssociated": "Aucune classe associée"
+    },
+    "loading": {
+      "data": "Chargement des données...",
+      "processing": "Traitement en cours..."
+    },
+    "errors": {
+      "loadData": "Erreur lors du chargement des données : ",
+      "delete": "Erreur lors de la suppression : "
+    }
+  },
+  "sidebar": {
+    "dashboard": "Tableau de Bord",
+    "activities": "Activités",
+    "manageUsers": "Gérer Utilisateur",
+    "admin": "Admin",
+    "professors": "Professeurs",
+    "parents": "Parents",
+    "students": "Élèves",
+    "others": "Autres",
+    "subjects": "Matières",
+    "rejectionReasons": "Motifs de Rejet",
+    "classes": "Classes",
+    "createClass": "Créer une Classe",
+    "manageClass": "Gérer une Classe",
+    "establishments": "Établissements",
+    "createEstablishment": "Créer un Établissement",
+    "manageEstablishment": "Gérer un Établissement",
+    "messaging": "Messagerie",
+    "manageCourses": "Gérer les Cours",
+    "courses": "Cours",
+    "scheduleCourse": "Programmer le Cours",
+    "exercises": "Exercices",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "logoutConfirmation": {
+      "title": "Confirmation",
+      "message": "Êtes-vous sûr de vouloir vous déconnecter?",
+      "cancel": "Annuler",
+      "confirm": "Confirmer"
+    }
+  }
+}

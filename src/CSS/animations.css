@@ -1,0 +1,47 @@
+/* animations.css */
+
+/* Smooth floating animation instead of harsh shake */
+@keyframes smoothFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.smooth-float {
+  animation: smoothFloat 3s ease-in-out infinite;
+}
+
+/* Keep original shake if you prefer it, but make it smoother */
+@keyframes shakeUpDown {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-25px);
+  }
+}
+
+.shake {
+  animation: shakeUpDown 3.5s ease-in-out infinite;
+}
+
+/* Typewriter cursor blink */
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1.2s infinite;
+}
