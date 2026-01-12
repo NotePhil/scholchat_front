@@ -3,6 +3,11 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Health check endpoint
+app.get('/healthz', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Serve static files from the React app build directory
 app.use(express.static(path.join(__dirname, 'build')));
 

@@ -3,7 +3,10 @@ services:
     name: scholchat-front
     env: node
     buildCommand: npm run build
-    startCommand: npm start
+    startCommand: node server.js
+    healthCheckPath: /healthz
     envVars:
       - key: NODE_VERSION
         value: 18.17.0
+      - key: NODE_ENV
+        value: production
