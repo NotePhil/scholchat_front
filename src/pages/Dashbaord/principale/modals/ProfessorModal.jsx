@@ -3,7 +3,6 @@ import {
   X,
   Save,
   Camera,
-  Upload,
   Check,
   XCircle,
   User,
@@ -12,7 +11,6 @@ import {
   MapPin,
   IdCard,
   FileImage,
-  AlertCircle,
   Shield,
 } from "lucide-react";
 import { scholchatService } from "../../../../services/ScholchatService";
@@ -119,7 +117,7 @@ const ProfessorModal = ({
         loadExistingImages(selectedProfessor);
       }
     }
-  }, [showModal, modalMode, selectedProfessor]);
+  }, [showModal, modalMode, selectedProfessor, loadExistingImages]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

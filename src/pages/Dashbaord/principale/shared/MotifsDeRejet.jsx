@@ -14,7 +14,6 @@ import { rejectionServiceClass } from "../../../../services/RejectionServiceClas
 import { themes, colorSchemes } from "../../theme";
 
 const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
-  const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState("prof"); // "prof" or "classe"
   const [motifs, setMotifs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -107,7 +106,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
 
   useEffect(() => {
     fetchMotifs();
-  }, [selectedType]); // Re-fetch when type changes
+  }, [selectedType, fetchMotifs]); // Re-fetch when type changes
 
   // Form validation
   const validateMotif = () => {
