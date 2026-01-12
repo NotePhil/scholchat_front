@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
-import { ArrowRight, ArrowLeft, Loader, X } from "lucide-react";
+import { ArrowRight, ArrowLeft, X } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../CSS/Signup.css";
 import axios from "axios";
@@ -710,12 +710,6 @@ const SignUp = () => {
         ? "Mettre à jour mes informations"
         : "Terminer l'inscription";
     }
-  };
-
-  const getStepTitle = () => {
-    if (currentStep === 1) return "Informations personnelles";
-    if (currentStep === 2) return "Type de compte";
-    if (currentStep === 3) return "Documents et photo";
   };
 
   const ImagePreview = ({ src, alt, onRemove }) => {

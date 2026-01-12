@@ -91,7 +91,7 @@ class ClassService {
         try {
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json();
+            await response.json();
             errorMessage = "Server error";
           } else {
             // If not JSON, get text content for debugging

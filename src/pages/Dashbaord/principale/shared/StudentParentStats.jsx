@@ -14,20 +14,11 @@ import {
   Line,
 } from "recharts";
 import {
-  Users,
-  GraduationCap,
   BookOpen,
-  School,
   TrendingUp,
-  UserCheck,
   MessageCircle,
-  Clock,
-  Mail,
-  Calendar,
-  Star,
   Award,
   Target,
-  Activity,
   Bell,
   User,
   CheckCircle,
@@ -68,7 +59,7 @@ const StudentParentStats = ({
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
 
   // Different stats for each student
-  const [studentStats, setStudentStats] = useState({
+  const [studentStats] = useState({
     1: {
       // First child's stats
       myClasses: 5,
@@ -190,8 +181,8 @@ const StudentParentStats = ({
   const [localStats, setLocalStats] = useState(
     studentStats[selectedStudent.id]
   );
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [isLoading] = useState(false);
+  const [error] = useState(null);
 
   const [performanceData, setPerformanceData] = useState(
     localStats.performanceData

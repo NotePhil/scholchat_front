@@ -125,44 +125,44 @@ export const createEstablishment = createAsyncThunk(
 );
 
 // Helper function to filter classes
-const filterClasses = (classes, searchTerm, currentTab, user) => {
-  let filtered = classes || [];
+// const filterClasses = (classes, searchTerm, currentTab, user) => {
+//   let filtered = classes || [];
 
-  // Apply search filter
-  if (searchTerm) {
-    const search = searchTerm.toLowerCase();
-    filtered = filtered.filter(
-      (cls) =>
-        cls.nom?.toLowerCase().includes(search) ||
-        cls.matiere?.toLowerCase().includes(search) ||
-        cls.professeur?.nom?.toLowerCase().includes(search) ||
-        cls.etablissement?.nom?.toLowerCase().includes(search)
-    );
-  }
+//   // Apply search filter
+//   if (searchTerm) {
+//     const search = searchTerm.toLowerCase();
+//     filtered = filtered.filter(
+//       (cls) =>
+//         cls.nom?.toLowerCase().includes(search) ||
+//         cls.matiere?.toLowerCase().includes(search) ||
+//         cls.professeur?.nom?.toLowerCase().includes(search) ||
+//         cls.etablissement?.nom?.toLowerCase().includes(search)
+//     );
+//   }
 
-  // Apply status filter
-  if (currentTab !== "all") {
-    const statusMap = {
-      active: "ACTIF",
-      inactive: "INACTIF",
-      pending: "EN_ATTENTE",
-    };
-    filtered = filtered.filter((cls) => cls.statut === statusMap[currentTab]);
-  }
+//   // Apply status filter
+//   if (currentTab !== "all") {
+//     const statusMap = {
+//       active: "ACTIF",
+//       inactive: "INACTIF",
+//       pending: "EN_ATTENTE",
+//     };
+//     filtered = filtered.filter((cls) => cls.statut === statusMap[currentTab]);
+//   }
 
-  // Apply role-based filter
-  if (user) {
-    if (user.role === "PROFESSEUR") {
-      filtered = filtered.filter((cls) => cls.professeur?.id === user.id);
-    } else if (user.role === "ETABLISSEMENT") {
-      filtered = filtered.filter(
-        (cls) => cls.etablissement?.id === user.etablissementId
-      );
-    }
-  }
+//   // Apply role-based filter
+//   if (user) {
+//     if (user.role === "PROFESSEUR") {
+//       filtered = filtered.filter((cls) => cls.professeur?.id === user.id);
+//     } else if (user.role === "ETABLISSEMENT") {
+//       filtered = filtered.filter(
+//         (cls) => cls.etablissement?.id === user.etablissementId
+//       );
+//     }
+//   }
 
-  return filtered;
-};
+//   return filtered;
+// };
 
 const initialState = {
   classes: [],

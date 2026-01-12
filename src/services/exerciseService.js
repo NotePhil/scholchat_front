@@ -840,7 +840,7 @@ export const utils = {
   mapNiveauToEnum,
 };
 
-export default {
+const exerciseServiceExport = {
   exercise: exerciseService,
   exerciseProgrammer: exerciseProgrammerService,
   questionReponse: questionReponseService,
@@ -848,3 +848,5 @@ export default {
   participationExercise: participationExerciseService,
   utils,
 };
+
+export default exerciseServiceExport;
