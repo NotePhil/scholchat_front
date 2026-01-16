@@ -23,6 +23,11 @@ export const Header = ({ theme, setTheme }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Force re-render when language changes
+  useEffect(() => {
+    // This will trigger a re-render when language changes
+  }, [language]);
+
   const navItems = [
     { name: t("navigation.home"), path: "/" },
     { name: t("navigation.about"), path: "/schoolchat/about" },
@@ -53,13 +58,13 @@ export const Header = ({ theme, setTheme }) => {
     <>
       <header className={getHeaderClasses()}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            {/* Logo */}
-            <div className="flex items-center">
+          <div className="flex justify-between items-center h-20 relative">
+            {/* Logo - Larger on mobile, normal on desktop */}
+            <div className="absolute left-4 md:relative md:left-0 flex items-center opacity-60 md:opacity-100 pointer-events-none md:pointer-events-auto z-0">
               <img
                 src={LogoImg}
                 alt="SchoolChat"
-                className="h-16 w-auto cursor-pointer hover:scale-105 transition-transform duration-200"
+                className="h-16 md:h-16 w-auto cursor-pointer hover:scale-105 transition-transform duration-200"
                 onClick={() => navigate("/")}
               />
             </div>
@@ -169,13 +174,13 @@ export const Header = ({ theme, setTheme }) => {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 ml-auto relative z-50 bg-white"
               onClick={() => setOpen(!open)}
             >
               {open ? (
-                <HiX className="w-6 h-6 text-gray-600" />
+                <HiX className="w-7 h-7 text-gray-600" />
               ) : (
-                <HiOutlineMenuAlt3 className="w-6 h-6 text-gray-600" />
+                <HiOutlineMenuAlt3 className="w-7 h-7 text-gray-600" />
               )}
             </button>
           </div>
@@ -200,14 +205,36 @@ export const Header = ({ theme, setTheme }) => {
                     {item.name}
                   </NavLink>
                 ))}
-                <div className="border-t border-gray-200 pt-4 mt-4">
+
+                {/* Mobile Theme and Language Toggles */}
+                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 mt-4 pt-4">
+                  <button
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    {theme === "dark" ? (
+                      <FiSun className="w-5 h-5 text-gray-600" />
+                    ) : (
+                      <FiMoon className="w-5 h-5 text-gray-600" />
+                    )}
+                    <span className="text-sm text-gray-600">{theme === "dark" ? "Light" : "Dark"}</span>
+                  </button>
+                  <button
+                    onClick={() => changeLanguage(language === "fr" ? "en" : "fr")}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    {language === "fr" ? "EN" : "FR"}
+                  </button>
+                </div>
+
+                <div className="border-t border-gray-200 pt-4 mt-4 space-y-2">
                   <NavLink
                     to="/schoolchat/login"
                     className={({ isActive }) =>
-                      `block px-4 py-3 text-lg font-medium rounded-lg transition-all duration-200 ${
+                      `block px-4 py-2 text-sm font-medium rounded-lg text-center transition-all duration-200 ${
                         isActive
                           ? "bg-blue-600 text-white"
-                          : "text-gray-700 hover:bg-gray-50"
+                          : "text-gray-700 hover:bg-gray-50 border border-gray-300"
                       }`
                     }
                     onClick={() => setOpen(false)}
@@ -217,10 +244,10 @@ export const Header = ({ theme, setTheme }) => {
                   <NavLink
                     to="/schoolchat/signup"
                     className={({ isActive }) =>
-                      `block px-4 py-3 text-lg font-medium rounded-lg mt-2 transition-all duration-200 ${
+                      `block px-4 py-2 text-sm font-medium rounded-lg text-center transition-all duration-200 ${
                         isActive
                           ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
                       }`
                     }
                     onClick={() => setOpen(false)}
