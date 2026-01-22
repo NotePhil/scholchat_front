@@ -770,8 +770,10 @@
       "description": "Soyez le premier à créer un événement et à partager vos activités avec la communauté.",
       "createFirst": "Créer le premier événement"
     },
-    "participants": "{count} participant{count, plural, one {} other {s}}",
-    "comments": "{count} commentaire{count, plural, one {} other {s}}",
+    "participants": "{count} participant",
+    "participantsPlural": "{count} participants",
+    "comments": "{count} commentaire",
+    "commentsPlural": "{count} commentaires",
     "validation": {
       "requiredFields": "Veuillez remplir tous les champs obligatoires"
     },

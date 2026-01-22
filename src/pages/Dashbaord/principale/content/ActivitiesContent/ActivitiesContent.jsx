@@ -26,6 +26,11 @@ import { useSelector } from "react-redux";
 const ActivitiesContent = () => {
   const { t } = useTranslation();
   const language = useSelector((state) => state.language?.currentLanguage || 'fr');
+  
+  // Helper function for French pluralization
+  const pluralize = (count, singular, plural) => {
+    return `${count} ${count === 1 ? singular : plural}`;
+  };
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [staticActivities] = useState([]);
@@ -902,13 +907,13 @@ const ActivitiesContent = () => {
                       )}
                       {activity.participants > 0 && (
                         <span>
-                          {t('activities.participants', { count: activity.participants })}
+                          {pluralize(activity.participants, 'participant', 'participants')}
                         </span>
                       )}
                     </div>
                     {activity.comments.length > 0 && (
                       <span>
-                        {t('activities.comments', { count: activity.comments.length })}
+                        {pluralize(activity.comments.length, 'commentaire', 'commentaires')}
                       </span>
                     )}
                   </div>
