@@ -187,30 +187,57 @@ export const Header = ({ theme, setTheme }) => {
 
           {/* Mobile Menu */}
           {open && (
-            <div className="md:hidden py-4 border-t border-gray-200">
+            <div className="md:hidden py-4 border-t border-gray-200 bg-white relative z-40">
               <div className="space-y-2">
                 {navItems.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `block px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                        isActive
-                          ? "bg-blue-50 text-blue-600"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`
-                    }
-                    onClick={() => setOpen(false)}
-                  >
-                    {item.name}
-                  </NavLink>
-                ))}
+                  item.hasDropdown ? (
+                    <div key={item.path} className="px-4">
+                      <div className="text-sm font-medium text-gray-700 py-2">{item.name}</div>
+                      <div className="ml-4 space-y-1">
+                        {item.dropdownItems.map((dropdownItem) => (
+                          <NavLink
+                            key={dropdownItem.path}
+                            to={dropdownItem.path}
+                            className={({ isActive }) =>
+                              `block px-3 py-2 text-sm rounded-lg transition-colors duration-200 touch-manipulation ${
+                                isActive
+                                  ? "bg-blue-50 text-blue-600"
+                                  : "text-gray-600 hover:bg-gray-50"
+                              }`
+                            }
+                            onClick={() => setOpen(false)}
+                          >
+                            {dropdownItem.name}
+                          </NavLink>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      className={({ isActive }) =>
+                        `block px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 touch-manipulation ${
+                          isActive
+                            ? "bg-blue-50 text-blue-600"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`
+                      }
+                      onClick={() => setOpen(false)}
+                    >
+                      {item.name}
+                    </NavLink>
+                  )
+                ))}}
 
                 {/* Mobile Theme and Language Toggles */}
                 <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 mt-4 pt-4">
                   <button
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onClick={() => {
+                      setTheme(theme === "dark" ? "light" : "dark");
+                      setOpen(false);
+                    }}
+                    className="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 touch-manipulation relative z-10 bg-white border border-gray-200"
                   >
                     {theme === "dark" ? (
                       <FiSun className="w-5 h-5 text-gray-600" />
@@ -220,8 +247,11 @@ export const Header = ({ theme, setTheme }) => {
                     <span className="text-sm text-gray-600">{theme === "dark" ? "Light" : "Dark"}</span>
                   </button>
                   <button
-                    onClick={() => changeLanguage(language === "fr" ? "en" : "fr")}
-                    className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onClick={() => {
+                      changeLanguage(language === "fr" ? "en" : "fr");
+                      setOpen(false);
+                    }}
+                    className="px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors duration-200 touch-manipulation relative z-10 bg-white border border-gray-200"
                   >
                     {language === "fr" ? "EN" : "FR"}
                   </button>
@@ -231,10 +261,10 @@ export const Header = ({ theme, setTheme }) => {
                   <NavLink
                     to="/schoolchat/login"
                     className={({ isActive }) =>
-                      `block px-4 py-2 text-sm font-medium rounded-lg text-center transition-all duration-200 ${
+                      `block px-4 py-3 text-sm font-medium rounded-lg text-center transition-all duration-200 touch-manipulation relative z-10 ${
                         isActive
                           ? "bg-blue-600 text-white"
-                          : "text-gray-700 hover:bg-gray-50 border border-gray-300"
+                          : "text-gray-700 hover:bg-gray-50 border border-gray-300 bg-white"
                       }`
                     }
                     onClick={() => setOpen(false)}
@@ -244,7 +274,7 @@ export const Header = ({ theme, setTheme }) => {
                   <NavLink
                     to="/schoolchat/signup"
                     className={({ isActive }) =>
-                      `block px-4 py-2 text-sm font-medium rounded-lg text-center transition-all duration-200 ${
+                      `block px-4 py-3 text-sm font-medium rounded-lg text-center transition-all duration-200 touch-manipulation relative z-10 ${
                         isActive
                           ? "bg-blue-600 text-white"
                           : "bg-blue-600 text-white hover:bg-blue-700"

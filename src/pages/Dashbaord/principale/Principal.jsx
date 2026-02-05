@@ -316,8 +316,22 @@ const Principal = () => {
       }
     };
 
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setShowLanguageDropdown(false);
+        setShowUserProfile(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside, true);
+    document.addEventListener("touchend", handleClickOutside, true);
+    document.addEventListener("keydown", handleEscape);
+    
+    return () => {
+      document.removeEventListener("click", handleClickOutside, true);
+      document.removeEventListener("touchend", handleClickOutside, true);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   const handleTabChange = useCallback(
@@ -622,99 +636,227 @@ const Principal = () => {
             </button>
             <h1>{getTabDisplayName()}</h1>
           </div>
-          <div className="header-actions">
+          <div className="header-actions" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexShrink: 0
+          }}>
             <NotificationIcon />
 
-            <div className="language-dropdown">
+            <div className="language-dropdown" style={{ position: 'relative' }}>
               <button
                 className="language-toggle-btn"
-                onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowLanguageDropdown(prev => !prev);
+                  setShowUserProfile(false);
+                }}
+                style={{ 
+                  touchAction: 'manipulation',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px',
+                  minWidth: '44px',
+                  minHeight: '44px'
+                }}
+                type="button"
               >
                 <span className="flag">{languages[currentLanguage].flag}</span>
                 <ChevronDown size={16} />
               </button>
               {showLanguageDropdown && (
-                <div className="language-dropdown-menu">
-                  {Object.entries(languages).map(([key, lang]) => (
-                    <button
-                      key={key}
-                      className={`language-option ${
-                        key === currentLanguage ? "active" : ""
-                      }`}
-                      onClick={() => handleLanguageChange(key)}
-                    >
-                      <span className="flag">{lang.flag}</span>
-                      <span>{lang.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div 
+                    className="dropdown-backdrop"
+                    onClick={() => setShowLanguageDropdown(false)}
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 9998,
+                      background: 'transparent'
+                    }}
+                  />
+                  <div 
+                    className="language-dropdown-menu"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ 
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '4px',
+                      zIndex: 9999,
+                      minWidth: '120px',
+                      maxWidth: '200px'
+                    }}
+                  >
+                    {Object.entries(languages).map(([key, lang]) => (
+                      <button
+                        key={key}
+                        className={`language-option ${
+                          key === currentLanguage ? "active" : ""
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleLanguageChange(key);
+                        }}
+                        style={{ 
+                          touchAction: 'manipulation',
+                          minHeight: '44px',
+                          width: '100%'
+                        }}
+                        type="button"
+                      >
+                        <span className="flag">{lang.flag}</span>
+                        <span>{lang.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
-            <div className="user-profile-dropdown">
+            <div className="user-profile-dropdown" style={{ position: 'relative' }}>
               <button
                 className="user-profile-btn"
-                onClick={() => setShowUserProfile(!showUserProfile)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowUserProfile(prev => !prev);
+                  setShowLanguageDropdown(false);
+                }}
+                style={{ 
+                  touchAction: 'manipulation',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  minWidth: 'fit-content',
+                  maxWidth: '160px',
+                  minHeight: '44px',
+                  padding: '8px 12px'
+                }}
+                type="button"
               >
-                <div className="user-avatar">
+                <div className="user-avatar" style={{ flexShrink: 0 }}>
                   <User size={20} />
                 </div>
-                <div className="user-info">
-                  <span className="user-name">{user?.name || "User"}</span>
+                <div className="user-info" style={{ 
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0,
+                  fontSize: '14px'
+                }}>
+                  <span className="user-name" style={{
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>{user?.name || "User"}</span>
                 </div>
-                <ChevronDown size={16} />
+                <ChevronDown size={16} style={{ flexShrink: 0 }} />
               </button>
               {showUserProfile && (
-                <div className="user-profile-menu">
-                  <div className="user-profile-header">
-                    <div className="user-avatar large">
-                      <User size={32} />
+                <>
+                  <div 
+                    className="dropdown-backdrop"
+                    onClick={() => setShowUserProfile(false)}
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 9998,
+                      background: 'transparent'
+                    }}
+                  />
+                  <div 
+                    className="user-profile-menu"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ 
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '4px',
+                      zIndex: 9999,
+                      minWidth: '200px',
+                      maxWidth: '280px'
+                    }}
+                  >
+                    <div className="user-profile-header">
+                      <div className="user-avatar large">
+                        <User size={32} />
+                      </div>
+                      <div className="user-details">
+                        <h4>{user?.name || "User"}</h4>
+                        <p className="user-role-text">{displayRole || "User"}</p>
+                      </div>
                     </div>
-                    <div className="user-details">
-                      <h4>{user?.name || "User"}</h4>
-                      <p className="user-role-text">{displayRole || "User"}</p>
+                    <div className="user-profile-info">
+                      {user?.email && (
+                        <div className="info-item">
+                          <Mail size={16} />
+                          <span>{user.email}</span>
+                        </div>
+                      )}
+                      {user?.phone && (
+                        <div className="info-item">
+                          <Phone size={16} />
+                          <span>{user.phone}</span>
+                        </div>
+                      )}
+                      {user?.username && (
+                        <div className="info-item">
+                          <User size={16} />
+                          <span>{user.username}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="user-profile-actions">
+                      <button
+                        className="profile-action-btn"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleTabChange("settings");
+                          setShowUserProfile(false);
+                        }}
+                        style={{ 
+                          touchAction: 'manipulation',
+                          minHeight: '44px'
+                        }}
+                        type="button"
+                      >
+                        <Settings size={16} />
+                        <span>Settings</span>
+                      </button>
+                      <button
+                        className="profile-action-btn logout"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleLogout();
+                        }}
+                        style={{ 
+                          touchAction: 'manipulation',
+                          minHeight: '44px'
+                        }}
+                        type="button"
+                      >
+                        <LogOut size={16} />
+                        <span>Logout</span>
+                      </button>
                     </div>
                   </div>
-                  <div className="user-profile-info">
-                    {user?.email && (
-                      <div className="info-item">
-                        <Mail size={16} />
-                        <span>{user.email}</span>
-                      </div>
-                    )}
-                    {user?.phone && (
-                      <div className="info-item">
-                        <Phone size={16} />
-                        <span>{user.phone}</span>
-                      </div>
-                    )}
-                    {user?.username && (
-                      <div className="info-item">
-                        <User size={16} />
-                        <span>{user.username}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="user-profile-actions">
-                    <button
-                      className="profile-action-btn"
-                      onClick={() => {
-                        handleTabChange("settings");
-                        setShowUserProfile(false);
-                      }}
-                    >
-                      <Settings size={16} />
-                      <span>Settings</span>
-                    </button>
-                    <button
-                      className="profile-action-btn logout"
-                      onClick={handleLogout}
-                    >
-                      <LogOut size={16} />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                </div>
+                </>
               )}
             </div>
           </div>

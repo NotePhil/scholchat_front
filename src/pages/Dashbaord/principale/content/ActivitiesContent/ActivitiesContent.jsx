@@ -38,10 +38,76 @@ const ActivitiesContent = () => {
   const [localLikes, setLocalLikes] = useState({}); // Track likes locally
   const [localComments, setLocalComments] = useState({}); // Track comments locally
   const [likedByUsers, setLikedByUsers] = useState({}); // Track who liked each post
+  const [newComment, setNewComment] = useState({});
+  const [imagePreview, setImagePreview] = useState({
+    isOpen: false,
+    images: [],
+    currentIndex: 0,
+  });
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    titre: "",
+    description: "",
+    lieu: "",
+    visibility: "PUBLIC", // Use visibility instead of etat
+    heureDebut: "",
+    heureFin: "",
+    createurId: localStorage.getItem("userId") || "user-id-123",
+    selectedClasses: [] // Array of selected class IDs
+  });
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [classes, setClasses] = useState([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Load classes when visibility changes to PRIVATE
+  const loadClasses = async () => {
+    if (formData.visibility !== 'PRIVATE') return;
+    
+    setLoadingClasses(true);
+    try {
+      const userRole = localStorage.getItem('userRole');
+      const userId = localStorage.getItem('userId');
+      
+      let endpoint;
+      if (userRole === 'ADMIN') {
+        endpoint = `${process.env.REACT_APP_API_BASE_URL}/classes`;
+      } else {
+        // For professors, get classes they have access to via publication rights
+        endpoint = `${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`;
+      }
+      
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const classesData = await response.json();
+        setClasses(classesData);
+      }
+    } catch (error) {
+      console.error('Error loading classes:', error);
+    } finally {
+      setLoadingClasses(false);
+    }
+  };
+
+  const openImagePreview = (images, index) => {
+    setImagePreview({ isOpen: true, images, currentIndex: index });
+  };
 
   useEffect(() => {
     loadEvents();
   }, []);
+
+  useEffect(() => {
+    loadClasses();
+  }, [formData.visibility]);
 
   const getImageUrl = async (media) => {
     try {
@@ -69,9 +135,14 @@ const ActivitiesContent = () => {
       setLoadingActivities(true);
       const events = await activityFeedService.getActivities();
       
+      console.log('Raw events from API:', events);
+      console.log('Number of events:', events.length);
+      
       // Process events directly in component
       const activitiesWithImages = await Promise.all(
         events.map(async (event) => {
+          console.log('Processing event:', event.id, 'visibility:', event.visibility);
+          
           const images = [];
           
           if (event.medias && event.medias.length > 0) {
@@ -140,6 +211,7 @@ const ActivitiesContent = () => {
         })
       );
       
+      console.log('Processed activities:', activitiesWithImages.length);
       setActivities(activitiesWithImages);
     } catch (error) {
       console.error('Error loading activities:', error);
@@ -147,31 +219,6 @@ const ActivitiesContent = () => {
     } finally {
       setLoadingActivities(false);
     }
-  };
-
-  const [newComment, setNewComment] = useState({});
-  const [imagePreview, setImagePreview] = useState({
-    isOpen: false,
-    images: [],
-    currentIndex: 0,
-  });
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    titre: "",
-    description: "",
-    lieu: "",
-    etat: "PLANIFIE",
-    heureDebut: "",
-    heureFin: "",
-    createurId: localStorage.getItem("userId") || "user-id-123",
-  });
-  const [uploadedImages, setUploadedImages] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
-
-  const openImagePreview = (images, index) => {
-    setImagePreview({ isOpen: true, images, currentIndex: index });
   };
 
   const closeImagePreview = () => {
@@ -193,19 +240,15 @@ const ActivitiesContent = () => {
 
     setUploading(true);
     try {
-      const uploadPromises = files.map(async (file) => {
-        const uploadResult = await minioS3Service.uploadFile(file, 'images');
-        return {
-          file,
-          path: uploadResult.filePath,
-          url: URL.createObjectURL(file)
-        };
-      });
-
-      const results = await Promise.all(uploadPromises);
-      setUploadedImages(prev => [...prev, ...results]);
+      const newImages = files.map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+        name: file.name
+      }));
+      
+      setUploadedImages(prev => [...prev, ...newImages]);
     } catch (error) {
-      console.error('Error uploading images:', error);
+      console.error('Error processing images:', error);
       alert(t('activities.errors.imageUploadFailed'));
     } finally {
       setUploading(false);
@@ -239,10 +282,11 @@ const ActivitiesContent = () => {
         titre: "",
         description: "",
         lieu: "",
-        etat: "PLANIFIE",
+        visibility: "PUBLIC",
         heureDebut: "",
         heureFin: "",
         createurId: localStorage.getItem("userId") || "user-id-123",
+        selectedClasses: []
       });
       setUploadedImages([]);
       setShowCreateForm(false);
@@ -450,6 +494,8 @@ const ActivitiesContent = () => {
         heureDebut: formData.heureDebut,
         heureFin: formData.heureFin,
         createurId: formData.createurId,
+        visibility: formData.visibility,
+        selectedClasses: formData.visibility === 'PRIVATE' ? formData.selectedClasses : [],
         participantsIds: [],
         medias: uploadedMedia,
         interactions: []
@@ -620,16 +666,56 @@ const ActivitiesContent = () => {
                   {t('activities.form.status')}
                 </label>
                 <select
-                  value={formData.etat}
-                  onChange={(e) => handleInputChange("etat", e.target.value)}
+                  value={formData.visibility}
+                  onChange={(e) => handleInputChange("visibility", e.target.value)}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="PLANIFIE">{t('activities.status.planned')}</option>
-                  <option value="EN_COURS">{t('activities.status.inProgress')}</option>
-                  <option value="TERMINE">{t('activities.status.completed')}</option>
-                  <option value="ANNULE">{t('activities.status.cancelled')}</option>
+                  <option value="PUBLIC">Public</option>
+                  <option value="PRIVATE">Privé</option>
                 </select>
               </div>
+
+              {/* Sélection des Classes - Seulement si PRIVÉ */}
+              {formData.visibility === "PRIVATE" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sélectionner les Classes *
+                  </label>
+                  {loadingClasses ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 size={20} className="animate-spin text-blue-600" />
+                      <span className="ml-2 text-gray-600">Chargement des classes...</span>
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto">
+                      {classes.length === 0 ? (
+                        <p className="text-gray-500 text-sm">Aucune classe disponible</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {classes.map((cls) => (
+                            <label key={cls.id} className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={formData.selectedClasses?.includes(cls.id) || false}
+                                onChange={(e) => {
+                                  const classId = cls.id;
+                                  if (e.target.checked) {
+                                    handleInputChange("selectedClasses", [...(formData.selectedClasses || []), classId]);
+                                  } else {
+                                    handleInputChange("selectedClasses", (formData.selectedClasses || []).filter(id => id !== classId));
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{cls.nom || cls.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -682,34 +768,28 @@ const ActivitiesContent = () => {
                     <Image size={16} />
                     {t('activities.form.selectedImages', { count: uploadedImages.length })}
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {uploadedImages.map((image, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                        <div className="relative group">
+                      <div key={index} className="relative group border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                        <div className="aspect-square">
                           <img
                             src={image.url}
                             alt={`Upload ${index + 1}`}
-                            className="w-full h-32 object-cover"
+                            className="w-full h-full object-cover cursor-pointer"
+                            onClick={() => openImagePreview([image.url], 0)}
                           />
                         </div>
-                        <div className="p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {t('activities.form.imageNumber', { number: index + 1 })}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {t('activities.form.readyToUpload')}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => removeImage(index)}
-                              className="text-red-500 hover:text-red-700 p-1 rounded transition-colors ml-2"
-                              title={t('activities.actions.delete')}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => removeImage(index)}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
+                            title="Remove image"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2">
+                          <p className="text-xs truncate">{image.name}</p>
                         </div>
                       </div>
                     ))}
@@ -727,7 +807,7 @@ const ActivitiesContent = () => {
               </button>
               <button
                 onClick={handleCreateEvent}
-                disabled={loading || uploading || !formData.titre || !formData.description || !formData.lieu || !formData.heureDebut || !formData.heureFin}
+                disabled={loading || uploading || !formData.titre || !formData.description || !formData.lieu || !formData.heureDebut || !formData.heureFin || (formData.visibility === 'PRIVATE' && formData.selectedClasses.length === 0)}
                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {loading || uploading ? (

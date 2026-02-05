@@ -27,7 +27,6 @@ activityFeedApi.interceptors.request.use(
 );
 
 class ActivityFeedService {
-  // Get current user with proper UUID
   getCurrentUser() {
     try {
       const userId = localStorage.getItem("userId");
@@ -69,7 +68,6 @@ class ActivityFeedService {
     }
   }
 
-  // Get valid user ID for API calls
   getValidUserId() {
     const userId = localStorage.getItem("userId");
     const authResponse = JSON.parse(
@@ -95,7 +93,6 @@ class ActivityFeedService {
     console.log('userRole:', userRole);
     console.log('userId:', userId);
     
-    // For admin users, try to get the first available professor ID from backend
     if (userRole === 'ROLE_ADMIN' || userRole === 'admin') {
       try {
         const response = await activityFeedApi.get('/professeurs');
@@ -109,12 +106,10 @@ class ActivityFeedService {
       }
     }
     
-    // For professor users, use their userId directly
     if (userRole === 'ROLE_PROFESSOR' || userRole === 'professor') {
       return userId || authResponse.userId;
     }
     
-    // Fallback to userId for other cases
     const finalId = userId || authResponse.userId;
     console.log('Final professor ID:', finalId);
     console.log('========================');
@@ -122,7 +117,6 @@ class ActivityFeedService {
     return finalId;
   }
 
-  // Get raw events from API
   async getActivities() {
     try {
       const response = await activityFeedApi.get("/evenements");
@@ -133,20 +127,9 @@ class ActivityFeedService {
     }
   }
 
-
-
-  // Like an event
   async likeEvent(eventId) {
     try {
-      const userId = this.getValidUserId();
-      const interaction = {
-        type: "LIKE",
-        content: "",
-        niveau: "INFO",
-        createdById: userId,
-        eventId: eventId
-      };
-      await activityFeedApi.post("/interactions", interaction);
+      await activityFeedApi.post(`/evenements/${eventId}/like`);
       return true;
     } catch (error) {
       console.error("Failed to like event:", error);
@@ -154,18 +137,9 @@ class ActivityFeedService {
     }
   }
 
-  // Comment on event
   async commentOnEvent(eventId, comment) {
     try {
-      const userId = this.getValidUserId();
-      const interaction = {
-        type: "COMMENT",
-        content: comment,
-        niveau: "INFO",
-        createdById: userId,
-        eventId: eventId
-      };
-      await activityFeedApi.post("/interactions", interaction);
+      await activityFeedApi.post(`/evenements/${eventId}/comment`, { content: comment });
       return true;
     } catch (error) {
       console.error("Failed to comment on event:", error);
@@ -173,11 +147,9 @@ class ActivityFeedService {
     }
   }
 
-  // Join event
   async joinEvent(eventId) {
     try {
-      const userId = this.getValidUserId();
-      await activityFeedApi.post(`/interactions/join/${eventId}/${userId}`);
+      await activityFeedApi.post(`/evenements/${eventId}/join`);
       return true;
     } catch (error) {
       console.error("Failed to join event:", error);
@@ -185,11 +157,9 @@ class ActivityFeedService {
     }
   }
 
-  // Leave event (unjoin)
   async unjoinEvent(eventId) {
     try {
-      const userId = this.getValidUserId();
-      await activityFeedApi.post(`/interactions/unjoin/${eventId}/${userId}`);
+      await activityFeedApi.post(`/evenements/${eventId}/unjoin`);
       return true;
     } catch (error) {
       console.error("Failed to unjoin event:", error);
@@ -197,7 +167,6 @@ class ActivityFeedService {
     }
   }
 
-  // Edit event
   async editEvent(eventId, eventData) {
     try {
       const createurId = await this.getProfessorId();
@@ -205,7 +174,6 @@ class ActivityFeedService {
         throw new Error("Professor ID not found. Please ensure you are logged in as a professor.");
       }
 
-      // Clean and validate media data
       let cleanedMedias = [];
       if (eventData.medias && eventData.medias.length > 0) {
         cleanedMedias = eventData.medias.map(media => ({
@@ -225,10 +193,12 @@ class ActivityFeedService {
         lieu: eventData.lieu,
         heureDebut: eventData.heureDebut,
         heureFin: eventData.heureFin,
-        etat: eventData.etat || "PLANIFIE",
+        etat: "PLANIFIE",
         createurId: createurId,
         participantsIds: eventData.participantsIds || [],
-        medias: cleanedMedias
+        medias: cleanedMedias,
+        visibility: eventData.visibility,
+        selectedClasses: eventData.selectedClasses || []
       };
 
       console.log("Updating event with payload:", eventPayload);
@@ -246,7 +216,6 @@ class ActivityFeedService {
     }
   }
 
-  // Delete event
   async deleteEvent(eventId) {
     try {
       console.log("Deleting event with ID:", eventId);
@@ -264,7 +233,6 @@ class ActivityFeedService {
     }
   }
 
-  // Create event
   async createEvent(eventData) {
     try {
       const createurId = await this.getProfessorId();
@@ -272,7 +240,6 @@ class ActivityFeedService {
         throw new Error("Professor ID not found. Please ensure you are logged in as a professor.");
       }
 
-      // Clean and validate media data
       let cleanedMedias = [];
       if (eventData.medias && eventData.medias.length > 0) {
         cleanedMedias = eventData.medias.map(media => ({
@@ -294,10 +261,12 @@ class ActivityFeedService {
         lieu: eventData.lieu,
         heureDebut: eventData.heureDebut,
         heureFin: eventData.heureFin,
-        etat: eventData.etat || "PLANIFIE",
+        etat: "PLANIFIE",
         createurId: createurId,
         participantsIds: eventData.participantsIds || [],
-        medias: cleanedMedias
+        medias: cleanedMedias,
+        visibility: eventData.visibility,
+        selectedClasses: eventData.selectedClasses || []
       };
 
       console.log("Creating event with payload:", eventPayload);
@@ -311,7 +280,6 @@ class ActivityFeedService {
       console.error("Failed to create event:", error);
       console.error("Error details:", error.response?.data);
       
-      // If it's a media-related error, try creating without media
       if (error.response?.status === 400 && eventData.medias?.length > 0) {
         console.warn('Retrying event creation without media due to error');
         const eventWithoutMedia = { ...eventData, medias: [] };
@@ -321,8 +289,6 @@ class ActivityFeedService {
       throw new Error(`Failed to create event: ${error.response?.data?.message || error.message}`);
     }
   }
-
 }
 
 export const activityFeedService = new ActivityFeedService();
- 
