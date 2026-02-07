@@ -24,6 +24,7 @@ import ClassApproval from "./pages/ClassApproval";
 import ClassRejection from "./pages/ClassRejection";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import { AnimatePresence } from "framer-motion";
 import "./CSS/themes.css";
 
 function ScrollToTop() {
@@ -36,15 +37,12 @@ function ScrollToTop() {
   return null;
 }
 
-function App() {
-  const [theme, setTheme] = useState("default");
-
+function AnimatedRoutes({ theme, setTheme }) {
+  const location = useLocation();
+  
   return (
-    <Provider store={store}>
-      <BrowserRouter>
-        <AuthProvider>
-          <ScrollToTop />
-          <Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
             <Route
               path="/"
               element={
@@ -172,6 +170,19 @@ function App() {
               />
             </Route>
           </Routes>
+        </AnimatePresence>
+  );
+}
+
+function App() {
+  const [theme, setTheme] = useState("default");
+
+  return (
+    <Provider store={store}>
+      <BrowserRouter>
+        <AuthProvider>
+          <ScrollToTop />
+          <AnimatedRoutes theme={theme} setTheme={setTheme} />
         </AuthProvider>
       </BrowserRouter>
     </Provider>

@@ -5,7 +5,8 @@ import { useDispatch } from "react-redux";
 import { setCredentials } from "../store/slices/authSlice";
 import { encryptPassword } from "../utils/crypto";
 import { useTranslation } from "../hooks/useTranslation";
-import "../CSS/Login.css";
+import { motion } from "framer-motion";
+import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight } from "react-icons/fi";
 
 const decodeJWT = (token) => {
   try {
@@ -31,7 +32,7 @@ const decodeJWT = (token) => {
   }
 };
 
-export const Login = () => {
+export const Login = ({ theme }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { navigateToStoredPage } = useReturnToPage();
@@ -60,13 +61,11 @@ export const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Prevent multiple submissions
     if (loading) return;
 
     setLoading(true);
     setError("");
 
-    // Add small delay to prevent UI blocking
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     try {
@@ -99,13 +98,8 @@ export const Login = () => {
         throw new Error(t("auth.errors.missingToken"));
       }
 
-      // Store returnToPage before clearing localStorage
       const returnToPage = localStorage.getItem("returnToPage");
-
-      // Clear localStorage
       localStorage.clear();
-
-      // Restore returnToPage
       if (returnToPage) {
         localStorage.setItem("returnToPage", returnToPage);
       }
@@ -114,9 +108,6 @@ export const Login = () => {
       if (!decodedToken) {
         throw new Error(t("auth.errors.invalidToken"));
       }
-
-      console.log("Decoded Token:", decodedToken);
-      console.log("Auth Data:", authData);
 
       const userId = authData.userId;
       const userEmail =
@@ -132,14 +123,11 @@ export const Login = () => {
         throw new Error(t("auth.errors.invalidUserId"));
       }
 
-      // Extract roles from token - roles come as array from backend
       let userRoles = [];
       let primaryRole = null;
 
       if (Array.isArray(decodedToken.roles) && decodedToken.roles.length > 0) {
-        // Backend sends roles like ["ROLE_USER", "ROLE_PROFESSOR"]
         userRoles = decodedToken.roles;
-        // Get the specific role (usually second one if there are multiple)
         primaryRole =
           decodedToken.roles.length > 1
             ? decodedToken.roles[1]
@@ -152,10 +140,6 @@ export const Login = () => {
         primaryRole = decodedToken.authorities[0];
       }
 
-      console.log("Primary Role:", primaryRole);
-      console.log("User Roles:", userRoles);
-
-      // Prepare user object
       const user = {
         name: username,
         email: userEmail,
@@ -164,7 +148,6 @@ export const Login = () => {
         id: userId,
       };
 
-      // Save to localStorage (for persistence)
       localStorage.setItem("accessToken", accessToken);
       if (refreshToken) {
         localStorage.setItem("refreshToken", refreshToken);
@@ -180,22 +163,18 @@ export const Login = () => {
       localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
       localStorage.setItem("authResponse", JSON.stringify(authData));
 
-      // Dispatch to Redux with exact role format from backend
       const credentials = {
         token: accessToken,
         user: user,
-        userRole: primaryRole, // ROLE_ADMIN, ROLE_PROFESSOR, etc.
-        userRoles: userRoles, // Array of roles
+        userRole: primaryRole,
+        userRoles: userRoles,
       };
 
-      console.log("Dispatching credentials:", credentials);
       dispatch(setCredentials(credentials));
 
-      // Small delay for state to update
       await new Promise((resolve) => setTimeout(resolve, 100));
       window.dispatchEvent(new Event("storage"));
 
-      // Determine default dashboard path based on role
       let dashboardPath = "/schoolchat/Principal/AdminDashboard/dashboard";
 
       if (primaryRole === "ROLE_ADMIN") {
@@ -210,17 +189,11 @@ export const Login = () => {
         dashboardPath = "/schoolchat/Principal/ProfessorDashboard/dashboard";
       }
 
-      // Use hook to navigate to stored page or default
-      const navigatedToStoredPage = navigateToStoredPage(
-        primaryRole,
-        dashboardPath
-      );
-      console.log("Navigated to stored page:", navigatedToStoredPage);
+      navigateToStoredPage(primaryRole, dashboardPath);
     } catch (err) {
       console.error("Login error:", err);
       setError(err.message || t("auth.errors.invalidCredentials"));
 
-      // Clear storage on error
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("authToken");
@@ -233,7 +206,6 @@ export const Login = () => {
       localStorage.removeItem("decodedToken");
       localStorage.removeItem("authResponse");
     } finally {
-      // Ensure loading state is cleared
       setTimeout(() => {
         setLoading(false);
       }, 100);
@@ -241,7 +213,6 @@ export const Login = () => {
   };
 
   useEffect(() => {
-    // Clear all authentication data on mount (but keep returnToPage)
     const returnToPage = localStorage.getItem("returnToPage");
     localStorage.removeItem("rememberedEmail");
     localStorage.removeItem("isAuthenticated");
@@ -256,55 +227,103 @@ export const Login = () => {
     localStorage.removeItem("decodedToken");
     localStorage.removeItem("authResponse");
     localStorage.removeItem("loginTime");
-    // Restore returnToPage if it existed
     if (returnToPage) {
       localStorage.setItem("returnToPage", returnToPage);
     }
   }, []);
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <h2 className="login-title">{t("auth.login.title")}</h2>
-        <p className="login-subtitle">
-          {t("auth.login.subtitle")}{" "}
-          <span
-            className="create-account"
-            onClick={() => navigate("/schoolchat/signup")}
-          >
-            {t("auth.login.createAccount")}
-          </span>
-        </p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className={`min-h-screen relative overflow-hidden transition-colors duration-300 ${
+        theme === 'dark' ? 'bg-gray-900 dark' : 'bg-gray-50'
+      }`}
+    >
+      {/* Background Decorative Blobs */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
 
-        <div className="login-form">
-          <form onSubmit={handleSubmit}>
+      <div className="relative z-10 flex items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-center mb-8"
+        >
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            {t("auth.login.title")}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            {t("auth.login.subtitle")}{" "}
+            <button
+              onClick={() => navigate("/schoolchat/signup")}
+              className="text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+            >
+              {t("auth.login.createAccount")}
+            </button>
+          </p>
+        </motion.div>
+
+        {/* Form Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-100 dark:border-gray-700"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="error-message bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm"
+              >
                 {error}
-              </div>
+              </motion.div>
             )}
 
-            <div className="input-group">
-              <label htmlFor="email" className="login-label">
+            {/* Email Field */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 {t("auth.login.email")}
               </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder={t("auth.login.emailPlaceholder")}
-                className="login-input"
-                required
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <FiMail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder={t("auth.login.emailPlaceholder")}
+                  className="block w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  required
+                />
+              </div>
             </div>
 
-            <div className="input-group password-group">
-              <label htmlFor="password" className="login-label">
+            {/* Password Field */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 {t("auth.login.password")}
               </label>
-              <div className="password-input-container">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <FiLock className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   type={showPassword ? "text" : "password"}
                   id="password"
@@ -312,49 +331,45 @@ export const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder={t("auth.login.passwordPlaceholder")}
-                  className="login-input"
+                  className="block w-full pl-12 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   required
                 />
                 <button
                   type="button"
-                  className="password-toggle"
                   onClick={togglePasswordVisibility}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  {showPassword
-                    ? t("auth.login.hidePassword")
-                    : t("auth.login.showPassword")}
+                  {showPassword ? (
+                    <FiEyeOff className="h-5 w-5" />
+                  ) : (
+                    <FiEye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>
 
-            <div className="flex-container">
-              <a href="/schoolchat/forgot-password" className="forgot-password">
+            {/* Forgot Password */}
+            <div className="flex justify-end">
+              <a
+                href="/schoolchat/forgot-password"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              >
                 {t("auth.login.forgotPassword")}
               </a>
             </div>
 
-            <button
+            {/* Submit Button */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
-              className={`login-button ${loading ? "loading" : ""}`}
               disabled={loading}
-              style={{
-                minHeight: "48px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                fontSize: "16px",
-                fontWeight: "600",
-                transition: "all 0.2s ease",
-                opacity: loading ? "0.8" : "1",
-                cursor: loading ? "not-allowed" : "pointer",
-              }}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30 font-semibold text-base"
             >
               {loading ? (
                 <>
                   <svg
-                    className="animate-spin"
-                    style={{ width: "20px", height: "20px" }}
+                    className="animate-spin h-5 w-5"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -376,22 +391,29 @@ export const Login = () => {
                   <span>{t("auth.login.signingIn")}</span>
                 </>
               ) : (
-                t("auth.login.signIn")
+                <>
+                  <span>{t("auth.login.signIn")}</span>
+                  <FiArrowRight className="h-5 w-5" />
+                </>
               )}
-            </button>
+            </motion.button>
           </form>
 
-          <div className="login-footer">
-            <p>
-              {t("auth.login.termsPrefix")}{" "}
-              <a href="/terms">{t("auth.login.termsLink")}</a>{" "}
-              {t("auth.login.termsAnd")}{" "}
-              <a href="/privacy">{t("auth.login.privacyLink")}</a>
-            </p>
+          {/* Footer */}
+          <div className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
+            {t("auth.login.termsPrefix")}{" "}
+            <a href="/terms" className="text-blue-600 dark:text-blue-400 hover:underline">
+              {t("auth.login.termsLink")}
+            </a>{" "}
+            {t("auth.login.termsAnd")}{" "}
+            <a href="/privacy" className="text-blue-600 dark:text-blue-400 hover:underline">
+              {t("auth.login.privacyLink")}
+            </a>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+      </div>
+    </motion.div>
   );
 };
 

@@ -432,71 +432,97 @@
       }
     },
     "instructor": {
-      "badge": "What is SchoolChat?",
-      "title": {
-        "line1": "The Revolution of",
-        "line2": "Educational Communication"
-      },
-      "subtitle": "Transform the school-family relationship with our innovative platform for modern and intuitive school communication",
-      "features": {
-        "communication": {
-          "title": "Instant Communication",
-          "desc": "Exchange in real time with teachers and track your children's progress",
-          "cta": "Start now"
-        },
-        "mobile": {
-          "title": "Mobile Application",
-          "desc": "Access all school information from your smartphone",
-          "cta": "Download the app"
-        }
-      },
-      "stats": {
-        "badge": "We Are Proud",
-        "title": "Results That Speak",
-        "subtitle": "Join thousands of families who have transformed their school communication with SchoolChat",
-        "families": "Connected Families",
-        "messages": "Messages Exchanged",
-        "schools": "Partner Schools",
-        "satisfaction": "Satisfaction Rate"
-      },
-      "cta": {
-        "title": "Ready to transform communication?",
-        "subtitle": "Join 2800+ families. Start today!",
-        "startFree": "Start for free",
-        "demo": "Request a demo"
+      "badge": "Our Team",
+      "title": "Meet Our Expert Team",
+      "subtitle": "Dedicated professionals working to revolutionize the educational experience.",
+      "team": {
+         "productManager": "Product Manager",
+         "leadDeveloper": "Lead Developer",
+         "uxDesigner": "UX Designer",
+         "marketingDirector": "Marketing Director",
+         "customerSuccess": "Customer Success",
+         "headOfEngineering": "Head of Engineering",
+         "contentStrategist": "Content Strategist",
+         "salesManager": "Sales Manager"
       }
     },
     "functionalities": {
-      "badge": "Features",
-      "title": "Our Features",
-      "subtitle": "Discover the magical tools that will transform your educational experience",
+      "badge": "Key Features",
+      "title": "Everything you need to run your school",
+      "subtitle": "A powerful suite of tools designed to modernize education management and improve student outcomes.",
       "features": {
-        "textbook": {
-          "title": "Textbook",
-          "desc": "Organize and easily access course notes and content for each subject."
+        "schoolAdmin": {
+          "title": "School Administration",
+          "desc": "Comprehensive management tools for principals and administrators to oversee all school operations effortlessly."
         },
-        "messaging": {
-          "title": "Messaging",
-          "desc": "Communicate easily with teachers and other students."
+        "studentSuccess": {
+          "title": "Student Success",
+          "desc": "Track academic progress, attendance, and behavioral development to ensure every student reaches their potential."
         },
-        "homework": {
-          "title": "Homework",
-          "desc": "Track assigned homework and manage due dates efficiently."
+        "parentEngagement": {
+          "title": "Parent Engagement",
+          "desc": "Direct communication channels fostering a strong partnership between families and the educational institution."
         },
-        "attendance": {
-          "title": "Attendance tracking",
-          "desc": "Keep a record of absences and track tardiness."
+        "securePlatform": {
+          "title": "Secure Platform",
+          "desc": "Enterprise-grade security ensuring all sensitive student and institutional data remains protected."
         },
-        "goals": {
-          "title": "Academic goals",
-          "desc": "Define and track academic goals in a structured way."
+        "analytics": {
+          "title": "Analytics & Reports",
+          "desc": "Data-driven insights to make informed decisions and improve overall educational quality."
         },
-        "schedule": {
-          "title": "Planning & Schedule",
-          "desc": "Manage your schedule and plan your school activities."
+        "curriculum": {
+          "title": "Curriculum Management",
+          "desc": "Tools for teachers to plan lessons, share resources, and grade assignments efficiently."
         }
       },
       "learnMore": "Learn more"
+    },
+    "courses": {
+      "badge": "Our Solutions",
+      "title": "Explore Our Popular Products",
+      "subtitle": "Discover tools tailored to your educational needs, from administration to classroom engagement.",
+      "items": {
+         "nurseries": { "name": "Nurseries", "desc": "Early Childhood Management System" },
+         "kindergarten": { "name": "Kindergarten", "desc": "Preschool Education Platform" },
+         "primary": { "name": "Primary Schools", "desc": "Elementary School Management" },
+         "middle": { "name": "Middle Schools", "desc": "Junior High Administration Tools" },
+         "high": { "name": "High Schools", "desc": "Secondary Education Platform" },
+         "university": { "name": "Universities", "desc": "Higher Education Management" }
+      },
+      "cardDesc": "A comprehensive solution designed to enhance the learning environment and streamline operations for {name}.",
+      "details": "Details"
+    },
+    "about": {
+      "badge": "About Us",
+      "title": "Empowering Education Through Innovation",
+      "desc": "SchoolChat is a comprehensive platform designed to bridge the gap between educational institutions and families. We believe that effective communication is the cornerstone of academic success.",
+      "list": {
+        "item1": "Real-time communication channels",
+        "item2": "Comprehensive academic tracking",
+        "item3": "Secure and private environment"
+      },
+      "mission": {
+        "badge": "Our Mission",
+        "title": "Connect, Collaborate, Succeed",
+        "desc": "We provide tools that simplify school management while enhancing the learning experience. Our goal is to create a seamless ecosystem where teachers, parents, and students can collaborate effortlessly.",
+        "cta": "Learn More"
+      }
+    },
+    "blog": {
+      "badge": "Latest News",
+      "title": "Our Blog Journal",
+      "subtitle": "Insights, updates, and stories from the SchoolChat community.",
+      "readStory": "Read Story",
+      "comments": "COMMENTS",
+      "items": {
+        "item1": { "title": "Revolutionizing School Communication", "desc": "Discover how digital platforms are transforming the way schools connect with parents and students." },
+        "item2": { "title": "Best Practices for Remote Learning", "desc": "Learn effective strategies for engaging students in virtual classrooms and maintaining educational quality." },
+        "item3": { "title": "Supporting Your Child's Education at Home", "desc": "Tips and techniques for parents to create an effective learning environment at home." },
+        "item4": { "title": "Technology Integration in Modern Classrooms", "desc": "Exploring the latest educational technology trends and their impact on student learning outcomes." },
+        "item5": { "title": "Assessment Strategies That Work", "desc": "Innovative approaches to evaluating student progress and providing meaningful feedback." },
+        "item6": { "title": "Building Strong Parent-Teacher Partnerships", "desc": "How effective collaboration between parents and teachers enhances student success." }
+      }
     },
     "accountActivation": {
       "title": "Account Activation",
@@ -574,7 +600,9 @@
     "signup": {
       "firstName": "First Name",
       "lastName": "Last Name",
-      "email": "Email"
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address"
     }
   },
   "footer": {

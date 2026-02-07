@@ -1,18 +1,19 @@
 import React from "react";
-import {
-  BookOpen,
-  Mail,
-  ClipboardList,
-  UserCheck,
-  Target,
-  ChevronRight,
-  Calendar,
+import { 
+  Building2, 
+  GraduationCap, 
+  School, 
+  BookOpen, 
+  Users, 
+  ArrowRight,
+  ShieldCheck,
+  TrendingUp 
 } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
+import { motion } from "framer-motion";
 
-const FunctionalitiesSection = ({ theme = "default" }) => {
+const FunctionalitiesSection = ({ theme }) => {
   const { t } = useTranslation();
-
   const getThemeClasses = () => {
     switch (theme) {
       case "dark":
@@ -21,6 +22,9 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
           text: "text-gray-200",
           cardBg: "bg-gray-800",
           cardBorder: "border-gray-700",
+          sectionTitle: "text-white",
+          subtext: "text-gray-400",
+          iconBg: "bg-gray-700",
         };
       case "light":
         return {
@@ -28,6 +32,9 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
           text: "text-gray-800",
           cardBg: "bg-white",
           cardBorder: "border-gray-200",
+          sectionTitle: "text-gray-900",
+          subtext: "text-gray-600",
+          iconBg: "bg-gray-100",
         };
       default:
         return {
@@ -35,120 +42,135 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
           text: "text-gray-200",
           cardBg: "bg-gray-800",
           cardBorder: "border-gray-700",
+          sectionTitle: "text-white",
+          subtext: "text-gray-400",
+          iconBg: "bg-gray-700",
         };
     }
   };
 
   const themeClasses = getThemeClasses();
 
-  const functionalities = [
+  const features = [
     {
-      icon: BookOpen,
-      title: t("pages.functionalities.features.textbook.title"),
-      description: t("pages.functionalities.features.textbook.desc"),
-      color: "from-blue-500 to-blue-600",
-      bgColor: theme === "dark" ? "bg-blue-900/30" : "bg-blue-50",
-      textColor: "text-blue-600",
+      icon: <Building2 className="w-8 h-8 text-blue-500" />,
+      title: t("pages.functionalities.features.schoolAdmin.title"),
+      description: t("pages.functionalities.features.schoolAdmin.desc"),
+      color: "blue"
     },
     {
-      icon: Mail,
-      title: t("pages.functionalities.features.messaging.title"),
-      description: t("pages.functionalities.features.messaging.desc"),
-      color: "from-purple-500 to-purple-600",
-      bgColor: theme === "dark" ? "bg-purple-900/30" : "bg-purple-50",
-      textColor: "text-purple-600",
+      icon: <GraduationCap className="w-8 h-8 text-green-500" />,
+      title: t("pages.functionalities.features.studentSuccess.title"),
+      description: t("pages.functionalities.features.studentSuccess.desc"),
+      color: "green"
     },
     {
-      icon: ClipboardList,
-      title: t("pages.functionalities.features.homework.title"),
-      description: t("pages.functionalities.features.homework.desc"),
-      color: "from-emerald-500 to-emerald-600",
-      bgColor: theme === "dark" ? "bg-emerald-900/30" : "bg-emerald-50",
-      textColor: "text-emerald-600",
+      icon: <Users className="w-8 h-8 text-purple-500" />,
+      title: t("pages.functionalities.features.parentEngagement.title"),
+      description: t("pages.functionalities.features.parentEngagement.desc"),
+      color: "purple"
     },
     {
-      icon: UserCheck,
-      title: t("pages.functionalities.features.attendance.title"),
-      description: t("pages.functionalities.features.attendance.desc"),
-      color: "from-orange-500 to-orange-600",
-      bgColor: theme === "dark" ? "bg-orange-900/30" : "bg-orange-50",
-      textColor: "text-orange-600",
+      icon: <ShieldCheck className="w-8 h-8 text-red-500" />,
+      title: t("pages.functionalities.features.securePlatform.title"),
+      description: t("pages.functionalities.features.securePlatform.desc"),
+      color: "red"
     },
     {
-      icon: Target,
-      title: t("pages.functionalities.features.goals.title"),
-      description: t("pages.functionalities.features.goals.desc"),
-      color: "from-rose-500 to-rose-600",
-      bgColor: theme === "dark" ? "bg-rose-900/30" : "bg-rose-50",
-      textColor: "text-rose-600",
+      icon: <TrendingUp className="w-8 h-8 text-amber-500" />,
+      title: t("pages.functionalities.features.analytics.title"),
+      description: t("pages.functionalities.features.analytics.desc"),
+      color: "amber"
     },
     {
-      icon: Calendar,
-      title: t("pages.functionalities.features.schedule.title"),
-      description: t("pages.functionalities.features.schedule.desc"),
-      color: "from-indigo-500 to-indigo-600",
-      bgColor: theme === "dark" ? "bg-indigo-900/30" : "bg-indigo-50",
-      textColor: "text-indigo-600",
-    },
+      icon: <BookOpen className="w-8 h-8 text-teal-500" />,
+      title: t("pages.functionalities.features.curriculum.title"),
+      description: t("pages.functionalities.features.curriculum.desc"),
+      color: "teal"
+    }
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+      },
+    },
+  };
+
   return (
-    <section className={`min-h-screen ${themeClasses.bg} py-20`}>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className={`py-20 ${themeClasses.bg} min-h-screen`}
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-3 bg-blue-100 dark:bg-blue-900 rounded-full px-8 py-3 mb-8">
-            <span className="text-blue-600 dark:text-blue-400 font-semibold text-lg">
-              🚀 {t("pages.functionalities.badge")}
-            </span>
+        <motion.div 
+            className="text-center mb-20"
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+        >
+          <div className="inline-block px-4 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm font-semibold tracking-wide uppercase mb-6">
+            {t("pages.functionalities.badge")}
           </div>
-
-          <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-3xl mb-8 mx-auto flex items-center justify-center">
-            <Target className="w-10 h-10 text-white" />
-          </div>
-
-          <h2 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="text-blue-500">{t("pages.functionalities.title")}</span>
+          <h2 className={`text-4xl md:text-5xl font-bold mb-6 ${themeClasses.sectionTitle}`}>
+            {t("pages.functionalities.title")}
           </h2>
-
-          <p className={`text-xl max-w-3xl mx-auto leading-relaxed mb-6 ${themeClasses.text}`}>
-            ✨ {t("pages.functionalities.subtitle")} ⚡
+          <p className={`text-xl max-w-3xl mx-auto ${themeClasses.subtext}`}>
+            {t("pages.functionalities.subtitle")}
           </p>
+        </motion.div>
 
-          <div className="w-32 h-1 mx-auto rounded-full bg-gradient-to-r from-cyan-400 to-purple-400"></div>
-        </div>
-
-        {/* Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-          {functionalities.map((func, index) => {
-            const IconComponent = func.icon;
-            return (
-              <div
-                key={index}
-                className={`${themeClasses.cardBg} border ${themeClasses.cardBorder} rounded-3xl p-8 hover:shadow-lg transition-shadow duration-300`}
-              >
-                <div className={`w-20 h-20 bg-gradient-to-br ${func.color} rounded-3xl mb-6 flex items-center justify-center`}>
-                  <IconComponent className="w-10 h-10 text-white" />
-                </div>
-
-                <h3 className={`text-2xl font-bold mb-4 ${themeClasses.text}`}>
-                  {func.title}
-                </h3>
-
-                <p className="text-gray-500 text-base leading-relaxed mb-6">
-                  {func.description}
-                </p>
-
-                <div className="flex items-center font-medium text-blue-500 hover:text-blue-400 transition-colors cursor-pointer">
-                  <span>{t("pages.functionalities.learnMore")}</span>
-                  <ChevronRight className="w-5 h-5 ml-2" />
-                </div>
+        <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+        >
+          {features.map((feature, index) => (
+            <motion.div
+              key={index}
+              variants={cardVariants}
+              whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
+              className={`p-8 rounded-3xl ${themeClasses.cardBg} border ${themeClasses.cardBorder} shadow-lg transition-all duration-300 group`}
+            >
+              <div className={`w-16 h-16 rounded-2xl ${themeClasses.iconBg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-inner`}>
+                {feature.icon}
               </div>
-            );
-          })}
-        </div>
+              
+              <h3 className={`text-2xl font-bold mb-4 ${themeClasses.text} group-hover:text-blue-500 transition-colors`}>{feature.title}</h3>
+              
+              <p className={`mb-6 leading-relaxed ${themeClasses.subtext}`}>
+                {feature.description}
+              </p>
+              
+              <div className="flex items-center text-blue-500 font-semibold cursor-pointer group/link hover:text-blue-600">
+                <span>Learn more</span>
+                <ArrowRight className="w-4 h-4 ml-2 transform group-hover/link:translate-x-1 transition-transform" />
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
-    </section>
+    </motion.div>
   );
 };
 

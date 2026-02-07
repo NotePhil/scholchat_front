@@ -432,71 +432,97 @@
       }
     },
     "instructor": {
-      "badge": "Qu'est-ce que SchoolChat ?",
-      "title": {
-        "line1": "La Révolution de la",
-        "line2": "Communication Éducative"
-      },
-      "subtitle": "Transformez la relation école-famille avec notre plateforme innovante de communication scolaire moderne et intuitive",
-      "features": {
-        "communication": {
-          "title": "Communication Instantanée",
-          "desc": "Échangez en temps réel avec les enseignants et suivez les progrès de vos enfants",
-          "cta": "Commencer maintenant"
-        },
-        "mobile": {
-          "title": "Application Mobile",
-          "desc": "Accédez à toutes les informations scolaires depuis votre smartphone",
-          "cta": "Télécharger l'app"
-        }
-      },
-      "stats": {
-        "badge": "Nous Sommes Fiers",
-        "title": "Des Résultats qui Parlent",
-        "subtitle": "Rejoignez des milliers de familles qui ont transformé leur communication scolaire avec SchoolChat",
-        "families": "Familles Connectées",
-        "messages": "Messages Échangés",
-        "schools": "Établissements Partenaires",
-        "satisfaction": "Taux de Satisfaction"
-      },
-      "cta": {
-        "title": "Prêt à transformer la communication ?",
-        "subtitle": "Rejoignez 2800+ familles. Commencez aujourd'hui !",
-        "startFree": "Commencer gratuitement",
-        "demo": "Demander une démo"
+      "badge": "Notre Équipe",
+      "title": "Rencontrez Notre Équipe d'Experts",
+      "subtitle": "Des professionnels dévoués travaillant à révolutionner l'expérience éducative.",
+      "team": {
+         "productManager": "Chef de Produit",
+         "leadDeveloper": "Développeur Principal",
+         "uxDesigner": "Designer UX",
+         "marketingDirector": "Directeur Marketing",
+         "customerSuccess": "Succès Client",
+         "headOfEngineering": "Chef de l'Ingénierie",
+         "contentStrategist": "Stratège de Contenu",
+         "salesManager": "Responsable des Ventes"
       }
     },
     "functionalities": {
-      "badge": "Fonctionnalités",
-      "title": "Nos Fonctionnalités",
-      "subtitle": "Découvrez les outils magiques qui transformeront votre expérience éducative",
+      "badge": "Fonctionnalités Clés",
+      "title": "Tout ce dont vous avez besoin pour gérer votre école",
+      "subtitle": "Une suite d'outils puissante conçue pour moderniser la gestion de l'éducation et améliorer les résultats des élèves.",
       "features": {
-        "textbook": {
-          "title": "Cahier de texte",
-          "desc": "Organisez et accédez facilement aux notes de cours et au contenu de chaque sujet."
+        "schoolAdmin": {
+          "title": "Administration Scolaire",
+          "desc": "Outils de gestion complets pour superviser toutes les opérations scolaires sans effort."
         },
-        "messaging": {
-          "title": "Messagerie",
-          "desc": "Communiquez facilement avec les enseignants et les autres élèves."
+        "studentSuccess": {
+          "title": "Réussite des Étudiants",
+          "desc": "Suivez les progrès académiques, la présence et le comportement pour assurer que chaque étudiant atteint son potentiel."
         },
-        "homework": {
-          "title": "Devoirs",
-          "desc": "Suivez les devoirs assignés et gérez les dates de rendu efficacement."
+        "parentEngagement": {
+          "title": "Engagement des Parents",
+          "desc": "Canaux de communication directs favorisant un partenariat solide entre les familles et l'établissement."
         },
-        "attendance": {
-          "title": "Suivi des absences",
-          "desc": "Gardez un enregistrement des absences et suivez les retards."
+        "securePlatform": {
+          "title": "Plateforme Sécurisée",
+          "desc": "Sécurité de niveau entreprise garantissant la protection de toutes les données sensibles."
         },
-        "goals": {
-          "title": "Objectifs scolaires",
-          "desc": "Définissez et suivez les objectifs scolaires de manière structurée."
+        "analytics": {
+          "title": "Analyses et Rapports",
+          "desc": "Informations basées sur les données pour prendre des décisions éclairées et améliorer la qualité globale."
         },
-        "schedule": {
-          "title": "Planning & Emploi du temps",
-          "desc": "Gérez votre emploi du temps et planifiez vos activités scolaires."
+        "curriculum": {
+          "title": "Gestion du Curriculum",
+          "desc": "Outils pour les enseignants pour planifier les leçons, partager des ressources et noter les devoirs efficacement."
         }
       },
       "learnMore": "En savoir plus"
+    },
+    "courses": {
+      "badge": "NOS SOLUTIONS",
+      "title": "Explorez Nos Solutions Populaires",
+      "subtitle": "Découvrez des outils adaptés à vos besoins éducatifs, de l'administration à l'engagement en classe.",
+      "items": {
+         "nurseries": { "name": "Crèches", "desc": "Système de Gestion de la Petite Enfance" },
+         "kindergarten": { "name": "Maternelle", "desc": "Plateforme d'Éducation Préscolaire" },
+         "primary": { "name": "Écoles Primaires", "desc": "Gestion de l'École Élémentaire" },
+         "middle": { "name": "Collèges", "desc": "Outils d'Administration du Secondaire Inférieur" },
+         "high": { "name": "Lycées", "desc": "Plateforme d'Éducation Secondaire" },
+         "university": { "name": "Universités", "desc": "Gestion de l'Enseignement Supérieur" }
+      },
+      "cardDesc": "Une solution complète conçue pour améliorer l'environnement d'apprentissage et rationaliser les opérations pour {name}.",
+      "details": "Détails"
+    },
+    "about": {
+      "badge": "À Propos de Nous",
+      "title": "Responsabiliser l'Éducation par l'Innovation",
+      "desc": "SchoolChat est une plateforme complète conçue pour combler le fossé entre les établissements d'enseignement et les familles. Nous croyons qu'une communication efficace est la pierre angulaire de la réussite scolaire.",
+      "list": {
+        "item1": "Canaux de communication en temps réel",
+        "item2": "Suivi académique complet",
+        "item3": "Environnement sécurisé et privé"
+      },
+      "mission": {
+        "badge": "Notre Mission",
+        "title": "Connecter, Collaborer, Réussir",
+        "desc": "Nous fournissons des outils qui simplifient la gestion scolaire tout en améliorant l'expérience d'apprentissage. Notre objectif est de créer un écosystème transparent où enseignants, parents et élèves peuvent collaborer sans effort.",
+        "cta": "En Savoir Plus"
+      }
+    },
+    "blog": {
+      "badge": "Dernières Actualités",
+      "title": "Notre Journal de Blog",
+      "subtitle": "Informations, mises à jour et histoires de la communauté SchoolChat.",
+      "readStory": "Lire l'Histoire",
+      "comments": "COMMENTAIRES",
+      "items": {
+        "item1": { "title": "Révolutionner la Communication Scolaire", "desc": "Découvrez comment les plateformes numériques transforment la façon dont les écoles se connectent avec les parents et les élèves." },
+        "item2": { "title": "Meilleures Pratiques pour l'Apprentissage à Distance", "desc": "Apprenez des stratégies efficaces pour engager les élèves dans des classes virtuelles et maintenir la qualité éducative." },
+        "item3": { "title": "Soutenir l'Éducation de Votre Enfant à la Maison", "desc": "Conseils et techniques pour les parents afin de créer un environnement d'apprentissage efficace à la maison." },
+        "item4": { "title": "Intégration Technologique dans les Classes Modernes", "desc": "Explorer les dernières tendances technologiques éducatives et leur impact sur les résultats d'apprentissage des élèves." },
+        "item5": { "title": "Stratégies d'Évaluation qui Fonctionnent", "desc": "Approches innovantes pour évaluer les progrès des élèves et fournir des commentaires significatifs." },
+        "item6": { "title": "Construire un Partenariat Parents-Enseignants Solide", "desc": "Comment une collaboration efficace entre parents et enseignants améliore la réussite des élèves." }
+      }
     },
     "accountActivation": {
       "title": "Activation du compte",
@@ -574,7 +600,9 @@
     "signup": {
       "firstName": "Prénom",
       "lastName": "Nom",
-      "email": "Email"
+      "email": "Email",
+      "phone": "Téléphone",
+      "address": "Adresse"
     }
   },
   "footer": {
@@ -662,67 +690,7 @@
       "requestError": "Erreur de configuration de la requête: "
     }
   },
-  "dashboard": {
-    "title": "Tableau de Bord Éducatif",
-    "subtitle": "Gestion des cours, exercices et progression des élèves",
-    "loading": "Chargement du tableau de bord...",
-    "refresh": "Actualiser",
-    "retry": "Réessayer",
-    "recentActivities": "Activités Récentes",
-    "stats": {
-      "availableCourses": "Cours Disponibles",
-      "exercises": "Exercices",
-      "activeClasses": "Classes Actives",
-      "avgProgress": "Progression Moy.",
-      "subjects": "{count} matières",
-      "completed": "{percent}% terminés",
-      "students": "{count} élèves",
-      "allClasses": "Toutes classes",
-      "thisMonth": "ce mois"
-    },
-    "charts": {
-      "courseDistribution": "Répartition des Cours par Matière",
-      "studentProgress": "Progression des Élèves par Classe",
-      "monthlyActivity": "Activité Éducative Mensuelle",
-      "exerciseStatus": "État des Exercices",
-      "subject": "Matière",
-      "class": "Classe",
-      "progressPercent": "Progression (%)",
-      "coursesCreated": "Cours créés",
-      "exercisesAdded": "Exercices ajoutés",
-      "completions": "Completions"
-    },
-    "months": {
-      "jan": "Jan",
-      "feb": "Fév",
-      "mar": "Mar",
-      "apr": "Avr",
-      "may": "Mai",
-      "jun": "Juin"
-    },
-    "completion": {
-      "completed": "Terminés",
-      "inProgress": "En Cours",
-      "notStarted": "Non Commencés"
-    },
-    "activities": {
-      "newCourse": "Nouveau cours: Algèbre Linéaire",
-      "exerciseCompleted": "Exercice complété par {count} élèves",
-      "newClass": "Nouvelle classe créée",
-      "progressReached": "Progression atteint 80%",
-      "subjectUpdated": "Matière mise à jour",
-      "system": "Système",
-      "hoursAgo": "Il y a {count}h",
-      "daysAgo": "Il y a {count}j"
-    },
-    "errors": {
-      "loadFailed": "Échec du chargement des données du tableau de bord",
-      "subjectNameRequired": "Le nom de la matière est requis",
-      "genericError": "Une erreur s'est produite",
-      "networkError": "Erreur réseau. Veuillez vérifier votre connexion.",
-      "requestError": "Erreur de configuration de la requête: "
-    }
-  },
+
   "activities": {
     "title": "Fil d'actualité",
     "actions": {
