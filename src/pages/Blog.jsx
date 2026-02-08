@@ -1,11 +1,13 @@
 import React from "react";
 import { FaUser, FaCalendarAlt, FaComment } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 import { useTranslation } from "../hooks/useTranslation";
 
 export const BlogContent = ({ theme }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   
   // Blog data moved inside component for translation
   const blog = [
@@ -181,7 +183,10 @@ export const BlogContent = ({ theme }) => {
                     </p>
 
                     <div className="pt-4 mt-auto border-t border-gray-100 dark:border-gray-700/50">
-                        <button className="text-sm font-bold text-pink-500 hover:text-pink-600 uppercase tracking-widest transition-colors flex items-center gap-2 group/btn">
+                        <button 
+                          onClick={() => navigate(`/schoolchat/blog/${val.id}`)}
+                          className="text-sm font-bold text-pink-500 hover:text-pink-600 uppercase tracking-widest transition-colors flex items-center gap-2 group/btn"
+                        >
                             {t("pages.blog.readStory")} <span className="transform group-hover/btn:translate-x-1 transition-transform">→</span>
                         </button>
                     </div>

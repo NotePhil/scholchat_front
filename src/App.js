@@ -10,6 +10,14 @@ import { Courses } from "./pages/Courses";
 import { Blog } from "./pages/Blog";
 import { Instructor } from "./pages/Instructor";
 import FunctionalitiesSection from "./pages/FunctionalitiesSection";
+import FunctionalityDetails from "./pages/FunctionalityDetails";
+import SolutionDetails from "./pages/SolutionDetails";
+import Contact from "./pages/Contact";
+import Nursery from "./pages/EducationLevels/Nursery";
+import Kindergarten from "./pages/EducationLevels/Kindergarten";
+import PrimarySchool from "./pages/EducationLevels/PrimarySchool";
+import HighSchool from "./pages/EducationLevels/HighSchool";
+import University from "./pages/EducationLevels/University";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import AccountActivation from "./pages/AccountActivation";
@@ -25,6 +33,7 @@ import ClassRejection from "./pages/ClassRejection";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import { AnimatePresence } from "framer-motion";
+import PageTransition from "./components/common/PageTransition";
 import "./CSS/themes.css";
 
 function ScrollToTop() {
@@ -41,13 +50,15 @@ function AnimatedRoutes({ theme, setTheme }) {
   const location = useLocation();
   
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>
             <Route
               path="/"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Home theme={theme} />
+                  <PageTransition>
+                    <Home theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -55,7 +66,9 @@ function AnimatedRoutes({ theme, setTheme }) {
               path="/schoolchat/about"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <About theme={theme} />
+                  <PageTransition>
+                    <About theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -63,7 +76,9 @@ function AnimatedRoutes({ theme, setTheme }) {
               path="/schoolchat/courses"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Courses theme={theme} />
+                  <PageTransition>
+                    <Courses theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -71,7 +86,9 @@ function AnimatedRoutes({ theme, setTheme }) {
               path="/schoolchat/instructor"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Instructor theme={theme} />
+                  <PageTransition>
+                    <Instructor theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -79,15 +96,19 @@ function AnimatedRoutes({ theme, setTheme }) {
               path="/schoolchat/blog"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Blog theme={theme} />
+                  <PageTransition>
+                    <Blog theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
             <Route
-              path="/schoolchat/single-blog"
+              path="/schoolchat/blog/:id"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <BlogSinglePage theme={theme} />
+                  <PageTransition>
+                    <BlogSinglePage theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -95,7 +116,89 @@ function AnimatedRoutes({ theme, setTheme }) {
               path="/schoolchat/functionalities"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <FunctionalitiesSection theme={theme} />
+                  <PageTransition>
+                    <FunctionalitiesSection theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/functionality/:id"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <FunctionalityDetails theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/solution/:id"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <SolutionDetails theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/contact"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <Contact theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/nursery"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <Nursery theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/kindergarten"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <Kindergarten theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/primary-school"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <PrimarySchool theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/high-school"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <HighSchool theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/university"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <University theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -103,7 +206,9 @@ function AnimatedRoutes({ theme, setTheme }) {
               path="/schoolchat/login"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Login theme={theme} />
+                  <PageTransition>
+                    <Login theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -111,7 +216,9 @@ function AnimatedRoutes({ theme, setTheme }) {
               path="/schoolchat/signup"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <SignUp theme={theme} />
+                  <PageTransition>
+                    <SignUp theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -155,7 +262,9 @@ function AnimatedRoutes({ theme, setTheme }) {
                 path="/schoolchat/manage-class"
                 element={
                   <Layout theme={theme} setTheme={setTheme}>
-                    <ManageClass theme={theme} />
+                    <PageTransition>
+                      <ManageClass theme={theme} />
+                    </PageTransition>
                   </Layout>
                 }
               />

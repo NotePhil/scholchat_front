@@ -26,15 +26,18 @@ import {
   UserCheck,
   UserX,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { classService, EtatClasse } from "../../../../../services/ClassService";
 import ClassModals from "../../modals/ClassModals";
 import PublicationRightsService from "../../../../../services/PublicationRightsService";
+import { useTranslation } from "../../../../../hooks/useTranslation";
 
 const ClassesListContent = ({
   onNavigateToCreate,
   userRole = "professeur",
   onSelectClass,
 }) => {
+  const { t } = useTranslation();
   const [classes, setClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [paginatedClasses, setPaginatedClasses] = useState([]);
@@ -508,12 +511,12 @@ const ClassesListContent = ({
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white">
-                    Gestion des Classes
+                    {t('classes.title', 'Gestion des Classes')}
                   </h1>
                   <p className="text-blue-100">
-                    {filteredClasses.length} classe
-                    {filteredClasses.length !== 1 ? "s" : ""} trouvée
-                    {filteredClasses.length !== 1 ? "s" : ""} sur{" "}
+                    {filteredClasses.length} {t('classes.classCount', 'classe')}
+                    {filteredClasses.length !== 1 ? "s" : ""} {t('classes.found', 'trouvée')}
+                    {filteredClasses.length !== 1 ? "s" : ""} {t('common.on', 'sur')}{" "}
                     {classes.length}
                   </p>
                 </div>
@@ -527,7 +530,7 @@ const ClassesListContent = ({
                   <RefreshCw
                     className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
                   />
-                  Actualiser
+                  {t('common.actions.refresh', 'Actualiser')}
                 </button>
                 {userRole === "professeur" && (
                   <>
@@ -536,14 +539,14 @@ const ClassesListContent = ({
                       className="bg-white/20 text-white px-6 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-2"
                     >
                       <Key className="w-5 h-5" />
-                      Accès Token
+                      {t('classes.accessToken', 'Accès Token')}
                     </button>
                     <button
                       onClick={onNavigateToCreate}
                       className="bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center gap-2"
                     >
                       <Plus className="w-5 h-5" />
-                      Nouvelle Classe
+                      {t('classes.newClass', 'Nouvelle Classe')}
                     </button>
                   </>
                 )}
@@ -557,7 +560,7 @@ const ClassesListContent = ({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Rechercher une classe..."
+                  placeholder={t('classes.searchPlaceholder', 'Rechercher une classe...')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -570,12 +573,12 @@ const ClassesListContent = ({
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="TOUS">Tous les statuts</option>
-                  <option value={EtatClasse.ACTIF}>Actif</option>
+                  <option value="TOUS">{t('classes.filters.allStatuses', 'Tous les statuts')}</option>
+                  <option value={EtatClasse.ACTIF}>{t('classes.status.active', 'Actif')}</option>
                   <option value={EtatClasse.EN_ATTENTE_APPROBATION}>
-                    En attente
+                    {t('classes.status.pending', 'En attente')}
                   </option>
-                  <option value={EtatClasse.INACTIF}>Inactif</option>
+                  <option value={EtatClasse.INACTIF}>{t('classes.status.inactive', 'Inactif')}</option>
                 </select>
 
                 {availableEtablissements.length > 0 && (
@@ -584,7 +587,7 @@ const ClassesListContent = ({
                     onChange={(e) => setEtablissementFilter(e.target.value)}
                     className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="TOUS">Tous les établissements</option>
+                    <option value="TOUS">{t('classes.filters.allSchools', 'Tous les établissements')}</option>
                     {availableEtablissements.map((etab) => (
                       <option key={etab.id} value={etab.id}>
                         {etab.nom}
@@ -598,10 +601,10 @@ const ClassesListContent = ({
                   onChange={(e) => setItemsPerPage(Number(e.target.value))}
                   className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value={9}>9 par page</option>
-                  <option value={12}>12 par page</option>
-                  <option value={18}>18 par page</option>
-                  <option value={24}>24 par page</option>
+                  <option value={9}>{t('common.perPage', '{{count}} par page', { count: 9 })}</option>
+                  <option value={12}>{t('common.perPage', '{{count}} par page', { count: 12 })}</option>
+                  <option value={18}>{t('common.perPage', '{{count}} par page', { count: 18 })}</option>
+                  <option value={24}>{t('common.perPage', '{{count}} par page', { count: 24 })}</option>
                 </select>
               </div>
             </div>
@@ -629,15 +632,15 @@ const ClassesListContent = ({
               {searchTerm ||
               statusFilter !== "TOUS" ||
               etablissementFilter !== "TOUS"
-                ? "Aucun résultat trouvé"
-                : "Aucune classe"}
+                ? t('classes.empty.noResults', "Aucun résultat trouvé")
+                : t('classes.empty.noClasses', "Aucune classe")}
             </h3>
             <p className="text-gray-600 mb-6">
               {searchTerm ||
               statusFilter !== "TOUS" ||
               etablissementFilter !== "TOUS"
-                ? "Essayez avec d'autres critères de recherche"
-                : "Commencez par créer votre première classe"}
+                ? t('classes.empty.noResultsDesc', "Essayez avec d'autres critères de recherche")
+                : t('classes.empty.noClassesDesc', "Commencez par créer votre première classe")}
             </p>
             {!searchTerm &&
               statusFilter === "TOUS" &&
@@ -648,228 +651,257 @@ const ClassesListContent = ({
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center gap-2 mx-auto"
                 >
                   <Plus className="w-5 h-5" />
-                  Créer une classe
+                  {t('classes.empty.createFirst', "Créer une classe")}
                 </button>
               )}
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {paginatedClasses.map((classe) => (
-                <div
-                  key={classe.id}
-                  className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative"
-                >
-                  {accessRequestCounts[classe.id] > 0 && (
-                    <div className="absolute top-3 right-3 z-20 animate-bounce">
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"></div>
-                        <div className="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-full shadow-2xl border-4 border-white">
-                          <span className="text-white font-bold text-base">
+            <AnimatePresence mode="wait">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6"
+              >
+                {paginatedClasses.map((classe, index) => (
+                  <motion.div
+                    key={classe.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-200 hover:border-blue-300 group relative"
+                  >
+                    {/* Notification Badge - Keep as is */}
+                    {accessRequestCounts[classe.id] > 0 && (
+                      <div className="absolute top-3 right-3 z-20">
+                        <div className="relative flex items-center justify-center w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-full shadow-md border-2 border-white animate-pulse">
+                          <span className="text-white font-bold text-xs">
                             {accessRequestCounts[classe.id]}
                           </span>
                         </div>
                       </div>
-                    </div>
-                  )}
-                  <div className="p-6 relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-indigo-50/0 group-hover:from-blue-50/50 group-hover:to-indigo-50/50 transition-all duration-300 pointer-events-none" />
-                    <div className="flex items-start justify-between mb-4 relative z-10">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    )}
+
+                    <div className="p-4">
+                      {/* Header - More Compact */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 pr-4">
+                          <h3 className="text-base font-bold text-gray-900 mb-0.5 group-hover:text-blue-600 transition-colors line-clamp-1">
                             {classe.nom}
                           </h3>
-                        </div>
-                        <div className="space-y-2.5 text-sm text-slate-600">
-                          <div className="flex items-center gap-2">
-                            <GraduationCap className="w-4 h-4" />
-                            <span>{classe.niveau}</span>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                            <GraduationCap className="w-3.5 h-3.5" />
+                            <span className="font-medium">{classe.niveau}</span>
                           </div>
-                          {classe.etablissement && (
-                            <div className="flex items-center gap-2">
-                              <School className="w-4 h-4" />
-                              <span>{classe.etablissement.nom}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4" />
-                            <span>
-                              {classe.nombreEtudiants || classe.eleves?.length || classe.participants?.length || 0} participants
-                            </span>
-                          </div>
-                          {classe.dateCreation && (
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
-                              <span>
-                                {new Date(
-                                  classe.dateCreation
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="mb-4 p-4 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-xl border border-slate-200/50 relative z-10">
-                      <div className="flex items-center gap-2 mb-3">
-                        {getStatusIcon(classe.etat)}
-                        <span className="text-sm font-semibold text-slate-700">
-                          Statut
+                        
+                        {/* Status Badge - Smaller */}
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                            classe.etat
+                          )}`}
+                        >
+                          <span className="w-3 h-3">{getStatusIcon(classe.etat)}</span>
+                          <span className="hidden sm:inline">{classService.getEtatDisplayName(classe.etat)}</span>
                         </span>
                       </div>
-                      <span
-                        className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full shadow-sm ${getStatusColor(
-                          classe.etat
-                        )}`}
-                      >
-                        {classService.getEtatDisplayName(classe.etat)}
-                      </span>
 
-                      {userRole === "professeur" && (
-                        <div className="mt-2 text-xs flex items-center gap-1">
-                          {hasPublicationRights(classe.id) ? (
-                            <>
-                              <UserCheck className="w-3 h-3 text-green-600" />
-                              <span className="text-green-600">
-                                Vous avez des droits de publication
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <UserX className="w-3 h-3 text-amber-600" />
-                              <span className="text-amber-600">
-                                Aucun droit de publication
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                      {classe.etat === EtatClasse.EN_ATTENTE_APPROBATION &&
-                        userRole === "professeur" && (
-                          <div className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                            En attente d'approbation. Le bouton "Gérer" sera
-                            disponible après approbation.
+                      {/* Info Section - Inline & Compact */}
+                      <div className="space-y-2 mb-3">
+                        {/* Établissement */}
+                        {classe.etablissement && (
+                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <div className="w-6 h-6 bg-blue-50 rounded flex items-center justify-center flex-shrink-0">
+                              <School className="w-3 h-3 text-blue-600" />
+                            </div>
+                            <span className="truncate font-medium">{classe.etablissement.nom}</span>
                           </div>
                         )}
-                    </div>
 
-                    <div className="flex gap-2 flex-wrap relative z-10">
-                      <button
-                        onClick={() => setSelectedClass(classe)}
-                        className="flex-1 bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 py-2.5 px-3 rounded-xl hover:from-blue-100 hover:to-blue-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Voir
-                      </button>
-
-                      {shouldShowManageButton(classe) && (
-                        <button
-                          onClick={() => handleManageClass(classe)}
-                          className="flex-1 bg-gradient-to-r from-indigo-50 to-indigo-100/50 text-indigo-700 py-2.5 px-3 rounded-xl hover:from-indigo-100 hover:to-indigo-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md relative"
-                        >
-                          <Settings className="w-4 h-4" />
-                          Gérer
-                          {accessRequestCounts[classe.id] > 0 && (
-                            <span className="absolute -top-2 -right-2 inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse shadow-lg">
-                              {accessRequestCounts[classe.id]}
+                        {/* Students & Date - Inline */}
+                        <div className="flex items-center gap-3 text-xs text-gray-600">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-6 h-6 bg-green-50 rounded flex items-center justify-center flex-shrink-0">
+                              <Users className="w-3 h-3 text-green-600" />
+                            </div>
+                            <span className="font-semibold text-gray-900">
+                              {classe.nombreEtudiants ||
+                                classe.eleves?.length ||
+                                classe.participants?.length ||
+                                0}
                             </span>
-                          )}
-                        </button>
-                      )}
+                            <span className="text-gray-500">{t('classes.card.students', 'élèves')}</span>
+                          </div>
 
-                      {userRole === "administrateur" &&
-                        classe.etat === EtatClasse.ACTIF && (
-                          <button
-                            onClick={() =>
-                              handleManagePublicationRights(classe)
-                            }
-                            disabled={loadingRights[classe.id]}
-                            className="flex-1 bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 py-2.5 px-3 rounded-xl hover:from-purple-100 hover:to-purple-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          {classe.dateCreation && (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 bg-purple-50 rounded flex items-center justify-center flex-shrink-0">
+                                <Calendar className="w-3 h-3 text-purple-600" />
+                              </div>
+                              <span className="text-gray-600">
+                                {new Date(classe.dateCreation).toLocaleDateString('fr-FR', {
+                                  day: 'numeric',
+                                  month: 'short'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Publication Rights - Compact */}
+                        {userRole === "professeur" && (
+                          <div
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium ${
+                              hasPublicationRights(classe.id)
+                                ? 'bg-green-50 text-green-700'
+                                : 'bg-amber-50 text-amber-700'
+                            }`}
                           >
-                            {loadingRights[classe.id] ? (
-                              <Loader className="w-4 h-4 animate-spin" />
+                            {hasPublicationRights(classe.id) ? (
+                              <>
+                                <UserCheck className="w-3 h-3 flex-shrink-0" />
+                                <span>{t('classes.card.rightsGranted', 'Droits accordés')}</span>
+                              </>
                             ) : (
-                              <UserCheck className="w-4 h-4" />
+                              <>
+                                <UserX className="w-3 h-3 flex-shrink-0" />
+                                <span>{t('classes.card.rights.none', 'Aucun droit')}</span>
+                              </>
                             )}
-                            Droits
-                          </button>
+                          </div>
                         )}
 
-                      <button
-                        onClick={() => handleEdit(classe)}
-                        disabled={
-                          actionLoading === "edit" ||
-                          (userRole === "professeur" &&
-                            !hasPublicationRights(classe.id))
-                        }
-                        className="flex-1 bg-gradient-to-r from-green-50 to-green-100/50 text-green-700 py-2.5 px-3 rounded-xl hover:from-green-100 hover:to-green-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {actionLoading === "edit" ? (
-                          <Loader className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Edit className="w-4 h-4" />
-                        )}
-                        Modifier
-                      </button>
-
-                      {(userRole === "administrateur" ||
-                        (userRole === "professeur" &&
-                          hasPublicationRights(classe.id))) && (
-                        <button
-                          onClick={() => setShowDeleteModal(classe)}
-                          disabled={actionLoading === classe.id}
-                          className="bg-gradient-to-r from-red-50 to-red-100/50 text-red-700 py-2.5 px-3 rounded-xl hover:from-red-100 hover:to-red-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {actionLoading === classe.id ? (
-                            <Loader className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
+                        {/* Pending Notice - Compact */}
+                        {classe.etat === EtatClasse.EN_ATTENTE_APPROBATION &&
+                          userRole === "professeur" && (
+                            <div className="flex items-start gap-1.5 px-2 py-1.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+                              <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                              <span>{t('classes.card.pendingBadge', "En attente d'approbation")}</span>
+                            </div>
                           )}
-                          Supprimer
-                        </button>
-                      )}
+                      </div>
 
-                      {userRole === "etablissement" &&
-                        classe.etat === EtatClasse.EN_ATTENTE_APPROBATION && (
+                      {/* Action Buttons - Compact */}
+                      <div className="flex flex-col gap-1.5 pt-3 border-t border-gray-100">
+                        {/* Primary Row */}
+                        <div className="grid grid-cols-2 gap-1.5">
                           <button
-                            onClick={() => setShowApprovalModal(classe)}
-                            className="bg-gradient-to-r from-yellow-50 to-yellow-100/50 text-yellow-700 py-2.5 px-3 rounded-xl hover:from-yellow-100 hover:to-yellow-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
+                            onClick={() => setSelectedClass(classe)}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-xs transition-colors"
                           >
-                            <Check className="w-4 h-4" />
-                            Approuver
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>{t('classes.card.seeDetails', 'Détails')}</span>
                           </button>
-                        )}
 
-                      {(userRole === "etablissement" ||
-                        userRole === "administrateur") &&
-                        classe.etat === EtatClasse.ACTIF && (
-                          <button
-                            onClick={() => setShowDeactivationModal(classe)}
-                            className="bg-gradient-to-r from-orange-50 to-orange-100/50 text-orange-700 py-2.5 px-3 rounded-xl hover:from-orange-100 hover:to-orange-200/50 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
-                          >
-                            <PowerOff className="w-4 h-4" />
-                            Désactiver
-                          </button>
-                        )}
+                          {shouldShowManageButton(classe) && (
+                            <button
+                              onClick={() => handleManageClass(classe)}
+                              className="relative flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-xs transition-colors"
+                            >
+                              <Settings className="w-3.5 h-3.5" />
+                              <span>{t('classes.actions.manage', 'Gérer')}</span>
+                              {accessRequestCounts[classe.id] > 0 && (
+                                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
+                                  {accessRequestCounts[classe.id]}
+                                </span>
+                              )}
+                            </button>
+                          )}
+
+                          {!shouldShowManageButton(classe) && (
+                            <button
+                              onClick={() => handleEdit(classe)}
+                              disabled={
+                                actionLoading === "edit" ||
+                                (userRole === "professeur" &&
+                                  !hasPublicationRights(classe.id))
+                              }
+                              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {actionLoading === "edit" ? (
+                                <Loader className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Edit className="w-3.5 h-3.5" />
+                              )}
+                              <span>{t('classes.actions.edit', 'Modifier')}</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Secondary Row - More Compact */}
+                        <div className="flex gap-1.5">
+                          {userRole === "administrateur" &&
+                            classe.etat === EtatClasse.ACTIF && (
+                              <button
+                                onClick={() => handleManagePublicationRights(classe)}
+                                disabled={loadingRights[classe.id]}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                              >
+                                {loadingRights[classe.id] ? (
+                                  <Loader className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <UserCheck className="w-3 h-3" />
+                                )}
+                                <span className="hidden sm:inline">{t('classes.actions.rights', 'Droits')}</span>
+                              </button>
+                            )}
+
+                          {(userRole === "administrateur" ||
+                            (userRole === "professeur" &&
+                              hasPublicationRights(classe.id))) && (
+                            <button
+                              onClick={() => setShowDeleteModal(classe)}
+                              disabled={actionLoading === classe.id}
+                              className="flex items-center justify-center gap-1 px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                            >
+                              {actionLoading === classe.id ? (
+                                <Loader className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3 h-3" />
+                              )}
+                            </button>
+                          )}
+
+                          {userRole === "etablissement" &&
+                            classe.etat === EtatClasse.EN_ATTENTE_APPROBATION && (
+                              <button
+                                onClick={() => setShowApprovalModal(classe)}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded text-xs font-medium transition-colors"
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>{t('classes.actions.approve', 'Approuver')}</span>
+                              </button>
+                            )}
+
+                          {(userRole === "etablissement" ||
+                            userRole === "administrateur") &&
+                            classe.etat === EtatClasse.ACTIF && (
+                              <button
+                                onClick={() => setShowDeactivationModal(classe)}
+                                className="flex items-center justify-center gap-1 px-2 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded text-xs font-medium transition-colors"
+                              >
+                                <PowerOff className="w-3 h-3" />
+                                <span className="hidden sm:inline">{t('classes.actions.deactivate', 'Désactiver')}</span>
+                              </button>
+                            )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </AnimatePresence>
 
             {totalPages > 1 && (
               <div className="bg-white rounded-2xl shadow-xl p-6">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">
-                    Affichage de {(currentPage - 1) * itemsPerPage + 1} à{" "}
-                    {Math.min(
-                      currentPage * itemsPerPage,
-                      filteredClasses.length
-                    )}{" "}
-                    sur {filteredClasses.length} résultats
+                    {t('subjects.pagination.showing', { 
+                      start: (currentPage - 1) * itemsPerPage + 1,
+                      end: Math.min(currentPage * itemsPerPage, filteredClasses.length),
+                      total: filteredClasses.length
+                    })}
                   </div>
 
                   <div className="flex items-center gap-2">

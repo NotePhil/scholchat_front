@@ -4,6 +4,8 @@ import aboutImgBanner from "../components/assets/images/about-banner.jpg";
 import imgs from "../components/assets/images/join1.png";
 import { AiOutlineCheck } from "react-icons/ai";
 import { motion } from "framer-motion";
+import { ArrowRight, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -34,6 +36,7 @@ export const AboutContent = ({ theme }) => {
   };
 
   const themeClasses = getThemeClasses();
+  const navigate = useNavigate();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -132,9 +135,17 @@ export const AboutContent = ({ theme }) => {
               </p>
               
               <motion.div variants={itemVariants} className="pt-6">
-                 <button className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-purple-500/30 transition-all transform hover:-translate-y-1">
-                    {t("pages.about.mission.cta")}
-                 </button>
+                <motion.button 
+                  onClick={() => navigate("/schoolchat/courses")}
+                  whileHover={{ scale: 1.05, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
+                  whileTap={{ scale: 0.95 }}
+                  className="group relative flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-2xl font-bold overflow-hidden shadow-lg hover:shadow-blue-500/25 transition-all"
+                >
+                  <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-500 -translate-x-full skew-x-12"></div>
+                  <Sparkles className="w-5 h-5 text-blue-200 group-hover:rotate-12 transition-transform" />
+                  <span>{t("pages.about.mission.cta")}</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </motion.button>
               </motion.div>
             </motion.div>
 

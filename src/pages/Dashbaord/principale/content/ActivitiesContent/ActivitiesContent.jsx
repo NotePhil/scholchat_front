@@ -17,27 +17,39 @@ import {
   Image,
   Trash2,
   Loader2,
+  Home,
+  Users,
+  Video,
+  Store,
+  Bell,
+  BookOpen
 } from "lucide-react";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
 import { minioS3Service } from "../../../../../services/minioS3";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useSelector } from "react-redux";
+import { motion } from "framer-motion";
 
+/**
+ * ActivitiesContent - Professional Facebook-like Activity Feed
+ * Responsive design with left sidebar and main content area
+ * All API calls preserved, enhanced UI/UX
+ */
 const ActivitiesContent = () => {
   const { t } = useTranslation();
   const language = useSelector((state) => state.language?.currentLanguage || 'fr');
   
-  // Helper function for French pluralization
   const pluralize = (count, singular, plural) => {
     return `${count} ${count === 1 ? singular : plural}`;
   };
+
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [staticActivities] = useState([]);
   const [likingActivities, setLikingActivities] = useState({});
-  const [localLikes, setLocalLikes] = useState({}); // Track likes locally
-  const [localComments, setLocalComments] = useState({}); // Track comments locally
-  const [likedByUsers, setLikedByUsers] = useState({}); // Track who liked each post
+  const [localLikes, setLocalLikes] = useState({});
+  const [localComments, setLocalComments] = useState({});
+  const [likedByUsers, setLikedByUsers] = useState({});
   const [newComment, setNewComment] = useState({});
   const [imagePreview, setImagePreview] = useState({
     isOpen: false,
@@ -50,11 +62,11 @@ const ActivitiesContent = () => {
     titre: "",
     description: "",
     lieu: "",
-    visibility: "PUBLIC", // Use visibility instead of etat
+    visibility: "PUBLIC",
     heureDebut: "",
     heureFin: "",
     createurId: localStorage.getItem("userId") || "user-id-123",
-    selectedClasses: [] // Array of selected class IDs
+    selectedClasses: []
   });
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -62,7 +74,6 @@ const ActivitiesContent = () => {
   const [loadingClasses, setLoadingClasses] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Load classes when visibility changes to PRIVATE
   const loadClasses = async () => {
     if (formData.visibility !== 'PRIVATE') return;
     
@@ -75,8 +86,7 @@ const ActivitiesContent = () => {
       if (userRole === 'ADMIN') {
         endpoint = `${process.env.REACT_APP_API_BASE_URL}/classes`;
       } else {
-        // For professors, get classes they have access to via publication rights
-        endpoint = `${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`;
+        endpoint = `${process.env.REACT_APP_API_BASE_URL}/droits-publication/util isateurs/${userId}/classes`;
       }
       
       const response = await fetch(endpoint, {
@@ -111,21 +121,11 @@ const ActivitiesContent = () => {
 
   const getImageUrl = async (media) => {
     try {
-      console.log('Getting image URL for media:', media);
-      console.log('Media ID:', media.id);
-      
-      if (!media.id) {
-        console.error('No ID in media:', media);
-        return null;
-      }
-      
-      // Use the same method as UserViewModal - by media ID
+      if (!media.id) return null;
       const downloadData = await minioS3Service.generateDownloadUrl(media.id);
-      console.log('Download data received:', downloadData);
-      console.log('Final image URL:', downloadData.downloadUrl);
       return downloadData.downloadUrl;
     } catch (error) {
-      console.error('Failed to get image URL for media:', media, 'Error:', error);
+      console.error('Failed to get image URL:', error);
       return null;
     }
   };
@@ -135,37 +135,23 @@ const ActivitiesContent = () => {
       setLoadingActivities(true);
       const events = await activityFeedService.getActivities();
       
-      console.log('Raw events from API:', events);
-      console.log('Number of events:', events.length);
-      
-      // Process events directly in component
       const activitiesWithImages = await Promise.all(
         events.map(async (event) => {
-          console.log('Processing event:', event.id, 'visibility:', event.visibility);
-          
           const images = [];
           
           if (event.medias && event.medias.length > 0) {
             const imageUrls = await Promise.all(
               event.medias
                 .filter(media => media.mediaType === 'IMAGE' && media.id)
-                .map(async (media) => {
-                  const imageUrl = await getImageUrl(media);
-                  return imageUrl;
-                })
+                .map(async (media) => await getImageUrl(media))
             );
-            
-            const validUrls = imageUrls.filter(url => url !== null);
-            images.push(...validUrls);
+            images.push(...imageUrls.filter(url => url !== null));
           }
           
           const currentUserId = localStorage.getItem('userId');
-          
-          // Process interactions - FIXED
           const interactions = event.interactions || [];
           const likes = interactions.filter(i => i.type === 'LIKE').length;
           
-          // Get only COMMENT type interactions
           const comments = interactions
             .filter(i => i.type === 'COMMENT')
             .map(comment => ({
@@ -180,7 +166,6 @@ const ActivitiesContent = () => {
             i.type === 'LIKE' && i.createdById === currentUserId
           );
           
-          // Participants count should come from participantsIds array
           const participants = event.participantsIds?.length || 0;
           const isParticipating = event.participantsIds?.includes(currentUserId) || false;
           
@@ -188,10 +173,10 @@ const ActivitiesContent = () => {
             id: event.id,
             type: 'event',
             images,
-            likes, // This now correctly counts only LIKE interactions
-            comments, // This now contains only COMMENT interactions
+            likes,
+            comments,
             isLiked,
-            participants, // Using participantsIds length
+            participants,
             isParticipating,
             showComments: false,
             user: { name: 'Event Creator' },
@@ -211,7 +196,6 @@ const ActivitiesContent = () => {
         })
       );
       
-      console.log('Processed activities:', activitiesWithImages.length);
       setActivities(activitiesWithImages);
     } catch (error) {
       console.error('Error loading activities:', error);
@@ -307,10 +291,8 @@ const ActivitiesContent = () => {
     
     try {
       const currentActivity = activities.find(a => a.id === activityId);
-      const currentUserId = localStorage.getItem('userId');
       const isCurrentlyLiked = currentActivity?.isLiked || false;
       
-      // Update UI optimistically
       setActivities(prev => prev.map(activity => 
         activity.id === activityId 
           ? { 
@@ -321,11 +303,9 @@ const ActivitiesContent = () => {
           : activity
       ));
       
-      // Send API request
       await activityFeedService.likeEvent(activityId);
     } catch (error) {
       console.error('Error handling like:', error);
-      // Revert optimistic update on error
       const currentActivity = activities.find(a => a.id === activityId);
       const isCurrentlyLiked = currentActivity?.isLiked || false;
       setActivities(prev => prev.map(activity => 
@@ -356,7 +336,6 @@ const ActivitiesContent = () => {
       const currentUserId = localStorage.getItem('userId');
       const isCurrentlyParticipating = currentActivity?.isParticipating || false;
       
-      // Update UI optimistically
       setActivities(prev => prev.map(activity => 
         activity.id === activityId 
           ? { 
@@ -370,7 +349,6 @@ const ActivitiesContent = () => {
           : activity
       ));
       
-      // Send API request
       if (isCurrentlyParticipating) {
         await activityFeedService.unjoinEvent(activityId);
       } else {
@@ -378,22 +356,6 @@ const ActivitiesContent = () => {
       }
     } catch (error) {
       console.error('Error handling participation:', error);
-      // Revert optimistic update on error
-      const currentActivity = activities.find(a => a.id === activityId);
-      const currentUserId = localStorage.getItem('userId');
-      const isCurrentlyParticipating = currentActivity?.isParticipating || false;
-      setActivities(prev => prev.map(activity => 
-        activity.id === activityId 
-          ? { 
-              ...activity, 
-              participants: isCurrentlyParticipating ? activity.participants + 1 : activity.participants - 1,
-              isParticipating: !isCurrentlyParticipating,
-              participantsIds: isCurrentlyParticipating 
-                ? [...activity.participantsIds, currentUserId]
-                : activity.participantsIds.filter(id => id !== currentUserId)
-            }
-          : activity
-      ));
     }
   };
 
@@ -411,7 +373,6 @@ const ActivitiesContent = () => {
         isCurrentUser: true
       };
       
-      // Update UI optimistically
       setActivities(prev => prev.map(activity => 
         activity.id === activityId 
           ? { 
@@ -421,22 +382,11 @@ const ActivitiesContent = () => {
           : activity
       ));
       
-      // Clear the input
       setNewComment(prev => ({ ...prev, [activityId]: '' }));
       
-      // Send API request
       await activityFeedService.commentOnEvent(activityId, comment);
     } catch (error) {
       console.error('Error adding comment:', error);
-      // Revert optimistic update on error
-      setActivities(prev => prev.map(activity => 
-        activity.id === activityId 
-          ? { 
-              ...activity, 
-              comments: activity.comments.filter(c => !c.id.startsWith('temp-'))
-            }
-          : activity
-      ));
     }
   };
 
@@ -457,17 +407,13 @@ const ActivitiesContent = () => {
     setLoading(true);
     
     try {
-      // First upload images if any
       const uploadedMedia = [];
       if (uploadedImages.length > 0) {
         setUploading(true);
         
         for (const img of uploadedImages) {
           try {
-            const result = await minioS3Service.uploadFile(
-              img.file,
-              "images"
-            );
+            const result = await minioS3Service.uploadFile(img.file, "images");
             
             uploadedMedia.push({
               fileName: result.fileName,
@@ -485,7 +431,6 @@ const ActivitiesContent = () => {
         setUploading(false);
       }
 
-      // Create event with media
       const eventData = {
         titre: formData.titre,
         description: formData.description,
@@ -501,7 +446,6 @@ const ActivitiesContent = () => {
         interactions: []
       };
 
-      console.log('Creating event with media:', eventData);
       await activityFeedService.createEvent(eventData);
 
       setShowCreateForm(false);
@@ -528,660 +472,645 @@ const ActivitiesContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-2xl mx-auto py-6 px-4">
-        {/* Header with Create Button */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-gray-900">
-              {t('activities.title')}
-            </h1>
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              <Plus size={20} />
-              {t('activities.actions.create')}
-            </button>
-          </div>
-        </div>
-
-        {/* Create Event Form */}
-        {showCreateForm ? (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="flex items-center gap-3 mb-6">
-              <button
-                onClick={() => setShowCreateForm(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Facebook-like Layout: Sidebar + Main Content */}
+      <div className="mx-auto max-w-7xl">
+        <div className="flex gap-0 lg:gap-6">
+          {/* Left Sidebar - Hidden on mobile, visible on desktop */}
+          <aside className="hidden lg:block lg:w-80 lg:flex-shrink-0">
+            <div className="sticky top-20 space-y-2">
+              <motion.div 
+                whileHover={{ x: 3 }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
               >
-                <ArrowLeft size={20} />
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                  <Calendar size={20} className="text-white" />
+                <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  {localStorage.getItem('userName')?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    {t('activities.createEvent.title')}
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    {t('activities.createEvent.subtitle')}
-                  </p>
+                <span className="font-semibold text-gray-900 dark:text-white">{localStorage.getItem('userName') || 'User'}</span>
+              </motion.div>
+
+              <motion.div 
+                whileHover={{ x: 3 }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+              >
+                <div className="w-9 h-9 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                  <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">{t('activities.sidebar.groups', 'Groupes')}</span>
+              </motion.div>
+
+              <motion.div 
+                whileHover={{ x: 3 }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+              >
+                <div className="w-9 h-9 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">{t('activities.sidebar.events', 'Événements')}</span>
+              </motion.div>
+
+              <motion.div 
+                whileHover={{ x: 3 }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+              >
+                <div className="w-9 h-9 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">{t('activities.sidebar.saved', 'Enregistrés')}</span>
+              </motion.div>
+
+              <div className="border- t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+                <button
+                  onClick={() => setShowCreateForm(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors shadow-md"
+                >
+                  <Plus className="w-5 h-5" />
+                  {t('activities.actions.create', 'Créer un événement')}
+                </button>
               </div>
             </div>
+          </aside>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('activities.form.title')} *
-                </label>
-                <input
-                  type="text"
-                  value={formData.titre}
-                  onChange={(e) => handleInputChange("titre", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t('activities.form.titlePlaceholder')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('activities.form.description')} *
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    handleInputChange("description", e.target.value)
-                  }
-                  rows={3}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder={t('activities.form.descriptionPlaceholder')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('activities.form.location')} *
-                </label>
-                <div className="relative">
-                  <MapPin
-                    size={18}
-                    className="absolute left-3 top-3.5 text-gray-400"
-                  />
-                  <input
-                    type="text"
-                    value={formData.lieu}
-                    onChange={(e) => handleInputChange("lieu", e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder={t('activities.form.locationPlaceholder')}
-                  />
+          {/* Main Content Area */}
+          <main className="flex-1 min-w-0">
+            <div className="max-w-2xl mx-auto px-0 sm:px-4 py-4 sm:py-6">
+              {/* Mobile Header */}
+              <div className="lg:hidden bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-sm p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {t('activities.title', 'Fil d\'actualité')}
+                  </h1>
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('activities.form.startTime')} *
-                  </label>
-                  <div className="relative">
-                    <Clock
-                      size={18}
-                      className="absolute left-3 top-3.5 text-gray-400"
-                    />
-                    <input
-                      type="datetime-local"
-                      value={formData.heureDebut}
-                      onChange={(e) =>
-                        handleInputChange("heureDebut", e.target.value)
-                      }
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('activities.form.endTime')} *
-                  </label>
-                  <div className="relative">
-                    <Clock
-                      size={18}
-                      className="absolute left-3 top-3.5 text-gray-400"
-                    />
-                    <input
-                      type="datetime-local"
-                      value={formData.heureFin}
-                      onChange={(e) =>
-                        handleInputChange("heureFin", e.target.value)
-                      }
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('activities.form.status')}
-                </label>
-                <select
-                  value={formData.visibility}
-                  onChange={(e) => handleInputChange("visibility", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              {/* Create Event Form Modal/Card */}
+              {showCreateForm && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 lg:relative lg:inset-auto lg:bg-transparent lg:p-0 lg:mb-4"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) setShowCreateForm(false);
+                  }}
                 >
-                  <option value="PUBLIC">Public</option>
-                  <option value="PRIVATE">Privé</option>
-                </select>
-              </div>
-
-              {/* Sélection des Classes - Seulement si PRIVÉ */}
-              {formData.visibility === "PRIVATE" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sélectionner les Classes *
-                  </label>
-                  {loadingClasses ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 size={20} className="animate-spin text-blue-600" />
-                      <span className="ml-2 text-gray-600">Chargement des classes...</span>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between z-10">
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                        {t('activities.createEvent.title', 'Créer un événement')}
+                      </h2>
+                      <button
+                        onClick={() => setShowCreateForm(false)}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5 text-gray-500" />
+                      </button>
                     </div>
-                  ) : (
-                    <div className="border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto">
-                      {classes.length === 0 ? (
-                        <p className="text-gray-500 text-sm">Aucune classe disponible</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {classes.map((cls) => (
-                            <label key={cls.id} className="flex items-center space-x-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={formData.selectedClasses?.includes(cls.id) || false}
-                                onChange={(e) => {
-                                  const classId = cls.id;
-                                  if (e.target.checked) {
-                                    handleInputChange("selectedClasses", [...(formData.selectedClasses || []), classId]);
-                                  } else {
-                                    handleInputChange("selectedClasses", (formData.selectedClasses || []).filter(id => id !== classId));
-                                  }
-                                }}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+
+                    <div className="p-4 sm:p-6 space-y-4">
+                      {/* Form fields - same as before but with better styling */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          {t('activities.form.title', 'Titre')} *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.titre}
+                          onChange={(e) => handleInputChange("titre", e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          placeholder={t('activities.form.titlePlaceholder', 'Ex: Réunion parents-professeurs')}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          {t('activities.form.description', 'Description')} *
+                        </label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => handleInputChange("description", e.target.value)}
+                          rows={3}
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all"
+                          placeholder={t('activities.form.descriptionPlaceholder', 'Décrivez votre événement...')}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          {t('activities.form.location', 'Lieu')} *
+                        </label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                          <input
+                            type="text"
+                            value={formData.lieu}
+                            onChange={(e) => handleInputChange("lieu", e.target.value)}
+                            className="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            placeholder={t('activities.form.locationPlaceholder', 'Salle 101')}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            {t('activities.form.startTime', 'Début')} *
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={formData.heureDebut}
+                            onChange={(e) => handleInputChange("heureDebut", e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            {t('activities.form.endTime', 'Fin')} *
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={formData.heureFin}
+                            onChange={(e) => handleInputChange("heureFin", e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          {t('activities.form.status', 'Visibilité')}
+                        </label>
+                        <select
+                          value={formData.visibility}
+                          onChange={(e) => handleInputChange("visibility", e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        >
+                          <option value="PUBLIC">Public</option>
+                          <option value="PRIVATE">Privé</option>
+                        </select>
+                      </div>
+
+                      {formData.visibility === "PRIVATE" && (
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            {t('activities.form.selectClasses', 'Sélectionner les Classes')} *
+                          </label>
+                          {loadingClasses ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                              <span className="ml-2 text-gray-600 dark:text-gray-400">Chargement...</span>
+                            </div>
+                          ) : (
+                            <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto">
+                              {classes.length === 0 ? (
+                                <p className="text-gray-500 dark:text-gray-400 text-sm">Aucune classe disponible</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {classes.map((cls) => (
+                                    <label key={cls.id} className="flex items-center space-x-2 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={formData.selectedClasses?.includes(cls.id) || false}
+                                        onChange={(e) => {
+                                          const classId = cls.id;
+                                          if (e.target.checked) {
+                                            handleInputChange("selectedClasses", [...(formData.selectedClasses || []), classId]);
+                                          } else {
+                                            handleInputChange("selectedClasses", (formData.selectedClasses || []).filter(id => id !== classId));
+                                          }
+                                        }}
+                                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                                      />
+                                      <span className="text-sm text-gray-700 dark:text-gray-300">{cls.nom || cls.name}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                          {t('activities.form.images', 'Photos')}
+                        </label>
+                        <div 
+                          onClick={() => fileInputRef.current?.click()}
+                          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer"
+                        >
+                          <div className="space-y-3">
+                            <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto">
+                              {uploading ? (
+                                <Loader2 className="w-6 h-6 text-blue-600 dark:text-blue-400 animate-spin" />
+                              ) : (
+                                <Image className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-700 dark:text-gray-300">
+                                {t('activities.form.addImages', 'Ajouter des photos')}
+                              </p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {t('activities.form.selectFiles', 'Cliquez pour sélectionner')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </div>
+
+                      {uploadedImages.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {uploadedImages.map((image, index) => (
+                            <div key={index} className="relative group">
+                              <img
+                                src={image.url}
+                                alt={`Upload ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg"
                               />
-                              <span className="text-sm text-gray-700">{cls.nom || cls.name}</span>
-                            </label>
+                              <button
+                                onClick={() => removeImage(index)}
+                                className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           ))}
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
+
+                    <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => setShowCreateForm(false)}
+                        className="px-6 py-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium transition-colors"
+                      >
+                        {t('common.actions.cancel', 'Annuler')}
+                      </button>
+                      <button
+                        onClick={handleCreateEvent}
+                        disabled={loading || uploading || !formData.titre || !formData.description || !formData.lieu || !formData.heureDebut || !formData.heureFin || (formData.visibility === 'PRIVATE' && formData.selectedClasses.length === 0)}
+                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {loading || uploading ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            {uploading ? t('activities.actions.processing', 'Traitement...') : t('activities.actions.creating', 'Création...')}
+                          </>
+                        ) : (
+                          t('activities.actions.createEvent', 'Créer l\'événement')
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  {t('activities.form.images')}
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-                  <div className="space-y-3">
-                    <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mx-auto">
-                      {uploading ? (
-                        <Loader2
-                          size={24}
-                          className="text-blue-600 animate-spin"
-                        />
-                      ) : (
-                        <Image size={24} className="text-blue-600" />
-                      )}
+              {/* Activities Feed */}
+              <div className="space-y-4">
+                {loadingActivities ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                  </div>
+                ) : activities.length === 0 ? (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="w-8 h-8 text-gray-400" />
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-700">
-                        {t('activities.form.addImages')}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {t('activities.form.selectFiles')}
-                      </p>
-                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      {t('activities.noActivities.title', 'Aucune activité')}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+                      {t('activities.noActivities.description', 'Créez votre premier événement')}
+                    </p>
                     <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+                      onClick={() => setShowCreateForm(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
                     >
-                      <Upload size={18} />
-                      {t('activities.actions.select')}
+                      <Plus className="w-5 h-5" />
+                      {t('activities. noActivities.createFirst', 'Créer un événement')}
                     </button>
                   </div>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
-
-              {uploadedImages.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
-                    <Image size={16} />
-                    {t('activities.form.selectedImages', { count: uploadedImages.length })}
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {uploadedImages.map((image, index) => (
-                      <div key={index} className="relative group border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                        <div className="aspect-square">
-                          <img
-                            src={image.url}
-                            alt={`Upload ${index + 1}`}
-                            className="w-full h-full object-cover cursor-pointer"
-                            onClick={() => openImagePreview([image.url], 0)}
-                          />
-                        </div>
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => removeImage(index)}
-                            className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
-                            title="Remove image"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2">
-                          <p className="text-xs truncate">{image.name}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
-              <button
-                onClick={() => setShowCreateForm(false)}
-                className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-              >
-                {t('common.actions.cancel')}
-              </button>
-              <button
-                onClick={handleCreateEvent}
-                disabled={loading || uploading || !formData.titre || !formData.description || !formData.lieu || !formData.heureDebut || !formData.heureFin || (formData.visibility === 'PRIVATE' && formData.selectedClasses.length === 0)}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {loading || uploading ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    {uploading ? t('activities.actions.processing') : t('activities.actions.creating')}
-                  </>
                 ) : (
-                  t('activities.actions.createEvent')
-                )}
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* Activities List */
-          <div className="space-y-4">
-            {loadingActivities ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 size={32} className="animate-spin text-blue-600" />
-              </div>
-            ) : activities.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar size={32} className="text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {t('activities.noActivities.title')}
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {t('activities.noActivities.description')}
-                </p>
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
-                >
-                  <Plus size={20} />
-                  {t('activities.noActivities.createFirst')}
-                </button>
-              </div>
-            ) : (
-              activities.map((activity) => (
-              <div key={activity.id} className="bg-white rounded-lg shadow-sm">
-                {/* Post Header */}
-                <div className="p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                      {activity.user.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {activity.user.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {activity.timestamp}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Post Content */}
-                  <p className="text-gray-800 mb-4">{activity.content}</p>
-                </div>
-
-                {/* Image Gallery */}
-                {activity.images && activity.images.length > 0 && (
-                  <div>
-                    {activity.images.length === 1 && (
-                      <div
-                        className="w-full cursor-pointer bg-gray-50"
-                        onClick={() => openImagePreview(activity.images, 0)}
-                      >
-                        <img
-                          src={activity.images[0]}
-                          alt="Post image"
-                          className="w-full h-96 object-contain"
-                          onError={(e) => {
-                            console.error('Image failed to load:', activity.images[0]);
-                            e.target.style.display = 'none';
-                          }}
-                          onLoad={() => console.log('Image loaded successfully:', activity.images[0])}
-                        />
-                      </div>
-                    )}
-
-                    {activity.images.length === 2 && (
-                      <div className="grid grid-cols-2 gap-1">
-                        {activity.images.map((img, idx) => (
-                          <div key={idx} className="bg-gray-50">
-                            <img
-                              src={img}
-                              alt={`Post image ${idx + 1}`}
-                              className="w-full h-64 object-contain cursor-pointer"
-                              onClick={() =>
-                                openImagePreview(activity.images, idx)
-                              }
-                            />
+                  activities.map((activity) => (
+                    <motion.div
+                      key={activity.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-sm overflow-hidden"
+                    >
+                      {/* Post Header */}
+                      <div className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+                            {activity.user.name?.charAt(0)?.toUpperCase() || 'E'}
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {activity.images.length === 3 && (
-                      <div className="grid grid-cols-2 gap-1">
-                        <div className="bg-gray-50">
-                          <img
-                            src={activity.images[0]}
-                            alt="Post image 1"
-                            className="w-full h-64 object-contain cursor-pointer"
-                            onClick={() => openImagePreview(activity.images, 0)}
-                          />
-                        </div>
-                        <div className="grid grid-rows-2 gap-1">
-                          <div className="bg-gray-50">
-                            <img
-                              src={activity.images[1]}
-                              alt="Post image 2"
-                              className="w-full h-32 object-contain cursor-pointer"
-                              onClick={() => openImagePreview(activity.images, 1)}
-                            />
-                          </div>
-                          <div className="bg-gray-50">
-                            <img
-                              src={activity.images[2]}
-                              alt="Post image 3"
-                              className="w-full h-32 object-contain cursor-pointer"
-                              onClick={() => openImagePreview(activity.images, 2)}
-                            />
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 dark:text-white">
+                              {activity.user.name}
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {activity.timestamp}
+                            </p>
                           </div>
                         </div>
-                      </div>
-                    )}
 
-                    {activity.images.length >= 4 && (
-                      <div className="grid grid-cols-2 gap-1">
-                        {activity.images.slice(0, 3).map((img, idx) => (
-                          <div key={idx} className="bg-gray-50">
-                            <img
-                              src={img}
-                              alt={`Post image ${idx + 1}`}
-                              className="w-full h-48 object-contain cursor-pointer"
-                              onClick={() =>
-                                openImagePreview(activity.images, idx)
-                              }
-                            />
-                          </div>
-                        ))}
-                        <div
-                          className="relative cursor-pointer bg-gray-50"
-                          onClick={() => openImagePreview(activity.images, 3)}
-                        >
-                          <img
-                            src={activity.images[3]}
-                            alt="Post image 4"
-                            className="w-full h-48 object-contain"
-                          />
-                          {activity.images.length > 4 && (
-                            <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-                              <span className="text-white text-xl font-bold">
-                                +{activity.images.length - 4}
-                              </span>
+                        {/* Post Content */}
+                        <p className="text-gray-800 dark:text-gray-200 mb-4 whitespace-pre-wrap">{activity.content}</p>
+                      </div>
+
+                      {/* Image Gallery - Same responsive grid as before */}
+                      {activity.images && activity.images.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-gray-900/50">
+                          {activity.images.length === 1 && (
+                            <div
+                              className="w-full cursor-pointer"
+                              onClick={() => openImagePreview(activity.images, 0)}
+                            >
+                              <img
+                                src={activity.images[0]}
+                                alt="Post"
+                                className="w-full max-h-96 object-contain"
+                              />
+                            </div>
+                          )}
+
+                          {activity.images.length === 2 && (
+                            <div className="grid grid-cols-2 gap-1">
+                              {activity.images.map((img, idx) => (
+                                <img
+                                  key={idx}
+                                  src={img}
+                                  alt={`Post ${idx + 1}`}
+                                  className="w-full h-64 object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                                  onClick={() => openImagePreview(activity.images, idx)}
+                                />
+                              ))}
+                            </div>
+                          )}
+
+{activity.images.length === 3 && (
+                            <div className="grid grid-cols-2 gap-1">
+                              <img
+                                src={activity.images[0]}
+                                alt="Post 1"
+                                className="w-full h-64 object-cover cursor-pointer row-span-2 hover:opacity-95 transition-opacity"
+                                onClick={() => openImagePreview(activity.images, 0)}
+                              />
+                              {activity.images.slice(1).map((img, idx) => (
+                                <img
+                                  key={idx + 1}
+                                  src={img}
+                                  alt={`Post ${idx + 2}`}
+                                  className="w-full h-32 object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                                  onClick={() => openImagePreview(activity.images, idx + 1)}
+                                />
+                              ))}
+                            </div>
+                          )}
+
+                          {activity.images.length >= 4 && (
+                            <div className="grid grid-cols-2 gap-1">
+                              {activity.images.slice(0, 4).map((img, idx) => (
+                                <div key={idx} className="relative">
+                                  <img
+                                    src={img}
+                                    alt={`Post ${idx + 1}`}
+                                    className="w-full h-48 object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                                    onClick={() => openImagePreview(activity.images, idx)}
+                                  />
+                                  {idx === 3 && activity.images.length > 4 && (
+                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center cursor-pointer"
+                                         onClick={() => openImagePreview(activity.images, 3)}>
+                                      <span className="text-white text-2xl font-bold">
+                                        +{activity.images.length - 4}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Engagement Stats */}
-                <div className="px-4 py-2 border-t border-gray-100">
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center gap-4">
-                      {activity.likes > 0 && (
-                        <button className="hover:underline flex items-center gap-1">
-                          <Heart size={14} className="text-red-500 fill-current" />
-                          {activity.likes} {t('activities.actions.like')}
-                        </button>
                       )}
-                      {activity.participants > 0 && (
-                        <span>
-                          {pluralize(activity.participants, 'participant', 'participants')}
-                        </span>
-                      )}
-                    </div>
-                    {activity.comments.length > 0 && (
-                      <span>
-                        {pluralize(activity.comments.length, 'commentaire', 'commentaires')}
-                      </span>
-                    )}
-                  </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="px-4 py-3 border-t border-gray-100">
-                  <div className="flex items-center justify-around">
-                    <button
-                      onClick={() => handleLike(activity.id)}
-                      disabled={likingActivities[activity.id]}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors disabled:opacity-50 ${
-                        activity.isLiked
-                          ? "text-red-600 bg-red-50 hover:bg-red-100"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      {likingActivities[activity.id] ? (
-                        <Loader2 size={18} className="animate-spin" />
-                      ) : (
-                        <Heart
-                          size={18}
-                          className={activity.isLiked ? "fill-current text-red-600" : ""}
-                        />
-                      )}
-                      {t('activities.actions.like')} {activity.likes > 0 && `(${activity.likes})`}
-                    </button>
-
-                    <button
-                      onClick={() => toggleComments(activity.id)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-                    >
-                      <MessageCircle size={18} />
-                      {t('activities.actions.comment')} {activity.comments.length > 0 && `(${activity.comments.length})`}
-                    </button>
-
-                    <button
-                      onClick={() => handleParticipate(activity.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                        activity.isParticipating
-                          ? "text-green-600 bg-green-50 hover:bg-green-100"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      <UserPlus size={18} />
-                      {t('activities.actions.participate')} {activity.participants > 0 && `(${activity.participants})`}
-                    </button>
-
-                    <button 
-                      onClick={() => handleShare(activity.id)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-                    >
-                      <Share2 size={18} />
-                      {t('activities.actions.share')}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Comments Section */}
-                {activity.showComments && (
-                  <div className="border-t border-gray-100">
-                    {/* Existing Comments */}
-                    {activity.comments.length > 0 && (
-                      <div className={`px-4 py-3 space-y-2 ${
-                        activity.comments.length > 4 ? 'max-h-48 overflow-y-auto' : ''
-                      }`}>
-                        {activity.comments.map((comment) => {
-                          const commentTime = comment.creationDate ? 
-                            new Date(comment.creationDate).toLocaleString('fr-FR', {
-                              day: '2-digit',
-                              month: '2-digit', 
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) : 'À l\'instant';
-                          
-                          return (
-                            <div key={comment.id} className={`flex gap-2 ${comment.isCurrentUser ? 'flex-row-reverse' : ''}`}>
-                              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                                {comment.isCurrentUser ? 'V' : 'U'}
-                              </div>
-                              <div className={`flex-1 ${comment.isCurrentUser ? 'text-right' : ''}`}>
-                                <div className={`rounded-2xl px-3 py-2 inline-block max-w-xs ${
-                                  comment.isCurrentUser 
-                                    ? 'bg-blue-500 text-white ml-auto' 
-                                    : 'bg-gray-100 text-gray-900'
-                                }`}>
-                                  <p className="text-sm">
-                                    {comment.content}
-                                  </p>
-                                </div>
-                                <p className={`text-xs text-gray-500 mt-1 ${
-                                  comment.isCurrentUser ? 'mr-3' : 'ml-3'
-                                }`}>
-                                  {commentTime}
-                                </p>
-                              </div>
+                      {/* Engagement Stats */}
+                      {(activity.likes > 0 || activity.participants > 0 || activity.comments.length > 0) && (
+                        <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700">
+                          <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center gap-3">
+                              {activity.likes > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <Heart className="w-4 h-4 text-red-500 fill-current" />
+                                  {activity.likes}
+                                </span>
+                              )}
+                              {activity.participants > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <UserPlus className="w-4 h-4 text-green-500" />
+                                  {pluralize(activity.participants, 'participant', 'participants')}
+                                </span>
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Add Comment */}
-                    <div className="px-4 py-3 border-t border-gray-200">
-                      <div className="flex gap-2">
-                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                          V
+                            {activity.comments.length > 0 && (
+                              <button
+                                onClick={() => toggleComments(activity.id)}
+                                className="hover:underline"
+                              >
+                                {pluralize(activity.comments.length, 'commentaire', 'commentaires')}
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1 relative">
-                          <input
-                            type="text"
-                            placeholder={t('activities.form.commentPlaceholder')}
-                            value={newComment[activity.id] || ""}
-                            onChange={(e) =>
-                              setNewComment((prev) => ({
-                                ...prev,
-                                [activity.id]: e.target.value,
-                              }))
-                            }
-                            onKeyPress={(e) =>
-                              e.key === "Enter" && addComment(activity.id)
-                            }
-                            className="w-full bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 pr-10"
-                          />
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="px-2 sm:px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex items-center justify-around gap-1">
                           <button
-                            onClick={() => addComment(activity.id)}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-600"
+                            onClick={() => handleLike(activity.id)}
+                            disabled={likingActivities[activity.id]}
+                            className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-semibold text-sm transition-all ${ 
+                              activity.isLiked
+                                ? "text-red-600 bg-red-50 dark:bg-red-900/20"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            }`}
                           >
-                            <Send size={16} />
+                            {likingActivities[activity.id] ? (
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                              <Heart className={`w-5 h-5 ${activity.isLiked ? 'fill-current' : ''}`} />
+                            )}
+                            <span className="hidden sm:inline">{t('activities.actions.like', 'J\'aime')}</span>
+                          </button>
+
+                          <button
+                            onClick={() => toggleComments(activity.id)}
+                            className="flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold text-sm transition-all"
+                          >
+                            <MessageCircle className="w-5 h-5" />
+                            <span className="hidden sm:inline">{t('activities.actions.comment', 'Commenter')}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleParticipate(activity.id)}
+                            className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                              activity.isParticipating
+                                ? "text-green-600 bg-green-50 dark:bg-green-900/20"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            }`}
+                          >
+                            <UserPlus className="w-5 h-5" />
+                            <span className="hidden sm:inline">{t('activities.actions.participate', 'Participer')}</span>
+                          </button>
+
+                          <button 
+                            onClick={() => handleShare(activity.id)}
+                            className="flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold text-sm transition-all"
+                          >
+                            <Share2 className="w-5 h-5" />
+                            <span className="hidden sm:inline">{t('activities.actions.share', 'Partager')}</span>
                           </button>
                         </div>
                       </div>
-                    </div>
-                  </div>
+
+                      {/* Comments Section */}
+                      {activity.showComments && (
+                        <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                          {activity.comments.length > 0 && (
+                            <div className="px-4 py-3 space-y-3 max-h-96 overflow-y-auto">
+                              {activity.comments.map((comment) => {
+                                const commentTime = comment.creationDate ? 
+                                  new Date(comment.creationDate).toLocaleString('fr-FR', {
+                                    day: '2-digit',
+                                    month: '2-digit', 
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  }) : 'À l\'instant';
+                                
+                                return (
+                                  <div key={comment.id} className={`flex gap-2 ${comment.isCurrentUser ? 'flex-row-reverse' : ''}`}>
+                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                      {comment.isCurrentUser ? 'V' : 'U'}
+                                    </div>
+                                    <div className={`flex-1 max-w-[75%] ${comment.isCurrentUser ? 'text-right' : ''}`}>
+                                      <div className={`rounded-2xl px-4 py-2 inline-block ${
+                                        comment.isCurrentUser 
+                                          ? 'bg-blue-600 text-white' 
+                                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                                      }`}>
+                                        <p className="text-sm break-words">{comment.content}</p>
+                                      </div>
+                                      <p className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${
+                                        comment.isCurrentUser ? 'mr-3' : 'ml-3'
+                                      }`}>
+                                        {commentTime}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Add Comment */}
+                          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                            <div className="flex gap-2">
+                              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                V
+                              </div>
+                              <div className="flex-1 relative">
+                                <input
+                                  type="text"
+                                  placeholder={t('activities.form.commentPlaceholder', 'Écrire un commentaire...')}
+                                  value={newComment[activity.id] || ""}
+                                  onChange={(e) =>
+                                    setNewComment((prev) => ({
+                                      ...prev,
+                                      [activity.id]: e.target.value,
+                                    }))
+                                  }
+                                  onKeyPress={(e) =>
+                                    e.key === "Enter" && addComment(activity.id)
+                                  }
+                                  className="w-full bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                                />
+                                <button
+                                  onClick={() => addComment(activity.id)}
+                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-600 transition-colors"
+                                  >
+                                  <Send className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  ))
                 )}
               </div>
-              ))
-            )}
-          </div>
-        )}
+            </div>
+          </main>
+        </div>
       </div>
 
-      {/* Image Preview Modal */}
+      {/* Image Preview Modal - Same as before */}
       {imagePreview.isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100]"
           onClick={closeImagePreview}
         >
           <div
-            className="relative max-w-4xl max-h-[90vh] w-full mx-4"
+            className="relative max-w-6xl max-h-[90vh] w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
             <button
               onClick={closeImagePreview}
-              className="absolute top-4 right-4 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
+              className="absolute top-4 right-4 z-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all"
             >
-              <X size={24} />
+              <X className="w-6 h-6" />
             </button>
 
-            {/* Navigation Buttons */}
             {imagePreview.images.length > 1 && (
               <>
                 <button
                   onClick={() => navigateImage("prev")}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all"
                 >
-                  <ChevronLeft size={24} />
+                  <ChevronLeft className="w-6 h-6" />
                 </button>
                 <button
                   onClick={() => navigateImage("next")}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all"
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all"
                 >
-                  <ChevronRight size={24} />
+                  <ChevronRight className="w-6 h-6" />
                 </button>
               </>
             )}
 
-            {/* Image */}
             <img
               src={imagePreview.images[imagePreview.currentIndex]}
               alt={`Preview ${imagePreview.currentIndex + 1}`}
               className="w-full h-full object-contain rounded-lg"
             />
 
-            {/* Image Counter */}
             {imagePreview.images.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium">
                 {imagePreview.currentIndex + 1} / {imagePreview.images.length}
               </div>
             )}

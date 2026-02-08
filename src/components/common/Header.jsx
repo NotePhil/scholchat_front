@@ -37,13 +37,15 @@ export const Header = ({ theme, setTheme }) => {
       hasDropdown: true,
       dropdownItems: [
         { name: t("navigation.pricing"), path: "/schoolchat/functionalities" },
-        { name: t("navigation.nurseries"), path: "/schoolchat/instructor" },
-        { name: t("navigation.kindergartens"), path: "/schoolchat/courses" },
-        { name: t("navigation.primarySchools"), path: "/schoolchat/courses" },
-        { name: t("navigation.highSchools"), path: "/schoolchat/courses" }
+        { name: t("navigation.nurseries"), path: "/schoolchat/nursery" },
+        { name: t("navigation.kindergartens"), path: "/schoolchat/kindergarten" },
+        { name: t("navigation.primarySchools"), path: "/schoolchat/primary-school" },
+        { name: t("navigation.highSchools"), path: "/schoolchat/high-school" },
+        { name: t("navigation.university"), path: "/schoolchat/university" }
       ]
     },
     { name: t("navigation.faq"), path: "/schoolchat/blog" },
+    { name: t("navigation.contact"), path: "/schoolchat/contact" },
   ];
 
   const getHeaderClasses = () => {

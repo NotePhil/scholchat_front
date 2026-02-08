@@ -8,6 +8,7 @@ import { Blog } from "./Blog";
 import FunctionalitiesSection from "./FunctionalitiesSection";
 import { motion } from "framer-motion";
 import { useTranslation } from "../hooks/useTranslation";
+import { Rocket, PlayCircle } from "lucide-react";
 
 export const HomeContent = ({ theme }) => {
   const navigate = useNavigate();
@@ -91,7 +92,7 @@ export const HomeContent = ({ theme }) => {
             </motion.div>
 
             <motion.h1 
-              className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-8 leading-[1.1] tracking-tight"
+              className="text-3xl sm:text-5xl lg:text-7xl font-bold mb-6 sm:mb-8 leading-[1.1] tracking-tight break-words hyphens-auto"
               variants={itemVariants}
             >
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 animate-gradient-x">
@@ -100,31 +101,34 @@ export const HomeContent = ({ theme }) => {
             </motion.h1>
 
             <motion.p 
-              className={`text-lg sm:text-xl ${themeClasses.text} opacity-90 max-w-2xl mx-auto lg:mx-0 leading-relaxed mb-10`}
+              className={`text-base sm:text-xl ${themeClasses.text} opacity-90 max-w-2xl mx-auto lg:mx-0 leading-relaxed mb-8 sm:mb-10`}
               variants={itemVariants}
             >
               {t("pages.home.subtitle")}
             </motion.p>
 
             <motion.div 
-              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-16"
+              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5 mb-16"
               variants={itemVariants}
             >
               <motion.button 
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, boxShadow: "0 20px 25px -5px rgb(59 130 246 / 0.5)" }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate('/schoolchat/login')}
-                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-lg shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all"
+                className="group relative w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all overflow-hidden"
               >
-                {t("pages.home.cta")}
+                <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-500 -translate-x-full skew-x-12"></div>
+                <Rocket className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                <span>{t("pages.home.cta")}</span>
               </motion.button>
 
               <motion.button 
-                 whileHover={{ scale: 1.05 }}
-                 whileTap={{ scale: 0.95 }}
-                 className={`w-full sm:w-auto px-8 py-4 ${theme === 'dark' ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50'} border border-gray-200 dark:border-gray-700 rounded-2xl font-bold text-lg shadow-sm transition-all`}
+                whileHover={{ scale: 1.05, backgroundColor: theme === 'dark' ? '#1f2937' : '#f9fafb' }}
+                whileTap={{ scale: 0.95 }}
+                className={`group w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 ${theme === 'dark' ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50'} border-2 border-gray-200 dark:border-gray-700 rounded-2xl font-bold text-lg shadow-md transition-all`}
               >
-                {t("pages.home.cta") === "Découvrir" ? "Voir Démo" : "Watch Demo"}
+                <PlayCircle className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform" />
+                <span>{t("pages.home.cta") === "Découvrir" ? "Voir Démo" : "Watch Demo"}</span>
               </motion.button>
             </motion.div>
 

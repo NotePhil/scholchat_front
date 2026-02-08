@@ -4,10 +4,12 @@ import { BookOutlined } from "@ant-design/icons";
 import { classService } from "../../../../../services/ClassService";
 import ManageClassList from "../../class-management/ManageClassList";
 import ManageClassDetailsView from "../../class-management/ManageClassDetailsView";
+import { useTranslation } from "../../../../../hooks/useTranslation";
 
 const { Text, Title } = Typography;
 
 const ManageClassContent = ({ onBack }) => {
+  const { t } = useTranslation();
   const [classes, setClasses] = useState([]);
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ const ManageClassContent = ({ onBack }) => {
 
     if (!userId) {
       console.error("No user ID found in storage");
-      setError("Erreur: Utilisateur non authentifié");
+      setError(t('classes.manage.errorAuth', "Erreur: Utilisateur non authentifié"));
       return null;
     }
 
@@ -68,7 +70,7 @@ const ManageClassContent = ({ onBack }) => {
       console.log("Fetched user classes:", data);
     } catch (error) {
       console.error("Error fetching user classes:", error);
-      setError("Erreur lors du chargement de vos classes");
+      setError(t('classes.manage.errorLoad', "Erreur lors du chargement de vos classes"));
     } finally {
       setLoading(false);
     }
@@ -78,7 +80,7 @@ const ManageClassContent = ({ onBack }) => {
     setRefreshing(true);
     await fetchUserClasses();
     setRefreshing(false);
-    setSuccessMessage("Données actualisées avec succès");
+    setSuccessMessage(t('classes.manage.successRefresh', "Données actualisées avec succès"));
   };
 
   const handleSelectClass = (classId) => {
@@ -116,11 +118,11 @@ const ManageClassContent = ({ onBack }) => {
               <Space align="center" style={{ marginBottom: "16px" }}>
                 <BookOutlined style={{ fontSize: "24px", color: "#4a6da7" }} />
                 <Title level={2} style={{ margin: 0, color: "#2c3e50" }}>
-                  Mes Classes
+                  {t('classes.manage.title', "Mes Classes")}
                 </Title>
               </Space>
               <Text type="secondary" style={{ fontSize: "16px" }}>
-                Gérez et supervisez les classes auxquelles vous avez accès
+                {t('classes.manage.subtitle', "Gérez et supervisez les classes auxquelles vous avez accès")}
               </Text>
             </div>
 

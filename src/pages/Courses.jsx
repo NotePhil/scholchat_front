@@ -2,9 +2,11 @@ import React from "react";
 import { FaStar, FaUserFriends, FaBook } from "react-icons/fa";
 import { useTranslation } from "../hooks/useTranslation";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export const CoursesContent = ({ theme }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   
   // Courses data moved inside component for translation
   const coursesCard = [
@@ -170,10 +172,13 @@ export const CoursesContent = ({ theme }) => {
 
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
                     <div className={`flex items-center space-x-4 text-sm opacity-60 ${themeClasses.text}`}>
-                       <span className="flex items-center space-x-1"><FaUserFriends /> <span>1.2k</span></span>
-                       <span className="flex items-center space-x-1"><FaBook /> <span>12</span></span>
+                       <span className="flex items-center space-x-1"><FaUserFriends /> <span>1.2k+</span></span>
+                       <span className="flex items-center space-x-1"><FaBook /> <span>{val.totalTime || '12+'}</span></span>
                     </div>
-                    <button className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm font-bold group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                    <button 
+                      onClick={() => navigate(`/schoolchat/solution/${val.key}`)}
+                      className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm font-bold group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300"
+                    >
                       {t("pages.courses.details")}
                     </button>
                   </div>

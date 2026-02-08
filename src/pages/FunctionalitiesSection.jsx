@@ -11,9 +11,12 @@ import {
 } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const FunctionalitiesSection = ({ theme }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
   const getThemeClasses = () => {
     switch (theme) {
       case "dark":
@@ -53,36 +56,42 @@ const FunctionalitiesSection = ({ theme }) => {
 
   const features = [
     {
+      id: "schoolAdmin",
       icon: <Building2 className="w-8 h-8 text-blue-500" />,
       title: t("pages.functionalities.features.schoolAdmin.title"),
       description: t("pages.functionalities.features.schoolAdmin.desc"),
       color: "blue"
     },
     {
+      id: "studentSuccess",
       icon: <GraduationCap className="w-8 h-8 text-green-500" />,
       title: t("pages.functionalities.features.studentSuccess.title"),
       description: t("pages.functionalities.features.studentSuccess.desc"),
       color: "green"
     },
     {
+      id: "parentEngagement",
       icon: <Users className="w-8 h-8 text-purple-500" />,
       title: t("pages.functionalities.features.parentEngagement.title"),
       description: t("pages.functionalities.features.parentEngagement.desc"),
       color: "purple"
     },
     {
+      id: "securePlatform",
       icon: <ShieldCheck className="w-8 h-8 text-red-500" />,
       title: t("pages.functionalities.features.securePlatform.title"),
       description: t("pages.functionalities.features.securePlatform.desc"),
       color: "red"
     },
     {
+      id: "analytics",
       icon: <TrendingUp className="w-8 h-8 text-amber-500" />,
       title: t("pages.functionalities.features.analytics.title"),
       description: t("pages.functionalities.features.analytics.desc"),
       color: "amber"
     },
     {
+      id: "curriculum",
       icon: <BookOpen className="w-8 h-8 text-teal-500" />,
       title: t("pages.functionalities.features.curriculum.title"),
       description: t("pages.functionalities.features.curriculum.desc"),
@@ -150,7 +159,8 @@ const FunctionalitiesSection = ({ theme }) => {
               key={index}
               variants={cardVariants}
               whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
-              className={`p-8 rounded-3xl ${themeClasses.cardBg} border ${themeClasses.cardBorder} shadow-lg transition-all duration-300 group`}
+              className={`p-8 rounded-3xl ${themeClasses.cardBg} border ${themeClasses.cardBorder} shadow-lg transition-all duration-300 group cursor-pointer`}
+              onClick={() => navigate(`/schoolchat/functionality/${feature.id}`)}
             >
               <div className={`w-16 h-16 rounded-2xl ${themeClasses.iconBg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-inner`}>
                 {feature.icon}
@@ -162,8 +172,8 @@ const FunctionalitiesSection = ({ theme }) => {
                 {feature.description}
               </p>
               
-              <div className="flex items-center text-blue-500 font-semibold cursor-pointer group/link hover:text-blue-600">
-                <span>Learn more</span>
+              <div className="flex items-center text-blue-500 font-semibold group/link hover:text-blue-600">
+                <span>{t("pages.functionalities.learnMore")}</span>
                 <ArrowRight className="w-4 h-4 ml-2 transform group-hover/link:translate-x-1 transition-transform" />
               </div>
             </motion.div>

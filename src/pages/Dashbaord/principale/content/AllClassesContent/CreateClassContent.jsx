@@ -20,6 +20,7 @@ import establishmentService from "../../../../../services/EstablishmentService";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import { useNavigate } from "react-router-dom";
 import PublicationRightsService from "../../../../../services/PublicationRightsService";
+import { useTranslation } from "../../../../../hooks/useTranslation";
 
 // Composant de modale de paiement
 const PaymentModal = ({
@@ -29,6 +30,7 @@ const PaymentModal = ({
   classData,
   isLoading,
 }) => {
+  const { t } = useTranslation();
   const [paymentStep, setPaymentStep] = useState(1); // 1: Choix méthode, 2: Formulaire, 3: Processing, 4: Success
   const [paymentMethod, setPaymentMethod] = useState(""); // "orange", "mtn", "card"
   const [paymentData, setPaymentData] = useState({
@@ -57,13 +59,13 @@ const PaymentModal = ({
     const errors = {};
 
     if (!paymentData.phone.trim()) {
-      errors.phone = "Le numéro de téléphone est requis";
+      errors.phone = t('classes.create.validation.phoneRequired', "Le numéro de téléphone est requis");
     } else if (paymentData.phone.length < 8) {
-      errors.phone = "Numéro de téléphone trop court (minimum 8 chiffres)";
+      errors.phone = t('classes.create.validation.phoneLength', "Numéro de téléphone trop court (minimum 8 chiffres)");
     }
 
     if (!paymentData.operator) {
-      errors.operator = "Veuillez sélectionner un opérateur";
+      errors.operator = t('classes.create.validation.operatorRequired', "Veuillez sélectionner un opérateur");
     }
 
     setPaymentErrors(errors);
@@ -77,19 +79,19 @@ const PaymentModal = ({
       !cardData.number.trim() ||
       cardData.number.replace(/\s/g, "").length !== 16
     ) {
-      errors.number = "Numéro de carte invalide (16 chiffres requis)";
+      errors.number = t('classes.create.validation.cardNumber', "Numéro de carte invalide (16 chiffres requis)");
     }
 
     if (!cardData.expiry.match(/^(0[1-9]|1[0-2])\/\d{2}$/)) {
-      errors.expiry = "Format invalide (MM/AA)";
+      errors.expiry = t('classes.create.validation.cardExpiry', "Format invalide (MM/AA)");
     }
 
     if (!cardData.cvv.match(/^\d{3}$/)) {
-      errors.cvv = "CVV invalide (3 chiffres requis)";
+      errors.cvv = t('classes.create.validation.cardCvv', "CVV invalide (3 chiffres requis)");
     }
 
     if (!cardData.name.trim() || cardData.name.length < 2) {
-      errors.name = "Nom complet requis";
+      errors.name = t('classes.create.validation.cardName', "Nom complet requis");
     }
 
     setPaymentErrors(errors);
@@ -180,10 +182,10 @@ const PaymentModal = ({
               <Shield className="w-6 h-6 text-white" />
               <div>
                 <h3 className="text-lg font-semibold text-white">
-                  Paiement Sécurisé
+                  {t('classes.create.payment.title', "Paiement Sécurisé")}
                 </h3>
                 <p className="text-orange-100 text-sm">
-                  Création de classe premium
+                  {t('classes.create.payment.subtitle', "Création de classe premium")}
                 </p>
               </div>
             </div>
@@ -201,21 +203,21 @@ const PaymentModal = ({
           {/* Résumé de la commande */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <h4 className="font-semibold text-gray-900 mb-2">
-              Résumé de la commande
+              {t('classes.create.payment.summary', "Résumé de la commande")}
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">
-                  Création de classe premium
+                  {t('classes.create.payment.premiumClass', "Création de classe premium")}
                 </span>
                 <span className="font-medium">6.500 FCFA</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Frais de service</span>
+                <span className="text-gray-600">{t('classes.create.payment.serviceFee', "Frais de service")}</span>
                 <span className="font-medium">500 FCFA</span>
               </div>
               <div className="border-t pt-2 flex justify-between font-semibold">
-                <span>Total</span>
+                <span>{t('classes.create.payment.total', "Total")}</span>
                 <span className="text-orange-600">5000.000 FCFA</span>
               </div>
             </div>
@@ -225,7 +227,7 @@ const PaymentModal = ({
           {paymentStep === 1 && (
             <div className="space-y-4">
               <h4 className="font-semibold text-gray-900 mb-4">
-                Choisissez votre méthode de paiement
+                {t('classes.create.payment.methodTitle', "Choisissez votre méthode de paiement")}
               </h4>
 
               {/* Orange Money */}
@@ -243,10 +245,10 @@ const PaymentModal = ({
                   </div>
                   <div>
                     <div className="font-semibold text-gray-900">
-                      Orange Money
+                      {t('classes.create.payment.orange', "Orange Money")}
                     </div>
                     <div className="text-sm text-gray-600">
-                      Paiement par mobile
+                      {t('classes.create.payment.orangeDesc', "Paiement par mobile")}
                     </div>
                   </div>
                 </div>
@@ -267,10 +269,10 @@ const PaymentModal = ({
                   </div>
                   <div>
                     <div className="font-semibold text-gray-900">
-                      MTN Mobile Money
+                      {t('classes.create.payment.mtn', "MTN Mobile Money")}
                     </div>
                     <div className="text-sm text-gray-600">
-                      Paiement par mobile
+                      {t('classes.create.payment.mtnDesc', "Paiement par mobile")}
                     </div>
                   </div>
                 </div>
@@ -290,10 +292,10 @@ const PaymentModal = ({
                   </div>
                   <div>
                     <div className="font-semibold text-gray-900">
-                      Carte bancaire
+                      {t('classes.create.payment.card', "Carte bancaire")}
                     </div>
                     <div className="text-sm text-gray-600">
-                      Visa, Mastercard
+                      {t('classes.create.payment.cardDesc', "Visa, Mastercard")}
                     </div>
                   </div>
                 </div>
@@ -307,7 +309,7 @@ const PaymentModal = ({
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Numéro de téléphone{" "}
+                      {t('classes.create.payment.phoneLabel', "Numéro de téléphone")}{" "}
                       {paymentMethod === "orange" ? "Orange" : "MTN"} *
                     </label>
                     <div className="relative">
@@ -343,7 +345,7 @@ const PaymentModal = ({
                   {/* Numéro de carte */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Numéro de carte
+                      {t('classes.create.payment.cardLabel', "Numéro de carte")}
                     </label>
                     <div className="relative">
                       <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -372,7 +374,7 @@ const PaymentModal = ({
                     {/* Date d'expiration */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Expiration
+                        {t('classes.create.payment.expiry', "Expiration")}
                       </label>
                       <input
                         type="text"
@@ -397,7 +399,7 @@ const PaymentModal = ({
                     {/* CVV */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CVV
+                        {t('classes.create.payment.cvv', "CVV")}
                       </label>
                       <input
                         type="text"
@@ -423,7 +425,7 @@ const PaymentModal = ({
                   {/* Nom sur la carte */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nom sur la carte
+                       {t('classes.create.payment.cardName', "Nom sur la carte")}
                     </label>
                     <input
                       type="text"
@@ -451,7 +453,7 @@ const PaymentModal = ({
               <div className="flex items-center gap-2 mt-6 p-3 bg-blue-50 rounded-lg">
                 <Lock className="w-4 h-4 text-blue-600" />
                 <span className="text-sm text-blue-700">
-                  Paiement sécurisé par SSL - Vos données sont cryptées
+                  {t('classes.create.payment.secureInfo', "Paiement sécurisé par SSL - Vos données sont cryptées")}
                 </span>
               </div>
 
@@ -462,7 +464,7 @@ const PaymentModal = ({
                   onClick={() => setPaymentStep(1)}
                   className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
                 >
-                  Retour
+                  {t('classes.create.payment.back', "Retour")}
                 </button>
                 <button
                   type="submit"
@@ -470,7 +472,7 @@ const PaymentModal = ({
                   className="flex-1 bg-gradient-to-r from-orange-600 to-amber-600 text-white py-3 rounded-lg font-semibold hover:from-orange-700 hover:to-amber-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <CreditCard className="w-5 h-5" />
-                  Payer 5000.000 FCFA
+                   {t('classes.create.payment.payBtn', "Payer {{amount}} FCFA", { amount: "5000.000" })}
                 </button>
               </div>
             </form>
@@ -480,12 +482,12 @@ const PaymentModal = ({
             <div className="text-center py-8">
               <Loader className="w-12 h-12 text-orange-600 animate-spin mx-auto mb-4" />
               <h4 className="font-semibold text-gray-900 mb-2">
-                Traitement du paiement
+                {t('classes.create.payment.processing', "Traitement du paiement")}
               </h4>
               <p className="text-gray-600">
                 {paymentMethod === "orange" || paymentMethod === "mtn"
-                  ? "Validation en cours via mobile money..."
-                  : "Vérification de la carte en cours..."}
+                  ? t('classes.create.payment.validatingMobile', "Validation en cours via mobile money...")
+                  : t('classes.create.payment.validatingCard', "Vérification de la carte en cours...")}
               </p>
             </div>
           )}
@@ -494,10 +496,10 @@ const PaymentModal = ({
             <div className="text-center py-8">
               <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
               <h4 className="font-semibold text-gray-900 mb-2">
-                Paiement accepté !
+                {t('classes.create.payment.success', "Paiement accepté !")}
               </h4>
               <p className="text-gray-600">
-                Votre classe va être créée et approuvée automatiquement...
+                {t('classes.create.payment.successDesc', "Votre classe va être créée et approuvée automatiquement...")}
               </p>
             </div>
           )}
@@ -515,6 +517,7 @@ const CreateClassContent = ({
   themes,
   colorSchemes,
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     nom: "",
     niveau: "",
@@ -637,17 +640,17 @@ const CreateClassContent = ({
     const newErrors = {};
 
     if (!formData.nom.trim()) {
-      newErrors.nom = "Le nom de la classe est requis";
+      newErrors.nom = t('classes.create.validation.nameRequired', "Le nom de la classe est requis");
     } else if (formData.nom.trim().length < 2) {
-      newErrors.nom = "Le nom doit contenir au moins 2 caractères";
+      newErrors.nom = t('classes.create.validation.nameLength', "Le nom doit contenir au moins 2 caractères");
     }
 
     if (!formData.niveau.trim()) {
-      newErrors.niveau = "Le niveau est requis";
+      newErrors.niveau = t('classes.create.validation.levelRequired', "Le niveau est requis");
     }
 
     if (!formData.moderator) {
-      newErrors.moderator = "Un modérateur est requis";
+      newErrors.moderator = t('classes.create.validation.moderatorRequired', "Un modérateur est requis");
     }
 
     if (
@@ -655,7 +658,7 @@ const CreateClassContent = ({
       !formData.etablissementToken.trim()
     ) {
       newErrors.etablissementToken =
-        "Le token est requis pour cet établissement";
+        t('classes.create.validation.tokenRequired', "Le token est requis pour cet établissement");
     }
 
     setErrors(newErrors);
@@ -820,20 +823,18 @@ const CreateClassContent = ({
               isDark ? "text-white" : "text-gray-900"
             } mb-4`}
           >
-            Classe créée avec succès!
+            {t('classes.create.success.title', "Classe créée avec succès!")}
           </h2>
           <p className={`${isDark ? "text-gray-300" : "text-gray-600"} mb-6`}>
             {formData.etablissement
-              ? "Votre classe a été créée et est en attente d'approbation."
-              : "Votre classe premium a été créée et approuvée automatiquement!"}
+              ? t('classes.create.success.message', "Votre classe a été créée et est en attente d'approbation.")
+              : t('classes.create.success.messagePremium', "Votre classe premium a été créée et approuvée automatiquement!")}
             {currentUserId && (
               <span className="block mt-2 text-sm text-green-600">
-                Les droits de publication vous ont été automatiquement
-                attribués.
+                {t('classes.create.success.rights', "Les droits de publication vous ont été automatiquement attribués.")}
               </span>
             )}
-            Redirection automatique vers la gestion des classes dans {countdown}{" "}
-            seconde{countdown !== 1 ? "s" : ""}.
+            {t('classes.create.success.redirect', "Redirection automatique vers la gestion des classes dans {{count}} seconde{{plural}}.", { count: countdown, plural: countdown !== 1 ? "s" : "" })}
           </p>
 
           <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
@@ -847,7 +848,7 @@ const CreateClassContent = ({
             onClick={handleManualRedirect}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 mb-4"
           >
-            Aller à la gestion des classes maintenant
+            {t('classes.create.success.button', "Aller à la gestion des classes maintenant")}
           </button>
 
           <div className="flex justify-center">
@@ -881,10 +882,10 @@ const CreateClassContent = ({
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white">
-                    Créer une Classe
+                    {t('classes.create.title', "Créer une Classe")}
                   </h1>
                   <p className="text-blue-100">
-                    Ajoutez une nouvelle classe à votre système
+                    {t('classes.create.header.subtitle', "Ajoutez une nouvelle classe à votre système")}
                   </p>
                 </div>
               </div>
@@ -899,7 +900,7 @@ const CreateClassContent = ({
                     {/* Class Name */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nom de la classe *
+                        {t('classes.create.form.name', "Nom de la classe")} *
                       </label>
                       <div className="relative">
                         <BookOpen className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -911,7 +912,7 @@ const CreateClassContent = ({
                           className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                             errors.nom ? "border-red-500" : "border-gray-300"
                           }`}
-                          placeholder="Ex: Classe de 3ème A"
+                          placeholder={t('classes.create.form.namePlaceholder', "Ex: Classe de 3ème A")}
                         />
                       </div>
                       {errors.nom && (
@@ -925,7 +926,7 @@ const CreateClassContent = ({
                     {/* Level */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Niveau *
+                        {t('classes.create.form.level', "Niveau")} *
                       </label>
                       <div className="relative">
                         <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -937,7 +938,7 @@ const CreateClassContent = ({
                             errors.niveau ? "border-red-500" : "border-gray-300"
                           }`}
                         >
-                          <option value="">Sélectionner un niveau</option>
+                          <option value="">{t('classes.create.form.select.level', "Sélectionner un niveau")}</option>
                           <option value="CP">CP (Cours Préparatoire)</option>
                           <option value="CE1">CE1 (Cours Élémentaire 1)</option>
                           <option value="CE2">CE2 (Cours Élémentaire 2)</option>
@@ -965,7 +966,7 @@ const CreateClassContent = ({
                       selectedEstablishment?.optionTokenGeneral && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Token d'établissement *
+                            {t('classes.create.form.token', "Token d'établissement")} *
                           </label>
                           <div className="relative">
                             <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -979,7 +980,7 @@ const CreateClassContent = ({
                                   ? "border-red-500"
                                   : "border-gray-300"
                               }`}
-                              placeholder="A1B2C3D4"
+                              placeholder={t('classes.create.form.tokenPlaceholder', "A1B2C3D4")}
                             />
                           </div>
                           {errors.etablissementToken && (
@@ -997,7 +998,7 @@ const CreateClassContent = ({
                     {/* Establishment */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Établissement (Optionnel)
+                        {t('classes.create.form.school', "Établissement (Optionnel)")}
                       </label>
                       <div className="relative">
                         <School className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -1010,8 +1011,8 @@ const CreateClassContent = ({
                         >
                           <option value="">
                             {loadingEstablishments
-                              ? "Chargement des établissements..."
-                              : "Aucun établissement (Classe indépendante)"}
+                              ? t('classes.create.form.loading.establishments', "Chargement des établissements...")
+                              : t('classes.create.form.select.noEstablishment', "Aucun établissement (Classe indépendante)")}
                           </option>
                           {establishments.map((establishment) => (
                             <option
@@ -1033,7 +1034,7 @@ const CreateClassContent = ({
                     {/* Moderator (Professor) */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Modérateur *
+                        {t('classes.create.form.moderator', "Modérateur")} *
                       </label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -1050,8 +1051,8 @@ const CreateClassContent = ({
                         >
                           <option value="">
                             {loadingProfessors
-                              ? "Chargement des professeurs..."
-                              : "Sélectionner un modérateur"}
+                              ? t('classes.create.form.loading.professors', "Chargement des professeurs...")
+                              : t('classes.create.form.select.moderator', "Sélectionner un modérateur")}
                           </option>
                           {professors.map((professor) => (
                             <option key={professor.id} value={professor.id}>
@@ -1068,7 +1069,7 @@ const CreateClassContent = ({
                       )}
                       {formData.moderator && (
                         <p className="mt-1 text-xs text-gray-500">
-                          Sélectionné: {selectedProfessorName}
+                          {t('classes.create.form.info.selected', "Sélectionné")}: {selectedProfessorName}
                         </p>
                       )}
                     </div>
@@ -1079,26 +1080,23 @@ const CreateClassContent = ({
                         <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                         <div className="text-sm text-blue-700">
                           <p className="font-semibold mb-1">
-                            Information importante
+                            {t('classes.create.form.info.title', "Information importante")}
                           </p>
                           <p>
-                            Les champs marqués d'un * sont obligatoires.
+                            {t('classes.create.form.info.required', "Les champs marqués d'un * sont obligatoires.")}
                             {selectedEstablishment?.optionEnvoiMailVersClasse && (
                               <span className="block mt-1">
-                                ✉️ Cet établissement envoie des emails aux
-                                classes.
+                                {t('classes.create.form.info.email', "✉️ Cet établissement envoie des emails aux classes.")}
                               </span>
                             )}
                             {selectedEstablishment?.optionTokenGeneral && (
                               <span className="block mt-1">
-                                🔑 Un token général est requis pour cet
-                                établissement.
+                                {t('classes.create.form.info.token', "🔑 Un token général est requis pour cet établissement.")}
                               </span>
                             )}
                             {selectedEstablishment?.codeUnique && (
                               <span className="block mt-1">
-                                🎯 Un code unique est requis pour cet
-                                établissement.
+                                {t('classes.create.form.info.code', "🎯 Un code unique est requis pour cet établissement.")}
                               </span>
                             )}
                           </p>
@@ -1113,12 +1111,10 @@ const CreateClassContent = ({
                           <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                           <div className="text-sm text-amber-800">
                             <p className="font-semibold mb-1">
-                              Aucun établissement sélectionné - Paiement requis
+                              {t('classes.create.form.paymentWarning.title', "Aucun établissement sélectionné - Paiement requis")}
                             </p>
                             <p>
-                              La création d'une classe sans établissement
-                              nécessite un paiement unique de 5000 FCFA pour
-                              l'activation immédiate.
+                              {t('classes.create.form.paymentWarning.desc', "La création d'une classe sans établissement nécessite un paiement unique de 5000 FCFA pour l'activation immédiate.")}
                             </p>
                           </div>
                         </div>
@@ -1158,10 +1154,10 @@ const CreateClassContent = ({
                         <Check className="w-4 h-4" />
                       )}
                       {loading || isProcessingPayment
-                        ? "Traitement en cours..."
+                        ? t('classes.create.form.loading.processing', "Traitement en cours...")
                         : !formData.etablissement
-                        ? "Procéder au paiement (5000.000 FCFA)"
-                        : "Créer la classe"}
+                        ? t('classes.create.form.actions.proceed', "Procéder au paiement (5000.000 FCFA)")
+                        : t('classes.create.form.actions.create', "Créer la classe")}
                     </button>
                   </div>
                 </div>

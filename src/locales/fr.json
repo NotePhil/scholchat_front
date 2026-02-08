@@ -50,11 +50,13 @@
     "about": "À propos",
     "products": "Nos produits",
     "faq": "FAQ",
+    "contact": "Contact",
     "pricing": "Nos tarifs",
     "nurseries": "Crèches",
     "kindergartens": "Écoles maternelles",
     "primarySchools": "Écoles primaires",
-    "highSchools": "Lycées"
+    "highSchools": "Lycées",
+    "university": "Universités"
   },
   "auth": {
     "login": {
@@ -218,219 +220,6 @@
         "guaranteed": "Garantie"
       }
     },
-    "about": {
-      "badge": "Guide Étudiant Révolutionnaire",
-      "title": {
-        "line1": "EXCELLENCE",
-        "line2": "ACADÉMIQUE",
-        "line3": "GARANTIE"
-      },
-      "subtitle": "Rejoignez la révolution éducative qui transforme des milliers d'étudiants en leaders de demain",
-      "stats": {
-        "students": "Étudiants",
-        "success": "Réussite",
-        "support": "Support",
-        "countries": "Pays"
-      },
-      "services": {
-        "academic": {
-          "title": "Orientation académique",
-          "desc": "Conseils pour choisir votre parcours avec des experts de renommée mondiale",
-          "stats": "98% de réussite"
-        },
-        "psychological": {
-          "title": "Soutien psychologique",
-          "desc": "Un accompagnement personnalisé par des psychologues certifiés",
-          "stats": "24/7 disponible"
-        },
-        "tutoring": {
-          "title": "Tutorat en ligne",
-          "desc": "Des cours particuliers avec les meilleurs professeurs du monde",
-          "stats": "1000+ tuteurs"
-        },
-        "resources": {
-          "title": "Ressources pédagogiques",
-          "desc": "Une bibliothèque numérique avec contenu interactif et IA",
-          "stats": "50k+ ressources"
-        }
-      },
-      "content": {
-        "badge": "Révolution Éducative",
-        "title": {
-          "line1": "TRANSFORMEZ",
-          "line2": "VOTRE AVENIR"
-        },
-        "description": "Notre plateforme révolutionnaire utilise l'intelligence artificielle et des méthodes d'apprentissage de pointe pour garantir votre succès académique absolu !",
-        "features": {
-          "feature1": "Développez vos compétences avec l'IA et des experts mondiaux",
-          "feature2": "Accédez à 50k+ ressources interactives et exclusives",
-          "feature3": "Bénéficiez d'un coaching personnalisé 24/7 par IA"
-        },
-        "cta": "COMMENCER LA TRANSFORMATION",
-        "trust": {
-          "guarantee": {
-            "label": "100% Garanti",
-            "desc": "Ou remboursé"
-          },
-          "security": {
-            "label": "Ultra Sécurisé",
-            "desc": "Données protégées"
-          },
-          "support": {
-            "label": "Support VIP",
-            "desc": "Assistance premium"
-          }
-        },
-        "videoPlaceholder": "Transformation en cours...",
-        "floatingStats": "Étudiants transformés"
-      }
-    },
-    "blog": {
-      "badge": "Blog Éducatif",
-      "title": {
-        "line1": "Nous partageons nos",
-        "line2": "Idées Éducatives"
-      },
-      "subtitle": "Vous n'êtes pas seul dans votre parcours, nous vous offrons notre soutien et notre guidance pour réussir ensemble",
-      "stats": {
-        "readers": "Lecteurs",
-        "articles": "Articles",
-        "satisfaction": "Satisfaction"
-      },
-      "readMore": "Lire plus",
-      "viewAll": "📖 Voir tous les articles",
-      "posts": {
-        "post1": {
-          "title": "L'excellence éducative : Entre tradition et innovation",
-          "category": "Éducation",
-          "author": "Aminata Diallo",
-          "date": "15 Nov 2024",
-          "excerpt": "Découvrez comment l'éducation moderne évolue avec les changements technologiques"
-        },
-        "post2": {
-          "title": "Méthodes pédagogiques innovantes dans les écoles modernes",
-          "category": "Innovation",
-          "author": "Kwame Nkrumah",
-          "date": "28 Oct 2024",
-          "excerpt": "Nouvelles méthodologies qui transforment les expériences éducatives"
-        },
-        "post3": {
-          "title": "Construire des communautés éducatives solides",
-          "category": "Communauté",
-          "author": "Fatoumata Bâ",
-          "date": "10 Oct 2024",
-          "excerpt": "Comment les environnements collaboratifs améliorent la réussite des élèves"
-        },
-        "post4": {
-          "title": "L'impact des technologies numériques sur l'apprentissage",
-          "category": "Technologie",
-          "author": "Jean Koffi",
-          "date": "5 Oct 2024",
-          "excerpt": "Exploration des outils numériques qui révolutionnent l'enseignement"
-        },
-        "post5": {
-          "title": "Stratégies pour engager les parents dans l'éducation",
-          "category": "Engagement",
-          "author": "Sophie Laurent",
-          "date": "22 Sep 2024",
-          "excerpt": "Techniques pour améliorer la participation des parents dans le parcours scolaire"
-        },
-        "post6": {
-          "title": "Évaluation des compétences au 21ème siècle",
-          "category": "Pédagogie",
-          "author": "Thomas Bernard",
-          "date": "14 Sep 2024",
-          "excerpt": "Nouvelles approches pour évaluer les compétences des élèves aujourd'hui"
-        }
-      }
-    },
-    "courses": {
-      "badge": "📚 Formations SchoolChat",
-      "title": {
-        "line1": "Découvrez Nos Formations",
-        "line2": "SchoolChat Pro"
-      },
-      "subtitle": "🚀 Maîtrisez la communication éducative moderne et optimisez le suivi scolaire de vos enfants ✨",
-      "stats": {
-        "students": "Étudiants",
-        "courses": "Cours",
-        "satisfaction": "Satisfaction"
-      },
-      "card": {
-        "lessons": "leçons",
-        "instructor": "Formateur Expert",
-        "cta": "Commencer"
-      },
-      "badgePopular": "Populaire",
-      "courses": {
-        "course1": {
-          "title": "Communication Parents-École Moderne",
-          "description": "Maîtrisez les outils de communication numérique pour un suivi optimal",
-          "category": "Communication",
-          "subcategory": "Digital",
-          "instructor": "Marie Dubois",
-          "price": "Gratuit",
-          "duration": "3 semaines",
-          "level": "Débutant"
-        },
-        "course2": {
-          "title": "Suivi Scolaire Numérique",
-          "description": "Optimisez le suivi des résultats et progrès de vos enfants",
-          "category": "Suivi",
-          "subcategory": "Éducatif",
-          "instructor": "Pierre Martin",
-          "price": "29€",
-          "duration": "4 semaines",
-          "level": "Intermédiaire"
-        },
-        "course3": {
-          "title": "Gestion des Notifications Intelligentes",
-          "description": "Restez informé sans être submergé par les alertes",
-          "category": "Gestion",
-          "subcategory": "Productivité",
-          "instructor": "Sophie Laurent",
-          "price": "Gratuit",
-          "duration": "2 semaines",
-          "level": "Tous niveaux"
-        },
-        "course4": {
-          "title": "Application Mobile SchoolChat",
-          "description": "Maîtrisez toutes les fonctionnalités de l'app mobile",
-          "category": "Mobile",
-          "subcategory": "Application",
-          "instructor": "Lucas Moreau",
-          "price": "19€",
-          "duration": "2 semaines",
-          "level": "Débutant"
-        },
-        "course5": {
-          "title": "Collaboration Parents-Enseignants",
-          "description": "Créez un environnement collaboratif pour la réussite",
-          "category": "Collaboration",
-          "subcategory": "Pédagogie",
-          "instructor": "Anne Rousseau",
-          "price": "39€",
-          "duration": "5 semaines",
-          "level": "Avancé"
-        },
-        "course6": {
-          "title": "Tableaux de Bord et Analyses",
-          "description": "Exploitez les données pour un meilleur accompagnement",
-          "category": "Analyse",
-          "subcategory": "Données",
-          "instructor": "Thomas Bernard",
-          "price": "49€",
-          "duration": "3 semaines",
-          "level": "Intermédiaire"
-        }
-      },
-      "cta": {
-        "title": "Prêt à transformer votre communication scolaire ?",
-        "subtitle": "Rejoignez plus de 1500 familles qui ont révolutionné leur suivi scolaire avec SchoolChat",
-        "button1": "🚀 Commencer gratuitement",
-        "button2": "📞 Démonstration"
-      }
-    },
     "instructor": {
       "badge": "Notre Équipe",
       "title": "Rencontrez Notre Équipe d'Experts",
@@ -476,7 +265,84 @@
           "desc": "Outils pour les enseignants pour planifier les leçons, partager des ressources et noter les devoirs efficacement."
         }
       },
-      "learnMore": "En savoir plus"
+      "learnMore": "En savoir plus",
+      "cta": {
+        "getStarted": "Commencer",
+        "contactSales": "Contacter les ventes"
+      },
+      "details": {
+        "backButton": "Retour aux Fonctionnalités",
+        "overview": "Aperçu",
+        "keyBenefits": "Avantages Clés",
+        "notFound": {
+          "title": "Fonctionnalité Non Trouvée",
+          "goBack": "Retour"
+        },
+        "whyChoose": {
+          "title": "Pourquoi choisir ce module ?",
+          "description": "Intégré de manière transparente à l'écosystème SchoolChat, ce module permet un contrôle et une visibilité sans précédent, garantissant que votre établissement reste à la pointe."
+        },
+        "schoolAdmin": {
+          "title": "Administration Scolaire",
+          "longDesc": "Rationalisez toutes les opérations de votre école avec notre suite administrative complète. Du suivi automatisé des présences à l'allocation complexe des ressources, nous fournissons les outils nécessaires pour gérer votre établissement efficacement. Réduisez la charge administrative et concentrez-vous sur l'essentiel : l'éducation.",
+          "benefits": [
+            "Suivi automatisé des présences et rapports",
+            "Gestion rationalisée du personnel et des ressources",
+            "Base de données centralisée des élèves",
+            "Communication en temps réel avec le corps enseignant"
+          ]
+        },
+        "studentSuccess": {
+          "title": "Réussite des Étudiants",
+          "longDesc": "Donnez à vos élèves les moyens d'atteindre leur plein potentiel grâce à nos outils complets de suivi de la réussite. Surveillez les progrès académiques, le développement comportemental et l'assiduité en temps réel. Identifiez tôt les élèves à risque et fournissez les interventions nécessaires.",
+          "benefits": [
+            "Suivi des progrès académiques en temps réel",
+            "Suivi et analyse du comportement",
+            "Recommandations de parcours d'apprentissage personnalisés",
+            "Système d'alerte d'intervention précoce"
+          ]
+        },
+        "parentEngagement": {
+          "title": "Engagement des Parents",
+          "longDesc": "Comblez le fossé entre la maison et l'école avec notre plateforme dédiée à l'engagement des parents. Favorisez un environnement collaboratif où les parents sont des partenaires actifs de l'éducation de leur enfant. Messagerie sécurisée, calendriers d'événements et notifications instantanées gardent les familles informées.",
+          "benefits": [
+            "Canaux de messagerie directs et sécurisés",
+            "Bulletins numériques et mises à jour des progrès",
+            "Calendrier des événements scolaires et RSVP",
+            "Suivi des devoirs et travaux"
+          ]
+        },
+        "securePlatform": {
+          "title": "Plateforme Sécurisée",
+          "longDesc": "La sécurité est primordiale dans l'éducation. Notre plateforme est construite avec des normes de cryptage et de conformité de niveau entreprise pour garantir que les données sensibles des élèves, du personnel et de l'institution restent protégées à tout moment.",
+          "benefits": [
+            "Chiffrement des données de bout en bout",
+            "Conforme au RGPD et aux normes de sécurité",
+            "Contrôle d'accès basé sur les rôles",
+            "Audits de sécurité réguliers et sauvegardes"
+          ]
+        },
+        "analytics": {
+          "title": "Analyses et Rapports",
+          "longDesc": "Transformez les données brutes en informations exploitables avec notre moteur avancé d'Analyses et Rapports. Visualisez les tendances de performance des élèves, d'assiduité et d'utilisation des ressources. Des rapports détaillés aident les administrateurs et les enseignants à prendre des décisions éclairées.",
+          "benefits": [
+             "Visualisations de tableaux de bord personnalisables",
+             "Analyse des tendances pour une meilleure prise de décision",
+             "Rapports automatisés sur les performances académiques",
+             "Métriques d'efficacité opérationnelle"
+          ]
+        },
+        "curriculum": {
+          "title": "Gestion du Curriculum",
+          "longDesc": "Modernisez votre planification et votre prestation de programmes. Nos outils permettent aux enseignants de concevoir collaborativement des leçons, de partager des ressources et d'aligner le contenu sur les normes éducatives. Rationalisez la notation et les commentaires.",
+          "benefits": [
+             "Outils de planification de cours collaboratifs",
+             "Référentiel de ressources numériques",
+             "Suivi de l'alignement sur les normes",
+             "Système de notation et de rétroaction intégré"
+          ]
+        }
+      }
     },
     "courses": {
       "badge": "NOS SOLUTIONS",
@@ -603,6 +469,358 @@
       "email": "Email",
       "phone": "Téléphone",
       "address": "Adresse"
+    },
+    "contact": {
+      "badge": "Nous Contacter",
+      "title": "Contactez-Nous",
+      "subtitle": "Vous avez des questions ? Nous serions ravis de vous entendre. Envoyez-nous un message et nous vous répondrons dès que possible.",
+      "info": {
+        "email": {
+          "title": "Envoyez-nous un Email",
+          "value": "contact@schoolchat.com"
+        },
+        "phone": {
+          "title": "Appelez-Nous",
+          "value": "+237 6** ** ** **"
+        },
+        "address": {
+          "title": "Visitez-Nous",
+          "value": "Douala, Littoral, Cameroun"
+        },
+        "hours": {
+          "title": "Heures d'Ouverture",
+          "value": "Lundi - Vendredi : 9h00 - 18h00"
+        }
+      },
+      "form": {
+        "title": "Envoyez-nous un Message",
+        "name": "Nom Complet",
+        "namePlaceholder": "Entrez votre nom complet",
+        "email": "Adresse Email",
+        "emailPlaceholder": "Entrez votre adresse email",
+        "subject": "Sujet",
+        "subjectPlaceholder": "De quoi s'agit-il ?",
+        "message": "Message",
+        "messagePlaceholder": "Dites-nous comment nous pouvons vous aider...",
+        "send": "Envoyer le Message",
+        "sending": "Envoi en cours...",
+        "successTitle": "Message Envoyé !",
+        "successMessage": "Merci de nous avoir contactés. Nous vous répondrons sous peu."
+      },
+      "map": {
+        "title": "Notre Emplacement",
+        "expand": "Agrandir la Carte",
+        "modalTitle": "Trouvez-nous à Douala, Cameroun"
+      },
+      "social": {
+        "title": "Suivez-Nous"
+      },
+      "faq": {
+        "title": "Vous avez une question ?",
+        "description": "Consultez notre section FAQ pour des réponses rapides aux questions courantes.",
+        "button": "Voir la FAQ"
+      }
+    },
+    "educationLevels": {
+      "cta": {
+        "getStarted": "Commencez Aujourd'hui",
+        "learnMore": "En Savoir Plus",
+        "startNow": "Essai Gratuit",
+        "viewFeatures": "Voir Toutes les Fonctionnalités"
+      },
+      "stats": {
+        "realTime": "Mises à Jour en Temps Réel",
+        "certified": "Plateforme Certifiée",
+        "mobileReady": "Compatible Mobile",
+        "secure": "100% Sécurisé"
+      },
+      "nursery": {
+        "badge": "Âges 0-3",
+        "title": "Plateforme de Gestion de Crèche",
+        "subtitle": "Solution numérique complète pour la gestion de crèche, connectant les éducateurs et les parents en temps réel avec communication sécurisée, rapports quotidiens et suivi du développement de l'enfant.",
+        "featuresTitle": "Fonctionnalités Essentielles pour la Garde d'Enfants",
+        "featuresSubtitle": "Tout ce dont vous avez besoin pour gérer votre crèche efficacement et tenir les parents informés",
+        "benefitsTitle": "Pourquoi Choisir SchoolChat pour Votre Crèche?",
+        "benefitsSubtitle":"Rationalisez les opérations et améliorez la satisfaction des parents avec notre plateforme complète",
+        "benefits": [
+          "Rapports d'activités quotidiennes en temps réel avec photos et vidéos",
+          "Suivi de l'alimentation, du sommeil et des changes",
+          "Messagerie instantanée entre éducateurs et parents",
+          "Gestion sécurisée des dépôts et retraits",
+          "Suivi des informations médicales et des allergies",
+          "Gestion de la facturation et des paiements"
+        ],
+        "ctaTitle": "Transformez la Gestion de Votre Crèche Aujourd'hui",
+        "ctaSubtitle": "Rejoignez des centaines de crèches utilisant SchoolChat pour fournir des soins et une communication exceptionnels",
+        "features": {
+          "parentCommunication": {
+            "title": "Communication avec les Parents",
+            "description": "Envoyez des rapports quotidiens avec photos, vidéos et mises à jour sur les repas, les siestes et les activités instantanément aux parents"
+          },
+          "academicTracking": {
+            "title": "Suivi du Développement",
+            "description": "Surveillez et documentez les jalons de développement de chaque enfant et les activités quotidiennes"
+          },
+          "attendance": {
+            "title": "Présence et Enregistrement",
+            "description": "Système numérique sécurisé d'arrivée/départ avec vérification photo et listes de personnes autorisées"
+          },
+          "analytics": {
+            "title": "Rapports de Santé et de Soins",
+            "description": "Suivez les heures de repas, les horaires de sieste, les changes et les observations de santé"
+          },
+          "messaging": {
+            "title": "Messagerie Instantanée",
+            "description": "Messagerie directe et sécurisée entre éducateurs et parents avec accusés de lecture"
+          },
+          "security": {
+            "title": "Sûreté et Sécurité",
+            "description": "Alertes médicales, informations sur les allergies et gestion des contacts d'urgence"
+          }
+        }
+      },
+      "kindergarten": {
+        "badge": "Âges 3-6",
+        "title": "Système de Gestion de Maternelle",
+        "subtitle": "Renforcez l'éducation de la petite enfance avec notre plateforme complète pour la gestion de la maternelle, l'engagement des parents et le suivi du développement de l'enfant.",
+        "featuresTitle": "Gestion Complète de la Maternelle",
+        "featuresSubtitle": "Outils conçus spécifiquement pour l'éducation de la petite enfance",
+        "benefitsTitle": "Avantages pour le Programme de Maternelle",
+        "benefitsSubtitle": "Créez un environnement d'apprentissage engageant avec une meilleure communication parentale",
+        "benefits": [
+          "Planification des leçons et gestion du curriculum",
+          "Rapports de progrès et évaluations des élèves",
+          "Partage de photos et vidéos des activités en classe",
+          "Calendrier d'événements et notifications aux parents",
+          "Suivi de la présence et alertes de retard de récupération",
+          "Portfolio numérique du travail des élèves"
+        ],
+        "ctaTitle": "Améliorez Votre Expérience de Maternelle",
+        "ctaSubtitle": "Découvrez comment SchoolChat peut transformer vos opérations de maternelle",
+        "features": {
+          "parentCommunication": {
+            "title": "Engagement des Parents",
+            "description": "Partagez les mises à jour de la classe, les réussites des élèves et les activités quotidiennes avec photos et vidéos"
+          },
+          "academicTracking": {
+            "title": "Progrès d'Apprentissage",
+            "description": "Suivez les compétences de développement, les objectifs d'apprentissage et créez des portfolios numériques"
+          },
+          "attendance": {
+            "title": "Gestion de la Présence",
+            "description": "Suivi automatisé de la présence avec notifications aux parents en cas d'absence"
+          },
+          "analytics": {
+            "title": "Rapports de Progrès",
+            "description": "Générez des rapports détaillés sur le développement social, émotionnel et cognitif"
+          },
+          "messaging": {
+            "title": "Communication de Classe",
+            "description": "Diffusez des messages à tous les parents ou envoyez des mises à jour individuelles sur les progrès des élèves"
+          },
+          "security": {
+            "title": "Sécurité des Enfants",
+            "description": "Gestion des personnes autorisées à récupérer, informations médicales et protocoles d'urgence"
+          }
+        }
+      },
+      "primarySchool": {
+        "badge": "Âges 6-12",
+        "title": "Plateforme de Gestion d'École Primaire",
+        "subtitle": "Système de gestion scolaire complet reliant enseignants, élèves et parents. Gérez les classes, les devoirs, les notes et la communication en un seul endroit.",
+        "featuresTitle": "Tout Ce Dont Vous Avez Besoin pour l'Éducation Primaire",
+        "featuresSubtitle": "Outils complets pour l'excellence académique et une communication fluide",
+        "benefitsTitle": "Avantages pour les Écoles Primaires",
+        "benefitsSubtitle": "Améliorez les résultats académiques et renforcez la communauté scolaire",
+        "benefits": [
+          "Carnet de notes et suivi des performances académiques",
+          "Gestion des devoirs et des travaux",
+          "Planification des conférences parents-enseignants",
+          "Rapport de comportement et de conduite",
+          "Gestion de la bibliothèque et des ressources",
+          "Coordination des activités parascolaires"
+        ],
+        "ctaTitle": "Modernisez Votre École Primaire",
+        "ctaSubtitle": "Rejoignez les écoles leaders utilisant SchoolChat pour l'excellence académique",
+        "features": {
+          "parentCommunication": {
+            "title": "Portail des Parents",
+            "description": "Les parents peuvent consulter les notes, les devoirs, la présence et communiquer avec les enseignants à tout moment"
+          },
+          "academicTracking": {
+            "title": "Gestion Académique",
+            "description": "Carnet de notes complet, suivi des devoirs et notation basée sur les normes"
+          },
+          "attendance": {
+            "title": "Suivi de la Présence",
+            "description": "Présence en temps réel avec notifications automatiques aux parents et gestion des absences"
+          },
+          "analytics": {
+            "title": "Analytique de Performance",
+            "description": "Analyses détaillées sur les performances des élèves, les tendances de classe et les besoins d'intervention"
+          },
+          "messaging": {
+            "title": "Messagerie Multicanal",
+            "description": "SMS, email et messagerie dans l'application pour joindre les parents où qu'ils soient"
+          },
+          "security": {
+            "title": "Sécurité des Données",
+            "description": "Conforme au RGPD avec accès basé sur les rôles et communications cryptées"
+          }
+        }
+      },
+      "highSchool": {
+        "badge": "Âges 12-18",
+        "title": "Système de Gestion de Lycée",
+        "subtitle": "Plateforme avancée de gestion scolaire avec suivi des notes, outils de préparation universitaire et système d'information complet pour l'enseignement secondaire.",
+        "featuresTitle": "Fonctionnalités Avancées pour l'Éducation Secondaire",
+        "featuresSubtitle": "Préparez les élèves au succès avec des outils académiques et administratifs puissants",
+        "benefitsTitle": "Plateforme de Réussite du Lycée",
+        "benefitsSubtitle": "Soutenez les élèves dans leur parcours vers l'enseignement supérieur",
+        "benefits": [
+          "Calcul des relevés de notes et de la moyenne générale",
+          "Sélection de cours et planification",
+          "Suivi des candidatures universitaires",
+          "Gestion des scores aux tests standardisés",
+          "Portail de communication conseiller",
+          "Gestion des activités parascolaires et sportives"
+        ],
+        "ctaTitle": "Élevez Votre Lycée",
+        "ctaSubtitle": "Donnez aux élèves et aux enseignants les moyens d'une technologie de pointe",
+        "features": {
+          "parentCommunication": {
+            "title": "Portail Élèves et Parents",
+            "description": "Portails dédiés pour les élèves et les parents avec notes, horaires et annonces"
+          },
+          "academicTracking": {
+            "title": "Conseil Académique",
+            "description": "Suivez les crédits, la moyenne, les exigences de cours et les indicateurs de préparation universitaire"
+          },
+          "attendance": {
+            "title": "Présence par Période",
+            "description": "Suivi de la présence cours par cours avec alertes d'absentéisme automatisées"
+          },
+          "analytics": {
+            "title": "Analytique Prédictive",
+            "description": "Systèmes d'alerte précoce pour identifier les élèves à risque et les opportunités d'intervention"
+          },
+          "messaging": {
+            "title": "Centre de Communication",
+            "description": "Messagerie intégrée pour enseignants, élèves, parents et conseillers"
+          },
+          "security": {
+            "title": "Sécurité Avancée",
+            "description": "Confidentialité des données des élèves, partage sécurisé de documents et contrôles d'accès"
+          }
+        }
+      },
+      "university": {
+        "badge": "Enseignement Supérieur",
+        "title": "Système de Gestion Universitaire",
+        "subtitle": "Plateforme de qualité entreprise pour les établissements d'enseignement supérieur avec systèmes d'information étudiants, gestion de l'apprentissage et outils administratifs.",
+        "featuresTitle": "Solutions Universitaires Complètes",
+        "featuresSubtitle": "Tout ce qui est nécessaire pour gérer les établissements d'enseignement supérieur modernes",
+        "benefitsTitle": "Transformez les Opérations Universitaires",
+        "benefitsSubtitle": "Rationalisez l'administration et améliorez l'expérience étudiante",
+        "benefits": [
+          "Gestion des inscriptions et des admissions",
+          "Intégration du système de gestion de l'apprentissage (LMS)",
+          "Coordination des départements et du corps professoral",
+          "Suivi des projets de recherche",
+          "Plateforme d'engagement des anciens élèves",
+          "Gestion de l'aide financière et des bourses"
+        ],
+        "ctaTitle": "Modernisez Votre Université",
+        "ctaSubtitle": "Rejoignez les universités du monde entier utilisant SchoolChat pour la transformation numérique",
+        "features": {
+          "parentCommunication": {
+            "title": "Portail des Services Étudiants",
+            "description": "Portail centralisé pour l'inscription, les notes, l'aide financière et les services universitaires"
+          },
+          "academicTracking": {
+            "title": "Dossiers Académiques",
+            "description": "SIS complet avec audit de diplôme, vérification des prérequis et planification académique"
+          },
+          "attendance": {
+            "title": "Gestion des Cours",
+            "description": "Inscription aux cours, gestion des listes d'attente et suivi de la présence aux cours"
+          },
+          "analytics": {
+            "title": "Analytique Institutionnelle",
+            "description": "Analyse de la rétention, taux de diplomation et métriques d'efficacité institutionnelle"
+          },
+          "messaging": {
+            "title": "Communication du Campus",
+            "description": "Annonces à l'échelle de l'université, communication des départements et alertes d'urgence"
+          },
+          "security": {
+            "title": "Sécurité d'Entreprise",
+            "description": "Conformité FERPA, intégration SSO et protection des données de niveau entreprise"
+          }
+        }
+      }
+    },
+    "solutionDetails": {
+      "demo": "Voir Démo Interactive",
+      "brochure": "Brochure Technique",
+      "infrastructure": "Infrastructure de Gestion Avancée",
+      "infrastructureDesc": "Conçu pour les écoles modernes, offrant un écosystème évolutif pour chaque point de contact.",
+      "learnMore": "Découvrez comment ça marche",
+      "cta": {
+        "title": "Intégration Transparente, Aucune Formation Requise.",
+        "subtitle": "Connectez vos systèmes existants ou repartez à zéro. Notre équipe de déploiement gère tout en moins de 48 heures.",
+        "button": "Demander une Démo Personnalisée"
+      },
+      "rating": "Note Utilisateur",
+      "badges": {
+        "nursery": "Bébés et Tout-petits",
+        "kindergarten": "Éducation Préscolaire",
+        "primary": "Enseignement Primaire",
+        "middle": "Enseignement Moyen",
+        "high": "Enseignement Secondaire",
+        "university": "Enseignement Supérieur"
+      },
+      "features": {
+        "nurseries": {
+          "f1": { "title": "Connectivité Parentale", "desc": "Mises à jour en temps réel sur les repas, les siestes et les changes." },
+          "f2": { "title": "Récupération Sécurisée", "desc": "Gestion des contacts autorisés avec vérification photo." },
+          "f3": { "title": "Suivi du Développement", "desc": "Portfolio numérique des étapes clés du développement précoce." }
+        },
+        "kindergarten": {
+          "f1": { "title": "Gestion des Classes", "desc": "Suivi quotidien des activités et de la participation des élèves." },
+          "f2": { "title": "Communication Directe", "desc": "Messagerie instantanée sécurisée entre enseignants et parents." },
+          "f3": { "title": "Rapports de Progrès", "desc": "Évaluations périodiques et rapports de compétences détaillés." }
+        },
+        "primary": {
+          "f1": { "title": "Suivi Académique", "desc": "Carnet de notes numérique et suivi des devoirs en temps réel." },
+          "f2": { "title": "Gestion du Comportement", "desc": "Système de points et rapports de conduite pour les élèves." },
+          "f3": { "title": "Calendrier Scolaire", "desc": "Gestion centralisée des événements et des examens." }
+        },
+        "middle": {
+          "f1": { "title": "Orientation Scolaire", "desc": "Outils d'aide à l'orientation et suivi des projets personnels." },
+          "f2": { "title": "Gestion Multi-matières", "desc": "Emplois du temps complexes et gestion des professeurs par matière." },
+          "f3": { "title": "Espace Élève", "desc": "Accès direct aux ressources et aux supports de cours." }
+        },
+        "high": {
+          "f1": { "title": "Préparation Baccalauréat", "desc": "Suivi intensif et examens blancs automatisés." },
+          "f2": { "title": "Dossiers Universitaires", "desc": "Aide à la constitution des dossiers et suivi des admissions." },
+          "f3": { "title": "Analyses Prédictives", "desc": "Identification précoce des élèves en difficulté scolaire." }
+        },
+        "university": {
+          "f1": { "title": "Gestion des Inscriptions", "desc": "Processus d'admission et d'inscription 100% numérique." },
+          "f2": { "title": "Portail Étudiant", "desc": "Services académiques, financiers et administratifs centralisés." },
+          "f3": { "title": "Suivi de Recherche", "desc": "Outils de gestion pour les projets et publications académiques." }
+        }
+      }
+    },
+    "blogSingle": {
+      "related": "Articles Similaires",
+      "cta": {
+        "title": "Prêt à transformer votre école ?",
+        "button": "Détails Solutions"
+      },
+      "readTime": "{{time}} min",
+      "keyPost": "Point Clé à Retenir"
     }
   },
   "footer": {
@@ -629,69 +847,14 @@
     },
     "copyright": "Tous droits réservés."
   },
-  "dashboard": {
-    "title": "Tableau de Bord Éducatif",
-    "subtitle": "Gestion des cours, exercices et progression des élèves",
-    "loading": "Chargement du tableau de bord...",
-    "refresh": "Actualiser",
-    "retry": "Réessayer",
-    "recentActivities": "Activités Récentes",
-    "stats": {
-      "availableCourses": "Cours Disponibles",
-      "exercises": "Exercices",
-      "activeClasses": "Classes Actives",
-      "avgProgress": "Progression Moy.",
-      "subjects": "{count} matières",
-      "completed": "{percent}% terminés",
-      "students": "{count} élèves",
-      "allClasses": "Toutes classes",
-      "thisMonth": "ce mois"
-    },
-    "charts": {
-      "courseDistribution": "Répartition des Cours par Matière",
-      "studentProgress": "Progression des Élèves par Classe",
-      "monthlyActivity": "Activité Éducative Mensuelle",
-      "exerciseStatus": "État des Exercices",
-      "subject": "Matière",
-      "class": "Classe",
-      "progressPercent": "Progression (%)",
-      "coursesCreated": "Cours créés",
-      "exercisesAdded": "Exercices ajoutés",
-      "completions": "Completions"
-    },
-    "months": {
-      "jan": "Jan",
-      "feb": "Fév",
-      "mar": "Mar",
-      "apr": "Avr",
-      "may": "Mai",
-      "jun": "Juin"
-    },
-    "completion": {
-      "completed": "Terminés",
-      "inProgress": "En Cours",
-      "notStarted": "Non Commencés"
-    },
-    "activities": {
-      "newCourse": "Nouveau cours: Algèbre Linéaire",
-      "exerciseCompleted": "Exercice complété par {count} élèves",
-      "newClass": "Nouvelle classe créée",
-      "progressReached": "Progression atteint 80%",
-      "subjectUpdated": "Matière mise à jour",
-      "system": "Système",
-      "hoursAgo": "Il y a {count}h",
-      "daysAgo": "Il y a {count}j"
-    },
-    "errors": {
-      "loadFailed": "Échec du chargement des données du tableau de bord",
-      "subjectNameRequired": "Le nom de la matière est requis",
-      "genericError": "Une erreur s'est produite",
-      "networkError": "Erreur réseau. Veuillez vérifier votre connexion.",
-      "requestError": "Erreur de configuration de la requête: "
-    }
-  },
+
 
   "activities": {
+    "sidebar": {
+      "groups": "Groupes",
+      "events": "Événements",
+      "saved": "Enregistrés"
+    },
     "title": "Fil d'actualité",
     "actions": {
       "create": "Créer",
@@ -876,6 +1039,208 @@
     "errors": {
       "loadData": "Erreur lors du chargement des données: ",
       "delete": "Erreur lors de la suppression: "
+    }
+  },
+  "classes": {
+    "title": "Gestion des Classes",
+    "header": {
+      "title": "Gestion des Classes",
+      "subtitle": "Gérez et supervisez toutes les classes de votre établissement"
+    },
+    "classCount": "classe",
+    "found": "trouvée",
+    "accessToken": "Token d'accès",
+    "newClass": "Nouvelle Classe",
+    "searchPlaceholder": "Rechercher une classe...",
+    "filters": {
+      "allStatuses": "Tous les statuts",
+      "allSchools": "Tous les établissements"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "pending": "En attente",
+      "rejected": "Rejeté"
+    },
+    "card": {
+      "level": "Niveau",
+      "school": "Établissement",
+      "students": "Élèves",
+      "createdOn": "Créée le",
+      "rights": {
+        "granted": "Droits de publication accordés",
+        "none": "Aucun droit de publication"
+      },
+      "pendingApproval": "En attente d'approbation. Le bouton \"Gérer\" sera disponible après approbation.",
+      "pendingBadge": "En attente d'approbation",
+      "rightsGranted": "Droits accordés",
+      "seeDetails": "Détails" 
+    },
+    "actions": {
+      "view": "Voir",
+      "manage": "Gérer",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "rights": "Droits",
+      "approve": "Approuver",
+      "deactivate": "Désactiver"
+    },
+    "empty": {
+      "noResults": "Aucun résultat trouvé",
+      "noClasses": "Aucune classe",
+      "noResultsDesc": "Essayez avec d'autres critères de recherche",
+      "noClassesDesc": "Commencez par créer votre première classe",
+      "createFirst": "Créer une classe"
+    },
+    "manage": {
+      "title": "Mes Classes",
+      "subtitle": "Gérez et supervisez les classes auxquelles vous avez accès",
+      "errorAuth": "Erreur: Utilisateur non authentifié",
+      "errorLoad": "Erreur lors du chargement de vos classes",
+      "successRefresh": "Données actualisées avec succès"
+    },
+    "create": {
+      "title": "Nouvelle Classe",
+      "subtitle": "Créez une nouvelle classe pour votre établissement",
+
+      "validation": {
+        "nameRequired": "Le nom de la classe est requis",
+        "nameLength": "Le nom doit contenir au moins 2 caractères",
+        "levelRequired": "Le niveau est requis",
+        "moderatorRequired": "Un modérateur est requis",
+        "tokenRequired": "Le token est requis pour cet établissement"
+      },
+      "payment": {
+        "title": "Paiement Sécurisé",
+        "subtitle": "Création de classe premium",
+        "summary": "Résumé de la commande",
+        "premiumClass": "Création de classe premium",
+        "serviceFee": "Frais de service",
+        "total": "Total",
+        "methodTitle": "Choisissez votre méthode de paiement",
+        "orange": "Orange Money",
+        "orangeDesc": "Paiement par mobile",
+        "mtn": "MTN Mobile Money",
+        "mtnDesc": "Paiement par mobile",
+        "card": "Carte bancaire",
+        "cardDesc": "Visa, Mastercard",
+        "phoneLabel": "Numéro de téléphone",
+        "cardLabel": "Numéro de carte",
+        "expiry": "Expiration",
+        "cvv": "CVV",
+        "cardName": "Nom sur la carte",
+        "secureInfo": "Paiement sécurisé par SSL - Vos données sont cryptées",
+        "processing": "Traitement du paiement",
+        "validatingMobile": "Validation en cours via mobile money...",
+        "validatingCard": "Vérification de la carte en cours...",
+        "success": "Paiement accepté !",
+        "successDesc": "Votre classe va être créée et approuvée automatiquement...",
+        "payBtn": "Payer {{amount}} FCFA",
+        "back": "Retour"
+      },
+      "success": {
+        "title": "Classe créée avec succès!",
+        "message": "Votre classe a été créée et est en attente d'approbation.",
+        "messagePremium": "Votre classe premium a été créée et approuvée automatiquement!",
+        "rights": "Les droits de publication vous ont été automatiquement attribués.",
+        "redirect": "Redirection automatique vers la gestion des classes dans {{count}} seconde{{plural}}.",
+        "button": "Aller à la gestion des classes maintenant"
+      },
+      "form": {
+        "name": "Nom de la classe",
+        "namePlaceholder": "Ex: 6ème A",
+        "level": "Niveau",
+        "levelPlaceholder": "Sélectionnez un niveau",
+        "school": "Établissement (Optionnel)",
+        "schoolPlaceholder": "Sélectionnez un établissement",
+        "moderator": "Professeur Principal (Modérateur)",
+        "moderatorPlaceholder": "Sélectionnez un professeur",
+        "token": "Token d'établissement",
+        "tokenPlaceholder": "Token fourni par l'établissement",
+        "loading": {
+          "establishments": "Chargement des établissements...",
+          "professors": "Chargement des professeurs...",
+          "processing": "Traitement en cours..."
+        },
+        "select": {
+          "noEstablishment": "Aucun établissement (Classe indépendante)",
+          "moderator": "Sélectionner un modérateur",
+          "level": "Sélectionner un niveau"
+        },
+        "info": {
+          "title": "Information importante",
+          "required": "Les champs marqués d'un * sont obligatoires.",
+          "email": "✉️ Cet établissement envoie des emails aux classes.",
+          "token": "🔑 Un token général est requis pour cet établissement.",
+          "code": "🎯 Un code unique est requis pour cet établissement.",
+          "selected": "Sélectionné"
+        },
+        "paymentWarning": {
+          "title": "Aucun établissement sélectionné - Paiement requis",
+          "desc": "La création d'une classe sans établissement nécessite un paiement unique de 5000 FCFA pour l'activation immédiate."
+        },
+        "actions": {
+          "proceed": "Procéder au paiement (5000.000 FCFA)",
+          "create": "Créer la classe"
+        }
+      }
+    }
+  },
+  "dashboard": {
+    "loading": "Chargement du tableau de bord...",
+    "retry": "Réessayer",
+    "title": "Tableau de Bord",
+    "subtitle": "Vue d'ensemble de votre établissement",
+    "refresh": "Actualiser",
+    "recentActivities": "Activités Récentes",
+    "errors": {
+      "loadFailed": "Impossible de charger les données du tableau de bord"
+    },
+    "stats": {
+      "availableCourses": "Cours Disponibles",
+      "subjects": "{{count}} Matières",
+      "exercises": "Exercices",
+      "completed": "{{percent}}% Complété",
+      "activeClasses": "Classes Actives",
+      "students": "{{count}} Élèves",
+      "avgProgress": "Progression Moyenne",
+      "allClasses": "Toutes les classes",
+      "thisMonth": "ce mois"
+    },
+    "charts": {
+      "courseDistribution": "Distribution des Cours",
+      "subject": "Matière",
+      "studentProgress": "Progression des Élèves",
+      "class": "Classe",
+      "progressPercent": "Progression (%)",
+      "monthlyActivity": "Tendances Mensuelles",
+      "coursesCreated": "Cours Créés",
+      "exercisesAdded": "Exercices Ajoutés",
+      "completions": "Complétions",
+      "exerciseStatus": "État des Exercices"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Fév",
+      "mar": "Mar",
+      "apr": "Avr",
+      "may": "Mai",
+      "jun": "Juin"
+    },
+    "completion": {
+      "completed": "Terminé",
+      "inProgress": "En Cours",
+      "notStarted": "Non Commencé"
+    },
+    "activities": {
+      "newCourse": "Nouveau cours créé",
+      "exerciseCompleted": "{{count}} exercices terminés",
+      "newClass": "Nouvelle classe ajoutée",
+      "progressReached": "Objectif atteint",
+      "subjectUpdated": "Matière mise à jour",
+      "system": "Système",
+      "hoursAgo": "il y a {{count}} heures",
+      "daysAgo": "il y a {{count}} jours"
     }
   },
   "admin": {
