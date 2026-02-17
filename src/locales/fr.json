@@ -14,7 +14,8 @@
       "submit": "Soumettre",
       "close": "Fermer",
       "confirm": "Confirmer",
-      "back": "Retour"
+      "back": "Retour",
+      "share": "Partager"
     },
     "status": {
       "active": "Actif",
@@ -36,7 +37,8 @@
       "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
       "operationSuccess": "Opération effectuée avec succès",
       "operationFailed": "Échec de l'opération"
-    }
+    },
+    "share": "Partager"
   },
   "navigation": {
     "dashboard": "Tableau de bord",
@@ -199,6 +201,7 @@
     }
   },
   "pages": {
+
     "home": {
       "badge": "Plateforme Éducative",
       "animatedTexts": {
@@ -381,6 +384,50 @@
       "subtitle": "Informations, mises à jour et histoires de la communauté SchoolChat.",
       "readStory": "Lire l'Histoire",
       "comments": "COMMENTAIRES",
+      "posts": {
+        "post1": {
+          "title": "La Révolution Numérique dans l'Éducation",
+          "category": "Technologie",
+          "author": "Dr. Sarah Johnson",
+          "date": "2 Févr, 2026",
+          "excerpt": "Les établissements scolaires du monde entier adoptent des plateformes de communication numériques pour créer des liens plus forts entre enseignants, parents et élèves."
+        },
+        "post2": {
+          "title": "Transformation des Expériences Éducatives",
+          "category": "Innovation",
+          "author": "Marc Dupont",
+          "date": "5 Févr, 2026",
+          "excerpt": "Nouvelles méthodologies qui transforment les expériences éducatives."
+        },
+        "post3": {
+          "title": "Environnements Collaboratifs",
+          "category": "Collaboration",
+          "author": "Julie Martin",
+          "date": "28 Janvier 2026",
+          "excerpt": "Comment les environnements collaboratifs améliorent la réussite des élèves."
+        },
+        "post4": {
+          "title": "Communication & Innovation Numérique",
+          "category": "Innovation",
+          "author": "Alexandre Petit",
+          "date": "20 Janvier 2026",
+          "excerpt": "Explorer les dernières tendances technologiques éducatives pour l'année à venir."
+        },
+        "post5": {
+          "title": "L'évaluation repensée",
+          "category": "Pédagogie",
+          "author": "Sophie Legrand",
+          "date": "15 Janvier 2026",
+          "excerpt": "Approches innovantes pour évaluer les progrès des élèves sans stress."
+        },
+        "post6": {
+          "title": "Collaboration École-Famille",
+          "category": "Communauté",
+          "author": "Thomas Bernard",
+          "date": "10 Janvier 2026",
+          "excerpt": "Comment une collaboration efficace entre l'école et la famille améliore la réussite des élèves."
+        }
+      },
       "items": {
         "item1": { "title": "Révolutionner la Communication Scolaire", "desc": "Découvrez comment les plateformes numériques transforment la façon dont les écoles se connectent avec les parents et les élèves." },
         "item2": { "title": "Meilleures Pratiques pour l'Apprentissage à Distance", "desc": "Apprenez des stratégies efficaces pour engager les élèves dans des classes virtuelles et maintenir la qualité éducative." },

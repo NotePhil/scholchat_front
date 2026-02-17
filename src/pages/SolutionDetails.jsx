@@ -227,37 +227,37 @@ const SolutionDetails = ({ theme }) => {
       </section>
 
       {/* Massive CTA */}
-      <section className="container mx-auto px-4 py-12 sm:py-24">
-        <div className="bg-slate-950 rounded-[3.5rem] sm:rounded-[6rem] p-12 sm:p-32 text-center relative overflow-hidden shadow-2xl border border-white/5">
+      <section className="container mx-auto px-4 py-12 sm:py-16">
+        <div className="bg-slate-950 rounded-[2rem] sm:rounded-[4rem] p-8 sm:p-16 text-center relative overflow-hidden shadow-2xl border border-white/5">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.3)_0%,transparent_70%)] opacity-50"></div>
           <div className="relative z-10 max-w-4xl mx-auto">
-             <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-12 animate-bounce shadow-2xl shadow-blue-500/40">
-                <Zap className="w-10 h-10 text-white fill-current" />
+             <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-8 animate-bounce shadow-xl shadow-blue-500/40">
+                <Zap className="w-8 h-8 text-white fill-current" />
              </div>
              
-             <h2 className="text-4xl sm:text-6xl lg:text-8xl font-black text-white mb-10 leading-[1] tracking-tighter">
+             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-6 leading-tight tracking-tight">
                 {t("pages.solutionDetails.cta.title")}
              </h2>
              
-             <p className="text-xl sm:text-2xl text-blue-100/60 mb-16 leading-relaxed font-medium">
+             <p className="text-lg sm:text-xl text-blue-100/60 mb-10 leading-relaxed font-medium">
                 {t("pages.solutionDetails.cta.subtitle")}
              </p>
              
-             <div className="flex flex-col items-center gap-12">
-                <button className="w-full sm:w-auto px-12 py-7 bg-blue-600 text-white rounded-[2.5rem] font-black text-xl hover:bg-blue-700 hover:scale-105 transition-all shadow-2xl shadow-blue-600/40">
+             <div className="flex flex-col items-center gap-8">
+                <button className="w-full sm:w-auto px-10 py-5 bg-blue-600 text-white rounded-[2rem] font-bold text-lg hover:bg-blue-700 hover:scale-105 transition-all shadow-xl shadow-blue-600/40">
                    {t("pages.solutionDetails.cta.button")}
                 </button>
                 
-                <div className="flex items-center gap-6">
-                   <div className="flex -space-x-5">
+                <div className="flex items-center gap-4">
+                   <div className="flex -space-x-4">
                       {[12,14,18,22,25].map(i => (
-                        <img key={i} src={`https://i.pravatar.cc/100?img=${i}`} className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[6px] border-slate-950 shadow-xl" alt="" />
+                        <img key={i} src={`https://i.pravatar.cc/100?img=${i}`} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-[4px] border-slate-950 shadow-lg" alt="" />
                       ))}
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[6px] border-slate-950 bg-slate-900 flex items-center justify-center text-xs font-black text-white">+2k</div>
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-[4px] border-slate-950 bg-slate-900 flex items-center justify-center text-[10px] font-black text-white">+2k</div>
                    </div>
-                   <div className="text-left border-l-2 border-white/10 pl-6">
-                      <div className="text-white font-black text-sm sm:text-base">Trust Built on Excellence</div>
-                      <div className="text-blue-500 font-black text-[10px] uppercase tracking-widest mt-1">Join the digital revolution</div>
+                   <div className="text-left border-l-2 border-white/10 pl-4">
+                      <div className="text-white font-bold text-xs sm:text-sm">Trust Built on Excellence</div>
+                      <div className="text-blue-500 font-bold text-[9px] uppercase tracking-widest mt-1">Join the digital revolution</div>
                    </div>
                 </div>
              </div>

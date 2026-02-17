@@ -14,7 +14,8 @@
       "submit": "Submit",
       "close": "Close",
       "confirm": "Confirm",
-      "back": "Back"
+      "back": "Back",
+      "share": "Share"
     },
     "status": {
       "active": "Active",
@@ -36,7 +37,8 @@
       "confirmDelete": "Are you sure you want to delete this item?",
       "operationSuccess": "Operation completed successfully",
       "operationFailed": "Operation failed"
-    }
+    },
+    "share": "Share"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -381,6 +383,50 @@
       "subtitle": "Insights, updates, and stories from the SchoolChat community.",
       "readStory": "Read Story",
       "comments": "COMMENTS",
+      "posts": {
+        "post1": {
+          "title": "The Digital Revolution in Education",
+          "category": "Technology",
+          "author": "Dr. Sarah Johnson",
+          "date": "Feb 2, 2026",
+          "excerpt": "Schools around the world are adopting digital communication platforms to build stronger connections between teachers, parents, and students."
+        },
+        "post2": {
+          "title": "Transforming Educational Experiences",
+          "category": "Innovation",
+          "author": "Marc Dupont",
+          "date": "Feb 5, 2026",
+          "excerpt": "New methodologies transforming educational experiences."
+        },
+        "post3": {
+          "title": "Collaborative Environments",
+          "category": "Collaboration",
+          "author": "Julie Martin",
+          "date": "Jan 28, 2026",
+          "excerpt": "How collaborative environments improve student success."
+        },
+        "post4": {
+          "title": "Communication & Digital Innovation",
+          "category": "Innovation",
+          "author": "Alexandre Petit",
+          "date": "Jan 20, 2026",
+          "excerpt": "Exploring the latest educational technology trends for the coming year."
+        },
+        "post5": {
+          "title": "Rethinking Assessment",
+          "category": "Pedagogy",
+          "author": "Sophie Legrand",
+          "date": "Jan 15, 2026",
+          "excerpt": "Innovative approaches to assess student progress without stress."
+        },
+        "post6": {
+          "title": "School-Family Collaboration",
+          "category": "Community",
+          "author": "Thomas Bernard",
+          "date": "Jan 10, 2026",
+          "excerpt": "How effective collaboration between school and family improves student success."
+        }
+      },
       "items": {
         "item1": { "title": "Revolutionizing School Communication", "desc": "Discover how digital platforms are transforming the way schools connect with parents and students." },
         "item2": { "title": "Best Practices for Remote Learning", "desc": "Learn effective strategies for engaging students in virtual classrooms and maintaining educational quality." },
