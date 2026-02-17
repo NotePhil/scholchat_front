@@ -5,6 +5,7 @@ import activitiesReducer from "./slices/activitiesSlice";
 import dataReducer from "./slices/dataSlice";
 import adminReducer from "./slices/adminSlice";
 import classesReducer from "./slices/classesSlice";
+import notificationsReducer from "./slices/notificationsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     data: dataReducer,
     admin: adminReducer,
     classes: classesReducer,
+    notifications: notificationsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

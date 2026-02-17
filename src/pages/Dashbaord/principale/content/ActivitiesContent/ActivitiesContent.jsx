@@ -76,32 +76,41 @@ const ActivitiesContent = () => {
 
   const loadClasses = async () => {
     if (formData.visibility !== 'PRIVATE') return;
-    
+
     setLoadingClasses(true);
     try {
-      const userRole = localStorage.getItem('userRole');
+      const userRole = localStorage.getItem('userRole') || '';
       const userId = localStorage.getItem('userId');
-      
+      const isAdmin = userRole.toUpperCase().includes('ADMIN');
+
       let endpoint;
-      if (userRole === 'ADMIN') {
+      if (isAdmin) {
+        // Admin sees all classes
         endpoint = `${process.env.REACT_APP_API_BASE_URL}/classes`;
       } else {
-        endpoint = `${process.env.REACT_APP_API_BASE_URL}/droits-publication/util isateurs/${userId}/classes`;
+        // Professor sees classes they have publication rights for
+        // Students/parents see classes they have access to
+        endpoint = `${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`;
       }
-      
+
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
       const response = await fetch(endpoint, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const classesData = await response.json();
         setClasses(classesData);
+      } else {
+        console.error('Error loading classes, status:', response.status);
+        setClasses([]);
       }
     } catch (error) {
       console.error('Error loading classes:', error);
+      setClasses([]);
     } finally {
       setLoadingClasses(false);
     }
@@ -554,7 +563,7 @@ const ActivitiesContent = () => {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 lg:relative lg:inset-auto lg:bg-transparent lg:p-0 lg:mb-4"
+                  className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/50 overflow-y-auto lg:relative lg:inset-auto lg:bg-transparent lg:p-0 lg:pt-0 lg:mb-4"
                   onClick={(e) => {
                     if (e.target === e.currentTarget) setShowCreateForm(false);
                   }}

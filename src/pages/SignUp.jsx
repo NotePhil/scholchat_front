@@ -179,10 +179,7 @@ const SignUp = ({ theme }) => {
       newErrors.type = true;
       return false;
     }
-    if (formData.type === "eleve" && !formData.niveau.trim()) {
-      showAlert("Le niveau d'éducation est requis");
-      newErrors.niveau = true;
-    }
+    // Niveau is optional for students
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
@@ -731,7 +728,7 @@ const SignUp = ({ theme }) => {
                     exit={{ opacity: 0, height: 0 }}
                   >
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Niveau d'éducation <span className="text-red-500">*</span>
+                      Niveau d'éducation
                     </label>
                     <input
                       type="text"

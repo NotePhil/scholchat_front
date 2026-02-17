@@ -1371,6 +1371,36 @@
       "daysAgo": "{{count}} days ago"
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "all": "All",
+    "unread": "Unread",
+    "markAllRead": "Read all",
+    "deleteAll": "Delete all",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "empty": "No notifications",
+    "emptyUnread": "No unread notifications",
+    "emptyDescription": "Your notifications will appear here",
+    "markAsRead": "Mark as read",
+    "delete": "Delete",
+    "viewDetails": "View details",
+    "justNow": "Just now",
+    "roleSubtitle": {
+      "admin": "Admin notifications",
+      "professor": "Professor notifications",
+      "student": "My notifications",
+      "parent": "Parent notifications"
+    },
+    "types": {
+      "ACCESS_REQUEST": "Access request",
+      "ACTIVITY_CREATED": "New activity",
+      "CLASS_VALIDATED": "Class validated",
+      "ASSIGNMENT_GIVEN": "New assignment",
+      "MESSAGE_SENT": "New message",
+      "EVENT_UPDATED": "Event updated"
+    }
+  },
   "sidebar": {
     "dashboard": "Dashboard",
     "activities": "Activities",

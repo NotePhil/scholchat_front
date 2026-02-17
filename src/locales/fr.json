@@ -1426,6 +1426,36 @@
       "delete": "Erreur lors de la suppression : "
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "all": "Toutes",
+    "unread": "Non lues",
+    "markAllRead": "Tout lire",
+    "deleteAll": "Tout supprimer",
+    "refresh": "Actualiser",
+    "loading": "Chargement...",
+    "empty": "Aucune notification",
+    "emptyUnread": "Aucune notification non lue",
+    "emptyDescription": "Vos notifications apparaîtront ici",
+    "markAsRead": "Marquer comme lu",
+    "delete": "Supprimer",
+    "viewDetails": "Voir les détails",
+    "justNow": "A l'instant",
+    "roleSubtitle": {
+      "admin": "Notifications administrateur",
+      "professor": "Notifications professeur",
+      "student": "Mes notifications",
+      "parent": "Notifications parent"
+    },
+    "types": {
+      "ACCESS_REQUEST": "Demande d'accès",
+      "ACTIVITY_CREATED": "Nouvelle activité",
+      "CLASS_VALIDATED": "Classe validée",
+      "ASSIGNMENT_GIVEN": "Nouveau devoir",
+      "MESSAGE_SENT": "Nouveau message",
+      "EVENT_UPDATED": "Événement modifié"
+    }
+  },
   "sidebar": {
     "dashboard": "Tableau de Bord",
     "activities": "Activités",
