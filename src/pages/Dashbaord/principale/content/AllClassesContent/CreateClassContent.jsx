@@ -696,9 +696,17 @@ const CreateClassContent = ({
         niveau: formData.niveau.trim(),
       };
 
-      // Add moderatorId if a different moderator is selected
+      // Add moderator as object with type before id if selected
       if (formData.moderator) {
-        classData.moderatorId = formData.moderator;
+        const selectedProfessor = professors.find((prof) => prof.id === formData.moderator);
+        if (selectedProfessor) {
+          classData.moderator = { type: selectedProfessor.type, id: formData.moderator };
+          // Validate moderator has type property
+          if (!classData.moderator.type) {
+            console.error("Moderator type is missing");
+            throw new Error("Moderator type is required");
+          }
+        }
       }
 
       // Only add etablissementId if one is selected
