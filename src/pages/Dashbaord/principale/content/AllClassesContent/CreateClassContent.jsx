@@ -649,10 +649,6 @@ const CreateClassContent = ({
       newErrors.niveau = t('classes.create.validation.levelRequired', "Le niveau est requis");
     }
 
-    if (!formData.moderator) {
-      newErrors.moderator = t('classes.create.validation.moderatorRequired', "Un modérateur est requis");
-    }
-
     if (
       selectedEstablishment?.optionTokenGeneral &&
       !formData.etablissementToken.trim()
@@ -695,32 +691,19 @@ const CreateClassContent = ({
   const createClass = async (paymentInfo = null) => {
     setLoading(true);
     try {
-      // Find the selected professor to get their type
-      const selectedProfessor = professors.find((prof) => prof.id === formData.moderator);
-      
-      let moderatorObj = null;
-      if (formData.moderator && selectedProfessor) {
-        moderatorObj = { type: selectedProfessor.type, id: formData.moderator };
-        // Validate moderator has type property
-        if (!moderatorObj.type) {
-          console.error("Moderator type is missing");
-          throw new Error("Moderator type is required");
-        }
-      }
-
       let classData = {
         nom: formData.nom.trim(),
         niveau: formData.niveau.trim(),
-        moderator: moderatorObj,
-        parents: [],
-        eleves: [],
       };
 
-      // Only add etablissement if one is selected
+      // Add moderatorId if a different moderator is selected
+      if (formData.moderator) {
+        classData.moderatorId = formData.moderator;
+      }
+
+      // Only add etablissementId if one is selected
       if (formData.etablissement) {
-        classData.etablissement = {
-          id: formData.etablissement,
-        };
+        classData.etablissementId = formData.etablissement;
 
         // Add etablissementToken based on establishment options
         if (selectedEstablishment?.optionTokenGeneral) {
@@ -1044,10 +1027,10 @@ const CreateClassContent = ({
                       )}
                     </div>
 
-                    {/* Moderator (Professor) */}
+                    {/* Moderator (Professor) - Optional */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('classes.create.form.moderator', "Modérateur")} *
+                        {t('classes.create.form.moderator', "Modérateur")} (Optionnel)
                       </label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -1056,16 +1039,12 @@ const CreateClassContent = ({
                           value={formData.moderator}
                           onChange={handleInputChange}
                           disabled={loadingProfessors}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed ${
-                            errors.moderator
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
+                          className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
                         >
                           <option value="">
                             {loadingProfessors
                               ? t('classes.create.form.loading.professors', "Chargement des professeurs...")
-                              : t('classes.create.form.select.moderator', "Sélectionner un modérateur")}
+                              : t('classes.create.form.select.moderator', "Vous serez le modérateur par défaut")}
                           </option>
                           {professors.map((professor) => (
                             <option key={professor.id} value={professor.id}>
@@ -1074,15 +1053,14 @@ const CreateClassContent = ({
                           ))}
                         </select>
                       </div>
-                      {errors.moderator && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                          <AlertCircle className="w-4 h-4" />
-                          {errors.moderator}
-                        </p>
-                      )}
                       {formData.moderator && (
                         <p className="mt-1 text-xs text-gray-500">
                           {t('classes.create.form.info.selected', "Sélectionné")}: {selectedProfessorName}
+                        </p>
+                      )}
+                      {!formData.moderator && (
+                        <p className="mt-1 text-xs text-blue-600">
+                          💡 Vous serez automatiquement défini comme modérateur
                         </p>
                       )}
                     </div>
