@@ -720,14 +720,18 @@ const CreateClassContent = ({
       }
 
       console.log("Creating class with data:", classData);
-      const createdClass = await classService.creerClasse(classData);
-      console.log("Class created:", createdClass);
-      setCreatedClassId(createdClass.id);
+      const response = await classService.creerClasse(classData);
+      console.log("Class created response:", response);
+      
+      // Extract class ID from response (it's nested in response.classe)
+      const createdClassId = response.classe?.id || response.id;
+      console.log("Extracted class ID:", createdClassId);
+      setCreatedClassId(createdClassId);
 
       // Assign publication rights to creator
-      if (currentUserId) {
+      if (currentUserId && createdClassId) {
         const rightsAssigned = await assignPublicationRightsToCreator(
-          createdClass.id
+          createdClassId
         );
         if (!rightsAssigned) {
           console.warn(
