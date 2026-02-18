@@ -698,7 +698,7 @@ const CreateClassContent = ({
       let classData = {
         nom: formData.nom.trim(),
         niveau: formData.niveau.trim(),
-        moderator: formData.moderator,
+        moderator: formData.moderator ? { id: formData.moderator } : null,
         parents: [],
         eleves: [],
       };

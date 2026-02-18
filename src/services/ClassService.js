@@ -7,9 +7,9 @@ export const EtatClasse = {
 };
 
 export const DroitPublication = {
-  TOUS: "TOUS",
+  PROFESSEUR_UNIQUE: "PROFESSEUR_UNIQUE",
+  TOUS_LES_PROFESSEURS: "TOUS_LES_PROFESSEURS",
   MODERATEUR_SEULEMENT: "MODERATEUR_SEULEMENT",
-  PARENTS_ET_MODERATEUR: "PARENTS_ET_MODERATEUR",
 };
 
 /**
@@ -443,12 +443,12 @@ class ClassService {
    */
   getDroitPublicationDisplayName(droit) {
     switch (droit) {
-      case DroitPublication.TOUS:
-        return "Tous";
+      case DroitPublication.PROFESSEUR_UNIQUE:
+        return "Professeur unique";
+      case DroitPublication.TOUS_LES_PROFESSEURS:
+        return "Tous les professeurs";
       case DroitPublication.MODERATEUR_SEULEMENT:
         return "Modérateur seulement";
-      case DroitPublication.PARENTS_ET_MODERATEUR:
-        return "Parents et modérateur";
       default:
         return "Non défini";
     }

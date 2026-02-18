@@ -38,7 +38,7 @@ const ClassEditModal = ({
     moderator: null, // This will store the moderator ID
     parents: [],
     eleves: [],
-    droitPublication: DroitPublication.PARENTS_ET_MODERATEUR,
+    droitPublication: DroitPublication.MODERATEUR_SEULEMENT,
   });
 
   const [originalData, setOriginalData] = useState(null);
@@ -84,7 +84,7 @@ const ClassEditModal = ({
         parents: data.parents || [],
         eleves: data.eleves || [],
         droitPublication:
-          data.droitPublication || DroitPublication.PARENTS_ET_MODERATEUR,
+          data.droitPublication || DroitPublication.MODERATEUR_SEULEMENT,
       };
 
       setClassData(completeData);
@@ -182,8 +182,8 @@ const ClassEditModal = ({
         etablissement: classData.etablissement
           ? { id: classData.etablissement.id }
           : null,
-        // Send moderator as just the ID string (not an object)
-        moderator: classData.moderator,
+        // Send moderator as an object with id
+        moderator: classData.moderator ? { id: classData.moderator } : null,
         parents: classData.parents.map((p) => ({ id: p.id })),
         eleves: classData.eleves.map((e) => ({ id: e.id })),
       };
@@ -425,14 +425,14 @@ const ClassEditModal = ({
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value={DroitPublication.TOUS}>
+                    <option value={DroitPublication.PROFESSEUR_UNIQUE}>
                       {classService.getDroitPublicationDisplayName(
-                        DroitPublication.TOUS
+                        DroitPublication.PROFESSEUR_UNIQUE
                       )}
                     </option>
-                    <option value={DroitPublication.PARENTS_ET_MODERATEUR}>
+                    <option value={DroitPublication.TOUS_LES_PROFESSEURS}>
                       {classService.getDroitPublicationDisplayName(
-                        DroitPublication.PARENTS_ET_MODERATEUR
+                        DroitPublication.TOUS_LES_PROFESSEURS
                       )}
                     </option>
                     <option value={DroitPublication.MODERATEUR_SEULEMENT}>
