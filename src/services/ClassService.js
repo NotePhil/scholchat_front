@@ -563,9 +563,8 @@ class ClassService {
    */
   async assignerModerateur(classId, moderatorId) {
     try {
-      return await this.axiosRequest(`/classes/${classId}/moderator`, {
+      return await this.axiosRequest(`/classes/${classId}/moderator/${moderatorId}`, {
         method: "patch",
-        data: { moderatorId },
       });
     } catch (error) {
       console.error("Error assigning moderator:", error);
