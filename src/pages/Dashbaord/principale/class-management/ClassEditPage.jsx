@@ -175,6 +175,20 @@ const ClassEditModal = ({
       setError("");
       setSuccess("");
 
+      // Find the selected moderator to get their type
+      const selectedModerator = availableModerators.find((mod) => mod.id === classData.moderator);
+      
+      // Prepare moderator object with type before id
+      let moderatorObj = null;
+      if (classData.moderator && selectedModerator) {
+        moderatorObj = { type: selectedModerator.type, id: classData.moderator };
+        // Validate moderator has type property
+        if (!moderatorObj.type) {
+          console.error("Moderator type is missing");
+          throw new Error("Moderator type is required");
+        }
+      }
+
       // Prepare the data to send to the backend
       const dataToSend = {
         ...classData,
@@ -182,8 +196,8 @@ const ClassEditModal = ({
         etablissement: classData.etablissement
           ? { id: classData.etablissement.id }
           : null,
-        // Send moderator as an object with id
-        moderator: classData.moderator ? { id: classData.moderator } : null,
+        // Send moderator as an object with type and id
+        moderator: moderatorObj,
         parents: classData.parents.map((p) => ({ id: p.id })),
         eleves: classData.eleves.map((e) => ({ id: e.id })),
       };

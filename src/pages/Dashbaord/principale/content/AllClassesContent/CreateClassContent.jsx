@@ -695,10 +695,23 @@ const CreateClassContent = ({
   const createClass = async (paymentInfo = null) => {
     setLoading(true);
     try {
+      // Find the selected professor to get their type
+      const selectedProfessor = professors.find((prof) => prof.id === formData.moderator);
+      
+      let moderatorObj = null;
+      if (formData.moderator && selectedProfessor) {
+        moderatorObj = { type: selectedProfessor.type, id: formData.moderator };
+        // Validate moderator has type property
+        if (!moderatorObj.type) {
+          console.error("Moderator type is missing");
+          throw new Error("Moderator type is required");
+        }
+      }
+
       let classData = {
         nom: formData.nom.trim(),
         niveau: formData.niveau.trim(),
-        moderator: formData.moderator ? { id: formData.moderator } : null,
+        moderator: moderatorObj,
         parents: [],
         eleves: [],
       };
