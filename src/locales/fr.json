@@ -1182,7 +1182,7 @@
         "validatingCard": "Vérification de la carte en cours...",
         "success": "Paiement accepté !",
         "successDesc": "Votre classe va être créée et approuvée automatiquement...",
-        "payBtn": "Payer {{amount}} FCFA",
+        "payBtn": "Payer 5000 FCFA",
         "back": "Retour"
       },
       "success": {

@@ -782,13 +782,13 @@ const Principal = () => {
                     className="user-profile-menu"
                     onClick={(e) => e.stopPropagation()}
                     style={{ 
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
+                      position: window.innerWidth < 768 ? 'fixed' : 'absolute',
+                      top: window.innerWidth < 768 ? '60px' : '100%',
+                      right: window.innerWidth < 768 ? '12px' : 0,
                       marginTop: '4px',
                       zIndex: 9999,
                       minWidth: '200px',
-                      maxWidth: '280px'
+                      maxWidth: window.innerWidth < 768 ? 'calc(100vw - 24px)' : '280px'
                     }}
                   >
                     <div className="user-profile-header">

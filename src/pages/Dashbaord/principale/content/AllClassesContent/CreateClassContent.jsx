@@ -472,7 +472,7 @@ const PaymentModal = ({
                   className="flex-1 bg-gradient-to-r from-orange-600 to-amber-600 text-white py-3 rounded-lg font-semibold hover:from-orange-700 hover:to-amber-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <CreditCard className="w-5 h-5" />
-                   {t('classes.create.payment.payBtn', "Payer {{amount}} FCFA", { amount: "5000.000" })}
+                   {t('classes.create.payment.payBtn', "Payer 5000 FCFA")}
                 </button>
               </div>
             </form>

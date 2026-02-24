@@ -366,9 +366,10 @@ const NotificationIcon = () => {
 
           <div
             ref={panelRef}
-            className="absolute right-0 mt-2 w-[360px] max-w-[calc(100vw-24px)] bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden"
+            className="fixed md:absolute right-3 md:right-0 mt-2 w-[360px] max-w-[calc(100vw-24px)] bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden"
             style={{
               maxHeight: "calc(100vh - 120px)",
+              top: buttonRef.current ? buttonRef.current.getBoundingClientRect().bottom + 8 : undefined,
             }}
           >
             {/* Header */}

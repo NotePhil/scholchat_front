@@ -16,6 +16,7 @@ const Header = ({
 
   const userDropdownRef = useRef(null);
   const notificationsRef = useRef(null);
+  const userButtonRef = useRef(null);
 
   useEffect(() => {
     const storedUserName =
@@ -153,7 +154,7 @@ const Header = ({
                     onClick={() => setShowNotifications(false)}
                   />
                   <div
-                    className={`absolute top-full right-0 mt-1 w-80 max-w-[calc(100vw-16px)] rounded-lg shadow-xl border z-[9999] ${
+                    className={`fixed md:absolute top-full right-3 md:right-0 mt-1 w-80 max-w-[calc(100vw-16px)] rounded-lg shadow-xl border z-[9999] ${
                       isDark
                         ? "bg-gray-800 border-gray-700"
                         : "bg-white border-gray-200"
@@ -190,6 +191,7 @@ const Header = ({
             {/* User Profile */}
             <div className="relative" ref={userDropdownRef}>
               <button
+                ref={userButtonRef}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -219,11 +221,14 @@ const Header = ({
                     onClick={() => setShowUserDropdown(false)}
                   />
                   <div
-                    className={`absolute top-full right-0 mt-1 w-64 max-w-[calc(100vw-16px)] rounded-lg shadow-xl border z-[9999] ${
+                    className={`fixed md:absolute right-3 md:right-0 w-64 max-w-[calc(100vw-16px)] rounded-lg shadow-xl border z-[9999] ${
                       isDark
                         ? "bg-gray-800 border-gray-700"
                         : "bg-white border-gray-200"
                     }`}
+                    style={{
+                      top: userButtonRef.current ? userButtonRef.current.getBoundingClientRect().bottom + 8 : undefined,
+                    }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className={`px-3 py-3 border-b ${isDark ? "border-gray-700" : "border-gray-200"}`}>

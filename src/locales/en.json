@@ -1301,7 +1301,7 @@
         "validatingCard": "Verifying card...",
         "success": "Payment accepted!",
         "successDesc": "Your class will be created and approved automatically...",
-        "payBtn": "Pay {{amount}} FCFA",
+        "payBtn": "Pay 5000 FCFA",
         "back": "Back"
       },
       "success": {

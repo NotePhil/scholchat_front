@@ -408,7 +408,7 @@ const ActivitiesContent = () => {
   };
 
   const handleCreateEvent = async () => {
-    if (!formData.titre || !formData.description || !formData.lieu || !formData.heureDebut || !formData.heureFin) {
+    if (!formData.titre || !formData.description || !formData.lieu || !formData.heureDebut) {
       alert(t('activities.validation.requiredFields'));
       return;
     }
@@ -640,7 +640,7 @@ const ActivitiesContent = () => {
 
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            {t('activities.form.endTime', 'Fin')} *
+                            {t('activities.form.endTime', 'Fin')}
                           </label>
                           <input
                             type="datetime-local"
@@ -772,7 +772,7 @@ const ActivitiesContent = () => {
                       </button>
                       <button
                         onClick={handleCreateEvent}
-                        disabled={loading || uploading || !formData.titre || !formData.description || !formData.lieu || !formData.heureDebut || !formData.heureFin || (formData.visibility === 'PRIVATE' && formData.selectedClasses.length === 0)}
+                        disabled={loading || uploading || !formData.titre || !formData.description || !formData.lieu || !formData.heureDebut || (formData.visibility === 'PRIVATE' && formData.selectedClasses.length === 0)}
                         className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         {loading || uploading ? (
@@ -811,7 +811,7 @@ const ActivitiesContent = () => {
                       className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
                     >
                       <Plus className="w-5 h-5" />
-                      {t('activities. noActivities.createFirst', 'Créer un événement')}
+                      {t('activities.noActivities.createFirst', 'Créer un événement')}
                     </button>
                   </div>
                 ) : (
