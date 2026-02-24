@@ -142,6 +142,10 @@ export const useAuth = () => {
     return hasRole("TUTOR");
   }, [hasRole]);
 
+  const isGestionnaire = useMemo(() => {
+    return hasRole("GESTIONNAIRE");
+  }, [hasRole]);
+
   const isParentOrStudent = useMemo(() => {
     return isParent || isStudent;
   }, [isParent, isStudent]);
@@ -160,6 +164,7 @@ export const useAuth = () => {
       PARENT: "Parent",
       STUDENT: "Student",
       TUTOR: "Tutor",
+      GESTIONNAIRE: "Gestionnaire",
       USER: "User",
     };
 
@@ -207,9 +212,10 @@ export const useAuth = () => {
     isParent,
     isStudent,
     isTutor,
+    isGestionnaire,
     isParentOrStudent,
-    displayRole, // "Admin", "Professor", "Parent", "Student"
-    normalizedUserRole, // "admin", "professor", "parent", "student"
+    displayRole, // "Admin", "Professor", "Parent", "Student", "Gestionnaire"
+    normalizedUserRole, // "admin", "professor", "parent", "student", "gestionnaire"
     userRole: authState.userRole, // "ROLE_ADMIN", "ROLE_PROFESSOR", etc.
     userRoles: authState.userRoles || [],
   };

@@ -554,7 +554,14 @@ const CreateClassContent = ({
         setEstablishments(establishmentsData || []);
 
         const professorsData = await scholchatService.getAllProfessors();
-        setProfessors(professorsData || []);
+        const gestionnairesData = await scholchatService.getAllGestionnaires();
+        
+        // Combine professors and gestionnaires
+        const allModerators = [
+          ...(professorsData || []),
+          ...(gestionnairesData || [])
+        ];
+        setProfessors(allModerators);
       } catch (error) {
         console.error("Error loading data:", error);
         setEstablishments([]);

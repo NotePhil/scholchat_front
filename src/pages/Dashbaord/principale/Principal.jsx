@@ -54,6 +54,7 @@ import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgra
 import CoursProgrammeManagement from "./content/InterfaceCours/CoursProgrammeManagement";
 import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
 import MatiereContent from "./content/MatiereContent/MatiereContent";
+import GestionnaireDashboardContent from "./content/GestionnaireContent/GestionnaireDashboardContent";
 
 import "../../../CSS/Principal.css";
 
@@ -141,6 +142,7 @@ const Principal = () => {
     isParent,
     isStudent,
     isParentOrStudent,
+    isGestionnaire,
     hasRole,
   } = useAuth();
 
@@ -275,6 +277,8 @@ const Principal = () => {
       expectedDashboard = "ParentDashboard";
     } else if (isStudent) {
       expectedDashboard = "StudentDashboard";
+    } else if (isGestionnaire) {
+      expectedDashboard = "GestionnaireDashboard";
     } else {
       expectedDashboard = `${
         normalizedUserRole.charAt(0).toUpperCase() + normalizedUserRole.slice(1)
@@ -425,11 +429,13 @@ const Principal = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return isParentOrStudent ? (
-          <StudentParentStats {...contentProps} />
-        ) : (
-          <DashboardContent {...contentProps} />
-        );
+        if (isParentOrStudent) {
+          return <StudentParentStats {...contentProps} />;
+        } else if (isGestionnaire) {
+          return <GestionnaireDashboardContent {...contentProps} />;
+        } else {
+          return <DashboardContent {...contentProps} />;
+        }
       case "activities":
         return <ActivitiesContent {...contentProps} />;
       case "admin":

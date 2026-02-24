@@ -14,7 +14,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import establishmentService from "../../../../../services/EstablishmentService";
-import { userService } from "../../../../../services/userService";
+import gestionnaireService from "../../../../../services/GestionnaireService";
 import { useNavigate } from "react-router-dom";
 
 const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingEstablishment = null }) => {
@@ -47,7 +47,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
     const loadUsers = async () => {
       setLoadingUsers(true);
       try {
-        const usersData = await userService.getAllUsers();
+        const usersData = await gestionnaireService.getAllGestionnaires();
         setUsers(usersData);
         
         // If editing, populate form with existing data

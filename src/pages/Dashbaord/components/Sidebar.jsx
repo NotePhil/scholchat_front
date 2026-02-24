@@ -54,6 +54,7 @@ const Sidebar = ({
     isStudent,
     isParentOrStudent,
     isTutor,
+    isGestionnaire,
   } = useAuth();
 
   useEffect(() => {
@@ -191,6 +192,32 @@ const Sidebar = ({
         },
         { name: t('sidebar.classes'), icon: Building2, tab: "classes" },
         { name: t('sidebar.courses'), icon: Book, tab: "cours" },
+        {
+          name: t('sidebar.messaging'),
+          icon: Mail,
+          tab: "messages",
+        },
+      ];
+    } else if (isGestionnaire) {
+      roleItems = [
+        {
+          name: t('sidebar.establishments'),
+          icon: School,
+          dropdown: "establishments",
+          items: [
+            { name: t('sidebar.createEstablishment'), tab: "create-establishment" },
+            { name: t('sidebar.manageEstablishment'), tab: "manage-establishment" },
+          ],
+        },
+        {
+          name: t('sidebar.classes'),
+          icon: Building2,
+          dropdown: "classes",
+          items: [
+            { name: t('sidebar.createClass'), tab: "create-class" },
+            { name: t('sidebar.manageClass'), tab: "manage-class" },
+          ],
+        },
         {
           name: t('sidebar.messaging'),
           icon: Mail,

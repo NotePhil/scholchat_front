@@ -692,6 +692,7 @@ const SignUp = ({ theme }) => {
                       { value: "parent", label: "Parent", icon: "👨‍👩‍👧" },
                       { value: "eleve", label: "Élève", icon: "🎓" },
                       { value: "professeur", label: "Professeur", icon: "👨‍🏫" },
+                      { value: "gestionnaire", label: "Gestionnaire", icon: "??" },
                     ].map((type) => (
                       <label
                         key={type.value}
@@ -911,3 +912,6 @@ const SignUp = ({ theme }) => {
 };
 
 export default SignUp;
+
+
+

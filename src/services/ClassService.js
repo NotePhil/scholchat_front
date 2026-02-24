@@ -175,12 +175,17 @@ class ClassService {
    */
   async creerClasse(classe) {
     try {
-      return await this.axiosRequest("/classes/nouvelle", {
+      console.log('Creating class with data:', classe);
+      const response = await this.axiosRequest("/classes/nouvelle", {
         method: "post",
         data: classe,
       });
+      console.log('Class created successfully:', response);
+      return response;
     } catch (error) {
       console.error("Error creating class:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
       throw error;
     }
   }

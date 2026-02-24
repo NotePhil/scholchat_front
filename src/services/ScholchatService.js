@@ -761,6 +761,16 @@ class ScholchatService {
     }
   }
 
+  // ============ Gestionnaire Management ============
+  async getAllGestionnaires() {
+    try {
+      const response = await api.get("/gestionnaires");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   // ============ Authentication ============
   async login(credentials) {
     try {
