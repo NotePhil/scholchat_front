@@ -428,6 +428,18 @@ class ExerciseProgrammerService {
     }
   }
 
+  async getExercisesProgrammesParExercise(exerciseId) {
+    try {
+      if (!exerciseId) throw new Error("L'ID de l'exercice est requis");
+      const response = await this.api.get(
+        `/exercises-programmer/exercise/${exerciseId}`
+      );
+      return response.data;
+    } catch (error) {
+      handleError(error, "getExercisesProgrammesParExercise");
+    }
+  }
+
   async mettreAJourEtatExerciseProgramme(exerciseProgrammerId, nouvelEtat) {
     try {
       if (!exerciseProgrammerId || !nouvelEtat) {
@@ -502,16 +514,10 @@ class QuestionReponseService {
         throw new Error("L'intitulé et le type de question sont requis");
       }
 
-      const formattedData = {
-        intitule: questionData.intitule,
-        reponse: questionData.reponse || "",
-        typeQuestion: questionData.typeQuestion,
-      };
-
-      console.log("Creating question:", JSON.stringify(formattedData, null, 2));
+      console.log("Creating question:", JSON.stringify(questionData, null, 2));
       const response = await this.api.post(
         `/questions/exercise/${exerciseId}`,
-        formattedData
+        questionData
       );
       return response.data;
     } catch (error) {

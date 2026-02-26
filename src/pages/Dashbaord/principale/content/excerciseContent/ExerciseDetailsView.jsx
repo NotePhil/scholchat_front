@@ -71,8 +71,6 @@ const ExerciseDetailsView = ({
 
   const [questions, setQuestions] = useState([]);
   const [questionsLoading, setQuestionsLoading] = useState(false);
-  const [showQuestionForm, setShowQuestionForm] = useState(false);
-  const [questionForm] = Form.useForm();
 
   const [showProgramForm, setShowProgramForm] = useState(false);
   const [programForm] = Form.useForm();
@@ -160,45 +158,19 @@ const ExerciseDetailsView = ({
   const fetchExerciseProgrammations = async () => {
     try {
       setProgrammationsLoading(true);
-      const userId =
-        sessionStorage.getItem("userId") || localStorage.getItem("userId");
-      console.log("Fetching programmations for user:", userId);
+      console.log("Fetching programmations for exercise:", exerciseId);
 
-      if (!userId) {
-        console.warn("No user ID found");
-        return;
-      }
-
-      const allProgrammations =
-        await exerciseProgrammerService.getExercisesProgrammesParProfesseur(
-          userId
+      const programmations =
+        await exerciseProgrammerService.getExercisesProgrammesParExercise(
+          exerciseId
         );
-      console.log("All programmations:", allProgrammations);
+      console.log("Programmations for exercise:", programmations);
 
-      // CORRECTION: Filtrer par exerciseId, pas par id
-      const filteredProgrammations = (allProgrammations || []).filter(
-        (prog) => {
-          // Vérifier plusieurs possibilités de structure
-          const progExerciseId =
-            prog.exerciseId || prog.exercise?.id || prog.exercise;
-          console.log(
-            `Comparing prog exercise ID: ${progExerciseId} with current exercise: ${exerciseId}`
-          );
-          return progExerciseId === exerciseId;
-        }
-      );
-
-      console.log(
-        "Filtered programmations for exercise",
-        exerciseId,
-        ":",
-        filteredProgrammations
-      );
-
-      setProgrammations(filteredProgrammations);
+      setProgrammations(programmations || []);
     } catch (error) {
       console.error("Error fetching exercise programmations:", error);
       message.warning("Impossible de charger les programmations");
+      setProgrammations([]);
     } finally {
       setProgrammationsLoading(false);
     }
@@ -283,29 +255,7 @@ const ExerciseDetailsView = ({
     });
   };
 
-  const handleAddQuestion = async (values) => {
-    try {
-      setActionLoading("add-question");
-      console.log("Creating question:", values);
-
-      await questionReponseService.createQuestion(exerciseId, values);
-
-      setSuccessMessage("Question ajoutée avec succès");
-      message.success("Question ajoutée avec succès");
-      setShowQuestionForm(false);
-      questionForm.resetFields();
-
-      await fetchExerciseQuestions();
-    } catch (error) {
-      console.error("Error adding question:", error);
-      setError("Erreur lors de l'ajout de la question");
-      message.error("Erreur lors de l'ajout de la question");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleDeleteQuestion = async (questionId) => {
+const handleDeleteQuestion = async (questionId) => {
     confirm({
       title: "Supprimer la question",
       content: "Êtes-vous sûr de vouloir supprimer cette question ?",
@@ -888,15 +838,12 @@ const ExerciseDetailsView = ({
                 <Title level={5} className="m-0 text-sm sm:text-base">
                   Questions de l'exercice
                 </Title>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => setShowQuestionForm(true)}
-                  size="middle"
-                >
-                  <span className="hidden sm:inline">Ajouter une Question</span>
-                  <span className="sm:hidden">Ajouter</span>
-                </Button>
+                <Alert
+                  message="Ajoutez des questions lors de la création de l'exercice"
+                  type="info"
+                  showIcon
+                  className="text-xs"
+                />
               </div>
 
               <Table
@@ -916,17 +863,9 @@ const ExerciseDetailsView = ({
                 locale={{
                   emptyText: (
                     <Empty
-                      description="Aucune question dans cet exercice"
+                      description="Aucune question dans cet exercice. Ajoutez des questions lors de la création de l'exercice."
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    >
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => setShowQuestionForm(true)}
-                      >
-                        Ajouter une Question
-                      </Button>
-                    </Empty>
+                    />
                   ),
                 }}
               />
@@ -993,82 +932,7 @@ const ExerciseDetailsView = ({
         </Card>
       )}
 
-      {/* Add Question Modal */}
-      <Modal
-        title="Ajouter une Question"
-        open={showQuestionForm}
-        onCancel={() => {
-          setShowQuestionForm(false);
-          questionForm.resetFields();
-        }}
-        footer={null}
-        width="90%"
-        style={{ maxWidth: 600 }}
-      >
-        <Form
-          form={questionForm}
-          layout="vertical"
-          onFinish={handleAddQuestion}
-        >
-          <Form.Item
-            name="intitule"
-            label="Intitulé de la question"
-            rules={[{ required: true, message: "L'intitulé est requis" }]}
-          >
-            <TextArea rows={3} placeholder="Posez votre question ici..." />
-          </Form.Item>
 
-          <Form.Item
-            name="typeQuestion"
-            label="Type de question"
-            rules={[{ required: true, message: "Le type est requis" }]}
-            initialValue="QCM"
-          >
-            <Select>
-              <Option value="QCM">Question à Choix Multiple (QCM)</Option>
-              <Option value="VRAI_FAUX">Vrai ou Faux</Option>
-              <Option value="REPONSE_COURTE">Réponse Courte</Option>
-              <Option value="REPONSE_LONGUE">Réponse Longue</Option>
-              <Option value="ASSOCIATION">Association</Option>
-              <Option value="CLASSEMENT">Classement</Option>
-              <Option value="TROU">Texte à Trous</Option>
-              <Option value="DEVELOPPEMENT">Développement</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="reponse"
-            label="Réponse attendue"
-            rules={[{ required: true, message: "La réponse est requise" }]}
-          >
-            <Input placeholder="Réponse correcte..." />
-          </Form.Item>
-
-          <div className="flex flex-col sm:flex-row justify-end gap-2">
-            <Button
-              onClick={() => {
-                setShowQuestionForm(false);
-                questionForm.resetFields();
-              }}
-              block
-              className="sm:w-auto"
-            >
-              Annuler
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={actionLoading === "add-question"}
-              block
-              className="sm:w-auto"
-            >
-              Ajouter la Question
-            </Button>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Program Exercise Modal */}
       <Modal
         title="Programmer l'Exercice"
         open={showProgramForm}

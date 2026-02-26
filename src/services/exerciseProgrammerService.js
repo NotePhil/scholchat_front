@@ -154,6 +154,20 @@ class ExerciseProgrammerService {
     }
   }
 
+  async getExercisesProgrammesParExercise(exerciseId) {
+    try {
+      if (!exerciseId) {
+        throw new Error("Exercise ID is required");
+      }
+      const response = await exerciseProgrammerApi.get(
+        `/exercises-programmer/exercise/${exerciseId}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   async mettreAJourEtatExerciseProgramme(exerciseProgrammerId, nouvelEtat) {
     try {
       if (!exerciseProgrammerId || !nouvelEtat) {
