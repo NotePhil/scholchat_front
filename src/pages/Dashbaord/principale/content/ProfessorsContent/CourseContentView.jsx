@@ -30,8 +30,10 @@ import {
   Archive,
 } from "lucide-react";
 import { minioS3Service } from "../../../../../services/minioS3";
+import { useNavigate } from "react-router-dom";
 
 const CourseContentView = ({ course, onBack }) => {
+  const navigate = useNavigate();
   const [processedChapters, setProcessedChapters] = useState([]);
   const [activeTab, setActiveTab] = useState("details");
   const [participants, setParticipants] = useState([]);
@@ -244,19 +246,28 @@ const CourseContentView = ({ course, onBack }) => {
             >
               <ArrowLeft size={20} />
             </button>
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg">
-                <BookOpen className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                  Détails du Cours
-                </h1>
-                <div className="flex items-center gap-3 mt-2">
-                  <p className="text-slate-600">{course?.titre}</p>
-                  {getStatusBadge(course?.etat)}
+            <div className="flex items-center justify-between flex-1">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                    Détails du Cours
+                  </h1>
+                  <div className="flex items-center gap-3 mt-2">
+                    <p className="text-slate-600">{course?.titre}</p>
+                    {getStatusBadge(course?.etat)}
+                  </div>
                 </div>
               </div>
+              <button
+                onClick={() => navigate('/schoolchat/Principal/ProfessorDashboard/schedule-course', { state: { course } })}
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all flex items-center gap-2 shadow-lg"
+              >
+                <CalendarPlus size={18} />
+                Programmer
+              </button>
             </div>
           </div>
         </div>

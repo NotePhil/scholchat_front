@@ -9,9 +9,16 @@ import {
   CheckCircle,
   Archive,
   AlertCircle,
+  CalendarPlus,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
+  const navigate = useNavigate();
+
+  const handleSchedule = () => {
+    navigate('/schoolchat/Principal/ProfessorDashboard/schedule-course', { state: { course } });
+  };
   const getStatusBadge = (status) => {
     const badges = {
       BROUILLON: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -117,6 +124,13 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
             title="Modifier"
           >
             <Edit2 size={16} />
+          </button>
+          <button
+            onClick={handleSchedule}
+            className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
+            title="Programmer"
+          >
+            <CalendarPlus size={16} />
           </button>
           <button
             className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all duration-200"
