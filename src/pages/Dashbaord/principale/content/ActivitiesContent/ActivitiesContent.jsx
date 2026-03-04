@@ -200,10 +200,13 @@ const ActivitiesContent = () => {
               endTime: event.heureFin,
               participantsCount: participants,
             },
-            participantsIds: event.participantsIds || []
+            participantsIds: event.participantsIds || [],
+            heureDebut: event.heureDebut
           };
         })
       );
+      
+      activitiesWithImages.sort((a, b) => new Date(b.heureDebut) - new Date(a.heureDebut));
       
       setActivities(activitiesWithImages);
     } catch (error) {
