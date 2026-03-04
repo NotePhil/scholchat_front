@@ -35,19 +35,15 @@ const ComposeModal = ({
 
   useEffect(() => {
     const fetchClasses = async () => {
-      if (!currentUser) return;
-      
       try {
         const accessToken = localStorage.getItem("accessToken");
         const userId = localStorage.getItem("userId");
-        if (!userId) {
-          throw new Error("User ID not found in localStorage");
-        }
+        if (!userId || !accessToken) return;
 
         let endpoint;
         if (
-          currentUser.role === "ROLE_PROFESSOR" ||
-          currentUser.admin === false
+          currentUser?.role === "ROLE_PROFESSOR" ||
+          currentUser?.admin === false
         ) {
           endpoint = `${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`;
         } else {
@@ -308,9 +304,9 @@ const ComposeModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 pt-20">
       <div
-        className={`rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto ${
+        className={`rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto my-auto ${
           isDark ? "bg-gray-800" : "bg-white"
         }`}
       >
@@ -676,8 +672,7 @@ const ComposeModal = ({
             className={`px-4 py-2 rounded-lg text-white transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${
               loading ||
               !newMessage.contenu.trim() ||
-              (selectedClasses.length === 0 &&
-                newMessage.destinataires.length === 0)
+              (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0)
                 ? "bg-gray-400 cursor-not-allowed"
                 : "hover:shadow-lg"
             }`}
@@ -685,8 +680,7 @@ const ComposeModal = ({
               backgroundColor:
                 loading ||
                 !newMessage.contenu.trim() ||
-                (selectedClasses.length === 0 &&
-                  newMessage.destinataires.length === 0)
+                (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0)
                   ? undefined
                   : themeColors.primary,
             }}
@@ -694,8 +688,7 @@ const ComposeModal = ({
             disabled={
               loading ||
               !newMessage.contenu.trim() ||
-              (selectedClasses.length === 0 &&
-                newMessage.destinataires.length === 0)
+              (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0)
             }
           >
             {loading ? (
