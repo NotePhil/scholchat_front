@@ -379,7 +379,11 @@ const ManageClassList = ({
         )}
 
         <div className="stats-grid">
-          <div className="stat-card stat-primary">
+          <div 
+            onClick={() => setStatusFilter("all")}
+            className={`stat-card stat-primary ${statusFilter === "all" ? "stat-active" : ""}`}
+            style={{ cursor: "pointer" }}
+          >
             <div className="stat-header">
               <div className="stat-icon">
                 <GraduationCap className="icon" />
@@ -388,7 +392,11 @@ const ManageClassList = ({
             </div>
             <div className="stat-label">Total Classes</div>
           </div>
-          <div className="stat-card stat-success">
+          <div 
+            onClick={() => setStatusFilter(EtatClasse.ACTIF)}
+            className={`stat-card stat-success ${statusFilter === EtatClasse.ACTIF ? "stat-active" : ""}`}
+            style={{ cursor: "pointer" }}
+          >
             <div className="stat-header">
               <div className="stat-icon">
                 <Trophy className="icon" />
@@ -397,7 +405,11 @@ const ManageClassList = ({
             </div>
             <div className="stat-label">Classes Actives</div>
           </div>
-          <div className="stat-card stat-info">
+          <div 
+            onClick={() => setStatusFilter(EtatClasse.EN_ATTENTE_APPROBATION)}
+            className={`stat-card stat-info ${statusFilter === EtatClasse.EN_ATTENTE_APPROBATION ? "stat-active" : ""}`}
+            style={{ cursor: "pointer" }}
+          >
             <div className="stat-header">
               <div className="stat-icon">
                 <Bell className="icon" />

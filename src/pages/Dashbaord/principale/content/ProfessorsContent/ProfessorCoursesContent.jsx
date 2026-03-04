@@ -27,6 +27,7 @@ import {
   Share2,
   Archive,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { matiereService } from "../../../../../services/MatiereService";
@@ -303,7 +304,12 @@ const ProfessorCoursesContent = () => {
         )}
 
         <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus('all')}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'all' ? 'ring-2 ring-blue-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -325,7 +331,12 @@ const ProfessorCoursesContent = () => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus('BROUILLON')}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'BROUILLON' ? 'ring-2 ring-yellow-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -347,7 +358,12 @@ const ProfessorCoursesContent = () => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus('PUBLIE')}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'PUBLIE' ? 'ring-2 ring-green-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -446,6 +462,15 @@ const ProfessorCoursesContent = () => {
                     Nouveau Cours
                   </>
                 )}
+              </button>
+
+              <button
+                onClick={loadCourses}
+                disabled={loading}
+                className="bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed text-slate-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg border border-slate-200"
+                title="Actualiser"
+              >
+                <RefreshCw size={16} className={`sm:w-5 sm:h-5 ${loading ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>

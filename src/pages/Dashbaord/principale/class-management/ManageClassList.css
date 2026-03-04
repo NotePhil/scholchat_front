@@ -248,6 +248,11 @@
   transition: all 0.3s ease;
 }
 
+.stat-card.stat-active {
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.5);
+  transform: translateY(-2px);
+}
+
 .stat-header {
   display: flex;
   align-items: center;

@@ -22,6 +22,7 @@ import {
   School,
   Clock,
   GraduationCap,
+  RefreshCw,
 } from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import { classService } from "../../../../../services/ClassService";
@@ -245,7 +246,11 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         )}
 
         <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("all")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === "all" ? "ring-2 ring-blue-500" : ""
+            }`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -267,7 +272,11 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("ACTIVE")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === "ACTIVE" ? "ring-2 ring-emerald-500" : ""
+            }`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -289,7 +298,11 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("PENDING")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === "PENDING" ? "ring-2 ring-amber-500" : ""
+            }`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -316,7 +329,11 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("INACTIVE")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === "INACTIVE" ? "ring-2 ring-red-500" : ""
+            }`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -378,6 +395,15 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  onClick={loadData}
+                  disabled={loading}
+                  className="px-3 sm:px-4 py-2 sm:py-3 bg-white border border-slate-200 text-slate-600 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw size={14} className={`sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
+                  Actualiser
+                </button>
+                
                 {isAdmin && (
                   <button
                     onClick={() => {

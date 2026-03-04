@@ -7,7 +7,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-const CoursProgrammerStats = ({ scheduledCourses }) => {
+const CoursProgrammerStats = ({ scheduledCourses, filterStatus, setFilterStatus }) => {
   const totalScheduled = scheduledCourses.length;
   const planifie = scheduledCourses.filter(
     (c) => c.etatCoursProgramme === "PLANIFIE"
@@ -32,6 +32,8 @@ const CoursProgrammerStats = ({ scheduledCourses }) => {
       bgColor: "bg-slate-50",
       iconBg: "bg-slate-100",
       iconColor: "text-slate-600",
+      filterValue: "all",
+      ringColor: "ring-slate-500",
     },
     {
       label: "Planifiés",
@@ -42,6 +44,8 @@ const CoursProgrammerStats = ({ scheduledCourses }) => {
       bgColor: "bg-blue-50",
       iconBg: "bg-blue-100",
       iconColor: "text-blue-600",
+      filterValue: "PLANIFIE",
+      ringColor: "ring-blue-500",
     },
     {
       label: "En Cours",
@@ -52,6 +56,8 @@ const CoursProgrammerStats = ({ scheduledCourses }) => {
       bgColor: "bg-green-50",
       iconBg: "bg-green-100",
       iconColor: "text-green-600",
+      filterValue: "EN_COURS",
+      ringColor: "ring-green-500",
     },
     {
       label: "Terminés",
@@ -62,6 +68,8 @@ const CoursProgrammerStats = ({ scheduledCourses }) => {
       bgColor: "bg-gray-50",
       iconBg: "bg-gray-100",
       iconColor: "text-gray-600",
+      filterValue: "TERMINE",
+      ringColor: "ring-gray-500",
     },
     {
       label: "Annulés",
@@ -72,6 +80,8 @@ const CoursProgrammerStats = ({ scheduledCourses }) => {
       bgColor: "bg-red-50",
       iconBg: "bg-red-100",
       iconColor: "text-red-600",
+      filterValue: "ANNULE",
+      ringColor: "ring-red-500",
     },
   ];
 
@@ -80,7 +90,10 @@ const CoursProgrammerStats = ({ scheduledCourses }) => {
       {stats.map((stat, index) => (
         <div
           key={index}
-          className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 group col-span-1"
+          onClick={() => setFilterStatus(stat.filterValue)}
+          className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 group col-span-1 cursor-pointer ${
+            filterStatus === stat.filterValue ? `ring-2 ${stat.ringColor}` : ''
+          }`}
         >
           <div className="flex items-center justify-between">
             <div className="flex-1">

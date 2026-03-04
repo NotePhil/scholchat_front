@@ -24,6 +24,7 @@ import {
   Clock,
   BarChart3,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import establishmentService from "../../../../../services/EstablishmentService";
 import ClassService from "../../../../../services/ClassService";
@@ -32,6 +33,9 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
   const { t } = useTranslation();
   const currentLanguage = useSelector((state) => state.ui.currentLanguage);
   
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [loading, setLoading] = useState(false);
+
   const [dashboardData, setDashboardData] = useState({
     establishments: [],
     classes: [],
@@ -54,6 +58,7 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
 
   const fetchDashboardData = async () => {
     try {
+      setLoading(true);
       setDashboardData((prev) => ({ ...prev, loading: true, error: null }));
 
       // Get current user ID
@@ -142,6 +147,8 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
         pendingClasses: 0,
         activeClasses: 0,
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -156,8 +163,15 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
     { name: "En attente", value: stats.pendingClasses, color: "#F59E0B" },
   ];
 
-  const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }) => (
-    <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow`}>
+  const StatCard = ({ title, value, icon: Icon, color, trend, subtitle, filterValue }) => (
+    <div 
+      onClick={() => filterValue && setFilterStatus(filterValue)}
+      className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-6 hover:shadow-md transition-all ${
+        filterValue ? 'cursor-pointer' : ''
+      } ${
+        filterStatus === filterValue ? 'ring-2 ring-blue-500' : ''
+      }`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -299,8 +313,10 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
             </div>
             <button
               onClick={fetchDashboardData}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               <span>Actualiser</span>
             </button>
           </div>
@@ -316,6 +332,7 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
             color="bg-blue-500"
             trend="+5%"
             subtitle={`${stats.activeEstablishments} actifs`}
+            filterValue="all"
           />
           <StatCard
             title="Classes"
@@ -324,6 +341,7 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
             color="bg-green-500"
             trend="+12%"
             subtitle={`${stats.activeClasses} actives`}
+            filterValue="ACTIF"
           />
           <StatCard
             title="Élèves"
@@ -339,6 +357,7 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
             icon={Clock}
             color="bg-orange-500"
             subtitle="Classes à approuver"
+            filterValue="EN_ATTENTE_APPROBATION"
           />
         </div>
 

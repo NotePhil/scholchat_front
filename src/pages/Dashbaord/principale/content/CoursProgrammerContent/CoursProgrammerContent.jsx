@@ -414,7 +414,11 @@ const CoursProgrammerContent = () => {
         )}
 
         {/* Statistiques */}
-        <CoursProgrammerStats scheduledCourses={scheduledCourses} />
+        <CoursProgrammerStats 
+          scheduledCourses={scheduledCourses} 
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+        />
 
         {/* Barre de contrôle */}
         <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg mb-6 sm:mb-8">

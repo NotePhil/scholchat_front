@@ -22,6 +22,7 @@ import {
   Edit3,
   AlertTriangle,
   Clock,
+  RefreshCw,
 } from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import { classService } from "../../../../../services/ClassService";
@@ -263,7 +264,12 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         )}
 
         <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className={`${isDark ? 'bg-gray-800/70 border-gray-700/50' : 'bg-white/70 border-white/50'} backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300`}>
+          <div 
+            onClick={() => setFilterStatus("all")}
+            className={`${isDark ? 'bg-gray-800/70 border-gray-700/50' : 'bg-white/70 border-white/50'} backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'all' ? 'ring-2 ring-blue-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} text-xs sm:text-sm font-medium`}>
@@ -285,7 +291,12 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("ACTIVE")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'ACTIVE' ? 'ring-2 ring-emerald-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -305,7 +316,12 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("AWAITING_VALIDATION")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'AWAITING_VALIDATION' ? 'ring-2 ring-amber-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -330,7 +346,12 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("INACTIVE")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'INACTIVE' ? 'ring-2 ring-red-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -400,6 +421,15 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  onClick={loadData}
+                  disabled={loading}
+                  className="p-2 sm:p-2.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Actualiser"
+                >
+                  <RefreshCw size={14} className={`sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+                
                 {isAdmin && (
                   <button
                     onClick={() => {
