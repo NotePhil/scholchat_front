@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -29,6 +30,7 @@ import CoursProgrammerViewModal from "../../modals/CoursProgrammerViewModal";
 const PAGE_SIZE_OPTIONS = [5, 10, 15, 20, 25, 50, 100];
 
 const CoursProgrammerContent = () => {
+  const location = useLocation();
   const [scheduledCourses, setScheduledCourses] = useState([]);
   const [filteredScheduledCourses, setFilteredScheduledCourses] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -56,6 +58,17 @@ const CoursProgrammerContent = () => {
       setLoading(false);
     }
   }, []);
+
+  // Handle auto-open if course is passed in state
+  useEffect(() => {
+    if (location.state?.course && courses.length > 0) {
+      setModalMode("create");
+      setSelectedScheduledCourse({ cours: location.state.course, coursId: location.state.course.id });
+      setShowScheduleModal(true);
+      // Clear state after reading to prevent re-opening on manual refreshes
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, courses]);
 
   useEffect(() => {
     filterScheduledCourses();

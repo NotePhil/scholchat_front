@@ -107,10 +107,10 @@ const RenderUserModal = ({ user, visible, onClose }) => {
   }
 };
 
-const ManageClassDetailsView = ({ classId, onBack }) => {
+const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
   const [classDetails, setClassDetails] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(initialTab || "overview");
   const [actionLoading, setActionLoading] = useState(null);
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
@@ -1663,6 +1663,16 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           {classDetails?.etat && getStatusTag(classDetails.etat)}
+          {usersWithPublicationRights.some(u => u.id === currentUserId && u.peutPublier) && (
+            <Tag icon={<CheckOutlined />} color="blue">
+              Droits de publication
+            </Tag>
+          )}
+          {moderatorsWithRights.some(u => u.id === currentUserId) && (
+            <Tag icon={<CrownOutlined />} color="purple">
+              Modérateur
+            </Tag>
+          )}
           {canSelfApproveReject() && isClassPendingApproval() && (
             <Tag icon={<CrownOutlined />} color="gold">
               En attente de votre approbation
@@ -1782,6 +1792,20 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
                           )}
                         </Descriptions.Item>
                       )}
+                      
+                      {/* Current User Rights */}
+                      <Descriptions.Item label="Mes Droits">
+                        <Space wrap>
+                          {usersWithPublicationRights.some(u => u.id === currentUserId && u.peutPublier) ? (
+                            <Tag color="blue">Publication autorisée</Tag>
+                          ) : (
+                            <Tag color="default">Pas de droits de publication</Tag>
+                          )}
+                          {moderatorsWithRights.some(u => u.id === currentUserId) && (
+                            <Tag color="purple">Modérateur</Tag>
+                          )}
+                        </Space>
+                      </Descriptions.Item>
                     </Descriptions>
                   </Card>
                 </Col>

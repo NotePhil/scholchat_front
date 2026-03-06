@@ -604,18 +604,18 @@ const ManageClassList = ({
 
                         <div className="card-actions">
                           <button
-                            onClick={() => handleEditClass(classe)}
-                            className="action-btn action-primary"
-                          >
-                            <Edit className="action-icon" />
-                            <span>Modifier</span>
-                          </button>
-                          <button
                             onClick={() => handleManageClass(classe)}
-                            className="action-btn action-secondary"
+                            className="action-btn action-primary"
                           >
                             <Settings className="action-icon" />
                             <span>Gérer</span>
+                          </button>
+                          <button
+                            onClick={() => handleEditClass(classe)}
+                            className="action-btn action-secondary"
+                          >
+                            <Edit className="action-icon" />
+                            <span>Modifier</span>
                           </button>
                         </div>
                       </div>

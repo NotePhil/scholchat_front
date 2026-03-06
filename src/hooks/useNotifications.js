@@ -98,11 +98,16 @@ export const useNotifications = () => {
   const getNotificationMeta = useCallback((type) => {
     switch (type) {
       case "ACCESS_REQUEST":
+      case "DEMANDE_ACCES":
         return { icon: "UserPlus", color: "blue", category: "access" };
       case "ACTIVITY_CREATED":
         return { icon: "Calendar", color: "green", category: "activity" };
       case "CLASS_VALIDATED":
         return { icon: "CheckCircle", color: "emerald", category: "class" };
+      case "CLASS_REJECTED":
+        return { icon: "RefreshCw", color: "orange", category: "class" };
+      case "PROFESSOR_CREATED":
+        return { icon: "UserPlus", color: "green", category: "professor" };
       case "ASSIGNMENT_GIVEN":
         return { icon: "BookOpen", color: "purple", category: "assignment" };
       case "MESSAGE_SENT":

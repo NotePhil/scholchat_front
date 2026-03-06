@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { useNotifications } from "../../../../hooks/useNotifications";
 import { useTranslation } from "../../../../hooks/useTranslation";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setActiveTab as setActiveTabAction } from "../../../../store/slices/uiSlice";
 
 const ICON_MAP = {
   UserPlus,
@@ -108,6 +111,7 @@ const formatTimeAgo = (dateStr, language) => {
 
 const NotificationItem = ({
   notification,
+  onClick,
   onMarkAsRead,
   onDelete,
   getNotificationMeta,
@@ -124,11 +128,7 @@ const NotificationItem = ({
           ? "bg-blue-50 hover:bg-blue-100/70"
           : "hover:bg-gray-50"
       }`}
-      onClick={() => {
-        if (!notification.read) {
-          onMarkAsRead(notification.id);
-        }
-      }}
+      onClick={() => onClick(notification)}
     >
       {/* Icon */}
       <div
@@ -281,6 +281,9 @@ const NotificationIcon = () => {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, closePanel]);
 
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
   const handleNotificationClick = useCallback(
     (notification) => {
       if (!notification.read) {
@@ -288,35 +291,59 @@ const NotificationIcon = () => {
       }
 
       // Navigation based on notification type and related entity
-      const { type, relatedEntityId, relatedEntityType } = notification;
+      const { type, relatedEntityId } = notification;
+
+      // Close panel after click
+      closePanel();
 
       switch (type) {
         case "ACCESS_REQUEST":
-          // Navigate to class management for professors/admins
-          console.log("Navigate to class access requests:", relatedEntityId);
-          break;
-        case "ACTIVITY_CREATED":
-        case "EVENT_UPDATED":
-          // Navigate to activities
-          console.log("Navigate to activity:", relatedEntityId);
-          break;
-        case "ASSIGNMENT_GIVEN":
-          // Navigate to assignment/exercise
-          console.log("Navigate to assignment:", relatedEntityId);
+        case "DEMANDE_ACCES":
+          dispatch(setActiveTabAction({ 
+            tab: "manage-class", 
+            data: { classId: relatedEntityId, subTab: "access-requests" } 
+          }));
           break;
         case "CLASS_VALIDATED":
-          // Navigate to class details
-          console.log("Navigate to class:", relatedEntityId);
+        case "CLASS_REJECTED":
+        case "CLASS_JOIN":
+          dispatch(setActiveTabAction({ 
+            tab: "manage-class", 
+            data: { classId: relatedEntityId, subTab: "overview" } 
+          }));
+          break;
+        case "ACTIVITY_CREATED":
+        case "ASSIGNMENT_GIVEN":
+        case "NEW_ACTIVITY":
+          dispatch(setActiveTabAction({ 
+            tab: "activities", 
+            data: { activityId: relatedEntityId } 
+          }));
+          break;
+        case "COURSE_SCHEDULED":
+        case "NEW_COURSE":
+          dispatch(setActiveTabAction({ 
+            tab: "cours", 
+            data: { courseId: relatedEntityId } 
+          }));
           break;
         case "MESSAGE_SENT":
-          // Navigate to messages
-          console.log("Navigate to message:", relatedEntityId);
+          dispatch(setActiveTabAction("messages"));
+          break;
+        case "PROFESSOR_CREATED":
+          dispatch(setActiveTabAction("professors"));
+          break;
+        case "STUDENT_CREATED":
+          dispatch(setActiveTabAction("students"));
+          break;
+        case "PARENT_CREATED":
+          dispatch(setActiveTabAction("parents"));
           break;
         default:
-          break;
+          dispatch(setActiveTabAction("dashboard"));
       }
     },
-    [markAsRead]
+    [markAsRead, closePanel, dispatch]
   );
 
   // Role-based header subtitle
@@ -471,10 +498,8 @@ const NotificationIcon = () => {
                     <div key={notification.id} className="group">
                       <NotificationItem
                         notification={notification}
-                        onMarkAsRead={(id) => {
-                          markAsRead(id);
-                          handleNotificationClick(notification);
-                        }}
+                        onClick={handleNotificationClick}
+                        onMarkAsRead={markAsRead}
                         onDelete={handleDeleteNotification}
                         getNotificationMeta={getNotificationMeta}
                         language={language}

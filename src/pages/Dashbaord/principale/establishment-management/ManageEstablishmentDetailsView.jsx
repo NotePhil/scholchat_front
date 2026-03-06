@@ -47,6 +47,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import EstablishmentService from "../../../../services/EstablishmentService";
+import gestionnaireService from "../../../../services/GestionnaireService";
 import { classService } from "../../../../services/ClassService";
 import { scholchatService } from "../../../../services/ScholchatService";
 import UserViewModal from "../modals/UserViewModal";
@@ -144,10 +145,10 @@ const ManageEstablishmentDetailsView = ({
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
-      const usersData = await EstablishmentService.getAllUsers();
+      const usersData = await gestionnaireService.getAllGestionnaires();
       setUsers(usersData);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching gestionnaires:", error);
     } finally {
       setLoadingUsers(false);
     }

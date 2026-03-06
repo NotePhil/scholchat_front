@@ -13,6 +13,8 @@ const Header = ({
   const [userName, setUserName] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const userDropdownRef = useRef(null);
   const notificationsRef = useRef(null);
@@ -57,6 +59,26 @@ const Header = ({
     };
   }, []);
 
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const { NotificationService } = await import("../../../../services/NotificationService");
+        const service = new NotificationService();
+        const data = await service.getUserNotifications();
+        setNotifications(data || []);
+        const unread = await service.getUnreadCount();
+        setUnreadCount(unread?.count || 0);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+    // Refresh notifications every 60 seconds
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const getRoleDisplayName = (role) => {
     const roleMap = {
       ROLE_ADMIN: "Admin",
@@ -76,6 +98,43 @@ const Header = ({
       return getRoleDisplayName(userRoles[0]);
     }
     return getRoleDisplayName(userRole);
+  };
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      const { NotificationService } = await import("../../../../services/NotificationService");
+      const service = new NotificationService();
+      await service.markAsRead(notification.id);
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(n => n.id === notification.id ? { ...n, lu: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+
+      // Navigation logic based on notification type
+      // Types could be: ACCESS_REQUEST, CLASS_JOIN, NEW_ACTIVITY, etc.
+      if (notification.type === "ACCESS_REQUEST") {
+        // Rediriger vers la gestion de la classe (onglet spécifique si possible)
+        // Note: Principal.jsx handles tab changes, we might need a prop for that
+        if (typeof onNavigate === 'function') {
+          onNavigate('manage-class', { classId: notification.targetId, subTab: 'requests' });
+        }
+      } else if (notification.type === "CLASS_JOIN") {
+        if (typeof onNavigate === 'function') {
+          onNavigate('classes', { classId: notification.targetId });
+        }
+      } else {
+        // Default navigation
+        if (typeof onNavigate === 'function') {
+          onNavigate('dashboard');
+        }
+      }
+      
+      setShowNotifications(false);
+    } catch (error) {
+      console.error("Error handling notification click:", error);
+    }
   };
 
   return (
@@ -142,9 +201,11 @@ const Header = ({
                 type="button"
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  3
-                </span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </button>
 
               {showNotifications && (
@@ -154,34 +215,60 @@ const Header = ({
                     onClick={() => setShowNotifications(false)}
                   />
                   <div
-                    className={`fixed md:absolute top-full right-3 md:right-0 mt-1 w-80 max-w-[calc(100vw-16px)] rounded-lg shadow-xl border z-[9999] ${
+                    className={`fixed md:absolute top-full right-3 md:right-0 mt-1 w-80 max-w-[calc(100vw-16px)] rounded-lg shadow-xl border z-[9999] overflow-hidden ${
                       isDark
-                        ? "bg-gray-800 border-gray-700"
-                        : "bg-white border-gray-200"
+                        ? "bg-gray-800 border-gray-700 shadow-black/40"
+                        : "bg-white border-gray-200 shadow-gray-200/50"
                     }`}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className={`px-3 py-2 border-b ${isDark ? "border-gray-700" : "border-gray-200"}`}>
-                      <h3 className={`text-sm font-medium ${isDark ? "text-white" : "text-gray-900"}`}>
+                    <div className={`px-4 py-3 border-b flex justify-between items-center ${isDark ? "border-gray-700 bg-gray-900/50" : "border-gray-100 bg-gray-50/50"}`}>
+                      <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
                         Notifications
                       </h3>
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full font-bold uppercase transition-all">
+                          {unreadCount} Nouvelles
+                        </span>
+                      )}
                     </div>
-                    <div className="max-h-60 overflow-y-auto">
-                      {[1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          className={`px-3 py-3 border-b last:border-b-0 ${
-                            isDark ? "border-gray-700 hover:bg-gray-700" : "border-gray-100 hover:bg-gray-50"
-                          } transition-colors cursor-pointer`}
-                        >
-                          <p className={`text-xs ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                            Notification {i} - Sample notification text
-                          </p>
-                          <p className={`text-xs mt-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                            2 min ago
+                    <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                      {notifications.length > 0 ? (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            onClick={() => handleNotificationClick(notification)}
+                            className={`px-4 py-4 border-b last:border-b-0 transition-all cursor-pointer relative ${
+                              notification.lu 
+                                ? (isDark ? "hover:bg-gray-700/50" : "hover:bg-gray-50/50") 
+                                : (isDark ? "bg-blue-900/10 hover:bg-blue-900/20" : "bg-blue-50/50 hover:bg-blue-100/50")
+                            }`}
+                          >
+                            {!notification.lu && (
+                              <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-full" />
+                            )}
+                            <div className="flex flex-col gap-1">
+                              <p className={`text-xs leading-relaxed ${
+                                notification.lu 
+                                  ? (isDark ? "text-gray-400" : "text-gray-600") 
+                                  : (isDark ? "text-gray-100 font-semibold" : "text-gray-900 font-semibold")
+                              }`}>
+                                {notification.message}
+                              </p>
+                              <p className={`text-[10px] font-medium ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+                                {notification.dateCreation ? new Date(notification.dateCreation).toLocaleString() : 'Récemment'}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-8 text-center">
+                          <Bell className={`w-8 h-8 mx-auto mb-2 opacity-20 ${isDark ? "text-gray-400" : "text-gray-600"}`} />
+                          <p className={`text-xs font-medium ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+                            Aucune notification
                           </p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 </>

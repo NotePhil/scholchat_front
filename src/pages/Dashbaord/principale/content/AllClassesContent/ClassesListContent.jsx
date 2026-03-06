@@ -786,28 +786,32 @@ const ClassesListContent = ({
                       <div className="flex flex-col gap-1.5 pt-3 border-t border-gray-100">
                         {/* Primary Row */}
                         <div className="grid grid-cols-2 gap-1.5">
-                          <button
-                            onClick={() => setSelectedClass(classe)}
-                            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-xs transition-colors"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>{t('classes.card.seeDetails', 'Détails')}</span>
-                          </button>
-
                           {shouldShowManageButton(classe) && (
                             <button
                               onClick={() => handleManageClass(classe)}
-                              className="relative flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-xs transition-colors"
+                              className="relative flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-xs transition-colors shadow-sm hover:shadow-md"
                             >
                               <Settings className="w-3.5 h-3.5" />
                               <span>{t('classes.actions.manage', 'Gérer')}</span>
                               {accessRequestCounts[classe.id] > 0 && (
-                                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
+                                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse border-2 border-white shadow-sm">
                                   {accessRequestCounts[classe.id]}
                                 </span>
                               )}
                             </button>
                           )}
+
+                          <button
+                            onClick={() => setSelectedClass(classe)}
+                            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs transition-colors ${
+                              shouldShowManageButton(classe) 
+                                ? "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200" 
+                                : "bg-blue-600 hover:bg-blue-700 text-white col-span-2 shadow-sm"
+                            }`}
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>{t('classes.card.seeDetails', 'Détails')}</span>
+                          </button>
 
                           {!shouldShowManageButton(classe) && (
                             <button
@@ -817,7 +821,7 @@ const ClassesListContent = ({
                                 (userRole === "professeur" &&
                                   !hasPublicationRights(classe.id))
                               }
-                              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed col-span-2"
                             >
                               {actionLoading === "edit" ? (
                                 <Loader className="w-3.5 h-3.5 animate-spin" />

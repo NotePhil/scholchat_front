@@ -150,6 +150,7 @@ const Principal = () => {
   const {
     showSidebar,
     activeTab,
+    tabData,
     isDark,
     currentTheme,
     currentLanguage,
@@ -416,6 +417,7 @@ const Principal = () => {
       userRole: normalizedUserRole || "admin",
       onManageClass: handleManageClass,
       onShowMessaging: handleShowMessaging,
+      tabData,
     }),
     [
       isDark,
@@ -423,6 +425,7 @@ const Principal = () => {
       normalizedUserRole,
       handleManageClass,
       handleShowMessaging,
+      tabData,
     ]
   );
 
@@ -453,7 +456,7 @@ const Principal = () => {
       case "others":
         return <OthersContent {...contentProps} />;
       case "create-course":
-        return <ProfessorCoursesContent {...contentProps} />;
+        return <ProfessorCoursesContent {...contentProps} setActiveTab={handleTabChange} />;
       case "schedule-course":
         return <CoursProgrammerContent {...contentProps} />;
       case "manage-exercises":
@@ -475,6 +478,7 @@ const Principal = () => {
             {...contentProps} 
             selectedClass={null}
             onBack={() => handleTabChange('classes')}
+            onScheduleCourse={() => handleTabChange('schedule-course')}
           />
         );
       case "create-class":

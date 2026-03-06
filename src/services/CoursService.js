@@ -193,15 +193,10 @@ class CoursService {
   }
 
   async getCoursByClasse(classeId) {
-    try {
-      if (!classeId) {
-        throw new Error("Class ID is required");
-      }
-      const response = await coursApi.get(`/cours/classe/${classeId}`);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
+    // NOTE: The backend does NOT have a /cours/classe/{classeId} endpoint.
+    // Use coursProgrammerService.obtenirProgrammationParClasse() instead.
+    console.warn("getCoursByClasse: This endpoint does not exist in the backend. Returning empty array.");
+    return [];
   }
 
   async getCoursByProfesseurAndClasse(professeurId, classeId) {

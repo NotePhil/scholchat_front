@@ -16,7 +16,16 @@ export const useTranslation = () => {
   const language = useSelector((state) => state.ui?.currentLanguage || 'fr');
 
   const t = useCallback(
-    (key, params = {}) => {
+    (key, defaultValue, params = {}) => {
+      // If the second argument is an object, then there's no defaultValue
+      let finalParams = params;
+      let finalDefaultValue = defaultValue;
+
+      if (typeof defaultValue === "object" && defaultValue !== null) {
+        finalParams = defaultValue;
+        finalDefaultValue = key; // Use the key as the default value if nothing else is provided
+      }
+
       const keys = key.split(".");
       let value = translations[language];
 
@@ -24,13 +33,18 @@ export const useTranslation = () => {
         value = value?.[k];
       }
 
-      if (!value) return key;
+      if (!value) value = finalDefaultValue || key;
 
       // Handle parameter interpolation
-      if (typeof value === "string" && Object.keys(params).length > 0) {
-        return value.replace(/\{(\w+)\}/g, (match, paramKey) => {
-          return params[paramKey] !== undefined ? params[paramKey] : match;
+      if (typeof value === "string") {
+        // First replace {{param}} (double braces), then {param} (single braces)
+        let result = value.replace(/\{\{(\w+)\}\}/g, (match, paramKey) => {
+          return finalParams[paramKey] !== undefined ? finalParams[paramKey] : match;
         });
+        result = result.replace(/\{(\w+)\}/g, (match, paramKey) => {
+          return finalParams[paramKey] !== undefined ? finalParams[paramKey] : match;
+        });
+        return result;
       }
 
       return value;

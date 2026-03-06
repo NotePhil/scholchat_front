@@ -21,6 +21,7 @@ import { scholchatService } from "../../../../../services/ScholchatService";
 import { useNavigate } from "react-router-dom";
 import PublicationRightsService from "../../../../../services/PublicationRightsService";
 import { useTranslation } from "../../../../../hooks/useTranslation";
+import { useAuth } from "../../../../../hooks/useAuth";
 
 // Composant de modale de paiement
 const PaymentModal = ({
@@ -518,6 +519,12 @@ const CreateClassContent = ({
   colorSchemes,
 }) => {
   const { t } = useTranslation();
+  const {
+    user: currentUser,
+    isProfessor,
+    isGestionnaire,
+  } = useAuth();
+
   const [formData, setFormData] = useState({
     nom: "",
     niveau: "",
@@ -540,7 +547,7 @@ const CreateClassContent = ({
   const [countdown, setCountdown] = useState(5);
   const [createdClassId, setCreatedClassId] = useState(null);
 
-  const currentUserId =
+  const currentUserId = currentUser?.id ||
     localStorage.getItem("userId") || sessionStorage.getItem("userId");
 
   useEffect(() => {
@@ -562,6 +569,19 @@ const CreateClassContent = ({
           ...(gestionnairesData || [])
         ];
         setProfessors(allModerators);
+
+        // Pre-select current user as moderator if they are a professor or gestionnaire
+        if (isProfessor || isGestionnaire) {
+          const matchingProf = allModerators.find(p => p.id === currentUserId);
+          if (matchingProf) {
+            setFormData(prev => ({
+              ...prev,
+              moderator: currentUserId
+            }));
+            setSelectedProfessorName(`${matchingProf.nom} ${matchingProf.prenom}`);
+          }
+        }
+        
       } catch (error) {
         console.error("Error loading data:", error);
         setEstablishments([]);
@@ -573,7 +593,7 @@ const CreateClassContent = ({
     };
 
     loadData();
-  }, []);
+  }, [isProfessor, isGestionnaire, currentUser, selectedProfessorName]);
 
   const generateToken = () => {
     const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -846,7 +866,7 @@ const CreateClassContent = ({
                 {t('classes.create.success.rights', "Les droits de publication vous ont été automatiquement attribués.")}
               </span>
             )}
-            {t('classes.create.success.redirect', "Redirection automatique vers la gestion des classes dans {{count}} seconde{{plural}}.", { count: countdown, plural: countdown !== 1 ? "s" : "" })}
+            {t('classes.create.success.redirect', "Redirection automatique vers la gestion des classes dans {{count}} secondes.", { count: countdown })}
           </p>
 
           <div className="w-full bg-gray-200 rounded-full h-2 mb-6">

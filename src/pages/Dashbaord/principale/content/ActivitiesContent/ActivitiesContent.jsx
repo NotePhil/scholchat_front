@@ -144,17 +144,20 @@ const ActivitiesContent = () => {
       setLoadingActivities(true);
       const events = await activityFeedService.getActivities();
       
-      const activitiesWithImages = await Promise.all(
+      const activitiesWithMedias = await Promise.all(
         events.map(async (event) => {
-          const images = [];
+          const medias = [];
           
           if (event.medias && event.medias.length > 0) {
-            const imageUrls = await Promise.all(
+            const mediaItems = await Promise.all(
               event.medias
-                .filter(media => media.mediaType === 'IMAGE' && media.id)
-                .map(async (media) => await getImageUrl(media))
+                .filter(media => (media.mediaType === 'IMAGE' || media.mediaType === 'VIDEO') && media.id)
+                .map(async (media) => {
+                  const url = await getImageUrl(media);
+                  return url ? { type: media.mediaType, url } : null;
+                })
             );
-            images.push(...imageUrls.filter(url => url !== null));
+            medias.push(...mediaItems.filter(item => item !== null));
           }
           
           const currentUserId = localStorage.getItem('userId');
@@ -181,7 +184,7 @@ const ActivitiesContent = () => {
           return {
             id: event.id,
             type: 'event',
-            images,
+            medias,
             likes,
             comments,
             isLiked,
@@ -206,9 +209,9 @@ const ActivitiesContent = () => {
         })
       );
       
-      activitiesWithImages.sort((a, b) => new Date(b.heureDebut) - new Date(a.heureDebut));
+      activitiesWithMedias.sort((a, b) => new Date(b.heureDebut) - new Date(a.heureDebut));
       
-      setActivities(activitiesWithImages);
+      setActivities(activitiesWithMedias);
     } catch (error) {
       console.error('Error loading activities:', error);
       setActivities([]);
@@ -236,16 +239,18 @@ const ActivitiesContent = () => {
 
     setUploading(true);
     try {
-      const newImages = files.map((file) => ({
+      const newMedia = files.map((file) => ({
         file,
         url: URL.createObjectURL(file),
-        name: file.name
+        name: file.name,
+        type: file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE',
+        contentType: file.type
       }));
       
-      setUploadedImages(prev => [...prev, ...newImages]);
+      setUploadedImages(prev => [...prev, ...newMedia]);
     } catch (error) {
-      console.error('Error processing images:', error);
-      alert(t('activities.errors.imageUploadFailed'));
+      console.error('Error processing media:', error);
+      alert(t('activities.errors.mediaUploadFailed', 'Échec du chargement des médias'));
     } finally {
       setUploading(false);
     }
@@ -423,20 +428,20 @@ const ActivitiesContent = () => {
       if (uploadedImages.length > 0) {
         setUploading(true);
         
-        for (const img of uploadedImages) {
+        for (const media of uploadedImages) {
           try {
-            const result = await minioS3Service.uploadFile(img.file, "images");
+            const result = await minioS3Service.uploadFile(media.file, media.type === 'VIDEO' ? 'videos' : 'images');
             
             uploadedMedia.push({
               fileName: result.fileName,
               filePath: result.filePath,
               contentType: result.contentType,
               fileSize: result.fileSize,
-              mediaType: "IMAGE",
+              mediaType: media.type, // 'IMAGE' or 'VIDEO'
               bucketName: "scholchat"
             });
           } catch (uploadError) {
-            console.error(`Error uploading ${img.fileName}:`, uploadError);
+            console.error(`Error uploading ${media.name}:`, uploadError);
           }
         }
         
@@ -739,7 +744,7 @@ const ActivitiesContent = () => {
                           ref={fileInputRef}
                           type="file"
                           multiple
-                          accept="image/*"
+                          accept="image/*,video/*"
                           onChange={handleImageUpload}
                           className="hidden"
                         />
@@ -747,13 +752,22 @@ const ActivitiesContent = () => {
 
                       {uploadedImages.length > 0 && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {uploadedImages.map((image, index) => (
+                          {uploadedImages.map((media, index) => (
                             <div key={index} className="relative group">
-                              <img
-                                src={image.url}
-                                alt={`Upload ${index + 1}`}
-                                className="w-full h-32 object-cover rounded-lg"
-                              />
+                              {media.type === 'VIDEO' ? (
+                                <video
+                                  src={media.url}
+                                  controls
+                                  playsInline
+                                  className="w-full h-32 object-cover rounded-lg"
+                                />
+                              ) : (
+                                <img
+                                  src={media.url}
+                                  alt={`Upload ${index + 1}`}
+                                  className="w-full h-32 object-cover rounded-lg"
+                                />
+                              )}
                               <button
                                 onClick={() => removeImage(index)}
                                 className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -845,73 +859,55 @@ const ActivitiesContent = () => {
                         <p className="text-gray-800 dark:text-gray-200 mb-4 whitespace-pre-wrap">{activity.content}</p>
                       </div>
 
-                      {/* Image Gallery - Same responsive grid as before */}
-                      {activity.images && activity.images.length > 0 && (
+                      {/* Media Gallery */}
+                      {activity.medias && activity.medias.length > 0 && (
                         <div className="bg-gray-50 dark:bg-gray-900/50">
-                          {activity.images.length === 1 && (
-                            <div
-                              className="w-full cursor-pointer"
-                              onClick={() => openImagePreview(activity.images, 0)}
-                            >
-                              <img
-                                src={activity.images[0]}
-                                alt="Post"
-                                className="w-full max-h-96 object-contain"
-                              />
-                            </div>
-                          )}
-
-                          {activity.images.length === 2 && (
-                            <div className="grid grid-cols-2 gap-1">
-                              {activity.images.map((img, idx) => (
-                                <img
-                                  key={idx}
-                                  src={img}
-                                  alt={`Post ${idx + 1}`}
-                                  className="w-full h-64 object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                                  onClick={() => openImagePreview(activity.images, idx)}
+                          {activity.medias.length === 1 && (
+                            <div className="w-full">
+                              {activity.medias[0].type === 'VIDEO' ? (
+                                <video
+                                  src={activity.medias[0].url}
+                                  controls
+                                  playsInline
+                                  className="w-full max-h-96 object-contain"
                                 />
-                              ))}
-                            </div>
-                          )}
-
-{activity.images.length === 3 && (
-                            <div className="grid grid-cols-2 gap-1">
-                              <img
-                                src={activity.images[0]}
-                                alt="Post 1"
-                                className="w-full h-64 object-cover cursor-pointer row-span-2 hover:opacity-95 transition-opacity"
-                                onClick={() => openImagePreview(activity.images, 0)}
-                              />
-                              {activity.images.slice(1).map((img, idx) => (
-                                <img
-                                  key={idx + 1}
-                                  src={img}
-                                  alt={`Post ${idx + 2}`}
-                                  className="w-full h-32 object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                                  onClick={() => openImagePreview(activity.images, idx + 1)}
-                                />
-                              ))}
-                            </div>
-                          )}
-
-                          {activity.images.length >= 4 && (
-                            <div className="grid grid-cols-2 gap-1">
-                              {activity.images.slice(0, 4).map((img, idx) => (
-                                <div key={idx} className="relative">
+                              ) : (
+                                <div
+                                  className="w-full cursor-pointer"
+                                  onClick={() => openImagePreview(activity.medias.filter(m => m.type === 'IMAGE').map(m => m.url), 0)}
+                                >
                                   <img
-                                    src={img}
-                                    alt={`Post ${idx + 1}`}
-                                    className="w-full h-48 object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                                    onClick={() => openImagePreview(activity.images, idx)}
+                                    src={activity.medias[0].url}
+                                    alt="Post"
+                                    className="w-full max-h-96 object-contain"
                                   />
-                                  {idx === 3 && activity.images.length > 4 && (
-                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center cursor-pointer"
-                                         onClick={() => openImagePreview(activity.images, 3)}>
-                                      <span className="text-white text-2xl font-bold">
-                                        +{activity.images.length - 4}
-                                      </span>
-                                    </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {activity.medias.length > 1 && (
+                            <div className={`grid gap-1 ${activity.medias.length === 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                              {activity.medias.map((media, idx) => (
+                                <div key={idx} className="relative">
+                                  {media.type === 'VIDEO' ? (
+                                    <video
+                                      src={media.url}
+                                      controls
+                                      playsInline
+                                      className="w-full h-48 sm:h-64 object-cover"
+                                    />
+                                  ) : (
+                                    <img
+                                      src={media.url}
+                                      alt={`Post ${idx + 1}`}
+                                      className="w-full h-48 sm:h-64 object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                                      onClick={() => {
+                                        const imageUrls = activity.medias.filter(m => m.type === 'IMAGE').map(m => m.url);
+                                        const imgIdx = imageUrls.indexOf(media.url);
+                                        openImagePreview(imageUrls, imgIdx !== -1 ? imgIdx : 0);
+                                      }}
+                                    />
                                   )}
                                 </div>
                               ))}

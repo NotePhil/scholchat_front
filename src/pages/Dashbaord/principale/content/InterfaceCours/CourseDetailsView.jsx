@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Modal, Button, Spin, Empty } from 'antd';
 import {
   ArrowLeft,
   BookOpen,
@@ -20,74 +21,80 @@ import {
   ChevronDown,
   ChevronRight,
   Activity,
-  Award,
-  Target,
-  Image,
-  File,
-  ExternalLink
+  ExternalLink,
+  Target
 } from 'lucide-react';
+import { exerciseService } from '../../../../../services/exerciseService';
 
 const CourseDetailsView = ({ courseId, onBack }) => {
   const [course, setCourse] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [expandedChapters, setExpandedChapters] = useState(new Set());
-  const [completedItems, setCompletedItems] = useState(new Set());
+  const [completedItems, setCompletedItems] = useState(() => {
+    // Persist completion state per course in localStorage
+    try {
+      const saved = localStorage.getItem(`course_progress_${courseId}`);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('content');
   const [courseFiles, setCourseFiles] = useState([]);
+  const [minioFiles, setMinioFiles] = useState([]);
   const [filesLoading, setFilesLoading] = useState(false);
+  const [videoModalVisible, setVideoModalVisible] = useState(false);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState("");
+  const [currentVideoTitle, setCurrentVideoTitle] = useState("");
+  const [exercises, setExercises] = useState([]);
+  const [exercisesLoading, setExercisesLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   useEffect(() => {
     fetchCourseDetails();
   }, [courseId]);
 
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  };
+
   const fetchCourseDetails = async () => {
     try {
       setLoading(true);
       
-      // Import services
       const { coursService } = await import('../../../../../services/CoursService');
-      const { minioS3Service } = await import('../../../../../services/minioS3');
       
-      // Get course with chapters from API
       const courseData = await coursService.getCoursWithChapitres(courseId);
       console.log('Course data loaded:', courseData);
       
-      // Extract files from course content after chapters are loaded
-      // We'll call fetchCourseFiles after chapters are set
-      
-      console.log('Course data with chapters:', courseData);
-      
-      // Format course data
       const formattedCourse = {
         id: courseData.id,
         titre: courseData.titre || "Titre non disponible",
         description: courseData.description || "Description non disponible",
-        instructeur: "Instructeur", // TODO: Get from backend
-        duree: "À déterminer", // TODO: Calculate from chapters
-        niveau: "Niveau", // TODO: Get from backend
-        rating: 4.5,
-        totalStudents: 0, // TODO: Get from backend
-        progress: 0, // TODO: Calculate user progress
-        thumbnail: "/api/placeholder/400/250"
+        redacteurId: courseData.redacteurId,
+        instructeur: courseData.redacteurId ? "Professeur" : "Instructeur",
+        duree: courseData.chapitres ? `${courseData.chapitres.length} chapitres` : "À déterminer",
+        niveau: courseData.etat || "Publié",
+        totalStudents: 0,
+        progress: 0
       };
       
-      // Format chapters data
       const formattedChapters = courseData.chapitres ? courseData.chapitres.map((chapitre, index) => ({
-        id: chapitre.id || index + 1,
+        id: chapitre.id || `ch_${index + 1}`,
         titre: chapitre.titre || `Chapitre ${index + 1}`,
-        description: chapitre.description || "Description non disponible",
-        duree: "À déterminer", // TODO: Calculate from content
-        completed: false, // TODO: Get user progress
-        locked: index > 0, // Lock all except first chapter for now
+        description: chapitre.description || "",
+        duree: "À déterminer",
+        completed: false,
+        locked: false,
         ordre: chapitre.ordre || index + 1,
         contenu: chapitre.contenu || "",
+        imageUrl: chapitre.imageUrl || null,
         materials: [
           {
-            id: `${chapitre.id || index + 1}_content`,
+            id: `${chapitre.id || `ch_${index + 1}`}_content`,
             type: 'document',
             titre: 'Contenu du chapitre',
-            size: '1 MB',
+            size: chapitre.contenu ? `${Math.ceil(chapitre.contenu.length / 1024)} KB` : '0 KB',
             completed: false
           }
         ]
@@ -95,15 +102,20 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       
       setCourse(formattedCourse);
       setChapters(formattedChapters);
-      setExpandedChapters(new Set([formattedChapters[0]?.id])); // Expand first chapter by default
+      setExpandedChapters(new Set(formattedChapters.map(ch => ch.id)));
       
-      // Extract files from chapters after they are set
-      setTimeout(() => {
-        fetchCourseFiles(courseId);
-      }, 100);
+      // Extract embedded files from chapter HTML content
+      extractFilesFromChapters(formattedChapters);
+      
+      // Also fetch professor's uploaded files from MinIO
+      if (courseData.redacteurId) {
+        fetchMinioFiles(courseData.redacteurId);
+      }
+      
+      // Fetch exercises for this course
+      fetchCourseExercises();
     } catch (error) {
       console.error('Erreur lors du chargement du cours:', error);
-      // Fallback to empty state
       setCourse({
         id: courseId,
         titre: "Cours non trouvé",
@@ -121,15 +133,15 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     }
   };
 
-  const fetchCourseFiles = async (courseId) => {
+  // Extract files from chapters - accepts chapters array directly to avoid stale state
+  const extractFilesFromChapters = (chaptersData) => {
     try {
       setFilesLoading(true);
-      console.log('Fetching files for course:', courseId);
+      console.log('Extracting files from', chaptersData.length, 'chapters');
       
-      // Extract files from chapter content (images and links)
       const extractedFiles = [];
       
-      chapters.forEach((chapter, chapterIndex) => {
+      (chaptersData || []).forEach((chapter, chapterIndex) => {
         if (chapter.contenu) {
           // Create a temporary div to parse HTML content
           const tempDiv = document.createElement('div');
@@ -152,6 +164,24 @@ const CourseDetailsView = ({ courseId, onBack }) => {
             }
           });
           
+          // Extract video elements
+          const videos = tempDiv.querySelectorAll('video source, video[src]');
+          videos.forEach((video, vidIndex) => {
+            const src = video.src || video.getAttribute('src');
+            if (src && src.startsWith('http')) {
+              extractedFiles.push({
+                id: `vid_${chapterIndex}_${vidIndex}`,
+                fileName: `Video_${chapterIndex}_${vidIndex}.mp4`,
+                filePath: src,
+                contentType: 'video/mp4',
+                fileSize: 0,
+                documentType: 'chapter_video',
+                chapterTitle: chapter.titre,
+                type: 'video'
+              });
+            }
+          });
+          
           // Extract file links
           const links = tempDiv.querySelectorAll('a[href]');
           links.forEach((link, linkIndex) => {
@@ -159,10 +189,18 @@ const CourseDetailsView = ({ courseId, onBack }) => {
               const fileName = link.textContent || `Document_${chapterIndex}_${linkIndex}`;
               const extension = fileName.split('.').pop()?.toLowerCase() || 'pdf';
               let contentType = 'application/octet-stream';
+              let type = 'document';
               
               if (['pdf'].includes(extension)) contentType = 'application/pdf';
               else if (['doc', 'docx'].includes(extension)) contentType = 'application/msword';
-              else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) contentType = `image/${extension}`;
+              else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+                contentType = `image/${extension}`;
+                type = 'image';
+              }
+              else if (['mp4', 'avi', 'mov', 'webm'].includes(extension)) {
+                contentType = `video/${extension}`;
+                type = 'video';
+              }
               
               extractedFiles.push({
                 id: `link_${chapterIndex}_${linkIndex}`,
@@ -172,14 +210,14 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                 fileSize: 0,
                 documentType: 'chapter_document',
                 chapterTitle: chapter.titre,
-                type: 'document'
+                type: type
               });
             }
           });
         }
       });
       
-      console.log('Extracted files from chapters:', extractedFiles);
+      console.log('Extracted files from chapters:', extractedFiles.length);
       setCourseFiles(extractedFiles);
     } catch (error) {
       console.error('Error extracting course files:', error);
@@ -189,12 +227,79 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     }
   };
 
+  // Fetch exercises for this course
+  const fetchCourseExercises = async () => {
+    try {
+      setExercisesLoading(true);
+      const courseExercises = await exerciseService.getExercisesByCours(courseId);
+      console.log('Exercises for course:', courseExercises);
+      if (Array.isArray(courseExercises)) {
+        setExercises(courseExercises.map(exo => ({
+          ...exo,
+          type: 'exercise',
+          titre: exo.nom || 'Exercice sans nom'
+        })));
+      }
+    } catch (error) {
+      console.warn('Could not fetch course exercises:', error.message);
+      setExercises([]);
+    } finally {
+      setExercisesLoading(false);
+    }
+  };
+
+  // Fetch uploaded files from MinIO for the professor
+  const fetchMinioFiles = async (professorId) => {
+    try {
+      const { minioS3Service } = await import('../../../../../services/minioS3');
+      const mediaFiles = await minioS3Service.getUserMedia(professorId);
+      console.log('MinIO files for professor:', mediaFiles?.length || 0);
+      
+      if (Array.isArray(mediaFiles) && mediaFiles.length > 0) {
+        const formatted = mediaFiles.map((media, index) => ({
+          id: media.id || `minio_${index}`,
+          fileName: media.fileName || media.originalFileName || `Fichier_${index}`,
+          filePath: media.filePath || media.objectKey || '',
+          contentType: media.contentType || 'application/octet-stream',
+          fileSize: media.fileSize || 0,
+          documentType: media.documentType || media.mediaType || 'general',
+          chapterTitle: null,
+          type: getFileType(media.contentType, media.fileName),
+          source: 'minio',
+          mediaId: media.id
+        }));
+        setMinioFiles(formatted);
+      }
+    } catch (error) {
+      console.warn('Could not fetch MinIO files:', error.message);
+      setMinioFiles([]);
+    }
+  };
+
+  const getFileType = (contentType, fileName) => {
+    if (contentType?.startsWith('image/') || fileName?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) return 'image';
+    if (contentType?.startsWith('video/') || fileName?.match(/\.(mp4|avi|mov|webm)$/i)) return 'video';
+    if (contentType?.includes('pdf') || fileName?.endsWith('.pdf')) return 'pdf';
+    return 'document';
+  };
+
   const handleFileDownload = async (file) => {
     try {
-      console.log('Downloading file:', file);
+      showToast('Téléchargement en cours...', 'info');
+      
+      // Try MinIO download first for MinIO-sourced files
+      if (file.source === 'minio' && file.filePath) {
+        try {
+          const { minioS3Service } = await import('../../../../../services/minioS3');
+          await minioS3Service.downloadFileByPath(file.filePath);
+          showToast('Fichier téléchargé avec succès!', 'success');
+          return;
+        } catch (minioErr) {
+          console.warn('MinIO download failed, trying direct link:', minioErr);
+        }
+      }
       
       if (file.filePath && file.filePath.startsWith('http')) {
-        // Direct download from URL
         const link = document.createElement('a');
         link.href = file.filePath;
         link.download = file.fileName;
@@ -202,27 +307,81 @@ const CourseDetailsView = ({ courseId, onBack }) => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        showToast('Téléchargement lancé!', 'success');
+      } else if (file.mediaId) {
+        // Try download by media ID
+        try {
+          const { minioS3Service } = await import('../../../../../services/minioS3');
+          const downloadData = await minioS3Service.generateDownloadUrl(file.mediaId);
+          if (downloadData?.downloadUrl) {
+            window.open(downloadData.downloadUrl, '_blank');
+            showToast('Fichier téléchargé!', 'success');
+          }
+        } catch (err) {
+          showToast('Lien de téléchargement non disponible', 'error');
+        }
       } else {
-        alert('Lien de téléchargement non disponible');
+        showToast('Lien de téléchargement non disponible', 'error');
       }
     } catch (error) {
       console.error('Error downloading file:', error);
-      alert(`Erreur lors du téléchargement: ${error.message}`);
+      showToast(`Erreur: ${error.message}`, 'error');
     }
   };
 
   const handleFilePreview = async (file) => {
     try {
-      console.log('Previewing file:', file);
-      
-      if (file.filePath && file.filePath.startsWith('http')) {
-        window.open(file.filePath, '_blank');
+      const isVideo = file.contentType?.startsWith('video/') || 
+                    file.fileName?.match(/\.(mp4|avi|mov|wmv|flv|webm)$/i) ||
+                    file.type === 'video';
+
+      // For MinIO files, get a fresh download URL
+      let url = file.filePath;
+      if (file.source === 'minio' && file.filePath) {
+        try {
+          const { minioS3Service } = await import('../../../../../services/minioS3');
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(file.filePath);
+          url = downloadData?.downloadUrl || file.filePath;
+        } catch (err) {
+          console.warn('Could not get MinIO URL, using stored path');
+        }
+      }
+
+      if (isVideo && url) {
+        setCurrentVideoUrl(url);
+        setCurrentVideoTitle(file.fileName || "Vidéo");
+        setVideoModalVisible(true);
+        return;
+      }
+
+      if (url && url.startsWith('http')) {
+        window.open(url, '_blank');
+      } else if (file.mediaId) {
+        const { minioS3Service } = await import('../../../../../services/minioS3');
+        const downloadData = await minioS3Service.generateDownloadUrl(file.mediaId);
+        if (downloadData?.downloadUrl) {
+          window.open(downloadData.downloadUrl, '_blank');
+        }
       } else {
-        alert('Lien de prévisualisation non disponible');
+        showToast('Aperçu non disponible', 'error');
       }
     } catch (error) {
       console.error('Error previewing file:', error);
-      alert(`Erreur lors de la prévisualisation: ${error.message}`);
+      showToast(`Erreur: ${error.message}`, 'error');
+    }
+  };
+
+  const handlePlayVideo = (material) => {
+    // If material has an ID that matches a course file, use that URL
+    const file = courseFiles.find(f => f.fileName === material.titre || f.id === material.id);
+    const url = file?.filePath || material.url || material.filePath;
+    
+    if (url) {
+      setCurrentVideoUrl(url);
+      setCurrentVideoTitle(material.titre || "Vidéo");
+      setVideoModalVisible(true);
+    } else {
+      alert("Source vidéo non trouvée");
     }
   };
 
@@ -263,14 +422,12 @@ const CourseDetailsView = ({ courseId, onBack }) => {
   const renderChapterContent = (content) => {
     if (!content) return <p className="text-gray-500 italic">Aucun contenu disponible</p>;
     
-    // Remove HTML tags and render as formatted text
-    const cleanContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-    
     return (
       <div className="prose max-w-none">
-        <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-          {cleanContent}
-        </div>
+        <div 
+          className="text-gray-700 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
       </div>
     );
   };
@@ -289,10 +446,16 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     const newCompleted = new Set(completedItems);
     if (newCompleted.has(itemId)) {
       newCompleted.delete(itemId);
+      showToast('Élément marqué comme non terminé', 'info');
     } else {
       newCompleted.add(itemId);
+      showToast('✅ Chapitre marqué comme terminé!', 'success');
     }
     setCompletedItems(newCompleted);
+    // Persist to localStorage
+    try {
+      localStorage.setItem(`course_progress_${courseId}`, JSON.stringify([...newCompleted]));
+    } catch (e) { console.warn('Could not save progress'); }
   };
 
   const getItemIcon = (type) => {
@@ -306,11 +469,18 @@ const CourseDetailsView = ({ courseId, onBack }) => {
 
   const getItemTypeColor = (type) => {
     switch (type) {
-      case 'video': return 'text-red-600 bg-red-50';
-      case 'document': return 'text-blue-600 bg-blue-50';
-      case 'exercise': return 'text-green-600 bg-green-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'video': return 'text-red-700 bg-red-50 border-red-100';
+      case 'document': return 'text-blue-700 bg-blue-50 border-blue-100';
+      case 'exercise': return 'text-amber-700 bg-amber-50 border-amber-100';
+      default: return 'text-gray-700 bg-gray-50 border-gray-100';
     }
+  };
+
+  const handleExerciseClick = (exo) => {
+    // If we have a dedicated exercise view or modal, open it here
+    // For now, show message
+    showToast(`Ouverture de l'exercice: ${exo.nom}`, 'info');
+    // If there is any external link for the exercise, we could use that
   };
 
   if (loading) {
@@ -340,22 +510,36 @@ const CourseDetailsView = ({ courseId, onBack }) => {
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="relative h-64 bg-gradient-to-r from-blue-600 to-purple-600">
               <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-              <div className="relative p-8 h-full flex items-end">
-                <div className="text-white">
-                  <h1 className="text-3xl font-bold mb-2">{course?.titre}</h1>
-                  <p className="text-blue-100 text-lg mb-4">{course?.description}</p>
-                  <div className="flex items-center space-x-6 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <Users className="w-4 h-4" />
-                      <span>{course?.totalStudents} étudiants</span>
+              <div className="relative p-8 h-full flex flex-col justify-end">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className={`px-4 py-1.5 backdrop-blur-md text-white text-xs font-bold rounded-full border border-white/20 uppercase tracking-widest shadow-lg ${
+                    course?.restriction === 'PUBLIC' ? 'bg-emerald-500/40' : 'bg-blue-500/30'
+                  }`}>
+                    {course?.restriction || "Cours"}
+                  </span>
+                  <span className="px-4 py-1.5 bg-purple-500/30 backdrop-blur-md text-white text-xs font-bold rounded-full border border-white/20 uppercase tracking-widest shadow-lg">
+                    {course?.niveau || "Tous niveaux"}
+                  </span>
+                </div>
+                <div className="text-white transform transition-all duration-500 translate-y-0 group-hover:-translate-y-2">
+                  <h1 className="text-4xl md:text-5xl font-extrabold mb-3 tracking-tight drop-shadow-2xl">
+                    {course?.titre || "Titre du cours"}
+                  </h1>
+                  <p className="text-blue-50 text-xl mb-6 max-w-2xl line-clamp-2 opacity-90 font-medium">
+                    {course?.description}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10">
+                      <BookOpen className="w-4 h-4 text-blue-300" />
+                      <span className="font-semibold">{chapters.length} chapitres</span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4" />
-                      <span>{course?.duree}</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10">
+                      <Clock className="w-4 h-4 text-purple-300" />
+                      <span className="font-semibold">{course?.duree || "12h 30min"}</span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Star className="w-4 h-4 fill-current" />
-                      <span>{course?.rating}/5</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10">
+                      <FileText className="w-4 h-4 text-emerald-300" />
+                      <span className="font-semibold">{courseFiles.length} fichiers ressources</span>
                     </div>
                   </div>
                 </div>
@@ -366,12 +550,14 @@ const CourseDetailsView = ({ courseId, onBack }) => {
             <div className="p-6 bg-gray-50 border-b">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">Progression du cours</span>
-                <span className="text-sm font-bold text-blue-600">{course?.progress}%</span>
+                <span className="text-sm font-bold text-blue-600">
+                  {chapters.length > 0 ? Math.round((completedItems.size / Math.max(chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 0), 1)) * 100) : 0}%
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
                   className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${course?.progress}%` }}
+                  style={{ width: `${chapters.length > 0 ? Math.round((completedItems.size / Math.max(chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 0), 1)) * 100) : 0}%` }}
                 ></div>
               </div>
             </div>
@@ -418,19 +604,13 @@ const CourseDetailsView = ({ courseId, onBack }) => {
           <div className="lg:col-span-2">
             {activeTab === 'content' && (
               <div className="space-y-4">
-                {/* Debug Info */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                  <h4 className="font-medium text-yellow-800 mb-2">Debug Info</h4>
-                  <p className="text-sm text-yellow-700">Course ID: {courseId}</p>
-                  <p className="text-sm text-yellow-700">Files Loading: {filesLoading ? 'Yes' : 'No'}</p>
-                  <p className="text-sm text-yellow-700">Files Count: {courseFiles.length}</p>
-                  <button 
-                    onClick={() => fetchCourseFiles(courseId)}
-                    className="mt-2 px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700"
-                  >
-                    Recharger les fichiers
-                  </button>
-                </div>
+                {chapters.length === 0 && (
+                  <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+                    <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun chapitre</h3>
+                    <p className="text-gray-600">Ce cours ne contient pas encore de chapitres.</p>
+                  </div>
+                )}
                 
                 {chapters.map((chapter) => (
                   <div key={chapter.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -588,97 +768,167 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                               </div>
                               <div className="flex items-center space-x-3">
                                 {material.type === 'video' && (
-                                  <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                  <button 
+                                    onClick={() => handlePlayVideo(material)}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  >
                                     <Play className="w-4 h-4" />
                                   </button>
                                 )}
                                 {material.type === 'document' && (
-                                  <button className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                                  <button 
+                                    onClick={() => handleFileDownload({ filePath: material.url, fileName: material.titre })}
+                                    className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                                  >
                                     <Download className="w-4 h-4" />
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => toggleItemCompletion(material.id)}
-                                  className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleItemCompletion(material.id);
+                                  }}
+                                  className="p-2 hover:bg-gray-50 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+                                  title={completedItems.has(material.id) ? "Marquer comme non terminé" : "Marquer comme terminé"}
                                 >
                                   {completedItems.has(material.id) || material.completed ? (
-                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                    <div className="relative">
+                                      <CheckCircle className="w-7 h-7 text-emerald-500 fill-emerald-50 drop-shadow-sm transition-transform duration-300 group-hover:rotate-12" />
+                                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
+                                    </div>
                                   ) : (
-                                    <Circle className="w-5 h-5 text-gray-400" />
+                                    <Circle className="w-7 h-7 text-gray-300 hover:text-blue-400 transition-colors duration-300" />
                                   )}
                                 </button>
                               </div>
                             </div>
                           ))}
+                          
+                          {/* Exercises Section specific to course but displayed here for context */}
+                          {exercisesLoading ? (
+                            <div className="flex justify-center py-4">
+                              <div className="w-5 h-5 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin"></div>
+                            </div>
+                          ) : exercises.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                              <h4 className="text-sm font-bold text-amber-700 mb-3 flex items-center">
+                                <Target className="w-4 h-4 mr-2" />
+                                EXERCICES COMPLÉMENTAIRES
+                              </h4>
+                              <div className="space-y-2">
+                                {exercises.map((exo) => (
+                                  <div
+                                    key={exo.id}
+                                    className="flex items-center justify-between p-3 bg-amber-50/50 rounded-xl border border-amber-100 hover:border-amber-300 transition-all cursor-pointer group"
+                                    onClick={() => handleExerciseClick(exo)}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2 bg-white rounded-lg shadow-sm">
+                                        <Target className="w-4 h-4 text-amber-600" />
+                                      </div>
+                                      <div>
+                                        <Text strong className="text-amber-900 block">{exo.nom}</Text>
+                                        <Text type="secondary" className="text-xs">{exo.description || 'Pratiquez vos connaissances'}</Text>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                        exo.restriction === 'PUBLIC' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                      }`}>
+                                        {exo.restriction}
+                                      </span>
+                                      <button className="p-1.5 text-amber-600 hover:bg-amber-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <ChevronRight className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
                 ))}
                 
-                {/* Global Files Section (outside chapters) */}
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100">
-                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-purple-600" />
-                    Tous les fichiers utilisateur ({courseFiles.length})
-                  </h4>
+                {/* Combined Resources Section */}
+                <div className="bg-white rounded-xl shadow-lg p-6 border border-blue-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="font-bold text-gray-900 flex items-center">
+                      <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                      Ressources et fichiers ({courseFiles.length + minioFiles.length})
+                    </h4>
+                    <span className="text-xs text-gray-400 italic">
+                      Les fichiers inclus dans les chapitres et les documents joints
+                    </span>
+                  </div>
                   
                   {filesLoading ? (
-                    <div className="text-center py-8">
-                      <div className="inline-flex items-center space-x-2 text-gray-600">
-                        <div className="w-5 h-5 border-2 border-gray-300 border-t-purple-600 rounded-full animate-spin"></div>
-                        <span>Chargement des fichiers...</span>
+                    <div className="text-center py-12">
+                      <div className="inline-flex items-center space-x-3 text-blue-600">
+                        <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                        <span className="font-medium">Chargement des fichiers...</span>
                       </div>
                     </div>
-                  ) : courseFiles.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {courseFiles.map((file, index) => (
+                  ) : (courseFiles.length + minioFiles.length > 0) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[...courseFiles, ...minioFiles].map((file, index) => (
                         <div
                           key={file.id || index}
-                          className="bg-white rounded-lg p-4 border hover:shadow-md transition-all duration-200"
+                          className="group relative bg-gray-50 rounded-xl p-4 border border-transparent hover:border-blue-200 hover:bg-white hover:shadow-md transition-all duration-300"
                         >
                           <div className="flex items-start space-x-3">
-                            <div className={`p-2 rounded-lg ${getFileTypeColor(file.fileName, file.contentType)}`}>
+                            <div className={`p-3 rounded-xl ${getFileTypeColor(file.fileName, file.contentType)} group-hover:scale-110 transition-transform`}>
                               {getFileIcon(file.fileName, file.contentType)}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h5 className="font-medium text-gray-900 text-sm truncate" title={file.fileName}>
+                              <h5 className="font-semibold text-gray-900 text-sm truncate pr-16" title={file.fileName}>
                                 {file.fileName || 'Fichier sans nom'}
                               </h5>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {formatFileSize(file.fileSize)}
-                              </p>
-                              {file.documentType && (
-                                <p className="text-xs text-gray-400">
-                                  {file.documentType}
+                              <div className="flex items-center space-x-2 mt-1">
+                                <span className="text-xs font-medium text-gray-500 uppercase">
+                                  {file.source === 'minio' ? 'Document' : (file.type || 'Lien')}
+                                </span>
+                                {file.fileSize > 0 && (
+                                  <>
+                                    <span className="text-gray-300">•</span>
+                                    <span className="text-xs text-gray-400">{formatFileSize(file.fileSize)}</span>
+                                  </>
+                                )}
+                              </div>
+                              {file.chapterTitle && (
+                                <p className="text-[10px] text-blue-500 mt-1 font-medium bg-blue-50 inline-block px-1.5 py-0.5 rounded">
+                                  Dans: {file.chapterTitle}
                                 </p>
                               )}
-                              <div className="flex items-center space-x-2 mt-2">
-                                <button
-                                  onClick={() => handleFilePreview(file)}
-                                  className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                  title="Prévisualiser"
-                                >
-                                  <Eye className="w-3 h-3" />
-                                </button>
-                                <button
-                                  onClick={() => handleFileDownload(file)}
-                                  className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
-                                  title="Télécharger"
-                                >
-                                  <Download className="w-3 h-3" />
-                                </button>
-                              </div>
+                            </div>
+                            
+                            <div className="absolute top-4 right-4 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleFilePreview(file)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors bg-white shadow-sm border border-blue-100"
+                                title="Prévisualiser"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleFileDownload(file)}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors bg-white shadow-sm border border-green-100"
+                                title="Télécharger"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600 font-medium">Aucun fichier trouvé</p>
-                      <p className="text-sm text-gray-500">Vérifiez que des fichiers ont été uploadés dans Minio</p>
+                    <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                      <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 font-medium">Aucun fichier joint trouvé</p>
+                      <p className="text-sm text-gray-400 mt-1">Les fichiers du professeur apparaîtront ici.</p>
                     </div>
                   )}
                 </div>
@@ -686,22 +936,30 @@ const CourseDetailsView = ({ courseId, onBack }) => {
             )}
 
             {activeTab === 'overview' && (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">À propos de ce cours</h2>
-                <div className="prose max-w-none">
-                  <p className="text-gray-600 mb-4">
-                    Ce cours complet vous permettra de maîtriser React.js, l'une des bibliothèques JavaScript 
-                    les plus populaires pour créer des interfaces utilisateur modernes et interactives.
-                  </p>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Ce que vous apprendrez :</h3>
-                  <ul className="list-disc list-inside space-y-2 text-gray-600">
-                    <li>Les concepts fondamentaux de React</li>
-                    <li>Création et gestion des composants</li>
-                    <li>Gestion de l'état avec les hooks</li>
-                    <li>Routage et navigation</li>
-                    <li>Intégration avec des APIs</li>
-                    <li>Bonnes pratiques et optimisation</li>
-                  </ul>
+              <div className="bg-white rounded-xl shadow-lg p-8 border border-blue-100">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                  <BookOpen className="w-6 h-6 mr-3 text-blue-600" />
+                  À propos du cours
+                </h2>
+                <div className="prose max-w-none prose-blue">
+                  <div className="bg-blue-50 p-6 rounded-2xl mb-8 border border-blue-100 italic text-blue-900 quote">
+                    {course?.description || "Aucune description détaillée disponible pour ce cours."}
+                  </div>
+                  
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Objectifs et apprentissage</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      "Maitrise des concepts abordés",
+                      "Application pratique immédiate",
+                      "Validation des acquis par exercices",
+                      "Accès illimité aux ressources"
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center space-x-3 p-3 bg-white border border-gray-100 rounded-xl">
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        <span className="text-gray-700 font-medium">{item}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -749,43 +1007,86 @@ const CourseDetailsView = ({ courseId, onBack }) => {
             </div>
 
             {/* Progress Stats */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Votre progression</h3>
+            <div className="bg-white rounded-xl shadow-lg p-6 group hover:translate-y-[-4px] transition-transform">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <Award className="w-5 h-5 mr-2 text-yellow-500" />
+                Votre progression
+              </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Chapitres terminés</span>
-                  <span className="font-bold text-green-600">
-                    {chapters.filter(c => c.completed).length}/{chapters.length}
+                  <span className="text-gray-600">Éléments terminés</span>
+                  <span className="font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm">
+                    {completedItems.size}/{chapters.length + (chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 0) || 0)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Temps passé</span>
-                  <span className="font-medium text-gray-900">12h 30min</span>
+                  <span className="text-gray-600">Statut</span>
+                  <span className="font-medium text-blue-600">
+                    {completedItems.size === 0 ? "Non commencé" : 
+                     completedItems.size >= chapters.length ? "En bonne voie" : "En cours"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Dernière activité</span>
-                  <span className="font-medium text-gray-900">Il y a 2 jours</span>
+                  <span className="font-medium text-gray-900">Aujourd'hui</span>
                 </div>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Actions</h3>
-              <div className="space-y-3">
-                <button className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  <Share2 className="w-4 h-4" />
-                  <span>Partager le cours</span>
-                </button>
-                <button className="w-full flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Award className="w-4 h-4" />
-                  <span>Voir le certificat</span>
-                </button>
-              </div>
+            
+            <div className="bg-blue-600 rounded-xl shadow-lg p-6 text-white overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full translate-x-16 translate-y-[-16px]"></div>
+              <h4 className="font-bold mb-2">Besoin d'aide ?</h4>
+              <p className="text-blue-100 text-sm mb-4">Contactez votre professeur pour toute question sur le contenu.</p>
+              <button className="w-full py-2 bg-white text-blue-600 rounded-lg font-bold text-sm hover:bg-blue-50 transition-colors">
+                Contacter
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed bottom-8 right-8 z-[1000] px-6 py-4 rounded-2xl shadow-2xl flex items-center space-x-3 animate-in fade-in slide-in-from-bottom-5 duration-300 ${
+          toast.type === 'success' ? 'bg-green-600' : 
+          toast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+        } text-white`}>
+          {toast.type === 'success' ? <CheckCircle className="w-6 h-6" /> : 
+           toast.type === 'info' ? <Clock className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
+          <span className="font-bold">{toast.message}</span>
+        </div>
+      )}
+      {/* Video Player Modal */}
+      <Modal
+        title={currentVideoTitle}
+        open={videoModalVisible}
+        onCancel={() => {
+          setVideoModalVisible(false);
+          setCurrentVideoUrl("");
+        }}
+        footer={null}
+        width={1000}
+        centered
+        destroyOnClose
+        styles={{ body: { padding: 0, backgroundColor: "#000" } }}
+      >
+        <div className="aspect-video bg-black flex items-center justify-center">
+          {currentVideoUrl ? (
+            <video 
+              src={currentVideoUrl} 
+              controls 
+              autoPlay 
+              className="w-full h-full"
+              style={{ maxHeight: "calc(100vh - 200px)" }}
+            />
+          ) : (
+            <div className="text-white flex flex-col items-center">
+              <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin mb-2"></div>
+              <span>Chargement de la vidéo...</span>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

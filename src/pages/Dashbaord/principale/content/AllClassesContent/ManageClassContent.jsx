@@ -8,14 +8,21 @@ import { useTranslation } from "../../../../../hooks/useTranslation";
 
 const { Text, Title } = Typography;
 
-const ManageClassContent = ({ onBack }) => {
+const ManageClassContent = ({ onBack, tabData }) => {
   const { t } = useTranslation();
   const [classes, setClasses] = useState([]);
-  const [selectedClassId, setSelectedClassId] = useState(null);
+  const [selectedClassId, setSelectedClassId] = useState(tabData?.classId || null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Update selected class if tabData changes (e.g. from notification)
+  useEffect(() => {
+    if (tabData?.classId) {
+      setSelectedClassId(tabData.classId);
+    }
+  }, [tabData]);
 
   // Auto-clear messages
   useEffect(() => {
@@ -163,6 +170,7 @@ const ManageClassContent = ({ onBack }) => {
           <ManageClassDetailsView
             classId={selectedClassId}
             onBack={handleBackToList}
+            initialTab={tabData?.subTab}
             onRefresh={handleRefresh}
             onError={setError}
             onSuccess={setSuccessMessage}

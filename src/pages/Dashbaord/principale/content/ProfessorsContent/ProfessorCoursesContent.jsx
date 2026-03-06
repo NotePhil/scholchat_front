@@ -46,7 +46,7 @@ const COURSE_STATES = {
   PUBLIE: "PUBLIE",
 };
 
-const ProfessorCoursesContent = () => {
+const ProfessorCoursesContent = ({ setActiveTab }) => {
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -445,6 +445,14 @@ const ProfessorCoursesContent = () => {
                   <List size={14} className="sm:w-4 sm:h-4" />
                 </button>
               </div>
+
+              <button
+                onClick={() => setActiveTab("schedule-course")}
+                className="bg-white hover:bg-slate-50 text-slate-700 px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg border border-slate-200 font-medium text-sm sm:text-base"
+              >
+                <Calendar size={16} className="sm:w-5 sm:h-5 text-indigo-600" />
+                Programmer
+              </button>
 
               <button
                 onClick={handleCreateCourse}

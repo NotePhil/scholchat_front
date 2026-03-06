@@ -149,19 +149,44 @@ class ClassService {
   }
 
   /**
-   * Gets classes that the user has access to
+   * Gets classes that the user has access to (from publication rights + access requests)
    * @param {string} userId - The user's UUID
    * @returns {Promise<Array>} List of classes the user has access to
    */
   async obtenirClassesUtilisateur(userId) {
     try {
       console.log("Fetching classes for user:", userId);
-      return await this.axiosRequest(
-        `/droits-publication/utilisateurs/${userId}/classes`,
-        {
-          method: "get",
-        }
-      );
+      
+      // Fetch from multiple sources in parallel
+      const [publicationClasses, accessClasses] = await Promise.allSettled([
+        this.axiosRequest(
+          `/droits-publication/utilisateurs/${userId}/classes`,
+          { method: "get" }
+        ),
+        this.axiosRequest(
+          `/acceder/utilisateurs/${userId}/classes`,
+          { method: "get" }
+        ),
+      ]);
+
+      // Merge results, deduplicate by class ID
+      const classesMap = new Map();
+
+      if (publicationClasses.status === "fulfilled" && Array.isArray(publicationClasses.value)) {
+        publicationClasses.value.forEach(c => classesMap.set(c.id, c));
+      }
+
+      if (accessClasses.status === "fulfilled" && Array.isArray(accessClasses.value)) {
+        accessClasses.value.forEach(c => {
+          if (!classesMap.has(c.id)) {
+            classesMap.set(c.id, c);
+          }
+        });
+      }
+
+      const mergedClasses = Array.from(classesMap.values());
+      console.log("Merged classes count:", mergedClasses.length);
+      return mergedClasses;
     } catch (error) {
       console.error("Error getting user classes:", error);
       throw error;

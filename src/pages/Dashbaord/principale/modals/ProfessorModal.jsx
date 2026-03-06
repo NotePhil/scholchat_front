@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { scholchatService } from "../../../../services/ScholchatService";
 import axios from "axios";
+import { message } from "antd";
 
 const ProfessorModal = ({
   showModal,
@@ -356,6 +357,11 @@ const ProfessorModal = ({
       }
 
       await loadData();
+      message.success(
+        modalMode === "create"
+          ? "Professeur créé avec succès"
+          : "Professeur mis à jour avec succès"
+      );
       setShowModal(false);
     } catch (err) {
       console.error("Error details:", err);
