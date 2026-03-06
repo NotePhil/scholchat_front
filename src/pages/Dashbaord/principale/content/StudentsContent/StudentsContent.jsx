@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import { classService } from "../../../../../services/ClassService";
+import { Badge } from "antd";
+import { motion } from "framer-motion";
 import StudentModal from "../../modals/StudentModal";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import UserViewEleve from "../../modals/UserViewEleve";
@@ -121,20 +123,20 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     switch (status) {
       case "ACTIVE":
         return (
-          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full"></div>
+          <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-emerald-100 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
         );
       case "INACTIVE":
         return (
-          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-500 rounded-full"></div>
+          <div className="w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-red-100 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
         );
       case "PENDING":
       case "AWAITING_VALIDATION":
         return (
-          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-amber-500 rounded-full animate-pulse"></div>
+          <div className="w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-amber-100 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
         );
       default:
         return (
-          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
+          <div className="w-2.5 h-2.5 bg-gray-500 rounded-full ring-2 ring-gray-100 shadow-[0_0_10px_rgba(107,114,128,0.5)]"></div>
         );
     }
   };
@@ -446,157 +448,150 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         </div>
 
         {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-            {filteredStudents.map((student) => (
-              <div
+          <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {filteredStudents.map((student, idx) => (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                whileHover={{ y: -8, scale: 1.02 }}
                 key={student.id}
-                className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col h-full overflow-hidden"
+                className={`relative group ${isDark ? 'bg-gray-800/80 border-white/5' : 'bg-white/80 border-white/40'} backdrop-blur-xl border rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col h-full overflow-hidden`}
               >
-                <div className="p-3 sm:p-5 pb-2 sm:pb-3">
+                {/* Decorative background element */}
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                
+                <div className="p-5 pb-3 relative z-10">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+                    <div className="flex items-center space-x-4 min-w-0 flex-1">
                       <div className="relative flex-shrink-0">
-                        <div className="w-8 h-8 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-xs sm:text-lg">
+                        <div className="w-14 h-14 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 transform group-hover:rotate-6 transition-transform">
+                          <span className="text-white font-black text-xl tracking-tighter">
                             {getInitials(student.prenom, student.nom)}
                           </span>
                         </div>
-                        <div className="absolute -bottom-0.5 -right-0.5">
+                        <div className="absolute -bottom-1 -right-1">
                           {getStatusIcon(student.etat)}
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-slate-900 text-xs sm:text-sm line-clamp-2 mb-1">
+                        <h3 className={`font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'} text-sm sm:text-base line-clamp-1 mb-1`}>
                           {student.prenom} {student.nom}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                              student.etat
-                            )}`}
-                          >
-                            {getStatusText(student.etat)}
-                          </span>
-                          <span className="inline-flex items-center px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                            {getLevelText(student.niveau)}
-                          </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge 
+                            status={student.etat === 'ACTIVE' ? 'success' : 'default'} 
+                            text={getStatusText(student.etat)}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusBadge(student.etat)}`}
+                          />
                         </div>
                       </div>
                     </div>
-                    <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                      <MoreVertical size={12} className="sm:w-4 sm:h-4" />
-                    </button>
                   </div>
                 </div>
 
-                <div className="px-3 sm:px-5 pb-3 sm:pb-4 flex-grow space-y-2 sm:space-y-3">
-                  <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                    <Mail
-                      size={10}
-                      className="sm:w-3.5 sm:h-3.5 mr-2 sm:mr-3 text-slate-400 flex-shrink-0"
-                    />
-                    <span className="truncate">{student.email}</span>
+                <div className="px-5 pb-5 flex-grow space-y-3 relative z-10">
+                  <div className={`p-4 rounded-2xl ${isDark ? 'bg-gray-900/40' : 'bg-slate-50/50'} space-y-3`}>
+                    <div className="flex items-center text-xs font-medium text-slate-500">
+                      <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center mr-3 border border-slate-100">
+                        <Mail size={14} className="text-blue-500" />
+                      </div>
+                      <span className="truncate flex-1">{student.email}</span>
+                    </div>
+
+                    <div className="flex items-center text-xs font-medium text-slate-500">
+                      <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center mr-3 border border-slate-100">
+                        <Phone size={14} className="text-indigo-500" />
+                      </div>
+                      <span className="truncate flex-1">{student.telephone || "N/A"}</span>
+                    </div>
+
+                    <div className="flex items-center text-xs font-medium text-slate-500">
+                      <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center mr-3 border border-slate-100">
+                        <GraduationCap size={14} className="text-violet-500" />
+                      </div>
+                      <span className="truncate flex-1 font-bold text-slate-700">{getLevelText(student.niveau)}</span>
+                    </div>
                   </div>
 
-                  {student.telephone && (
-                    <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                      <Phone
-                        size={10}
-                        className="sm:w-3.5 sm:h-3.5 mr-2 sm:mr-3 text-slate-400 flex-shrink-0"
-                      />
-                      <span className="truncate">{student.telephone}</span>
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Classes</p>
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                        {student.classes?.length || 0} associées
+                      </span>
                     </div>
-                  )}
-
-                  {student.adresse && (
-                    <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                      <MapPin
-                        size={10}
-                        className="sm:w-3.5 sm:h-3.5 mr-2 sm:mr-3 text-slate-400 flex-shrink-0"
-                      />
-                      <span className="truncate">{student.adresse}</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                    <Calendar
-                      size={10}
-                      className="sm:w-3.5 sm:h-3.5 mr-2 sm:mr-3 text-slate-400 flex-shrink-0"
-                    />
-                    <span className="truncate">
-                      Inscrit le{" "}
-                      {new Date(student.creationDate).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <div className="pt-1 sm:pt-2">
-                    <p className="text-xs font-medium text-slate-500 mb-1 sm:mb-2">
-                      Classes associées
-                    </p>
-                    <div className="flex flex-wrap gap-1 sm:gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {student.classes?.length > 0 ? (
                         <>
                           {student.classes.slice(0, 2).map((cls) => (
                             <span
                               key={cls.id}
-                              className="inline-flex items-center px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 truncate max-w-full"
+                              className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-white text-slate-700 border border-slate-100 shadow-sm"
                             >
                               {cls.nom}
                             </span>
                           ))}
                           {student.classes.length > 2 && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                            <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-500">
                               +{student.classes.length - 2}
                             </span>
                           )}
                         </>
                       ) : (
-                        <span className="text-xs text-slate-400">
-                          Aucune classe associée
-                        </span>
+                        <span className="text-[10px] font-medium text-slate-400 italic">Aucune classe associée</span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="px-3 sm:px-5 py-2 sm:py-3 border-t border-slate-100">
-                  <div className="flex items-center justify-end space-x-2 sm:space-x-3">
-                    <button
+                <div className={`px-5 py-3 ${isDark ? 'bg-gray-900/20' : 'bg-slate-50/30'} flex items-center justify-between border-t ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+                   <div className="text-[10px] text-slate-400 font-medium">
+                      Inscrit le {new Date(student.creationDate).toLocaleDateString()}
+                   </div>
+                  <div className="flex items-center space-x-1">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
                       onClick={() => handleViewUser(student)}
-                      className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                      title="Voir les détails"
+                      className="p-2 text-blue-500 hover:bg-blue-100 rounded-xl transition-all"
+                      title="Détails"
                     >
-                      <Eye size={12} className="sm:w-4 sm:h-4" />
-                    </button>
+                      <Eye size={16} />
+                    </motion.button>
 
                     {isAdmin && (
-                      <>
-                        <button
+                      <div className="flex space-x-1">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           onClick={() => {
                             setModalMode("edit");
                             setSelectedStudent(student);
                             setShowModal(true);
                           }}
-                          className="p-1.5 sm:p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
+                          className="p-2 text-emerald-500 hover:bg-emerald-100 rounded-xl transition-all"
                           title="Modifier"
                         >
-                          <Edit2 size={12} className="sm:w-4 sm:h-4" />
-                        </button>
-                        <button
+                          <Edit2 size={16} />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           onClick={() => {
                             setSelectedStudent(student);
                             setShowDeleteConfirm(true);
                           }}
-                          className="p-1.5 sm:p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                          className="p-2 text-red-500 hover:bg-red-100 rounded-xl transition-all"
                           title="Supprimer"
                         >
-                          <Trash2 size={12} className="sm:w-4 sm:h-4" />
-                        </button>
-                      </>
+                          <Trash2 size={16} />
+                        </motion.button>
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         ) : (

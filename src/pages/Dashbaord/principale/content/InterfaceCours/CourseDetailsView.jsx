@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Spin, Empty } from 'antd';
+import { Modal, Button, Spin, Empty, Typography, Progress, Card, Tabs, Badge, Avatar, Timeline, List } from 'antd';
 import {
   ArrowLeft,
   BookOpen,
@@ -22,9 +22,21 @@ import {
   ChevronRight,
   Activity,
   ExternalLink,
-  Target
+  Target,
+  Award,
+  AlertTriangle,
+  Image,
+  File,
+  Send,
+  MoreVertical,
+  Bookmark,
+  TrendingUp
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { exerciseService } from '../../../../../services/exerciseService';
+
+const { Text, Title, Paragraph } = Typography;
+const { TabPane } = Tabs;
 
 const CourseDetailsView = ({ courseId, onBack }) => {
   const [course, setCourse] = useState(null);
@@ -546,19 +558,31 @@ const CourseDetailsView = ({ courseId, onBack }) => {
               </div>
             </div>
 
-            {/* Progress Bar */}
-            <div className="p-6 bg-gray-50 border-b">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Progression du cours</span>
-                <span className="text-sm font-bold text-blue-600">
-                  {chapters.length > 0 ? Math.round((completedItems.size / Math.max(chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 0), 1)) * 100) : 0}%
-                </span>
+            {/* Progress Bar - Revamped */}
+            <div className="p-6 bg-white/50 backdrop-blur-sm border-b border-gray-100">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-blue-100 rounded-lg">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-bold text-gray-700">Progression du cours</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-black text-blue-600">
+                    {chapters.length > 0 ? Math.round((completedItems.size / Math.max(chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 1), 1)) * 100) : 0}%
+                  </span>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Complété</span>
+                </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div 
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${chapters.length > 0 ? Math.round((completedItems.size / Math.max(chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 0), 1)) * 100) : 0}%` }}
-                ></div>
+              <div className="w-full bg-gray-100 rounded-full h-3 p-0.5 border border-gray-200 shadow-inner">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${chapters.length > 0 ? Math.round((completedItems.size / Math.max(chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 1), 1)) * 100) : 0}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 h-full rounded-full shadow-lg relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[progress-stripe_2s_linear_infinite]"></div>
+                </motion.div>
               </div>
             </div>
 

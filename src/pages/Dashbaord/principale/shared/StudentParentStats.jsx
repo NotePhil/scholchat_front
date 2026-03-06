@@ -25,6 +25,7 @@ import {
   AlertCircle,
   ChevronDown,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const StudentParentStats = ({
   stats,
@@ -236,35 +237,42 @@ const StudentParentStats = ({
   const themeColors = getThemeColors();
 
   const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => (
-    <div
-      className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-6 hover:shadow-md transition-all duration-200`}
+    <motion.div
+      whileHover={{ y: -5, scale: 1.02 }}
+      className={`${isDark ? 'bg-gray-800/80 border-white/5' : 'bg-white/80 border-white/20'} backdrop-blur-xl rounded-2xl shadow-xl border p-5 sm:p-6 group transition-all duration-300 relative overflow-hidden`}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className={`text-sm font-medium ${themeColors.textSecondary}`}>
+      <div className={`absolute top-0 right-0 w-24 h-24 ${color.replace('bg-', 'bg-')}/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700`}></div>
+      
+      <div className="flex items-center justify-between relative z-10">
+        <div className="flex-1 min-w-0 pr-4">
+          <p className={`text-xs font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
             {title}
           </p>
-          <p className={`text-3xl font-bold ${themeColors.textPrimary} mt-2`}>
+          <p className={`text-2xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'} leading-none`}>
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {subtitle && (
-            <p className={`text-sm ${themeColors.textSecondary} mt-1`}>
+            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-2 flex items-center gap-1 font-medium`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
               {subtitle}
             </p>
           )}
         </div>
-        <div className={`p-3 rounded-full ${color}`}>
+        <div className={`p-4 rounded-2xl ${color} shadow-lg shadow-${color.split('-')[1]}-500/30 transform group-hover:rotate-12 transition-transform duration-300`}>
           <Icon className="h-6 w-6 text-white" />
         </div>
       </div>
+      
       {trend && (
-        <div className="flex items-center mt-4 text-sm">
-          <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-          <span className="text-green-600 font-medium">{trend}</span>
-          <span className={`${themeColors.textSecondary} ml-1`}>ce mois</span>
+        <div className="flex items-center mt-6 pt-4 border-t border-gray-100/10 text-xs relative z-10 font-bold">
+          <div className="flex items-center bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full mr-2">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            <span>{trend}</span>
+          </div>
+          <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'} italic uppercase tracking-tighter`}>ce mois</span>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 
   const ActivityCard = ({ activity }) => (

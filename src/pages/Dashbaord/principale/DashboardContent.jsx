@@ -316,38 +316,47 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
   const exerciseCompletionData = [
     { name: t('dashboard.completion.completed'), value: 78.5, color: "#10B981" },
-    { name: t('dashboard.completion.inProgress'), value: 15.3, color: "#F59E0B" },
-    { name: t('dashboard.completion.notStarted'), value: 6.2, color: "#EF4444" },
+    { name: t('dashboard.completion.inProgress'), value: 15.3, color: "#6366F1" },
+    { name: t('dashboard.completion.notStarted'), value: 6.2, color: "#F43F5E" },
   ];
 
   const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }) => (
-    <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-3 sm:p-4 lg:p-6 hover:shadow-md transition-shadow`}>
-      <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0 pr-2">
-          <p className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'} truncate`}>
+    <motion.div 
+      whileHover={{ y: -5, scale: 1.02 }}
+      className={`relative overflow-hidden ${isDark ? 'bg-gray-800/80' : 'bg-white/80'} backdrop-blur-md rounded-2xl shadow-xl border ${isDark ? 'border-white/5' : 'border-white/20'} p-5 sm:p-6 group transition-all duration-300`}
+    >
+      <div className={`absolute top-0 right-0 w-32 h-32 ${color.replace('bg-', 'bg-')}/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`}></div>
+      
+      <div className="flex items-center justify-between relative z-10">
+        <div className="flex-1 min-w-0 pr-4">
+          <p className={`text-xs sm:text-sm font-bold uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
             {title}
           </p>
-          <p className={`text-lg sm:text-2xl lg:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} mt-1 sm:mt-2`}>
+          <p className={`text-2xl sm:text-3xl lg:text-4xl font-black ${isDark ? 'text-white' : 'text-gray-900'} leading-none`}>
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {subtitle && (
-            <p className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1 truncate`}>
+            <p className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-2 flex items-center gap-1`}>
+              <span className="w-1 h-1 rounded-full bg-blue-500"></span>
               {subtitle}
             </p>
           )}
         </div>
-        <div className={`p-2 sm:p-3 rounded-full ${color} flex-shrink-0`}>
-          <Icon className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
+        <div className={`p-4 rounded-2xl ${color} shadow-lg shadow-${color.split('-')[1]}-500/30 transform group-hover:rotate-12 transition-transform duration-300`}>
+          <Icon className="h-6 w-6 text-white" />
         </div>
       </div>
+      
       {trend && (
-        <div className="flex items-center mt-3 sm:mt-4 text-xs sm:text-sm">
-          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 mr-1 flex-shrink-0" />
-          <span className="text-green-600 font-medium">{trend}</span>
-          <span className="text-gray-500 ml-1">{t('dashboard.stats.thisMonth')}</span>
+        <div className="flex items-center mt-6 pt-4 border-t border-gray-100/10 text-xs sm:text-sm relative z-10">
+          <div className="flex items-center bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full mr-2">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            <span className="font-bold">{trend}</span>
+          </div>
+          <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'} italic`}>{t('dashboard.stats.thisMonth')}</span>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 
   const RecentActivity = () => {
@@ -465,24 +474,37 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Header */}
-      <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-sm border-b`}>
+      {/* Header - Premium Makeover */}
+      <div className={`${isDark ? 'bg-gray-800/90' : 'bg-white/90'} backdrop-blur-xl border-b ${isDark ? 'border-white/5' : 'border-gray-200'} sticky top-0 z-50`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6">
-            <div className="mb-3 sm:mb-0">
-              <h1 className={`text-xl sm:text-2xl lg:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {t('dashboard.title')}
-              </h1>
-              <p className={`text-sm sm:text-base ${isDark ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
-                {t('dashboard.subtitle')}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-6 sm:py-8 gap-4">
+            <div>
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-3 mb-2"
+              >
+                <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/40">
+                  <Activity className="w-6 h-6 text-white" />
+                </div>
+                <h1 className={`text-2xl sm:text-4xl font-black tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t('dashboard.title')}
+                </h1>
+              </motion.div>
+              <p className={`text-sm sm:text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'} flex items-center gap-2`}>
+                <Calendar className="w-4 h-4 text-blue-500" />
+                {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
-            <button
-              onClick={fetchDashboardData}
-              className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm sm:text-base self-start sm:self-auto"
-            >
-              <span>{t('dashboard.refresh')}</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={fetchDashboardData}
+                className="group px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 flex items-center space-x-2 font-bold transform hover:-translate-y-1 active:translate-y-0"
+              >
+                <TrendingUp className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+                <span>{t('dashboard.refresh')}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
