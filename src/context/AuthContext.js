@@ -88,7 +88,9 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === "isAuthenticated" || e.key === "accessToken") {
+      // Handle both real StorageEvents (from other tabs) and
+      // custom events dispatched from same tab (e.key will be undefined)
+      if (!e.key || e.key === "isAuthenticated" || e.key === "accessToken") {
         loadUserFromStorage();
       }
     };

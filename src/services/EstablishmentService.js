@@ -152,6 +152,30 @@ class EstablishmentService {
   }
 
   /**
+   * Get establishments managed by a specific gestionnaire
+   * @param {string} gestionnaireId - ID of the gestionnaire
+   * @returns {Promise<Array>} List of establishments
+   */
+  async getEstablishmentsByGestionnaire(gestionnaireId) {
+    try {
+      const response = await api.get(`/gestionnaire/${gestionnaireId}`);
+      return response.data || [];
+    } catch (error) {
+      console.error(`Error fetching establishments for gestionnaire ${gestionnaireId}:`, error);
+      // Fallback: fetch all and filter client-side
+      try {
+        const allEstablishments = await this.getAllEstablishments();
+        return (allEstablishments || []).filter(e =>
+          e.gestionnaire?.id?.toString() === gestionnaireId?.toString()
+        );
+      } catch (fallbackError) {
+        console.error("Fallback also failed:", fallbackError);
+        return [];
+      }
+    }
+  }
+
+  /**
    * Get gestionnaire of an establishment
    * @param {string} establishmentId - ID of the establishment
    * @returns {Promise<Object>} Gestionnaire data

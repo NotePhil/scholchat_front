@@ -38,6 +38,7 @@ import { styled } from "@mui/material/styles";
 import { classService } from "../../../../services/ClassService";
 import AccederService from "../../../../services/accederService";
 import ParentClassManagementModalUpdate from "./ParentClassManagementModalUpdate";
+import CoursProgrammeManagement from "../content/InterfaceCours/CoursProgrammeManagement";
 
 const StyledCard = styled(Card)(({ theme }) => ({
   height: "100%",
@@ -213,6 +214,7 @@ const ParentClassManagementClass = () => {
   const [students, setStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [newStudentName, setNewStudentName] = useState("");
+  const [showCourseManagement, setShowCourseManagement] = useState(false);
 
   const userId = localStorage.getItem("userId");
   const userEmail = localStorage.getItem("userEmail");
@@ -350,7 +352,8 @@ const ParentClassManagementClass = () => {
 
   const handleAccessClick = (classe) => {
     if (hasApprovedAccess(classe.id)) {
-      navigate(`/parent/classes/${classe.id}`);
+      setSelectedClass(classe);
+      setShowCourseManagement(true);
     } else if (hasPendingRequest(classe.id)) {
       setPendingDialog({
         open: true,
@@ -538,6 +541,15 @@ const ParentClassManagementClass = () => {
           </EmptyState>
         </Box>
       </Box>
+    );
+  }
+
+  if (showCourseManagement && selectedClass) {
+    return (
+      <CoursProgrammeManagement
+        selectedClass={selectedClass}
+        onBack={() => setShowCourseManagement(false)}
+      />
     );
   }
 

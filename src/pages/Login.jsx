@@ -66,7 +66,7 @@ export const Login = ({ theme }) => {
     setLoading(true);
     setError("");
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    let loginSucceeded = false;
 
     try {
       const response = await fetch(
@@ -172,8 +172,10 @@ export const Login = ({ theme }) => {
 
       dispatch(setCredentials(credentials));
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Notify AuthContext to sync user state from localStorage
       window.dispatchEvent(new Event("storage"));
+
+      loginSucceeded = true;
 
       let dashboardPath = "/schoolchat/Principal/AdminDashboard/activities";
 
@@ -206,9 +208,10 @@ export const Login = ({ theme }) => {
       localStorage.removeItem("decodedToken");
       localStorage.removeItem("authResponse");
     } finally {
-      setTimeout(() => {
+      // Only reset loading on error - on success we're navigating away
+      if (!loginSucceeded) {
         setLoading(false);
-      }, 100);
+      }
     }
   };
 

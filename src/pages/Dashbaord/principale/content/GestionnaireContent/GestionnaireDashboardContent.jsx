@@ -64,9 +64,10 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
 
       // Get current user ID
       const userId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
-      
+
+      // Use dedicated endpoint to fetch gestionnaire's establishments
       const [establishments, classes] = await Promise.allSettled([
-        establishmentService.getAllEstablishments().catch(err => {
+        establishmentService.getEstablishmentsByGestionnaire(userId).catch(err => {
           console.error("Establishments error:", err);
           return [];
         }),
@@ -76,21 +77,14 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
         }),
       ]);
 
-      let allEstablishments = establishments.status === "fulfilled" ? establishments.value || [] : [];
+      const gestionnaireEstablishments = establishments.status === "fulfilled" ? establishments.value || [] : [];
       let allClasses = classes.status === "fulfilled" ? classes.value || [] : [];
-      
-      // Filter establishments managed by current gestionnaire
-      const gestionnaireEstablishments = allEstablishments.filter(e => {
-        const gestionnaireId = e.gestionnaire?.id?.toString();
-        const currentUserId = userId?.toString();
-        return gestionnaireId === currentUserId;
-      });
-      
+
       // Get IDs of gestionnaire's establishments
       const establishmentIds = gestionnaireEstablishments.map(e => e.id);
-      
+
       // Filter classes that belong to gestionnaire's establishments
-      const gestionnaireClasses = allClasses.filter(c => 
+      const gestionnaireClasses = allClasses.filter(c =>
         establishmentIds.includes(c.etablissement?.id)
       );
 
@@ -333,7 +327,7 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
                     Tableau de bord live
                   </div>
                   <h1 className={`text-4xl font-black ${isDark ? 'text-white' : 'text-gray-900'} tracking-tight`}>
-                    Hello, Gestionnaire
+                    Hello, {localStorage.getItem("username") || "Gestionnaire"}
                   </h1>
                   <p className={`text-lg ${isDark ? 'text-gray-300' : 'text-gray-500'} mt-1 font-medium`}>
                     Gérez vos {stats.totalEstablishments} établissements et supervisez vos classes en temps réel.
