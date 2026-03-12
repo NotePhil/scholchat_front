@@ -40,6 +40,8 @@ import CourseContentView from "./CourseContentView";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import CourseCard from "./CourseCard";
 import CourseTableRow from "./CourseTableRow";
+import { useSelector } from "react-redux";
+import ProfessorCoursesContentMobile from "./ProfessorCoursesContentMobile";
 
 const COURSE_STATES = {
   BROUILLON: "BROUILLON",
@@ -236,6 +238,24 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       <CourseContentView
         course={viewingCourse}
         onBack={handleBackFromCourseContent}
+      />
+    );
+  }
+
+  const isMobile = useSelector((state) => state.ui.isMobile);
+
+  if (isMobile && !showCreateForm && !showEditForm && !showCourseContent) {
+    return (
+      <ProfessorCoursesContentMobile 
+        courses={courses}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        onViewCourse={handleViewCourse}
+        onCreateCourse={handleCreateCourse}
+        onRefresh={loadCourses}
+        loading={loading}
       />
     );
   }

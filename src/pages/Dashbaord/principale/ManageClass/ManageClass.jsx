@@ -34,6 +34,8 @@ import {
   Check,
   ChevronRight,
 } from "lucide-react";
+import ManageClassMobile from "./ManageClassMobile";
+import { useMobile } from "../../../../hooks/useMobile";
 
 const ManageClass = ({ classInfo, onBack }) => {
   // États principaux
@@ -609,6 +611,19 @@ const ManageClass = ({ classInfo, onBack }) => {
       </div>
     );
   };
+
+  const isMobile = useMobile();
+
+  if (isMobile) {
+    return (
+      <ManageClassMobile 
+        classeInfo={classeInfo} 
+        participants={participants} 
+        chatMessages={chatMessages} 
+        onBack={onBack} 
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">

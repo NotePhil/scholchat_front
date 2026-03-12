@@ -26,16 +26,18 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSelector } from "react-redux";
 
 const StudentParentStats = ({
   stats,
   isDark = false,
   themes,
   currentTheme,
-  userRole = "parent", // Default to parent for demo
+  userRole = "parent",
   currentUser,
   childId,
 }) => {
+  const isMobile = useSelector((state) => state.ui.isMobile);
   // Mock students data for parent prototype
   const [parentStudents] = useState([
     {
@@ -238,32 +240,41 @@ const StudentParentStats = ({
 
   const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => (
     <motion.div
-      whileHover={{ y: -5, scale: 1.02 }}
-      className={`${isDark ? 'bg-gray-800/80 border-white/5' : 'bg-white/80 border-white/20'} backdrop-blur-xl rounded-2xl shadow-xl border p-5 sm:p-6 group transition-all duration-300 relative overflow-hidden`}
+      whileHover={isMobile ? {} : { y: -5, scale: 1.02 }}
+      className={`${isDark ? 'bg-gray-800/80 border-white/5' : 'bg-white/80 border-white/20'} backdrop-blur-xl rounded-2xl shadow-xl border ${isMobile ? 'p-3' : 'p-5 sm:p-6'} group transition-all duration-300 relative overflow-hidden`}
     >
-      <div className={`absolute top-0 right-0 w-24 h-24 ${color.replace('bg-', 'bg-')}/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700`}></div>
-      
-      <div className="flex items-center justify-between relative z-10">
-        <div className="flex-1 min-w-0 pr-4">
-          <p className={`text-xs font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
-            {title}
-          </p>
-          <p className={`text-2xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'} leading-none`}>
+      <div className={`absolute top-0 right-0 w-24 h-24 ${color.replace('bg-', 'bg-')}/10 rounded-full blur-2xl -mr-12 -mt-12`}></div>
+
+      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} relative z-10`}>
+        <div className={`flex items-center ${isMobile ? 'justify-between' : ''}`}>
+          <div className={`${isMobile ? 'p-2 rounded-xl' : 'p-4 rounded-2xl'} ${color} shadow-lg transition-transform duration-300 ${isMobile ? 'order-2' : ''}`}>
+            <Icon className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'} text-white`} />
+          </div>
+          {isMobile && (
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'} order-1`}>
+              {title}
+            </p>
+          )}
+        </div>
+        <div className={`flex-1 min-w-0 ${isMobile ? '' : 'pr-4'}`}>
+          {!isMobile && (
+            <p className={`text-xs font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
+              {title}
+            </p>
+          )}
+          <p className={`${isMobile ? 'text-xl' : 'text-2xl sm:text-3xl'} font-black ${isDark ? 'text-white' : 'text-slate-900'} leading-none`}>
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {subtitle && (
-            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-2 flex items-center gap-1 font-medium`}>
+            <p className={`text-[10px] sm:text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} ${isMobile ? 'mt-1' : 'mt-2'} flex items-center gap-1 font-medium`}>
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
               {subtitle}
             </p>
           )}
         </div>
-        <div className={`p-4 rounded-2xl ${color} shadow-lg shadow-${color.split('-')[1]}-500/30 transform group-hover:rotate-12 transition-transform duration-300`}>
-          <Icon className="h-6 w-6 text-white" />
-        </div>
       </div>
-      
-      {trend && (
+
+      {trend && !isMobile && (
         <div className="flex items-center mt-6 pt-4 border-t border-gray-100/10 text-xs relative z-10 font-bold">
           <div className="flex items-center bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full mr-2">
             <TrendingUp className="h-3 w-3 mr-1" />
@@ -455,10 +466,10 @@ const StudentParentStats = ({
       <div
         className={`${themeColors.cardBg} shadow-sm border-b ${themeColors.border}`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+        <div className={`max-w-7xl mx-auto ${isMobile ? 'px-3' : 'px-4 sm:px-6 lg:px-8'}`}>
+          <div className={`flex ${isMobile ? 'flex-col gap-3 py-3' : 'justify-between items-center py-6'}`}>
             <div>
-              <h1 className={`text-3xl font-bold ${themeColors.textPrimary}`}>
+              <h1 className={`${isMobile ? 'text-lg' : 'text-3xl'} font-bold ${themeColors.textPrimary}`}>
                 {userRole === "student"
                   ? "Mon Tableau de Bord"
                   : userRole === "parent"
@@ -467,7 +478,7 @@ const StudentParentStats = ({
                   ? "Tableau de Bord Enseignant"
                   : "Tableau de Bord"}
               </h1>
-              <p className={`${themeColors.textSecondary} mt-1`}>
+              <p className={`${themeColors.textSecondary} ${isMobile ? 'text-xs mt-0.5' : 'mt-1'}`}>
                 {userRole === "student"
                   ? "Suivez vos progrès et activités scolaires"
                   : userRole === "parent"
@@ -477,14 +488,14 @@ const StudentParentStats = ({
                   : "Tableau de bord utilisateur"}
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className={`flex items-center ${isMobile ? 'gap-2' : 'space-x-4'}`}>
               {userRole === "parent" && <StudentSelector />}
               <div className="relative">
                 <Bell
-                  className={`h-6 w-6 ${themeColors.textSecondary} hover:${themeColors.textPrimary} cursor-pointer transition-colors`}
+                  className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} ${themeColors.textSecondary} hover:${themeColors.textPrimary} cursor-pointer transition-colors`}
                 />
                 {localStats.unreadMessages > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className={`absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full ${isMobile ? 'h-4 w-4 text-[10px]' : 'h-5 w-5'} flex items-center justify-center`}>
                     {localStats.unreadMessages}
                   </span>
                 )}
@@ -494,9 +505,9 @@ const StudentParentStats = ({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className={`max-w-7xl mx-auto ${isMobile ? 'px-3 py-3' : 'px-4 sm:px-6 lg:px-8 py-8'}`}>
         {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'} mb-4 sm:mb-8`}>
           <StatCard
             title={userRole === "teacher" ? "Mes Classes" : "Classes"}
             value={localStats.myClasses}
@@ -529,17 +540,17 @@ const StudentParentStats = ({
         </div>
 
         {/* Progress Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'lg:grid-cols-3 gap-6'} mb-4 sm:mb-8`}>
           {/* Performance Chart */}
           <div
-            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-6 lg:col-span-2`}
+            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? 'p-3' : 'p-6'} lg:col-span-2`}
           >
             <h3
-              className={`text-lg font-semibold ${themeColors.textPrimary} mb-4`}
+              className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold ${themeColors.textPrimary} mb-3`}
             >
               Performance par Matière
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={isMobile ? 200 : 300}>
               <BarChart data={performanceData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -547,10 +558,11 @@ const StudentParentStats = ({
                 />
                 <XAxis
                   dataKey="subject"
-                  tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: 12 }}
+                  tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: isMobile ? 9 : 12 }}
                 />
                 <YAxis
-                  tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: 12 }}
+                  tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: isMobile ? 9 : 12 }}
+                  width={isMobile ? 28 : 40}
                 />
                 <Tooltip
                   contentStyle={{
@@ -558,6 +570,7 @@ const StudentParentStats = ({
                     border: `1px solid ${isDark ? "#374151" : "#E5E7EB"}`,
                     borderRadius: "8px",
                     color: isDark ? "#F9FAFB" : "#111827",
+                    fontSize: isMobile ? 11 : 14,
                   }}
                 />
                 <Bar dataKey="score" fill="#3B82F6" radius={[4, 4, 0, 0]} />
@@ -573,23 +586,20 @@ const StudentParentStats = ({
 
           {/* Progress Indicators */}
           <div
-            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-6`}
+            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? 'p-3' : 'p-6'}`}
           >
             <h3
-              className={`text-lg font-semibold ${themeColors.textPrimary} mb-6`}
+              className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold ${themeColors.textPrimary} ${isMobile ? 'mb-3' : 'mb-6'}`}
             >
               Indicateurs de Progrès
             </h3>
-            <div className="space-y-6">
+            <div className={isMobile ? 'flex justify-around' : 'space-y-6'}>
               <div className="text-center">
-                <ProgressRing percentage={localStats.attendanceRate} />
+                <ProgressRing percentage={localStats.attendanceRate} size={isMobile ? 48 : 60} strokeWidth={isMobile ? 3 : 4} />
                 <p
-                  className={`text-sm font-medium ${themeColors.textPrimary} mt-2`}
+                  className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium ${themeColors.textPrimary} mt-1`}
                 >
                   Assiduité
-                </p>
-                <p className={`text-xs ${themeColors.textSecondary}`}>
-                  Cette période
                 </p>
               </div>
 
@@ -600,26 +610,22 @@ const StudentParentStats = ({
                       localStats.totalActivities) *
                       100
                   )}
+                  size={isMobile ? 48 : 60}
+                  strokeWidth={isMobile ? 3 : 4}
                 />
                 <p
-                  className={`text-sm font-medium ${themeColors.textPrimary} mt-2`}
+                  className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium ${themeColors.textPrimary} mt-1`}
                 >
                   Activités
-                </p>
-                <p className={`text-xs ${themeColors.textSecondary}`}>
-                  Complétées
                 </p>
               </div>
 
               <div className="text-center">
-                <ProgressRing percentage={localStats.averageGrade} />
+                <ProgressRing percentage={localStats.averageGrade} size={isMobile ? 48 : 60} strokeWidth={isMobile ? 3 : 4} />
                 <p
-                  className={`text-sm font-medium ${themeColors.textPrimary} mt-2`}
+                  className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium ${themeColors.textPrimary} mt-1`}
                 >
                   Performance
-                </p>
-                <p className={`text-xs ${themeColors.textSecondary}`}>
-                  Moyenne générale
                 </p>
               </div>
             </div>
@@ -627,17 +633,17 @@ const StudentParentStats = ({
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'lg:grid-cols-2 gap-6'} mb-4 sm:mb-8`}>
           {/* Attendance Trend */}
           <div
-            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-6`}
+            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? 'p-3' : 'p-6'}`}
           >
             <h3
-              className={`text-lg font-semibold ${themeColors.textPrimary} mb-4`}
+              className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold ${themeColors.textPrimary} mb-3`}
             >
               Évolution de l'Assiduité
             </h3>
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={isMobile ? 180 : 250}>
               <LineChart data={attendanceData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -645,10 +651,11 @@ const StudentParentStats = ({
                 />
                 <XAxis
                   dataKey="month"
-                  tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: 12 }}
+                  tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: isMobile ? 10 : 12 }}
                 />
                 <YAxis
-                  tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: 12 }}
+                  tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: isMobile ? 10 : 12 }}
+                  width={isMobile ? 28 : 40}
                 />
                 <Tooltip
                   contentStyle={{
@@ -656,14 +663,15 @@ const StudentParentStats = ({
                     border: `1px solid ${isDark ? "#374151" : "#E5E7EB"}`,
                     borderRadius: "8px",
                     color: isDark ? "#F9FAFB" : "#111827",
+                    fontSize: isMobile ? 11 : 14,
                   }}
                 />
                 <Line
                   type="monotone"
                   dataKey="attendance"
                   stroke="#10B981"
-                  strokeWidth={3}
-                  dot={{ fill: "#10B981", strokeWidth: 2, r: 4 }}
+                  strokeWidth={isMobile ? 2 : 3}
+                  dot={{ fill: "#10B981", strokeWidth: 2, r: isMobile ? 3 : 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -671,23 +679,23 @@ const StudentParentStats = ({
 
           {/* Activity Distribution */}
           <div
-            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-6`}
+            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? 'p-3' : 'p-6'}`}
           >
             <h3
-              className={`text-lg font-semibold ${themeColors.textPrimary} mb-4`}
+              className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold ${themeColors.textPrimary} mb-3`}
             >
               Répartition des Activités
             </h3>
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={isMobile ? 180 : 250}>
               <PieChart>
                 <Pie
                   data={activityDistribution}
                   cx="50%"
                   cy="50%"
-                  outerRadius={80}
+                  outerRadius={isMobile ? 60 : 80}
                   fill="#8884d8"
                   dataKey="value"
-                  label={({ name, percent }) =>
+                  label={isMobile ? false : ({ name, percent }) =>
                     `${name} ${(percent * 100).toFixed(0)}%`
                   }
                 >
@@ -705,21 +713,31 @@ const StudentParentStats = ({
                 />
               </PieChart>
             </ResponsiveContainer>
+            {isMobile && (
+              <div className="flex justify-center gap-4 mt-1">
+                {activityDistribution.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                    <span className={`text-[10px] ${themeColors.textSecondary}`}>{entry.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Recent Activity */}
         {recentActivity.length > 0 && (
           <div
-            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-6`}
+            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? 'p-3' : 'p-6'}`}
           >
-            <div className="flex justify-between items-center mb-6">
+            <div className={`flex justify-between items-center ${isMobile ? 'mb-3' : 'mb-6'}`}>
               <h3
-                className={`text-lg font-semibold ${themeColors.textPrimary}`}
+                className={`${isMobile ? 'text-sm' : 'text-lg'} font-semibold ${themeColors.textPrimary}`}
               >
                 Activité Récente
               </h3>
-              <button className="text-blue-500 hover:text-blue-600 text-sm font-medium transition-colors">
+              <button className="text-blue-500 hover:text-blue-600 text-xs sm:text-sm font-medium transition-colors">
                 Voir tout
               </button>
             </div>

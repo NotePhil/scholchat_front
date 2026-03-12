@@ -251,10 +251,6 @@ const Sidebar = ({
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-
-    if (tab === "messages" && onShowMessaging) {
-      onShowMessaging();
-    }
   };
 
   const openLogoutModal = () => {

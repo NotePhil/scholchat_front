@@ -32,6 +32,7 @@ import ClassService from "../../../../../services/ClassService";
 const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchemes, setActiveTab }) => {
   const { t } = useTranslation();
   const currentLanguage = useSelector((state) => state.ui.currentLanguage);
+  const isMobile = useSelector((state) => state.ui.isMobile);
   
   const [filterStatus, setFilterStatus] = useState("all");
   const [loading, setLoading] = useState(false);
@@ -148,34 +149,43 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
   ];
 
   const StatCard = ({ title, value, icon: Icon, color, trend, subtitle, filterValue, navigateTab }) => (
-    <div 
+    <div
       onClick={() => {
         if (navigateTab) setActiveTab(navigateTab);
         if (filterValue) setFilterStatus(filterValue);
       }}
-      className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} group relative overflow-hidden rounded-2xl shadow-sm border p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer`}
+      className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} group relative overflow-hidden rounded-2xl shadow-sm border ${isMobile ? 'p-3' : 'p-6'} hover:shadow-xl transition-all duration-300 cursor-pointer`}
     >
       <div className={`absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 opacity-10 rounded-full ${color}`}></div>
-      
-      <div className="flex items-center justify-between relative z-10">
+
+      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} relative z-10`}>
+        <div className={`flex items-center ${isMobile ? 'justify-between' : ''}`}>
+          <div className={`${isMobile ? 'p-2 rounded-xl' : 'p-4 rounded-2xl'} ${color} shadow-lg group-hover:scale-110 transition-transform ${isMobile ? 'order-2' : ''}`}>
+            <Icon className={`${isMobile ? 'h-4 w-4' : 'h-7 w-7'} text-white`} />
+          </div>
+          {isMobile && (
+            <p className={`text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'} order-1`}>
+              {title}
+            </p>
+          )}
+        </div>
         <div className="flex-1">
-          <p className={`text-sm font-semibold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            {title}
-          </p>
-          <p className={`text-4xl font-extrabold ${isDark ? 'text-white' : 'text-gray-900'} mt-2`}>
+          {!isMobile && (
+            <p className={`text-sm font-semibold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              {title}
+            </p>
+          )}
+          <p className={`${isMobile ? 'text-xl' : 'text-4xl'} font-extrabold ${isDark ? 'text-white' : 'text-gray-900'} ${isMobile ? '' : 'mt-2'}`}>
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {subtitle && (
-            <p className={`text-sm font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'} mt-2`}>
+            <p className={`${isMobile ? 'text-[10px]' : 'text-sm'} font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'} ${isMobile ? 'mt-1' : 'mt-2'}`}>
               {subtitle}
             </p>
           )}
         </div>
-        <div className={`p-4 rounded-2xl ${color} shadow-lg shadow-${color.split('-')[1]}-500/20 group-hover:scale-110 transition-transform`}>
-          <Icon className="h-7 w-7 text-white" />
-        </div>
       </div>
-      {trend && (
+      {trend && !isMobile && (
         <div className="flex items-center mt-4 text-sm font-semibold text-green-500">
           <TrendingUp className="h-4 w-4 mr-1" />
           <span>{trend}</span>
@@ -298,40 +308,56 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Premium Header */}
+      {/* Header */}
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b relative overflow-hidden`}>
-        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-blue-50 to-transparent opacity-50"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center py-10">
-            <div>
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-3">
-                <Activity className="w-3 h-3 mr-2" />
-                Tableau de bord live
-              </div>
-              <h1 className={`text-4xl font-black ${isDark ? 'text-white' : 'text-gray-900'} tracking-tight`}>
-                Hello, Gestionnaire 👋
-              </h1>
-              <p className={`text-lg ${isDark ? 'text-gray-300' : 'text-gray-500'} mt-1 font-medium`}>
-                Gérez vos {stats.totalEstablishments} établissements et supervisez vos classes en temps réel.
-              </p>
+        {!isMobile && <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-blue-50 to-transparent opacity-50"></div>}
+        <div className={`max-w-7xl mx-auto ${isMobile ? 'px-3' : 'px-4 sm:px-6 lg:px-8'} relative z-10`}>
+          <div className={`flex ${isMobile ? 'items-center justify-between py-3' : 'flex-col md:flex-row md:justify-between md:items-center py-10'}`}>
+            <div className={isMobile ? 'flex-1 min-w-0' : ''}>
+              {isMobile ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <div className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[9px] font-bold uppercase">Live</div>
+                    <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      Gestionnaire
+                    </h1>
+                  </div>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
+                    {stats.totalEstablishments} établissements
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-3">
+                    <Activity className="w-3 h-3 mr-2" />
+                    Tableau de bord live
+                  </div>
+                  <h1 className={`text-4xl font-black ${isDark ? 'text-white' : 'text-gray-900'} tracking-tight`}>
+                    Hello, Gestionnaire
+                  </h1>
+                  <p className={`text-lg ${isDark ? 'text-gray-300' : 'text-gray-500'} mt-1 font-medium`}>
+                    Gérez vos {stats.totalEstablishments} établissements et supervisez vos classes en temps réel.
+                  </p>
+                </>
+              )}
             </div>
-            <div className="mt-6 md:mt-0">
+            <div className={isMobile ? '' : 'mt-6 md:mt-0'}>
               <button
                 onClick={fetchDashboardData}
                 disabled={loading}
-                className="px-6 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:shadow-md transition-all flex items-center space-x-3 disabled:opacity-50"
+                className={`${isMobile ? 'p-2 rounded-xl' : 'px-6 py-3 rounded-xl'} bg-white border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition-all flex items-center ${isMobile ? '' : 'space-x-3'} disabled:opacity-50`}
               >
-                <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin text-blue-600' : 'text-gray-400'}`} />
-                <span>Actualiser les données</span>
+                <RefreshCw className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} ${loading ? 'animate-spin text-blue-600' : 'text-gray-400'}`} />
+                {!isMobile && <span>Actualiser les données</span>}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className={`max-w-7xl mx-auto ${isMobile ? 'px-3 py-3' : 'px-4 sm:px-6 lg:px-8 py-10'}`}>
         {/* Main Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'} mb-4 sm:mb-10`}>
           <StatCard
             title="Établissements"
             value={stats.totalEstablishments}
@@ -367,49 +393,51 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+        <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'lg:grid-cols-2 gap-8'} mb-4 sm:mb-10`}>
           {/* Distribution Chart */}
-          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-3xl shadow-sm border p-8`}>
-            <div className="flex items-center justify-between mb-8">
+          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} ${isMobile ? 'rounded-xl p-3' : 'rounded-3xl shadow-sm border p-8'}`}>
+            <div className="flex items-center justify-between mb-3 sm:mb-8">
               <div>
-                <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`${isMobile ? 'text-sm' : 'text-xl'} font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Distribution des Classes
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">Nombre de classes par établissement</p>
+                {!isMobile && <p className="text-sm text-gray-500 mt-1">Nombre de classes par établissement</p>}
               </div>
-              <div className="p-3 bg-gray-50 text-gray-400 rounded-2xl">
-                <BarChart3 className="h-6 w-6" />
+              <div className={`${isMobile ? 'p-1.5' : 'p-3'} bg-gray-50 text-gray-400 rounded-xl`}>
+                <BarChart3 className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'}`} />
               </div>
             </div>
-            <div className="h-80">
+            <div className={isMobile ? 'h-48' : 'h-80'}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={establishmentDistributionData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#374151' : '#f1f5f9'} />
                   <XAxis
                     dataKey="name"
-                    tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#64748b' }}
+                    tick={{ fontSize: isMobile ? 9 : 12, fill: isDark ? '#9ca3af' : '#64748b' }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  <YAxis 
-                    tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#64748b' }}
+                  <YAxis
+                    tick={{ fontSize: isMobile ? 9 : 12, fill: isDark ? '#9ca3af' : '#64748b' }}
                     axisLine={false}
                     tickLine={false}
+                    width={isMobile ? 25 : 40}
                   />
-                  <Tooltip 
+                  <Tooltip
                     cursor={{fill: 'transparent'}}
-                    contentStyle={{ 
-                      borderRadius: '16px', 
-                      border: 'none', 
+                    contentStyle={{
+                      borderRadius: '12px',
+                      border: 'none',
                       boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                      padding: '12px'
+                      padding: isMobile ? '8px' : '12px',
+                      fontSize: isMobile ? 11 : 14,
                     }}
                   />
-                  <Bar 
-                    dataKey="classes" 
-                    fill="#3b82f6" 
-                    radius={[8, 8, 0, 0]} 
-                    barSize={40}
+                  <Bar
+                    dataKey="classes"
+                    fill="#3b82f6"
+                    radius={[8, 8, 0, 0]}
+                    barSize={isMobile ? 20 : 40}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -417,27 +445,24 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
           </div>
 
           {/* Status Chart */}
-          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-3xl shadow-sm border p-8`}>
-            <div className="flex items-center justify-between mb-8">
+          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} ${isMobile ? 'rounded-xl p-3' : 'rounded-3xl shadow-sm border p-8'}`}>
+            <div className="flex items-center justify-between mb-3 sm:mb-8">
               <div>
-                <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`${isMobile ? 'text-sm' : 'text-xl'} font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   État du Réseau
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">Proportion des classes actives vs en attente</p>
-              </div>
-              <div className="p-3 bg-gray-50 text-gray-400 rounded-2xl">
-                <GraduationCap className="h-6 w-6" />
+                {!isMobile && <p className="text-sm text-gray-500 mt-1">Proportion des classes actives vs en attente</p>}
               </div>
             </div>
-            <div className="h-80">
+            <div className={isMobile ? 'h-40' : 'h-80'}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={classStatusData}
                     cx="50%"
                     cy="50%"
-                    innerRadius="60%"
-                    outerRadius="90%"
+                    innerRadius={isMobile ? "50%" : "60%"}
+                    outerRadius={isMobile ? "80%" : "90%"}
                     paddingAngle={8}
                     dataKey="value"
                   >
@@ -445,16 +470,16 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
                       <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                  <Tooltip
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="flex justify-center gap-6 mt-4">
+              <div className={`flex justify-center ${isMobile ? 'gap-4 mt-1' : 'gap-6 mt-4'}`}>
                 {classStatusData.map((s) => (
                   <div key={s.name} className="flex items-center">
-                    <div className="w-3 h-3 rounded-full mr-2" style={{backgroundColor: s.color}}></div>
-                    <span className="text-sm font-medium text-gray-600">{s.name}</span>
+                    <div className={`${isMobile ? 'w-2 h-2' : 'w-3 h-3'} rounded-full mr-2`} style={{backgroundColor: s.color}}></div>
+                    <span className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium text-gray-600`}>{s.name}</span>
                   </div>
                 ))}
               </div>
@@ -462,60 +487,60 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'lg:grid-cols-2 gap-8'}`}>
           <RecentActivity />
-          
+
           {/* Quick Actions Panel */}
-          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-3xl shadow-sm border p-8`}>
-            <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-8`}>
+          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} ${isMobile ? 'rounded-xl p-3' : 'rounded-3xl shadow-sm border p-8'}`}>
+            <h3 className={`${isMobile ? 'text-sm' : 'text-xl'} font-bold ${isDark ? 'text-white' : 'text-gray-900'} ${isMobile ? 'mb-3' : 'mb-8'}`}>
               Actions Prioritaires
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button 
+            <div className={`grid grid-cols-2 ${isMobile ? 'gap-2' : 'sm:grid-cols-2 gap-4'}`}>
+              <button
                 onClick={() => setActiveTab('create-establishment')}
-                className="group p-5 bg-blue-50 hover:bg-blue-600 rounded-2xl transition-all duration-300 text-left"
+                className={`group ${isMobile ? 'p-3' : 'p-5'} bg-blue-50 hover:bg-blue-600 rounded-2xl transition-all duration-300 text-left`}
               >
-                <div className="w-12 h-12 bg-white text-blue-600 rounded-xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                  <School className="h-6 w-6" />
+                <div className={`${isMobile ? 'w-8 h-8 rounded-lg mb-2' : 'w-12 h-12 rounded-xl mb-4'} bg-white text-blue-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+                  <School className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'}`} />
                 </div>
-                <span className="text-blue-900 group-hover:text-white font-bold block">Nouvel Établissement</span>
-                <span className="text-blue-600 group-hover:text-blue-100 text-xs mt-1 block">Ajouter une structure</span>
+                <span className={`text-blue-900 group-hover:text-white font-bold block ${isMobile ? 'text-xs' : ''}`}>Nouvel Établissement</span>
+                {!isMobile && <span className="text-blue-600 group-hover:text-blue-100 text-xs mt-1 block">Ajouter une structure</span>}
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => setActiveTab('create-class')}
-                className="group p-5 bg-emerald-50 hover:bg-emerald-600 rounded-2xl transition-all duration-300 text-left"
+                className={`group ${isMobile ? 'p-3' : 'p-5'} bg-emerald-50 hover:bg-emerald-600 rounded-2xl transition-all duration-300 text-left`}
               >
-                <div className="w-12 h-12 bg-white text-emerald-600 rounded-xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                  <Building2 className="h-6 w-6" />
+                <div className={`${isMobile ? 'w-8 h-8 rounded-lg mb-2' : 'w-12 h-12 rounded-xl mb-4'} bg-white text-emerald-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+                  <Building2 className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'}`} />
                 </div>
-                <span className="text-emerald-900 group-hover:text-white font-bold block">Créer une Classe</span>
-                <span className="text-emerald-600 group-hover:text-emerald-100 text-xs mt-1 block">Lancer un programme</span>
+                <span className={`text-emerald-900 group-hover:text-white font-bold block ${isMobile ? 'text-xs' : ''}`}>Créer une Classe</span>
+                {!isMobile && <span className="text-emerald-600 group-hover:text-emerald-100 text-xs mt-1 block">Lancer un programme</span>}
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => setActiveTab('manage-class')}
-                className="group p-5 bg-indigo-50 hover:bg-indigo-600 rounded-2xl transition-all duration-300 text-left"
+                className={`group ${isMobile ? 'p-3' : 'p-5'} bg-indigo-50 hover:bg-indigo-600 rounded-2xl transition-all duration-300 text-left`}
               >
-                <div className="w-12 h-12 bg-white text-indigo-600 rounded-xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                  <Users className="h-6 w-6" />
+                <div className={`${isMobile ? 'w-8 h-8 rounded-lg mb-2' : 'w-12 h-12 rounded-xl mb-4'} bg-white text-indigo-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+                  <Users className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'}`} />
                 </div>
-                <span className="text-indigo-900 group-hover:text-white font-bold block">Gérer les Élèves</span>
-                <span className="text-indigo-600 group-hover:text-indigo-100 text-xs mt-1 block">Superviser les inscrits</span>
+                <span className={`text-indigo-900 group-hover:text-white font-bold block ${isMobile ? 'text-xs' : ''}`}>Gérer les Élèves</span>
+                {!isMobile && <span className="text-indigo-600 group-hover:text-indigo-100 text-xs mt-1 block">Superviser les inscrits</span>}
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => setActiveTab('manage-class')}
-                className="group p-5 bg-amber-50 hover:bg-amber-600 rounded-2xl transition-all duration-300 text-left"
+                className={`group ${isMobile ? 'p-3' : 'p-5'} bg-amber-50 hover:bg-amber-600 rounded-2xl transition-all duration-300 text-left`}
               >
-                <div className="w-12 h-12 bg-white text-amber-600 rounded-xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform relative">
-                  <AlertCircle className="h-6 w-6" />
+                <div className={`${isMobile ? 'w-8 h-8 rounded-lg mb-2' : 'w-12 h-12 rounded-xl mb-4'} bg-white text-amber-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform relative`}>
+                  <AlertCircle className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'}`} />
                   {stats.pendingClasses > 0 && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white"></div>
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
                   )}
                 </div>
-                <span className="text-amber-900 group-hover:text-white font-bold block">Approbations</span>
-                <span className="text-amber-600 group-hover:text-amber-100 text-xs mt-1 block">{stats.pendingClasses} classe(s) en attente</span>
+                <span className={`text-amber-900 group-hover:text-white font-bold block ${isMobile ? 'text-xs' : ''}`}>Approbations</span>
+                <span className={`text-amber-600 group-hover:text-amber-100 ${isMobile ? 'text-[10px]' : 'text-xs'} mt-1 block`}>{stats.pendingClasses} en attente</span>
               </button>
             </div>
           </div>

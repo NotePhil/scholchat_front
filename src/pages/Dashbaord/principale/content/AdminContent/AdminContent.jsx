@@ -643,6 +643,7 @@ export const useAdmins = () => {
 const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const { t } = useTranslation();
   const language = useReduxSelector((state) => state.ui?.currentLanguage || 'fr');
+  const isMobile = useSelector((state) => state.ui.isMobile);
   const {
     admins,
     filteredAdmins,
@@ -794,7 +795,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'} mb-8`}>
           <StatsCard
             title={t('admin.stats.total')}
             value={stats.total}
@@ -821,32 +822,32 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           />
         </div>
 
-        <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="relative flex-1 max-w-md">
+        <div className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl ${isMobile ? 'p-3' : 'p-6'} shadow-lg mb-8`}>
+          <div className={`flex ${isMobile ? 'flex-col gap-3' : 'flex-col lg:flex-row lg:items-center lg:justify-between gap-6'}`}>
+            <div className={`relative flex-1 ${isMobile ? 'max-w-full' : 'max-w-md'}`}>
               <Search
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                size={20}
+                size={isMobile ? 16 : 20}
               />
               <input
                 type="text"
                 placeholder={t('admin.search.placeholder')}
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm"
+                className={`w-full ${isMobile ? 'pl-10 pr-3 py-2 text-sm' : 'pl-12 pr-4 py-3'} bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm`}
               />
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="relative">
+            <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-4'}`}>
+              <div className={`relative ${isMobile ? 'w-full' : ''}`}>
                 <Filter
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
+                  className={`absolute ${isMobile ? 'left-3' : 'left-4'} top-1/2 transform -translate-y-1/2 text-slate-400`}
                   size={16}
                 />
                 <select
                   value={filterStatus}
                   onChange={(e) => handleFilterChange(e.target.value)}
-                  className="pl-12 pr-8 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
+                  className={`${isMobile ? 'w-full pl-9 pr-6 py-2 text-xs' : 'pl-12 pr-8 py-3'} bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer`}
                 >
                   <option value="all">{t('admin.search.allStatuses')}</option>
                   <option value="ACTIVE">{t('admin.status.active')}</option>
@@ -859,44 +860,46 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 />
               </div>
 
-              <div className="flex bg-slate-100 rounded-xl p-1">
-                <button
-                  onClick={() => handleViewModeChange("grid")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    viewMode === "grid"
-                      ? "bg-white text-purple-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {t('admin.search.grid')}
-                </button>
-                <button
-                  onClick={() => handleViewModeChange("table")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    viewMode === "table"
-                      ? "bg-white text-purple-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {t('admin.search.table')}
-                </button>
-              </div>
+              <div className={`flex ${isMobile ? 'justify-between' : ''} items-center gap-2`}>
+                <div className="flex bg-slate-100 rounded-xl p-1">
+                  <button
+                    onClick={() => handleViewModeChange("grid")}
+                    className={`${isMobile ? 'px-3 py-1 text-xs' : 'px-4 py-2 text-sm'} rounded-lg font-medium transition-all duration-200 ${
+                      viewMode === "grid"
+                        ? "bg-white text-purple-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {t('admin.search.grid')}
+                  </button>
+                  <button
+                    onClick={() => handleViewModeChange("table")}
+                    className={`${isMobile ? 'px-3 py-1 text-xs' : 'px-4 py-2 text-sm'} rounded-lg font-medium transition-all duration-200 ${
+                      viewMode === "table"
+                        ? "bg-white text-purple-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {t('admin.search.table')}
+                  </button>
+                </div>
 
-              {canManageAdmins && (
-                <button
-                  onClick={handleCreateClick}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
-                >
-                  <Plus size={20} />
-                  {t('admin.search.newAdmin')}
-                </button>
-              )}
+                {canManageAdmins && (
+                  <button
+                    onClick={handleCreateClick}
+                    className={`bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white ${isMobile ? 'px-3 py-2 text-xs' : 'px-6 py-3'} rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium`}
+                  >
+                    <Plus size={isMobile ? 16 : 20} />
+                    {!isMobile && t('admin.search.newAdmin')}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}`}>
             {safeFilteredAdmins.map((admin) => (
               <AdminCard
                 key={admin.id}
@@ -913,16 +916,16 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50/50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} text-left text-xs font-semibold text-slate-600 uppercase tracking-wider`}>
                       {t('admin.table.administrator')}
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} text-left text-xs font-semibold text-slate-600 uppercase tracking-wider`}>
                       {t('admin.table.contact')}
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} text-left text-xs font-semibold text-slate-600 uppercase tracking-wider`}>
                       {t('admin.table.status')}
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} text-right text-xs font-semibold text-slate-600 uppercase tracking-wider`}>
                       {t('admin.table.actions')}
                     </th>
                   </tr>
@@ -933,35 +936,35 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                       key={admin.id}
                       className="hover:bg-white/50 transition-colors duration-200"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
                         <div className="flex items-center">
-                          <div className="h-10 w-10 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
-                            <span className="text-white font-medium text-sm">
+                          <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md`}>
+                            <span className={`text-white font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
                               {`${admin.prenom?.charAt(0) || ""}${
                                 admin.nom?.charAt(0) || ""
                               }`.toUpperCase()}
                             </span>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-semibold text-slate-900">
+                          <div className={`${isMobile ? 'ml-2' : 'ml-4'}`}>
+                            <div className={`${isMobile ? 'text-xs' : 'text-sm'} font-semibold text-slate-900`}>
                               {admin.prenom} {admin.nom}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
                         <div className="space-y-1">
-                          <div className="text-sm text-slate-900">
+                          <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-slate-900`}>
                             {admin.email}
                           </div>
                           {admin.telephone && (
-                            <div className="text-sm text-slate-500">
+                            <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-slate-500`}>
                               {admin.telephone}
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
                         <span
                           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
                             admin.etat === "ACTIVE"
@@ -974,14 +977,14 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                           {t(`admin.status.${admin.etat?.toLowerCase()}`) || admin.etat}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <td className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} whitespace-nowrap text-right text-sm`}>
                         <div className="flex items-center justify-end space-x-1">
                           <button
                             onClick={() => handleViewAdmin(admin)}
-                            className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
+                            className={`${isMobile ? 'p-1.5' : 'p-2'} text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200`}
                             title={t('admin.actions.view')}
                           >
-                            <Eye size={16} />
+                            <Eye size={isMobile ? 14 : 16} />
                           </button>
                           {canManageAdmins && (
                             <>

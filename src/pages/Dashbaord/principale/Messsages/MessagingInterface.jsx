@@ -5,6 +5,8 @@ import MessageDetailPanel from "./MessageDetailPanel";
 import ComposeModal from "./ComposeModal";
 import RecipientSelectorModal from "./RecipientSelectorModal";
 import { useAuth } from "../../../../context/AuthContext"; // Import the useAuth hook
+import { useSelector } from "react-redux";
+import MobileMessagingInterface from "./MobileMessagingInterface";
 
 const MessagingInterface = ({
   isDark = false,
@@ -468,6 +470,52 @@ const MessagingInterface = ({
   };
 
   const messageCounts = getMessageCounts();
+
+  const isMobile = useSelector((state) => state.ui.isMobile);
+
+  if (isMobile) {
+    return (
+      <MobileMessagingInterface
+        messages={messages}
+        isDark={isDark}
+        currentUser={currentUser}
+        formatDate={formatDate}
+        getUserInitials={getUserInitials}
+        getUserDisplay={getUserDisplay}
+        handleRefresh={handleRefresh}
+        loading={loading}
+        error={error}
+        setError={setError}
+        filterType={filterType}
+        setFilterType={setFilterType}
+        messageCounts={messageCounts}
+        showCompose={showCompose}
+        setShowCompose={setShowCompose}
+        newMessage={newMessage}
+        setNewMessage={setNewMessage}
+        recipientSearch={recipientSearch}
+        setRecipientSearch={setRecipientSearch}
+        addRecipient={addRecipient}
+        removeRecipient={removeRecipient}
+        handleEmailInput={handleEmailInput}
+        selectedClasses={selectedClasses}
+        setSelectedClasses={setSelectedClasses}
+        isGeneralMessage={isGeneralMessage}
+        setIsGeneralMessage={setIsGeneralMessage}
+        ccRecipients={ccRecipients}
+        setCcRecipients={setCcRecipients}
+        setShowRecipientSelector={setShowRecipientSelector}
+        showRecipientSelector={showRecipientSelector}
+        filteredUsers={filteredUsers}
+        fetchMessages={fetchMessages}
+        setLoading={setLoading}
+        themeColors={themeColors}
+        handleDeleteMessage={handleDeleteMessage}
+        handleMarkAsRead={handleMarkAsRead}
+        toggleStarMessage={toggleStarMessage}
+      />
+    );
+  }
 
   return (
     <div className={`flex h-full ${isDark ? "bg-gray-900" : "bg-white"}`}>

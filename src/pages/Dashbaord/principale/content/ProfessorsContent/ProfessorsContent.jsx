@@ -36,6 +36,7 @@ import { useSelector } from "react-redux";
 const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const { t } = useTranslation();
   const language = useSelector((state) => state.language?.currentLanguage || 'fr');
+  const isMobile = useSelector((state) => state.ui.isMobile);
   const [professors, setProfessors] = useState([]);
   const [classes, setClasses] = useState([]);
   const [filteredProfessors, setFilteredProfessors] = useState([]);
@@ -263,7 +264,7 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+        <div className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6'} mb-6 sm:mb-8`}>
           <div 
             onClick={() => setFilterStatus("all")}
             className={`${isDark ? 'bg-gray-800/70 border-gray-700/50' : 'bg-white/70 border-white/50'} backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
@@ -378,24 +379,24 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           </div>
         </div>
 
-        <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg mb-6 sm:mb-8">
-          <div className="flex flex-col space-y-3 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between lg:space-x-6">
-            <div className="relative flex-1 max-w-full lg:max-w-md">
+        <div className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl ${isMobile ? 'p-2' : 'p-3 sm:p-6'} shadow-lg mb-6 sm:mb-8`}>
+          <div className={`flex flex-col ${isMobile ? 'gap-2' : 'space-y-3 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between lg:space-x-6'}`}>
+            <div className={`relative flex-1 ${isMobile ? 'max-w-full' : 'max-w-full lg:max-w-md'}`}>
               <Search
                 className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                size={16}
+                size={isMobile ? 14 : 16}
               />
               <input
                 type="text"
                 placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                className={`w-full ${isMobile ? 'pl-8 pr-2 py-1.5 text-xs' : 'pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base'} bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm`}
               />
             </div>
 
-            <div className="flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4">
-              <div className="relative flex-1 min-[480px]:flex-none min-w-0">
+            <div className={`flex ${isMobile ? 'flex-col gap-2' : 'flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4'}`}>
+              <div className={`relative ${isMobile ? 'w-full' : 'flex-1 min-[480px]:flex-none min-w-0'}`}>
                 <Filter
                   className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
                   size={14}
@@ -403,7 +404,7 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full pl-8 sm:pl-12 pr-6 sm:pr-8 py-2 sm:py-3 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
+                  className={`w-full ${isMobile ? 'pl-8 pr-5 py-1.5 text-xs' : 'pl-8 sm:pl-12 pr-6 sm:pr-8 py-2 sm:py-3 text-xs sm:text-sm'} bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer`}
                 >
                   <option value="all">Tous</option>
                   <option value="ACTIVE">Actifs</option>
@@ -420,16 +421,16 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 />
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className={`flex items-center ${isMobile ? 'justify-between gap-1' : 'gap-2 sm:gap-3'}`}>
                 <button
                   onClick={loadData}
                   disabled={loading}
-                  className="p-2 sm:p-2.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`${isMobile ? 'p-1.5' : 'p-2 sm:p-2.5'} text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                   title="Actualiser"
                 >
-                  <RefreshCw size={14} className={`sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw size={isMobile ? 12 : 14} className={`sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
-                
+
                 {isAdmin && (
                   <button
                     onClick={() => {
@@ -437,17 +438,17 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                       setSelectedProfessor(null);
                       setShowModal(true);
                     }}
-                    className="px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1 sm:gap-2"
+                    className={`${isMobile ? 'px-2 py-1.5' : 'px-3 sm:px-4 py-2 sm:py-3'} bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1 sm:gap-2`}
                   >
-                    <Users size={14} className="sm:w-4 sm:h-4" />
-                    Ajouter
+                    <Users size={isMobile ? 12 : 14} className="sm:w-4 sm:h-4" />
+                    {!isMobile && 'Ajouter'}
                   </button>
                 )}
-                
+
                 <div className="flex bg-slate-100 rounded-lg sm:rounded-xl p-1">
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
+                    className={`${isMobile ? 'px-2 py-0.5 text-[10px]' : 'px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm'} rounded-md sm:rounded-lg font-medium transition-all duration-200 ${
                       viewMode === "grid"
                         ? "bg-white text-blue-600 shadow-sm"
                         : "text-slate-600 hover:text-slate-900"
@@ -457,7 +458,7 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   </button>
                   <button
                     onClick={() => setViewMode("table")}
-                    className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
+                    className={`${isMobile ? 'px-2 py-0.5 text-[10px]' : 'px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm'} rounded-md sm:rounded-lg font-medium transition-all duration-200 ${
                       viewMode === "table"
                         ? "bg-white text-blue-600 shadow-sm"
                         : "text-slate-600 hover:text-slate-900"
@@ -472,7 +473,7 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         </div>
 
         {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+          <div className={`grid ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6'}`}>
             {filteredProfessors.map((professor) => (
               <div
                 key={professor.id}

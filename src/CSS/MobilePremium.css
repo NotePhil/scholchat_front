@@ -1,0 +1,141 @@
+/* Mobile Premium Styles */
+@media (max-width: 768px) {
+  :root {
+    --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  }
+
+  body {
+    background-color: #f8f9fa;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .principal-container.mobile-layout {
+    background: #f8f9fa;
+  }
+
+  .dark-mode .principal-container.mobile-layout {
+    background: #020617;
+  }
+
+  .mobile-header {
+    height: 70px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    position: sticky !important;
+    top: 0;
+    z-index: 100 !important;
+  }
+
+  .dark-mode .mobile-header {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .mobile-header-title {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.03em !important;
+    background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .dark-mode .mobile-header-title {
+    background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .mobile-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: #f1f5f9;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark-mode .mobile-icon-btn {
+    background: #1e293b;
+    color: #94a3b8;
+  }
+
+  .mobile-icon-btn:active {
+    transform: scale(0.9);
+    background: #e2e8f0;
+  }
+
+  .dark-mode .mobile-icon-btn:active {
+    background: #334155;
+  }
+
+  .main-content {
+    padding-bottom: 120px !important; /* Space for bottom nav */
+  }
+
+  .content-body {
+    padding: 15px !important;
+    padding-top: 10px !important;
+  }
+
+  /* Premium Card Styles for Mobile */
+  .mobile-card {
+    background: white;
+    border-radius: 30px;
+    padding: 20px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    margin-bottom: 15px;
+  }
+
+  .dark-mode .mobile-card {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Safe Area Padding */
+  .safe-area-bottom {
+    padding-bottom: calc(1rem + var(--safe-area-inset-bottom));
+  }
+
+  .pt-safe {
+     padding-top: var(--safe-area-inset-top, 20px);
+  }
+
+  /* Bottom Nav Container Adjustments */
+  .mobile-bottom-nav-container {
+     position: fixed;
+     bottom: 0;
+     left: 0;
+     right: 0;
+     z-index: 1000;
+  }
+
+  /* Hide Desktop Elements on Mobile */
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}

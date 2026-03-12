@@ -19,8 +19,10 @@ import {
 import classService from "../../../../../services/ClassService";
 import establishmentService from "../../../../../services/EstablishmentService";
 import { useAuth } from "../../../../../context/AuthContext";
+import { useSelector } from "react-redux";
+import ClassesContentMobile from "./ClassesContentMobile";
 
-const ClassesContent = ({ onManageClass }) => {
+const ClassesContent = ({ onManageClass, setActiveTab }) => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTab, setCurrentTab] = useState("active");
@@ -311,6 +313,27 @@ const ClassesContent = ({ onManageClass }) => {
         <AlertCircle className="inline mr-2" />
         {error}
       </div>
+    );
+  }
+
+  const isMobile = useSelector((state) => state.ui.isMobile);
+
+  if (isMobile) {
+    return (
+      <ClassesContentMobile 
+        classes={classes}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        onManageClass={onManageClass}
+        onJoinByToken={handleTokenAccess}
+        onCreateClass={() => setActiveTab ? setActiveTab("create-class") : setShowCreateModal(true)}
+        accessToken={accessToken}
+        setAccessToken={setAccessToken}
+        userRole={user.role}
+        accessRequestCounts={accessRequestCounts}
+      />
     );
   }
 

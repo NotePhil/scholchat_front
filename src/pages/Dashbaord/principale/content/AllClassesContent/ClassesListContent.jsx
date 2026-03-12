@@ -31,6 +31,7 @@ import { classService, EtatClasse } from "../../../../../services/ClassService";
 import ClassModals from "../../modals/ClassModals";
 import PublicationRightsService from "../../../../../services/PublicationRightsService";
 import { useTranslation } from "../../../../../hooks/useTranslation";
+import { useSelector } from "react-redux";
 
 const ClassesListContent = ({
   onNavigateToCreate,
@@ -38,6 +39,7 @@ const ClassesListContent = ({
   onSelectClass,
 }) => {
   const { t } = useTranslation();
+  const isMobile = useSelector((state) => state.ui.isMobile);
   const [classes, setClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [paginatedClasses, setPaginatedClasses] = useState([]);
@@ -500,20 +502,20 @@ const ClassesListContent = ({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+    <div className={`min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 ${isMobile ? 'py-4 px-2' : 'py-8 px-4'}`}>
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
-            <div className="flex items-center justify-between">
+          <div className={`bg-gradient-to-r from-blue-600 to-indigo-600 ${isMobile ? 'px-4 py-3' : 'px-8 py-6'}`}>
+            <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6 text-white" />
+                <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-white/20 rounded-full flex items-center justify-center`}>
+                  <GraduationCap className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'} text-white`} />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-white">
+                  <h1 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-white`}>
                     {t('classes.title', 'Gestion des Classes')}
                   </h1>
-                  <p className="text-blue-100">
+                  <p className={`text-blue-100 ${isMobile ? 'text-xs' : ''}`}>
                     {filteredClasses.length} {t('classes.classCount', 'classe')}
                     {filteredClasses.length !== 1 ? "s" : ""} {t('classes.found', 'trouvée')}
                     {filteredClasses.length !== 1 ? "s" : ""} {t('common.on', 'sur')}{" "}
@@ -521,32 +523,32 @@ const ClassesListContent = ({
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className={`flex ${isMobile ? 'gap-1.5 flex-wrap' : 'gap-3'}`}>
                 <button
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="bg-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-2"
+                  className={`bg-white/20 text-white ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-2'} rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5`}
                 >
                   <RefreshCw
-                    className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
+                    className={`${isMobile ? 'w-3.5 h-3.5' : 'w-5 h-5'} ${refreshing ? "animate-spin" : ""}`}
                   />
-                  {t('common.actions.refresh', 'Actualiser')}
+                  {!isMobile && t('common.actions.refresh', 'Actualiser')}
                 </button>
                 {userRole === "professeur" && (
                   <>
                     <button
                       onClick={() => setShowAccessRequestModal(true)}
-                      className="bg-white/20 text-white px-6 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-2"
+                      className={`bg-white/20 text-white ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-6 py-2'} rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5`}
                     >
-                      <Key className="w-5 h-5" />
-                      {t('classes.accessToken', 'Accès Token')}
+                      <Key className={`${isMobile ? 'w-3.5 h-3.5' : 'w-5 h-5'}`} />
+                      {!isMobile && t('classes.accessToken', 'Accès Token')}
                     </button>
                     <button
                       onClick={onNavigateToCreate}
-                      className="bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center gap-2"
+                      className={`bg-white text-blue-600 ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-6 py-2'} rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center gap-1.5`}
                     >
-                      <Plus className="w-5 h-5" />
-                      {t('classes.newClass', 'Nouvelle Classe')}
+                      <Plus className={`${isMobile ? 'w-3.5 h-3.5' : 'w-5 h-5'}`} />
+                      {isMobile ? t('classes.newClass', 'Nouvelle Classe').split(' ')[0] : t('classes.newClass', 'Nouvelle Classe')}
                     </button>
                   </>
                 )}
@@ -554,24 +556,24 @@ const ClassesListContent = ({
             </div>
           </div>
 
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <div className={`${isMobile ? 'p-3' : 'p-6'} border-b border-gray-200`}>
+            <div className={`flex flex-col ${isMobile ? 'gap-2' : 'lg:flex-row gap-4'}`}>
+              <div className={`relative flex-1 ${isMobile ? 'max-w-full' : 'max-w-md'}`}>
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-gray-400`} />
                 <input
                   type="text"
                   placeholder={t('classes.searchPlaceholder', 'Rechercher une classe...')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full ${isMobile ? 'pl-9 pr-3 py-2 text-xs' : 'pl-12 pr-4 py-3'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className={`flex ${isMobile ? 'flex-col gap-2' : 'gap-3'}`}>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`${isMobile ? 'w-full px-3 py-1.5 text-xs' : 'px-4 py-3'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                 >
                   <option value="TOUS">{t('classes.filters.allStatuses', 'Tous les statuts')}</option>
                   <option value={EtatClasse.ACTIF}>{t('classes.status.active', 'Actif')}</option>
@@ -585,7 +587,7 @@ const ClassesListContent = ({
                   <select
                     value={etablissementFilter}
                     onChange={(e) => setEtablissementFilter(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`${isMobile ? 'w-full px-3 py-1.5 text-xs' : 'px-4 py-3'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                   >
                     <option value="TOUS">{t('classes.filters.allSchools', 'Tous les établissements')}</option>
                     {availableEtablissements.map((etab) => (
@@ -599,7 +601,7 @@ const ClassesListContent = ({
                 <select
                   value={itemsPerPage}
                   onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`${isMobile ? 'w-full px-3 py-1.5 text-xs' : 'px-4 py-3'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                 >
                   <option value={9}>{t('common.perPage', '{{count}} par page', { count: 9 })}</option>
                   <option value={12}>{t('common.perPage', '{{count}} par page', { count: 12 })}</option>
@@ -658,11 +660,11 @@ const ClassesListContent = ({
         ) : (
           <>
             <AnimatePresence mode="wait">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6"
+                className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'} mb-6`}
               >
                 {paginatedClasses.map((classe, index) => (
                   <motion.div

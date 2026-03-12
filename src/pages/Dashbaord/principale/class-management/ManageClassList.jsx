@@ -35,6 +35,8 @@ import {
   Bell,
   Zap,
 } from "lucide-react";
+import { useSelector } from "react-redux";
+import ManageClassListMobile from "./ManageClassListMobile";
 import AccederService, {
   EtatDemandeAcces,
 } from "../../../../services/accederService";
@@ -302,6 +304,8 @@ const ManageClassList = ({
     setEditingClass(null);
   };
 
+  const isMobile = useSelector((state) => state.ui.isMobile);
+
   if (loading && classes.length === 0) {
     return (
       <div className="loading-container">
@@ -310,6 +314,21 @@ const ManageClassList = ({
           <p className="loading-text">Chargement des classes...</p>
         </div>
       </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <ManageClassListMobile 
+        classes={sortedAndFilteredClasses}
+        loading={loading}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        handleManageClass={handleManageClass}
+        handleEditClass={handleEditClass}
+        pendingRequests={pendingRequests}
+        onRefresh={handleRefreshWithRequests}
+      />
     );
   }
 

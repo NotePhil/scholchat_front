@@ -18,6 +18,8 @@ import {
   List,
   Checkbox,
 } from "antd";
+import { useSelector } from "react-redux";
+import ManageClassDetailsMobile from "./ManageClassDetailsMobile";
 import {
   ArrowLeftOutlined,
   ReloadOutlined,
@@ -1596,15 +1598,234 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
         </Space>
       );
     }
-
     return <Text type="secondary">Aucun modérateur assigné</Text>;
   };
 
-  if (loading && !classDetails) {
+  const isMobile = useSelector((state) => state.ui.isMobile);
+
+  if (loading) {
     return (
-      <div className="manage-class-details-view loading-container">
+      <div className="loading-container">
         <Spin size="large" />
       </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        <ManageClassDetailsMobile
+          classDetails={classDetails}
+          users={users}
+          statistics={statistics}
+          loading={loading}
+          onBack={onBack}
+          onRefresh={() => setRefreshKey(prev => prev + 1)}
+          handleApproveRequest={handleApproveRequest}
+          handleRejectRequest={handleRejectRequest}
+          handleRemoveAccess={handleRemoveAccess}
+          handleViewUser={(user) => {
+            setSelectedUser(user);
+            setUserViewModalVisible(true);
+          }}
+          handleApprove={handleApprove}
+          handleReject={showRejectConfirm}
+          handleSelfApprove={handleSelfApprove}
+          canSelfManage={canSelfApproveReject() && isClassPendingApproval()}
+          isPending={classDetails?.etat === "EN_ATTENTE_APPROBATION" || classDetails?.etat === "EN_ATTENTE"}
+          actionLoading={actionLoading}
+          onAssignModerator={() => setModeratorModalVisible(true)}
+          onManageRights={() => setPublicationRightsModalVisible(true)}
+          onViewHistory={fetchActivationHistory}
+          onDelete={showDeleteConfirm}
+          moderatorsWithRights={moderatorsWithRights}
+          handleModeratorRemove={handleModeratorRemove}
+        />
+
+        {/* Modals must render outside mobile component so they still show */}
+        {userViewModalVisible && selectedUser && (
+          <RenderUserModal
+            user={selectedUser}
+            visible={userViewModalVisible}
+            onClose={handleCloseModal}
+          />
+        )}
+
+        <Modal
+          title="Rejeter la demande d'accès"
+          open={rejectModalVisible}
+          onCancel={() => {
+            setRejectModalVisible(false);
+            setRejectReason("");
+            setRejectingUser(null);
+          }}
+          footer={[
+            <Button key="cancel" onClick={() => setRejectModalVisible(false)}>Annuler</Button>,
+            <Button key="reject" type="primary" danger onClick={confirmRejectRequest}>Rejeter</Button>,
+          ]}
+        >
+          <p>Veuillez saisir le motif du rejet pour {rejectingUser?.prenom} {rejectingUser?.nom}:</p>
+          <Input.TextArea
+            rows={4}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Motif du rejet..."
+          />
+        </Modal>
+
+        <Modal
+          title="Historique d'activation"
+          open={historyModalVisible}
+          onCancel={() => setHistoryModalVisible(false)}
+          footer={null}
+          width="95%"
+        >
+          <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
+            {history.length === 0 ? (
+              <Text type="secondary">Aucun historique disponible</Text>
+            ) : (
+              history.map((item) => (
+                <div key={item.id} style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", marginBottom: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <Text strong>{item.active ? "Activation" : "Désactivation"} - {item.etatClasse}</Text>
+                    <Text type="secondary">{new Date(item.dateActivation).toLocaleString()}</Text>
+                  </div>
+                  {item.motifDesactivation && (
+                    <div style={{ marginTop: 8 }}><Text>Motif: {item.motifDesactivation}</Text></div>
+                  )}
+                  <div style={{ marginTop: 8 }}>
+                    <Tag color={item.active ? "green" : "red"}>{item.active ? "Actif" : "Inactif"}</Tag>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Modal>
+
+        <Modal
+          title="Assigner un modérateur"
+          open={moderatorModalVisible}
+          onCancel={() => {
+            setModeratorModalVisible(false);
+            setModeratorSearchQuery("");
+            setModeratorSearchResults([]);
+            setSelectedModerator(null);
+          }}
+          footer={null}
+          width="95%"
+        >
+          <div style={{ marginBottom: 16 }}>
+            <Text strong>Rechercher un professeur:</Text>
+            <Space.Compact style={{ width: "100%", marginTop: 8 }}>
+              <Input
+                placeholder="Nom ou email du professeur"
+                value={moderatorSearchQuery}
+                onChange={(e) => setModeratorSearchQuery(e.target.value)}
+                onPressEnter={handleSearchModerator}
+              />
+              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearchModerator} loading={moderatorSearchLoading}>
+                Rechercher
+              </Button>
+            </Space.Compact>
+          </div>
+          {moderatorSearchResults.length > 0 && (
+            <List
+              size="small"
+              dataSource={moderatorSearchResults}
+              renderItem={(professor) => (
+                <List.Item
+                  actions={[
+                    <Button type="link" onClick={() => setSelectedModerator(professor)} disabled={selectedModerator?.id === professor.id}>
+                      {selectedModerator?.id === professor.id ? "Sélectionné" : "Sélectionner"}
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    title={`${professor.nom} ${professor.prenom}`}
+                    description={professor.email}
+                  />
+                </List.Item>
+              )}
+            />
+          )}
+          {selectedModerator && (
+            <div style={{ marginTop: 16 }}>
+              <Divider />
+              <Text strong>Sélectionné: {selectedModerator.nom} {selectedModerator.prenom}</Text>
+              <div style={{ marginTop: 12, textAlign: "right" }}>
+                <Space>
+                  <Button onClick={() => { setSelectedModerator(null); setModeratorSearchResults([]); }}>Annuler</Button>
+                  <Button type="primary" onClick={handleModeratorAssign} loading={actionLoading === "moderator"}>Assigner</Button>
+                </Space>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        <Modal
+          title="Gérer les droits de publication"
+          open={publicationRightsModalVisible}
+          onCancel={() => {
+            setPublicationRightsModalVisible(false);
+            setSearchEmail("");
+            setSearchResults([]);
+            setSelectedUserForRights(null);
+          }}
+          footer={null}
+          width="95%"
+        >
+          <div style={{ marginBottom: 16 }}>
+            <Text strong>Rechercher un utilisateur:</Text>
+            <Space.Compact style={{ width: "100%", marginTop: 8 }}>
+              <Input
+                placeholder="Nom ou email de l'utilisateur"
+                value={searchEmail}
+                onChange={(e) => setSearchEmail(e.target.value)}
+                onPressEnter={handleSearchUserByEmail}
+              />
+              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearchUserByEmail} loading={searchLoading}>
+                Rechercher
+              </Button>
+            </Space.Compact>
+          </div>
+          {searchResults.length > 0 && (
+            <List
+              size="small"
+              dataSource={searchResults}
+              renderItem={(user) => (
+                <List.Item
+                  actions={[
+                    <Button type="link" onClick={() => setSelectedUserForRights(user)} disabled={selectedUserForRights?.id === user.id}>
+                      {selectedUserForRights?.id === user.id ? "Sélectionné" : "Sélectionner"}
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    title={`${user.nom} ${user.prenom}`}
+                    description={user.email}
+                  />
+                </List.Item>
+              )}
+            />
+          )}
+          {selectedUserForRights && (
+            <div style={{ marginTop: 16 }}>
+              <Divider />
+              <Text strong>Droits pour {selectedUserForRights.nom} {selectedUserForRights.prenom}:</Text>
+              <div style={{ marginTop: 8 }}>
+                <div><Checkbox checked={publicationRights.peutPublier} onChange={(e) => setPublicationRights({ ...publicationRights, peutPublier: e.target.checked })}>Peut publier</Checkbox></div>
+                <div><Checkbox checked={publicationRights.peutModerer} onChange={(e) => setPublicationRights({ ...publicationRights, peutModerer: e.target.checked })}>Peut modérer</Checkbox></div>
+              </div>
+              <div style={{ marginTop: 12, textAlign: "right" }}>
+                <Space>
+                  <Button onClick={() => { setSelectedUserForRights(null); setSearchEmail(""); setSearchResults([]); }}>Annuler</Button>
+                  <Button type="primary" onClick={handleAssignPublicationRights} loading={actionLoading === "assignPublicationRights"}>Assigner les droits</Button>
+                </Space>
+              </div>
+            </div>
+          )}
+        </Modal>
+      </>
     );
   }
 

@@ -55,6 +55,7 @@ import CoursProgrammeManagement from "./content/InterfaceCours/CoursProgrammeMan
 import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
 import MatiereContent from "./content/MatiereContent/MatiereContent";
 import GestionnaireDashboardContent from "./content/GestionnaireContent/GestionnaireDashboardContent";
+import MobileBottomNav from "../components/MobileBottomNav";
 
 import "../../../CSS/Principal.css";
 
@@ -347,19 +348,35 @@ const Principal = () => {
       // Update URL to reflect current section
       const currentPath = location.pathname;
       const pathParts = currentPath.split('/');
-      
-      // Ensure we have at least the base path parts
+
+      let basePath;
       if (pathParts.length >= 4) {
-        const basePath = pathParts.slice(0, 4).join('/'); // /schoolchat/principal/AdminDashboard
-        const newPath = `${basePath}/${tab}`;
-        navigate(newPath, { replace: true });
+        // Already have /schoolchat/principal/DashboardType
+        basePath = pathParts.slice(0, 4).join('/');
+      } else {
+        // Build the base path from the dashboard type or role
+        let dashboard = dashboardType || 'AdminDashboard';
+        if (!dashboardType) {
+          if (normalizedUserRole === 'professor' || normalizedUserRole === 'tutor') {
+            dashboard = 'ProfessorDashboard';
+          } else if (normalizedUserRole === 'parent') {
+            dashboard = 'ParentDashboard';
+          } else if (normalizedUserRole === 'student') {
+            dashboard = 'StudentDashboard';
+          } else if (normalizedUserRole === 'gestionnaire') {
+            dashboard = 'GestionnaireDashboard';
+          }
+        }
+        basePath = `/schoolchat/principal/${dashboard}`;
       }
+
+      navigate(`${basePath}/${tab}`, { replace: true });
 
       if (isMobile || isCustomBreakpoint) {
         dispatch(setSidebar(false));
       }
     },
-    [dispatch, isMobile, isCustomBreakpoint, navigate, location.pathname]
+    [dispatch, isMobile, isCustomBreakpoint, navigate, location.pathname, dashboardType, normalizedUserRole]
   );
 
   const handleManageClass = useCallback(() => {
@@ -417,6 +434,7 @@ const Principal = () => {
       userRole: normalizedUserRole || "admin",
       onManageClass: handleManageClass,
       onShowMessaging: handleShowMessaging,
+      setActiveTab: handleTabChange,
       tabData,
     }),
     [
@@ -425,6 +443,7 @@ const Principal = () => {
       normalizedUserRole,
       handleManageClass,
       handleShowMessaging,
+      handleTabChange,
       tabData,
     ]
   );
@@ -876,13 +895,25 @@ const Principal = () => {
           className={`content-body ${
             isDark ? "bg-gray-900 text-white" : "bg-gray-50"
           }`}
-          style={{ paddingTop: "100px" }}
+          style={{ paddingTop: isMobile ? "64px" : "100px" }}
         >
           {renderContent()}
         </div>
       </div>
 
-      {showMessaging && activeTab !== "messages" && (
+      {/* Mobile Bottom Navigation - only on dashboard */}
+      {isMobile && (
+        <MobileBottomNav
+          activeTab={activeTab}
+          setActiveTab={handleTabChange}
+          isDark={isDark}
+          currentTheme={currentTheme}
+          colorSchemes={colorSchemes}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {showMessaging && activeTab !== "messages" && !isMobile && (
         <div className="messaging-sidebar">
           <MessagingInterface
             onClose={handleCloseMessaging}

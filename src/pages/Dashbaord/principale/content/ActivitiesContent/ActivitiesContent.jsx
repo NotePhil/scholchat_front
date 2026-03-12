@@ -38,6 +38,7 @@ import { motion } from "framer-motion";
 const ActivitiesContent = () => {
   const { t } = useTranslation();
   const language = useSelector((state) => state.language?.currentLanguage || 'fr');
+  const isMobile = useSelector((state) => state.ui.isMobile);
   
   const pluralize = (count, singular, plural) => {
     return `${count} ${count === 1 ? singular : plural}`;
@@ -550,18 +551,18 @@ const ActivitiesContent = () => {
 
           {/* Main Content Area */}
           <main className="flex-1 min-w-0">
-            <div className="max-w-2xl mx-auto px-0 sm:px-4 py-4 sm:py-6">
+            <div className={`max-w-2xl mx-auto ${isMobile ? 'px-0 py-2' : 'px-0 sm:px-4 py-4 sm:py-6'}`}>
               {/* Mobile Header */}
               <div className="lg:hidden bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-sm p-4 mb-4">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                  <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-gray-900 dark:text-white`}>
                     {t('activities.title', 'Fil d\'actualité')}
                   </h1>
                   <button
                     onClick={() => setShowCreateForm(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+                    className={`bg-blue-600 hover:bg-blue-700 text-white ${isMobile ? 'p-1.5' : 'p-2'} rounded-lg transition-colors`}
                   >
-                    <Plus className="w-5 h-5" />
+                    <Plus className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
                   </button>
                 </div>
               </div>
@@ -840,23 +841,23 @@ const ActivitiesContent = () => {
                       className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-sm overflow-hidden"
                     >
                       {/* Post Header */}
-                      <div className="p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+                      <div className={`${isMobile ? 'p-3' : 'p-4'}`}>
+                        <div className={`flex items-center ${isMobile ? 'gap-2 mb-2' : 'gap-3 mb-3'}`}>
+                          <div className={`${isMobile ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'} bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md`}>
                             {activity.user.name?.charAt(0)?.toUpperCase() || 'E'}
                           </div>
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 dark:text-white">
+                            <h3 className={`font-semibold text-gray-900 dark:text-white ${isMobile ? 'text-sm' : ''}`}>
                               {activity.user.name}
                             </h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400`}>
                               {activity.timestamp}
                             </p>
                           </div>
                         </div>
 
                         {/* Post Content */}
-                        <p className="text-gray-800 dark:text-gray-200 mb-4 whitespace-pre-wrap">{activity.content}</p>
+                        <p className={`text-gray-800 dark:text-gray-200 ${isMobile ? 'text-sm mb-2' : 'mb-4'} whitespace-pre-wrap`}>{activity.content}</p>
                       </div>
 
                       {/* Media Gallery */}
@@ -947,51 +948,51 @@ const ActivitiesContent = () => {
                       )}
 
                       {/* Action Buttons */}
-                      <div className="px-2 sm:px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+                      <div className={`${isMobile ? 'px-1 py-1' : 'px-2 sm:px-4 py-2'} border-t border-gray-100 dark:border-gray-700`}>
                         <div className="flex items-center justify-around gap-1">
                           <button
                             onClick={() => handleLike(activity.id)}
                             disabled={likingActivities[activity.id]}
-                            className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-semibold text-sm transition-all ${ 
+                            className={`flex-1 flex items-center justify-center ${isMobile ? 'gap-1 px-1 py-1.5' : 'gap-2 px-2 py-2.5'} rounded-lg font-semibold ${isMobile ? 'text-xs' : 'text-sm'} transition-all ${
                               activity.isLiked
                                 ? "text-red-600 bg-red-50 dark:bg-red-900/20"
                                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                             }`}
                           >
                             {likingActivities[activity.id] ? (
-                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <Loader2 className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} animate-spin`} />
                             ) : (
-                              <Heart className={`w-5 h-5 ${activity.isLiked ? 'fill-current' : ''}`} />
+                              <Heart className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} ${activity.isLiked ? 'fill-current' : ''}`} />
                             )}
-                            <span className="hidden sm:inline">{t('activities.actions.like', 'J\'aime')}</span>
+                            <span className={`${isMobile ? 'hidden' : 'hidden sm:inline'}`}>{t('activities.actions.like', 'J\'aime')}</span>
                           </button>
 
                           <button
                             onClick={() => toggleComments(activity.id)}
-                            className="flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold text-sm transition-all"
+                            className={`flex-1 flex items-center justify-center ${isMobile ? 'gap-1 px-1 py-1.5' : 'gap-2 px-2 py-2.5'} rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold ${isMobile ? 'text-xs' : 'text-sm'} transition-all`}
                           >
-                            <MessageCircle className="w-5 h-5" />
-                            <span className="hidden sm:inline">{t('activities.actions.comment', 'Commenter')}</span>
+                            <MessageCircle className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                            <span className={`${isMobile ? 'hidden' : 'hidden sm:inline'}`}>{t('activities.actions.comment', 'Commenter')}</span>
                           </button>
 
                           <button
                             onClick={() => handleParticipate(activity.id)}
-                            className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                            className={`flex-1 flex items-center justify-center ${isMobile ? 'gap-1 px-1 py-1.5' : 'gap-2 px-2 py-2.5'} rounded-lg font-semibold ${isMobile ? 'text-xs' : 'text-sm'} transition-all ${
                               activity.isParticipating
                                 ? "text-green-600 bg-green-50 dark:bg-green-900/20"
                                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                             }`}
                           >
-                            <UserPlus className="w-5 h-5" />
-                            <span className="hidden sm:inline">{t('activities.actions.participate', 'Participer')}</span>
+                            <UserPlus className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                            <span className={`${isMobile ? 'hidden' : 'hidden sm:inline'}`}>{t('activities.actions.participate', 'Participer')}</span>
                           </button>
 
-                          <button 
+                          <button
                             onClick={() => handleShare(activity.id)}
-                            className="flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold text-sm transition-all"
+                            className={`flex-1 flex items-center justify-center ${isMobile ? 'gap-1 px-1 py-1.5' : 'gap-2 px-2 py-2.5'} rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold ${isMobile ? 'text-xs' : 'text-sm'} transition-all`}
                           >
-                            <Share2 className="w-5 h-5" />
-                            <span className="hidden sm:inline">{t('activities.actions.share', 'Partager')}</span>
+                            <Share2 className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                            <span className={`${isMobile ? 'hidden' : 'hidden sm:inline'}`}>{t('activities.actions.share', 'Partager')}</span>
                           </button>
                         </div>
                       </div>

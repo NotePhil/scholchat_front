@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useSelector } from 'react-redux';
 import {
@@ -42,6 +43,7 @@ import { scholchatService } from "../../../services/ScholchatService";
 import ClassService from "../../../services/ClassService";
 import establishmentService from "../../../services/EstablishmentService";
 import { coursService } from "../../../services/CoursService";
+import MobileDashboardContent from "./MobileDashboardContent";
 
 // MatiereService (inline since you provided it)
 import axios from "axios";
@@ -120,6 +122,7 @@ const matiereService = new MatiereService();
 const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const { t, changeLanguage } = useTranslation();
   const currentLanguage = useSelector((state) => state.ui.currentLanguage);
+  const isMobile = useSelector((state) => state.ui.isMobile);
   
   // Sync Redux language with translation hook
   useEffect(() => {
@@ -321,33 +324,42 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   ];
 
   const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }) => (
-    <motion.div 
-      whileHover={{ y: -5, scale: 1.02 }}
-      className={`relative overflow-hidden ${isDark ? 'bg-gray-800/80' : 'bg-white/80'} backdrop-blur-md rounded-2xl shadow-xl border ${isDark ? 'border-white/5' : 'border-white/20'} p-5 sm:p-6 group transition-all duration-300`}
+    <motion.div
+      whileHover={isMobile ? {} : { y: -5, scale: 1.02 }}
+      className={`relative overflow-hidden ${isDark ? 'bg-gray-800/80' : 'bg-white/80'} backdrop-blur-md rounded-2xl shadow-xl border ${isDark ? 'border-white/5' : 'border-white/20'} ${isMobile ? 'p-3' : 'p-5 sm:p-6'} group transition-all duration-300`}
     >
       <div className={`absolute top-0 right-0 w-32 h-32 ${color.replace('bg-', 'bg-')}/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`}></div>
-      
-      <div className="flex items-center justify-between relative z-10">
-        <div className="flex-1 min-w-0 pr-4">
-          <p className={`text-xs sm:text-sm font-bold uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
-            {title}
-          </p>
-          <p className={`text-2xl sm:text-3xl lg:text-4xl font-black ${isDark ? 'text-white' : 'text-gray-900'} leading-none`}>
+
+      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} relative z-10`}>
+        <div className={`flex items-center ${isMobile ? 'justify-between' : ''}`}>
+          <div className={`${isMobile ? 'p-2 rounded-xl' : 'p-4 rounded-2xl'} ${color} shadow-lg ${isMobile ? '' : `shadow-${color.split('-')[1]}-500/30 transform group-hover:rotate-12`} transition-transform duration-300 ${isMobile ? 'order-2' : ''}`}>
+            <Icon className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'} text-white`} />
+          </div>
+          {isMobile && (
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'} order-1`}>
+              {title}
+            </p>
+          )}
+        </div>
+        <div className={`flex-1 min-w-0 ${isMobile ? '' : 'pr-4'}`}>
+          {!isMobile && (
+            <p className={`text-xs sm:text-sm font-bold uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
+              {title}
+            </p>
+          )}
+          <p className={`${isMobile ? 'text-xl' : 'text-2xl sm:text-3xl lg:text-4xl'} font-black ${isDark ? 'text-white' : 'text-gray-900'} leading-none`}>
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {subtitle && (
-            <p className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-2 flex items-center gap-1`}>
+            <p className={`text-[10px] sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} ${isMobile ? 'mt-1' : 'mt-2'} flex items-center gap-1`}>
               <span className="w-1 h-1 rounded-full bg-blue-500"></span>
               {subtitle}
             </p>
           )}
         </div>
-        <div className={`p-4 rounded-2xl ${color} shadow-lg shadow-${color.split('-')[1]}-500/30 transform group-hover:rotate-12 transition-transform duration-300`}>
-          <Icon className="h-6 w-6 text-white" />
-        </div>
       </div>
-      
-      {trend && (
+
+      {trend && !isMobile && (
         <div className="flex items-center mt-6 pt-4 border-t border-gray-100/10 text-xs sm:text-sm relative z-10">
           <div className="flex items-center bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full mr-2">
             <TrendingUp className="h-3 w-3 mr-1" />
@@ -472,46 +484,79 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     );
   }
 
+  if (isMobile) {
+    return (
+      <MobileDashboardContent 
+        stats={stats} 
+        isDark={isDark} 
+        t={t} 
+        fetchDashboardData={fetchDashboardData} 
+      />
+    );
+  }
+
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Header - Premium Makeover */}
-      <div className={`${isDark ? 'bg-gray-800/90' : 'bg-white/90'} backdrop-blur-xl border-b ${isDark ? 'border-white/5' : 'border-gray-200'} sticky top-0 z-50`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-6 sm:py-8 gap-4">
-            <div>
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-3 mb-2"
-              >
-                <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/40">
-                  <Activity className="w-6 h-6 text-white" />
-                </div>
-                <h1 className={`text-2xl sm:text-4xl font-black tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {t('dashboard.title')}
-                </h1>
-              </motion.div>
-              <p className={`text-sm sm:text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'} flex items-center gap-2`}>
-                <Calendar className="w-4 h-4 text-blue-500" />
-                {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
+      {/* Header */}
+      <div className={`${isDark ? 'bg-gray-800/90' : 'bg-white/90'} backdrop-blur-xl border-b ${isDark ? 'border-white/5' : 'border-gray-200'} ${isMobile ? '' : 'sticky top-0 z-50'}`}>
+        <div className={`max-w-7xl mx-auto ${isMobile ? 'px-3 py-3' : 'px-4 sm:px-6 lg:px-8'}`}>
+          <div className={`flex ${isMobile ? 'items-center justify-between' : 'flex-col sm:flex-row sm:justify-between sm:items-center py-6 sm:py-8 gap-4'}`}>
+            <div className={isMobile ? 'flex-1 min-w-0' : ''}>
+              {isMobile ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-600 rounded-lg">
+                      <Activity className="w-4 h-4 text-white" />
+                    </div>
+                    <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {t('dashboard.title')}
+                    </h1>
+                  </div>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-0.5 ml-8`}>
+                    {new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-3 mb-2"
+                  >
+                    <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/40">
+                      <Activity className="w-6 h-6 text-white" />
+                    </div>
+                    <h1 className={`text-2xl sm:text-4xl font-black tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {t('dashboard.title')}
+                    </h1>
+                  </motion.div>
+                  <p className={`text-sm sm:text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'} flex items-center gap-2`}>
+                    <Calendar className="w-4 h-4 text-blue-500" />
+                    {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className={`flex items-center ${isMobile ? '' : 'gap-3'}`}>
               <button
                 onClick={fetchDashboardData}
-                className="group px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 flex items-center space-x-2 font-bold transform hover:-translate-y-1 active:translate-y-0"
+                className={`group bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center font-bold transition-all duration-300 active:scale-95 ${
+                  isMobile
+                    ? 'p-2 rounded-xl'
+                    : 'px-6 py-3 rounded-2xl hover:shadow-2xl hover:shadow-blue-500/40 space-x-2 transform hover:-translate-y-1 active:translate-y-0'
+                }`}
               >
-                <TrendingUp className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
-                <span>{t('dashboard.refresh')}</span>
+                <TrendingUp className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} group-hover:rotate-180 transition-transform duration-500`} />
+                {!isMobile && <span>{t('dashboard.refresh')}</span>}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className={`max-w-7xl mx-auto ${isMobile ? 'px-3 py-3' : 'px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8'}`}>
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+        <div className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6'} mb-4 sm:mb-6 lg:mb-8`}>
           <StatCard
             title={t('dashboard.stats.availableCourses')}
             value={stats.totalCourses}
@@ -547,29 +592,27 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'lg:grid-cols-2 gap-4 sm:gap-6'} mb-4 sm:mb-6 lg:mb-8`}>
           {/* Course Distribution */}
-          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border ${isMobile ? 'p-3' : 'p-4 sm:p-6'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className={`${isMobile ? 'text-sm' : 'text-sm sm:text-base lg:text-lg'} font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {t('dashboard.charts.courseDistribution')}
               </h3>
-              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+              <BarChart3 className="h-4 w-4 text-gray-400" />
             </div>
-            <div className="h-64 sm:h-80">
+            <div className={isMobile ? 'h-48' : 'h-64 sm:h-80'}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={courseDistributionData}
                     cx="50%"
                     cy="50%"
-                    outerRadius="70%"
+                    outerRadius={isMobile ? "65%" : "70%"}
                     fill="#8884d8"
                     dataKey="courses"
-                    label={({ name, percent }) =>
-                      `${name.substring(0, 8)}... ${(percent * 100).toFixed(
-                        0
-                      )}%`
+                    label={isMobile ? false : ({ name, percent }) =>
+                      `${name.substring(0, 8)}... ${(percent * 100).toFixed(0)}%`
                     }
                   >
                     {courseDistributionData.map((entry, index) => (
@@ -583,25 +626,25 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           </div>
 
           {/* Student Progress by Class */}
-          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border ${isMobile ? 'p-3' : 'p-4 sm:p-6'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className={`${isMobile ? 'text-sm' : 'text-sm sm:text-base lg:text-lg'} font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {t('dashboard.charts.studentProgress')}
               </h3>
-              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+              <BarChart3 className="h-4 w-4 text-gray-400" />
             </div>
-            <div className="h-64 sm:h-80">
+            <div className={isMobile ? 'h-48' : 'h-64 sm:h-80'}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={studentProgressData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="class"
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: isMobile ? 9 : 12 }}
                     angle={-45}
                     textAnchor="end"
-                    height={60}
+                    height={isMobile ? 45 : 60}
                   />
-                  <YAxis tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: isMobile ? 9 : 12 }} width={isMobile ? 30 : 40} />
                   <Tooltip />
                   <Bar
                     dataKey="progress"
@@ -616,19 +659,19 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         </div>
 
         {/* Monthly Activity Trends */}
-        <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6 mb-6 sm:mb-8`}>
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border ${isMobile ? 'p-3' : 'p-4 sm:p-6'} mb-4 sm:mb-6 lg:mb-8`}>
+          <div className="flex items-center justify-between mb-3 sm:mb-6">
+            <h3 className={`${isMobile ? 'text-sm' : 'text-sm sm:text-base lg:text-lg'} font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {t('dashboard.charts.monthlyActivity')}
             </h3>
-            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+            <TrendingUp className="h-4 w-4 text-gray-400" />
           </div>
-          <div className="h-64 sm:h-80">
+          <div className={isMobile ? 'h-48' : 'h-64 sm:h-80'}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyTrendsData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <XAxis dataKey="month" tick={{ fontSize: isMobile ? 10 : 12 }} />
+                <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} width={isMobile ? 30 : 40} />
                 <Tooltip />
                 <Area
                   type="monotone"
@@ -663,26 +706,26 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         </div>
 
         {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'lg:grid-cols-3 gap-4 sm:gap-6'}`}>
           {/* Exercise Completion Status */}
-          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border ${isMobile ? 'p-3' : 'p-4 sm:p-6'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className={`${isMobile ? 'text-sm' : 'text-sm sm:text-base lg:text-lg'} font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {t('dashboard.charts.exerciseStatus')}
               </h3>
-              <Target className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+              <Target className="h-4 w-4 text-gray-400" />
             </div>
-            <div className="h-48 sm:h-64">
+            <div className={isMobile ? 'h-40' : 'h-48 sm:h-64'}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={exerciseCompletionData}
                     cx="50%"
                     cy="50%"
-                    outerRadius="80%"
+                    outerRadius={isMobile ? "70%" : "80%"}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, value }) => `${name} ${value}%`}
+                    label={isMobile ? false : ({ name, value }) => `${name} ${value}%`}
                   >
                     {exerciseCompletionData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -692,13 +735,22 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 </PieChart>
               </ResponsiveContainer>
             </div>
+            {/* Mobile legend for pie chart */}
+            {isMobile && (
+              <div className="flex flex-wrap gap-3 mt-2 justify-center">
+                {exerciseCompletionData.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                    <span className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{entry.name} {entry.value}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Recent Activities */}
           <RecentActivity />
         </div>
-
-        {/* Footer Stats */}
       </div>
     </div>
   );
