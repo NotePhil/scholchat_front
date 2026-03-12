@@ -101,15 +101,29 @@ export const useNotifications = () => {
       case "DEMANDE_ACCES":
         return { icon: "UserPlus", color: "blue", category: "access" };
       case "ACTIVITY_CREATED":
+      case "NEW_ACTIVITY":
         return { icon: "Calendar", color: "green", category: "activity" };
       case "CLASS_VALIDATED":
         return { icon: "CheckCircle", color: "emerald", category: "class" };
       case "CLASS_REJECTED":
         return { icon: "RefreshCw", color: "orange", category: "class" };
+      case "CLASS_CREATED":
+        return { icon: "BookOpen", color: "blue", category: "class" };
+      case "CLASS_JOIN":
+        return { icon: "UserPlus", color: "emerald", category: "class" };
       case "PROFESSOR_CREATED":
         return { icon: "UserPlus", color: "green", category: "professor" };
+      case "STUDENT_CREATED":
+        return { icon: "UserPlus", color: "blue", category: "student" };
+      case "PARENT_CREATED":
+        return { icon: "UserPlus", color: "purple", category: "parent" };
       case "ASSIGNMENT_GIVEN":
         return { icon: "BookOpen", color: "purple", category: "assignment" };
+      case "NEW_COURSE":
+      case "COURSE_SCHEDULED":
+        return { icon: "BookOpen", color: "indigo", category: "course" };
+      case "EXERCISE_CREATED":
+        return { icon: "BookOpen", color: "orange", category: "exercise" };
       case "MESSAGE_SENT":
         return { icon: "MessageSquare", color: "indigo", category: "message" };
       case "EVENT_UPDATED":

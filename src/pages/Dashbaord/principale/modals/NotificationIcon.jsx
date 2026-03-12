@@ -299,32 +299,39 @@ const NotificationIcon = () => {
       switch (type) {
         case "ACCESS_REQUEST":
         case "DEMANDE_ACCES":
-          dispatch(setActiveTabAction({ 
-            tab: "manage-class", 
-            data: { classId: relatedEntityId, subTab: "access-requests" } 
+          dispatch(setActiveTabAction({
+            tab: "manage-class",
+            data: { classId: relatedEntityId, subTab: "access-requests" }
           }));
           break;
         case "CLASS_VALIDATED":
         case "CLASS_REJECTED":
         case "CLASS_JOIN":
-          dispatch(setActiveTabAction({ 
-            tab: "manage-class", 
-            data: { classId: relatedEntityId, subTab: "overview" } 
+        case "CLASS_CREATED":
+          dispatch(setActiveTabAction({
+            tab: "manage-class",
+            data: { classId: relatedEntityId, subTab: "overview" }
           }));
           break;
         case "ACTIVITY_CREATED":
         case "ASSIGNMENT_GIVEN":
         case "NEW_ACTIVITY":
-          dispatch(setActiveTabAction({ 
-            tab: "activities", 
-            data: { activityId: relatedEntityId } 
+          dispatch(setActiveTabAction({
+            tab: "activities",
+            data: { activityId: relatedEntityId }
           }));
           break;
         case "COURSE_SCHEDULED":
         case "NEW_COURSE":
-          dispatch(setActiveTabAction({ 
-            tab: "cours", 
-            data: { courseId: relatedEntityId } 
+          dispatch(setActiveTabAction({
+            tab: "cours",
+            data: { courseId: relatedEntityId }
+          }));
+          break;
+        case "EXERCISE_CREATED":
+          dispatch(setActiveTabAction({
+            tab: "exercises",
+            data: { exerciseId: relatedEntityId }
           }));
           break;
         case "MESSAGE_SENT":
