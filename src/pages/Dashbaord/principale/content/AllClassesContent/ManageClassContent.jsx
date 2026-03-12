@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, Space, Typography, Alert, Button, message, Spin } from "antd";
+import { Space, Typography, Alert, Button, message, Spin } from "antd";
 import { BookOutlined } from "@ant-design/icons";
 import { classService } from "../../../../../services/ClassService";
 import ManageClassList from "../../class-management/ManageClassList";
@@ -8,7 +8,7 @@ import { useTranslation } from "../../../../../hooks/useTranslation";
 
 const { Text, Title } = Typography;
 
-const ManageClassContent = ({ onBack, tabData }) => {
+const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
   const { t } = useTranslation();
   const [classes, setClasses] = useState([]);
   const [selectedClassId, setSelectedClassId] = useState(tabData?.classId || null);
@@ -103,22 +103,8 @@ const ManageClassContent = ({ onBack, tabData }) => {
   };
 
   return (
-    <div
-      style={{
-        background: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)",
-        minHeight: "100vh",
-        padding: "24px",
-      }}
-    >
-      <Card
-        style={{
-          background: "white",
-          borderRadius: "16px",
-          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.08)",
-          border: "1px solid #e1e4e8",
-          overflow: "hidden",
-        }}
-      >
+    <div className="p-4 sm:p-6">
+      <div>
         {!selectedClassId ? (
           <div style={{ padding: "24px" }}>
             <div style={{ marginBottom: "24px" }}>
@@ -164,6 +150,7 @@ const ManageClassContent = ({ onBack, tabData }) => {
               onSelectClass={handleSelectClass}
               onRefresh={handleRefresh}
               onBack={onBack}
+              onNavigateToCreate={setActiveTab ? () => setActiveTab("create-class") : undefined}
             />
           </div>
         ) : (
@@ -176,7 +163,7 @@ const ManageClassContent = ({ onBack, tabData }) => {
             onSuccess={setSuccessMessage}
           />
         )}
-      </Card>
+      </div>
     </div>
   );
 };

@@ -837,11 +837,7 @@ const CreateClassContent = ({
 
   if (success) {
     return (
-      <div
-        className={`min-h-screen ${
-          isDark ? "bg-gray-900" : "bg-gradient-to-br from-green-50 to-blue-50"
-        } flex items-center justify-center p-4`}
-      >
+      <div className="flex items-center justify-center py-20 p-4">
         <div
           className={`${
             isDark ? "bg-gray-800" : "bg-white"
@@ -894,11 +890,7 @@ const CreateClassContent = ({
   return (
     <>
       <div
-        className={`min-h-screen ${
-          isDark
-            ? "bg-gray-900"
-            : "bg-gradient-to-br from-blue-50 to-indigo-100"
-        } py-8 px-4`}
+        className="py-4 px-4"
       >
         <div className="max-w-6xl mx-auto">
           <div

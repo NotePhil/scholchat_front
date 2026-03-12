@@ -15,15 +15,16 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-const ManageClassListMobile = ({ 
-  classes, 
-  loading, 
-  searchTerm, 
-  setSearchTerm, 
-  handleManageClass, 
+const ManageClassListMobile = ({
+  classes,
+  loading,
+  searchTerm,
+  setSearchTerm,
+  handleManageClass,
   handleEditClass,
   pendingRequests,
-  onRefresh
+  onRefresh,
+  onNavigateToCreate
 }) => {
   return (
     <div className="flex flex-col space-y-4 px-4 pb-32 pt-2 bg-gray-50 dark:bg-slate-950 min-h-screen">
@@ -128,9 +129,14 @@ const ManageClassListMobile = ({
       </div>
 
       {/* Floating Add Button */}
-      <button className="fixed bottom-28 right-6 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 z-[30]">
-        <Plus size={28} />
-      </button>
+      {onNavigateToCreate && (
+        <button
+          onClick={onNavigateToCreate}
+          className="fixed bottom-28 right-6 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 z-[30]"
+        >
+          <Plus size={28} />
+        </button>
+      )}
     </div>
   );
 };

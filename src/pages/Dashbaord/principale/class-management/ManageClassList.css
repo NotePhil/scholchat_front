@@ -1,6 +1,4 @@
 .manage-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 1rem;
 }
 
@@ -13,12 +11,7 @@
 }
 
 .header-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 24px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 2rem;
+  padding: 0 0 1.5rem 0;
 }
 
 .header-content {
@@ -236,12 +229,11 @@
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 24px;
-  padding: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -260,8 +252,8 @@
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .stat-icon {
@@ -310,12 +302,11 @@
 }
 
 .filters-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 2rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+  padding: 1.5rem;
 }
 
 /* UPDATED: Compact Filters Layout */
@@ -387,12 +378,7 @@
 }
 
 .classes-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 2rem;
+  padding: 0;
 }
 
 /* Loading states */
@@ -466,17 +452,17 @@
 
 .class-card {
   background: white;
-  border-radius: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #e5e7eb;
   position: relative;
 }
 
 .class-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .new-badge {
@@ -868,21 +854,14 @@
 }
 
 .loading-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 4rem 1rem;
 }
 
 .loading-content {
   text-align: center;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 3rem;
-  border-radius: 24px;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
 }
 
 .loading-spinner {
@@ -955,7 +934,7 @@
   }
 
   .header-card {
-    padding: 1.5rem;
+    padding: 0 0 1rem 0;
   }
 
   .header-content {
@@ -999,7 +978,7 @@
   }
 
   .filters-card {
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   /* Filters go to column on tablet */
@@ -1014,7 +993,7 @@
   }
 
   .classes-card {
-    padding: 1.5rem;
+    padding: 0;
   }
 
   .classes-grid {
@@ -1134,10 +1113,8 @@
     padding: 0.5rem;
   }
 
-  .header-card,
-  .filters-card,
-  .classes-card {
-    padding: 1rem;
+  .filters-card {
+    padding: 0.75rem;
   }
 
   .card-content {

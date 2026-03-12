@@ -749,7 +749,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   // FIX: Update loading condition to handle undefined admins
   if (loading && (!admins || admins.length === 0)) {
     return (
-      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50'} flex items-center justify-center`}>
+      <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="animate-spin text-purple-600" size={48} />
           <p className="text-slate-600 font-medium">
@@ -761,8 +761,8 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   }
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {error && (
           <div className="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
             <AlertCircle size={20} />

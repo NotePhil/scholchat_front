@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Building } from "lucide-react";
 import EstablishmentService from "../../../../../services/EstablishmentService";
 import ManageEstablishmentList from "../../establishment-management/ManageEstablishmentList";
 import ManageEstablishmentDetailsView from "../../establishment-management/ManageEstablishmentDetailsView";
 import CreateEstablishmentContent from "./CreateEstablishmentContent";
 
-const ManageEstablishmentContent = ({ onBack }) => {
+const ManageEstablishmentContent = ({ onBack, setActiveTab }) => {
   const [establishments, setEstablishments] = useState([]);
   const [selectedEstablishmentId, setSelectedEstablishmentId] = useState(null);
   const [editingEstablishment, setEditingEstablishment] = useState(null);
@@ -70,19 +70,19 @@ const ManageEstablishmentContent = ({ onBack }) => {
     setSuccessMessage("");
   };
 
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
     setSelectedEstablishmentId(null);
     setEditingEstablishment(null);
     setError("");
     setSuccessMessage("");
-  };
+  }, []);
 
-  const handleEditEstablishment = (establishment) => {
+  const handleEditEstablishment = useCallback((establishment) => {
     setEditingEstablishment(establishment);
     setSelectedEstablishmentId(null);
     setError("");
     setSuccessMessage("");
-  };
+  }, []);
 
   const handleDeleteEstablishment = async (establishmentId) => {
     try {
@@ -110,22 +110,8 @@ const ManageEstablishmentContent = ({ onBack }) => {
   };
 
   return (
-    <div
-      style={{
-        background: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)",
-        minHeight: "100vh",
-        padding: "24px",
-      }}
-    >
-      <div
-        style={{
-          background: "white",
-          borderRadius: "16px",
-          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.08)",
-          border: "1px solid #e1e4e8",
-          overflow: "hidden",
-        }}
-      >
+    <div className="p-4 sm:p-6">
+      <div>
         {!selectedEstablishmentId && !editingEstablishment ? (
           <div style={{ padding: "24px" }}>
             <div style={{ marginBottom: "24px" }}>
@@ -199,13 +185,14 @@ const ManageEstablishmentContent = ({ onBack }) => {
               onRefresh={handleRefresh}
               onDelete={handleDeleteEstablishment}
               onBack={onBack}
+              onNavigateToCreate={setActiveTab ? () => setActiveTab("create-establishment") : undefined}
             />
           </div>
         ) : editingEstablishment ? (
           <CreateEstablishmentContent
             editingEstablishment={editingEstablishment}
             onNavigateToManage={handleBackToList}
-            setActiveTab={() => handleBackToList()}
+            setActiveTab={handleBackToList}
           />
         ) : (
           <ManageEstablishmentDetailsView

@@ -208,7 +208,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
   if (!canManage) {
     return (
-      <div className={`min-h-screen ${bgClass} flex items-center justify-center p-6`}>
+      <div className="flex items-center justify-center py-20 p-6">
         <div className={`${cardBgClass} rounded-2xl shadow-lg border ${borderClass} p-8 text-center max-w-md`}>
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h2 className={`text-2xl font-bold ${textClass} mb-2`}>Accès Restreint</h2>
@@ -222,7 +222,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   }
 
   return (
-    <div className={`min-h-screen ${bgClass} p-6`}>
+    <div className="p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className={`${cardBgClass} rounded-2xl shadow-lg border ${borderClass} p-6 mb-6`}>

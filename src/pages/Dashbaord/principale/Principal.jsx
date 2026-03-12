@@ -289,7 +289,7 @@ const Principal = () => {
 
     // Only redirect if we don't have a dashboardType at all and we're not already on the right path
     if (!dashboardType && !location.pathname.includes(expectedDashboard)) {
-      navigate(`/schoolchat/Principal/${expectedDashboard}/dashboard`, { replace: true });
+      navigate(`/schoolchat/Principal/${expectedDashboard}/activities`, { replace: true });
     }
   }, [
     dashboardType,
@@ -306,11 +306,10 @@ const Principal = () => {
 
   // Set active tab based on URL section parameter
   useEffect(() => {
-    const targetTab = section || 'dashboard';
-    if (targetTab !== activeTab) {
-      dispatch(setActiveTabAction(targetTab));
+    if (section) {
+      dispatch(setActiveTabAction(section));
     }
-  }, [section, activeTab, dispatch]);
+  }, [section, dispatch]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -342,41 +341,37 @@ const Principal = () => {
 
   const handleTabChange = useCallback(
     (tab) => {
+      // Skip if already on this tab
+      if (tab === activeTab) return;
+
       setShowManageClass(false);
       dispatch(setActiveTabAction(tab));
 
-      // Update URL to reflect current section
-      const currentPath = location.pathname;
-      const pathParts = currentPath.split('/');
-
-      let basePath;
-      if (pathParts.length >= 4) {
-        // Already have /schoolchat/principal/DashboardType
-        basePath = pathParts.slice(0, 4).join('/');
-      } else {
-        // Build the base path from the dashboard type or role
-        let dashboard = dashboardType || 'AdminDashboard';
-        if (!dashboardType) {
-          if (normalizedUserRole === 'professor' || normalizedUserRole === 'tutor') {
-            dashboard = 'ProfessorDashboard';
-          } else if (normalizedUserRole === 'parent') {
-            dashboard = 'ParentDashboard';
-          } else if (normalizedUserRole === 'student') {
-            dashboard = 'StudentDashboard';
-          } else if (normalizedUserRole === 'gestionnaire') {
-            dashboard = 'GestionnaireDashboard';
-          }
+      // Build the dashboard base path
+      let dashboard = dashboardType;
+      if (!dashboard) {
+        if (isAdmin) {
+          dashboard = 'AdminDashboard';
+        } else if (normalizedUserRole === 'professor' || normalizedUserRole === 'tutor') {
+          dashboard = 'ProfessorDashboard';
+        } else if (normalizedUserRole === 'parent') {
+          dashboard = 'ParentDashboard';
+        } else if (normalizedUserRole === 'student') {
+          dashboard = 'StudentDashboard';
+        } else if (normalizedUserRole === 'gestionnaire') {
+          dashboard = 'GestionnaireDashboard';
+        } else {
+          dashboard = 'AdminDashboard';
         }
-        basePath = `/schoolchat/principal/${dashboard}`;
       }
 
-      navigate(`${basePath}/${tab}`, { replace: true });
+      navigate(`/schoolchat/Principal/${dashboard}/${tab}`);
 
       if (isMobile || isCustomBreakpoint) {
         dispatch(setSidebar(false));
       }
     },
-    [dispatch, isMobile, isCustomBreakpoint, navigate, location.pathname, dashboardType, normalizedUserRole]
+    [dispatch, isMobile, isCustomBreakpoint, navigate, dashboardType, normalizedUserRole, isAdmin, activeTab]
   );
 
   const handleManageClass = useCallback(() => {

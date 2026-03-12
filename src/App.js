@@ -268,13 +268,13 @@ function AnimatedRoutes({ theme, setTheme }) {
                   </Layout>
                 }
               />
-              <Route path="/schoolchat/principal" element={<Principal />} />
+              <Route path="/schoolchat/Principal" element={<Principal />} />
               <Route
-                path="/schoolchat/principal/:dashboardType"
+                path="/schoolchat/Principal/:dashboardType"
                 element={<Principal />}
               />
               <Route
-                path="/schoolchat/principal/:dashboardType/:section"
+                path="/schoolchat/Principal/:dashboardType/:section"
                 element={<Principal />}
               />
             </Route>

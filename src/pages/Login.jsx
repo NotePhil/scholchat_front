@@ -175,18 +175,18 @@ export const Login = ({ theme }) => {
       await new Promise((resolve) => setTimeout(resolve, 100));
       window.dispatchEvent(new Event("storage"));
 
-      let dashboardPath = "/schoolchat/Principal/AdminDashboard/dashboard";
+      let dashboardPath = "/schoolchat/Principal/AdminDashboard/activities";
 
       if (primaryRole === "ROLE_ADMIN") {
-        dashboardPath = "/schoolchat/Principal/AdminDashboard/dashboard";
+        dashboardPath = "/schoolchat/Principal/AdminDashboard/activities";
       } else if (primaryRole === "ROLE_PROFESSOR") {
-        dashboardPath = "/schoolchat/Principal/ProfessorDashboard/dashboard";
+        dashboardPath = "/schoolchat/Principal/ProfessorDashboard/activities";
       } else if (primaryRole === "ROLE_PARENT") {
-        dashboardPath = "/schoolchat/Principal/ParentDashboard/dashboard";
+        dashboardPath = "/schoolchat/Principal/ParentDashboard/activities";
       } else if (primaryRole === "ROLE_STUDENT") {
-        dashboardPath = "/schoolchat/Principal/StudentDashboard/dashboard";
+        dashboardPath = "/schoolchat/Principal/StudentDashboard/activities";
       } else if (primaryRole === "ROLE_TUTOR") {
-        dashboardPath = "/schoolchat/Principal/ProfessorDashboard/dashboard";
+        dashboardPath = "/schoolchat/Principal/ProfessorDashboard/activities";
       }
 
       navigateToStoredPage(primaryRole, dashboardPath);

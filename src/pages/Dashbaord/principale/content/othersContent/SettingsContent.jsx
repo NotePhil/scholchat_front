@@ -184,7 +184,7 @@ const SettingsContent = ({
 
   if (loading) {
     return (
-      <div className={`min-h-screen ${bgClass} flex items-center justify-center`}>
+      <div className="flex items-center justify-center py-20">
         <div className="flex items-center gap-3">
           <Loader className="w-6 h-6 animate-spin text-blue-600" />
           <span className={textClass}>Chargement des paramètres...</span>
@@ -194,7 +194,7 @@ const SettingsContent = ({
   }
 
   return (
-    <div className={`min-h-screen ${bgClass} transition-all duration-300`}>
+    <div className="transition-all duration-300">
       {/* Modern Header with Gradient */}
       <div className={`relative overflow-hidden ${isDark ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' : 'bg-gradient-to-br from-white via-blue-50 to-indigo-100'}`}>
         <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>

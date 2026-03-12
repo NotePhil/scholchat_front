@@ -272,7 +272,7 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
 
   if (dashboardData.loading) {
     return (
-      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
+      <div className="flex items-center justify-center py-20">
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto">
             <div className="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
@@ -288,7 +288,7 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
 
   if (dashboardData.error) {
     return (
-      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
+      <div className="flex items-center justify-center py-20">
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-red-100`}>
           <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="h-8 w-8" />
@@ -307,7 +307,7 @@ const GestionnaireDashboardContent = ({ isDark, currentTheme, themes, colorSchem
   }
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div>
       {/* Header */}
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b relative overflow-hidden`}>
         {!isMobile && <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-blue-50 to-transparent opacity-50"></div>}

@@ -490,7 +490,7 @@ const ActivitiesContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div>
       {/* Facebook-like Layout: Sidebar + Main Content */}
       <div className="mx-auto max-w-7xl">
         <div className="flex gap-0 lg:gap-6">

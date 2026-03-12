@@ -200,15 +200,8 @@ const ManageExercisesContent = ({ onBack }) => {
     userRoles.includes("ROLE_ADMIN");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-2 sm:p-4 lg:p-6">
-      <Card
-        className="max-w-7xl mx-auto"
-        style={{
-          borderRadius: "16px",
-          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.08)",
-          border: "1px solid #e1e4e8",
-        }}
-      >
+    <div className="p-2 sm:p-4 lg:p-6">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="p-4 sm:p-6">
           <div className="mb-4 sm:mb-6">
@@ -359,7 +352,7 @@ const ManageExercisesContent = ({ onBack }) => {
             </Tabs>
           )}
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

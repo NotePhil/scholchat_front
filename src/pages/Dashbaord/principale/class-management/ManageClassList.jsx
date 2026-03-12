@@ -319,7 +319,7 @@ const ManageClassList = ({
 
   if (isMobile) {
     return (
-      <ManageClassListMobile 
+      <ManageClassListMobile
         classes={sortedAndFilteredClasses}
         loading={loading}
         searchTerm={searchTerm}
@@ -328,6 +328,7 @@ const ManageClassList = ({
         handleEditClass={handleEditClass}
         pendingRequests={pendingRequests}
         onRefresh={handleRefreshWithRequests}
+        onNavigateToCreate={onNavigateToCreate}
       />
     );
   }

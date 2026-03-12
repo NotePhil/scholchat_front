@@ -492,7 +492,7 @@ const ClassesListContent = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="text-center">
           <Loader className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600">Chargement des classes...</p>
@@ -502,7 +502,7 @@ const ClassesListContent = ({
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 ${isMobile ? 'py-4 px-2' : 'py-8 px-4'}`}>
+    <div className={`${isMobile ? 'py-4 px-2' : 'py-4 px-4'}`}>
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
           <div className={`bg-gradient-to-r from-blue-600 to-indigo-600 ${isMobile ? 'px-4 py-3' : 'px-8 py-6'}`}>

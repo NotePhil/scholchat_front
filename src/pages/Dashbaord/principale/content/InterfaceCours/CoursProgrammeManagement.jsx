@@ -423,7 +423,7 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
 
   // Main courses list view
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div>
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg mb-6 overflow-hidden">
