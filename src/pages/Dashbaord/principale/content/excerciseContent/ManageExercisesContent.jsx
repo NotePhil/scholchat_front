@@ -7,33 +7,30 @@ import {
   Button,
   message,
   Spin,
-  Tabs,
 } from "antd";
 import {
   BookOutlined,
   PlusOutlined,
-  EyeOutlined,
-  EditOutlined,
   ArrowLeftOutlined,
 } from "@ant-design/icons";
 import { exerciseService } from "../../../../../services/exerciseService";
 import { exerciseProgrammerService } from "../../../../../services/exerciseService";
 import ExerciseList from "./ExerciseList";
 import CreateExerciseForm from "./CreateExerciseForm";
+import EditExerciseForm from "./EditExerciseForm";
 import ExerciseDetailsView from "./ExerciseDetailsView";
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 
 const ManageExercisesContent = ({ onBack }) => {
   const [exercises, setExercises] = useState([]);
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingExerciseId, setEditingExerciseId] = useState(null);
+  const [currentView, setCurrentView] = useState("list"); // list, create, details, edit
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [activeTab, setActiveTab] = useState("list");
 
   // Auto-clear messages
   useEffect(() => {
@@ -115,22 +112,29 @@ const ManageExercisesContent = ({ onBack }) => {
 
   const handleSelectExercise = (exerciseId) => {
     setSelectedExerciseId(exerciseId);
-    setActiveTab("details");
+    setCurrentView("details");
     setError("");
     setSuccessMessage("");
   };
 
   const handleBackToList = () => {
     setSelectedExerciseId(null);
-    setShowCreateForm(false);
-    setActiveTab("list");
+    setEditingExerciseId(null);
+    setCurrentView("list");
     setError("");
     setSuccessMessage("");
   };
 
   const handleShowCreateForm = () => {
-    setShowCreateForm(true);
-    setActiveTab("create");
+    setCurrentView("create");
+    setError("");
+    setSuccessMessage("");
+  };
+
+  const handleShowEditForm = (exerciseId) => {
+    setEditingExerciseId(exerciseId);
+    setSelectedExerciseId(null);
+    setCurrentView("edit");
     setError("");
     setSuccessMessage("");
   };
@@ -140,9 +144,8 @@ const ManageExercisesContent = ({ onBack }) => {
       const newExercise = await exerciseService.createExercise(exerciseData);
       setSuccessMessage("Exercice créé avec succès");
       message.success("Exercice créé avec succès");
-      setShowCreateForm(false);
-      setActiveTab("list");
-      await fetchExercises(); // Refresh the list
+      setCurrentView("list");
+      await fetchExercises();
       return newExercise;
     } catch (error) {
       console.error("Error creating exercise:", error);
@@ -202,156 +205,190 @@ const ManageExercisesContent = ({ onBack }) => {
   return (
     <div className="p-2 sm:p-4 lg:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="p-4 sm:p-6">
-          <div className="mb-4 sm:mb-6">
-            <div className="flex items-center gap-2 sm:gap-3 mb-3">
-              {onBack && (
+        {/* List View */}
+        {currentView === "list" && (
+          <div className="p-4 sm:p-6">
+            <div className="mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                {onBack && (
+                  <Button
+                    icon={<ArrowLeftOutlined />}
+                    onClick={onBack}
+                    type="text"
+                    size="middle"
+                  />
+                )}
+                <Space align="center">
+                  <BookOutlined
+                    className="text-xl sm:text-2xl"
+                    style={{ color: "#4a6da7" }}
+                  />
+                  <Title level={2} className="m-0 text-lg sm:text-2xl">
+                    Gestion des Exercices
+                  </Title>
+                </Space>
+              </div>
+              <Text
+                type="secondary"
+                className="text-sm sm:text-base block pl-0 sm:pl-10"
+              >
+                Créez, gérez et programmez des exercices pour vos classes
+              </Text>
+            </div>
+
+            {successMessage && (
+              <Alert
+                message={successMessage}
+                type="success"
+                showIcon
+                closable
+                className="mb-4"
+                style={{ borderRadius: "8px" }}
+                onClose={() => setSuccessMessage("")}
+              />
+            )}
+
+            {error && (
+              <Alert
+                message={error}
+                type="error"
+                showIcon
+                closable
+                className="mb-4"
+                style={{ borderRadius: "8px" }}
+                onClose={() => setError("")}
+              />
+            )}
+
+            {loading && !refreshing ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Spin size="large" />
+                <Text className="mt-4 text-sm sm:text-base">
+                  Chargement des exercices...
+                </Text>
+              </div>
+            ) : (
+              <ExerciseList
+                exercises={exercises}
+                loading={loading}
+                error={error}
+                successMessage={successMessage}
+                refreshing={refreshing}
+                onSelectExercise={handleSelectExercise}
+                onRefresh={handleRefresh}
+                onDelete={handleDeleteExercise}
+                onBack={onBack}
+                onCreateExercise={
+                  canCreateExercise ? handleShowCreateForm : null
+                }
+                canCreate={canCreateExercise}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Create View */}
+        {currentView === "create" && (
+          <div className="p-4 sm:p-6">
+            <div className="mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3">
                 <Button
                   icon={<ArrowLeftOutlined />}
-                  onClick={onBack}
+                  onClick={handleBackToList}
                   type="text"
                   size="middle"
                 />
-              )}
-              <Space align="center">
-                <BookOutlined
-                  className="text-xl sm:text-2xl"
-                  style={{ color: "#4a6da7" }}
-                />
-                <Title level={2} className="m-0 text-lg sm:text-2xl">
-                  Gestion des Exercices
-                </Title>
-              </Space>
+                <Space align="center">
+                  <PlusOutlined
+                    className="text-xl sm:text-2xl"
+                    style={{ color: "#4a6da7" }}
+                  />
+                  <Title level={2} className="m-0 text-lg sm:text-2xl">
+                    Créer un Exercice
+                  </Title>
+                </Space>
+              </div>
             </div>
-            <Text
-              type="secondary"
-              className="text-sm sm:text-base block pl-0 sm:pl-10"
-            >
-              Créez, gérez et programmez des exercices pour vos classes
-            </Text>
+
+            {error && (
+              <Alert
+                message={error}
+                type="error"
+                showIcon
+                closable
+                className="mb-4"
+                style={{ borderRadius: "8px" }}
+                onClose={() => setError("")}
+              />
+            )}
+
+            <CreateExerciseForm
+              onSubmit={handleCreateExercise}
+              onCancel={handleBackToList}
+              onError={setError}
+              onSuccess={setSuccessMessage}
+            />
           </div>
+        )}
 
-          {/* Success Message */}
-          {successMessage && (
-            <Alert
-              message={successMessage}
-              type="success"
-              showIcon
-              closable
-              className="mb-4"
-              style={{ borderRadius: "8px" }}
-              onClose={() => setSuccessMessage("")}
-            />
-          )}
+        {/* Details View */}
+        {currentView === "details" && selectedExerciseId && (
+          <ExerciseDetailsView
+            exerciseId={selectedExerciseId}
+            onBack={handleBackToList}
+            onRefresh={handleRefresh}
+            onError={setError}
+            onSuccess={setSuccessMessage}
+            onUpdate={handleUpdateExercise}
+            onDelete={handleDeleteExercise}
+            onEdit={handleShowEditForm}
+          />
+        )}
 
-          {/* Error Message */}
-          {error && (
-            <Alert
-              message={error}
-              type="error"
-              showIcon
-              closable
-              className="mb-4"
-              style={{ borderRadius: "8px" }}
-              onClose={() => setError("")}
-            />
-          )}
-
-          {/* Loading State */}
-          {loading && !refreshing ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Spin size="large" />
-              <Text className="mt-4 text-sm sm:text-base">
-                Chargement des exercices...
-              </Text>
-            </div>
-          ) : (
-            <Tabs
-              activeKey={activeTab}
-              onChange={setActiveTab}
-              type="card"
-              size="large"
-              className="exercise-tabs"
-            >
-              <TabPane
-                tab={
-                  <span className="text-xs sm:text-sm">
-                    <EyeOutlined />
-                    <span className="ml-1 hidden sm:inline">
-                      Liste des Exercices
-                    </span>
-                    <span className="ml-1 sm:hidden">Liste</span>
-                  </span>
-                }
-                key="list"
-              >
-                <ExerciseList
-                  exercises={exercises}
-                  loading={loading}
-                  error={error}
-                  successMessage={successMessage}
-                  refreshing={refreshing}
-                  onSelectExercise={handleSelectExercise}
-                  onRefresh={handleRefresh}
-                  onDelete={handleDeleteExercise}
-                  onBack={onBack}
-                  onCreateExercise={
-                    canCreateExercise ? handleShowCreateForm : null
-                  }
-                  canCreate={canCreateExercise}
+        {/* Edit View */}
+        {currentView === "edit" && editingExerciseId && (
+          <div className="p-4 sm:p-6">
+            <div className="mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                <Button
+                  icon={<ArrowLeftOutlined />}
+                  onClick={handleBackToList}
+                  type="text"
+                  size="middle"
                 />
-              </TabPane>
-
-              {canCreateExercise && (
-                <TabPane
-                  tab={
-                    <span className="text-xs sm:text-sm">
-                      <PlusOutlined />
-                      <span className="ml-1 hidden sm:inline">
-                        Créer un Exercice
-                      </span>
-                      <span className="ml-1 sm:hidden">Créer</span>
-                    </span>
-                  }
-                  key="create"
-                >
-                  <CreateExerciseForm
-                    onSubmit={handleCreateExercise}
-                    onCancel={handleBackToList}
-                    onError={setError}
-                    onSuccess={setSuccessMessage}
+                <Space align="center">
+                  <BookOutlined
+                    className="text-xl sm:text-2xl"
+                    style={{ color: "#4a6da7" }}
                   />
-                </TabPane>
-              )}
+                  <Title level={2} className="m-0 text-lg sm:text-2xl">
+                    Modifier l'Exercice
+                  </Title>
+                </Space>
+              </div>
+            </div>
 
-              {selectedExerciseId && (
-                <TabPane
-                  tab={
-                    <span className="text-xs sm:text-sm">
-                      <EditOutlined />
-                      <span className="ml-1 hidden sm:inline">
-                        Détails de l'Exercice
-                      </span>
-                      <span className="ml-1 sm:hidden">Détails</span>
-                    </span>
-                  }
-                  key="details"
-                >
-                  <ExerciseDetailsView
-                    exerciseId={selectedExerciseId}
-                    onBack={handleBackToList}
-                    onRefresh={handleRefresh}
-                    onError={setError}
-                    onSuccess={setSuccessMessage}
-                    onUpdate={handleUpdateExercise}
-                    onDelete={handleDeleteExercise}
-                  />
-                </TabPane>
-              )}
-            </Tabs>
-          )}
-        </div>
+            {error && (
+              <Alert
+                message={error}
+                type="error"
+                showIcon
+                closable
+                className="mb-4"
+                style={{ borderRadius: "8px" }}
+                onClose={() => setError("")}
+              />
+            )}
+
+            <EditExerciseForm
+              exerciseId={editingExerciseId}
+              onSubmit={handleUpdateExercise}
+              onCancel={handleBackToList}
+              onError={setError}
+              onSuccess={setSuccessMessage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

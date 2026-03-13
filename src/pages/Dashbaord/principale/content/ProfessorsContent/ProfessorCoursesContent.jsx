@@ -49,6 +49,7 @@ const COURSE_STATES = {
 };
 
 const ProfessorCoursesContent = ({ setActiveTab }) => {
+  const isMobile = useSelector((state) => state.ui.isMobile);
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -241,8 +242,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       />
     );
   }
-
-  const isMobile = useSelector((state) => state.ui.isMobile);
 
   if (isMobile && !showCreateForm && !showEditForm && !showCourseContent) {
     return (

@@ -25,9 +25,10 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
+const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [matieres, setMatieres] = useState([]);
   const [loadingMatieres, setLoadingMatieres] = useState(false);
@@ -70,7 +71,10 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
 
   useEffect(() => {
     fetchMatieres();
-  }, []);
+    if (exerciseId) {
+      loadExerciseData();
+    }
+  }, [exerciseId]);
 
   const fetchMatieres = async () => {
     try {
@@ -83,6 +87,29 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
       setMatieres([]);
     } finally {
       setLoadingMatieres(false);
+    }
+  };
+
+  const loadExerciseData = async () => {
+    try {
+      setLoading(true);
+      const exerciseData = await exerciseService.getExerciseById(exerciseId);
+      const questionsData = await questionReponseService.getQuestionsByExercise(exerciseId);
+      
+      form.setFieldsValue({
+        nom: exerciseData.nom || "",
+        description: exerciseData.description || "",
+        niveau: exerciseData.niveau || "",
+        restriction: exerciseData.restriction || "PRIVE",
+      });
+      
+      setQuestions(questionsData || []);
+    } catch (error) {
+      console.error("Error loading exercise data:", error);
+      setError("Erreur lors du chargement de l'exercice");
+      onError?.("Erreur lors du chargement de l'exercice");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,11 +128,10 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
 
   const handleTypeQuestionChange = (value) => {
     const isAssociationOrClassement = value === "ASSOCIATION" || value === "CLASSEMENT";
-    // Conserver l'intitulé et les points lors du changement de type
     setCurrentQuestion(prev => ({
-      intitule: prev.intitule, // Garder l'intitulé existant
+      intitule: prev.intitule,
       typeQuestion: value,
-      points: prev.points, // Garder les points existants
+      points: prev.points,
       choixReponses: [{ texte: "", estCorrect: isAssociationOrClassement, ordreAffichage: 1 }],
       reponseAttendueVraiFaux: false,
       reponseAttendueCourte: "",
@@ -216,12 +242,39 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
   };
 
   const handleEditQuestion = (index) => {
-    setCurrentQuestion(questions[index]);
+    const question = questions[index];
+    const type = question.typeQuestion;
+    const isAssociationOrClassement = type === "ASSOCIATION" || type === "CLASSEMENT";
+    
+    // Ensure all required fields are present
+    setCurrentQuestion({
+      ...question,
+      choixReponses: question.choixReponses || [{ texte: "", estCorrect: isAssociationOrClassement, ordreAffichage: 1 }],
+      reponseAttendueVraiFaux: question.reponseAttendueVraiFaux ?? false,
+      reponseAttendueCourte: question.reponseAttendueCourte || "",
+      reponseAttendueLongue: question.reponseAttendueLongue || ""
+    });
     setEditingQuestionIndex(index);
   };
 
   const handleRemoveQuestion = (index) => {
-    setQuestions(questions.filter((_, i) => i !== index));
+    const question = questions[index];
+    if (question.id) {
+      // If question has an ID, delete it from backend
+      questionReponseService.deleteQuestion(question.id)
+        .then(() => {
+          message.success("Question supprimée");
+          setQuestions(questions.filter((_, i) => i !== index));
+        })
+        .catch(error => {
+          console.error("Error deleting question:", error);
+          message.error("Erreur lors de la suppression de la question");
+        });
+    } else {
+      // If no ID, just remove from local state
+      setQuestions(questions.filter((_, i) => i !== index));
+    }
+    
     if (editingQuestionIndex === index) {
       resetCurrentQuestion();
       setEditingQuestionIndex(null);
@@ -230,68 +283,51 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
 
   const handleSubmit = async (values) => {
     try {
-      setLoading(true);
+      setSaving(true);
       setError("");
-
-      const userId =
-        sessionStorage.getItem("userId") ||
-        localStorage.getItem("userId") ||
-        sessionStorage.getItem("user_id") ||
-        localStorage.getItem("user_id");
-
-      if (!userId) {
-        throw new Error("Utilisateur non connecté. Veuillez vous reconnecter.");
-      }
 
       const exerciseData = {
         nom: values.nom,
         description: values.description,
         niveau: values.niveau,
         restriction: values.restriction || "PRIVE",
-        redacteurId: userId,
-        etat: "BROUILLON",
       };
 
-      const createdExercise = await onSubmit(exerciseData);
+      await onSubmit(exerciseId, exerciseData);
       
-      if (createdExercise?.id) {
-        // Associate matieres
-        if (values.matiereIds && values.matiereIds.length > 0) {
-          for (const matiereId of values.matiereIds) {
-            try {
-              await exerciseService.lierExerciseAMatiere(createdExercise.id, matiereId);
-            } catch (err) {
-              console.error("Error associating matiere:", err);
-            }
-          }
-        }
-
-        // Create questions
-        if (questions.length > 0) {
-          for (const question of questions) {
-            try {
-              const payload = buildQuestionPayload(question);
-              await questionReponseService.createQuestion(createdExercise.id, payload);
-            } catch (err) {
-              console.error("Error creating question:", err);
-            }
-          }
-          message.success(`Exercice créé avec ${questions.length} question(s)`);
+      // Update questions
+      const existingQuestions = questions.filter(q => q.id);
+      const newQuestions = questions.filter(q => !q.id);
+      
+      // Update existing questions
+      for (const question of existingQuestions) {
+        try {
+          const payload = buildQuestionPayload(question);
+          await questionReponseService.updateQuestion(question.id, payload);
+        } catch (err) {
+          console.error("Error updating question:", err);
         }
       }
       
-      form.resetFields();
-      setQuestions([]);
-      resetCurrentQuestion();
-      onSuccess?.("Exercice créé avec succès");
+      // Create new questions
+      for (const question of newQuestions) {
+        try {
+          const payload = buildQuestionPayload(question);
+          await questionReponseService.createQuestion(exerciseId, payload);
+        } catch (err) {
+          console.error("Error creating question:", err);
+        }
+      }
+      
+      message.success("Exercice mis à jour avec succès");
+      onSuccess?.("Exercice mis à jour avec succès");
     } catch (error) {
-      console.error("Error creating exercise:", error);
-      const errorMessage =
-        error.message || "Erreur lors de la création de l'exercice";
+      console.error("Error updating exercise:", error);
+      const errorMessage = error.message || "Erreur lors de la mise à jour de l'exercice";
       setError(errorMessage);
       onError?.(errorMessage);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -307,6 +343,7 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
     const type = currentQuestion.typeQuestion;
 
     if (type === "QCM" || type === "ASSOCIATION" || type === "CLASSEMENT") {
+      const choixReponses = currentQuestion.choixReponses || [];
       return (
         <div>
           <div className="mb-2">
@@ -316,7 +353,7 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
                "Éléments à classer (dans l'ordre)"}
             </Text>
           </div>
-          {currentQuestion.choixReponses.map((choix, index) => (
+          {choixReponses.map((choix, index) => (
             <div key={index} className="flex gap-2 mb-2 items-center">
               {type === "QCM" && (
                 <input
@@ -331,7 +368,7 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
                 onChange={(e) => handleChoixChange(index, "texte", e.target.value)}
                 style={{ flex: 1 }}
               />
-              {currentQuestion.choixReponses.length > 2 && (
+              {choixReponses.length > 2 && (
                 <Button
                   type="text"
                   danger
@@ -409,6 +446,17 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
     return null;
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-96 p-4">
+        <Spin size="large" />
+        <Text className="mt-3 text-sm sm:text-base">
+          Chargement de l'exercice...
+        </Text>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-4">
       <Card bordered={false} className="shadow-sm">
@@ -416,11 +464,11 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
           <Title level={3} className="flex items-center gap-2 mb-2">
             <BookOutlined className="text-blue-500" />
             <span className="text-lg sm:text-2xl">
-              Créer un Nouvel Exercice
+              Modifier l'Exercice
             </span>
           </Title>
           <Text type="secondary" className="text-sm sm:text-base">
-            Remplissez les informations de base pour créer un nouvel exercice
+            Modifiez les informations de l'exercice et ses questions
           </Text>
         </div>
 
@@ -504,41 +552,11 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
                   rules={[
                     { required: true, message: "La visibilité est requise" },
                   ]}
-                  initialValue="PRIVE"
                 >
                   <Select>
                     {restrictionOptions.map((option) => (
                       <Option key={option.value} value={option.value}>
                         {option.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-
-                <Form.Item
-                  name="matiereIds"
-                  label="Matières associées"
-                  tooltip="Sélectionnez une ou plusieurs matières pour cet exercice"
-                >
-                  <Select
-                    mode="multiple"
-                    placeholder="Sélectionnez les matières"
-                    loading={loadingMatieres}
-                    allowClear
-                    showSearch
-                    optionFilterProp="children"
-                    notFoundContent={
-                      loadingMatieres ? (
-                        <Spin size="small" />
-                      ) : (
-                        "Aucune matière disponible"
-                      )
-                    }
-                  >
-                    {matieres.map((matiere) => (
-                      <Option key={matiere.id} value={matiere.id}>
-                        {matiere.nom}{" "}
-                        {matiere.description && `- ${matiere.description}`}
                       </Option>
                     ))}
                   </Select>
@@ -595,7 +613,7 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
             {questions.length > 0 && (
               <div className="mb-4">
                 <Text type="secondary" className="text-xs mb-2 block">
-                  Questions ajoutées (cliquez pour modifier):
+                  Questions (cliquez pour modifier):
                 </Text>
                 <Space size="small" wrap>
                   {questions.map((q, index) => (
@@ -690,7 +708,7 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
             <Button
               size="large"
               onClick={handleCancel}
-              disabled={loading}
+              disabled={saving}
               icon={<CloseOutlined />}
               block
               className="sm:w-auto"
@@ -701,32 +719,18 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
               type="primary"
               size="large"
               htmlType="submit"
-              loading={loading}
+              loading={saving}
               icon={<SaveOutlined />}
               block
               className="sm:w-auto"
             >
-              Créer l'Exercice
+              Enregistrer les Modifications
             </Button>
           </div>
         </Form>
-      </Card>
-
-      <Card className="mt-4 sm:mt-6" size="small">
-        <Title level={5} className="text-sm sm:text-base mb-3">
-          Conseils pour créer un bon exercice
-        </Title>
-        <div className="space-y-2 text-xs sm:text-sm text-gray-600">
-          <p>• Choisissez un nom clair et descriptif</p>
-          <p>• Sélectionnez le niveau approprié pour vos étudiants</p>
-          <p>• Rédigez une description complète avec les objectifs pédagogiques</p>
-          <p>• Associez les matières pertinentes pour faciliter la recherche</p>
-          <p>• Utilisez la visibilité "Privé" pour limiter l'accès à vos classes</p>
-          <p>• Ajoutez des questions directement lors de la création de l'exercice</p>
-        </div>
       </Card>
     </div>
   );
 };
 
-export default CreateExerciseForm;
+export default EditExerciseForm;

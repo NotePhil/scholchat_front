@@ -102,6 +102,29 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
     setSuccessMessage("");
   };
 
+  // Navigation handlers for course and exercise management
+  const handleNavigateToCourseCreation = (classId) => {
+    console.log("Navigating to course creation for class:", classId);
+    if (setActiveTab) {
+      // Store the class ID in localStorage for the course creation page
+      localStorage.setItem("selectedClassId", classId);
+      setActiveTab("create-course");
+    } else {
+      message.warning("Navigation non disponible");
+    }
+  };
+
+  const handleNavigateToExerciseManagement = (classId) => {
+    console.log("Navigating to exercise management for class:", classId);
+    if (setActiveTab) {
+      // Store the class ID in localStorage for the exercise management page
+      localStorage.setItem("selectedClassId", classId);
+      setActiveTab("manage-exercises");
+    } else {
+      message.warning("Navigation non disponible");
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6">
       <div>
@@ -161,6 +184,8 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
             onRefresh={handleRefresh}
             onError={setError}
             onSuccess={setSuccessMessage}
+            onNavigateToCourseCreation={handleNavigateToCourseCreation}
+            onNavigateToExerciseManagement={handleNavigateToExerciseManagement}
           />
         )}
       </div>

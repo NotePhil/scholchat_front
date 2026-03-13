@@ -37,7 +37,9 @@ import {
   UserOutlined,
   SearchOutlined,
   CrownOutlined,
-  CopyOutlined, // Add this line
+  CopyOutlined,
+  FileTextOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { Row, Col, Descriptions } from "antd";
 import { classService } from "../../../../services/ClassService";
@@ -109,7 +111,7 @@ const RenderUserModal = ({ user, visible, onClose }) => {
   }
 };
 
-const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
+const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCourseCreation, onNavigateToExerciseManagement }) => {
   const [classDetails, setClassDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(initialTab || "overview");
@@ -277,13 +279,18 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
         details.droitPublication || "PROFESSEURS_SEULEMENT"
       );
 
-      // Load all user data in parallel
-      await Promise.all([
-        loadUsersWithAccess(),
-        loadAccessRequests(),
-        loadModeratorsAndRights(),
-        loadStudentsAlternative(), // Alternative method to ensure students are loaded
-      ]);
+      // Load all user data in sequence to avoid race conditions
+      // First load users with access (from acceder API)
+      await loadUsersWithAccess();
+      
+      // Then load access requests
+      await loadAccessRequests();
+      
+      // Then load and MERGE publication rights users (this will add any missing professors)
+      await loadModeratorsAndRights();
+      
+      // Finally, try alternative student loading if needed
+      await loadStudentsAlternative();
     } catch (error) {
       message.error("Erreur lors du chargement des détails de la classe");
       console.error("Error loading class details:", error);
@@ -344,16 +351,88 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
       const rightsResult =
         await PublicationRightsService.getUsersWithRightsForClass(classId);
       if (rightsResult.success) {
-        setUsersWithPublicationRights(rightsResult.data || []);
-        console.log("Users with publication rights:", rightsResult.data);
-      }
+        const rightsUsers = rightsResult.data || [];
+        setUsersWithPublicationRights(rightsUsers);
+        console.log("Users with publication rights:", rightsUsers);
 
-      // Get moderators (users with moderation rights)
-      const moderators = (rightsResult.data || []).filter(
-        (user) => user.peutModerer
-      );
-      setModeratorsWithRights(moderators);
-      console.log("Moderators with rights:", moderators);
+        // Get moderators (users with moderation rights)
+        const moderators = rightsUsers.filter((user) => user.peutModerer);
+        setModeratorsWithRights(moderators);
+        console.log("Moderators with rights:", moderators);
+
+        // IMPORTANT: Merge publication rights users into the main users state
+        // This ensures professors with publication rights are displayed in the table
+        if (rightsUsers.length > 0) {
+          setUsers((prevUsers) => {
+            // Get existing IDs to avoid duplicates
+            const existingIds = new Set([
+              ...prevUsers.professeurs.map(u => u.id),
+              ...prevUsers.eleves.map(u => u.id),
+              ...prevUsers.parents.map(u => u.id),
+              ...prevUsers.utilisateurs.map(u => u.id)
+            ]);
+            
+            console.log("Existing user IDs before merge:", Array.from(existingIds));
+            
+            const categorized = { professeurs: [], eleves: [], parents: [], utilisateurs: [] };
+            
+            rightsUsers.forEach((user) => {
+              // Only add if not already in the list
+              if (!existingIds.has(user.id)) {
+                const userType = (user.type || "").toLowerCase();
+                
+                if (userType === "professeur") {
+                  categorized.professeurs.push({ ...user, typeUtilisateur: "PROFESSEUR" });
+                } else if (userType === "eleve" || userType === "élève") {
+                  categorized.eleves.push({ ...user, typeUtilisateur: "ELEVE" });
+                } else if (userType === "parent") {
+                  categorized.parents.push({ ...user, typeUtilisateur: "PARENT" });
+                } else {
+                  categorized.utilisateurs.push({ ...user, typeUtilisateur: "UTILISATEUR" });
+                }
+              } else {
+                console.log(`Skipping user ${user.id} - already exists`);
+              }
+            });
+
+            console.log("Merging publication rights users:", categorized);
+            
+            // Only update if we have new users to add
+            if (categorized.professeurs.length > 0 || categorized.eleves.length > 0 || 
+                categorized.parents.length > 0 || categorized.utilisateurs.length > 0) {
+              
+              const newState = {
+                professeurs: [...prevUsers.professeurs, ...categorized.professeurs],
+                eleves: [...prevUsers.eleves, ...categorized.eleves],
+                parents: [...prevUsers.parents, ...categorized.parents],
+                utilisateurs: [...prevUsers.utilisateurs, ...categorized.utilisateurs],
+                accessRequests: prevUsers.accessRequests
+              };
+              
+              console.log("New users state after merge:", {
+                professeurs: newState.professeurs.length,
+                eleves: newState.eleves.length,
+                parents: newState.parents.length,
+                utilisateurs: newState.utilisateurs.length
+              });
+              
+              // Update statistics
+              setStatistics((prevStats) => ({
+                professeurs: newState.professeurs.length,
+                eleves: newState.eleves.length,
+                parents: newState.parents.length,
+                utilisateurs: newState.utilisateurs.length,
+                accessRequests: prevStats.accessRequests
+              }));
+              
+              return newState;
+            } else {
+              console.log("No new users to merge - keeping existing state");
+              return prevUsers;
+            }
+          });
+        }
+      }
     } catch (error) {
       console.error("Error loading moderator and rights info:", error);
     }
@@ -368,23 +447,11 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
       );
       console.log("Raw users with access:", usersWithAccess);
       
-      // If no users have access yet, initialize empty arrays but still load reference data
+      // If no users have access yet, don't reset - just log and continue
+      // This allows publication rights data to be loaded next
       if (!usersWithAccess || usersWithAccess.length === 0) {
-        console.log("No users with access found for this class");
-        setUsers({
-          professeurs: [],
-          eleves: [],
-          parents: [],
-          utilisateurs: [],
-          accessRequests: []
-        });
-        setStatistics({
-          professeurs: 0,
-          eleves: 0,
-          parents: 0,
-          utilisateurs: 0,
-          accessRequests: 0
-        });
+        console.log("No users with access found for this class - will check publication rights");
+        // Don't reset the users state - just return and let other methods populate it
         return;
       }
 
@@ -398,9 +465,9 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
 
       // Get all user data in parallel for better categorization
       const [allProfessors, allStudents, allParents] = await Promise.all([
-        scholchatService.getAllProfessors().catch(() => []),
-        scholchatService.getAllStudents().catch(() => []),
-        scholchatService.getAllParents().catch(() => []),
+        scholchatService.getAllProfessors().catch((err) => { console.log("Error loading professors:", err); return []; }),
+        scholchatService.getAllStudents().catch((err) => { console.log("Error loading students:", err); return []; }),
+        scholchatService.getAllParents().catch((err) => { console.log("Error loading parents:", err); return []; }),
       ]);
 
       console.log("Reference data loaded:", {
@@ -412,6 +479,9 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
       // Process each user with access
       for (const user of usersWithAccess) {
         let categorized = false;
+        let fullUserData = null;
+
+        console.log(`Processing user from access API: ${user.id} - ${user.prenom} ${user.nom}`);
 
         // First, try to categorize by explicit type markers
         const userType = (
@@ -421,53 +491,52 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
           ""
         ).toUpperCase();
 
-        console.log(
-          `Processing user ${user.id}: ${user.prenom} ${user.nom}, type: ${userType}`
-        );
-
         // Try exact type matching first
-        switch (userType) {
-          case "PROFESSEUR":
-          case "PROFESSOR":
-            const professorData =
-              allProfessors.find((p) => p.id === user.id) || user;
-            categorizedUsers.professeurs.push({
-              ...professorData,
-              type: "PROFESSEUR",
-              typeUtilisateur: "PROFESSEUR",
-            });
-            categorized = true;
-            console.log("Categorized as professor:", professorData);
-            break;
+        if (userType) {
+          console.log(`User has explicit type: ${userType}`);
+          switch (userType) {
+            case "PROFESSEUR":
+            case "PROFESSOR":
+              fullUserData = allProfessors.find((p) => p.id === user.id) || user;
+              categorizedUsers.professeurs.push({
+                ...fullUserData,
+                type: "PROFESSEUR",
+                typeUtilisateur: "PROFESSEUR",
+              });
+              categorized = true;
+              console.log("✓ Categorized as professor by type");
+              break;
 
-          case "ELEVE":
-          case "ÉLÈVE":
-          case "STUDENT":
-            const studentData =
-              allStudents.find((s) => s.id === user.id) || user;
-            categorizedUsers.eleves.push({
-              ...studentData,
-              type: "ELEVE",
-              typeUtilisateur: "ELEVE",
-            });
-            categorized = true;
-            console.log("Categorized as student:", studentData);
-            break;
+            case "ELEVE":
+            case "ÉLÈVE":
+            case "STUDENT":
+              fullUserData = allStudents.find((s) => s.id === user.id) || user;
+              categorizedUsers.eleves.push({
+                ...fullUserData,
+                type: "ELEVE",
+                typeUtilisateur: "ELEVE",
+              });
+              categorized = true;
+              console.log("✓ Categorized as student by type");
+              break;
 
-          case "PARENT":
-            const parentData = allParents.find((p) => p.id === user.id) || user;
-            categorizedUsers.parents.push({
-              ...parentData,
-              type: "PARENT",
-              typeUtilisateur: "PARENT",
-            });
-            categorized = true;
-            console.log("Categorized as parent:", parentData);
-            break;
+            case "PARENT":
+              fullUserData = allParents.find((p) => p.id === user.id) || user;
+              categorizedUsers.parents.push({
+                ...fullUserData,
+                type: "PARENT",
+                typeUtilisateur: "PARENT",
+              });
+              categorized = true;
+              console.log("✓ Categorized as parent by type");
+              break;
+          }
         }
 
-        // If not categorized by type, try to find them in the reference data
+        // If not categorized by type, try to find them in the reference data by ID
         if (!categorized) {
+          console.log(`No explicit type, searching in reference data...`);
+          
           // Check if they exist in professors
           const foundProfessor = allProfessors.find((p) => p.id === user.id);
           if (foundProfessor) {
@@ -477,7 +546,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
               typeUtilisateur: "PROFESSEUR",
             });
             categorized = true;
-            console.log("Found and categorized as professor:", foundProfessor);
+            console.log("✓ Found and categorized as professor by ID match");
           }
 
           // Check if they exist in students
@@ -490,7 +559,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
                 typeUtilisateur: "ELEVE",
               });
               categorized = true;
-              console.log("Found and categorized as student:", foundStudent);
+              console.log("✓ Found and categorized as student by ID match");
             }
           }
 
@@ -504,13 +573,14 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
                 typeUtilisateur: "PARENT",
               });
               categorized = true;
-              console.log("Found and categorized as parent:", foundParent);
+              console.log("✓ Found and categorized as parent by ID match");
             }
           }
         }
 
         // If still not categorized, check by data structure characteristics
         if (!categorized) {
+          console.log(`Still not categorized, checking data structure...`);
           if (user.nomEtablissement || user.matriculeProfesseur) {
             categorizedUsers.professeurs.push({
               ...user,
@@ -518,7 +588,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
               typeUtilisateur: "PROFESSEUR",
             });
             categorized = true;
-            console.log("Categorized as professor by data structure:", user);
+            console.log("✓ Categorized as professor by data structure");
           } else if (user.niveau) {
             categorizedUsers.eleves.push({
               ...user,
@@ -526,7 +596,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
               typeUtilisateur: "ELEVE",
             });
             categorized = true;
-            console.log("Categorized as student by data structure:", user);
+            console.log("✓ Categorized as student by data structure");
           } else if (user.adresse && !user.niveau && !user.nomEtablissement) {
             categorizedUsers.parents.push({
               ...user,
@@ -534,22 +604,22 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
               typeUtilisateur: "PARENT",
             });
             categorized = true;
-            console.log("Categorized as parent by data structure:", user);
+            console.log("✓ Categorized as parent by data structure");
           }
         }
 
         // If still not categorized, put in utilisateurs
         if (!categorized) {
+          console.log("⚠ Could not categorize, adding to utilisateurs");
           categorizedUsers.utilisateurs.push({
             ...user,
             type: "utilisateur",
             typeUtilisateur: "UTILISATEUR",
           });
-          console.log("Categorized as general user:", user);
         }
       }
 
-      console.log("Final categorized users:", {
+      console.log("Final categorized users from access API:", {
         professeurs: categorizedUsers.professeurs.length,
         eleves: categorizedUsers.eleves.length,
         parents: categorizedUsers.parents.length,
@@ -1921,14 +1991,97 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab }) => {
       {/* Action Buttons */}
       {renderActionButtons()}
 
-      {/* Class Information Card */}
+      {/* Quick Actions Card */}
       <Card
+        title={
+          <span>
+            <PlusOutlined style={{ marginRight: 8 }} />
+            Actions rapides
+          </span>
+        }
         style={{
           marginBottom: 20,
           borderRadius: "12px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         }}
-      ></Card>
+      >
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12}>
+            <div
+              onClick={() => {
+                if (onNavigateToCourseCreation) {
+                  onNavigateToCourseCreation(classId);
+                } else {
+                  message.info("Navigation vers la création de cours");
+                }
+              }}
+              style={{
+                width: "100%",
+                height: "100px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow = "0 8px 20px rgba(102, 126, 234, 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.3)";
+              }}
+            >
+              <BookOutlined style={{ fontSize: "32px", color: "white", marginBottom: "12px" }} />
+              <span style={{ color: "white", fontSize: "16px", fontWeight: 500 }}>
+                Créer un nouveau cours
+              </span>
+            </div>
+          </Col>
+          <Col xs={24} sm={12}>
+            <div
+              onClick={() => {
+                if (onNavigateToExerciseManagement) {
+                  onNavigateToExerciseManagement(classId);
+                } else {
+                  message.info("Navigation vers la gestion des exercices");
+                }
+              }}
+              style={{
+                width: "100%",
+                height: "100px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                boxShadow: "0 4px 12px rgba(240, 147, 251, 0.3)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow = "0 8px 20px rgba(240, 147, 251, 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(240, 147, 251, 0.3)";
+              }}
+            >
+              <FileTextOutlined style={{ fontSize: "32px", color: "white", marginBottom: "12px" }} />
+              <span style={{ color: "white", fontSize: "16px", fontWeight: 500 }}>
+                Gestion des Exercices
+              </span>
+            </div>
+          </Col>
+        </Row>
+      </Card>
 
       {/* Main Content Tabs */}
       <Card className="tabs-container">

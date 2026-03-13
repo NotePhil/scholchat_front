@@ -58,6 +58,7 @@ const ExerciseDetailsView = ({
   onSuccess,
   onUpdate,
   onDelete,
+  onEdit,
 }) => {
   const [exercise, setExercise] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -255,7 +256,7 @@ const ExerciseDetailsView = ({
     });
   };
 
-const handleDeleteQuestion = async (questionId) => {
+  const handleDeleteQuestion = async (questionId) => {
     confirm({
       title: "Supprimer la question",
       content: "Êtes-vous sûr de vouloir supprimer cette question ?",
@@ -277,6 +278,13 @@ const handleDeleteQuestion = async (questionId) => {
         }
       },
     });
+  };
+
+  const handleEditQuestion = (question) => {
+    // Navigate to edit form instead of showing modal
+    if (onEdit) {
+      onEdit(exerciseId);
+    }
   };
 
   const handleProgramExercise = async (values) => {
@@ -443,9 +451,17 @@ const handleDeleteQuestion = async (questionId) => {
     {
       title: "Actions",
       key: "actions",
-      width: 100,
+      width: 150,
       render: (_, record) => (
         <Space size="small">
+          <Tooltip title="Modifier">
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEditQuestion(record)}
+            />
+          </Tooltip>
           <Tooltip title="Supprimer">
             <Popconfirm
               title="Supprimer la question"

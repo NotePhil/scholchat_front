@@ -975,6 +975,7 @@ const CreateClassContent = ({
                           <option value="2nde">2nde (Seconde)</option>
                           <option value="1ère">1ère (Première)</option>
                           <option value="Terminale">Terminale</option>
+                          <option value="AUTRE">Autre</option>
                         </select>
                       </div>
                       {errors.niveau && (

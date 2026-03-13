@@ -20,7 +20,7 @@ import AccederService from "../../../../../../services/accederService";
 
 const schedulingSchema = yup.object().shape({
   coursId: yup.string().required("Le cours est obligatoire"),
-  classeId: yup.string().nullable(),
+  classeId: yup.string().required("La classe est obligatoire"),
   dateCoursPrevue: yup
     .string()
     .nullable()
@@ -503,7 +503,7 @@ const CoursProgrammerForm = ({
                   className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
                 >
                   <Users2 size={16} className="mr-2 text-indigo-600" />
-                  Classe
+                  Classe *
                 </label>
                 <select
                   id="classeId"
@@ -514,7 +514,7 @@ const CoursProgrammerForm = ({
                       : "border-slate-200"
                   }`}
                 >
-                  <option value="">Sélectionnez une classe (optionnel)</option>
+                  <option value="">Sélectionnez une classe</option>
                   {classes.map((classe) => (
                     <option key={classe.id} value={classe.id}>
                       {classe.nom}
