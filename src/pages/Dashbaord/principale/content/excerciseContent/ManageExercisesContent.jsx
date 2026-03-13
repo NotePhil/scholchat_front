@@ -386,6 +386,7 @@ const ManageExercisesContent = ({ onBack }) => {
               onCancel={handleBackToList}
               onError={setError}
               onSuccess={setSuccessMessage}
+              onBackToDetails={handleSelectExercise}
             />
           </div>
         )}

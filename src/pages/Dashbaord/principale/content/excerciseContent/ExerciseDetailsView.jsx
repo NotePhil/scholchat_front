@@ -22,6 +22,7 @@ import {
   message,
   Select,
   DatePicker,
+  List,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -72,6 +73,7 @@ const ExerciseDetailsView = ({
 
   const [questions, setQuestions] = useState([]);
   const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [viewingQuestion, setViewingQuestion] = useState(null);
 
   const [showProgramForm, setShowProgramForm] = useState(false);
   const [programForm] = Form.useForm();
@@ -281,10 +283,11 @@ const ExerciseDetailsView = ({
   };
 
   const handleEditQuestion = (question) => {
-    // Navigate to edit form instead of showing modal
-    if (onEdit) {
-      onEdit(exerciseId);
-    }
+    if (onEdit) onEdit(exerciseId);
+  };
+
+  const handleViewQuestion = (question) => {
+    setViewingQuestion(question);
   };
 
   const handleProgramExercise = async (values) => {
@@ -416,9 +419,7 @@ const ExerciseDetailsView = ({
       ellipsis: true,
       render: (text) => (
         <Tooltip title={text}>
-          <Text strong className="text-xs sm:text-sm">
-            {text}
-          </Text>
+          <Text strong className="text-xs sm:text-sm">{text}</Text>
         </Tooltip>
       ),
     },
@@ -426,34 +427,81 @@ const ExerciseDetailsView = ({
       title: "Type",
       dataIndex: "typeQuestion",
       key: "typeQuestion",
-      width: 120,
+      width: 130,
       responsive: ["md"],
       render: (type) => (
-        <Tag color="blue" className="text-xs">
-          {type}
-        </Tag>
+        <Tag color="blue" className="text-xs">{type}</Tag>
       ),
     },
     {
-      title: "Réponse",
-      dataIndex: "reponse",
-      key: "reponse",
-      ellipsis: true,
-      responsive: ["lg"],
-      render: (text) => (
-        <Tooltip title={text}>
-          <Text code className="text-xs">
-            {text || "N/A"}
-          </Text>
-        </Tooltip>
+      title: "Points",
+      dataIndex: "points",
+      key: "points",
+      width: 70,
+      render: (points) => (
+        <Tag color="green" className="text-xs">{points || 0} pt{points > 1 ? 's' : ''}</Tag>
       ),
+    },
+    {
+      title: "Réponse / Choix",
+      key: "reponseChoix",
+      ellipsis: true,
+      render: (_, record) => {
+        const type = record.typeQuestion;
+        if (record.choixReponses && record.choixReponses.length > 0) {
+          const sorted = [...record.choixReponses].sort((a, b) => a.ordreAffichage - b.ordreAffichage);
+          if (type === "QCM") {
+            const correct = sorted.filter(c => c.estCorrect).map(c => c.texte).join(", ");
+            return (
+              <Tooltip title={`Bonne(s) réponse(s): ${correct}`}>
+                <Space size={2} wrap>
+                  {sorted.map((c) => (
+                    <Tag key={c.id} color={c.estCorrect ? "green" : "default"} className="text-xs">
+                      {c.texte}
+                    </Tag>
+                  ))}
+                </Space>
+              </Tooltip>
+            );
+          }
+          if (type === "VRAI_FAUX") {
+            const correct = sorted.find(c => c.estCorrect);
+            return <Tag color="purple" className="text-xs">{correct?.texte || "N/A"}</Tag>;
+          }
+          if (type === "CLASSEMENT" || type === "ASSOCIATION" || type === "TROU") {
+            return (
+              <Tooltip title={sorted.map((c, i) => `${i + 1}. ${c.texte}`).join(" | ")}>
+                <Text code className="text-xs">
+                  {sorted.map(c => c.texte).join(" → ")}
+                </Text>
+              </Tooltip>
+            );
+          }
+        }
+        if (record.reponse) {
+          return (
+            <Tooltip title={record.reponse}>
+              <Text code className="text-xs">{record.reponse}</Text>
+            </Tooltip>
+          );
+        }
+        return <Text type="secondary" className="text-xs">—</Text>;
+      },
     },
     {
       title: "Actions",
       key: "actions",
-      width: 150,
+      width: 110,
       render: (_, record) => (
         <Space size="small">
+          <Tooltip title="Voir">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewQuestion(record)}
+            />
+          </Tooltip>
           <Tooltip title="Modifier">
             <Button
               type="text"
@@ -1114,6 +1162,157 @@ const ExerciseDetailsView = ({
             </Button>
           </div>
         </Form>
+      </Modal>
+
+      {/* Modal de visualisation de question */}
+      <Modal
+        title={
+          <Space>
+            <EyeOutlined />
+            <span>Détail de la question</span>
+            <Tag color="blue">{viewingQuestion?.typeQuestion}</Tag>
+            <Tag color="green">{viewingQuestion?.points || 0} pt{viewingQuestion?.points > 1 ? 's' : ''}</Tag>
+          </Space>
+        }
+        open={!!viewingQuestion}
+        onCancel={() => setViewingQuestion(null)}
+        footer={[
+          <Button key="close" onClick={() => setViewingQuestion(null)}>
+            Fermer
+          </Button>,
+          <Button
+            key="edit"
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() => {
+              setViewingQuestion(null);
+              handleEditQuestion(viewingQuestion);
+            }}
+          >
+            Modifier
+          </Button>,
+        ]}
+        width="90%"
+        style={{ maxWidth: 600 }}
+      >
+        {viewingQuestion && (() => {
+          const type = viewingQuestion.typeQuestion;
+          const sorted = viewingQuestion.choixReponses
+            ? [...viewingQuestion.choixReponses].sort((a, b) => a.ordreAffichage - b.ordreAffichage)
+            : [];
+
+          return (
+            <div>
+              <div className="mb-4 p-3 bg-gray-50 rounded">
+                <Text type="secondary" className="text-xs">Intitulé</Text>
+                <p className="mt-1 font-medium">{viewingQuestion.intitule}</p>
+              </div>
+
+              {/* QCM */}
+              {type === "QCM" && sorted.length > 0 && (
+                <div>
+                  <Text strong className="text-sm">Choix de réponses :</Text>
+                  <List
+                    className="mt-2"
+                    size="small"
+                    dataSource={sorted}
+                    renderItem={(c) => (
+                      <List.Item>
+                        <Space>
+                          <Tag color={c.estCorrect ? "green" : "default"}>
+                            {c.estCorrect ? "✓ Correct" : "✕"}
+                          </Tag>
+                          <Text>{c.texte}</Text>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* VRAI_FAUX */}
+              {type === "VRAI_FAUX" && sorted.length > 0 && (
+                <div>
+                  <Text strong className="text-sm">Réponse correcte :</Text>
+                  <div className="mt-2">
+                    {sorted.map(c => (
+                      <Tag key={c.id} color={c.estCorrect ? "green" : "default"} className="mr-2">
+                        {c.estCorrect ? "✓ " : ""}{c.texte}
+                      </Tag>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CLASSEMENT */}
+              {type === "CLASSEMENT" && sorted.length > 0 && (
+                <div>
+                  <Text strong className="text-sm">Ordre correct :</Text>
+                  <List
+                    className="mt-2"
+                    size="small"
+                    dataSource={sorted}
+                    renderItem={(c, i) => (
+                      <List.Item>
+                        <Space>
+                          <Tag color="blue">{i + 1}</Tag>
+                          <Text>{c.texte}</Text>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* ASSOCIATION */}
+              {type === "ASSOCIATION" && sorted.length > 0 && (
+                <div>
+                  <Text strong className="text-sm">Paires à associer :</Text>
+                  <List
+                    className="mt-2"
+                    size="small"
+                    dataSource={sorted}
+                    renderItem={(c) => (
+                      <List.Item>
+                        <Tag color="cyan">{c.texte}</Tag>
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* TROU */}
+              {type === "TROU" && sorted.length > 0 && (
+                <div>
+                  <Text strong className="text-sm">Mots à compléter :</Text>
+                  <List
+                    className="mt-2"
+                    size="small"
+                    dataSource={sorted}
+                    renderItem={(c, i) => (
+                      <List.Item>
+                        <Space>
+                          <Tag color="orange">{i + 1}</Tag>
+                          <Text>{c.texte}</Text>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* REPONSE_COURTE / REPONSE_LONGUE / DEVELOPPEMENT */}
+              {(type === "REPONSE_COURTE" || type === "REPONSE_LONGUE" || type === "DEVELOPPEMENT") && (
+                <div>
+                  <Text strong className="text-sm">Réponse attendue :</Text>
+                  <div className="mt-2 p-3 bg-gray-50 rounded border-l-4 border-blue-400">
+                    <Text>{viewingQuestion.reponse || <Text type="secondary">Aucune réponse définie</Text>}</Text>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );

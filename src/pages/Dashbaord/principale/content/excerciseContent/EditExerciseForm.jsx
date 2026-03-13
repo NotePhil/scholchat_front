@@ -15,9 +15,8 @@ import {
   Tag,
   Space,
   InputNumber,
-  Radio,
 } from "antd";
-import { SaveOutlined, CloseOutlined, BookOutlined, PlusOutlined, CloseCircleOutlined, DeleteOutlined } from "@ant-design/icons";
+import { SaveOutlined, CloseOutlined, BookOutlined, PlusOutlined, CloseCircleOutlined, DeleteOutlined, ArrowUpOutlined, ArrowDownOutlined } from "@ant-design/icons";
 import { matiereService } from "../../../../../services/MatiereService";
 import { questionReponseService, exerciseService } from "../../../../../services/exerciseService";
 
@@ -25,7 +24,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }) => {
+const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess, onBackToDetails }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,9 +38,7 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
     typeQuestion: "QCM", 
     points: 1,
     choixReponses: [{ texte: "", estCorrect: false, ordreAffichage: 1 }],
-    reponseAttendueVraiFaux: false,
-    reponseAttendueCourte: "",
-    reponseAttendueLongue: ""
+    reponse: ""
   });
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
 
@@ -103,7 +100,18 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
         restriction: exerciseData.restriction || "PRIVE",
       });
       
-      setQuestions(questionsData || []);
+      // Sort questions by ordreAffichage if they have choixReponses
+      const sortedQuestions = (questionsData || []).map(q => {
+        if (q.choixReponses && q.choixReponses.length > 0) {
+          return {
+            ...q,
+            choixReponses: [...q.choixReponses].sort((a, b) => a.ordreAffichage - b.ordreAffichage)
+          };
+        }
+        return q;
+      });
+      
+      setQuestions(sortedQuestions);
     } catch (error) {
       console.error("Error loading exercise data:", error);
       setError("Erreur lors du chargement de l'exercice");
@@ -120,9 +128,7 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
       typeQuestion,
       points: 1,
       choixReponses: [{ texte: "", estCorrect: isAssociationOrClassement, ordreAffichage: 1 }],
-      reponseAttendueVraiFaux: false,
-      reponseAttendueCourte: "",
-      reponseAttendueLongue: ""
+      reponse: ""
     });
   };
 
@@ -133,9 +139,7 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
       typeQuestion: value,
       points: prev.points,
       choixReponses: [{ texte: "", estCorrect: isAssociationOrClassement, ordreAffichage: 1 }],
-      reponseAttendueVraiFaux: false,
-      reponseAttendueCourte: "",
-      reponseAttendueLongue: ""
+      reponse: ""
     }));
   };
 
@@ -154,9 +158,11 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
 
   const handleRemoveChoix = (index) => {
     const updatedChoix = currentQuestion.choixReponses.filter((_, i) => i !== index);
+    // Recalculate ordreAffichage to maintain sequential order
+    const reorderedChoix = updatedChoix.map((c, i) => ({ ...c, ordreAffichage: i + 1 }));
     setCurrentQuestion({
       ...currentQuestion,
-      choixReponses: updatedChoix.map((c, i) => ({ ...c, ordreAffichage: i + 1 }))
+      choixReponses: reorderedChoix
     });
   };
 
@@ -164,6 +170,24 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
     const updatedChoix = [...currentQuestion.choixReponses];
     updatedChoix[index] = { ...updatedChoix[index], [field]: value };
     setCurrentQuestion({ ...currentQuestion, choixReponses: updatedChoix });
+  };
+
+  const handleMoveChoixUp = (index) => {
+    if (index === 0) return;
+    const updatedChoix = [...currentQuestion.choixReponses];
+    [updatedChoix[index - 1], updatedChoix[index]] = [updatedChoix[index], updatedChoix[index - 1]];
+    // Update ordreAffichage
+    const reorderedChoix = updatedChoix.map((c, i) => ({ ...c, ordreAffichage: i + 1 }));
+    setCurrentQuestion({ ...currentQuestion, choixReponses: reorderedChoix });
+  };
+
+  const handleMoveChoixDown = (index) => {
+    if (index === currentQuestion.choixReponses.length - 1) return;
+    const updatedChoix = [...currentQuestion.choixReponses];
+    [updatedChoix[index], updatedChoix[index + 1]] = [updatedChoix[index + 1], updatedChoix[index]];
+    // Update ordreAffichage
+    const reorderedChoix = updatedChoix.map((c, i) => ({ ...c, ordreAffichage: i + 1 }));
+    setCurrentQuestion({ ...currentQuestion, choixReponses: reorderedChoix });
   };
 
   const validateQuestion = () => {
@@ -174,7 +198,7 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
 
     const type = currentQuestion.typeQuestion;
     
-    if (type === "QCM" || type === "ASSOCIATION" || type === "CLASSEMENT") {
+    if (type === "QCM" || type === "ASSOCIATION" || type === "CLASSEMENT" || type === "VRAI_FAUX" || type === "TROU") {
       if (currentQuestion.choixReponses.length < 2) {
         message.warning("Au moins 2 choix sont requis");
         return false;
@@ -187,13 +211,8 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
         message.warning("Au moins un choix doit être marqué comme correct");
         return false;
       }
-    } else if (type === "REPONSE_COURTE" || type === "TROU") {
-      if (!currentQuestion.reponseAttendueCourte.trim()) {
-        message.warning("La réponse attendue est requise");
-        return false;
-      }
-    } else if (type === "REPONSE_LONGUE" || type === "DEVELOPPEMENT") {
-      if (!currentQuestion.reponseAttendueLongue.trim()) {
+    } else if (type === "REPONSE_COURTE" || type === "REPONSE_LONGUE" || type === "DEVELOPPEMENT") {
+      if (!currentQuestion.reponse.trim()) {
         message.warning("La réponse attendue est requise");
         return false;
       }
@@ -210,16 +229,10 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
       points: question.points || 1
     };
 
-    if (type === "QCM" || type === "ASSOCIATION" || type === "CLASSEMENT") {
+    if (type === "QCM" || type === "ASSOCIATION" || type === "CLASSEMENT" || type === "VRAI_FAUX" || type === "TROU") {
       payload.choixReponses = question.choixReponses;
-    } else if (type === "VRAI_FAUX") {
-      payload.reponseAttendueVraiFaux = question.reponseAttendueVraiFaux;
-    } else if (type === "REPONSE_COURTE") {
-      payload.reponseAttendueCourte = question.reponseAttendueCourte;
-    } else if (type === "REPONSE_LONGUE") {
-      payload.reponseAttendueLongue = question.reponseAttendueLongue;
-    } else if (type === "TROU" || type === "DEVELOPPEMENT") {
-      payload.reponseAttendueLongue = question.reponseAttendueLongue;
+    } else if (type === "REPONSE_COURTE" || type === "REPONSE_LONGUE" || type === "DEVELOPPEMENT") {
+      payload.reponse = question.reponse;
     }
 
     return payload;
@@ -246,13 +259,10 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
     const type = question.typeQuestion;
     const isAssociationOrClassement = type === "ASSOCIATION" || type === "CLASSEMENT";
     
-    // Ensure all required fields are present
     setCurrentQuestion({
       ...question,
       choixReponses: question.choixReponses || [{ texte: "", estCorrect: isAssociationOrClassement, ordreAffichage: 1 }],
-      reponseAttendueVraiFaux: question.reponseAttendueVraiFaux ?? false,
-      reponseAttendueCourte: question.reponseAttendueCourte || "",
-      reponseAttendueLongue: question.reponseAttendueLongue || ""
+      reponse: question.reponse || ""
     });
     setEditingQuestionIndex(index);
   };
@@ -321,6 +331,12 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
       
       message.success("Exercice mis à jour avec succès");
       onSuccess?.("Exercice mis à jour avec succès");
+      // Navigate back to details view after successful save
+      if (onBackToDetails) {
+        onBackToDetails(exerciseId);
+      } else {
+        onCancel();
+      }
     } catch (error) {
       console.error("Error updating exercise:", error);
       const errorMessage = error.message || "Erreur lors de la mise à jour de l'exercice";
@@ -342,19 +358,55 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
   const renderQuestionInputs = () => {
     const type = currentQuestion.typeQuestion;
 
-    if (type === "QCM" || type === "ASSOCIATION" || type === "CLASSEMENT") {
+    if (type === "QCM" || type === "ASSOCIATION" || type === "CLASSEMENT" || type === "VRAI_FAUX" || type === "TROU") {
       const choixReponses = currentQuestion.choixReponses || [];
       return (
         <div>
           <div className="mb-2">
             <Text strong className="text-xs sm:text-sm">
               {type === "QCM" ? "Choix de réponses (cochez la/les bonne(s) réponse(s))" : 
+               type === "VRAI_FAUX" ? "Choix de réponses" :
                type === "ASSOCIATION" ? "Paires à associer" : 
+               type === "TROU" ? "Mots/Expressions à compléter" :
                "Éléments à classer (dans l'ordre)"}
             </Text>
+            {(type === "CLASSEMENT" || type === "ASSOCIATION" || type === "TROU") && (
+              <Text type="secondary" className="text-xs block mt-1">
+                Utilisez les flèches ↑↓ pour réorganiser l'ordre d'affichage
+              </Text>
+            )}
           </div>
           {choixReponses.map((choix, index) => (
             <div key={index} className="flex gap-2 mb-2 items-center">
+              {/* Show order controls for all types except VRAI_FAUX */}
+              {type !== "VRAI_FAUX" && (
+                <div className="flex flex-col gap-1">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<ArrowUpOutlined />}
+                    onClick={() => handleMoveChoixUp(index)}
+                    disabled={index === 0}
+                    style={{ padding: '0 4px', height: '20px' }}
+                    title="Déplacer vers le haut"
+                  />
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<ArrowDownOutlined />}
+                    onClick={() => handleMoveChoixDown(index)}
+                    disabled={index === choixReponses.length - 1}
+                    style={{ padding: '0 4px', height: '20px' }}
+                    title="Déplacer vers le bas"
+                  />
+                </div>
+              )}
+              {/* Show order number for CLASSEMENT and TROU */}
+              {(type === "CLASSEMENT" || type === "TROU") && (
+                <span className="text-gray-500 font-semibold" style={{ minWidth: '24px' }}>
+                  {index + 1}.
+                </span>
+              )}
               {type === "QCM" && (
                 <input
                   type="checkbox"
@@ -363,69 +415,38 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
                 />
               )}
               <Input
-                placeholder={`${type === "ASSOCIATION" ? "Ex: France - Paris" : type === "CLASSEMENT" ? `${index + 1}. ` : ""}Choix ${index + 1}`}
+                placeholder={`${type === "ASSOCIATION" ? "Ex: France - Paris" : type === "CLASSEMENT" ? "Élément" : type === "VRAI_FAUX" && index === 0 ? "Vrai" : type === "VRAI_FAUX" && index === 1 ? "Faux" : type === "TROU" ? "Mot/Expression" : ""}Choix ${index + 1}`}
                 value={choix.texte}
                 onChange={(e) => handleChoixChange(index, "texte", e.target.value)}
                 style={{ flex: 1 }}
               />
-              {choixReponses.length > 2 && (
+              {choixReponses.length > 2 && type !== "VRAI_FAUX" && (
                 <Button
                   type="text"
                   danger
                   icon={<DeleteOutlined />}
                   onClick={() => handleRemoveChoix(index)}
+                  title="Supprimer ce choix"
                 />
               )}
             </div>
           ))}
-          <Button
-            type="dashed"
-            icon={<PlusOutlined />}
-            onClick={handleAddChoix}
-            size="small"
-            className="mt-2"
-          >
-            Ajouter un choix
-          </Button>
+          {type !== "VRAI_FAUX" && (
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={handleAddChoix}
+              size="small"
+              className="mt-2"
+            >
+              Ajouter un choix
+            </Button>
+          )}
         </div>
       );
     }
 
-    if (type === "VRAI_FAUX") {
-      return (
-        <div>
-          <div className="mb-2">
-            <Text strong className="text-xs sm:text-sm">Réponse correcte</Text>
-          </div>
-          <Radio.Group
-            value={currentQuestion.reponseAttendueVraiFaux}
-            onChange={(e) => setCurrentQuestion({ ...currentQuestion, reponseAttendueVraiFaux: e.target.value })}
-          >
-            <Radio value={true}>Vrai</Radio>
-            <Radio value={false}>Faux</Radio>
-          </Radio.Group>
-        </div>
-      );
-    }
-
-    if (type === "REPONSE_COURTE" || type === "TROU") {
-      return (
-        <div>
-          <div className="mb-2">
-            <Text strong className="text-xs sm:text-sm">
-              {type === "TROU" ? "Mot/Expression manquant(e)" : "Réponse attendue"}
-            </Text>
-          </div>
-          <Input
-            placeholder={type === "TROU" ? "Ex: Soleil" : "Ex: H2O"}
-            value={currentQuestion.reponseAttendueCourte}
-            onChange={(e) => setCurrentQuestion({ ...currentQuestion, reponseAttendueCourte: e.target.value })}
-          />
-        </div>
-      );
-    }
-
-    if (type === "REPONSE_LONGUE" || type === "DEVELOPPEMENT") {
+    if (type === "REPONSE_COURTE" || type === "REPONSE_LONGUE" || type === "DEVELOPPEMENT") {
       return (
         <div>
           <div className="mb-2">
@@ -433,12 +454,20 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess }
               Réponse attendue (modèle de correction)
             </Text>
           </div>
-          <TextArea
-            rows={4}
-            placeholder="Décrivez la réponse attendue..."
-            value={currentQuestion.reponseAttendueLongue}
-            onChange={(e) => setCurrentQuestion({ ...currentQuestion, reponseAttendueLongue: e.target.value })}
-          />
+          {type === "REPONSE_COURTE" ? (
+            <Input
+              placeholder="Ex: H2O"
+              value={currentQuestion.reponse}
+              onChange={(e) => setCurrentQuestion({ ...currentQuestion, reponse: e.target.value })}
+            />
+          ) : (
+            <TextArea
+              rows={4}
+              placeholder="Décrivez la réponse attendue..."
+              value={currentQuestion.reponse}
+              onChange={(e) => setCurrentQuestion({ ...currentQuestion, reponse: e.target.value })}
+            />
+          )}
         </div>
       );
     }
