@@ -39,7 +39,11 @@ const ActivitiesContent = () => {
   const { t } = useTranslation();
   const language = useSelector((state) => state.language?.currentLanguage || 'fr');
   const isMobile = useSelector((state) => state.ui.isMobile);
-  
+
+  // Role check: only professors and admins can create events
+  const userRole = (localStorage.getItem('userRole') || '').toUpperCase();
+  const canCreateEvent = userRole.includes('ADMIN') || userRole.includes('PROFESSOR') || userRole.includes('TUTOR') || userRole.includes('GESTIONNAIRE');
+
   const pluralize = (count, singular, plural) => {
     return `${count} ${count === 1 ? singular : plural}`;
   };
@@ -537,7 +541,8 @@ const ActivitiesContent = () => {
                 <span className="font-medium text-gray-700 dark:text-gray-300">{t('activities.sidebar.saved', 'Enregistrés')}</span>
               </motion.div>
 
-              <div className="border- t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+              {canCreateEvent && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
                 <button
                   onClick={() => setShowCreateForm(true)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors shadow-md"
@@ -546,6 +551,7 @@ const ActivitiesContent = () => {
                   {t('activities.actions.create', 'Créer un événement')}
                 </button>
               </div>
+              )}
             </div>
           </aside>
 
@@ -558,12 +564,14 @@ const ActivitiesContent = () => {
                   <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-gray-900 dark:text-white`}>
                     {t('activities.title', 'Fil d\'actualité')}
                   </h1>
+                  {canCreateEvent && (
                   <button
                     onClick={() => setShowCreateForm(true)}
                     className={`bg-blue-600 hover:bg-blue-700 text-white ${isMobile ? 'p-1.5' : 'p-2'} rounded-lg transition-colors`}
                   >
                     <Plus className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
                   </button>
+                  )}
                 </div>
               </div>
 
@@ -824,6 +832,7 @@ const ActivitiesContent = () => {
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
                       {t('activities.noActivities.description', 'Créez votre premier événement')}
                     </p>
+                    {canCreateEvent && (
                     <button
                       onClick={() => setShowCreateForm(true)}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
@@ -831,6 +840,7 @@ const ActivitiesContent = () => {
                       <Plus className="w-5 h-5" />
                       {t('activities.noActivities.createFirst', 'Créer un événement')}
                     </button>
+                    )}
                   </div>
                 ) : (
                   activities.map((activity) => (

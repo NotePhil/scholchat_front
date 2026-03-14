@@ -233,49 +233,50 @@ const CoursProgrammerViewModal = ({
   const currentClassId = getClassId(scheduledCourse);
 
   return (
-    <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-8 py-6 border-b border-slate-200">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg">
-                <CalendarPlus className="w-6 h-6 text-white" />
+        <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-4 sm:px-8 py-4 sm:py-6 border-b border-slate-200">
+          <div className="flex justify-between items-start gap-3">
+            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+              <div className="p-2 sm:p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg flex-shrink-0">
+                <CalendarPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                  Détails de la Programmation
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent truncate">
+                  <span className="hidden sm:inline">Détails de la Programmation</span>
+                  <span className="sm:hidden">Détails</span>
                 </h2>
-                <p className="text-slate-600 mt-1">
+                <p className="text-slate-600 mt-1 text-sm truncate">
                   {scheduledCourse.cours?.titre}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
               <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusBadge(
+                className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium border ${getStatusBadge(
                   scheduledCourse.etatCoursProgramme
                 )}`}
               >
-                <div className="mr-2">
+                <div className="mr-1 sm:mr-2">
                   {getStatusIcon(scheduledCourse.etatCoursProgramme)}
                 </div>
-                {getStatusText(scheduledCourse.etatCoursProgramme)}
+                <span className="hidden sm:inline">{getStatusText(scheduledCourse.etatCoursProgramme)}</span>
               </span>
               <button
                 onClick={onClose}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-slate-200 px-8">
-          <div className="flex space-x-6">
+        <div className="border-b border-slate-200 px-4 sm:px-8 overflow-x-auto">
+          <div className="flex space-x-4 sm:space-x-6">
             <button
               onClick={() => setActiveTab("details")}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
@@ -311,7 +312,7 @@ const CoursProgrammerViewModal = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             {/* Details Tab */}
             {activeTab === "details" && (
               <div className="space-y-8">
@@ -744,13 +745,13 @@ const CoursProgrammerViewModal = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="bg-slate-50 px-8 py-6 border-t border-slate-200">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-slate-600">
+        <div className="bg-slate-50 px-4 sm:px-8 py-4 sm:py-6 border-t border-slate-200">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="text-sm text-slate-600 hidden sm:block">
               Cours programmé
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
               {/* Action buttons based on course state */}
               {scheduledCourse.etatCoursProgramme === "PLANIFIE" && (
                 <>
@@ -759,14 +760,14 @@ const CoursProgrammerViewModal = ({
                       onStart(scheduledCourse.id);
                       onClose();
                     }}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl flex items-center justify-center gap-2 transition-colors font-medium text-sm"
                   >
                     <PlayCircle className="w-4 h-4" />
                     Démarrer
                   </button>
                   <button
                     onClick={() => setShowCancelReason(true)}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl flex items-center justify-center gap-2 transition-colors font-medium text-sm"
                   >
                     <XCircle className="w-4 h-4" />
                     Annuler
@@ -781,14 +782,14 @@ const CoursProgrammerViewModal = ({
                       onEnd(scheduledCourse.id);
                       onClose();
                     }}
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl flex items-center justify-center gap-2 transition-colors font-medium text-sm"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Terminer
                   </button>
                   <button
                     onClick={() => setShowCancelReason(true)}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl flex items-center justify-center gap-2 transition-colors font-medium text-sm"
                   >
                     <XCircle className="w-4 h-4" />
                     Annuler
@@ -801,7 +802,7 @@ const CoursProgrammerViewModal = ({
                   onEdit(scheduledCourse);
                   onClose();
                 }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center justify-center gap-2 transition-colors font-medium text-sm"
               >
                 <Edit2 className="w-4 h-4" />
                 Modifier
@@ -809,7 +810,7 @@ const CoursProgrammerViewModal = ({
 
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium"
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium text-sm"
               >
                 Fermer
               </button>

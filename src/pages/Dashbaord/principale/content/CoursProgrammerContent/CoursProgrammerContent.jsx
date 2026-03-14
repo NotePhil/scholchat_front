@@ -18,6 +18,10 @@ import {
   Users,
   Eye,
   Edit2,
+  MapPin,
+  PlayCircle,
+  PauseCircle,
+  XCircle,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { classService } from "../../../../../services/ClassService";
@@ -229,7 +233,13 @@ const CoursProgrammerContent = () => {
       return;
     }
     setModalMode("edit");
-    setSelectedScheduledCourse(scheduledCourse);
+    // Normalize classeId from classesIds array if missing
+    const normalizedCourse = {
+      ...scheduledCourse,
+      coursId: scheduledCourse.coursId || scheduledCourse.cours?.id || "",
+      classeId: scheduledCourse.classeId || (scheduledCourse.classesIds && scheduledCourse.classesIds[0]) || "",
+    };
+    setSelectedScheduledCourse(normalizedCourse);
     setError("");
     setSuccess("");
     setShowScheduleModal(true);
@@ -581,7 +591,10 @@ const CoursProgrammerContent = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             {filteredScheduledCourses
               .slice(0, pageSize)
-              .map((scheduledCourse) => (
+              .map((scheduledCourse) => {
+                const classeId = scheduledCourse.classeId || (scheduledCourse.classesIds && scheduledCourse.classesIds[0]);
+                const classeName = classeId ? (classes.find(c => c.id === classeId)?.nom || "Classe") : "";
+                return (
                 <div
                   key={scheduledCourse.id}
                   className="w-full min-w-0 overflow-hidden"
@@ -600,11 +613,17 @@ const CoursProgrammerContent = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight break-words hyphens-auto overflow-wrap-break-word">
-                            {scheduledCourse.cours?.titre}
+                            {scheduledCourse.cours?.titre || scheduledCourse.titre || "Cours sans titre"}
                           </h3>
+                          {classeName && (
+                            <p className="text-xs text-slate-500 mt-0.5 break-words">
+                              {classeName}
+                            </p>
+                          )}
                           {scheduledCourse.lieu && (
-                            <p className="text-xs sm:text-sm text-slate-600 mt-1 break-words">
-                              📍 {scheduledCourse.lieu}
+                            <p className="text-xs sm:text-sm text-slate-600 mt-1 break-words flex items-center">
+                              <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                              {scheduledCourse.lieu}
                             </p>
                           )}
                         </div>
@@ -633,31 +652,37 @@ const CoursProgrammerContent = () => {
 
                     {/* Course Details */}
                     <div className="space-y-2 mb-4 flex-1">
-                      {scheduledCourse.dateDebut && (
+                      {/* Always show planned date */}
+                      {scheduledCourse.dateCoursPrevue && (
                         <div className="flex items-center text-xs text-slate-500">
                           <Calendar className="w-3 h-3 mr-2 flex-shrink-0" />
                           <span className="break-words">
-                            {new Date(
-                              scheduledCourse.dateDebut
-                            ).toLocaleDateString("fr-FR")}{" "}
+                            Prévu: {new Date(scheduledCourse.dateCoursPrevue).toLocaleDateString("fr-FR")}{" "}
                             à{" "}
-                            {new Date(
-                              scheduledCourse.dateDebut
-                            ).toLocaleTimeString("fr-FR", {
+                            {new Date(scheduledCourse.dateCoursPrevue).toLocaleTimeString("fr-FR", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                           </span>
                         </div>
                       )}
-                      {scheduledCourse.dateFin && (
-                        <div className="flex items-center text-xs text-slate-500">
+                      {/* Show effective dates only for EN_COURS or TERMINE */}
+                      {scheduledCourse.etatCoursProgramme !== "PLANIFIE" && scheduledCourse.dateDebutEffectif && (
+                        <div className="flex items-center text-xs text-green-600">
                           <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
                           <span className="break-words">
-                            Jusqu'à{" "}
-                            {new Date(
-                              scheduledCourse.dateFin
-                            ).toLocaleTimeString("fr-FR", {
+                            Début: {new Date(scheduledCourse.dateDebutEffectif).toLocaleTimeString("fr-FR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      {scheduledCourse.etatCoursProgramme === "TERMINE" && scheduledCourse.dateFinEffectif && (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
+                          <span className="break-words">
+                            Fin: {new Date(scheduledCourse.dateFinEffectif).toLocaleTimeString("fr-FR", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
@@ -670,9 +695,9 @@ const CoursProgrammerContent = () => {
                             <Users className="w-3 h-3 mr-2 flex-shrink-0" />
                             <span className="break-words hyphens-auto overflow-wrap-break-word">
                               {scheduledCourse.classesIds
-                                .map((classId) => {
+                                .map((cId) => {
                                   const classe = classes.find(
-                                    (c) => c.id === classId
+                                    (c) => c.id === cId
                                   );
                                   return classe?.nom;
                                 })
@@ -688,26 +713,54 @@ const CoursProgrammerContent = () => {
                       )}
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 mt-auto">
+                    {/* Action Buttons - includes start/end/cancel for mobile visibility */}
+                    <div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-slate-100">
+                      {scheduledCourse.etatCoursProgramme === "PLANIFIE" && (
+                        <button
+                          onClick={() => handleStartCourse(scheduledCourse.id)}
+                          className="flex-1 min-w-[80px] bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <PlayCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>Démarrer</span>
+                        </button>
+                      )}
+                      {scheduledCourse.etatCoursProgramme === "EN_COURS" && (
+                        <button
+                          onClick={() => handleEndCourse(scheduledCourse.id)}
+                          className="flex-1 min-w-[80px] bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <PauseCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>Terminer</span>
+                        </button>
+                      )}
+                      {(scheduledCourse.etatCoursProgramme === "PLANIFIE" || scheduledCourse.etatCoursProgramme === "EN_COURS") && (
+                        <button
+                          onClick={() => handleCancelCourse(scheduledCourse.id, "Annulé par le professeur")}
+                          className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="hidden sm:inline">Annuler</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => handleViewSchedule(scheduledCourse)}
-                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                       >
-                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="truncate">Voir</span>
+                        <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>Voir</span>
                       </button>
                       <button
                         onClick={() => handleEditSchedule(scheduledCourse)}
-                        className="flex-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                       >
-                        <Edit2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="truncate">Modifier</span>
+                        <Edit2 className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>Modifier</span>
                       </button>
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
           </div>
         ) : (
           <CoursProgrammerList

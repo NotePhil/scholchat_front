@@ -194,8 +194,9 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
       );
 
       // Filter final list for the selected class context
-      const finalCourses = enrichedCourses.filter(c => 
-        c.classeId === selectedClass.id || 
+      const finalCourses = enrichedCourses.filter(c =>
+        c.classeId === selectedClass.id ||
+        (c.classesIds && c.classesIds.includes(selectedClass.id)) ||
         (c.participantsIds && c.participantsIds.includes(userId))
       );
 
@@ -424,40 +425,40 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   // Main courses list view
   return (
     <div>
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-3 sm:p-6">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white pb-0">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-4">
+        <div className="bg-white rounded-2xl shadow-lg mb-4 sm:mb-6 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 sm:p-6 text-white pb-0">
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
                 <button
                   onClick={handleBackToClasses}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
-                <div>
-                  <div className="flex items-center space-x-4">
-                    <h1 className="text-2xl font-bold flex items-center">
-                      <GraduationCap className="w-7 h-7 mr-3" />
-                      {selectedClass?.nom || "Gestion des Cours"}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <h1 className="text-lg sm:text-2xl font-bold flex items-center truncate">
+                      <GraduationCap className="w-5 h-5 sm:w-7 sm:h-7 mr-2 sm:mr-3 flex-shrink-0" />
+                      <span className="truncate">{selectedClass?.nom || "Gestion des Cours"}</span>
                     </h1>
                     {onScheduleCourse && (
                     <button
                       onClick={onScheduleCourse}
-                      className="px-4 py-1.5 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center space-x-2 text-sm"
+                      className="px-3 sm:px-4 py-1.5 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center space-x-2 text-xs sm:text-sm self-start"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Programmer</span>
                     </button>
                     )}
                   </div>
-                  <p className="text-blue-100 mt-1">
+                  <p className="text-blue-100 mt-1 text-sm truncate">
                     {selectedClass ? `${selectedClass.niveau} - ${selectedClass.description || "Espace de classe"}` : 'Tous mes cours'}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right flex-shrink-0 hidden sm:block">
                 <p className="text-blue-100 text-sm">
                   {filteredCourses.length} cours programmés
                 </p>
@@ -510,8 +511,8 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
           </div>
 
           {/* Filters */}
-          <div className="p-6 bg-gray-50 border-t">
-            <div className="flex flex-col md:flex-row gap-4">
+          <div className="p-3 sm:p-6 bg-gray-50 border-t">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1 relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
@@ -519,15 +520,15 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                   placeholder="Rechercher un cours..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
               </div>
               <div className="flex items-center space-x-2">
-                <Filter className="w-4 h-4 text-gray-500" />
+                <Filter className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   <option value="TOUS">Tous les statuts</option>
                   <option value="PLANIFIE">Planifiés</option>
@@ -577,22 +578,22 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   {filteredCourses.map((course) => (
                     <div
                       key={course.id}
                       onClick={() => handleCourseClick(course)}
                       className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 border border-gray-100"
                     >
-                      <div className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <h3 className="font-bold text-lg text-gray-900">
-                                {course.cours?.titre || "Titre non disponible"}
+                      <div className="p-4 sm:p-6">
+                        <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <h3 className="font-bold text-base sm:text-lg text-gray-900 break-words">
+                                {course.cours?.titre || course.titre || "Titre non disponible"}
                               </h3>
                               <div
-                                className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                                className={`px-2 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(
                                   course.etatCoursProgramme
                                 )}`}
                               >
@@ -604,30 +605,30 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                                 </div>
                               </div>
                             </div>
-                            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                            <p className="text-gray-600 text-xs sm:text-sm mb-3 line-clamp-2">
                               {course.cours?.description ||
                                 "Description non disponible"}
                             </p>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0 ml-2" />
+                          <ChevronRight className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
                         </div>
 
-                        <div className="space-y-3">
-                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <div className="space-y-2 sm:space-y-3">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                             <div className="flex items-center space-x-1">
-                              <Calendar className="w-4 h-4" />
+                              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               <span>{formatDate(course.dateCoursPrevue)}</span>
                             </div>
                             <div className="flex items-center space-x-1">
-                              <Clock className="w-4 h-4" />
+                              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               <span>{formatTime(course.dateCoursPrevue)}</span>
                             </div>
                           </div>
 
                           {course.lieu && (
                             <div className="flex items-center space-x-2">
-                              <MapPin className="w-4 h-4 text-gray-600" />
-                              <span className="text-sm text-gray-600">
+                              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 flex-shrink-0" />
+                              <span className="text-xs sm:text-sm text-gray-600 truncate">
                                 {course.lieu}
                               </span>
                             </div>

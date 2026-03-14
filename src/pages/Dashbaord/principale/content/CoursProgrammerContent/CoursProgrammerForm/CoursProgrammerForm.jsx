@@ -229,8 +229,8 @@ const CoursProgrammerForm = ({
         };
 
         const initialValues = {
-          coursId: selectedScheduledCourse.coursId || "",
-          classeId: selectedScheduledCourse.classeId || "",
+          coursId: selectedScheduledCourse.coursId || selectedScheduledCourse.cours?.id || "",
+          classeId: selectedScheduledCourse.classeId || (selectedScheduledCourse.classesIds && selectedScheduledCourse.classesIds[0]) || "",
           dateCoursPrevue: formatDateForInput(
             selectedScheduledCourse.dateCoursPrevue
           ),
@@ -333,14 +333,14 @@ const CoursProgrammerForm = ({
 
       const scheduleData = {
         coursId: data.coursId,
-        professeurId: "550e8400-e29b-41d4-a716-446655440007", // TODO: Get from user context
+        professeurId: localStorage.getItem("userId") || "",
         dateCoursPrevue: formatDate(data.dateCoursPrevue),
         dateDebutEffectif: isPlanifie
-          ? formatDate(data.dateCoursPrevue)
-          : formatDate(data.dateDebutEffectif),
+          ? null
+          : formatDate(data.dateDebutEffectif) || null,
         dateFinEffectif: isPlanifie
-          ? calculateEndDate(data.dateCoursPrevue, 2)
-          : formatDate(data.dateFinEffectif),
+          ? null
+          : formatDate(data.dateFinEffectif) || null,
         lieu: data.lieu.trim(),
         description: data.description?.trim() || null,
         etatCoursProgramme: data.etatCoursProgramme,

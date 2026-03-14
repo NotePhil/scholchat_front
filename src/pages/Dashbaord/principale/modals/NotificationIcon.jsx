@@ -116,6 +116,7 @@ const NotificationItem = ({
   onDelete,
   getNotificationMeta,
   language,
+  disableNavigation = false,
 }) => {
   const meta = getNotificationMeta(notification.type);
   const IconComponent = ICON_MAP[meta.icon] || Bell;
@@ -123,7 +124,9 @@ const NotificationItem = ({
 
   return (
     <div
-      className={`flex items-start gap-3 p-3 transition-colors cursor-pointer ${
+      className={`flex items-start gap-3 p-3 transition-colors ${
+        disableNavigation ? "cursor-default" : "cursor-pointer"
+      } ${
         !notification.read
           ? "bg-blue-50 hover:bg-blue-100/70"
           : "hover:bg-gray-50"
@@ -284,10 +287,17 @@ const NotificationIcon = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  const isStudentOrParent = userRole === "student" || userRole === "parent";
+
   const handleNotificationClick = useCallback(
     (notification) => {
       if (!notification.read) {
         markAsRead(notification.id);
+      }
+
+      // Students and parents: only mark as read, no navigation
+      if (isStudentOrParent) {
+        return;
       }
 
       // Navigation based on notification type and related entity
@@ -350,7 +360,7 @@ const NotificationIcon = () => {
           dispatch(setActiveTabAction("dashboard"));
       }
     },
-    [markAsRead, closePanel, dispatch]
+    [markAsRead, closePanel, dispatch, isStudentOrParent]
   );
 
   // Role-based header subtitle
@@ -510,6 +520,7 @@ const NotificationIcon = () => {
                         onDelete={handleDeleteNotification}
                         getNotificationMeta={getNotificationMeta}
                         language={language}
+                        disableNavigation={isStudentOrParent}
                       />
                     </div>
                   ))}

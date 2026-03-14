@@ -75,6 +75,8 @@ export const useNotifications = () => {
 
   const handleTogglePanel = useCallback(() => {
     dispatch(toggleNotificationPanel());
+    // Refresh notifications when opening the panel
+    dispatch(fetchNotifications());
   }, [dispatch]);
 
   const handleClosePanel = useCallback(() => {
