@@ -1,51 +1,49 @@
 import React, { useState, useEffect } from "react";
 import { Download, X, Smartphone } from "lucide-react";
 
+// Global capture - catches the event even before React mounts
+let globalDeferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  globalDeferredPrompt = e;
+  window.dispatchEvent(new Event("pwaInstallReady"));
+});
+
 const PWAInstallPrompt = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    // Check if already dismissed
     const dismissed = localStorage.getItem("pwaInstallDismissed");
     const alreadyInstalled = window.matchMedia("(display-mode: standalone)").matches;
-
     if (alreadyInstalled || dismissed === "true") return;
 
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowButton(true);
-      // Show popup after 3 seconds
-      setTimeout(() => setShowPrompt(true), 3000);
+    // Show popup when install is ready
+    const showIfReady = () => {
+      if (globalDeferredPrompt) {
+        setTimeout(() => setShowPrompt(true), 3000);
+      }
     };
 
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    showIfReady();
+    window.addEventListener("pwaInstallReady", showIfReady);
+    return () => window.removeEventListener("pwaInstallReady", showIfReady);
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    if (!globalDeferredPrompt) return;
+    globalDeferredPrompt.prompt();
+    const { outcome } = await globalDeferredPrompt.userChoice;
     if (outcome === "accepted") {
       setShowPrompt(false);
-      setShowButton(false);
       localStorage.setItem("pwaInstallDismissed", "true");
+      globalDeferredPrompt = null;
     }
-    setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
     localStorage.setItem("pwaInstallDismissed", "true");
   };
-
-  // Install button for header
-  if (showButton && !showPrompt) {
-    return null; // Will be rendered via getInstallButton export
-  }
 
   if (!showPrompt) return null;
 
@@ -89,30 +87,38 @@ const PWAInstallPrompt = () => {
   );
 };
 
-// Export install button for header use
+// Export install button for header use - uses global captured prompt
 export const useInstallApp = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [canInstall, setCanInstall] = useState(false);
+  const [canInstall, setCanInstall] = useState(!!globalDeferredPrompt);
 
   useEffect(() => {
     const alreadyInstalled = window.matchMedia("(display-mode: standalone)").matches;
     if (alreadyInstalled) return;
 
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
+    // Check if already captured globally
+    if (globalDeferredPrompt) {
       setCanInstall(true);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    }
+
+    // Listen for future events
+    const handler = () => setCanInstall(!!globalDeferredPrompt);
+    window.addEventListener("pwaInstallReady", handler);
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      globalDeferredPrompt = e;
+      setCanInstall(true);
+    });
+    return () => window.removeEventListener("pwaInstallReady", handler);
   }, []);
 
   const install = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-    setCanInstall(false);
+    if (!globalDeferredPrompt) return;
+    globalDeferredPrompt.prompt();
+    const { outcome } = await globalDeferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      globalDeferredPrompt = null;
+      setCanInstall(false);
+    }
   };
 
   return { canInstall, install };
