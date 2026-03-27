@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Provider } from "react-redux";
 import { store } from "./store/store";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { Layout } from "./components/common/Layout";
 import { Home } from "./pages/Home";
 import { BlogSinglePage } from "./components/common/BlogSinglePage";
@@ -292,6 +293,7 @@ function App() {
         <AuthProvider>
           <ScrollToTop />
           <AnimatedRoutes theme={theme} setTheme={setTheme} />
+          <PWAInstallPrompt />
         </AuthProvider>
       </BrowserRouter>
     </Provider>

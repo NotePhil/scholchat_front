@@ -9,6 +9,7 @@ import {
   ChevronDown,
   LogOut,
   RefreshCw,
+  Download,
   Settings,
   Phone,
   Mail,
@@ -62,6 +63,7 @@ import GestionnairesManagement from "./content/GestionnaireContent/Gestionnaires
 import RoleSelectorModal from "../../../components/modals/RoleSelectorModal";
 import ReAuthModal from "../../../components/modals/ReAuthModal";
 import ChildSelectorModal from "../../../components/modals/ChildSelectorModal";
+import { useInstallApp } from "../../../components/PWAInstallPrompt";
 
 import "../../../CSS/Principal.css";
 
@@ -239,6 +241,9 @@ const Principal = () => {
     // Trigger full refresh of all child data
     window.dispatchEvent(new Event("childChanged"));
   };
+
+  // PWA Install
+  const { canInstall, install: installApp } = useInstallApp();
 
   const handleLogout = useCallback(() => {
     // Store current page before logout using hook
@@ -842,6 +847,19 @@ const Principal = () => {
             gap: '8px',
             flexShrink: 0
           }}>
+            {/* Install PWA button */}
+            {canInstall && (
+              <button
+                onClick={installApp}
+                className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                title="Installer l'application"
+                style={{ minHeight: '36px' }}
+              >
+                <Download size={14} />
+                <span className="hidden sm:inline">Installer</span>
+              </button>
+            )}
+
             {/* Refresh button */}
             <button
               onClick={() => window.location.reload()}

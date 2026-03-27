@@ -189,8 +189,25 @@ const ActivitiesContent = () => {
   const getImageUrl = async (media) => {
     try {
       if (!media.id) return null;
-      // Use proxy download to avoid CORS issues with MinIO
-      return `${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/content`;
+      // Try proxy first, fallback to presigned URL
+      const proxyUrl = `${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/content`;
+      // Test if proxy works by doing a HEAD request
+      try {
+        const testResp = await fetch(proxyUrl, { method: 'HEAD' });
+        if (testResp.ok) return proxyUrl;
+      } catch (e) { /* proxy failed, try presigned */ }
+      // Fallback: get presigned URL from backend
+      try {
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+        const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/download-url`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          return data.url || proxyUrl;
+        }
+      } catch (e) { /* fallback to proxy */ }
+      return proxyUrl;
     } catch (error) {
       console.error('Failed to get image URL:', error);
       return null;
