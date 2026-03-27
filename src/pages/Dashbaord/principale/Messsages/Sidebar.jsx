@@ -14,9 +14,10 @@ const Sidebar = ({
   const sidebarItems = [
     {
       key: "all",
-      label: "Boîte de réception",
+      label: "Boite de reception",
       icon: Inbox,
-      count: messageCounts.all
+      count: messageCounts.all,
+      badge: messageCounts.unread > 0 ? messageCounts.unread : null,
     },
     {
       key: "starred",
@@ -26,13 +27,16 @@ const Sidebar = ({
     },
     {
       key: "sent",
-      label: "Envoyés",
+      label: "Envoyes",
       icon: Send,
+      count: messageCounts.sent,
     },
     {
       key: "unread",
       label: "Non lus",
       icon: Circle,
+      count: messageCounts.unread,
+      badge: messageCounts.unread > 0 ? messageCounts.unread : null,
     },
     {
       key: "trash",
@@ -55,7 +59,7 @@ const Sidebar = ({
         </button>
       </div>
       <div className="px-2">
-        {sidebarItems.map(({ key, label, icon: Icon, count }) => (
+        {sidebarItems.map(({ key, label, icon: Icon, count, badge }) => (
           <button
             key={key}
             className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm mb-1 transition-colors ${
@@ -73,19 +77,26 @@ const Sidebar = ({
               <Icon size={18} />
               {label}
             </div>
-            {count !== undefined && (
-              <span
-                className={`text-xs px-2 py-1 rounded-full ${
-                  filterType === key
-                    ? "bg-blue-600 text-white"
-                    : isDark
-                    ? "bg-gray-600 text-gray-300"
-                    : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {count}
-              </span>
-            )}
+            <div className="flex items-center gap-1">
+              {badge && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white min-w-[18px] text-center">
+                  {badge}
+                </span>
+              )}
+              {count !== undefined && count > 0 && (
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full ${
+                    filterType === key
+                      ? "bg-blue-600 text-white"
+                      : isDark
+                      ? "bg-gray-600 text-gray-300"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {count}
+                </span>
+              )}
+            </div>
           </button>
         ))}
         {filterType === 'trash' && messageCounts.trash > 0 && (

@@ -58,7 +58,13 @@ const MessagingInterface = ({
   };
 
   const fetchMessages = useCallback(async () => {
-    const userId = localStorage.getItem('userId');
+    const parentId = localStorage.getItem('userId');
+    const selectedRole = (localStorage.getItem('userRole') || '').toUpperCase();
+    const isParentRole = selectedRole.includes('PARENT');
+    // For parents: use selected child's ID so they see child's messages, not professor messages
+    const userId = isParentRole
+      ? (localStorage.getItem('selectedChildId') || parentId)
+      : parentId;
     if (!userId) return;
 
     setLoading(true);

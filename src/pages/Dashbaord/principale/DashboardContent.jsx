@@ -157,8 +157,8 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     activeProfessors: 0,
     activeClasses: 0,
     pendingClasses: 0,
-    averageProgress: 68.2,
-    completionRate: 78.5,
+    averageProgress: 0,
+    completionRate: 0,
   });
 
   useEffect(() => {
@@ -207,7 +207,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             ? pendingProfessors.value || []
             : [],
         matieres: matieres.status === "fulfilled" ? matieres.value || [] : [],
-        courses: [], // Mock data for now
+        courses: [],
       };
 
       // Calculate statistics
@@ -219,8 +219,8 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         totalClasses: successfulResults.classes.length,
         totalEstablishments: successfulResults.establishments.length,
         totalMatieres: successfulResults.matieres.length,
-        totalCourses: Math.floor(successfulResults.matieres.length * 16.3), // Estimated
-        totalExercises: Math.floor(successfulResults.matieres.length * 121.3), // Estimated
+        totalCourses: successfulResults.courses ? successfulResults.courses.length : 0,
+        totalExercises: 0,
         pendingProfessors: successfulResults.pendingProfessors.length,
         activeProfessors: successfulResults.professors.filter(
           (p) => p.etat === "ACTIVE"
@@ -231,8 +231,8 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         pendingClasses: successfulResults.classes.filter(
           (c) => c.etat === "EN_ATTENTE_APPROBATION"
         ).length,
-        averageProgress: 68.2,
-        completionRate: 78.5,
+        averageProgress: 0,
+        completionRate: 0,
       };
 
       setDashboardData({
@@ -318,7 +318,7 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   ];
 
   const exerciseCompletionData = [
-    { name: t('dashboard.completion.completed'), value: 78.5, color: "#10B981" },
+    { name: t('dashboard.completion.completed'), value: stats.completionRate || 0, color: "#10B981" },
     { name: t('dashboard.completion.inProgress'), value: 15.3, color: "#6366F1" },
     { name: t('dashboard.completion.notStarted'), value: 6.2, color: "#F43F5E" },
   ];

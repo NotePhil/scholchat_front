@@ -130,24 +130,47 @@ class MinioS3Service {
       console.log('=== UPLOADING TO MINIO ===');
       console.log('Presigned URL:', presignedUrl);
       console.log('File size:', file.size, 'Content-Type:', contentType);
-      
-      const uploadResponse = await axios.put(presignedUrl, file, {
-        headers: {
-          "Content-Type": contentType,
-        },
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        timeout: 30000, // 30 second timeout
-      });
 
-      console.log('Upload response status:', uploadResponse.status);
-      console.log('=== MINIO UPLOAD SUCCESS ===');
+      // Try direct upload first
+      try {
+        const uploadResponse = await axios.put(presignedUrl, file, {
+          headers: {
+            "Content-Type": contentType,
+          },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          timeout: 60000,
+        });
+        console.log('Direct upload success:', uploadResponse.status);
+        return { success: true, status: uploadResponse.status };
+      } catch (directError) {
+        console.warn('Direct MinIO upload failed (CORS), using backend proxy...');
+      }
 
-      return {
-        success: true,
-        status: uploadResponse.status,
-        statusText: uploadResponse.statusText,
-      };
+      // Fallback: upload through backend proxy using FormData
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('presignedUrl', presignedUrl);
+      formData.append('contentType', contentType);
+
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      const proxyResponse = await axios.post(
+        `${process.env.REACT_APP_API_BASE_URL}/media/proxy-upload`,
+        formData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          timeout: 120000,
+        }
+      );
+
+      console.log('Proxy upload success:', proxyResponse.status);
+      console.log('=== MINIO UPLOAD SUCCESS (via proxy) ===');
+      return { success: true, status: proxyResponse.status };
     } catch (error) {
       console.error('=== MINIO UPLOAD ERROR ===');
       console.error('Error status:', error.response?.status);
@@ -208,13 +231,13 @@ class MinioS3Service {
 
   async generateDownloadUrl(mediaId) {
     try {
-      const response = await minioApi.get(`/media/${mediaId}/download-url`);
-      
+      // Use proxy download URL to avoid CORS issues with MinIO
+      const proxyUrl = `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`;
       return {
-        downloadUrl: response.data.url,
-        fileName: response.data.fileName,
-        contentType: response.data.contentType,
-        ownerId: response.data.ownerId,
+        downloadUrl: proxyUrl,
+        fileName: mediaId,
+        contentType: "application/octet-stream",
+        ownerId: null,
       };
     } catch (error) {
       throw new Error(
@@ -227,7 +250,17 @@ class MinioS3Service {
 
   async generateDownloadUrlByPath(filePath) {
     try {
+      // First try to get media info to use proxy URL
       const response = await minioApi.get(`/media/download-by-path?filePath=${encodeURIComponent(filePath)}`);
+      // If we have an ID, use proxy; otherwise use direct URL
+      if (response.data.id) {
+        return {
+          downloadUrl: `${process.env.REACT_APP_API_BASE_URL}/media/${response.data.id}/content`,
+          fileName: response.data.fileName,
+          contentType: response.data.contentType,
+          ownerId: response.data.ownerId,
+        };
+      }
       return {
         downloadUrl: response.data.url,
         fileName: response.data.fileName,

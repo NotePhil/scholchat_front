@@ -37,29 +37,35 @@ const ComposeModal = ({
     const fetchClasses = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const userId = localStorage.getItem("userId");
+        const parentId = localStorage.getItem("userId");
+        const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase();
+        const isParentRole = selectedRole.includes("PARENT");
+        const isAdmin = selectedRole.includes("ADMIN");
+        const userId = isParentRole
+          ? (localStorage.getItem("selectedChildId") || parentId)
+          : parentId;
         if (!userId || !accessToken) return;
 
-        let endpoint;
-        if (
-          currentUser?.role === "ROLE_PROFESSOR" ||
-          currentUser?.admin === false
-        ) {
-          endpoint = `${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`;
-        } else {
-          endpoint = `${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`;
+        let allClasses = [];
+        try {
+          if (isAdmin) {
+            // Admin sees ALL classes
+            const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes`, {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            if (resp.ok) allClasses = await resp.json();
+          } else {
+            // Others see classes they have access to
+            const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`, {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            if (resp.ok) allClasses = await resp.json();
+          }
+        } catch (e) {
+          console.warn("Error fetching classes:", e);
         }
 
-        const response = await fetch(endpoint, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        if (!response.ok) {
-          throw new Error("Failed to fetch classes");
-        }
-        const data = await response.json();
-        setClassesList(data);
+        setClassesList(allClasses);
       } catch (error) {
         console.error("Error fetching classes:", error);
       }
@@ -188,14 +194,14 @@ const ComposeModal = ({
               expediteur: {
                 type: "utilisateur",
                 id: senderId,
-                nom: currentUser.nom,
-                prenom: currentUser.prenom,
-                email: currentUser.email,
-                telephone: currentUser.telephone,
-                adresse: currentUser.adresse,
+                nom: currentUser?.nom || localStorage.getItem("userName") || currentUser?.username || "",
+                prenom: currentUser?.prenom || "",
+                email: currentUser?.email || localStorage.getItem("userEmail") || "",
+                telephone: currentUser?.telephone || "",
+                adresse: currentUser?.adresse || "",
                 etat: "ACTIVE",
-                creationDate: currentUser.creationDate,
-                admin: currentUser.admin,
+                creationDate: currentUser?.creationDate || null,
+                admin: currentUser?.admin || false,
               },
               destinataires: allRecipients.map((dest) => ({
                 type: "utilisateur",
@@ -245,12 +251,18 @@ const ComposeModal = ({
 
   const filteredUsers = Object.values(classUsers)
     .flat()
+    .filter((user, index, self) => self.findIndex(u => u.id === user.id) === index) // deduplicate
     .filter(
-      (user) =>
-        (user.nom.toLowerCase().includes(recipientSearch.toLowerCase()) ||
-        user.email.toLowerCase().includes(recipientSearch.toLowerCase()) ||
-        (user.prenom && user.prenom.toLowerCase().includes(recipientSearch.toLowerCase()))) &&
-        user.id !== localStorage.getItem('userId')
+      (user) => {
+        if (user.id === localStorage.getItem('userId')) return false;
+        if (!recipientSearch) return true;
+        const search = recipientSearch.toLowerCase();
+        const fullName = `${user.prenom || ""} ${user.nom || ""}`.toLowerCase();
+        return fullName.includes(search) ||
+          (user.email || "").toLowerCase().includes(search) ||
+          (user.nom || "").toLowerCase().includes(search) ||
+          (user.prenom || "").toLowerCase().includes(search);
+      }
     );
 
   const handleAddRecipient = (user) => {
@@ -266,15 +278,19 @@ const ComposeModal = ({
   // Filter users for CC field from class users
   const filteredCcUsers = Object.values(classUsers)
     .flat()
+    .filter((user, index, self) => self.findIndex(u => u.id === user.id) === index)
     .filter(
-      (user) =>
-        (user.nom.toLowerCase().includes(ccSearch.toLowerCase()) ||
-          user.email.toLowerCase().includes(ccSearch.toLowerCase()) ||
-          (user.prenom &&
-            user.prenom.toLowerCase().includes(ccSearch.toLowerCase()))) &&
+      (user) => {
+        const search = ccSearch.toLowerCase();
+        const fullName = `${user.prenom || ""} ${user.nom || ""}`.toLowerCase();
+        return (fullName.includes(search) ||
+          (user.email || "").toLowerCase().includes(search) ||
+          (user.nom || "").toLowerCase().includes(search) ||
+          (user.prenom || "").toLowerCase().includes(search)) &&
         !ccRecipients.some((cc) => cc.id === user.id) &&
         !newMessage.destinataires.some((dest) => dest.id === user.id) &&
-        user.id !== localStorage.getItem('userId')
+        user.id !== localStorage.getItem('userId');
+      }
     );
 
   const handleAddCcRecipient = (user) => {
@@ -373,24 +389,32 @@ const ComposeModal = ({
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="generalMessage"
-                  checked={isGeneralMessage}
-                  onChange={toggleGeneralMessage}
-                  disabled={selectedClasses.length === 0}
-                  className="rounded"
-                />
-                <label
-                  htmlFor="generalMessage"
-                  className={`text-sm ${
-                    selectedClasses.length === 0 ? "opacity-50" : ""
-                  } ${isDark ? "text-gray-300" : "text-gray-700"}`}
-                >
-                  Message général (envoyé à tous les membres de la classe)
-                </label>
-              </div>
+              {/* Hide general message option for parents and students */}
+              {(() => {
+                const userRole = (localStorage.getItem('userRole') || '').toUpperCase();
+                const isParentOrStudent = userRole.includes('PARENT') || userRole.includes('ELEVE') || userRole.includes('STUDENT');
+                if (isParentOrStudent) return null;
+                return (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="generalMessage"
+                      checked={isGeneralMessage}
+                      onChange={toggleGeneralMessage}
+                      disabled={selectedClasses.length === 0}
+                      className="rounded"
+                    />
+                    <label
+                      htmlFor="generalMessage"
+                      className={`text-sm ${
+                        selectedClasses.length === 0 ? "opacity-50" : ""
+                      } ${isDark ? "text-gray-300" : "text-gray-700"}`}
+                    >
+                      Message général (envoyé à tous les membres de la classe)
+                    </label>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

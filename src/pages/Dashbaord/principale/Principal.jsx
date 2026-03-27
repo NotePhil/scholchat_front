@@ -8,6 +8,7 @@ import {
   User,
   ChevronDown,
   LogOut,
+  RefreshCw,
   Settings,
   Phone,
   Mail,
@@ -56,6 +57,11 @@ import ManageExercisesContent from "./content/excerciseContent/ManageExercisesCo
 import MatiereContent from "./content/MatiereContent/MatiereContent";
 import GestionnaireDashboardContent from "./content/GestionnaireContent/GestionnaireDashboardContent";
 import MobileBottomNav from "../components/MobileBottomNav";
+import ParentChildrenList from "./ParentSidebar/ParentChildrenList";
+import GestionnairesManagement from "./content/GestionnaireContent/GestionnairesManagement";
+import RoleSelectorModal from "../../../components/modals/RoleSelectorModal";
+import ReAuthModal from "../../../components/modals/ReAuthModal";
+import ChildSelectorModal from "../../../components/modals/ChildSelectorModal";
 
 import "../../../CSS/Principal.css";
 
@@ -165,6 +171,74 @@ const Principal = () => {
   const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showRoleSwitchModal, setShowRoleSwitchModal] = useState(false);
+  const [showReAuthModal, setShowReAuthModal] = useState(false);
+  const [pendingRoleSwitch, setPendingRoleSwitch] = useState(null);
+  const [roleSwitchLoading, setRoleSwitchLoading] = useState(false);
+  // Child switcher for parents
+  const [parentChildren, setParentChildren] = useState([]);
+  const [selectedChild, setSelectedChild] = useState(null);
+  const [showChildDropdown, setShowChildDropdown] = useState(false);
+  const [pendingChildSwitch, setPendingChildSwitch] = useState(null);
+  const [showChildAuthModal, setShowChildAuthModal] = useState(false);
+  const [childAuthLoading, setChildAuthLoading] = useState(false);
+
+  // Fetch children for parent role
+  useEffect(() => {
+    if (isParent) {
+      const fetchChildren = async () => {
+        try {
+          const pid = localStorage.getItem("userId");
+          const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+          if (!pid || !token) return;
+          const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/parents/${pid}/enfants`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (resp.ok) {
+            const kids = await resp.json();
+            setParentChildren(kids || []);
+            // Auto-select stored child or first
+            const storedId = localStorage.getItem("selectedChildId");
+            const found = kids.find(k => k.id === storedId);
+            setSelectedChild(found || (kids.length > 0 ? kids[0] : null));
+            if (!found && kids.length > 0) {
+              localStorage.setItem("selectedChildId", kids[0].id);
+              localStorage.setItem("selectedChildName", `${kids[0].prenom || ''} ${kids[0].nom || ''}`);
+            }
+          }
+        } catch (e) {
+          console.warn("Could not fetch parent children:", e);
+        }
+      };
+      fetchChildren();
+    }
+  }, [isParent]);
+
+  const handleChildSwitch = (child) => {
+    // If switching to a different child, require password verification
+    if (selectedChild && selectedChild.id !== child.id) {
+      setPendingChildSwitch(child);
+      setShowChildDropdown(false);
+      setShowChildAuthModal(true);
+      return;
+    }
+    // Same child or first selection - just switch
+    doChildSwitch(child);
+  };
+
+  const doChildSwitch = (child) => {
+    setSelectedChild(child);
+    // Clear previous child data from localStorage
+    localStorage.removeItem("childClasses");
+    localStorage.removeItem("childCourses");
+    // Set new child info
+    localStorage.setItem("selectedChildId", child.id);
+    localStorage.setItem("selectedChildName", `${child.prenom || ''} ${child.nom || ''}`);
+    localStorage.setItem("selectedChildNiveau", child.niveau || '');
+    setShowChildDropdown(false);
+    // Trigger full refresh of all child data
+    window.dispatchEvent(new Event("childChanged"));
+  };
 
   const handleLogout = useCallback(() => {
     // Store current page before logout using hook
@@ -488,11 +562,11 @@ const Principal = () => {
         );
       case "cours":
         return (
-          <CoursProgrammeManagement 
-            {...contentProps} 
+          <CoursProgrammeManagement
+            {...contentProps}
             selectedClass={null}
             onBack={() => handleTabChange('classes')}
-            onScheduleCourse={() => handleTabChange('schedule-course')}
+            onScheduleCourse={(isProfessor || isAdmin) ? () => handleTabChange('schedule-course') : undefined}
           />
         );
       case "create-class":
@@ -515,6 +589,10 @@ const Principal = () => {
         );
       case "manage-establishment":
         return <ManageEstablishmentContent {...contentProps} />;
+      case "my-children":
+        return <ParentChildrenList />;
+      case "gestionnaires":
+        return <GestionnairesManagement />;
       case "messages":
         return (
           <div className="messages-content-container">
@@ -632,6 +710,104 @@ const Principal = () => {
         </div>
       </Modal>
 
+      {/* Role Switch Flow */}
+      <RoleSelectorModal
+        isOpen={showRoleSwitchModal}
+        roles={JSON.parse(localStorage.getItem('availableRoles') || '[]')}
+        onSelect={(role) => {
+          setShowRoleSwitchModal(false);
+          setPendingRoleSwitch(role);
+          setShowReAuthModal(true);
+        }}
+        onClose={() => setShowRoleSwitchModal(false)}
+        title="Changer de profil"
+        subtitle="Choisissez le profil vers lequel vous souhaitez basculer."
+      />
+
+      <ReAuthModal
+        isOpen={showReAuthModal}
+        email={localStorage.getItem('userEmail')}
+        loading={roleSwitchLoading}
+        onConfirm={async (encryptedPassword) => {
+          setRoleSwitchLoading(true);
+          try {
+            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/auth/switch-role`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: localStorage.getItem('userEmail'),
+                password: encryptedPassword,
+                selectedRole: pendingRoleSwitch,
+              }),
+            });
+            if (!response.ok) throw new Error("Mot de passe incorrect");
+            const authData = await response.json();
+
+            // Update localStorage with new role
+            localStorage.setItem("accessToken", authData.accessToken);
+            localStorage.setItem("authToken", authData.accessToken);
+            localStorage.setItem("userRole", "ROLE_" + pendingRoleSwitch.toUpperCase());
+            localStorage.setItem("authResponse", JSON.stringify(authData));
+            localStorage.setItem("availableRoles", JSON.stringify(authData.availableRoles || []));
+            if (authData.children) localStorage.setItem("children", JSON.stringify(authData.children));
+
+            setShowReAuthModal(false);
+            setPendingRoleSwitch(null);
+
+            // Map role to correct dashboard path
+            const dashboardMap = {
+              ADMIN: "AdminDashboard",
+              PROFESSOR: "ProfessorDashboard",
+              PARENT: "ParentDashboard",
+              STUDENT: "StudentDashboard",
+              TUTOR: "ProfessorDashboard",
+              GESTIONNAIRE: "GestionnaireDashboard",
+            };
+            const dashName = dashboardMap[pendingRoleSwitch.toUpperCase()] || "AdminDashboard";
+            window.location.href = `/schoolchat/Principal/${dashName}/activities`;
+          } catch (err) {
+            throw err;
+          } finally {
+            setRoleSwitchLoading(false);
+          }
+        }}
+        onClose={() => { setShowReAuthModal(false); setPendingRoleSwitch(null); }}
+      />
+
+      {/* Child Switch Auth Modal */}
+      <ReAuthModal
+        isOpen={showChildAuthModal}
+        email={localStorage.getItem('userEmail')}
+        loading={childAuthLoading}
+        onConfirm={async (encryptedPassword) => {
+          setChildAuthLoading(true);
+          try {
+            // Verify password by calling login
+            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/auth/login`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: localStorage.getItem('userEmail'),
+                password: encryptedPassword,
+              }),
+            });
+            if (!response.ok) throw new Error("Mot de passe incorrect");
+
+            // Password verified - do the switch
+            setShowChildAuthModal(false);
+            if (pendingChildSwitch) {
+              doChildSwitch(pendingChildSwitch);
+              setPendingChildSwitch(null);
+            }
+          } catch (err) {
+            throw err;
+          } finally {
+            setChildAuthLoading(false);
+          }
+        }}
+        onClose={() => { setShowChildAuthModal(false); setPendingChildSwitch(null); }}
+      />
+
       <Sidebar
         showSidebar={showSidebar}
         activeTab={activeTab}
@@ -666,7 +842,106 @@ const Principal = () => {
             gap: '8px',
             flexShrink: 0
           }}>
+            {/* Refresh button */}
+            <button
+              onClick={() => window.location.reload()}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Actualiser"
+              style={{ minHeight: '36px', minWidth: '36px' }}
+            >
+              <RefreshCw size={16} className="text-gray-500" />
+            </button>
+
             <NotificationIcon />
+
+            {/* Role Switcher - only show if user has multiple roles */}
+            {(() => {
+              const storedRoles = JSON.parse(localStorage.getItem('availableRoles') || '[]');
+              if (storedRoles.length <= 1) return null;
+              const currentRole = (normalizedUserRole || '').charAt(0).toUpperCase() + (normalizedUserRole || '').slice(1);
+              return (
+                <button
+                  onClick={() => setShowRoleSwitchModal(true)}
+                  className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
+                  title="Changer de role"
+                  style={{ minHeight: '36px' }}
+                >
+                  <Settings size={14} />
+                  <span className="hidden sm:inline">{currentRole}</span>
+                </button>
+              );
+            })()}
+
+            {/* Child Switcher - only for parents with children */}
+            {isParent && parentChildren.length > 0 && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowChildDropdown(prev => !prev);
+                  }}
+                  className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                  style={{ minHeight: '36px', maxWidth: '160px' }}
+                  title="Changer d'enfant"
+                >
+                  <User size={14} />
+                  <span className="truncate">{selectedChild ? `${selectedChild.prenom || ''} ${(selectedChild.nom || '').charAt(0)}.` : 'Enfant'}</span>
+                  <ChevronDown size={12} />
+                </button>
+                {showChildDropdown && (
+                  <>
+                    <div
+                      onClick={() => setShowChildDropdown(false)}
+                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, background: 'transparent' }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute', top: '100%', right: 0, marginTop: '4px',
+                        background: 'white', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                        zIndex: 9999, minWidth: '220px', overflow: 'hidden', border: '1px solid #e5e7eb'
+                      }}
+                    >
+                      <div style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Mes enfants
+                        </span>
+                      </div>
+                      {parentChildren.map((child) => (
+                        <button
+                          key={child.id}
+                          onClick={() => handleChildSwitch(child)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                            padding: '10px 12px', border: 'none', background: selectedChild?.id === child.id ? '#f3e8ff' : 'white',
+                            cursor: 'pointer', textAlign: 'left', fontSize: '13px',
+                            borderLeft: selectedChild?.id === child.id ? '3px solid #9333ea' : '3px solid transparent',
+                          }}
+                          onMouseEnter={(e) => { if (selectedChild?.id !== child.id) e.target.style.background = '#faf5ff'; }}
+                          onMouseLeave={(e) => { if (selectedChild?.id !== child.id) e.target.style.background = 'white'; }}
+                        >
+                          <div style={{
+                            width: '28px', height: '28px', borderRadius: '50%',
+                            background: selectedChild?.id === child.id ? '#9333ea' : '#e9d5ff',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: selectedChild?.id === child.id ? 'white' : '#7c3aed',
+                            fontSize: '11px', fontWeight: 700, flexShrink: 0
+                          }}>
+                            {(child.prenom || '?').charAt(0)}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, color: '#1f2937' }}>{child.prenom} {child.nom}</div>
+                            {child.niveau && <div style={{ fontSize: '11px', color: '#9ca3af' }}>{child.niveau}</div>}
+                          </div>
+                          {selectedChild?.id === child.id && (
+                            <span style={{ marginLeft: 'auto', color: '#9333ea', fontSize: '16px', flexShrink: 0 }}>✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="language-dropdown" style={{ position: 'relative' }}>
               <button

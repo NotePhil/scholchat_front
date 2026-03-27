@@ -71,7 +71,10 @@ const StudentParentStats = ({
         const childrenData = await parentService.getChildren(userId);
         setChildren(childrenData);
         if (childrenData.length > 0) {
-          setSelectedChild(childrenData[0]);
+          // Use child selected from header switcher, or first child
+          const storedChildId = localStorage.getItem("selectedChildId");
+          const found = childrenData.find(c => c.id === storedChildId);
+          setSelectedChild(found || childrenData[0]);
         }
       } else {
         // Student - load own data
@@ -90,28 +93,73 @@ const StudentParentStats = ({
     }
   }, [userId, userRole]);
 
+  // Load data for selected child - fetches ONLY this child's data using direct fetch (no cache)
+  const loadChildData = useCallback(async (child) => {
+    if (!child?.id) return;
+
+    console.log("=== LOADING DATA FOR CHILD ===", child.id, child.prenom, child.nom);
+
+    // Use direct fetch to avoid any axios caching or interceptor issues
+    const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+    const baseUrl = process.env.REACT_APP_API_BASE_URL;
+    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+    try {
+      // Fetch classes directly for THIS child ID - no fallback to parent
+      const classesResp = await fetch(`${baseUrl}/acceder/utilisateurs/${child.id}/classes`, { headers });
+      const childClassesResult = classesResp.ok ? await classesResp.json() : [];
+
+      // Fetch courses for this child
+      const coursesResp = await fetch(`${baseUrl}/cours-programmes/by-participant/${child.id}`, { headers });
+      const childCoursesResult = coursesResp.ok ? await coursesResp.json() : [];
+
+      // Fetch notifications
+      let childNotifs = [];
+      try {
+        const notifsResp = await fetch(`${baseUrl}/notifications`, { headers });
+        childNotifs = notifsResp.ok ? await notifsResp.json() : [];
+      } catch (e) { /* ignore */ }
+
+      console.log("=== CHILD CLASSES ===", child.prenom, ":", childClassesResult.length);
+      console.log("=== CHILD COURSES ===", child.prenom, ":", childCoursesResult.length);
+
+      setChildClasses(childClassesResult);
+      setChildCourses(childCoursesResult);
+      setChildNotifications(childNotifs);
+    } catch (err) {
+      console.error("Error loading child data:", err);
+      setChildClasses([]);
+      setChildCourses([]);
+      setChildNotifications([]);
+    }
+  }, []);
+
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
 
-  // Load data for selected child
-  const loadChildData = useCallback(async (child) => {
-    if (!child?.id) return;
-
-    try {
-      const [classes, courses, notifications] = await Promise.allSettled([
-        AccederService.obtenirClassesAccessibles(child.id),
-        coursProgrammerService.obtenirProgrammationParParticipant(child.id),
-        parentService.getMyNotifications(),
-      ]);
-
-      setChildClasses(classes.status === "fulfilled" ? classes.value || [] : []);
-      setChildCourses(courses.status === "fulfilled" ? courses.value || [] : []);
-      setChildNotifications(notifications.status === "fulfilled" ? notifications.value || [] : []);
-    } catch (err) {
-      console.error("Error loading child data:", err);
-    }
-  }, []);
+  // Listen for child switch from header - FULL RESET and RELOAD
+  useEffect(() => {
+    const handleChildChanged = () => {
+      const storedChildId = localStorage.getItem("selectedChildId");
+      if (storedChildId && children.length > 0) {
+        const found = children.find(c => c.id === storedChildId);
+        if (found) {
+          // Clear ALL previous child data immediately
+          setChildClasses([]);
+          setChildCourses([]);
+          setChildNotifications([]);
+          // Create new object reference to force re-render
+          const newChild = { ...found };
+          setSelectedChild(newChild);
+          // Directly reload data for this child
+          loadChildData(newChild);
+        }
+      }
+    };
+    window.addEventListener("childChanged", handleChildChanged);
+    return () => window.removeEventListener("childChanged", handleChildChanged);
+  }, [children, loadChildData]);
 
   // When selected child changes, reload their data
   useEffect(() => {
@@ -428,9 +476,11 @@ const StudentParentStats = ({
                 <div className={`px-2 py-1 rounded-full text-[10px] font-bold ${
                   classe.etat === "ACTIF"
                     ? "bg-green-100 text-green-700"
-                    : "bg-yellow-100 text-yellow-700"
+                    : classe.etat === "EN_ATTENTE"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-blue-100 text-blue-700"
                 }`}>
-                  {classe.etat === "ACTIF" ? "Actif" : classe.etat}
+                  {classe.etat === "ACTIF" ? "Actif" : classe.etat === "EN_ATTENTE" ? "En attente" : classe.etat || "Inscrit"}
                 </div>
               </div>
             );
@@ -567,7 +617,7 @@ const StudentParentStats = ({
               </p>
             </div>
             <div className={`flex items-center ${isMobile ? "gap-2" : "space-x-4"}`}>
-              {userRole === "parent" && <StudentSelector />}
+              {/* Child switcher moved to header */}
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}

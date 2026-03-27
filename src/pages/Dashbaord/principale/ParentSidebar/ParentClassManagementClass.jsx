@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import AddChildModal from "./AddChildModal";
 import {
   Box,
   Typography,
@@ -210,13 +211,21 @@ const ParentClassManagementClass = () => {
   });
   const [activationCode, setActivationCode] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [showAddChild, setShowAddChild] = useState(false);
   const [foundClass, setFoundClass] = useState(null);
   const [students, setStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [newStudentName, setNewStudentName] = useState("");
   const [showCourseManagement, setShowCourseManagement] = useState(false);
 
-  const userId = localStorage.getItem("userId");
+  const parentId = localStorage.getItem("userId");
+  const userRole = (localStorage.getItem("userRole") || "").toUpperCase();
+  const isParent = userRole.includes("PARENT");
+  // For parents: use selected child's ID for class fetching
+  const [activeUserId, setActiveUserId] = useState(
+    isParent ? (localStorage.getItem("selectedChildId") || parentId) : parentId
+  );
+  const userId = activeUserId;
   const userEmail = localStorage.getItem("userEmail");
   const username = localStorage.getItem("username");
 
@@ -343,6 +352,21 @@ const ParentClassManagementClass = () => {
     }
     fetchData();
   }, [userId, navigate]);
+
+  // Refresh when child is switched from header
+  useEffect(() => {
+    const handleChildChanged = () => {
+      const newChildId = isParent
+        ? (localStorage.getItem("selectedChildId") || parentId)
+        : parentId;
+      setActiveUserId(newChildId);
+      setUserClasses([]);
+      setAllClasses([]);
+      setUserAccessStatus({});
+    };
+    window.addEventListener("childChanged", handleChildChanged);
+    return () => window.removeEventListener("childChanged", handleChildChanged);
+  }, [isParent, parentId]);
 
   const handleClassClick = (classe, isRequest = false) => {
     setSelectedClass(classe);
@@ -607,7 +631,23 @@ const ParentClassManagementClass = () => {
                 </Box>
               </Box>
 
-              <Box display="flex" gap={2}>
+              <Box display="flex" gap={2} flexWrap="wrap">
+                <ActionButton
+                  variant="contained"
+                  onClick={() => setShowAddChild(true)}
+                  startIcon={<PersonAddIcon />}
+                  sx={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    color: "white",
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 255, 255, 0.3)",
+                    },
+                  }}
+                >
+                  Ajouter enfant
+                </ActionButton>
                 <ActionButton
                   variant="contained"
                   onClick={() => setSearchDialogOpen(true)}
@@ -622,7 +662,7 @@ const ParentClassManagementClass = () => {
                     },
                   }}
                 >
-                  Rechercher une
+                  Rechercher classe
                 </ActionButton>
                 <ActionButton
                   variant="contained"
@@ -988,6 +1028,15 @@ const ParentClassManagementClass = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* Add Child Modal */}
+        <AddChildModal
+          isOpen={showAddChild}
+          onClose={() => setShowAddChild(false)}
+          onChildAdded={() => {
+            setSnackbar({ open: true, message: "Enfant ajoute avec succes!", severity: "success" });
+          }}
+        />
       </Box>
     </Box>
   );

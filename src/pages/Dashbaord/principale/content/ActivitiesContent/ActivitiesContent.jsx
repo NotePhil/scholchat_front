@@ -55,6 +55,8 @@ const ActivitiesContent = () => {
   const [localLikes, setLocalLikes] = useState({});
   const [localComments, setLocalComments] = useState({});
   const [likedByUsers, setLikedByUsers] = useState({});
+  const [activeTab, setActiveTab] = useState('all'); // New state for active tab
+  const [filteredActivities, setFilteredActivities] = useState([]); // Filtered activities
   const [newComment, setNewComment] = useState({});
   const [imagePreview, setImagePreview] = useState({
     isOpen: false,
@@ -88,31 +90,45 @@ const ActivitiesContent = () => {
       const userId = localStorage.getItem('userId');
       const isAdmin = userRole.toUpperCase().includes('ADMIN');
 
-      let endpoint;
-      if (isAdmin) {
-        // Admin sees all classes
-        endpoint = `${process.env.REACT_APP_API_BASE_URL}/classes`;
-      } else {
-        // Professor sees classes they have publication rights for
-        // Students/parents see classes they have access to
-        endpoint = `${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`;
-      }
-
       const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-      const response = await fetch(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const isProfessor = userRole.toUpperCase().includes('PROFESSOR') || userRole.toUpperCase().includes('TUTOR');
 
-      if (response.ok) {
-        const classesData = await response.json();
-        setClasses(classesData);
+      let classesData = [];
+
+      if (isAdmin) {
+        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (response.ok) classesData = await response.json();
+      } else if (isProfessor) {
+        // Try moderator classes first, then publication rights, then accessible classes
+        try {
+          const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+          });
+          if (resp.ok) {
+            const allClasses = await resp.json();
+            // Filter to only classes where this professor is moderator or has access
+            const accessResp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`, {
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+            const accessClasses = accessResp.ok ? await accessResp.json() : [];
+            const accessIds = accessClasses.map(c => c.id);
+            classesData = allClasses.filter(c => c.moderatorId === userId || accessIds.includes(c.id));
+            if (classesData.length === 0) classesData = allClasses.filter(c => c.etat === 'ACTIF');
+          }
+        } catch (e) {
+          console.warn("Fallback to all classes:", e);
+        }
       } else {
-        console.error('Error loading classes, status:', response.status);
-        setClasses([]);
+        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (response.ok) classesData = await response.json();
       }
+
+      // Filter active classes only
+      setClasses(classesData.filter(c => c.etat === 'ACTIF' || !c.etat));
     } catch (error) {
       console.error('Error loading classes:', error);
       setClasses([]);
@@ -133,11 +149,48 @@ const ActivitiesContent = () => {
     loadClasses();
   }, [formData.visibility]);
 
+  // Filter activities based on active tab
+  useEffect(() => {
+    const currentUserId = localStorage.getItem('userId');
+    let filtered = [];
+    
+    switch (activeTab) {
+      case 'user':
+        // Show only user's own events
+        filtered = activities.filter(activity => 
+          activity.eventDetails && activity.eventDetails.createurId === currentUserId
+        );
+        break;
+      case 'groups':
+        // Show only private/group events
+        filtered = activities.filter(activity => 
+          activity.visibility === 'PRIVATE'
+        );
+        break;
+      case 'events':
+        // Show only upcoming events
+        filtered = activities.filter(activity => 
+          activity.eventDetails && new Date(activity.eventDetails.startTime) > new Date()
+        );
+        break;
+      case 'saved':
+        // Show only liked/participated events
+        filtered = activities.filter(activity => 
+          activity.isLiked || activity.isParticipating
+        );
+        break;
+      default:
+        filtered = activities;
+    }
+    
+    setFilteredActivities(filtered);
+  }, [activities, activeTab]);
+
   const getImageUrl = async (media) => {
     try {
       if (!media.id) return null;
-      const downloadData = await minioS3Service.generateDownloadUrl(media.id);
-      return downloadData.downloadUrl;
+      // Use proxy download to avoid CORS issues with MinIO
+      return `${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/content`;
     } catch (error) {
       console.error('Failed to get image URL:', error);
       return null;
@@ -186,6 +239,42 @@ const ActivitiesContent = () => {
           const participants = event.participantsIds?.length || 0;
           const isParticipating = event.participantsIds?.includes(currentUserId) || false;
           
+          // Resolve creator name and role from backend fields
+          let creatorName = '';
+          let creatorRole = event.createurRole || '';
+
+          // Backend now sends createurNom, createurPrenom, createurRole
+          if (event.createurPrenom || event.createurNom) {
+            creatorName = `${event.createurPrenom || ''} ${event.createurNom || ''}`.trim();
+          } else if (event.createur) {
+            const cPrenom = event.createur.prenom || '';
+            const cNom = event.createur.nom || '';
+            creatorName = `${cPrenom} ${cNom}`.trim() || event.createur.email || '';
+          }
+
+          // Fallback: fetch from API if still no name
+          if (!creatorName && event.createurId) {
+            try {
+              const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+              const userRes = await fetch(`${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${event.createurId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (userRes.ok) {
+                const userData = await userRes.json();
+                creatorName = `${userData.prenom || ''} ${userData.nom || ''}`.trim() || userData.email || 'Utilisateur';
+                if (userData.admin) creatorRole = 'Admin';
+                else if (userData.type) {
+                  const typeMap = { professeur: 'Professeur', eleve: 'Eleve', parent: 'Parent', gestionnaire: 'Gestionnaire', repetiteur: 'Repetiteur' };
+                  creatorRole = typeMap[userData.type.toLowerCase()] || '';
+                }
+              }
+            } catch (e) {
+              console.warn('Could not fetch creator details:', e);
+            }
+          }
+
+          if (!creatorName) creatorName = 'Utilisateur';
+
           return {
             id: event.id,
             type: 'event',
@@ -196,8 +285,10 @@ const ActivitiesContent = () => {
             participants,
             isParticipating,
             showComments: false,
-            user: { name: 'Event Creator' },
-            content: `${event.titre}: ${event.description}`,
+            user: { name: creatorName, role: creatorRole },
+            titre: event.titre,
+            description: event.description,
+            content: event.description,
             timestamp: new Date(event.heureDebut).toLocaleString(),
             eventDetails: {
               title: event.titre,
@@ -209,14 +300,54 @@ const ActivitiesContent = () => {
               participantsCount: participants,
             },
             participantsIds: event.participantsIds || [],
-            heureDebut: event.heureDebut
+            heureDebut: event.heureDebut,
+            visibility: event.visibility || 'PUBLIC',
+            selectedClasses: event.selectedClasses || [],
+            createurId: event.createurId,
           };
         })
       );
       
       activitiesWithMedias.sort((a, b) => new Date(b.heureDebut) - new Date(a.heureDebut));
-      
-      setActivities(activitiesWithMedias);
+
+      // Filter based on role and visibility
+      const currentUserId = localStorage.getItem('userId');
+      const selectedRole = (localStorage.getItem('userRole') || '').toUpperCase().replace('ROLE_', '');
+      const isParentOrStudentRole = selectedRole === 'PARENT' || selectedRole === 'STUDENT';
+
+      let visibleActivities = activitiesWithMedias;
+
+      if (isParentOrStudentRole) {
+        // For parent/student: get child's classes to filter private events
+        const childId = selectedRole === 'PARENT'
+          ? (localStorage.getItem('selectedChildId') || currentUserId)
+          : currentUserId;
+
+        let userClassIds = [];
+        try {
+          const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+          const classResp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${childId}/classes`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (classResp.ok) {
+            const userClasses = await classResp.json();
+            userClassIds = userClasses.map(c => c.id);
+          }
+        } catch (e) { /* ignore */ }
+
+        visibleActivities = activitiesWithMedias.filter(a => {
+          // Public events: always visible
+          if (!a.visibility || a.visibility === 'PUBLIC') return true;
+          // Private events: only if child has access to one of the event's classes
+          if (a.selectedClasses && a.selectedClasses.length > 0) {
+            return a.selectedClasses.some(classId => userClassIds.includes(classId));
+          }
+          return false;
+        });
+      }
+      // Professor/Admin see all events
+
+      setActivities(visibleActivities);
     } catch (error) {
       console.error('Error loading activities:', error);
       setActivities([]);
@@ -244,18 +375,34 @@ const ActivitiesContent = () => {
 
     setUploading(true);
     try {
-      const newMedia = files.map((file) => ({
+      // Validate file sizes
+      const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+      const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+
+      const validFiles = [];
+      for (const file of files) {
+        const isVideo = file.type.startsWith('video/');
+        const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+        if (file.size > maxSize) {
+          const maxMB = maxSize / 1024 / 1024;
+          alert(`${file.name} est trop volumineux (${(file.size / 1024 / 1024).toFixed(1)} Mo). Maximum: ${maxMB} Mo`);
+          continue;
+        }
+        validFiles.push(file);
+      }
+
+      const newMedia = validFiles.map((file) => ({
         file,
         url: URL.createObjectURL(file),
         name: file.name,
         type: file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE',
         contentType: file.type
       }));
-      
+
       setUploadedImages(prev => [...prev, ...newMedia]);
     } catch (error) {
       console.error('Error processing media:', error);
-      alert(t('activities.errors.mediaUploadFailed', 'Échec du chargement des médias'));
+      alert(t('activities.errors.mediaUploadFailed', 'Echec du chargement des medias'));
     } finally {
       setUploading(false);
     }
@@ -457,7 +604,7 @@ const ActivitiesContent = () => {
         titre: formData.titre,
         description: formData.description,
         lieu: formData.lieu,
-        etat: formData.etat,
+        etat: "PLANIFIE",
         heureDebut: formData.heureDebut,
         heureFin: formData.heureFin,
         createurId: formData.createurId,
@@ -499,56 +646,43 @@ const ActivitiesContent = () => {
       <div className="mx-auto max-w-7xl">
         <div className="flex gap-0 lg:gap-6">
           {/* Left Sidebar - Hidden on mobile, visible on desktop */}
-          <aside className="hidden lg:block lg:w-80 lg:flex-shrink-0">
-            <div className="sticky top-20 space-y-2">
-              <motion.div 
-                whileHover={{ x: 3 }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
-              >
-                <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                  {localStorage.getItem('userName')?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
-                <span className="font-semibold text-gray-900 dark:text-white">{localStorage.getItem('userName') || 'User'}</span>
-              </motion.div>
-
-              <motion.div 
-                whileHover={{ x: 3 }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
-              >
-                <div className="w-9 h-9 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <span className="font-medium text-gray-700 dark:text-gray-300">{t('activities.sidebar.groups', 'Groupes')}</span>
-              </motion.div>
-
-              <motion.div 
-                whileHover={{ x: 3 }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
-              >
-                <div className="w-9 h-9 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="font-medium text-gray-700 dark:text-gray-300">{t('activities.sidebar.events', 'Événements')}</span>
-              </motion.div>
-
-              <motion.div 
-                whileHover={{ x: 3 }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
-              >
-                <div className="w-9 h-9 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                </div>
-                <span className="font-medium text-gray-700 dark:text-gray-300">{t('activities.sidebar.saved', 'Enregistrés')}</span>
-              </motion.div>
+          <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0">
+            <div className="sticky top-20 space-y-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3">
+              {[
+                { key: 'all', label: 'Fil d\'actualite', icon: Home, color: 'text-gray-700', bg: '' },
+                { key: 'user', label: 'Mes publications', icon: Store, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+                { key: 'groups', label: 'Groupes prives', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/30' },
+                { key: 'events', label: 'A venir', icon: Calendar, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/30' },
+                { key: 'saved', label: 'Favoris', icon: BookOpen, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/30' },
+              ].map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setActiveTab(item.key)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all ${
+                      isActive
+                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isActive ? 'bg-blue-100 dark:bg-blue-800' : item.bg || 'bg-gray-100 dark:bg-gray-700'}`}>
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : item.color}`} />
+                    </div>
+                    <span className="text-sm">{item.label}</span>
+                  </button>
+                );
+              })}
 
               {canCreateEvent && (
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-3 mt-2">
                 <button
                   onClick={() => setShowCreateForm(true)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors shadow-md"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors"
                 >
-                  <Plus className="w-5 h-5" />
-                  {t('activities.actions.create', 'Créer un événement')}
+                  <Plus className="w-4 h-4" />
+                  Creer un evenement
                 </button>
               </div>
               )}
@@ -558,9 +692,9 @@ const ActivitiesContent = () => {
           {/* Main Content Area */}
           <main className="flex-1 min-w-0">
             <div className={`max-w-2xl mx-auto ${isMobile ? 'px-0 py-2' : 'px-0 sm:px-4 py-4 sm:py-6'}`}>
-              {/* Mobile Header */}
-              <div className="lg:hidden bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-sm p-4 mb-4">
-                <div className="flex items-center justify-between">
+              {/* Mobile Header with Tabs */}
+              <div className="lg:hidden bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-sm mb-4">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                   <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-gray-900 dark:text-white`}>
                     {t('activities.title', 'Fil d\'actualité')}
                   </h1>
@@ -572,6 +706,29 @@ const ActivitiesContent = () => {
                     <Plus className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
                   </button>
                   )}
+                </div>
+                
+                {/* Tab Navigation - Soft pill style */}
+                <div className="flex overflow-x-auto scrollbar-hide gap-1.5 px-3 py-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {[
+                    { key: 'all', label: 'Tout' },
+                    { key: 'user', label: 'Mes posts' },
+                    { key: 'groups', label: 'Groupes' },
+                    { key: 'events', label: 'A venir' },
+                    { key: 'saved', label: 'Favoris' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`px-3.5 py-1.5 text-xs font-medium whitespace-nowrap rounded-full transition-all ${
+                        activeTab === tab.key
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -821,18 +978,26 @@ const ActivitiesContent = () => {
                   <div className="flex justify-center items-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                   </div>
-                ) : activities.length === 0 ? (
+                ) : filteredActivities.length === 0 ? (
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
                     <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Calendar className="w-8 h-8 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      {t('activities.noActivities.title', 'Aucune activité')}
+                      {activeTab === 'all' ? t('activities.noActivities.title', 'Aucune activité') : `Aucun contenu dans "${[
+                        { key: 'user', label: 'Mes posts' },
+                        { key: 'groups', label: 'Groupes' },
+                        { key: 'events', label: 'Événements' },
+                        { key: 'saved', label: 'Enregistrés' }
+                      ].find(tab => tab.key === activeTab)?.label}"`}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
-                      {t('activities.noActivities.description', 'Créez votre premier événement')}
+                      {activeTab === 'all' 
+                        ? t('activities.noActivities.description', 'Créez votre premier événement')
+                        : 'Essayez de changer de filtre ou créez du contenu'
+                      }
                     </p>
-                    {canCreateEvent && (
+                    {canCreateEvent && activeTab === 'all' && (
                     <button
                       onClick={() => setShowCreateForm(true)}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
@@ -843,7 +1008,7 @@ const ActivitiesContent = () => {
                     )}
                   </div>
                 ) : (
-                  activities.map((activity) => (
+                  filteredActivities.map((activity) => (
                     <motion.div
                       key={activity.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -854,25 +1019,46 @@ const ActivitiesContent = () => {
                       <div className={`${isMobile ? 'p-3' : 'p-4'}`}>
                         <div className={`flex items-center ${isMobile ? 'gap-2 mb-2' : 'gap-3 mb-3'}`}>
                           <div className={`${isMobile ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'} bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md`}>
-                            {activity.user.name?.charAt(0)?.toUpperCase() || 'E'}
+                            {activity.user.name?.charAt(0)?.toUpperCase() || 'U'}
                           </div>
-                          <div className="flex-1">
-                            <h3 className={`font-semibold text-gray-900 dark:text-white ${isMobile ? 'text-sm' : ''}`}>
-                              {activity.user.name}
-                            </h3>
-                            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className={`font-semibold text-gray-900 dark:text-white ${isMobile ? 'text-sm' : ''} truncate`}>
+                                {activity.user.name}
+                              </h3>
+                              {activity.user.role && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-full flex-shrink-0">
+                                  {activity.user.role}
+                                </span>
+                              )}
+                            </div>
+                            <p className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-gray-500 dark:text-gray-400`}>
                               {activity.timestamp}
                             </p>
                           </div>
                         </div>
 
-                        {/* Post Content */}
-                        <p className={`text-gray-800 dark:text-gray-200 ${isMobile ? 'text-sm mb-2' : 'mb-4'} whitespace-pre-wrap`}>{activity.content}</p>
+                        {/* Post Title + Content */}
+                        {activity.titre && (
+                          <h4 className={`font-bold text-gray-900 dark:text-white ${isMobile ? 'text-sm mb-1' : 'text-base mb-1.5'}`}>
+                            {activity.titre}
+                          </h4>
+                        )}
+                        {activity.content && (
+                          <p className={`text-gray-700 dark:text-gray-300 ${isMobile ? 'text-xs mb-2' : 'text-sm mb-3'} whitespace-pre-wrap line-clamp-4`}>{activity.content}</p>
+                        )}
+
+                        {/* Event details badge */}
+                        {activity.eventDetails?.location && (
+                          <div className={`flex items-center gap-3 ${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 mb-1`}>
+                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{activity.eventDetails.location}</span>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Media Gallery */}
+                      {/* Media Gallery - Compact with carousel */}
                       {activity.medias && activity.medias.length > 0 && (
-                        <div className="bg-gray-50 dark:bg-gray-900/50">
+                        <div className="bg-gray-50 dark:bg-gray-900/50 relative">
                           {activity.medias.length === 1 && (
                             <div className="w-full">
                               {activity.medias[0].type === 'VIDEO' ? (
@@ -880,7 +1066,7 @@ const ActivitiesContent = () => {
                                   src={activity.medias[0].url}
                                   controls
                                   playsInline
-                                  className="w-full max-h-96 object-contain"
+                                  className="w-full max-h-64 object-contain"
                                 />
                               ) : (
                                 <div
@@ -890,7 +1076,7 @@ const ActivitiesContent = () => {
                                   <img
                                     src={activity.medias[0].url}
                                     alt="Post"
-                                    className="w-full max-h-96 object-contain"
+                                    className="w-full h-48 sm:h-56 object-cover"
                                   />
                                 </div>
                               )}
@@ -898,30 +1084,41 @@ const ActivitiesContent = () => {
                           )}
 
                           {activity.medias.length > 1 && (
-                            <div className={`grid gap-1 ${activity.medias.length === 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
-                              {activity.medias.map((media, idx) => (
-                                <div key={idx} className="relative">
-                                  {media.type === 'VIDEO' ? (
-                                    <video
-                                      src={media.url}
-                                      controls
-                                      playsInline
-                                      className="w-full h-48 sm:h-64 object-cover"
-                                    />
-                                  ) : (
-                                    <img
-                                      src={media.url}
-                                      alt={`Post ${idx + 1}`}
-                                      className="w-full h-48 sm:h-64 object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                                      onClick={() => {
-                                        const imageUrls = activity.medias.filter(m => m.type === 'IMAGE').map(m => m.url);
-                                        const imgIdx = imageUrls.indexOf(media.url);
-                                        openImagePreview(imageUrls, imgIdx !== -1 ? imgIdx : 0);
-                                      }}
-                                    />
-                                  )}
+                            <div className="relative">
+                              {/* Horizontal scrollable carousel */}
+                              <div className="flex overflow-x-auto snap-x snap-mandatory gap-1 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                                {activity.medias.map((media, idx) => (
+                                  <div key={idx} className="flex-shrink-0 snap-center" style={{ width: activity.medias.length === 2 ? '50%' : '75%' }}>
+                                    {media.type === 'VIDEO' ? (
+                                      <video
+                                        src={media.url}
+                                        controls
+                                        playsInline
+                                        className="w-full h-40 sm:h-52 object-cover rounded-sm"
+                                      />
+                                    ) : (
+                                      <img
+                                        src={media.url}
+                                        alt={`Post ${idx + 1}`}
+                                        className="w-full h-40 sm:h-52 object-cover cursor-pointer hover:opacity-95 transition-opacity rounded-sm"
+                                        onClick={() => {
+                                          const imageUrls = activity.medias.filter(m => m.type === 'IMAGE').map(m => m.url);
+                                          const imgIdx = imageUrls.indexOf(media.url);
+                                          openImagePreview(imageUrls, imgIdx !== -1 ? imgIdx : 0);
+                                        }}
+                                      />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                              {/* Dot indicators */}
+                              {activity.medias.length > 2 && (
+                                <div className="flex justify-center gap-1.5 py-2">
+                                  {activity.medias.map((_, idx) => (
+                                    <div key={idx} className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                                  ))}
                                 </div>
-                              ))}
+                              )}
                             </div>
                           )}
                         </div>

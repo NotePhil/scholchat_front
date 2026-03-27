@@ -7,6 +7,8 @@ import { encryptPassword } from "../utils/crypto";
 import { useTranslation } from "../hooks/useTranslation";
 import { motion } from "framer-motion";
 import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight } from "react-icons/fi";
+import RoleSelectorModal from "../components/modals/RoleSelectorModal";
+import ChildSelectorModal from "../components/modals/ChildSelectorModal";
 
 const decodeJWT = (token) => {
   try {
@@ -44,6 +46,12 @@ export const Login = ({ theme }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Multi-role state
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
+  const [showChildSelector, setShowChildSelector] = useState(false);
+  const [pendingAuthData, setPendingAuthData] = useState(null);
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [availableChildren, setAvailableChildren] = useState([]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -98,100 +106,18 @@ export const Login = ({ theme }) => {
         throw new Error(t("auth.errors.missingToken"));
       }
 
-      const returnToPage = localStorage.getItem("returnToPage");
-      localStorage.clear();
-      if (returnToPage) {
-        localStorage.setItem("returnToPage", returnToPage);
+      // Check if user has multiple roles - show role picker
+      if (authData.multiRole && authData.availableRoles && authData.availableRoles.length > 1) {
+        setPendingAuthData(authData);
+        setAvailableRoles(authData.availableRoles);
+        setShowRoleSelector(true);
+        setLoading(false);
+        return; // Wait for role selection
       }
 
-      const decodedToken = decodeJWT(accessToken);
-      if (!decodedToken) {
-        throw new Error(t("auth.errors.invalidToken"));
-      }
-
-      const userId = authData.userId;
-      const userEmail =
-        authData.userEmail || decodedToken.email || formData.email;
-      const username =
-        authData.username || decodedToken.username || userEmail.split("@")[0];
-
-      if (!userId) {
-        throw new Error(t("auth.errors.missingUserId"));
-      }
-
-      if (userId.includes("@")) {
-        throw new Error(t("auth.errors.invalidUserId"));
-      }
-
-      let userRoles = [];
-      let primaryRole = null;
-
-      if (Array.isArray(decodedToken.roles) && decodedToken.roles.length > 0) {
-        userRoles = decodedToken.roles;
-        primaryRole =
-          decodedToken.roles.length > 1
-            ? decodedToken.roles[1]
-            : decodedToken.roles[0];
-      } else if (decodedToken.role) {
-        primaryRole = decodedToken.role;
-        userRoles = [decodedToken.role];
-      } else if (Array.isArray(decodedToken.authorities)) {
-        userRoles = decodedToken.authorities;
-        primaryRole = decodedToken.authorities[0];
-      }
-
-      const user = {
-        name: username,
-        email: userEmail,
-        username: username,
-        phone: decodedToken.phone || decodedToken.phoneNumber || "",
-        id: userId,
-      };
-
-      localStorage.setItem("accessToken", accessToken);
-      if (refreshToken) {
-        localStorage.setItem("refreshToken", refreshToken);
-      }
-      localStorage.setItem("authToken", accessToken);
-      localStorage.setItem("userRole", primaryRole);
-      localStorage.setItem("userId", userId);
-      localStorage.setItem("userEmail", userEmail);
-      localStorage.setItem("username", username);
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("loginTime", new Date().getTime().toString());
-      localStorage.setItem("userRoles", JSON.stringify(userRoles));
-      localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
-      localStorage.setItem("authResponse", JSON.stringify(authData));
-
-      const credentials = {
-        token: accessToken,
-        user: user,
-        userRole: primaryRole,
-        userRoles: userRoles,
-      };
-
-      dispatch(setCredentials(credentials));
-
-      // Notify AuthContext to sync user state from localStorage
-      window.dispatchEvent(new Event("storage"));
-
+      // Single role - proceed directly
+      completeLogin(authData);
       loginSucceeded = true;
-
-      let dashboardPath = "/schoolchat/Principal/AdminDashboard/activities";
-
-      if (primaryRole === "ROLE_ADMIN") {
-        dashboardPath = "/schoolchat/Principal/AdminDashboard/activities";
-      } else if (primaryRole === "ROLE_PROFESSOR") {
-        dashboardPath = "/schoolchat/Principal/ProfessorDashboard/activities";
-      } else if (primaryRole === "ROLE_PARENT") {
-        dashboardPath = "/schoolchat/Principal/ParentDashboard/activities";
-      } else if (primaryRole === "ROLE_STUDENT") {
-        dashboardPath = "/schoolchat/Principal/StudentDashboard/activities";
-      } else if (primaryRole === "ROLE_TUTOR") {
-        dashboardPath = "/schoolchat/Principal/ProfessorDashboard/activities";
-      }
-
-      navigateToStoredPage(primaryRole, dashboardPath);
     } catch (err) {
       console.error("Login error:", err);
       setError(err.message || t("auth.errors.invalidCredentials"));
@@ -212,6 +138,123 @@ export const Login = ({ theme }) => {
       if (!loginSucceeded) {
         setLoading(false);
       }
+    }
+  };
+
+  const completeLogin = (authData, selectedRole = null) => {
+    const accessToken = authData.accessToken;
+    const decodedToken = decodeJWT(accessToken);
+    if (!decodedToken) return;
+
+    const userId = authData.userId;
+    const userEmail = authData.userEmail || decodedToken.email || formData.email;
+    const username = authData.username || decodedToken.username || userEmail.split("@")[0];
+
+    if (!userId || userId.includes("@")) return;
+
+    // Use selected role or the one from auth response
+    const roleStr = selectedRole || authData.selectedRole || null;
+    const activeRole = roleStr
+      ? (roleStr.toUpperCase().startsWith("ROLE_") ? roleStr.toUpperCase() : "ROLE_" + roleStr.toUpperCase())
+      : null;
+
+    let userRoles = [];
+    let primaryRole = activeRole;
+
+    if (Array.isArray(decodedToken.roles) && decodedToken.roles.length > 0) {
+      userRoles = decodedToken.roles;
+      if (!primaryRole) {
+        primaryRole = decodedToken.roles.length > 1 ? decodedToken.roles[1] : decodedToken.roles[0];
+      }
+    }
+
+    const returnToPage = localStorage.getItem("returnToPage");
+    localStorage.clear();
+    if (returnToPage) localStorage.setItem("returnToPage", returnToPage);
+
+    const user = {
+      name: username, email: userEmail, username, phone: "", id: userId,
+    };
+
+    localStorage.setItem("accessToken", accessToken);
+    if (authData.refreshToken) localStorage.setItem("refreshToken", authData.refreshToken);
+    localStorage.setItem("authToken", accessToken);
+    localStorage.setItem("userRole", primaryRole);
+    localStorage.setItem("userId", userId);
+    localStorage.setItem("userEmail", userEmail);
+    localStorage.setItem("username", username);
+    localStorage.setItem("userName", username);
+    localStorage.setItem("isAuthenticated", "true");
+    localStorage.setItem("loginTime", new Date().getTime().toString());
+    localStorage.setItem("userRoles", JSON.stringify(userRoles));
+    localStorage.setItem("decodedToken", JSON.stringify(decodedToken));
+    localStorage.setItem("authResponse", JSON.stringify(authData));
+    if (authData.availableRoles) {
+      localStorage.setItem("availableRoles", JSON.stringify(authData.availableRoles));
+    }
+    if (authData.children) {
+      localStorage.setItem("children", JSON.stringify(authData.children));
+    }
+
+    dispatch(setCredentials({ token: accessToken, user, userRole: primaryRole, userRoles }));
+    window.dispatchEvent(new Event("storage"));
+
+    // Navigate to dashboard
+    const rolePathMap = {
+      "ROLE_ADMIN": "/schoolchat/Principal/AdminDashboard/activities",
+      "ROLE_PROFESSOR": "/schoolchat/Principal/ProfessorDashboard/activities",
+      "ROLE_PARENT": "/schoolchat/Principal/ParentDashboard/activities",
+      "ROLE_STUDENT": "/schoolchat/Principal/StudentDashboard/activities",
+      "ROLE_TUTOR": "/schoolchat/Principal/ProfessorDashboard/activities",
+      "ROLE_GESTIONNAIRE": "/schoolchat/Principal/GestionnaireDashboard/activities",
+    };
+    const dashboardPath = rolePathMap[primaryRole] || rolePathMap["ROLE_ADMIN"];
+    navigateToStoredPage(primaryRole, dashboardPath);
+  };
+
+  const handleRoleSelected = async (role) => {
+    setShowRoleSelector(false);
+    if (!pendingAuthData) return;
+
+    // Re-login with selected role
+    try {
+      setLoading(true);
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: encryptPassword(formData.password),
+          selectedRole: role,
+        }),
+      });
+      if (!response.ok) throw new Error("Role switch failed");
+      const newAuthData = await response.json();
+
+      // Check if parent with multiple children
+      if (role === "PARENT" && newAuthData.children && newAuthData.children.length > 1) {
+        setPendingAuthData(newAuthData);
+        setAvailableChildren(newAuthData.children);
+        setShowChildSelector(true);
+        setLoading(false);
+        return;
+      }
+
+      completeLogin(newAuthData, role);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  const handleChildSelected = (child) => {
+    setShowChildSelector(false);
+    if (child) {
+      localStorage.setItem("selectedChildId", child.id);
+      localStorage.setItem("selectedChildName", `${child.prenom} ${child.nom}`);
+    }
+    if (pendingAuthData) {
+      completeLogin(pendingAuthData, "PARENT");
     }
   };
 
@@ -236,6 +279,23 @@ export const Login = ({ theme }) => {
   }, []);
 
   return (
+    <>
+    {/* Role Selection Modal */}
+    <RoleSelectorModal
+      isOpen={showRoleSelector}
+      roles={availableRoles}
+      onSelect={handleRoleSelected}
+      onClose={() => setShowRoleSelector(false)}
+    />
+
+    {/* Child Selection Modal */}
+    <ChildSelectorModal
+      isOpen={showChildSelector}
+      children={availableChildren}
+      onSelect={handleChildSelected}
+      onClose={() => { setShowChildSelector(false); if (pendingAuthData) completeLogin(pendingAuthData, "PARENT"); }}
+    />
+
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -417,6 +477,7 @@ export const Login = ({ theme }) => {
       </div>
       </div>
     </motion.div>
+    </>
   );
 };
 

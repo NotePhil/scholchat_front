@@ -59,7 +59,7 @@ const Sidebar = ({
 
   useEffect(() => {
     const coursesTabs = ["create-course", "schedule-course"];
-    const usersTabs = ["admin", "professors", "parents", "students", "others"];
+    const usersTabs = ["admin", "professors", "parents", "students", "others", "gestionnaires"];
     const classesTabs = ["create-class", "manage-class"];
     const establishmentsTabs = ["create-establishment", "manage-establishment"];
     const exercisesTabs = ["manage-exercises"];
@@ -101,6 +101,7 @@ const Sidebar = ({
             { name: t('sidebar.parents'), tab: "parents" },
             { name: t('sidebar.students'), tab: "students" },
             { name: t('sidebar.others'), tab: "others" },
+            { name: t('sidebar.gestionnaires'), tab: "gestionnaires" },
           ],
         },
         {
@@ -192,12 +193,16 @@ const Sidebar = ({
         },
         { name: t('sidebar.classes'), icon: Building2, tab: "classes" },
         { name: t('sidebar.courses'), icon: Book, tab: "cours" },
-        {
-          name: t('sidebar.messaging'),
-          icon: Mail,
-          tab: "messages",
-        },
       ];
+      // Add "Mes enfants" only for parents
+      if (isParent) {
+        roleItems.push({ name: "Mes enfants", icon: Users, tab: "my-children" });
+      }
+      roleItems.push({
+        name: t('sidebar.messaging'),
+        icon: Mail,
+        tab: "messages",
+      });
     } else if (isGestionnaire) {
       roleItems = [
         {

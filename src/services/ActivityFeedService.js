@@ -84,34 +84,12 @@ class ActivityFeedService {
     return finalUserId;
   }
 
-  async getProfessorId() {
-    const userRole = localStorage.getItem("userRole");
+  async getCreatorId() {
     const userId = localStorage.getItem("userId");
     const authResponse = JSON.parse(localStorage.getItem("authResponse") || "{}");
-    
-    console.log('=== PROFESSOR ID DEBUG ===');
-    console.log('userRole:', userRole);
-    console.log('userId:', userId);
-    
-    if (userRole === 'ROLE_ADMIN' || userRole === 'admin') {
-      try {
-        const response = await activityFeedApi.get('/professeurs');
-        const professors = response.data;
-        if (professors && professors.length > 0) {
-          console.log('Using first available professor ID for admin:', professors[0].id);
-          return professors[0].id;
-        }
-      } catch (error) {
-        console.warn('Could not fetch professors for admin, using userId:', error);
-      }
-    }
-    
-    if (userRole === 'ROLE_PROFESSOR' || userRole === 'professor') {
-      return userId || authResponse.userId;
-    }
-    
+
+    // Always use the actual logged-in user's ID as the creator
     const finalId = userId || authResponse.userId;
-    console.log('Final professor ID:', finalId);
     console.log('========================');
     
     return finalId;
@@ -169,7 +147,7 @@ class ActivityFeedService {
 
   async editEvent(eventId, eventData) {
     try {
-      const createurId = await this.getProfessorId();
+      const createurId = await this.getCreatorId();
       if (!createurId) {
         throw new Error("Professor ID not found. Please ensure you are logged in as a professor.");
       }
@@ -235,7 +213,7 @@ class ActivityFeedService {
 
   async createEvent(eventData) {
     try {
-      const createurId = await this.getProfessorId();
+      const createurId = await this.getCreatorId();
       if (!createurId) {
         throw new Error("Professor ID not found. Please ensure you are logged in as a professor.");
       }

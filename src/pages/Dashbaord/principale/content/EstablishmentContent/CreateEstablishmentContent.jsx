@@ -71,6 +71,32 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
             console.error("Error loading gestionnaire:", error);
           }
         }
+        // Pre-fill gestionnaire and email for gestionnaire role (not editing)
+        if (!editingEstablishment) {
+          const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase();
+          if (selectedRole.includes("GESTIONNAIRE")) {
+            const userId = localStorage.getItem("userId");
+            const userEmail = localStorage.getItem("userEmail") || "";
+            const userName = localStorage.getItem("userName") || localStorage.getItem("username") || "";
+            // Find current user in gestionnaires list
+            const currentUser = (usersData || []).find(u => u.id === userId);
+            if (currentUser) {
+              setFormData(prev => ({
+                ...prev,
+                email: currentUser.email || userEmail,
+                gestionnaire: currentUser,
+              }));
+            } else {
+              // Fallback: create a basic user object
+              setFormData(prev => ({
+                ...prev,
+                email: userEmail,
+                gestionnaire: { id: userId, nom: userName.split(" ")[1] || "", prenom: userName.split(" ")[0] || "", email: userEmail },
+              }));
+            }
+          }
+        }
+
       } catch (error) {
         console.error("Error loading users:", error);
         setErrors({ users: "Erreur lors du chargement des utilisateurs" });

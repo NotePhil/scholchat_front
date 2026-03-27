@@ -49,7 +49,9 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const userId = localStorage.getItem("userId");
+  const parentIdCPM = localStorage.getItem("userId");
+  const isParentRoleCPM = (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT");
+  const userId = isParentRoleCPM ? (localStorage.getItem("selectedChildId") || parentIdCPM) : parentIdCPM;
   const isProfessorOrAdmin = userRole === 'professor' || userRole === 'admin' || userRole?.includes('PROFESSOR') || userRole?.includes('ADMIN');
 
   // Fetch courses when component mounts

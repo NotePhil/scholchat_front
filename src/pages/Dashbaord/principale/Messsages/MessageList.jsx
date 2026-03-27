@@ -111,7 +111,12 @@ const MessageList = ({
                     ? "hover:bg-gray-800"
                     : "hover:bg-gray-50"
                 } ${!message.read ? "border-l-4 border-blue-500" : ""}`}
-                onClick={() => setSelectedMessage(message)}
+                onClick={() => {
+                  setSelectedMessage(message);
+                  if (!message.read && handleMarkAsRead) {
+                    handleMarkAsRead(message.id, false);
+                  }
+                }}
               >
                 <input
                   type="checkbox"

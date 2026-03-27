@@ -70,8 +70,32 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
         return;
       }
 
-      // Use the new endpoint to get classes for the specific user
-      const data = await classService.obtenirClassesUtilisateur(userId);
+      // Admin sees ALL classes, gestionnaire sees classes in their establishments, others see their own
+      const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase();
+      let data;
+      if (selectedRole.includes("ADMIN")) {
+        data = await classService.obtenirToutesLesClasses();
+      } else if (selectedRole.includes("GESTIONNAIRE")) {
+        // Get all classes then filter by gestionnaire's establishments
+        const allClasses = await classService.obtenirToutesLesClasses();
+        try {
+          const token = localStorage.getItem("accessToken");
+          const etabResp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/etablissements`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (etabResp.ok) {
+            const allEtabs = await etabResp.json();
+            const myEtabIds = allEtabs.filter(e => e.gestionnaireId === userId).map(e => e.id);
+            data = (allClasses || []).filter(c => myEtabIds.includes(c.etablissementId));
+          } else {
+            data = [];
+          }
+        } catch (e) {
+          data = [];
+        }
+      } else {
+        data = await classService.obtenirClassesUtilisateur(userId);
+      }
       setClasses(data || []);
 
       console.log("Fetched user classes:", data);

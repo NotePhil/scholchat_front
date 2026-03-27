@@ -43,6 +43,18 @@ const MessageDetailPanel = ({
       const accessToken = localStorage.getItem('accessToken');
       const senderId = localStorage.getItem('userId');
       const recipient = selectedMessage.expediteur;
+      const senderData = {
+        type: "utilisateur",
+        id: currentUser?.id || senderId,
+        nom: currentUser?.nom || localStorage.getItem('userName') || "",
+        prenom: currentUser?.prenom || "",
+        email: currentUser?.email || localStorage.getItem('userEmail') || "",
+        telephone: currentUser?.telephone || "",
+        adresse: currentUser?.adresse || "",
+        etat: "ACTIVE",
+        creationDate: currentUser?.creationDate || null,
+        admin: currentUser?.admin || false
+      };
       const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/messages`, {
         method: 'POST',
         headers: {
@@ -54,29 +66,18 @@ const MessageDetailPanel = ({
           contenu: replyContent,
           dateCreation: new Date().toISOString(),
           etat: "envoyé",
-          expediteur: {
-            type: "utilisateur",
-            id: currentUser.id,
-            nom: currentUser.nom,
-            prenom: currentUser.prenom,
-            email: currentUser.email,
-            telephone: currentUser.telephone,
-            adresse: currentUser.adresse,
-            etat: "ACTIVE",
-            creationDate: currentUser.creationDate,
-            admin: currentUser.admin
-          },
+          expediteur: senderData,
           destinataires: [{
             type: "utilisateur",
             id: recipient.id,
-            nom: recipient.nom,
-            prenom: recipient.prenom,
-            email: recipient.email,
-            telephone: recipient.telephone,
-            adresse: recipient.adresse,
+            nom: recipient.nom || "",
+            prenom: recipient.prenom || "",
+            email: recipient.email || "",
+            telephone: recipient.telephone || "",
+            adresse: recipient.adresse || "",
             etat: "ACTIVE",
-            creationDate: recipient.creationDate,
-            admin: recipient.admin
+            creationDate: recipient.creationDate || null,
+            admin: recipient.admin || false
           }]
         })
       });

@@ -275,7 +275,15 @@ const SignUp = ({ theme }) => {
       const newUserId = response.data.id;
       setCreatedUserId(newUserId);
       localStorage.setItem("createdUserId", newUserId);
-      showAlert("Profil créé avec succès!", "success");
+
+      // If existing active user adding a new role, go straight to login
+      const userData = response.data;
+      if (userData.etat === "ACTIVE" || userData.etat === "AWAITING_VALIDATION") {
+        navigate("/schoolchat/login");
+        return;
+      }
+
+      showAlert("Profil cree avec succes!", "success");
 
       if (formData.type === "professeur") {
         setCurrentStep(3);

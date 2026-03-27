@@ -121,34 +121,20 @@ export const useAuth = () => {
     [hasRole]
   );
 
-  // Check roles based on backend format: ROLE_ADMIN, ROLE_PROFESSOR, etc.
-  const isAdmin = useMemo(() => {
-    return hasRole("ADMIN");
-  }, [hasRole]);
+  // Check roles based on the SELECTED role only (not all roles from JWT)
+  // This ensures the sidebar/dashboard shows content for the chosen role
+  const selectedRoleStr = useMemo(() => {
+    const stored = localStorage.getItem("userRole") || authState.userRole || "";
+    return stored.toUpperCase().replace("ROLE_", "");
+  }, [authState.userRole]);
 
-  const isProfessor = useMemo(() => {
-    return hasRole("PROFESSOR");
-  }, [hasRole]);
-
-  const isParent = useMemo(() => {
-    return hasRole("PARENT");
-  }, [hasRole]);
-
-  const isStudent = useMemo(() => {
-    return hasRole("STUDENT");
-  }, [hasRole]);
-
-  const isTutor = useMemo(() => {
-    return hasRole("TUTOR");
-  }, [hasRole]);
-
-  const isGestionnaire = useMemo(() => {
-    return hasRole("GESTIONNAIRE");
-  }, [hasRole]);
-
-  const isParentOrStudent = useMemo(() => {
-    return isParent || isStudent;
-  }, [isParent, isStudent]);
+  const isAdmin = useMemo(() => selectedRoleStr === "ADMIN", [selectedRoleStr]);
+  const isProfessor = useMemo(() => selectedRoleStr === "PROFESSOR", [selectedRoleStr]);
+  const isParent = useMemo(() => selectedRoleStr === "PARENT", [selectedRoleStr]);
+  const isStudent = useMemo(() => selectedRoleStr === "STUDENT", [selectedRoleStr]);
+  const isTutor = useMemo(() => selectedRoleStr === "TUTOR", [selectedRoleStr]);
+  const isGestionnaire = useMemo(() => selectedRoleStr === "GESTIONNAIRE", [selectedRoleStr]);
+  const isParentOrStudent = useMemo(() => isParent || isStudent, [isParent, isStudent]);
 
   // Helper function to get clean display name from ROLE_* format
   const getCleanRoleName = useCallback((role) => {
@@ -186,17 +172,10 @@ export const useAuth = () => {
     return getCleanRoleName(authState.userRole);
   }, [authState.userRole, authState.userRoles, getCleanRoleName]);
 
-  // Normalized role for internal use (lowercase without ROLE_ prefix)
+  // Normalized role for internal use - uses SELECTED role only
   const normalizedUserRole = useMemo(() => {
-    if (!authState.userRole) {
-      if (authState.userRoles && authState.userRoles.length > 0) {
-        return authState.userRoles[0].toLowerCase().replace("role_", "");
-      }
-      return null;
-    }
-
-    return authState.userRole.toLowerCase().replace("role_", "");
-  }, [authState.userRole, authState.userRoles]);
+    return selectedRoleStr.toLowerCase() || null;
+  }, [selectedRoleStr]);
 
   return {
     ...authState,

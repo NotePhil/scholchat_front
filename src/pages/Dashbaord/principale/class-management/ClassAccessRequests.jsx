@@ -74,6 +74,10 @@ const ClassAccessRequests = ({
           etat: request.etat || "EN_ATTENTE",
           dateDemande: request.dateDemande || "",
           type: request.type || "REQUESTER",
+          estParent: request.estParent || false,
+          eleveAssocieId: request.eleveAssocieId || "",
+          eleveAssocieNom: request.eleveAssocieNom || "",
+          eleveAssociePrenom: request.eleveAssociePrenom || "",
         }));
 
       const processedMembers = (members || []).map((member) => ({
@@ -287,13 +291,25 @@ const ClassAccessRequests = ({
       render: (type) => renderRoleTag(type),
     },
     {
+      title: "Élève associé",
+      key: "eleveAssocie",
+      render: (_, record) => {
+        if (!record.estParent && !record.eleveAssocieId) {
+          return <Text type="secondary">-</Text>;
+        }
+        const eleveName = `${record.eleveAssociePrenom || ""} ${record.eleveAssocieNom || ""}`.trim();
+        return eleveName || record.eleveAssocieId || <Text type="secondary">Non renseigné</Text>;
+      },
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+    },
+    {
       title: "Status",
       dataIndex: "etat",
       key: "status",
       render: (etat) => renderStatusTag(etat),
     },
     {
-      title: "Activation Code",
+      title: "Code",
       dataIndex: "codeActivation",
       key: "code",
       render: (code) => code || <Text type="secondary">N/A</Text>,

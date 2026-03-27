@@ -32,6 +32,7 @@ import {
   Bookmark,
   TrendingUp
 } from 'lucide-react';
+import DocumentViewer from '../../../../../components/viewers/DocumentViewer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { exerciseService } from '../../../../../services/exerciseService';
 
@@ -60,6 +61,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
   const [exercises, setExercises] = useState([]);
   const [exercisesLoading, setExercisesLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [docViewerFile, setDocViewerFile] = useState(null);
 
   useEffect(() => {
     fetchCourseDetails();
@@ -359,23 +361,22 @@ const CourseDetailsView = ({ courseId, onBack }) => {
         }
       }
 
-      if (isVideo && url) {
-        setCurrentVideoUrl(url);
-        setCurrentVideoTitle(file.fileName || "Vidéo");
-        setVideoModalVisible(true);
-        return;
+      // Use integrated document viewer for all file types
+      let viewUrl = url;
+      if (!viewUrl && file.mediaId) {
+        viewUrl = `${process.env.REACT_APP_API_BASE_URL}/media/${file.mediaId}/content`;
       }
 
-      if (url && url.startsWith('http')) {
-        window.open(url, '_blank');
-      } else if (file.mediaId) {
-        const { minioS3Service } = await import('../../../../../services/minioS3');
-        const downloadData = await minioS3Service.generateDownloadUrl(file.mediaId);
-        if (downloadData?.downloadUrl) {
-          window.open(downloadData.downloadUrl, '_blank');
+      if (viewUrl) {
+        if (isVideo) {
+          setCurrentVideoUrl(viewUrl);
+          setCurrentVideoTitle(file.fileName || "Video");
+          setVideoModalVisible(true);
+        } else {
+          setDocViewerFile({ url: viewUrl, fileName: file.fileName, contentType: file.contentType });
         }
       } else {
-        showToast('Aperçu non disponible', 'error');
+        showToast('Apercu non disponible', 'error');
       }
     } catch (error) {
       console.error('Error previewing file:', error);
@@ -1111,6 +1112,14 @@ const CourseDetailsView = ({ courseId, onBack }) => {
           )}
         </div>
       </Modal>
+      {/* Document Viewer */}
+      <DocumentViewer
+        isOpen={!!docViewerFile}
+        url={docViewerFile?.url}
+        fileName={docViewerFile?.fileName}
+        contentType={docViewerFile?.contentType}
+        onClose={() => setDocViewerFile(null)}
+      />
     </div>
   );
 };

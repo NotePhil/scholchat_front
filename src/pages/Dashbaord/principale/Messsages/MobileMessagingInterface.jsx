@@ -88,11 +88,31 @@ const MobileMessagingInterface = ({
       const accessToken = localStorage.getItem("accessToken");
       const userId = localStorage.getItem("userId");
 
-      // Determine recipients for reply
-      const recipients =
+      // Determine recipient objects for reply
+      const recipientObjects =
         selectedThread.expediteur.id === userId
-          ? selectedThread.destinataires.map((d) => d.id)
-          : [selectedThread.expediteur.id];
+          ? selectedThread.destinataires.map((d) => ({
+              type: "utilisateur",
+              id: d.id,
+              nom: d.nom || "",
+              prenom: d.prenom || "",
+              email: d.email || "",
+              telephone: d.telephone || "",
+              adresse: d.adresse || "",
+              etat: "ACTIVE",
+              admin: d.admin || false,
+            }))
+          : [{
+              type: "utilisateur",
+              id: selectedThread.expediteur.id,
+              nom: selectedThread.expediteur.nom || "",
+              prenom: selectedThread.expediteur.prenom || "",
+              email: selectedThread.expediteur.email || "",
+              telephone: selectedThread.expediteur.telephone || "",
+              adresse: selectedThread.expediteur.adresse || "",
+              etat: "ACTIVE",
+              admin: selectedThread.expediteur.admin || false,
+            }];
 
       const response = await fetch(
         `${process.env.REACT_APP_API_BASE_URL}/messages`,
@@ -105,8 +125,20 @@ const MobileMessagingInterface = ({
           body: JSON.stringify({
             contenu: replyText,
             objet: `Re: ${selectedThread.objet?.replace(/^Re:\s*/i, "")}`,
-            expediteurId: userId,
-            destinataireIds: recipients,
+            dateCreation: new Date().toISOString(),
+            etat: "envoyé",
+            expediteur: {
+              type: "utilisateur",
+              id: userId,
+              nom: currentUser?.nom || "",
+              prenom: currentUser?.prenom || "",
+              email: currentUser?.email || "",
+              telephone: currentUser?.telephone || "",
+              adresse: currentUser?.adresse || "",
+              etat: "ACTIVE",
+              admin: currentUser?.admin || false,
+            },
+            destinataires: recipientObjects,
           }),
         }
       );
@@ -114,6 +146,8 @@ const MobileMessagingInterface = ({
       if (response.ok) {
         setReplyText("");
         await fetchMessages();
+      } else {
+        console.error("Reply failed with status:", response.status);
       }
     } catch (err) {
       console.error("Error sending reply:", err);

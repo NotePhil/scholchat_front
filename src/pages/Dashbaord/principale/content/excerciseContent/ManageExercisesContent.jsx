@@ -19,6 +19,7 @@ import ExerciseList from "./ExerciseList";
 import CreateExerciseForm from "./CreateExerciseForm";
 import EditExerciseForm from "./EditExerciseForm";
 import ExerciseDetailsView from "./ExerciseDetailsView";
+import StudentExerciseView from "./StudentExerciseView";
 
 const { Title, Text } = Typography;
 
@@ -26,7 +27,7 @@ const ManageExercisesContent = ({ onBack }) => {
   const [exercises, setExercises] = useState([]);
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
   const [editingExerciseId, setEditingExerciseId] = useState(null);
-  const [currentView, setCurrentView] = useState("list"); // list, create, details, edit
+  const [currentView, setCurrentView] = useState("list"); // list, create, details, edit, take-exercise
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -57,20 +58,15 @@ const ManageExercisesContent = ({ onBack }) => {
       setLoading(true);
       setError("");
 
-      // Get current user info from multiple possible storage locations
-      const userId =
-        sessionStorage.getItem("userId") ||
-        localStorage.getItem("userId") ||
-        sessionStorage.getItem("user_id") ||
-        localStorage.getItem("user_id");
+      // Get current user info - for parents, use selected child ID
+      const parentIdExo = localStorage.getItem("userId");
+      const isParentRoleExo = (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT");
+      const userId = isParentRoleExo
+        ? (localStorage.getItem("selectedChildId") || parentIdExo)
+        : (sessionStorage.getItem("userId") || parentIdExo);
 
-      const userRole =
-        sessionStorage.getItem("userRole") || localStorage.getItem("userRole");
-
-      const userRolesStr =
-        sessionStorage.getItem("userRoles") ||
-        localStorage.getItem("userRoles");
-      const userRoles = userRolesStr ? JSON.parse(userRolesStr) : [];
+      // Use SELECTED role only (not JWT roles array) for multi-role users
+      const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
 
       if (!userId) {
         throw new Error("Utilisateur non connecté. Veuillez vous reconnecter.");
@@ -78,15 +74,51 @@ const ManageExercisesContent = ({ onBack }) => {
 
       let data = [];
 
-      if (userRole === "professor" || userRoles.includes("ROLE_PROFESSOR")) {
-        // Professors see their own exercises
+      if (selectedRole === "PROFESSOR" || selectedRole === "TUTOR") {
         data = await exerciseService.getExercisesByProfesseur(userId);
-      } else if (userRole === "admin" || userRoles.includes("ROLE_ADMIN")) {
-        // Admins see all exercises
+      } else if (selectedRole === "ADMIN") {
         data = await exerciseService.getExercisesAccessibles(userId);
       } else {
-        // Students and parents see accessible exercises
-        data = await exerciseService.getExercisesAccessibles(userId);
+        // Students and parents: get accessible exercises + exercises programmed for their classes
+        const [accessibleExercises, classExercises] = await Promise.allSettled([
+          exerciseService.getExercisesAccessibles(userId),
+          // Fetch exercises from user's classes
+          (async () => {
+            try {
+              const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+              const baseUrl = process.env.REACT_APP_API_BASE_URL;
+              // Get user's classes first
+              const classesResp = await fetch(`${baseUrl}/acceder/utilisateurs/${userId}/classes`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (!classesResp.ok) return [];
+              const classes = await classesResp.json();
+              // Get exercises programmed for each class
+              const allExercises = [];
+              for (const cls of classes) {
+                try {
+                  const exoResp = await fetch(`${baseUrl}/exercises-programmer/classe/${cls.id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  if (exoResp.ok) {
+                    const exos = await exoResp.json();
+                    allExercises.push(...exos);
+                  }
+                } catch (e) { /* ignore */ }
+              }
+              return allExercises;
+            } catch (e) { return []; }
+          })(),
+        ]);
+
+        const accessible = accessibleExercises.status === "fulfilled" ? accessibleExercises.value || [] : [];
+        const fromClasses = classExercises.status === "fulfilled" ? classExercises.value || [] : [];
+
+        // Merge and deduplicate by ID
+        const allMap = new Map();
+        accessible.forEach(e => allMap.set(e.id, e));
+        fromClasses.forEach(e => { if (!allMap.has(e.id)) allMap.set(e.id, e); });
+        data = Array.from(allMap.values());
       }
 
       setExercises(data || []);
@@ -112,7 +144,12 @@ const ManageExercisesContent = ({ onBack }) => {
 
   const handleSelectExercise = (exerciseId) => {
     setSelectedExerciseId(exerciseId);
-    setCurrentView("details");
+    // Students/parents go directly to take-exercise view
+    if (!canCreateExercise) {
+      setCurrentView("take-exercise");
+    } else {
+      setCurrentView("details");
+    }
     setError("");
     setSuccessMessage("");
   };
@@ -135,6 +172,13 @@ const ManageExercisesContent = ({ onBack }) => {
     setEditingExerciseId(exerciseId);
     setSelectedExerciseId(null);
     setCurrentView("edit");
+    setError("");
+    setSuccessMessage("");
+  };
+
+  const handleTakeExercise = (exerciseId) => {
+    setSelectedExerciseId(exerciseId);
+    setCurrentView("take-exercise");
     setError("");
     setSuccessMessage("");
   };
@@ -189,18 +233,9 @@ const ManageExercisesContent = ({ onBack }) => {
     }
   };
 
-  // Check user permissions
-  const userRole =
-    sessionStorage.getItem("userRole") || localStorage.getItem("userRole");
-  const userRolesStr =
-    sessionStorage.getItem("userRoles") || localStorage.getItem("userRoles");
-  const userRoles = userRolesStr ? JSON.parse(userRolesStr) : [];
-
-  const canCreateExercise =
-    userRole === "professor" ||
-    userRole === "admin" ||
-    userRoles.includes("ROLE_PROFESSOR") ||
-    userRoles.includes("ROLE_ADMIN");
+  // Check user permissions based on SELECTED role only
+  const selectedRoleForPerms = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
+  const canCreateExercise = selectedRoleForPerms === "PROFESSOR" || selectedRoleForPerms === "ADMIN" || selectedRoleForPerms === "TUTOR";
 
   return (
     <div className="p-2 sm:p-4 lg:p-6">
@@ -224,7 +259,7 @@ const ManageExercisesContent = ({ onBack }) => {
                     style={{ color: "#4a6da7" }}
                   />
                   <Title level={2} className="m-0 text-lg sm:text-2xl">
-                    Gestion des Exercices
+                    {canCreateExercise ? "Gestion des Exercices" : "Mes Exercices"}
                   </Title>
                 </Space>
               </div>
@@ -232,7 +267,9 @@ const ManageExercisesContent = ({ onBack }) => {
                 type="secondary"
                 className="text-sm sm:text-base block pl-0 sm:pl-10"
               >
-                Créez, gérez et programmez des exercices pour vos classes
+                {canCreateExercise
+                  ? "Creez, gerez et programmez des exercices pour vos classes"
+                  : "Consultez et repondez aux exercices de vos classes"}
               </Text>
             </div>
 
@@ -342,6 +379,19 @@ const ManageExercisesContent = ({ onBack }) => {
             onUpdate={handleUpdateExercise}
             onDelete={handleDeleteExercise}
             onEdit={handleShowEditForm}
+            onTakeExercise={!canCreateExercise ? handleTakeExercise : null}
+          />
+        )}
+
+        {/* Student Take Exercise View */}
+        {currentView === "take-exercise" && selectedExerciseId && (
+          <StudentExerciseView
+            exerciseId={selectedExerciseId}
+            onBack={handleBackToList}
+            onComplete={() => {
+              setSuccessMessage("Exercice soumis avec succès !");
+              handleBackToList();
+            }}
           />
         )}
 

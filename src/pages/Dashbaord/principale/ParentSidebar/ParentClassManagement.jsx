@@ -267,9 +267,25 @@ const ParentClassManagement = () => {
   const [courseCounts, setCourseCounts] = useState({});
   const [participantCounts, setParticipantCounts] = useState({});
   const [showCourseManagement, setShowCourseManagement] = useState(false);
-  const userId = localStorage.getItem("userId");
+  const parentId = localStorage.getItem("userId");
+  const userRoleCheck = (localStorage.getItem("userRole") || "").toUpperCase();
+  const isParentRole = userRoleCheck.includes("PARENT");
+  const [activeChildId, setActiveChildId] = useState(
+    isParentRole ? (localStorage.getItem("selectedChildId") || parentId) : parentId
+  );
+  const userId = activeChildId;
   const userEmail = localStorage.getItem("userEmail");
   const username = localStorage.getItem("username");
+
+  // Listen for child switch
+  useEffect(() => {
+    const handleChildChanged = () => {
+      const newId = isParentRole ? (localStorage.getItem("selectedChildId") || parentId) : parentId;
+      setActiveChildId(newId);
+    };
+    window.addEventListener("childChanged", handleChildChanged);
+    return () => window.removeEventListener("childChanged", handleChildChanged);
+  }, [isParentRole, parentId]);
 
   const getLevelFromNiveau = (niveau) => {
     if (niveau.includes("Maternelle")) return "MATERNELLE";

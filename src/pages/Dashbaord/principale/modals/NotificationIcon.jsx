@@ -229,7 +229,7 @@ const EmptyState = ({ filter, language }) => {
 const NotificationIcon = () => {
   const {
     notifications,
-    unreadCount,
+    unreadCount: rawUnreadCount,
     loading,
     isOpen,
     filter,
@@ -288,6 +288,9 @@ const NotificationIcon = () => {
   const dispatch = useDispatch();
 
   const isStudentOrParent = userRole === "student" || userRole === "parent";
+
+  // Use filtered unread count (notifications list is already role-filtered by useNotifications)
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleNotificationClick = useCallback(
     (notification) => {

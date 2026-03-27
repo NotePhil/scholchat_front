@@ -60,9 +60,9 @@ const PaymentModal = ({
     const errors = {};
 
     if (!paymentData.phone.trim()) {
-      errors.phone = t('classes.create.validation.phoneRequired', "Le numéro de téléphone est requis");
-    } else if (paymentData.phone.length < 8) {
-      errors.phone = t('classes.create.validation.phoneLength', "Numéro de téléphone trop court (minimum 8 chiffres)");
+      errors.phone = t('classes.create.validation.phoneRequired', "Le numero de telephone est requis");
+    } else if (!/^[6-9][0-9]{8}$/.test(paymentData.phone.replace(/\s/g, ''))) {
+      errors.phone = "Format invalide. Entrez 9 chiffres (ex: 699999999)";
     }
 
     if (!paymentData.operator) {
@@ -131,8 +131,8 @@ const PaymentModal = ({
   };
 
   const handlePhoneInputChange = (value) => {
-    // Nettoyer le numéro sans restriction de longueur
-    const cleaned = value.replace(/\D/g, "");
+    // Clean and limit to 9 digits
+    const cleaned = value.replace(/\D/g, "").slice(0, 9);
     setPaymentData((prev) => ({ ...prev, phone: cleaned }));
 
     if (paymentErrors.phone) {
@@ -855,14 +855,14 @@ const CreateClassContent = ({
           </h2>
           <p className={`${isDark ? "text-gray-300" : "text-gray-600"} mb-6`}>
             {formData.etablissement
-              ? t('classes.create.success.message', "Votre classe a été créée et est en attente d'approbation.")
-              : t('classes.create.success.messagePremium', "Votre classe premium a été créée et approuvée automatiquement!")}
+              ? "Votre classe a ete creee et est en attente d'approbation."
+              : "Votre classe a ete creee et approuvee automatiquement!"}
             {currentUserId && (
               <span className="block mt-2 text-sm text-green-600">
-                {t('classes.create.success.rights', "Les droits de publication vous ont été automatiquement attribués.")}
+                Les droits de publication vous ont ete automatiquement attribues.
               </span>
             )}
-            {t('classes.create.success.redirect', "Redirection automatique vers la gestion des classes dans {{count}} secondes.", { count: countdown })}
+            <span className="block mt-2">Redirection dans {countdown} seconde{countdown > 1 ? "s" : ""}...</span>
           </p>
 
           <div className="w-full bg-gray-200 rounded-full h-2 mb-6">

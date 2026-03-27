@@ -45,6 +45,7 @@ import {
   exerciseProgrammerService,
 } from "../../../../../services/exerciseService";
 import { classService } from "../../../../../services/ClassService";
+import ProfessorGradingTab from "./ProfessorGradingTab";
 
 const { Title, Text } = Typography;
 const { confirm } = Modal;
@@ -60,6 +61,7 @@ const ExerciseDetailsView = ({
   onUpdate,
   onDelete,
   onEdit,
+  onTakeExercise,
 }) => {
   const [exercise, setExercise] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -992,7 +994,40 @@ const ExerciseDetailsView = ({
                 }}
               />
             </Tabs.TabPane>
+
+            {/* Grading Tab - Professor only */}
+            {!onTakeExercise && programmations.length > 0 && (
+              <Tabs.TabPane
+                tab={
+                  <span className="text-xs sm:text-sm">
+                    <EyeOutlined />
+                    <span className="ml-1">Résultats élèves</span>
+                  </span>
+                }
+                key="grading"
+              >
+                <ProfessorGradingTab
+                  exerciseId={exerciseId}
+                  exerciseProgrammerId={programmations[0]?.id}
+                />
+              </Tabs.TabPane>
+            )}
           </Tabs>
+
+          {/* Take Exercise button - Student only */}
+          {onTakeExercise && questions.length > 0 && (
+            <div className="mt-4 text-center">
+              <Button
+                type="primary"
+                size="large"
+                icon={<BookOutlined />}
+                onClick={() => onTakeExercise(exerciseId)}
+                style={{ borderRadius: "8px", height: "48px", paddingInline: "32px" }}
+              >
+                Passer l'exercice
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 

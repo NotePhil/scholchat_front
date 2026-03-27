@@ -80,6 +80,11 @@ const MobileBottomNav = ({
           { icon: ClipboardList, label: "Exercices", color: "bg-amber-500", tab: "manage-exercises" },
           { icon: Building2, label: "Classes", color: "bg-emerald-500", tab: "classes" },
           { icon: BookOpen, label: "Mes Cours", color: "bg-violet-500", tab: "cours" },
+        );
+        if (isParent) {
+          items.push({ icon: Users, label: "Enfants", color: "bg-purple-500", tab: "my-children" });
+        }
+        items.push(
           { icon: MessageSquare, label: "Messagerie", color: "bg-sky-500", tab: "messages" }
         );
       } else if (isGestionnaire) {

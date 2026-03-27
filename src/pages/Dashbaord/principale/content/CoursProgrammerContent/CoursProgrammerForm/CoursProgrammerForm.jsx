@@ -23,13 +23,12 @@ const schedulingSchema = yup.object().shape({
   classeId: yup.string().required("La classe est obligatoire"),
   dateCoursPrevue: yup
     .string()
-    .nullable()
-    .optional()
+    .required("La date prevue est obligatoire")
     .test(
       "future-date",
       "La date ne peut pas être dans le passé",
       function (value) {
-        if (!value) return true;
+        if (!value) return false;
         const selectedDate = new Date(value);
         const now = new Date();
         return selectedDate > now;
@@ -162,8 +161,14 @@ const CoursProgrammerForm = ({
 
         console.log("Raw participants data:", participants);
 
-        // Format users properly for the dropdown
+        // Format users properly for the dropdown - EXCLUDE parents
         const approvedUsers = participants
+          .filter((user) => {
+            // Exclude parents from participant list
+            const userType = (user.type || "").toUpperCase();
+            const userRole = (user.role || "").toUpperCase();
+            return !userType.includes("PARENT") && !userRole.includes("PARENT");
+          })
           .map((user) => {
             // Get the full name in a professional format
             const firstName = user.prenom || "";
@@ -573,7 +578,7 @@ const CoursProgrammerForm = ({
                     className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                   >
                     <Calendar size={16} className="mr-2 text-blue-600" />
-                    Date prévue
+                    Date prévue *
                   </label>
                   <input
                     id="dateCoursPrevue"
@@ -598,7 +603,8 @@ const CoursProgrammerForm = ({
                   )}
                 </div>
 
-                {/* Effective Dates */}
+                {/* Effective Dates - Only show when NOT planifié */}
+                {watchedEtat !== "PLANIFIE" && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label
@@ -606,7 +612,7 @@ const CoursProgrammerForm = ({
                       className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                     >
                       <Activity size={16} className="mr-2 text-green-600" />
-                      Date début effectif (optionnel)
+                      Date début effectif
                     </label>
                     <input
                       id="dateDebutEffectif"
@@ -637,7 +643,7 @@ const CoursProgrammerForm = ({
                       className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                     >
                       <BookOpen size={16} className="mr-2 text-gray-600" />
-                      Date fin effectif (optionnel)
+                      Date fin effectif
                     </label>
                     <input
                       id="dateFinEffectif"
@@ -662,6 +668,7 @@ const CoursProgrammerForm = ({
                     )}
                   </div>
                 </div>
+                )}
               </div>
             </div>
 

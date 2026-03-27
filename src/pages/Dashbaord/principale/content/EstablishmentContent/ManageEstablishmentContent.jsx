@@ -45,7 +45,19 @@ const ManageEstablishmentContent = ({ onBack, setActiveTab }) => {
         return;
       }
 
-      const data = await EstablishmentService.getAllEstablishments();
+      let data = await EstablishmentService.getAllEstablishments();
+
+      // Gestionnaires only see their own establishments
+      const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase();
+      if (selectedRole.includes("GESTIONNAIRE")) {
+        const userId = localStorage.getItem("userId");
+        data = (data || []).filter(e =>
+          e.gestionnaireId === userId ||
+          (e.gestionnaire && e.gestionnaire.id === userId) ||
+          e.gestionnaire_id === userId
+        );
+      }
+
       setEstablishments(data || []);
 
       console.log("Fetched establishments:", data);

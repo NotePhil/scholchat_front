@@ -90,11 +90,26 @@ export const useNotifications = () => {
     [dispatch]
   );
 
-  // Filter notifications based on current filter
+  // Filter notifications based on selected role
+  const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
+
+  // Define which notification types each role can see
+  const roleAllowedTypes = {
+    PARENT: ["ACTIVITY_CREATED", "NEW_ACTIVITY", "CLASS_VALIDATED", "CLASS_REJECTED", "CLASS_JOIN", "EVENT_UPDATED", "MESSAGE_SENT"],
+    STUDENT: ["ACTIVITY_CREATED", "NEW_ACTIVITY", "ASSIGNMENT_GIVEN", "CLASS_VALIDATED", "CLASS_REJECTED", "CLASS_JOIN", "COURSE_SCHEDULED", "NEW_COURSE", "EXERCISE_CREATED", "EVENT_UPDATED", "MESSAGE_SENT"],
+    PROFESSOR: ["ACCESS_REQUEST", "DEMANDE_ACCES", "CLASS_CREATED", "CLASS_VALIDATED", "CLASS_REJECTED", "COURSE_SCHEDULED", "NEW_COURSE", "EXERCISE_CREATED", "ACTIVITY_CREATED", "NEW_ACTIVITY", "MESSAGE_SENT", "EVENT_UPDATED"],
+  };
+
+  const roleFilteredNotifications = notifications.filter((n) => {
+    const allowed = roleAllowedTypes[selectedRole];
+    if (!allowed) return true; // admin sees all
+    return allowed.includes(n.type);
+  });
+
   const filteredNotifications =
     filter === "unread"
-      ? notifications.filter((n) => !n.read)
-      : notifications;
+      ? roleFilteredNotifications.filter((n) => !n.read)
+      : roleFilteredNotifications;
 
   // Get notification icon and color based on type
   const getNotificationMeta = useCallback((type) => {
