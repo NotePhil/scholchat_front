@@ -13,14 +13,14 @@ const PWAInstallPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    const dismissed = localStorage.getItem("pwaInstallDismissed");
     const alreadyInstalled = window.matchMedia("(display-mode: standalone)").matches;
-    if (alreadyInstalled || dismissed === "true") return;
+    const dismissCount = parseInt(localStorage.getItem("pwaInstallDismissCount") || "0", 10);
+    // Only show popup max 2 times, then stop (button in header remains)
+    if (alreadyInstalled || dismissCount >= 2) return;
 
-    // Show popup when install is ready
     const showIfReady = () => {
       if (globalDeferredPrompt) {
-        setTimeout(() => setShowPrompt(true), 3000);
+        setTimeout(() => setShowPrompt(true), 5000);
       }
     };
 
@@ -35,14 +35,15 @@ const PWAInstallPrompt = () => {
     const { outcome } = await globalDeferredPrompt.userChoice;
     if (outcome === "accepted") {
       setShowPrompt(false);
-      localStorage.setItem("pwaInstallDismissed", "true");
+      localStorage.setItem("pwaInstallDismissCount", "99");
       globalDeferredPrompt = null;
     }
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem("pwaInstallDismissed", "true");
+    const count = parseInt(localStorage.getItem("pwaInstallDismissCount") || "0", 10);
+    localStorage.setItem("pwaInstallDismissCount", String(count + 1));
   };
 
   if (!showPrompt) return null;

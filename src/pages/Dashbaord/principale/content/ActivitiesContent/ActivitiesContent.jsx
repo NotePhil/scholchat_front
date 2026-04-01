@@ -1100,24 +1100,41 @@ const ActivitiesContent = () => {
                             </div>
                           )}
 
-                          {activity.medias.length > 1 && (
+                          {activity.medias.length > 1 && (() => {
+                            const carouselId = `carousel-${activity.id}`;
+                            return (
                             <div className="relative">
                               {/* Horizontal scrollable carousel */}
-                              <div className="flex overflow-x-auto snap-x snap-mandatory gap-1 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                              <div
+                                id={carouselId}
+                                className="flex overflow-x-auto snap-x snap-mandatory gap-0 scrollbar-hide"
+                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                onScroll={(e) => {
+                                  const container = e.target;
+                                  const scrollLeft = container.scrollLeft;
+                                  const itemWidth = container.offsetWidth;
+                                  const activeIdx = Math.round(scrollLeft / itemWidth);
+                                  const dots = container.parentElement.querySelectorAll('.carousel-dot');
+                                  dots.forEach((dot, i) => {
+                                    dot.style.backgroundColor = i === activeIdx ? '#3b82f6' : '#d1d5db';
+                                    dot.style.width = i === activeIdx ? '16px' : '6px';
+                                  });
+                                }}
+                              >
                                 {activity.medias.map((media, idx) => (
-                                  <div key={idx} className="flex-shrink-0 snap-center" style={{ width: activity.medias.length === 2 ? '50%' : '75%' }}>
+                                  <div key={idx} className="flex-shrink-0 snap-center w-full">
                                     {media.type === 'VIDEO' ? (
                                       <video
                                         src={media.url}
                                         controls
                                         playsInline
-                                        className="w-full h-40 sm:h-52 object-cover rounded-sm"
+                                        className="w-full h-48 sm:h-56 object-cover"
                                       />
                                     ) : (
                                       <img
                                         src={media.url}
                                         alt={`Post ${idx + 1}`}
-                                        className="w-full h-40 sm:h-52 object-cover cursor-pointer hover:opacity-95 transition-opacity rounded-sm"
+                                        className="w-full h-48 sm:h-56 object-cover cursor-pointer hover:opacity-95 transition-opacity"
                                         onClick={() => {
                                           const imageUrls = activity.medias.filter(m => m.type === 'IMAGE').map(m => m.url);
                                           const imgIdx = imageUrls.indexOf(media.url);
@@ -1128,16 +1145,32 @@ const ActivitiesContent = () => {
                                   </div>
                                 ))}
                               </div>
-                              {/* Dot indicators */}
-                              {activity.medias.length > 2 && (
-                                <div className="flex justify-center gap-1.5 py-2">
-                                  {activity.medias.map((_, idx) => (
-                                    <div key={idx} className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
-                                  ))}
-                                </div>
-                              )}
+                              {/* Active dot indicators */}
+                              <div className="flex justify-center gap-1.5 py-2.5">
+                                {activity.medias.map((_, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="carousel-dot h-1.5 rounded-full transition-all duration-300 cursor-pointer"
+                                    style={{
+                                      width: idx === 0 ? '16px' : '6px',
+                                      backgroundColor: idx === 0 ? '#3b82f6' : '#d1d5db',
+                                    }}
+                                    onClick={() => {
+                                      const container = document.getElementById(carouselId);
+                                      if (container) {
+                                        container.scrollTo({ left: idx * container.offsetWidth, behavior: 'smooth' });
+                                      }
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                              {/* Image counter badge */}
+                              <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                1/{activity.medias.length}
+                              </div>
                             </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       )}
 

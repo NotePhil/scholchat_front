@@ -271,17 +271,12 @@ const Sidebar = ({
     const currentPath = window.location.pathname;
     localStorage.setItem("returnToPage", currentPath);
 
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("username");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userRoles");
-    localStorage.removeItem("decodedToken");
-    localStorage.removeItem("authResponse");
+    // Clear ALL auth and user data
+    const keysToKeep = ["language", "pwaInstallDismissed"];
+    const savedValues = {};
+    keysToKeep.forEach(k => { savedValues[k] = localStorage.getItem(k); });
+    localStorage.clear();
+    keysToKeep.forEach(k => { if (savedValues[k]) localStorage.setItem(k, savedValues[k]); });
 
     navigate("/schoolchat/login");
   };

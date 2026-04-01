@@ -868,11 +868,6 @@ const ExerciseDetailsView = ({
                       : "N/A"}
                   </Text>
                 </Descriptions.Item>
-                <Descriptions.Item label="ID">
-                  <Text code className="text-xs">
-                    {exercise.id}
-                  </Text>
-                </Descriptions.Item>
               </Descriptions>
             </Col>
             <Col xs={24}>

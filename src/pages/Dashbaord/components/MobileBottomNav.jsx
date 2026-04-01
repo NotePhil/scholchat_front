@@ -220,7 +220,7 @@ const MobileBottomNav = ({
       </AnimatePresence>
 
       {/* Main Bottom Nav Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 h-24 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-gray-100 dark:border-white/5 z-[999] flex items-center justify-around px-4 pb-2">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-gray-100 dark:border-white/5 z-[999] flex items-center justify-around px-4" style={{ height: 'calc(80px + env(safe-area-inset-bottom, 16px))', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
         {navItems.map((item, index) => {
           if (item.isCenter) {
             return (

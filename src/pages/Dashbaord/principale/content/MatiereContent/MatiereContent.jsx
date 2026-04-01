@@ -423,8 +423,8 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`${cardBgClass} rounded-2xl shadow-xl w-full max-w-md`}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className={`${cardBgClass} rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto`}>
             <div className={`p-6 border-b ${borderClass}`}>
               <div className="flex items-center justify-between">
                 <h2 className={`text-xl font-bold ${textClass}`}>{t('subjects.modals.create')}</h2>
@@ -488,8 +488,8 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
       {/* Edit Modal */}
       {showEditModal && selectedMatiere && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`${cardBgClass} rounded-2xl shadow-xl w-full max-w-md`}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className={`${cardBgClass} rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto`}>
             <div className={`p-6 border-b ${borderClass}`}>
               <div className="flex items-center justify-between">
                 <h2 className={`text-xl font-bold ${textClass}`}>Modifier la Matière</h2>
@@ -553,8 +553,8 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
       {/* Delete Modal */}
       {showDeleteModal && selectedMatiere && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`${cardBgClass} rounded-2xl shadow-xl w-full max-w-md`}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className={`${cardBgClass} rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto`}>
             <div className={`p-6 border-b ${borderClass}`}>
               <h2 className={`text-xl font-bold ${textClass}`}>Confirmer la suppression</h2>
             </div>

@@ -249,17 +249,12 @@ const Principal = () => {
     // Store current page before logout using hook
     storeCurrentPage();
 
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("username");
-    localStorage.removeItem("userRoles");
-    localStorage.removeItem("decodedToken");
-    localStorage.removeItem("authResponse");
-    localStorage.removeItem("lastLocation");
+    // Clear ALL auth data (keep only language and PWA settings)
+    const lang = localStorage.getItem("language");
+    const pwa = localStorage.getItem("pwaInstallDismissed");
+    localStorage.clear();
+    if (lang) localStorage.setItem("language", lang);
+    if (pwa) localStorage.setItem("pwaInstallDismissed", pwa);
 
     dispatch(logoutAction());
     navigate("/schoolchat/login");

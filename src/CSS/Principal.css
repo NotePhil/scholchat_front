@@ -1,3 +1,17 @@
+/* Ensure Ant Design modals appear above mobile bottom nav */
+.ant-modal-root,
+.ant-modal-wrap,
+.ant-modal-mask {
+  z-index: 10000 !important;
+}
+
+/* Safe area padding for mobile devices with gesture bars */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 .principal-container {
   display: flex;
   min-height: 100vh;
@@ -1004,6 +1018,7 @@
   .main-content {
     margin-left: 0;
     width: 100%;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 16px));
   }
 
   .content-header {
