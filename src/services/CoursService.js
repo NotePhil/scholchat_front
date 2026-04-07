@@ -237,6 +237,23 @@ class CoursService {
     }
   }
 
+  async getProgression(coursId, utilisateurId) {
+    try {
+      const response = await coursApi.get(`/cours/${coursId}/progression/${utilisateurId}`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async marquerChapitreComplete(coursId, chapitreId, utilisateurId) {
+    try {
+      await coursApi.post(`/cours/${coursId}/chapitres/${chapitreId}/complete/${utilisateurId}`);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   async getCoursByRestriction(restriction) {
     try {
       if (!restriction) {

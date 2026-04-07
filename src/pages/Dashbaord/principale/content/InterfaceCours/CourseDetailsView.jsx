@@ -35,21 +35,17 @@ import {
 import DocumentViewer from '../../../../../components/viewers/DocumentViewer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { exerciseService } from '../../../../../services/exerciseService';
+import { useAuth } from '../../../../../context/AuthContext';
 
 const { Text, Title, Paragraph } = Typography;
 const { TabPane } = Tabs;
 
 const CourseDetailsView = ({ courseId, onBack }) => {
+  const { user } = useAuth();
   const [course, setCourse] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [expandedChapters, setExpandedChapters] = useState(new Set());
-  const [completedItems, setCompletedItems] = useState(() => {
-    // Persist completion state per course in localStorage
-    try {
-      const saved = localStorage.getItem(`course_progress_${courseId}`);
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch { return new Set(); }
-  });
+  const [progression, setProgression] = useState({ pourcentage: 0, chapitresCompletesIds: [] });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('content');
   const [courseFiles, setCourseFiles] = useState([]);
@@ -66,6 +62,17 @@ const CourseDetailsView = ({ courseId, onBack }) => {
   useEffect(() => {
     fetchCourseDetails();
   }, [courseId]);
+
+  const fetchProgression = async () => {
+    if (!user?.id) return;
+    try {
+      const { coursService } = await import('../../../../../services/CoursService');
+      const data = await coursService.getProgression(courseId, user.id);
+      setProgression(data);
+    } catch (e) {
+      console.warn('Could not fetch progression:', e.message);
+    }
+  };
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -117,6 +124,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       setCourse(formattedCourse);
       setChapters(formattedChapters);
       setExpandedChapters(new Set(formattedChapters.map(ch => ch.id)));
+      fetchProgression();
       
       // Extract embedded files from chapter HTML content
       extractFilesFromChapters(formattedChapters);
@@ -455,20 +463,16 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     setExpandedChapters(newExpanded);
   };
 
-  const toggleItemCompletion = (itemId) => {
-    const newCompleted = new Set(completedItems);
-    if (newCompleted.has(itemId)) {
-      newCompleted.delete(itemId);
-      showToast('Élément marqué comme non terminé', 'info');
-    } else {
-      newCompleted.add(itemId);
-      showToast('✅ Chapitre marqué comme terminé!', 'success');
-    }
-    setCompletedItems(newCompleted);
-    // Persist to localStorage
+  const toggleItemCompletion = async (chapterId) => {
+    if (!user?.id) return;
     try {
-      localStorage.setItem(`course_progress_${courseId}`, JSON.stringify([...newCompleted]));
-    } catch (e) { console.warn('Could not save progress'); }
+      const { coursService } = await import('../../../../../services/CoursService');
+      await coursService.marquerChapitreComplete(courseId, chapterId, user.id);
+      showToast('✅ Chapitre marqué comme terminé!', 'success');
+      await fetchProgression();
+    } catch (e) {
+      showToast(`Erreur: ${e.message}`, 'error');
+    }
   };
 
   const getItemIcon = (type) => {
@@ -570,7 +574,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-2xl font-black text-blue-600">
-                    {chapters.length > 0 ? Math.round((completedItems.size / Math.max(chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 1), 1)) * 100) : 0}%
+                    {progression.pourcentage}%
                   </span>
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Complété</span>
                 </div>
@@ -578,7 +582,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
               <div className="w-full bg-gray-100 rounded-full h-3 p-0.5 border border-gray-200 shadow-inner">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: `${chapters.length > 0 ? Math.round((completedItems.size / Math.max(chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 1), 1)) * 100) : 0}%` }}
+                  animate={{ width: `${progression.pourcentage}%` }}
                   transition={{ duration: 1, ease: "easeOut" }}
                   className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 h-full rounded-full shadow-lg relative overflow-hidden"
                 >
@@ -811,12 +815,12 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    toggleItemCompletion(material.id);
+                                    toggleItemCompletion(chapter.id);
                                   }}
                                   className="p-2 hover:bg-gray-50 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
-                                  title={completedItems.has(material.id) ? "Marquer comme non terminé" : "Marquer comme terminé"}
+                                  title={progression.chapitresCompletesIds?.includes(chapter.id) ? "Chapitre terminé" : "Marquer comme terminé"}
                                 >
-                                  {completedItems.has(material.id) || material.completed ? (
+                                  {progression.chapitresCompletesIds?.includes(chapter.id) ? (
                                     <div className="relative">
                                       <CheckCircle className="w-7 h-7 text-emerald-500 fill-emerald-50 drop-shadow-sm transition-transform duration-300 group-hover:rotate-12" />
                                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
@@ -1041,14 +1045,14 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Éléments terminés</span>
                   <span className="font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm">
-                    {completedItems.size}/{chapters.length + (chapters.reduce((acc, ch) => acc + (ch.materials?.length || 0), 0) || 0)}
+                    {progression.chapitresCompletes ?? 0}/{progression.totalChapitres ?? chapters.length}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Statut</span>
                   <span className="font-medium text-blue-600">
-                    {completedItems.size === 0 ? "Non commencé" : 
-                     completedItems.size >= chapters.length ? "En bonne voie" : "En cours"}
+                    {progression.pourcentage === 0 ? "Non commencé" :
+                     progression.pourcentage === 100 ? "Terminé" : "En cours"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
