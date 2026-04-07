@@ -421,23 +421,55 @@ class MessageService {
    * @param {string} messageId - The ID of the message to mark as read
    * @returns {Promise<Object>} Updated message object
    */
-  async markAsRead(messageId) {
+  async setStatutLu(messageId, utilisateurId, lu) {
     try {
-      const response = await messageApi.patch(`/messages/${messageId}/read`);
+      const response = await messageApi.post(
+        `/messages/${messageId}/statut/${utilisateurId}/lu?lu=${lu}`
+      );
       return response.data;
     } catch (error) {
       this.handleError(error);
     }
   }
 
-  /**
-   * Mark a message as unread
-   * @param {string} messageId - The ID of the message to mark as unread
-   * @returns {Promise<Object>} Updated message object
-   */
-  async markAsUnread(messageId) {
+  async setStatutFavori(messageId, utilisateurId, favori) {
     try {
-      const response = await messageApi.patch(`/messages/${messageId}/unread`);
+      const response = await messageApi.post(
+        `/messages/${messageId}/statut/${utilisateurId}/favori?favori=${favori}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getStatut(messageId, utilisateurId) {
+    try {
+      const response = await messageApi.get(
+        `/messages/${messageId}/statut/${utilisateurId}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getFavoris(utilisateurId) {
+    try {
+      const response = await messageApi.get(
+        `/messages/utilisateur/${utilisateurId}/favoris`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getNonLus(utilisateurId) {
+    try {
+      const response = await messageApi.get(
+        `/messages/utilisateur/${utilisateurId}/non-lus`
+      );
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -533,29 +565,7 @@ class MessageService {
 
     return this.createMessage(messageData);
   }
-  async starMessage(messageId) {
-    try {
-      const response = await messageApi.patch(`/messages/${messageId}`, {
-        starred: true,
-        dateModification: this.formatDateForBackend(),
-      });
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
 
-  async unstarMessage(messageId) {
-    try {
-      const response = await messageApi.patch(`/messages/${messageId}`, {
-        starred: false,
-        dateModification: this.formatDateForBackend(),
-      });
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
 }
 
 export const messageService = new MessageService();

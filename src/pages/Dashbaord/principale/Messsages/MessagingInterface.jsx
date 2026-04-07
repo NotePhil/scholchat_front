@@ -4,9 +4,10 @@ import MessageList from "./MessageList";
 import MessageDetailPanel from "./MessageDetailPanel";
 import ComposeModal from "./ComposeModal";
 import RecipientSelectorModal from "./RecipientSelectorModal";
-import { useAuth } from "../../../../context/AuthContext"; // Import the useAuth hook
+import { useAuth } from "../../../../context/AuthContext";
 import { useSelector } from "react-redux";
 import MobileMessagingInterface from "./MobileMessagingInterface";
+import { messageService } from "../../../../services/MessageService";
 
 const MessagingInterface = ({
   isDark = false,
@@ -99,8 +100,9 @@ const MessagingInterface = ({
             role: dest.admin ? "ADMIN" : "USER",
             type: dest.type
           })),
-          read: msg.etat === "lu",
-          starred: false,
+          // /received returns lu & favori directly; /sent messages are always read by sender
+          read: msg.lu !== undefined ? msg.lu : true,
+          starred: msg.favori || false,
           classes: [],
           isGeneral: false
         };
@@ -322,18 +324,20 @@ const MessagingInterface = ({
     }
   };
 
-  const handleMarkAsRead = async (messageId, isRead) => {
-    setMessages(prev =>
-      prev.map(msg =>
-        msg.id === messageId ? { ...msg, read: !isRead } : msg
-      )
-    );
-
-    setAllMessages(prev =>
-      prev.map(msg =>
-        msg.id === messageId ? { ...msg, read: !isRead } : msg
-      )
-    );
+  const handleMarkAsRead = async (messageId, newRead) => {
+    const userId = localStorage.getItem('userId');
+    // Optimistic update — filterMessages useEffect re-derives messages immediately
+    setAllMessages(prev => prev.map(msg =>
+      msg.id === messageId ? { ...msg, read: newRead } : msg
+    ));
+    // Fire API — no await so UI is instant
+    messageService.setStatutLu(messageId, userId, newRead).catch(e => {
+      console.warn('Could not update read status:', e.message);
+      // Revert on failure
+      setAllMessages(prev => prev.map(msg =>
+        msg.id === messageId ? { ...msg, read: !newRead } : msg
+      ));
+    });
   };
 
   const handleDeleteMessage = async (messageId) => {
@@ -427,17 +431,15 @@ const MessagingInterface = ({
   };
 
   const toggleStarMessage = async (messageId, isStarred) => {
-    setMessages(prev =>
-      prev.map(msg =>
-        msg.id === messageId ? { ...msg, starred: !isStarred } : msg
-      )
-    );
-
-    setAllMessages(prev =>
-      prev.map(msg =>
-        msg.id === messageId ? { ...msg, starred: !isStarred } : msg
-      )
-    );
+    const userId = localStorage.getItem('userId');
+    const newStarred = !isStarred;
+    setAllMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, starred: newStarred } : msg));
+    try {
+      await messageService.setStatutFavori(messageId, userId, newStarred);
+    } catch (e) {
+      console.warn('Could not update favori status:', e.message);
+      setAllMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, starred: !newStarred } : msg));
+    }
   };
 
   const addRecipient = (user) => {

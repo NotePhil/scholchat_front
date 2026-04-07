@@ -113,9 +113,10 @@ const MessageList = ({
                 } ${!message.read ? "border-l-4 border-blue-500" : ""}`}
                 onClick={() => {
                   setSelectedMessage(message);
-                  if (!message.read && handleMarkAsRead) {
-                    handleMarkAsRead(message.id, false);
-                  }
+                  const threadIds = message.thread
+                    ? message.thread.filter(m => !m.read).map(m => m.id)
+                    : (!message.read ? [message.id] : []);
+                  threadIds.forEach(id => handleMarkAsRead(id, true));
                 }}
               >
                 <input
@@ -192,7 +193,7 @@ const MessageList = ({
                     className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleMarkAsRead(message.id, message.read);
+                      handleMarkAsRead(message.id, !message.read);
                     }}
                   >
                     {message.read ? <Circle size={14} /> : <CheckCircle size={14} />}
