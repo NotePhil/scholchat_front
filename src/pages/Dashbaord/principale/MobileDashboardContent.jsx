@@ -49,43 +49,6 @@ const MobileDashboardContent = ({ stats, isDark, t, fetchDashboardData }) => {
         </div>
       </section>
 
-      {/* Main Stats Grid */}
-      <section className="grid grid-cols-2 gap-3">
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-5 rounded-[40px] shadow-2xl shadow-blue-500/20 text-white col-span-2 relative overflow-hidden group">
-          <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-          <div className="flex justify-between items-start mb-4">
-             <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-                <BookOpen size={24} />
-             </div>
-             <div className="bg-white/20 text-[10px] font-bold px-3 py-1 rounded-full backdrop-blur-md">
-                +12% vs last month
-             </div>
-          </div>
-          <p className="text-sm font-bold text-blue-100 uppercase tracking-widest">Available Courses</p>
-          <h2 className="text-5xl font-black mt-1">{stats.totalCourses.toLocaleString()}</h2>
-          <div className="mt-4 flex items-center text-xs font-bold text-blue-100">
-             <Clock size={14} className="mr-2" />
-             <span>Last updated 2h ago</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-xl border border-gray-100 dark:border-white/5">
-          <div className="p-3 bg-green-500/10 text-green-500 rounded-2xl w-fit mb-3">
-             <Target size={20} />
-          </div>
-          <h4 className="text-2xl font-black dark:text-white leading-none">{stats.totalExercises.toLocaleString()}</h4>
-          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">Exercises</p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-xl border border-gray-100 dark:border-white/5">
-          <div className="p-3 bg-purple-500/10 text-purple-500 rounded-2xl w-fit mb-3">
-             <Users size={20} />
-          </div>
-          <h4 className="text-2xl font-black dark:text-white leading-none">{stats.activeClasses}</h4>
-          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">Classes</p>
-        </div>
-      </section>
-
       {/* Progress Chart */}
       <section className="bg-white dark:bg-slate-800 p-6 rounded-[40px] shadow-xl border border-gray-100 dark:border-white/5">
         <div className="flex justify-between items-center mb-6">

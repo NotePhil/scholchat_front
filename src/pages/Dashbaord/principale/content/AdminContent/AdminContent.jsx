@@ -795,7 +795,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           </div>
         </div>
 
-        <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'} mb-8`}>
+        <div className={`${isMobile ? 'hidden' : 'grid'} grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8`}>
           <StatsCard
             title={t('admin.stats.total')}
             value={stats.total}

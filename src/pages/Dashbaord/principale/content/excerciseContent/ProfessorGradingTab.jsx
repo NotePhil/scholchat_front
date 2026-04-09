@@ -219,7 +219,7 @@ const ProfessorGradingTab = ({ exerciseId, exerciseProgrammerId }) => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="hidden md:grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
           <Users className="w-5 h-5 text-blue-600 mx-auto mb-1" />
           <p className="text-xl font-bold text-blue-700">{totalStudents}</p>

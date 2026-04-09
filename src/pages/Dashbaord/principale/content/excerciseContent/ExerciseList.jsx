@@ -261,7 +261,7 @@ const ExerciseList = ({
       {/* Statistics Cards */}
       <Row
         gutter={[8, 8]}
-        className="mb-4 sm:mb-6"
+        className="mb-4 sm:mb-6 hidden md:flex"
         style={{ marginBottom: "16px" }}
       >
         <Col xs={12} sm={12} md={6}>

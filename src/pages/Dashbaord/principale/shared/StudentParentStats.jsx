@@ -656,7 +656,7 @@ const StudentParentStats = ({
         {/* Stats Cards */}
         {(userRole !== "parent" || children.length > 0) && (
           <>
-            <div className={`grid ${isMobile ? "grid-cols-2 gap-2" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"} mb-4 sm:mb-8`}>
+            <div className={`${isMobile ? "hidden" : "grid"} grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4 sm:mb-8`}>
               <StatCard
                 title="Classes"
                 value={currentClasses.length}

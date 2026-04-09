@@ -398,7 +398,7 @@ const ManageClassList = ({
           </div>
         )}
 
-        <div className="stats-grid">
+        <div className="stats-grid hidden md:grid">
           <div 
             onClick={() => setStatusFilter("all")}
             className={`stat-card stat-primary ${statusFilter === "all" ? "stat-active" : ""}`}

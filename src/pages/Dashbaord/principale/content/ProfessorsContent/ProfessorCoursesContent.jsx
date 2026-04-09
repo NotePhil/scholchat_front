@@ -322,8 +322,8 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div 
+        <div className="hidden md:grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <div
             onClick={() => setFilterStatus('all')}
             className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
               filterStatus === 'all' ? 'ring-2 ring-blue-500' : ''

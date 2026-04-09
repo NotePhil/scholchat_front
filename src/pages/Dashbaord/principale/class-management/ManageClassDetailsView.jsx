@@ -1986,7 +1986,9 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
       </div>
 
       {/* Statistics Cards */}
-      <StatisticsCards statistics={statistics} loading={loading} />
+      <div className="hidden md:block">
+        <StatisticsCards statistics={statistics} loading={loading} />
+      </div>
 
       {/* Action Buttons */}
       {renderActionButtons()}
