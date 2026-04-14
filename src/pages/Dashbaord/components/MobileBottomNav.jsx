@@ -52,10 +52,11 @@ const MobileBottomNav = ({
 
     if (!showMore) {
       // Main menu — matches Sidebar exactly
-      items = [
-        { icon: LayoutDashboard, label: "Dashboard", color: "bg-indigo-500", tab: "dashboard" },
-        { icon: Activity, label: "Activités", color: "bg-blue-500", tab: "activities" },
-      ];
+        items = [
+          { icon: LayoutDashboard, label: "Dashboard", color: "bg-indigo-500", tab: "dashboard" },
+          { icon: Activity, label: "Activités", color: "bg-blue-500", tab: "activities" },
+          { icon: PlusCircle, label: "Événement", color: "bg-pink-500", tab: "activities", action: "create-event" },
+        ];
 
       if (isAdmin) {
         items.push(

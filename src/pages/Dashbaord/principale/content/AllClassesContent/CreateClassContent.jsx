@@ -530,6 +530,7 @@ const CreateClassContent = ({
     niveau: "",
     etablissement: "",
     etablissementToken: "",
+    codeUnique: "",
     moderator: "",
   });
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -650,6 +651,7 @@ const CreateClassContent = ({
         ...prev,
         [name]: value,
         etablissementToken: "",
+        codeUnique: "",
       }));
     } else {
       setFormData((prev) => ({
@@ -674,6 +676,14 @@ const CreateClassContent = ({
 
     if (!formData.niveau.trim()) {
       newErrors.niveau = t('classes.create.validation.levelRequired', "Le niveau est requis");
+    }
+
+    if (
+      selectedEstablishment?.codeUnique &&
+      !formData.codeUnique.trim()
+    ) {
+      newErrors.codeUnique =
+        t('classes.create.validation.codeRequired', "Le code unique est requis pour cet établissement");
     }
 
     if (
@@ -732,14 +742,14 @@ const CreateClassContent = ({
       if (formData.etablissement) {
         classData.etablissementId = formData.etablissement;
 
-        // Add codeUnique if establishment requires it
-        if (selectedEstablishment?.codeUnique) {
-          classData.codeUnique = selectedEstablishment.codeUnique;
-        }
-
         // Add etablissementToken based on establishment options
         if (selectedEstablishment?.optionTokenGeneral) {
           classData.etablissementToken = formData.etablissementToken;
+        }
+
+        // Add codeUnique if establishment requires it
+        if (selectedEstablishment?.codeUnique) {
+          classData.codeUnique = formData.codeUnique;
         }
       } else if (paymentInfo) {
         // Add payment info for classes without establishment
@@ -1012,6 +1022,37 @@ const CreateClassContent = ({
                             <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                               <AlertCircle className="w-4 h-4" />
                               {errors.etablissementToken}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                    {/* Code Unique Field - Only show if establishment is selected and requires it */}
+                    {formData.etablissement &&
+                      selectedEstablishment?.codeUnique && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {t('classes.create.form.codeUnique', "Code Unique")} *
+                          </label>
+                          <div className="relative">
+                            <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                              type="text"
+                              name="codeUnique"
+                              value={formData.codeUnique}
+                              onChange={handleInputChange}
+                              className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                                errors.codeUnique
+                                  ? "border-red-500"
+                                  : "border-gray-300"
+                              }`}
+                              placeholder={t('classes.create.form.codeUniquePlaceholder', "Entrez le code unique")}
+                            />
+                          </div>
+                          {errors.codeUnique && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                              <AlertCircle className="w-4 h-4" />
+                              {errors.codeUnique}
                             </p>
                           )}
                         </div>

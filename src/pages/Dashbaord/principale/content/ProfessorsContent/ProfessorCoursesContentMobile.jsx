@@ -12,7 +12,8 @@ import {
   Activity,
   Star,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Edit2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,6 +24,7 @@ const ProfessorCoursesContentMobile = ({
   filterStatus, 
   setFilterStatus,
   onViewCourse,
+  onEditCourse,
   onCreateCourse,
   onRefresh,
   loading
@@ -142,9 +144,20 @@ const ProfessorCoursesContentMobile = ({
                       {course.matiere?.nom || "Subject"}
                    </span>
                 </div>
-                <div className="flex items-center space-x-1 text-gray-400">
-                   <Clock size={12} />
-                   <span className="text-[10px] font-bold">{new Date(course.dateCreation).toLocaleDateString()}</span>
+                <div className="flex items-center space-x-2">
+                   <button 
+                      onClick={(e) => {
+                         e.stopPropagation();
+                         onEditCourse(course);
+                      }}
+                      className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-xl"
+                   >
+                      <Edit2 size={16} />
+                   </button>
+                   <div className="flex items-center space-x-1 text-gray-400">
+                      <Clock size={12} />
+                      <span className="text-[10px] font-bold">{new Date(course.dateCreation).toLocaleDateString()}</span>
+                   </div>
                 </div>
              </div>
           </motion.div>

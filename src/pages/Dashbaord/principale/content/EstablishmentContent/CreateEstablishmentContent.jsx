@@ -578,7 +578,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">
-                        Envoi d'email pour nouvelles classes
+                        Validation nouvelle classe
                       </span>
                     </label>
 

@@ -1237,6 +1237,15 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
   const handleDelete = async () => {
     if (!classId) return;
 
+    // Protection: Professor cannot delete class if they are the sole moderator
+    const isProfessor = userRole === "ROLE_PROFESSOR" || userRole === "PROFESSOR" || userRole?.includes("PROFESSOR");
+    const isAdmin = userRole === "ROLE_ADMIN" || userRole === "ADMIN";
+    
+    if (isProfessor && !isAdmin && moderatorsWithRights.length === 1 && moderatorsWithRights[0].id === currentUserId) {
+      message.error("En tant que seul modérateur, vous ne pouvez pas supprimer cette classe. Veuillez d'abord assigner un autre modérateur ou contacter l'administration.");
+      return;
+    }
+
     try {
       setActionLoading("delete");
       await classService.supprimerClasse(classId);
@@ -1483,6 +1492,12 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
     const isPending = classDetails.etat === "EN_ATTENTE_APPROBATION" || 
                      classDetails.etat === "EN_ATTENTE" || 
                      classDetails.etat === "PENDING";
+    
+    const isProfessor = userRole === "ROLE_PROFESSOR" || userRole === "PROFESSOR" || userRole?.includes("PROFESSOR");
+    const establishmentEnforcesValidation = classDetails.etablissement?.optionEnvoiMailNewClasse === true;
+    
+    // Hide buttons if professor and establishment requires validation
+    const shouldShowApprovalButtons = isPending && !canSelfManage && (isAdmin || (isProfessor && !establishmentEnforcesValidation));
 
     console.log("=== ACTION BUTTONS DEBUG ===");
     console.log("Class Details:", classDetails);
@@ -1546,7 +1561,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
           )}
 
           {/* Boutons Approuver/Rejeter pour classes en attente */}
-          {isPending && (
+          {shouldShowApprovalButtons && (
             <>
               <Button
                 type="primary"

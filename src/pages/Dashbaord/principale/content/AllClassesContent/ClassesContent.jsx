@@ -981,7 +981,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
                     htmlFor="optionEnvoiMail"
                     className="text-sm text-gray-700"
                   >
-                    Envoyer un email pour les nouvelles classes
+                    Validation nouvelle classe
                   </label>
                 </div>
 

@@ -26,11 +26,16 @@ const schedulingSchema = yup.object().shape({
     .required("La date prevue est obligatoire")
     .test(
       "future-date",
-      "La date ne peut pas être dans le passé",
+      "La date ne peut pas être dans le passé pour les nouveaux cours",
       function (value) {
         if (!value) return false;
+        // If we're editing, allow past dates (could be an existing schedule)
+        if (modalMode === "edit") return true;
+        
         const selectedDate = new Date(value);
         const now = new Date();
+        // Allow a small buffer (5 mins) for network latency/entry time
+        now.setMinutes(now.getMinutes() - 5);
         return selectedDate > now;
       }
     ),

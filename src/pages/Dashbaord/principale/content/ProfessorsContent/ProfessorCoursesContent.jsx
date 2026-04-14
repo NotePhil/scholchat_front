@@ -252,6 +252,7 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
         filterStatus={filterStatus}
         setFilterStatus={setFilterStatus}
         onViewCourse={handleViewCourse}
+        onEditCourse={handleEditCourse}
         onCreateCourse={handleCreateCourse}
         onRefresh={loadCourses}
         loading={loading}

@@ -406,12 +406,22 @@ const ManageClassDetailsMobile = ({
                     <div className="flex-1 min-w-0">
                       <h4 className="font-black text-sm dark:text-white truncate">{currentModerator.prenom} {currentModerator.nom}</h4>
                       <p className="text-[10px] text-gray-400 font-bold truncate">{currentModerator.email}</p>
-                      <button
-                        onClick={() => handleViewUser(currentModerator)}
-                        className="mt-2 text-[10px] font-black text-blue-600 flex items-center"
-                      >
-                        VOIR LE PROFIL <ChevronRight size={12} className="ml-1" />
-                      </button>
+                      <div className="flex items-center gap-3 mt-2">
+                        <button
+                          onClick={() => handleViewUser(currentModerator)}
+                          className="text-[10px] font-black text-blue-600 flex items-center"
+                        >
+                          VOIR PROFIL <ChevronRight size={12} className="ml-1" />
+                        </button>
+                        {!isClassPending && (
+                          <button
+                            onClick={onAssignModerator}
+                            className="text-[10px] font-black text-purple-600 flex items-center"
+                          >
+                            CHANGER <UserPlus size={12} className="ml-1" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : (

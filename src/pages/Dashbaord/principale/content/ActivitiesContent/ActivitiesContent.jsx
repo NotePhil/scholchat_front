@@ -35,14 +35,18 @@ import { motion } from "framer-motion";
  * Responsive design with left sidebar and main content area
  * All API calls preserved, enhanced UI/UX
  */
+import { useAuth } from "../../../../../hooks/useAuth";
+
 const ActivitiesContent = () => {
   const { t } = useTranslation();
   const language = useSelector((state) => state.language?.currentLanguage || 'fr');
   const isMobile = useSelector((state) => state.ui.isMobile);
+  const { isAdmin, isProfessor, isTutor, isGestionnaire, user } = useAuth();
 
   // Role check: only professors and admins can create events
   const userRole = (localStorage.getItem('userRole') || '').toUpperCase();
-  const canCreateEvent = userRole.includes('ADMIN') || userRole.includes('PROFESSOR') || userRole.includes('TUTOR') || userRole.includes('GESTIONNAIRE');
+  const canCreateEvent = isAdmin || isProfessor || isTutor || isGestionnaire ||
+    userRole.includes('ADMIN') || userRole.includes('PROFESSOR') || userRole.includes('TUTOR') || userRole.includes('GESTIONNAIRE');
 
   const pluralize = (count, singular, plural) => {
     return `${count} ${count === 1 ? singular : plural}`;
@@ -292,6 +296,29 @@ const ActivitiesContent = () => {
 
           if (!creatorName) creatorName = 'Utilisateur';
 
+          // Resolve class names from selectedClasses IDs
+          let classNames = [];
+          if (event.selectedClasses && event.selectedClasses.length > 0) {
+            try {
+              const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+              const classResults = await Promise.all(
+                event.selectedClasses.map(async (classId) => {
+                  try {
+                    const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes/${classId}`, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                      const cls = await res.json();
+                      return cls.nom || cls.name || null;
+                    }
+                  } catch (e) { /* ignore */ }
+                  return null;
+                })
+              );
+              classNames = classResults.filter(Boolean);
+            } catch (e) { /* ignore */ }
+          }
+
           return {
             id: event.id,
             type: 'event',
@@ -302,7 +329,7 @@ const ActivitiesContent = () => {
             participants,
             isParticipating,
             showComments: false,
-            user: { name: creatorName, role: creatorRole },
+            user: { name: creatorName, role: creatorRole, classNames },
             titre: event.titre,
             description: event.description,
             content: event.description,
@@ -660,7 +687,7 @@ const ActivitiesContent = () => {
   return (
     <div>
       {/* Facebook-like Layout: Sidebar + Main Content */}
-      <div className="mx-auto max-w-7xl">
+      <div className={`mx-auto max-w-7xl ${isMobile ? 'pb-32' : ''}`}>
         <div className="flex gap-0 lg:gap-6">
           {/* Left Sidebar - Hidden on mobile, visible on desktop */}
           <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0">
@@ -709,24 +736,24 @@ const ActivitiesContent = () => {
           {/* Main Content Area */}
           <main className="flex-1 min-w-0">
             <div className={`max-w-2xl mx-auto ${isMobile ? 'px-0 py-2' : 'px-0 sm:px-4 py-4 sm:py-6'}`}>
-              {/* Mobile Header with Tabs */}
-              <div className="lg:hidden bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-sm mb-4">
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              {/* Mobile Header with Tabs - Sticky for better accessibility */}
+              <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 rounded-none shadow-md mb-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between p-4">
                   <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-gray-900 dark:text-white`}>
                     {t('activities.title', 'Fil d\'actualité')}
                   </h1>
                   {canCreateEvent && (
-                  <button
-                    onClick={() => setShowCreateForm(true)}
-                    className={`bg-blue-600 hover:bg-blue-700 text-white ${isMobile ? 'p-1.5' : 'p-2'} rounded-lg transition-colors`}
-                  >
-                    <Plus className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
-                  </button>
+                    <button
+                      onClick={() => setShowCreateForm(true)}
+                      className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
                   )}
                 </div>
                 
                 {/* Tab Navigation - Soft pill style */}
-                <div className="flex overflow-x-auto scrollbar-hide gap-1.5 px-3 py-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <div className="flex overflow-x-auto scrollbar-hide gap-1.5 px-3 pb-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   {[
                     { key: 'all', label: 'Tout' },
                     { key: 'user', label: 'Mes posts' },
@@ -749,239 +776,256 @@ const ActivitiesContent = () => {
                 </div>
               </div>
 
+              {/* Floating Action Button for Mobile */}
+              {canCreateEvent && isMobile && !showCreateForm && (
+                <motion.button
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowCreateForm(true)}
+                  className="fixed bottom-32 right-6 z-[100] w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center border-4 border-white dark:border-gray-900"
+                >
+                  <Plus className="w-8 h-8" />
+                </motion.button>
+              )}
+
               {/* Create Event Form Modal/Card */}
               {showCreateForm && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/50 overflow-y-auto lg:relative lg:inset-auto lg:bg-transparent lg:p-0 lg:pt-0 lg:mb-4"
+                  initial={{ opacity: 0, y: isMobile ? '100%' : 0, scale: isMobile ? 1 : 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  className={`fixed inset-0 z-[1100] flex ${isMobile ? 'items-end' : 'items-center justify-center p-4'} bg-black/60 backdrop-blur-sm overflow-hidden`}
                   onClick={(e) => {
                     if (e.target === e.currentTarget) setShowCreateForm(false);
                   }}
                 >
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between z-10">
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                        {t('activities.createEvent.title', 'Créer un événement')}
-                      </h2>
+                  <div className={`bg-white dark:bg-gray-800 shadow-2xl w-full ${isMobile ? 'h-[92vh] rounded-t-[32px]' : 'max-w-2xl max-h-[90vh] rounded-2xl'} overflow-hidden flex flex-col relative`}>
+                    {/* Header */}
+                    <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-5 flex items-center justify-between z-10">
+                      <div>
+                        <h2 className="text-xl font-black text-gray-900 dark:text-white">
+                          {t('activities.createEvent.title', 'Nouvel Événement')}
+                        </h2>
+                        {isMobile && <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Partagez avec votre communauté</p>}
+                      </div>
                       <button
                         onClick={() => setShowCreateForm(false)}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        className="p-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-2xl transition-all"
                       >
-                        <X className="w-5 h-5 text-gray-500" />
+                        <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
                       </button>
                     </div>
 
-                    <div className="p-4 sm:p-6 space-y-4">
-                      {/* Form fields - same as before but with better styling */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          {t('activities.form.title', 'Titre')} *
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.titre}
-                          onChange={(e) => handleInputChange("titre", e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                          placeholder={t('activities.form.titlePlaceholder', 'Ex: Réunion parents-professeurs')}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          {t('activities.form.description', 'Description')} *
-                        </label>
-                        <textarea
-                          value={formData.description}
-                          onChange={(e) => handleInputChange("description", e.target.value)}
-                          rows={3}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all"
-                          placeholder={t('activities.form.descriptionPlaceholder', 'Décrivez votre événement...')}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          {t('activities.form.location', 'Lieu')} *
-                        </label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                    {/* Scrollable Form Content */}
+                    <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-6 no-scrollbar pb-40">
+                      {/* Form fields */}
+                      <div className="space-y-4">
+                        <div className="group">
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 group-focus-within:text-blue-500 transition-colors">
+                            {t('activities.form.title', 'Titre de l\'événement')} *
+                          </label>
                           <input
                             type="text"
-                            value={formData.lieu}
-                            onChange={(e) => handleInputChange("lieu", e.target.value)}
-                            className="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder={t('activities.form.locationPlaceholder', 'Salle 101')}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            {t('activities.form.startTime', 'Début')} *
-                          </label>
-                          <input
-                            type="datetime-local"
-                            value={formData.heureDebut}
-                            onChange={(e) => handleInputChange("heureDebut", e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            value={formData.titre}
+                            onChange={(e) => handleInputChange("titre", e.target.value)}
+                            className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                            placeholder={t('activities.form.titlePlaceholder', 'Ex: Réunion parents-professeurs')}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            {t('activities.form.endTime', 'Fin')}
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                            {t('activities.form.description', 'Description')} *
                           </label>
-                          <input
-                            type="datetime-local"
-                            value={formData.heureFin}
-                            onChange={(e) => handleInputChange("heureFin", e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          <textarea
+                            value={formData.description}
+                            onChange={(e) => handleInputChange("description", e.target.value)}
+                            rows={4}
+                            className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all font-medium"
+                            placeholder={t('activities.form.descriptionPlaceholder', 'Décrivez votre événement...')}
                           />
                         </div>
-                      </div>
 
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          {t('activities.form.status', 'Visibilité')}
-                        </label>
-                        <select
-                          value={formData.visibility}
-                          onChange={(e) => handleInputChange("visibility", e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        >
-                          <option value="PUBLIC">Public</option>
-                          <option value="PRIVATE">Privé</option>
-                        </select>
-                      </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                              {t('activities.form.location', 'Lieu')} *
+                            </label>
+                            <div className="relative">
+                              <MapPin className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
+                              <input
+                                type="text"
+                                value={formData.lieu}
+                                onChange={(e) => handleInputChange("lieu", e.target.value)}
+                                className="w-full pl-12 pr-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                                placeholder={t('activities.form.locationPlaceholder', 'Ex: Salle 101')}
+                              />
+                            </div>
+                          </div>
 
-                      {formData.visibility === "PRIVATE" && (
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            {t('activities.form.selectClasses', 'Sélectionner les Classes')} *
-                          </label>
-                          {loadingClasses ? (
-                            <div className="flex items-center justify-center py-4">
-                              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                              <span className="ml-2 text-gray-600 dark:text-gray-400">Chargement...</span>
-                            </div>
-                          ) : (
-                            <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto">
-                              {classes.length === 0 ? (
-                                <p className="text-gray-500 dark:text-gray-400 text-sm">Aucune classe disponible</p>
-                              ) : (
-                                <div className="space-y-2">
-                                  {classes.map((cls) => (
-                                    <label key={cls.id} className="flex items-center space-x-2 cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        checked={formData.selectedClasses?.includes(cls.id) || false}
-                                        onChange={(e) => {
-                                          const classId = cls.id;
-                                          if (e.target.checked) {
-                                            handleInputChange("selectedClasses", [...(formData.selectedClasses || []), classId]);
-                                          } else {
-                                            handleInputChange("selectedClasses", (formData.selectedClasses || []).filter(id => id !== classId));
-                                          }
-                                        }}
-                                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                                      />
-                                      <span className="text-sm text-gray-700 dark:text-gray-300">{cls.nom || cls.name}</span>
-                                    </label>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                          {t('activities.form.images', 'Photos')}
-                        </label>
-                        <div 
-                          onClick={() => fileInputRef.current?.click()}
-                          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer"
-                        >
-                          <div className="space-y-3">
-                            <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto">
-                              {uploading ? (
-                                <Loader2 className="w-6 h-6 text-blue-600 dark:text-blue-400 animate-spin" />
-                              ) : (
-                                <Image className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-700 dark:text-gray-300">
-                                {t('activities.form.addImages', 'Ajouter des photos')}
-                              </p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {t('activities.form.selectFiles', 'Cliquez pour sélectionner')}
-                              </p>
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                              {t('activities.form.status', 'Visibilité')}
+                            </label>
+                            <div className="relative">
+                              <select
+                                value={formData.visibility}
+                                onChange={(e) => handleInputChange("visibility", e.target.value)}
+                                className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none transition-all font-bold"
+                              >
+                                <option value="PUBLIC">🌍 Public (Tout le monde)</option>
+                                <option value="PRIVATE">🔒 Privé (Classes spécifiques)</option>
+                              </select>
+                              <ChevronDown className="absolute right-4 top-4.5 w-5 h-5 text-gray-400 pointer-events-none" />
                             </div>
                           </div>
                         </div>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          multiple
-                          accept="image/*,video/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                      </div>
 
-                      {uploadedImages.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {uploadedImages.map((media, index) => (
-                            <div key={index} className="relative group">
-                              {media.type === 'VIDEO' ? (
-                                <video
-                                  src={media.url}
-                                  controls
-                                  playsInline
-                                  className="w-full h-32 object-cover rounded-lg"
-                                />
-                              ) : (
-                                <img
-                                  src={media.url}
-                                  alt={`Upload ${index + 1}`}
-                                  className="w-full h-32 object-cover rounded-lg"
-                                />
-                              )}
-                              <button
-                                onClick={() => removeImage(index)}
-                                className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                              {t('activities.form.startTime', 'Date & Heure Début')} *
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={formData.heureDebut}
+                              onChange={(e) => handleInputChange("heureDebut", e.target.value)}
+                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                              {t('activities.form.endTime', 'Heure Fin (Optionnel)')}
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={formData.heureFin}
+                              onChange={(e) => handleInputChange("heureFin", e.target.value)}
+                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
+                            />
+                          </div>
                         </div>
-                      )}
+
+                        {formData.visibility === "PRIVATE" && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                              {t('activities.form.selectClasses', 'Classes Concernées')} *
+                            </label>
+                            {loadingClasses ? (
+                              <div className="flex items-center space-x-2 py-4">
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Recherche des classes...</span>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar p-1">
+                                {classes.map((cls) => (
+                                  <label 
+                                    key={cls.id} 
+                                    className={`flex items-center space-x-2 p-3 rounded-xl border transition-all cursor-pointer ${
+                                      formData.selectedClasses?.includes(cls.id)
+                                        ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                                        : 'bg-gray-50 border-gray-100 dark:bg-gray-900 dark:border-white/5'
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={formData.selectedClasses?.includes(cls.id) || false}
+                                      onChange={(e) => {
+                                        const classId = cls.id;
+                                        if (e.target.checked) {
+                                          handleInputChange("selectedClasses", [...(formData.selectedClasses || []), classId]);
+                                        } else {
+                                          handleInputChange("selectedClasses", (formData.selectedClasses || []).filter(id => id !== classId));
+                                        }
+                                      }}
+                                      className="w-4 h-4 rounded-lg border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-[10px] font-black uppercase tracking-tighter truncate dark:text-white">{cls.nom || cls.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                            {t('activities.form.images', 'Photos & Vidéos')}
+                          </label>
+                          <div 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-8 text-center hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/10 transition-all cursor-pointer group"
+                          >
+                            <div className="space-y-4">
+                              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                                {uploading ? (
+                                  <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin" />
+                                ) : (
+                                  <Image className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-black text-sm uppercase tracking-widest text-gray-700 dark:text-gray-300">
+                                  {t('activities.form.addImages', 'Ajouter des médias')}
+                                </p>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                  Photos ou Vidéos (max 50Mo)
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept="image/*,video/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                        </div>
+
+                        {uploadedImages.length > 0 && (
+                          <div className="grid grid-cols-3 gap-3 pt-2">
+                            {uploadedImages.map((media, index) => (
+                              <div key={index} className="relative group aspect-square">
+                                {media.type === 'VIDEO' ? (
+                                  <video src={media.url} className="w-full h-full object-cover rounded-xl shadow-md" />
+                                ) : (
+                                  <img src={media.url} alt="Upload" className="w-full h-full object-cover rounded-xl shadow-md" />
+                                )}
+                                <button
+                                  onClick={() => removeImage(index)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-lg hover:scale-110 transition-transform"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 flex items-center justify-end gap-3">
+                    {/* Sticky Footer */}
+                    <div className="sticky bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 p-6 flex items-center justify-between gap-4 z-20" style={{ paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 24px) + 24px)' : '24px' }}>
                       <button
                         onClick={() => setShowCreateForm(false)}
-                        className="px-6 py-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium transition-colors"
+                        className="flex-1 py-4 text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest text-[10px] hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all"
                       >
                         {t('common.actions.cancel', 'Annuler')}
                       </button>
                       <button
                         onClick={handleCreateEvent}
                         disabled={loading || uploading || !formData.titre || !formData.description || !formData.lieu || !formData.heureDebut || (formData.visibility === 'PRIVATE' && formData.selectedClasses.length === 0)}
-                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="flex-[2] py-4 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-blue-500/20 disabled:grayscale disabled:opacity-50 transition-all flex items-center justify-center space-x-2"
                       >
                         {loading || uploading ? (
                           <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            {uploading ? t('activities.actions.processing', 'Traitement...') : t('activities.actions.creating', 'Création...')}
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>{uploading ? 'Upload...' : 'Envoi...'}</span>
                           </>
                         ) : (
-                          t('activities.actions.createEvent', 'Créer l\'événement')
+                          <span>{t('activities.actions.createEvent', 'Publier l\'Événement')}</span>
                         )}
                       </button>
                     </div>
@@ -1039,13 +1083,18 @@ const ActivitiesContent = () => {
                             {activity.user.name?.charAt(0)?.toUpperCase() || 'U'}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h3 className={`font-semibold text-gray-900 dark:text-white ${isMobile ? 'text-sm' : ''} truncate`}>
                                 {activity.user.name}
                               </h3>
                               {activity.user.role && (
                                 <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-full flex-shrink-0">
                                   {activity.user.role}
+                                </span>
+                              )}
+                              {activity.user.classNames && activity.user.classNames.length > 0 && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 rounded-full flex-shrink-0">
+                                  {activity.user.classNames.join(', ')}
                                 </span>
                               )}
                             </div>

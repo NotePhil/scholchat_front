@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { minioS3Service } from "../../../../../services/minioS3";
 import { useNavigate } from "react-router-dom";
+import DocumentViewer from "../../../../../components/viewers/DocumentViewer";
 
 const CourseContentView = ({ course, onBack }) => {
   const navigate = useNavigate();
@@ -44,6 +45,12 @@ const CourseContentView = ({ course, onBack }) => {
   const [documentSearchTerm, setDocumentSearchTerm] = useState("");
   const [documentFilter, setDocumentFilter] = useState("all");
   const [documentViewMode, setDocumentViewMode] = useState("grid");
+  const [viewerConfig, setViewerConfig] = useState({
+    isOpen: false,
+    url: "",
+    fileName: "",
+    contentType: ""
+  });
 
   useEffect(() => {
     if (course) {
@@ -216,6 +223,31 @@ const CourseContentView = ({ course, onBack }) => {
     );
   };
 
+  const handleDocumentClick = (e) => {
+    // Intercept clicks on links or elements with data-file-url
+    const target = e.target.closest('a') || e.target.closest('[data-file-url]');
+    if (target) {
+      const url = target.getAttribute('href') || target.getAttribute('data-file-url');
+      const fileName = target.textContent || target.getAttribute('data-file-name') || "Document";
+      
+      // If it's a file we can view, prevent default and open viewer
+      if (url && (
+        url.includes('.pdf') || 
+        url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png') || 
+        url.includes('.mp4') || url.includes('.webm') ||
+        url.includes('.ppt') || url.includes('.doc') || url.includes('.xls')
+      )) {
+        e.preventDefault();
+        setViewerConfig({
+          isOpen: true,
+          url,
+          fileName,
+          contentType: "" // Let viewer determine from URL
+        });
+      }
+    }
+  };
+
   const renderChapterContent = (content) => {
     if (!content) return null;
 
@@ -223,9 +255,10 @@ const CourseContentView = ({ course, onBack }) => {
 
     return (
       <div
-        className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
+        className="prose prose-sm max-w-none text-slate-700 leading-relaxed course-content-container"
         dangerouslySetInnerHTML={{ __html: formattedContent }}
         style={{ wordBreak: "break-word" }}
+        onClick={handleDocumentClick}
       />
     );
   };
@@ -1024,6 +1057,13 @@ const CourseContentView = ({ course, onBack }) => {
           </div>
         </div>
       </div>
+      <DocumentViewer
+        isOpen={viewerConfig.isOpen}
+        url={viewerConfig.url}
+        fileName={viewerConfig.fileName}
+        contentType={viewerConfig.contentType}
+        onClose={() => setViewerConfig({ ...viewerConfig, isOpen: false })}
+      />
     </div>
   );
 };

@@ -971,7 +971,7 @@ const ManageEstablishmentDetailsView = ({
                         alignItems: "center",
                       }}
                     >
-                      <span>Envoi d'email pour nouvelles classes</span>
+                      <span>Validation nouvelle classe</span>
                       <Switch />
                     </div>
                   </Form.Item>
@@ -1091,7 +1091,7 @@ const ManageEstablishmentDetailsView = ({
           <Row gutter={[24, 16]}>
             <Col xs={24} md={8}>
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <Text>Envoi d'email pour nouvelles classes</Text>
+                <Text>Validation nouvelle classe</Text>
                 <Tag
                   color={
                     establishment.optionEnvoiMailNewClasse
