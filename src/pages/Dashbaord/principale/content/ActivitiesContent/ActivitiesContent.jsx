@@ -686,7 +686,7 @@ const ActivitiesContent = () => {
   };
 
   return (
-    <div>
+    <div className="relative">
       {/* Facebook-like Layout: Sidebar + Main Content */}
       <div className={`mx-auto max-w-7xl ${isMobile ? 'pb-32' : ''}`}>
         <div className="flex gap-0 lg:gap-6">
@@ -1371,36 +1371,36 @@ const ActivitiesContent = () => {
         </div>
       </div>
 
-      {/* Image Preview Modal - Same as before */}
+      {/* Image Preview Modal */}
       {imagePreview.isOpen && (
         <div
-          className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100]"
+          className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] rounded-xl"
           onClick={closeImagePreview}
         >
           <div
-            className="relative max-w-6xl max-h-[90vh] w-full mx-4"
+            className="relative w-full h-full flex items-center justify-center p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={closeImagePreview}
-              className="absolute top-4 right-4 z-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all"
+              className="absolute top-4 right-4 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2.5 rounded-full transition-all"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
 
             {imagePreview.images.length > 1 && (
               <>
                 <button
                   onClick={() => navigateImage("prev")}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2.5 rounded-full transition-all"
                 >
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => navigateImage("next")}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2.5 rounded-full transition-all"
                 >
-                  <ChevronRight className="w-6 h-6" />
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </>
             )}
@@ -1408,11 +1408,11 @@ const ActivitiesContent = () => {
             <img
               src={imagePreview.images[imagePreview.currentIndex]}
               alt={`Preview ${imagePreview.currentIndex + 1}`}
-              className="w-full h-full object-contain rounded-lg"
+              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
             />
 
             {imagePreview.images.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm text-white px-4 py-1.5 rounded-full text-sm font-medium">
                 {imagePreview.currentIndex + 1} / {imagePreview.images.length}
               </div>
             )}
