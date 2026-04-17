@@ -8,6 +8,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   UserPlus,
   ArrowLeft,
   Calendar,
@@ -1122,106 +1123,92 @@ const ActivitiesContent = () => {
                         )}
                       </div>
 
-                      {/* Media Gallery - Compact with carousel */}
-                      {activity.medias && activity.medias.length > 0 && (
-                        <div className="bg-gray-50 dark:bg-gray-900/50 relative">
-                          {activity.medias.length === 1 && (
-                            <div className="w-full">
-                              {activity.medias[0].type === 'VIDEO' ? (
-                                <video
-                                  src={activity.medias[0].url}
-                                  controls
-                                  playsInline
-                                  className="w-full max-h-64 object-contain"
-                                />
-                              ) : (
-                                <div
-                                  className="w-full cursor-pointer"
-                                  onClick={() => openImagePreview(activity.medias.filter(m => m.type === 'IMAGE').map(m => m.url), 0)}
-                                >
-                                  <img
-                                    src={activity.medias[0].url}
-                                    alt="Post"
-                                    className="w-full h-48 sm:h-56 object-cover"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          )}
+                      {/* Media Gallery - Facebook-style grid */}
+                      {activity.medias && activity.medias.length > 0 && (() => {
+                        const medias = activity.medias;
+                        const allImageUrls = medias.filter(m => m.type === 'IMAGE').map(m => m.url);
+                        const MediaItem = ({ media, index, className, overlay }) => (
+                          <div
+                            className={`relative overflow-hidden cursor-pointer group ${className}`}
+                            onClick={() => {
+                              if (media.type === 'IMAGE') {
+                                const idx = allImageUrls.indexOf(media.url);
+                                openImagePreview(allImageUrls, idx !== -1 ? idx : 0);
+                              }
+                            }}
+                          >
+                            {media.type === 'VIDEO' ? (
+                              <video src={media.url} controls playsInline className="w-full h-full object-cover" onClick={e => e.stopPropagation()} />
+                            ) : (
+                              <img src={media.url} alt={`media-${index}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            )}
+                            {overlay && (
+                              <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+                                <span className="text-white text-2xl font-bold">{overlay}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
 
-                          {activity.medias.length > 1 && (() => {
-                            const carouselId = `carousel-${activity.id}`;
-                            return (
-                            <div className="relative">
-                              {/* Horizontal scrollable carousel */}
-                              <div
-                                id={carouselId}
-                                className="flex overflow-x-auto snap-x snap-mandatory gap-0 scrollbar-hide"
-                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                                onScroll={(e) => {
-                                  const container = e.target;
-                                  const scrollLeft = container.scrollLeft;
-                                  const itemWidth = container.offsetWidth;
-                                  const activeIdx = Math.round(scrollLeft / itemWidth);
-                                  const dots = container.parentElement.querySelectorAll('.carousel-dot');
-                                  dots.forEach((dot, i) => {
-                                    dot.style.backgroundColor = i === activeIdx ? '#3b82f6' : '#d1d5db';
-                                    dot.style.width = i === activeIdx ? '16px' : '6px';
-                                  });
-                                }}
-                              >
-                                {activity.medias.map((media, idx) => (
-                                  <div key={idx} className="flex-shrink-0 snap-center w-full">
-                                    {media.type === 'VIDEO' ? (
-                                      <video
-                                        src={media.url}
-                                        controls
-                                        playsInline
-                                        className="w-full h-48 sm:h-56 object-cover"
-                                      />
-                                    ) : (
-                                      <img
-                                        src={media.url}
-                                        alt={`Post ${idx + 1}`}
-                                        className="w-full h-48 sm:h-56 object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                                        onClick={() => {
-                                          const imageUrls = activity.medias.filter(m => m.type === 'IMAGE').map(m => m.url);
-                                          const imgIdx = imageUrls.indexOf(media.url);
-                                          openImagePreview(imageUrls, imgIdx !== -1 ? imgIdx : 0);
-                                        }}
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                              {/* Active dot indicators */}
-                              <div className="flex justify-center gap-1.5 py-2.5">
-                                {activity.medias.map((_, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="carousel-dot h-1.5 rounded-full transition-all duration-300 cursor-pointer"
-                                    style={{
-                                      width: idx === 0 ? '16px' : '6px',
-                                      backgroundColor: idx === 0 ? '#3b82f6' : '#d1d5db',
-                                    }}
-                                    onClick={() => {
-                                      const container = document.getElementById(carouselId);
-                                      if (container) {
-                                        container.scrollTo({ left: idx * container.offsetWidth, behavior: 'smooth' });
-                                      }
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                              {/* Image counter badge */}
-                              <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                1/{activity.medias.length}
-                              </div>
+                        // 1 media
+                        if (medias.length === 1) return (
+                          <MediaItem media={medias[0]} index={0} className="w-full h-72 sm:h-96" />
+                        );
+
+                        // 2 medias
+                        if (medias.length === 2) return (
+                          <div className="flex gap-0.5 h-64 sm:h-80">
+                            <MediaItem media={medias[0]} index={0} className="flex-1" />
+                            <MediaItem media={medias[1]} index={1} className="flex-1" />
+                          </div>
+                        );
+
+                        // 3 medias
+                        if (medias.length === 3) return (
+                          <div className="flex gap-0.5 h-64 sm:h-80">
+                            <MediaItem media={medias[0]} index={0} className="flex-[2]" />
+                            <div className="flex flex-col gap-0.5 flex-1">
+                              <MediaItem media={medias[1]} index={1} className="flex-1" />
+                              <MediaItem media={medias[2]} index={2} className="flex-1" />
                             </div>
-                            );
-                          })()}
-                        </div>
-                      )}
+                          </div>
+                        );
+
+                        // 4 medias
+                        if (medias.length === 4) return (
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex gap-0.5 h-48 sm:h-56">
+                              <MediaItem media={medias[0]} index={0} className="flex-1" />
+                              <MediaItem media={medias[1]} index={1} className="flex-1" />
+                            </div>
+                            <div className="flex gap-0.5 h-48 sm:h-56">
+                              <MediaItem media={medias[2]} index={2} className="flex-1" />
+                              <MediaItem media={medias[3]} index={3} className="flex-1" />
+                            </div>
+                          </div>
+                        );
+
+                        // 5+ medias
+                        const remaining = medias.length - 4;
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex gap-0.5 h-48 sm:h-56">
+                              <MediaItem media={medias[0]} index={0} className="flex-1" />
+                              <MediaItem media={medias[1]} index={1} className="flex-1" />
+                            </div>
+                            <div className="flex gap-0.5 h-48 sm:h-56">
+                              <MediaItem media={medias[2]} index={2} className="flex-1" />
+                              <MediaItem media={medias[3]} index={3} className="flex-1" />
+                              <MediaItem
+                                media={medias[4]}
+                                index={4}
+                                className="flex-1"
+                                overlay={remaining > 0 ? `+${remaining}` : null}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Engagement Stats */}
                       {(activity.likes > 0 || activity.participants > 0 || activity.comments.length > 0) && (
