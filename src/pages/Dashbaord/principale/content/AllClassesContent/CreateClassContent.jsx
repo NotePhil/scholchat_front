@@ -529,7 +529,6 @@ const CreateClassContent = ({
     nom: "",
     niveau: "",
     etablissement: "",
-    etablissementToken: "",
     codeUnique: "",
     moderator: "",
   });
@@ -650,7 +649,6 @@ const CreateClassContent = ({
       setFormData((prev) => ({
         ...prev,
         [name]: value,
-        etablissementToken: "",
         codeUnique: "",
       }));
     } else {
@@ -679,19 +677,11 @@ const CreateClassContent = ({
     }
 
     if (
-      selectedEstablishment?.codeUnique &&
+      formData.etablissement &&
+      selectedEstablishment?.optionTokenGeneral &&
       !formData.codeUnique.trim()
     ) {
-      newErrors.codeUnique =
-        t('classes.create.validation.codeRequired', "Le code unique est requis pour cet établissement");
-    }
-
-    if (
-      selectedEstablishment?.optionTokenGeneral &&
-      !formData.etablissementToken.trim()
-    ) {
-      newErrors.etablissementToken =
-        t('classes.create.validation.tokenRequired', "Le token est requis pour cet établissement");
+      newErrors.codeUnique = t('classes.create.validation.codeRequired', "Le code unique de l'établissement est requis");
     }
 
     setErrors(newErrors);
@@ -742,13 +732,8 @@ const CreateClassContent = ({
       if (formData.etablissement) {
         classData.etablissementId = formData.etablissement;
 
-        // Add etablissementToken based on establishment options
-        if (selectedEstablishment?.optionTokenGeneral) {
-          classData.etablissementToken = formData.etablissementToken;
-        }
-
-        // Add codeUnique if establishment requires it
-        if (selectedEstablishment?.codeUnique) {
+        // Add codeUnique if establishment requires it (optionTokenGeneral)
+        if (selectedEstablishment?.optionTokenGeneral && formData.codeUnique) {
           classData.codeUnique = formData.codeUnique;
         }
       } else if (paymentInfo) {
@@ -996,43 +981,12 @@ const CreateClassContent = ({
                       )}
                     </div>
 
-                    {/* Token Field - Only show if establishment is selected and requires it */}
+                    {/* Code Unique Field - Only show if establishment requires optionTokenGeneral */}
                     {formData.etablissement &&
                       selectedEstablishment?.optionTokenGeneral && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {t('classes.create.form.token', "Token d'établissement")} *
-                          </label>
-                          <div className="relative">
-                            <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                              type="text"
-                              name="etablissementToken"
-                              value={formData.etablissementToken}
-                              onChange={handleInputChange}
-                              className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                                errors.etablissementToken
-                                  ? "border-red-500"
-                                  : "border-gray-300"
-                              }`}
-                              placeholder={t('classes.create.form.tokenPlaceholder', "A1B2C3D4")}
-                            />
-                          </div>
-                          {errors.etablissementToken && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <AlertCircle className="w-4 h-4" />
-                              {errors.etablissementToken}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                    {/* Code Unique Field - Only show if establishment is selected and requires it */}
-                    {formData.etablissement &&
-                      selectedEstablishment?.codeUnique && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {t('classes.create.form.codeUnique', "Code Unique")} *
+                            {t('classes.create.form.codeUnique', "Code Unique de l'établissement")} *
                           </label>
                           <div className="relative">
                             <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -1042,11 +996,9 @@ const CreateClassContent = ({
                               value={formData.codeUnique}
                               onChange={handleInputChange}
                               className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                                errors.codeUnique
-                                  ? "border-red-500"
-                                  : "border-gray-300"
+                                errors.codeUnique ? "border-red-500" : "border-gray-300"
                               }`}
-                              placeholder={t('classes.create.form.codeUniquePlaceholder', "Entrez le code unique")}
+                              placeholder="ABC123"
                             />
                           </div>
                           {errors.codeUnique && (

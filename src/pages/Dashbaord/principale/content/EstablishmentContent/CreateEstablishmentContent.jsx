@@ -259,7 +259,13 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
     setLoading(true);
     try {
       const establishmentData = {
-        ...formData,
+        nom: formData.nom,
+        localisation: formData.localisation,
+        pays: formData.pays,
+        email: formData.email,
+        telephone: formData.telephone,
+        optionEnvoiMailNewClasse: formData.optionEnvoiMailNewClasse,
+        optionTokenGeneral: formData.optionTokenGeneral,
         gestionnaire: {
           type: formData.gestionnaire.type,
           id: formData.gestionnaire.id,
