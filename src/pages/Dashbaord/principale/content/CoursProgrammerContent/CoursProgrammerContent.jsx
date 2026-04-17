@@ -30,6 +30,9 @@ import CoursProgrammerForm from "./CoursProgrammerForm/CoursProgrammerForm";
 import CoursProgrammerList from "./CoursProgrammerList";
 import CoursProgrammerStats from "./CoursProgrammerStats";
 import CoursProgrammerViewModal from "../../modals/CoursProgrammerViewModal";
+import SessionLauncher from "./LiveSession/SessionLauncher";
+import LiveSession from "./LiveSession/LiveSession";
+import liveSessionService from "../../../../../services/LiveSessionService";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 15, 20, 25, 50, 100];
 
@@ -51,6 +54,10 @@ const CoursProgrammerContent = () => {
   const [selectedScheduledCourse, setSelectedScheduledCourse] = useState(null);
   const [modalMode, setModalMode] = useState("create");
   const [professorId, setProfessorId] = useState("");
+  const [showLauncher, setShowLauncher] = useState(false);
+  const [launcherCourse, setLauncherCourse] = useState(null);
+  const [launchLoading, setLaunchLoading] = useState(false);
+  const [liveSession, setLiveSession] = useState(null); // { scheduledCourse, cours, isModerator }
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
@@ -251,23 +258,37 @@ const CoursProgrammerContent = () => {
   };
 
   const handleStartCourse = async (scheduledId) => {
+    // Find the scheduled course to get the cours object
+    const scheduled = scheduledCourses.find(s => s.id === scheduledId);
+    if (!scheduled) return;
+    // Show launcher modal for professor to pick mode
+    setLauncherCourse(scheduled);
+    setShowLauncher(true);
+  };
+
+  const handleLaunchSession = async (mode) => {
+    if (!launcherCourse) return;
+    setLaunchLoading(true);
     try {
-      setLoading(true);
-      setError("");
-
-      console.log("Démarrage du cours:", scheduledId);
-
-      await coursProgrammerService.demarrerCours(scheduledId);
-      setSuccess("Cours démarré avec succès !");
-
-      // Rechargement des données
+      const coursId = launcherCourse.cours?.id || launcherCourse.coursId;
+      // 1. Mark course as EN_COURS
+      await coursProgrammerService.demarrerCours(launcherCourse.id);
+      // 2. Start live session → returns SessionResponseDTO with jitsiJwt
+      await liveSessionService.startSession(coursId, mode);
+      setShowLauncher(false);
+      setLauncherCourse(null);
+      // 3. Open live session as moderator
+      setLiveSession({ scheduledCourse: launcherCourse, cours: launcherCourse.cours, isModerator: true });
       await loadData(professorId);
     } catch (err) {
-      console.error("Erreur lors du démarrage:", err);
-      setError("Erreur lors du démarrage: " + err.message);
+      setError("Erreur lors du démarrage: " + (err.response?.data?.message || err.message));
     } finally {
-      setLoading(false);
+      setLaunchLoading(false);
     }
+  };
+
+  const handleJoinSession = (scheduledCourse) => {
+    setLiveSession({ scheduledCourse, cours: scheduledCourse.cours, isModerator: false });
   };
 
   const handleEndCourse = async (scheduledId) => {
@@ -725,13 +746,22 @@ const CoursProgrammerContent = () => {
                         </button>
                       )}
                       {scheduledCourse.etatCoursProgramme === "EN_COURS" && (
-                        <button
-                          onClick={() => handleEndCourse(scheduledCourse.id)}
-                          className="flex-1 min-w-[80px] bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          <PauseCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span>Terminer</span>
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleEndCourse(scheduledCourse.id)}
+                            className="flex-1 min-w-[80px] bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <PauseCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Terminer</span>
+                          </button>
+                          <button
+                            onClick={() => handleJoinSession(scheduledCourse)}
+                            className="flex-1 min-w-[80px] bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <PlayCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Rejoindre</span>
+                          </button>
+                        </>
                       )}
                       {(scheduledCourse.etatCoursProgramme === "PLANIFIE" || scheduledCourse.etatCoursProgramme === "EN_COURS") && (
                         <button
@@ -835,6 +865,26 @@ const CoursProgrammerContent = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Session Launcher Modal */}
+        {showLauncher && launcherCourse && (
+          <SessionLauncher
+            cours={launcherCourse.cours}
+            loading={launchLoading}
+            onStart={handleLaunchSession}
+            onClose={() => { setShowLauncher(false); setLauncherCourse(null); }}
+          />
+        )}
+
+        {/* Live Session Full-screen */}
+        {liveSession && (
+          <LiveSession
+            scheduledCourse={liveSession.scheduledCourse}
+            cours={liveSession.cours}
+            isModerator={liveSession.isModerator}
+            onClose={() => { setLiveSession(null); loadData(professorId); }}
+          />
         )}
 
         {/* Modals */}

@@ -25,8 +25,10 @@ import {
   Pause,
   Plus,
   Loader,
+  Radio,
 } from "lucide-react";
 import CourseDetailsView from './CourseDetailsView';
+import LiveSession from '../CoursProgrammerContent/LiveSession/LiveSession';
 
 const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, userRole, tabData }) => {
   const [scheduledCourses, setScheduledCourses] = useState([]);
@@ -48,11 +50,58 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   const [courseResources, setCourseResources] = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [error, setError] = useState("");
+  const [liveSession, setLiveSession] = useState(null);
+  const [activeSessions, setActiveSessions] = useState({}); // { coursId: sessionData }
 
   const parentIdCPM = localStorage.getItem("userId");
   const isParentRoleCPM = (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT");
   const userId = isParentRoleCPM ? (localStorage.getItem("selectedChildId") || parentIdCPM) : parentIdCPM;
   const isProfessorOrAdmin = userRole === 'professor' || userRole === 'admin' || userRole?.includes('PROFESSOR') || userRole?.includes('ADMIN');
+
+  // Poll active sessions + sync course statuses
+  useEffect(() => {
+    if (scheduledCourses.length === 0) return;
+    const checkSessions = async () => {
+      const { default: liveSessionService } = await import('../../../../../services/LiveSessionService');
+      const results = {};
+      await Promise.all(
+        scheduledCourses
+          .filter(c => c.etatCoursProgramme !== 'ANNULE')
+          .map(async (c) => {
+            const cId = c.cours?.id || c.coursId;
+            if (!cId || results[cId] !== undefined) return;
+            try {
+              const session = await liveSessionService.getActiveSession(cId);
+              results[cId] = session; // active session found
+            } catch (e) {
+              results[cId] = null; // no active session
+            }
+          })
+      );
+      setActiveSessions(prev => {
+        const next = {};
+        Object.keys(results).forEach(k => { if (results[k]) next[k] = results[k]; });
+        return next;
+      });
+      // Sync etatCoursProgramme based on session state
+      setScheduledCourses(prev => prev.map(c => {
+        const cId = c.cours?.id || c.coursId;
+        if (!(cId in results)) return c; // not checked, leave as-is
+        const hasSession = !!results[cId];
+        if (hasSession && c.etatCoursProgramme === 'PLANIFIE') {
+          return { ...c, etatCoursProgramme: 'EN_COURS' };
+        }
+        if (!hasSession && c.etatCoursProgramme === 'EN_COURS') {
+          // Session ended → mark as TERMINE
+          return { ...c, etatCoursProgramme: 'TERMINE' };
+        }
+        return c;
+      }));
+    };
+    checkSessions();
+    const interval = setInterval(checkSessions, 15000);
+    return () => clearInterval(interval);
+  }, [scheduledCourses.length]);
 
   // Fetch courses when component mounts
   useEffect(() => {
@@ -581,64 +630,96 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  {filteredCourses.map((course) => (
+                  {filteredCourses.map((course) => {
+                    const cId = course.cours?.id || course.coursId;
+                    const activeSession = activeSessions[cId];
+                    const isLive = !!activeSession;
+                    const isEnded = course.etatCoursProgramme === 'TERMINE';
+                    const isPlanned = course.etatCoursProgramme === 'PLANIFIE';
+
+                    return (
                     <div
                       key={course.id}
-                      onClick={() => handleCourseClick(course)}
-                      className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 border border-gray-100"
+                      className={`bg-white rounded-xl shadow-lg transition-all duration-300 border-2 overflow-hidden ${
+                        isLive ? 'border-green-400 shadow-green-100' : 'border-gray-100 hover:shadow-xl'
+                      }`}
                     >
-                      <div className="p-4 sm:p-6">
-                        <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
+                      {/* LIVE banner */}
+                      {isLive && (
+                        <div className="bg-green-500 px-4 py-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                            <span className="text-white text-xs font-bold uppercase tracking-widest">Session en direct</span>
+                          </div>
+                          <span className="text-green-100 text-xs">{activeSession?.mode === 'VIDEO' ? '📹 Vidéo' : activeSession?.mode === 'AUDIO' ? '🎤 Audio' : '📚 Contenu'}</span>
+                        </div>
+                      )}
+
+                      {/* Card body — click to view details */}
+                      <div
+                        onClick={() => handleCourseClick(course)}
+                        className="p-4 sm:p-5 cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <h3 className="font-bold text-base sm:text-lg text-gray-900 break-words">
-                                {course.cours?.titre || course.titre || "Titre non disponible"}
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <h3 className="font-bold text-base text-gray-900 break-words">
+                                {course.cours?.titre || course.titre || 'Titre non disponible'}
                               </h3>
-                              <div
-                                className={`px-2 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(
-                                  course.etatCoursProgramme
-                                )}`}
-                              >
-                                <div className="flex items-center space-x-1">
+                              <div className={`px-2 py-0.5 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(course.etatCoursProgramme)}`}>
+                                <div className="flex items-center gap-1">
                                   {getStatusIcon(course.etatCoursProgramme)}
-                                  <span>
-                                    {getStatusText(course.etatCoursProgramme)}
-                                  </span>
+                                  <span>{getStatusText(course.etatCoursProgramme)}</span>
                                 </div>
                               </div>
                             </div>
-                            <p className="text-gray-600 text-xs sm:text-sm mb-3 line-clamp-2">
-                              {course.cours?.description ||
-                                "Description non disponible"}
+                            <p className="text-gray-500 text-xs line-clamp-2">
+                              {course.cours?.description || 'Description non disponible'}
                             </p>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
+                          <ChevronRight className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
                         </div>
 
-                        <div className="space-y-2 sm:space-y-3">
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
-                            <div className="flex items-center space-x-1">
-                              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              <span>{formatDate(course.dateCoursPrevue)}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              <span>{formatTime(course.dateCoursPrevue)}</span>
-                            </div>
-                          </div>
-
-                          {course.lieu && (
-                            <div className="flex items-center space-x-2">
-                              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 flex-shrink-0" />
-                              <span className="text-xs sm:text-sm text-gray-600 truncate">
-                                {course.lieu}
-                              </span>
-                            </div>
-                          )}
+                        <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-3">
+                          <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{formatDate(course.dateCoursPrevue)}</span>
+                          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{formatTime(course.dateCoursPrevue)}</span>
+                          {course.lieu && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{course.lieu}</span>}
                         </div>
                       </div>
+
+                      {/* Action footer */}
+                      <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-0">
+                        {isLive ? (
+                          <button
+                            onClick={() => setLiveSession({ scheduledCourse: course, cours: course.cours, isModerator: false })}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-sm transition-colors shadow"
+                          >
+                            <Radio className="w-4 h-4 animate-pulse" />
+                            Rejoindre la session en direct
+                          </button>
+                        ) : course.etatCoursProgramme === 'TERMINE' ? (
+                          <button
+                            onClick={() => handleCourseClick(course)}
+                            className="w-full flex items-center justify-center gap-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Voir le contenu du cours
+                          </button>
+                        ) : course.etatCoursProgramme === 'ANNULE' ? (
+                          <div className="flex items-center gap-2 py-2 px-3 bg-red-50 rounded-xl">
+                            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                            <span className="text-xs text-red-500 font-medium">Ce cours a été annulé</span>
+                          </div>
+                        ) : course.etatCoursProgramme === 'PLANIFIE' ? (
+                          <div className="flex items-center gap-2 py-2 px-3 bg-blue-50 rounded-xl">
+                            <Clock className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                            <span className="text-xs text-blue-600 font-medium">En attente du démarrage par le professeur</span>
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )
             ) : activeTab === "ALL_COURSES" ? (
@@ -787,6 +868,16 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
           <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
           <span className="font-medium">{toast.message}</span>
         </div>
+      )}
+
+      {/* Live Session */}
+      {liveSession && (
+        <LiveSession
+          scheduledCourse={liveSession.scheduledCourse}
+          cours={liveSession.cours}
+          isModerator={false}
+          onClose={() => setLiveSession(null)}
+        />
       )}
     </div>
   );
