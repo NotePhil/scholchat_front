@@ -1174,34 +1174,20 @@ const ActivitiesContent = () => {
                           </div>
                         );
 
-                        // 4 medias
-                        if (medias.length === 4) return (
-                          <div className="flex flex-col gap-0.5">
-                            <div className="flex gap-0.5 h-48 sm:h-56">
-                              <MediaItem media={medias[0]} index={0} className="flex-1" />
-                              <MediaItem media={medias[1]} index={1} className="flex-1" />
-                            </div>
-                            <div className="flex gap-0.5 h-48 sm:h-56">
-                              <MediaItem media={medias[2]} index={2} className="flex-1" />
-                              <MediaItem media={medias[3]} index={3} className="flex-1" />
-                            </div>
-                          </div>
-                        );
-
-                        // 5+ medias
+                        // 4+ medias: show max 4, last one has +N overlay
+                        const shown = medias.slice(0, 4);
                         const remaining = medias.length - 4;
                         return (
                           <div className="flex flex-col gap-0.5">
                             <div className="flex gap-0.5 h-48 sm:h-56">
-                              <MediaItem media={medias[0]} index={0} className="flex-1" />
-                              <MediaItem media={medias[1]} index={1} className="flex-1" />
+                              <MediaItem media={shown[0]} index={0} className="flex-1" />
+                              <MediaItem media={shown[1]} index={1} className="flex-1" />
                             </div>
                             <div className="flex gap-0.5 h-48 sm:h-56">
-                              <MediaItem media={medias[2]} index={2} className="flex-1" />
-                              <MediaItem media={medias[3]} index={3} className="flex-1" />
+                              <MediaItem media={shown[2]} index={2} className="flex-1" />
                               <MediaItem
-                                media={medias[4]}
-                                index={4}
+                                media={shown[3]}
+                                index={3}
                                 className="flex-1"
                                 overlay={remaining > 0 ? `+${remaining}` : null}
                               />
