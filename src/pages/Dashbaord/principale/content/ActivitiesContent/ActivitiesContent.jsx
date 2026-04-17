@@ -1374,49 +1374,46 @@ const ActivitiesContent = () => {
       {/* Image Preview Modal */}
       {imagePreview.isOpen && (
         <div
-          className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] rounded-xl"
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[500]"
+          style={{ left: isMobile ? 0 : '220px' }}
           onClick={closeImagePreview}
         >
-          <div
-            className="relative w-full h-full flex items-center justify-center p-6"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            onClick={closeImagePreview}
+            className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all"
           >
-            <button
-              onClick={closeImagePreview}
-              className="absolute top-4 right-4 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2.5 rounded-full transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <X className="w-5 h-5" />
+          </button>
 
-            {imagePreview.images.length > 1 && (
-              <>
-                <button
-                  onClick={() => navigateImage("prev")}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2.5 rounded-full transition-all"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => navigateImage("next")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2.5 rounded-full transition-all"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </>
-            )}
+          {imagePreview.images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); navigateImage("prev"); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); navigateImage("next"); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </>
+          )}
 
-            <img
-              src={imagePreview.images[imagePreview.currentIndex]}
-              alt={`Preview ${imagePreview.currentIndex + 1}`}
-              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
-            />
+          <img
+            src={imagePreview.images[imagePreview.currentIndex]}
+            alt={`Preview ${imagePreview.currentIndex + 1}`}
+            className="max-w-[90%] max-h-[85vh] object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
 
-            {imagePreview.images.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm text-white px-4 py-1.5 rounded-full text-sm font-medium">
-                {imagePreview.currentIndex + 1} / {imagePreview.images.length}
-              </div>
-            )}
-          </div>
+          {imagePreview.images.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-1.5 rounded-full text-sm font-medium">
+              {imagePreview.currentIndex + 1} / {imagePreview.images.length}
+            </div>
+          )}
         </div>
       )}
     </div>
