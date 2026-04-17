@@ -1374,38 +1374,44 @@ const ActivitiesContent = () => {
       {/* Image Preview Modal */}
       {imagePreview.isOpen && (
         <div
-          className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[500]"
-          style={{ left: isMobile ? 0 : '220px' }}
+          className="fixed bg-black/75 backdrop-blur-sm z-[500] flex items-center justify-center"
+          style={{
+            top: '70px',
+            bottom: 0,
+            left: isMobile ? 0 : '280px',
+            right: 0,
+          }}
           onClick={closeImagePreview}
         >
-          <button
-            onClick={closeImagePreview}
-            className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
           {imagePreview.images.length > 1 && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); navigateImage("prev"); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all"
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); navigateImage("next"); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all"
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
             </>
           )}
 
+          <button
+            onClick={closeImagePreview}
+            className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
           <img
             src={imagePreview.images[imagePreview.currentIndex]}
             alt={`Preview ${imagePreview.currentIndex + 1}`}
-            className="max-w-[90%] max-h-[85vh] object-contain rounded-xl shadow-2xl"
+            className="object-contain rounded-xl shadow-2xl"
+            style={{ maxWidth: 'calc(100% - 96px)', maxHeight: 'calc(100% - 80px)' }}
             onClick={(e) => e.stopPropagation()}
           />
 
