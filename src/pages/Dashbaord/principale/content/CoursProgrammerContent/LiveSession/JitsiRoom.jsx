@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from "react";
 
-const JitsiRoom = ({ roomName, jitsiJwt, displayName, isModerator, mode }) => {
+const JitsiRoom = ({ roomName, jitsiJwt, jitsiDomain, displayName, isModerator, mode }) => {
   const containerRef = useRef(null);
   const apiRef = useRef(null);
 
   useEffect(() => {
-    if (!roomName || !containerRef.current) return;
+    if (!roomName || !jitsiDomain || !containerRef.current) return;
 
     const loadJitsi = () => {
       if (!window.JitsiMeetExternalAPI) return;
@@ -45,14 +45,14 @@ const JitsiRoom = ({ roomName, jitsiJwt, displayName, isModerator, mode }) => {
         options.configOverwrite.startWithAudioMuted = true;
       }
 
-      apiRef.current = new window.JitsiMeetExternalAPI("8x8.vc", options);
+      apiRef.current = new window.JitsiMeetExternalAPI(jitsiDomain, options);
     };
 
     if (window.JitsiMeetExternalAPI) {
       loadJitsi();
     } else {
       const script = document.createElement("script");
-      script.src = "https://8x8.vc/libs/external_api.min.js";
+      script.src = `https://${jitsiDomain}/libs/external_api.min.js`;
       script.async = true;
       script.onload = loadJitsi;
       document.head.appendChild(script);
@@ -64,7 +64,7 @@ const JitsiRoom = ({ roomName, jitsiJwt, displayName, isModerator, mode }) => {
         apiRef.current = null;
       }
     };
-  }, [roomName, jitsiJwt, displayName, isModerator, mode]);
+  }, [roomName, jitsiJwt, jitsiDomain, displayName, isModerator, mode]);
 
   if (mode === "CONTENT_ONLY") {
     return (

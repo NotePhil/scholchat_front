@@ -304,6 +304,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
             <JitsiRoom
               roomName={session?.roomName}
               jitsiJwt={session?.jitsiJwt}
+              jitsiDomain={session?.jitsiDomain}
               displayName={userName}
               isModerator={isModerator}
               mode={session?.mode}
