@@ -30,7 +30,7 @@ const schedulingSchema = yup.object().shape({
       function (value) {
         if (!value) return false;
         // If we're editing, allow past dates (could be an existing schedule)
-        if (modalMode === "edit") return true;
+        if (this.options.context?.modalMode === "edit") return true;
         
         const selectedDate = new Date(value);
         const now = new Date();
@@ -121,7 +121,7 @@ const CoursProgrammerForm = ({
     clearErrors,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(schedulingSchema),
+    resolver: yupResolver(schedulingSchema, { context: { modalMode } }),
     defaultValues: {
       participantsIds: [],
       etatCoursProgramme: "PLANIFIE",

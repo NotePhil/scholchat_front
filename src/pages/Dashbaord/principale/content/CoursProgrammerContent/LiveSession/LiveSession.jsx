@@ -3,12 +3,14 @@ import { createPortal } from "react-dom";
 import {
   ArrowLeft, Users, ChevronLeft, ChevronRight,
   Video, Mic, BookOpen, PhoneOff, Maximize2, Minimize2,
-  CheckCircle, Loader2, AlertCircle,
+  CheckCircle, Loader2, AlertCircle, MessageSquare,
 } from "lucide-react";
 import JitsiRoom from "./JitsiRoom";
 import ChapterPanel from "./ChapterPanel";
 import ChatBar from "./ChatBar";
 import liveSessionService from "../../../../../../services/LiveSessionService";
+import { coursProgrammerService } from "../../../../../../services/coursProgrammerService";
+import { coursService } from "../../../../../../services/CoursService";
 import { useSessionWebSocket } from "../../../../../../hooks/useSessionWebSocket";
 
 const MODE_ICON = { VIDEO: Video, AUDIO: Mic, CONTENT_ONLY: BookOpen };
@@ -16,6 +18,7 @@ const MODE_LABEL = { VIDEO: "Vidéo", AUDIO: "Audio", CONTENT_ONLY: "Contenu" };
 
 const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModeratorProp }) => {
   const coursId = cours?.id || scheduledCourse?.cours?.id || scheduledCourse?.coursId;
+  const scheduledCourseId = scheduledCourse?.id;
   const coursTitle = cours?.titre || scheduledCourse?.cours?.titre || "Cours";
 
   const [session, setSession] = useState(null);
@@ -30,6 +33,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [mobileTab, setMobileTab] = useState("video"); // "video" | "content" | "chat"
   const [chapterChanging, setChapterChanging] = useState(false);
   const sessionRef = useRef(null);
 
@@ -104,8 +108,18 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
         const joined = await liveSessionService.joinSession(coursId, activeSession.sessionId);
         setSession(joined);
         sessionRef.current = joined;
-        setChapitres(joined.chapitres || []);
-        setCurrentChapitreId(joined.currentChapitreId || joined.chapitres?.[0]?.id || null);
+
+        // Fetch full chapter content (contenu, medias, ressources, fileUrl)
+        let fullChapitres = joined.chapitres || [];
+        try {
+          const fullCours = await coursService.getCoursWithChapitres(coursId);
+          const fullMap = Object.fromEntries((fullCours.chapitres || []).map(c => [c.id, c]));
+          fullChapitres = fullChapitres.map(c => ({ ...fullMap[c.id], ...c }));
+          if (fullChapitres.length === 0) fullChapitres = fullCours.chapitres || [];
+        } catch (e) { /* fallback to session chapitres */ }
+
+        setChapitres(fullChapitres);
+        setCurrentChapitreId(joined.currentChapitreId || fullChapitres[0]?.id || null);
         setParticipants(joined.participants || []);
 
         // Load my progress
@@ -172,6 +186,9 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
     if (!session) return;
     try {
       await liveSessionService.endSession(coursId, session.sessionId);
+      if (scheduledCourseId) {
+        await coursProgrammerService.terminerCours(scheduledCourseId).catch(() => {});
+      }
       setSessionEnded(true);
     } catch (e) { console.error(e); }
   };
@@ -253,13 +270,13 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
           </div>
         </div>
 
-        {/* Chapter nav */}
-        <div className="hidden sm:flex items-center gap-1 bg-gray-800 rounded-lg px-2 py-1">
+        {/* Chapter nav — visible on all sizes */}
+        <div className="flex items-center gap-1 bg-gray-800 rounded-lg px-2 py-1">
           <button onClick={handlePrevChapter} disabled={currentChapIdx <= 0} className="p-1 text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="text-xs text-gray-300 px-1">
-            {currentChapIdx + 1} / {chapitres.length}
+            {currentChapIdx + 1}/{chapitres.length}
             {chapterChanging && <Loader2 className="w-3 h-3 animate-spin inline ml-1" />}
           </span>
           <button onClick={handleNextChapter} disabled={currentChapIdx >= chapitres.length - 1} className="p-1 text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
@@ -296,8 +313,68 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
         </div>
       </div>
 
-      {/* Main layout */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* ── MOBILE layout: stacked tabs ── */}
+      <div className="flex lg:hidden flex-col flex-1 overflow-hidden">
+        {/* Tab content */}
+        <div className="flex-1 overflow-hidden">
+          {/* Video tab */}
+          <div className={`w-full h-full ${mobileTab === "video" ? "block" : "hidden"}`}>
+            <JitsiRoom
+              roomName={session?.roomName}
+              jitsiJwt={session?.jitsiJwt}
+              jitsiDomain={session?.jitsiDomain}
+              displayName={userName}
+              isModerator={isModerator}
+              mode={session?.mode}
+            />
+          </div>
+          {/* Content tab */}
+          <div className={`w-full h-full overflow-y-auto ${mobileTab === "content" ? "block" : "hidden"}`}>
+            <ChapterPanel
+              chapitres={chapitres}
+              currentChapitreId={currentChapitreId}
+              progress={progress}
+              isModerator={isModerator}
+              onSelectChapter={handleSelectChapter}
+            />
+          </div>
+          {/* Chat tab */}
+          <div className={`w-full h-full ${mobileTab === "chat" ? "flex flex-col" : "hidden"}`}>
+            <ChatBar
+              messages={messages}
+              participants={participants}
+              handRaises={handRaises}
+              onSendMessage={handleSendMessage}
+              onRaiseHand={handleRaiseHand}
+            />
+          </div>
+        </div>
+
+        {/* Bottom tab bar */}
+        <div className="flex-shrink-0 flex border-t border-gray-800 bg-gray-900">
+          {[
+            { key: "video", icon: session?.mode === "AUDIO" ? Mic : Video, label: "Vidéo" },
+            { key: "content", icon: BookOpen, label: "Contenu" },
+            { key: "chat", icon: MessageSquare, label: "Chat" },
+          ].map(({ key, icon: Icon, label }) => (
+            <button
+              key={key}
+              onClick={() => setMobileTab(key)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors ${
+                mobileTab === key
+                  ? "text-indigo-400 border-t-2 border-indigo-400"
+                  : "text-gray-500 border-t-2 border-transparent"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── DESKTOP layout: side by side ── */}
+      <div className="hidden lg:flex flex-1 overflow-hidden">
         {/* Left: Jitsi */}
         <div className={`flex flex-col transition-all duration-300 ${panelCollapsed ? "flex-1" : "flex-1 lg:w-0 lg:flex-none lg:basis-[55%]"}`}>
           <div className="flex-1 p-2">
@@ -313,17 +390,15 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
         </div>
 
         {/* Right: Chapter panel + Chat */}
-        <div className={`flex flex-col border-l border-gray-800 transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-full lg:w-[45%] lg:max-w-sm xl:max-w-md"}`}>
-          {/* Toggle button */}
+        <div className={`flex flex-col border-l border-gray-800 transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-[45%] max-w-sm xl:max-w-md"}`}>
           <button
             onClick={() => setPanelCollapsed(p => !p)}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white p-1 rounded-l-lg transition-colors hidden lg:flex"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white p-1 rounded-l-lg transition-colors flex"
             style={{ right: panelCollapsed ? 0 : undefined }}
           >
             {panelCollapsed ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
           </button>
 
-          {/* Chapter panel — top half */}
           <div className="flex-1 overflow-hidden min-h-0">
             <ChapterPanel
               chapitres={chapitres}
@@ -334,7 +409,6 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
             />
           </div>
 
-          {/* Chat — bottom */}
           <div className={`flex-shrink-0 transition-all duration-300 ${chatCollapsed ? "h-10" : "h-64"}`}>
             <div className="flex items-center justify-between px-3 py-1.5 bg-gray-900 border-t border-gray-800 cursor-pointer" onClick={() => setChatCollapsed(p => !p)}>
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Chat & Interactions</span>
