@@ -326,6 +326,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
               displayName={userName}
               isModerator={isModerator}
               mode={session?.mode}
+              onHangup={isModerator ? handleEndSession : onClose}
             />
           </div>
           {/* Content tab */}
@@ -385,11 +386,8 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
               displayName={userName}
               isModerator={isModerator}
               mode={session?.mode}
+              onHangup={isModerator ? handleEndSession : onClose}
             />
-          </div>
-        </div>
-
-        {/* Right: Chapter panel + Chat */}
         <div className={`flex flex-col border-l border-gray-800 transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-[45%] max-w-sm xl:max-w-md"}`}>
           <button
             onClick={() => setPanelCollapsed(p => !p)}

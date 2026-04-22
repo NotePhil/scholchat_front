@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 
-const JitsiRoom = ({ roomName, jitsiJwt, jitsiDomain, displayName, isModerator, mode }) => {
+const JitsiRoom = ({ roomName, jitsiJwt, jitsiDomain, displayName, isModerator, mode, onHangup }) => {
   const containerRef = useRef(null);
   const apiRef = useRef(null);
 
@@ -46,6 +46,13 @@ const JitsiRoom = ({ roomName, jitsiJwt, jitsiDomain, displayName, isModerator, 
       }
 
       apiRef.current = new window.JitsiMeetExternalAPI(jitsiDomain, options);
+
+      // When user clicks the in-Jitsi hangup button, delegate to parent instead of navigating away
+      const handleHangup = () => { if (onHangup) onHangup(); };
+      apiRef.current.addEventListeners({
+        readyToClose: handleHangup,
+        videoConferenceLeft: handleHangup,
+      });
     };
 
     if (window.JitsiMeetExternalAPI) {
