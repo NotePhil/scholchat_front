@@ -1,65 +1,97 @@
 import React, { useState } from "react";
-import { CheckCircle, ChevronRight, BookOpen, Lock, FileText, Image, Video, Download, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle, ChevronRight, BookOpen, Lock, FileText, Image, Video, Download, ExternalLink, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 
-// Detect file type from URL or contentType
 const getFileType = (url = "", contentType = "") => {
-  const u = url.toLowerCase();
-  if (contentType.startsWith("image/") || u.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return "image";
-  if (contentType.startsWith("video/") || u.match(/\.(mp4|webm|avi|mov|mkv)(\?|$)/)) return "video";
-  if (contentType.includes("pdf") || u.match(/\.pdf(\?|$)/)) return "pdf";
-  if (u.match(/\.(ppt|pptx)(\?|$)/) || contentType.includes("presentation")) return "ppt";
-  if (u.match(/\.(doc|docx)(\?|$)/) || contentType.includes("word")) return "doc";
+  const u = url.toLowerCase().split("?")[0];
+  if (contentType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(u)) return "image";
+  if (contentType.startsWith("video/") || /\.(mp4|webm|avi|mov|mkv)$/.test(u)) return "video";
+  if (contentType.includes("pdf") || u.endsWith(".pdf")) return "pdf";
+  if (/\.(ppt|pptx)$/.test(u) || contentType.includes("presentation")) return "office";
+  if (/\.(doc|docx)$/.test(u) || contentType.includes("word")) return "office";
+  if (/\.(xls|xlsx|csv)$/.test(u) || contentType.includes("spreadsheet") || contentType.includes("excel")) return "office";
   return "file";
 };
 
+const FILE_META = {
+  pdf:    { color: "bg-red-100 text-red-600",    label: "PDF" },
+  office: { color: "bg-blue-100 text-blue-600",  label: "Office" },
+  image:  { color: "bg-green-100 text-green-600",label: "Image" },
+  video:  { color: "bg-purple-100 text-purple-600", label: "Vidéo" },
+  file:   { color: "bg-gray-100 text-gray-600",  label: "Fichier" },
+};
+
 const FileViewer = ({ url, contentType = "", fileName = "Fichier" }) => {
+  const [preview, setPreview] = useState(false);
   const type = getFileType(url, contentType);
+  const meta = FILE_META[type] || FILE_META.file;
 
-  if (type === "image") return (
-    <img src={url} alt={fileName} className="w-full rounded-lg object-contain max-h-64 bg-gray-100" />
-  );
+  // Google Docs viewer works for pdf, doc, docx, xls, xlsx, ppt, pptx
+  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
 
-  if (type === "video") return (
-    <video src={url} controls playsInline className="w-full rounded-lg max-h-64" />
-  );
+  const canPreview = type === "image" || type === "video" || type === "pdf" || type === "office";
 
-  if (type === "pdf") return (
-    <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-      <iframe
-        src={`${url}#toolbar=0&navpanes=0`}
-        className="w-full h-64"
-        title={fileName}
-      />
-      <a href={url} target="_blank" rel="noreferrer"
-        className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 text-xs text-indigo-600 hover:underline border-t border-gray-200">
-        <ExternalLink className="w-3 h-3" /> Ouvrir en plein écran
-      </a>
-    </div>
-  );
-
-  if (type === "ppt") return (
-    <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-      <iframe
-        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`}
-        className="w-full h-64"
-        title={fileName}
-        frameBorder="0"
-      />
-      <a href={url} target="_blank" rel="noreferrer"
-        className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 text-xs text-indigo-600 hover:underline border-t border-gray-200">
-        <Download className="w-3 h-3" /> Télécharger le PowerPoint
-      </a>
-    </div>
-  );
-
-  // Generic file download
   return (
-    <a href={url} target="_blank" rel="noreferrer" download={fileName}
-      className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 transition-colors">
-      <FileText className="w-5 h-5 text-indigo-500 flex-shrink-0" />
-      <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">{fileName}</span>
-      <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
-    </a>
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* File header row */}
+      <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-800">
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${meta.color} flex-shrink-0`}>
+          {fileName.split(".").pop()?.toUpperCase() || meta.label}
+        </span>
+        <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1 font-medium">{fileName}</span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {canPreview && (
+            <button
+              onClick={() => setPreview(p => !p)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors"
+            >
+              {preview ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              {preview ? "Fermer" : "Aperçu"}
+            </button>
+          )}
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            download={fileName}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium transition-colors"
+          >
+            <Download className="w-3 h-3" />
+          </a>
+        </div>
+      </div>
+
+      {/* Preview area */}
+      {preview && (
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          {type === "image" && (
+            <img src={url} alt={fileName} className="w-full object-contain max-h-80" />
+          )}
+          {type === "video" && (
+            <video src={url} controls playsInline className="w-full max-h-64" />
+          )}
+          {(type === "pdf" || type === "office") && (
+            <div className="relative">
+              <iframe
+                src={type === "pdf" ? `${url}#toolbar=1&navpanes=0` : googleViewerUrl}
+                className="w-full"
+                style={{ height: "420px" }}
+                title={fileName}
+                frameBorder="0"
+                allow="autoplay"
+              />
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 text-xs text-indigo-600 hover:underline border-t border-gray-200"
+              >
+                <ExternalLink className="w-3 h-3" /> Ouvrir dans un nouvel onglet
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
