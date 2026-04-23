@@ -39,6 +39,7 @@
     "yup": "^1.7.0"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "start": "node server.js",
     "dev": "cross-env REACT_APP_API_BASE_URL=http://localhost:8486/scholchat NODE_OPTIONS=--max_old_space_size=4096 react-app-rewired start",
     "build": "cross-env NODE_OPTIONS=--max_old_space_size=4096 GENERATE_SOURCEMAP=false react-app-rewired build",
