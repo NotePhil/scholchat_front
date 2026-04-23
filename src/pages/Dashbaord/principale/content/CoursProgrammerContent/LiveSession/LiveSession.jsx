@@ -388,7 +388,9 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
               mode={session?.mode}
               onHangup={isModerator ? handleEndSession : onClose}
             />
-        <div className={`flex flex-col border-l border-gray-800 transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-[45%] max-w-sm xl:max-w-md"}`}>
+          </div>
+        </div>
+        <div className={`relative flex flex-col border-l border-gray-800 transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-[45%] max-w-sm xl:max-w-md"}`}>
           <button
             onClick={() => setPanelCollapsed(p => !p)}
             className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white p-1 rounded-l-lg transition-colors flex"
