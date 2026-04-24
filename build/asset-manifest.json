@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.0ee4fa12.css",
-    "main.js": "/static/js/main.2e2b8a56.js",
+    "main.css": "/static/css/main.55ffcabd.css",
+    "main.js": "/static/js/main.d5dc6cc7.js",
     "static/js/6259.78373f26.chunk.js": "/static/js/6259.78373f26.chunk.js",
     "vendors-46552168.js": "/static/js/vendors-46552168.301e9957.js",
     "vendors-39a3c0d7.js": "/static/js/vendors-39a3c0d7.2442ee6b.js",
@@ -26,7 +26,7 @@
     "vendors-15989550.js": "/static/js/vendors-15989550.01423330.js",
     "vendors-f7e533a2.js": "/static/js/vendors-f7e533a2.a5c07478.js",
     "vendors-1cdde194.js": "/static/js/vendors-1cdde194.c538dd4c.js",
-    "vendors-d17272b1.js": "/static/js/vendors-d17272b1.f1ecb30a.js",
+    "vendors-d17272b1.js": "/static/js/vendors-d17272b1.9abe4150.js",
     "vendors-54b208fe.js": "/static/js/vendors-54b208fe.39fb6223.js",
     "vendors-1e5a62bf.js": "/static/js/vendors-1e5a62bf.b70ccc33.js",
     "vendors-3fb7187e.js": "/static/js/vendors-3fb7187e.efbf2ba1.js",
@@ -102,7 +102,7 @@
     "static/js/vendors-15989550.01423330.js",
     "static/js/vendors-f7e533a2.a5c07478.js",
     "static/js/vendors-1cdde194.c538dd4c.js",
-    "static/js/vendors-d17272b1.f1ecb30a.js",
+    "static/js/vendors-d17272b1.9abe4150.js",
     "static/js/vendors-54b208fe.39fb6223.js",
     "static/js/vendors-1e5a62bf.b70ccc33.js",
     "static/js/vendors-3fb7187e.efbf2ba1.js",
@@ -150,7 +150,7 @@
     "static/js/vendors-229eafb5.27e8bf29.js",
     "static/js/vendors-866ab763.27b6521c.js",
     "static/js/vendors-46552168.301e9957.js",
-    "static/css/main.0ee4fa12.css",
-    "static/js/main.2e2b8a56.js"
+    "static/css/main.55ffcabd.css",
+    "static/js/main.d5dc6cc7.js"
   ]
 }
