@@ -17,6 +17,7 @@ import {
   Upload,
   Image,
   Trash2,
+  Pencil,
   Loader2,
   Home,
   Users,
@@ -85,6 +86,13 @@ const ActivitiesContent = () => {
   const [classes, setClasses] = useState([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
   const fileInputRef = useRef(null);
+  const [editingActivity, setEditingActivity] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [editLoading, setEditLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [editUploadedImages, setEditUploadedImages] = useState([]);
+  const [editUploading, setEditUploading] = useState(false);
+  const editFileInputRef = useRef(null);
 
   const loadClasses = async () => {
     if (formData.visibility !== 'PRIVATE') return;
@@ -106,25 +114,10 @@ const ActivitiesContent = () => {
         });
         if (response.ok) classesData = await response.json();
       } else if (isProfessor) {
-        // Try moderator classes first, then publication rights, then accessible classes
-        try {
-          const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-          });
-          if (resp.ok) {
-            const allClasses = await resp.json();
-            // Filter to only classes where this professor is moderator or has access
-            const accessResp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`, {
-              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-            });
-            const accessClasses = accessResp.ok ? await accessResp.json() : [];
-            const accessIds = accessClasses.map(c => c.id);
-            classesData = allClasses.filter(c => c.moderatorId === userId || accessIds.includes(c.id));
-            if (classesData.length === 0) classesData = allClasses.filter(c => c.etat === 'ACTIF');
-          }
-        } catch (e) {
-          console.warn("Fallback to all classes:", e);
-        }
+        const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (resp.ok) classesData = await resp.json();
       } else {
         const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
@@ -153,6 +146,10 @@ const ActivitiesContent = () => {
   useEffect(() => {
     loadClasses();
   }, [formData.visibility]);
+
+  useEffect(() => {
+    if (editingActivity && editFormData.visibility === 'PRIVATE') loadClasses();
+  }, [editFormData.visibility, editingActivity]);
 
   // Filter activities based on active tab
   useEffect(() => {
@@ -297,13 +294,14 @@ const ActivitiesContent = () => {
 
           if (!creatorName) creatorName = 'Utilisateur';
 
-          // Resolve class names from selectedClasses IDs
+          // Resolve class names from classesIds (API field)
+          const classIds = event.classesIds || event.selectedClasses || [];
           let classNames = [];
-          if (event.selectedClasses && event.selectedClasses.length > 0) {
+          if (classIds.length > 0) {
             try {
               const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
               const classResults = await Promise.all(
-                event.selectedClasses.map(async (classId) => {
+                classIds.map(async (classId) => {
                   try {
                     const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes/${classId}`, {
                       headers: { 'Authorization': `Bearer ${token}` }
@@ -330,7 +328,8 @@ const ActivitiesContent = () => {
             participants,
             isParticipating,
             showComments: false,
-            user: { name: creatorName, role: creatorRole, classNames },
+            classNames,
+            user: { name: creatorName, role: creatorRole },
             titre: event.titre,
             description: event.description,
             content: event.description,
@@ -347,7 +346,7 @@ const ActivitiesContent = () => {
             participantsIds: event.participantsIds || [],
             heureDebut: event.heureDebut,
             visibility: event.visibility || 'PUBLIC',
-            selectedClasses: event.selectedClasses || [],
+            selectedClasses: classIds,
             createurId: event.createurId,
           };
         })
@@ -608,6 +607,95 @@ const ActivitiesContent = () => {
     alert(t('activities.actions.shareDemo'));
   };
 
+  const openEditModal = (activity) => {
+    setEditFormData({
+      titre: activity.titre || '',
+      description: activity.description || '',
+      lieu: activity.eventDetails?.location || '',
+      heureDebut: activity.eventDetails?.startTime ? activity.eventDetails.startTime.slice(0, 16) : '',
+      heureFin: activity.eventDetails?.endTime ? activity.eventDetails.endTime.slice(0, 16) : '',
+      visibility: activity.visibility || 'PUBLIC',
+      classesIds: activity.selectedClasses || [],
+      existingMedias: activity.medias || [],
+    });
+    setEditUploadedImages([]);
+    setEditingActivity(activity);
+  };
+
+  const handleEditImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    setEditUploading(true);
+    const newMedia = files
+      .filter(f => {
+        const max = f.type.startsWith('video/') ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+        if (f.size > max) { alert(`${f.name} est trop volumineux`); return false; }
+        return true;
+      })
+      .map(f => ({ file: f, url: URL.createObjectURL(f), name: f.name, type: f.type.startsWith('video/') ? 'VIDEO' : 'IMAGE', contentType: f.type }));
+    setEditUploadedImages(prev => [...prev, ...newMedia]);
+    setEditUploading(false);
+  };
+
+  const handleEditEvent = async () => {
+    if (!editFormData.titre || !editFormData.description || !editFormData.lieu || !editFormData.heureDebut) return;
+    setEditLoading(true);
+    try {
+      const uploadedMedia = [...(editFormData.existingMedias || []).map(m => ({
+        fileName: m.fileName || m.name,
+        filePath: m.filePath || m.url,
+        fileType: m.fileType || m.type || 'IMAGE',
+        contentType: m.contentType,
+        fileSize: m.fileSize,
+        mediaType: m.mediaType || m.type || 'IMAGE',
+        bucketName: m.bucketName || 'scholchat',
+      }))];
+
+      if (editUploadedImages.length > 0) {
+        setEditUploading(true);
+        for (const media of editUploadedImages) {
+          try {
+            const result = await minioS3Service.uploadFile(media.file, media.type === 'VIDEO' ? 'videos' : 'images');
+            uploadedMedia.push({ fileName: result.fileName, filePath: result.filePath, contentType: result.contentType, fileSize: result.fileSize, mediaType: media.type, bucketName: 'scholchat' });
+          } catch (e) { console.error('Upload error:', e); }
+        }
+        setEditUploading(false);
+      }
+
+      await activityFeedService.editEvent(editingActivity.id, {
+        ...editFormData,
+        etat: 'PLANIFIE',
+        classesIds: editFormData.visibility === 'PRIVATE' ? editFormData.classesIds : [],
+        medias: uploadedMedia,
+      });
+      setEditingActivity(null);
+      setEditUploadedImages([]);
+      await loadEvents();
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert(`Échec de la mise à jour: ${error.message}`);
+    } finally {
+      setEditLoading(false);
+      setEditUploading(false);
+    }
+  };
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const handleDeleteEvent = async (activityId) => {
+    setConfirmDeleteId(null);
+    setDeletingId(activityId);
+    try {
+      await activityFeedService.deleteEvent(activityId);
+      setActivities(prev => prev.filter(a => a.id !== activityId));
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert(`Échec de la suppression: ${error.message}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -655,6 +743,7 @@ const ActivitiesContent = () => {
         createurId: formData.createurId,
         visibility: formData.visibility,
         selectedClasses: formData.visibility === 'PRIVATE' ? formData.selectedClasses : [],
+        classesIds: formData.visibility === 'PRIVATE' ? formData.selectedClasses : [],
         participantsIds: [],
         medias: uploadedMedia,
         interactions: []
@@ -1080,7 +1169,7 @@ const ActivitiesContent = () => {
                       {/* Post Header */}
                       <div className={`${isMobile ? 'p-3' : 'p-4'}`}>
                         <div className={`flex items-center ${isMobile ? 'gap-2 mb-2' : 'gap-3 mb-3'}`}>
-                          <div className={`${isMobile ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'} bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md`}>
+                          <div className={`${isMobile ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'} bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md flex-shrink-0`}>
                             {activity.user.name?.charAt(0)?.toUpperCase() || 'U'}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1093,16 +1182,32 @@ const ActivitiesContent = () => {
                                   {activity.user.role}
                                 </span>
                               )}
-                              {activity.user.classNames && activity.user.classNames.length > 0 && (
-                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 rounded-full flex-shrink-0">
-                                  {activity.user.classNames.join(', ')}
-                                </span>
-                              )}
                             </div>
                             <p className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-gray-500 dark:text-gray-400`}>
                               {activity.timestamp}
                             </p>
                           </div>
+                          {canCreateEvent && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button
+                                onClick={() => openEditModal(activity)}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
+                                title="Modifier"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(activity.id)}
+                                disabled={deletingId === activity.id}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all disabled:opacity-50"
+                                title="Supprimer"
+                              >
+                                {deletingId === activity.id
+                                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                                  : <Trash2 className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Post Title + Content */}
@@ -1115,10 +1220,31 @@ const ActivitiesContent = () => {
                           <p className={`text-gray-700 dark:text-gray-300 ${isMobile ? 'text-xs mb-2' : 'text-sm mb-3'} whitespace-pre-wrap line-clamp-4`}>{activity.content}</p>
                         )}
 
-                        {/* Event details badge */}
-                        {activity.eventDetails?.location && (
-                          <div className={`flex items-center gap-3 ${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 mb-1`}>
-                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{activity.eventDetails.location}</span>
+                        {/* Event details badge - Location and Date on same line */}
+                        {(activity.eventDetails?.location || activity.eventDetails?.startTime || activity.eventDetails?.endTime) && (
+                          <div className={`flex items-center justify-between ${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 mb-1`}>
+                            {activity.eventDetails?.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {activity.eventDetails.location}
+                              </span>
+                            )}
+                            {(activity.eventDetails?.startTime || activity.eventDetails?.endTime) && (
+                              <span className="flex items-center gap-1 ml-auto">
+                                <Clock className="w-3 h-3" />
+                                {activity.eventDetails.startTime && new Date(activity.eventDetails.startTime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                {activity.eventDetails.endTime && ` → ${new Date(activity.eventDetails.endTime).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {activity.classNames && activity.classNames.length > 0 && (
+                          <div className={`flex items-center gap-2 flex-wrap ${isMobile ? 'text-xs' : 'text-sm'} mb-1`}>
+                            {activity.classNames.map((name, i) => (
+                              <span key={i} className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 rounded-full text-[11px] font-medium">
+                                {name}
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -1407,6 +1533,210 @@ const ActivitiesContent = () => {
             </div>
           )}
         </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteId && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setConfirmDeleteId(null); }}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm"
+          >
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 dark:text-white text-center mb-2">Supprimer l'événement</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+              Cette action est irréversible. L'événement sera définitivement supprimé.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 py-3 text-gray-600 dark:text-gray-300 font-bold text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => handleDeleteEvent(confirmDeleteId)}
+                disabled={deletingId === confirmDeleteId}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deletingId === confirmDeleteId
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Suppression...</span></>
+                  : <span>Supprimer</span>}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Edit Event Modal */}
+      {editingActivity && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={`fixed inset-0 z-[1100] flex ${isMobile ? 'items-end' : 'items-center justify-center p-4'} bg-black/60 backdrop-blur-sm`}
+          onClick={(e) => { if (e.target === e.currentTarget) setEditingActivity(null); }}
+        >
+          <div className={`bg-white dark:bg-gray-800 shadow-2xl w-full ${isMobile ? 'h-[92vh] rounded-t-[32px]' : 'max-w-2xl max-h-[90vh] rounded-2xl'} overflow-hidden flex flex-col`}>
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-5 flex items-center justify-between z-10">
+              <h2 className="text-xl font-black text-gray-900 dark:text-white">Modifier l'événement</h2>
+              <button onClick={() => setEditingActivity(null)} className="p-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-2xl transition-all">
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-4 no-scrollbar pb-40">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Titre *</label>
+                <input type="text" value={editFormData.titre} onChange={(e) => setEditFormData(p => ({ ...p, titre: e.target.value }))}
+                  className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Description *</label>
+                <textarea rows={4} value={editFormData.description} onChange={(e) => setEditFormData(p => ({ ...p, description: e.target.value }))}
+                  className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none font-medium" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Lieu *</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
+                    <input type="text" value={editFormData.lieu} onChange={(e) => setEditFormData(p => ({ ...p, lieu: e.target.value }))}
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Visibilité</label>
+                  <div className="relative">
+                    <select value={editFormData.visibility} onChange={(e) => setEditFormData(p => ({ ...p, visibility: e.target.value }))}
+                      className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none font-bold">
+                      <option value="PUBLIC">🌍 Public</option>
+                      <option value="PRIVATE">🔒 Privé</option>
+                    </select>
+                    <ChevronDown className="absolute right-4 top-4 w-5 h-5 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Début *</label>
+                  <input type="datetime-local" value={editFormData.heureDebut} onChange={(e) => setEditFormData(p => ({ ...p, heureDebut: e.target.value }))}
+                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Fin</label>
+                  <input type="datetime-local" value={editFormData.heureFin} onChange={(e) => setEditFormData(p => ({ ...p, heureFin: e.target.value }))}
+                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs" />
+                </div>
+              </div>
+
+              {/* Classes selector */}
+              {editFormData.visibility === 'PRIVATE' && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Classes concernées *</label>
+                  {loadingClasses ? (
+                    <div className="flex items-center gap-2 py-4">
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                      <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Recherche des classes...</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar p-1">
+                      {classes.map((cls) => (
+                        <label key={cls.id} className={`flex items-center space-x-2 p-3 rounded-xl border transition-all cursor-pointer ${
+                          editFormData.classesIds?.includes(cls.id)
+                            ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                            : 'bg-gray-50 border-gray-100 dark:bg-gray-900 dark:border-white/5'
+                        }`}>
+                          <input type="checkbox"
+                            checked={editFormData.classesIds?.includes(cls.id) || false}
+                            onChange={(e) => {
+                              const id = cls.id;
+                              setEditFormData(p => ({
+                                ...p,
+                                classesIds: e.target.checked
+                                  ? [...(p.classesIds || []), id]
+                                  : (p.classesIds || []).filter(c => c !== id)
+                              }));
+                            }}
+                            className="w-4 h-4 rounded-lg border-gray-300 text-blue-600 focus:ring-blue-500" />
+                          <span className="text-[10px] font-black uppercase tracking-tighter truncate dark:text-white">{cls.nom || cls.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Existing media */}
+              {editFormData.existingMedias && editFormData.existingMedias.length > 0 && (
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Médias actuels</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {editFormData.existingMedias.map((media, i) => (
+                      <div key={i} className="relative group aspect-square">
+                        {media.type === 'VIDEO' ? (
+                          <video src={media.url} className="w-full h-full object-cover rounded-xl shadow-md" />
+                        ) : (
+                          <img src={media.url} alt={`media-${i}`} className="w-full h-full object-cover rounded-xl shadow-md" />
+                        )}
+                        <button
+                          onClick={() => setEditFormData(p => ({ ...p, existingMedias: p.existingMedias.filter((_, idx) => idx !== i) }))}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-lg hover:scale-110 transition-transform">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* New media upload */}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Ajouter des médias</label>
+                <div onClick={() => editFileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/10 transition-all cursor-pointer">
+                  {editUploading
+                    ? <Loader2 className="w-6 h-6 text-blue-600 animate-spin mx-auto" />
+                    : <Image className="w-6 h-6 text-blue-600 dark:text-blue-400 mx-auto" />}
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Photos ou Vidéos (max 50Mo)</p>
+                </div>
+                <input ref={editFileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleEditImageUpload} className="hidden" />
+              </div>
+              {editUploadedImages.length > 0 && (
+                <div className="grid grid-cols-3 gap-3">
+                  {editUploadedImages.map((media, i) => (
+                    <div key={i} className="relative group aspect-square">
+                      {media.type === 'VIDEO'
+                        ? <video src={media.url} className="w-full h-full object-cover rounded-xl shadow-md" />
+                        : <img src={media.url} alt="new" className="w-full h-full object-cover rounded-xl shadow-md" />}
+                      <button onClick={() => setEditUploadedImages(p => p.filter((_, idx) => idx !== i))}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-lg hover:scale-110 transition-transform">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="sticky bottom-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 p-6 flex gap-4 z-20"
+              style={{ paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 24px) + 24px)' : '24px' }}>
+              <button onClick={() => setEditingActivity(null)}
+                className="flex-1 py-4 text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest text-[10px] hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all">
+                Annuler
+              </button>
+              <button onClick={handleEditEvent}
+                disabled={editLoading || !editFormData.titre || !editFormData.description || !editFormData.lieu || !editFormData.heureDebut}
+                className="flex-[2] py-4 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl disabled:grayscale disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                {editLoading ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Enregistrement...</span></> : <span>Enregistrer</span>}
+              </button>
+            </div>
+          </div>
+        </motion.div>
       )}
     </div>
   );

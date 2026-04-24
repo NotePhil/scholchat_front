@@ -176,7 +176,7 @@ class ActivityFeedService {
         participantsIds: eventData.participantsIds || [],
         medias: cleanedMedias,
         visibility: eventData.visibility,
-        selectedClasses: eventData.selectedClasses || []
+        classesIds: eventData.classesIds || eventData.selectedClasses || []
       };
 
       console.log("Updating event with payload:", eventPayload);
@@ -244,7 +244,7 @@ class ActivityFeedService {
         participantsIds: eventData.participantsIds || [],
         medias: cleanedMedias,
         visibility: eventData.visibility,
-        selectedClasses: eventData.selectedClasses || []
+        classesIds: eventData.classesIds || eventData.selectedClasses || []
       };
 
       console.log("Creating event with payload:", eventPayload);

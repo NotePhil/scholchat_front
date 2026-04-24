@@ -161,9 +161,9 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
                   {t('classes.manage.title', "Mes Classes")}
                 </Title>
               </Space>
-              <Text type="secondary" style={{ fontSize: "16px" }}>
+              {/* <Text type="secondary" style={{ fontSize: "16px" }}>
                 {t('classes.manage.subtitle', "Gérez et supervisez les classes auxquelles vous avez accès")}
-              </Text>
+              </Text> */}
             </div>
 
             {error && (

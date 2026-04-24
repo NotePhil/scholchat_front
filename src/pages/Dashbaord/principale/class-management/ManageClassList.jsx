@@ -409,8 +409,8 @@ const ManageClassList = ({
                 <GraduationCap className="icon" />
               </div>
               <div className="stat-value">{totalClasses}</div>
+              <div className="stat-label">Total Classes</div>
             </div>
-            <div className="stat-label">Total Classes</div>
           </div>
           <div 
             onClick={() => setStatusFilter(EtatClasse.ACTIF)}
@@ -422,8 +422,8 @@ const ManageClassList = ({
                 <Trophy className="icon" />
               </div>
               <div className="stat-value">{activeClasses}</div>
+              <div className="stat-label">Classes Actives</div>
             </div>
-            <div className="stat-label">Classes Actives</div>
           </div>
           <div 
             onClick={() => setStatusFilter(EtatClasse.EN_ATTENTE_APPROBATION)}
@@ -441,8 +441,8 @@ const ManageClassList = ({
                   totalPendingRequests
                 )}
               </div>
+              <div className="stat-label">Demandes en Attente</div>
             </div>
-            <div className="stat-label">Demandes en Attente</div>
           </div>
         </div>
 

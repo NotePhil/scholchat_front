@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
       const tokenPayload = JSON.parse(atob(token.split(".")[1]));
       const currentTime = Date.now() / 1000;
 
-      return tokenPayload.exp && tokenPayload.exp > currentTime + 300;
+      return tokenPayload.exp && tokenPayload.exp > currentTime;
     } catch (error) {
       return false;
     }

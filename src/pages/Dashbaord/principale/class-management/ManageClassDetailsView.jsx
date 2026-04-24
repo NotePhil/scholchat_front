@@ -280,17 +280,9 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
       );
 
       // Load all user data in sequence to avoid race conditions
-      // First load users with access (from acceder API)
-      await loadUsersWithAccess();
-      
-      // Then load access requests
+      const accessResult = await loadUsersWithAccess();
       await loadAccessRequests();
-      
-      // Then load and MERGE publication rights users (this will add any missing professors)
       await loadModeratorsAndRights();
-      
-      // Finally, try alternative student loading if needed
-      await loadStudentsAlternative();
     } catch (error) {
       message.error("Erreur lors du chargement des détails de la classe");
       console.error("Error loading class details:", error);
@@ -300,10 +292,10 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
   };
 
   // Alternative method to load students if main method fails
-  const loadStudentsAlternative = async () => {
+  const loadStudentsAlternative = async (elevesAlreadyLoaded = 0) => {
     try {
       // Only run if no students were loaded via the main method
-      if (users.eleves.length === 0) {
+      if (elevesAlreadyLoaded === 0) {
         console.log("Trying alternative method to load students...");
 
         // Récupérer tous les étudiants du système
@@ -379,13 +371,13 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
             rightsUsers.forEach((user) => {
               // Only add if not already in the list
               if (!existingIds.has(user.id)) {
-                const userType = (user.type || "").toLowerCase();
+                const userType = (user.typeUtilisateur || user.type || "").toUpperCase();
                 
-                if (userType === "professeur") {
+                if (userType === "PROFESSEUR" || userType === "PROFESSOR") {
                   categorized.professeurs.push({ ...user, typeUtilisateur: "PROFESSEUR" });
-                } else if (userType === "eleve" || userType === "élève") {
+                } else if (userType === "ELEVE" || userType === "ÉLÈVE" || userType === "STUDENT") {
                   categorized.eleves.push({ ...user, typeUtilisateur: "ELEVE" });
-                } else if (userType === "parent") {
+                } else if (userType === "PARENT") {
                   categorized.parents.push({ ...user, typeUtilisateur: "PARENT" });
                 } else {
                   categorized.utilisateurs.push({ ...user, typeUtilisateur: "UTILISATEUR" });
@@ -415,15 +407,6 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 parents: newState.parents.length,
                 utilisateurs: newState.utilisateurs.length
               });
-              
-              // Update statistics
-              setStatistics((prevStats) => ({
-                professeurs: newState.professeurs.length,
-                eleves: newState.eleves.length,
-                parents: newState.parents.length,
-                utilisateurs: newState.utilisateurs.length,
-                accessRequests: prevStats.accessRequests
-              }));
               
               return newState;
             } else {
@@ -463,183 +446,50 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
         utilisateurs: [],
       };
 
-      // Get all user data in parallel for better categorization
-      const [allProfessors, allStudents, allParents] = await Promise.all([
-        scholchatService.getAllProfessors().catch((err) => { console.log("Error loading professors:", err); return []; }),
-        scholchatService.getAllStudents().catch((err) => { console.log("Error loading students:", err); return []; }),
-        scholchatService.getAllParents().catch((err) => { console.log("Error loading parents:", err); return []; }),
-      ]);
-
-      console.log("Reference data loaded:", {
-        professorsCount: allProfessors.length,
-        studentsCount: allStudents.length,
-        parentsCount: allParents.length,
-      });
-
-      // Process each user with access
       for (const user of usersWithAccess) {
-        let categorized = false;
-        let fullUserData = null;
-
-        console.log(`Processing user from access API: ${user.id} - ${user.prenom} ${user.nom}`);
-
-        // First, try to categorize by explicit type markers
-        const userType = (
-          user.type ||
-          user.role ||
-          user.typeUtilisateur ||
-          ""
-        ).toUpperCase();
-
-        // Try exact type matching first
-        if (userType) {
-          console.log(`User has explicit type: ${userType}`);
-          switch (userType) {
-            case "PROFESSEUR":
-            case "PROFESSOR":
-              fullUserData = allProfessors.find((p) => p.id === user.id) || user;
-              categorizedUsers.professeurs.push({
-                ...fullUserData,
-                type: "PROFESSEUR",
-                typeUtilisateur: "PROFESSEUR",
-              });
-              categorized = true;
-              console.log("✓ Categorized as professor by type");
-              break;
-
-            case "ELEVE":
-            case "ÉLÈVE":
-            case "STUDENT":
-              fullUserData = allStudents.find((s) => s.id === user.id) || user;
-              categorizedUsers.eleves.push({
-                ...fullUserData,
-                type: "ELEVE",
-                typeUtilisateur: "ELEVE",
-              });
-              categorized = true;
-              console.log("✓ Categorized as student by type");
-              break;
-
-            case "PARENT":
-              fullUserData = allParents.find((p) => p.id === user.id) || user;
-              categorizedUsers.parents.push({
-                ...fullUserData,
-                type: "PARENT",
-                typeUtilisateur: "PARENT",
-              });
-              categorized = true;
-              console.log("✓ Categorized as parent by type");
-              break;
-          }
-        }
-
-        // If not categorized by type, try to find them in the reference data by ID
-        if (!categorized) {
-          console.log(`No explicit type, searching in reference data...`);
-          
-          // Check if they exist in professors
-          const foundProfessor = allProfessors.find((p) => p.id === user.id);
-          if (foundProfessor) {
-            categorizedUsers.professeurs.push({
-              ...foundProfessor,
-              type: "PROFESSEUR",
-              typeUtilisateur: "PROFESSEUR",
-            });
-            categorized = true;
-            console.log("✓ Found and categorized as professor by ID match");
-          }
-
-          // Check if they exist in students
-          if (!categorized) {
-            const foundStudent = allStudents.find((s) => s.id === user.id);
-            if (foundStudent) {
-              categorizedUsers.eleves.push({
-                ...foundStudent,
-                type: "ELEVE",
-                typeUtilisateur: "ELEVE",
-              });
-              categorized = true;
-              console.log("✓ Found and categorized as student by ID match");
-            }
-          }
-
-          // Check if they exist in parents
-          if (!categorized) {
-            const foundParent = allParents.find((p) => p.id === user.id);
-            if (foundParent) {
-              categorizedUsers.parents.push({
-                ...foundParent,
-                type: "PARENT",
-                typeUtilisateur: "PARENT",
-              });
-              categorized = true;
-              console.log("✓ Found and categorized as parent by ID match");
-            }
-          }
-        }
-
-        // If still not categorized, check by data structure characteristics
-        if (!categorized) {
-          console.log(`Still not categorized, checking data structure...`);
-          if (user.nomEtablissement || user.matriculeProfesseur) {
-            categorizedUsers.professeurs.push({
-              ...user,
-              type: "PROFESSEUR",
-              typeUtilisateur: "PROFESSEUR",
-            });
-            categorized = true;
-            console.log("✓ Categorized as professor by data structure");
-          } else if (user.niveau) {
-            categorizedUsers.eleves.push({
-              ...user,
-              type: "ELEVE",
-              typeUtilisateur: "ELEVE",
-            });
-            categorized = true;
-            console.log("✓ Categorized as student by data structure");
-          } else if (user.adresse && !user.niveau && !user.nomEtablissement) {
-            categorizedUsers.parents.push({
-              ...user,
-              type: "PARENT",
-              typeUtilisateur: "PARENT",
-            });
-            categorized = true;
-            console.log("✓ Categorized as parent by data structure");
-          }
-        }
-
-        // If still not categorized, put in utilisateurs
-        if (!categorized) {
-          console.log("⚠ Could not categorize, adding to utilisateurs");
-          categorizedUsers.utilisateurs.push({
-            ...user,
-            type: "utilisateur",
-            typeUtilisateur: "UTILISATEUR",
-          });
+        const userType = (user.typeUtilisateur || user.type || user.role || "").toUpperCase();
+        if (userType === "PROFESSEUR" || userType === "PROFESSOR") {
+          categorizedUsers.professeurs.push({ ...user, typeUtilisateur: "PROFESSEUR" });
+        } else if (userType === "ELEVE" || userType === "ÉLÈVE" || userType === "STUDENT") {
+          categorizedUsers.eleves.push({ ...user, typeUtilisateur: "ELEVE" });
+        } else if (userType === "PARENT") {
+          categorizedUsers.parents.push({ ...user, typeUtilisateur: "PARENT" });
+        } else {
+          categorizedUsers.utilisateurs.push({ ...user, typeUtilisateur: "UTILISATEUR" });
         }
       }
 
-      console.log("Final categorized users from access API:", {
-        professeurs: categorizedUsers.professeurs.length,
-        eleves: categorizedUsers.eleves.length,
-        parents: categorizedUsers.parents.length,
-        utilisateurs: categorizedUsers.utilisateurs.length,
-        details: categorizedUsers,
-      });
+      // Enrich with full profile data (telephone, adresse, niveau, creationDate, etc.)
+      const [allProfessors, allStudents, allParents] = await Promise.all([
+        scholchatService.getAllProfessors().catch(() => []),
+        scholchatService.getAllStudents().catch(() => []),
+        scholchatService.getAllParents().catch(() => []),
+      ]);
 
-      setUsers((prev) => ({
+      const enrich = (users, pool) =>
+        users.map(u => ({ ...(pool.find(p => p.id === u.id) || {}), ...u }));
+
+      categorizedUsers.professeurs = enrich(categorizedUsers.professeurs, allProfessors);
+      categorizedUsers.eleves = enrich(categorizedUsers.eleves, allStudents);
+      categorizedUsers.parents = enrich(categorizedUsers.parents, allParents);
+
+      setUsers(prev => ({
         ...prev,
-        ...categorizedUsers,
+        professeurs: categorizedUsers.professeurs,
+        eleves: categorizedUsers.eleves,
+        parents: categorizedUsers.parents,
+        utilisateurs: categorizedUsers.utilisateurs,
       }));
 
-      // Update statistics
-      setStatistics((prevStats) => ({
-        ...prevStats,
+      setStatistics(prev => ({
+        ...prev,
         professeurs: categorizedUsers.professeurs.length,
         eleves: categorizedUsers.eleves.length,
         parents: categorizedUsers.parents.length,
         utilisateurs: categorizedUsers.utilisateurs.length,
       }));
+
+      return categorizedUsers;
     } catch (error) {
       console.error("Error loading users with access:", error);
       message.error("Erreur lors du chargement des utilisateurs");
@@ -2214,7 +2064,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
             tab={
               <span>
                 <UserOutlined />
-                Professeurs ({statistics.professeurs})
+                Professeurs ({users.professeurs.length})
               </span>
             }
             key="professeurs"
@@ -2233,7 +2083,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
             tab={
               <span>
                 <TeamOutlined />
-                Élèves ({statistics.eleves})
+                Élèves ({users.eleves.length})
               </span>
             }
             key="eleves"
@@ -2252,7 +2102,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
             tab={
               <span>
                 <TeamOutlined />
-                Parents ({statistics.parents})
+                Parents ({users.parents.length})
               </span>
             }
             key="parents"
@@ -2272,7 +2122,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
             tab={
               <span>
                 <UserOutlined />
-                Utilisateurs ({statistics.utilisateurs})
+                Utilisateurs ({users.utilisateurs.length})
               </span>
             }
             key="utilisateurs"

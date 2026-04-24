@@ -260,21 +260,25 @@ export const Login = ({ theme }) => {
 
   useEffect(() => {
     const returnToPage = localStorage.getItem("returnToPage");
-    localStorage.removeItem("rememberedEmail");
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("username");
-    localStorage.removeItem("userRoles");
-    localStorage.removeItem("decodedToken");
-    localStorage.removeItem("authResponse");
-    localStorage.removeItem("loginTime");
-    if (returnToPage) {
-      localStorage.setItem("returnToPage", returnToPage);
+    const existingToken = localStorage.getItem("accessToken");
+    // Only wipe auth data if there's no valid token already present
+    // (avoids clearing a freshly-written session on redirect)
+    if (!existingToken) {
+      localStorage.removeItem("rememberedEmail");
+      localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("username");
+      localStorage.removeItem("userRoles");
+      localStorage.removeItem("decodedToken");
+      localStorage.removeItem("authResponse");
+      localStorage.removeItem("loginTime");
+      if (returnToPage) {
+        localStorage.setItem("returnToPage", returnToPage);
+      }
     }
   }, []);
 
