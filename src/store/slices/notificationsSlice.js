@@ -112,6 +112,14 @@ const notificationsSlice = createSlice({
       state.error = null;
     },
     resetNotifications: () => initialState,
+    pushNotification: (state, action) => {
+      const incoming = action.payload;
+      const exists = state.notifications.some((n) => n.id === incoming.id);
+      if (!exists) {
+        state.notifications = [incoming, ...state.notifications];
+        if (!incoming.read) state.unreadCount += 1;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -199,6 +207,7 @@ export const {
   setNotificationFilter,
   clearNotificationError,
   resetNotifications,
+  pushNotification,
 } = notificationsSlice.actions;
 
 export default notificationsSlice.reducer;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchNotifications,
@@ -12,8 +12,7 @@ import {
   setNotificationFilter,
 } from "../store/slices/notificationsSlice";
 import { useAuth } from "./useAuth";
-
-const POLLING_INTERVAL = 60000; // 1 minute
+import { useNotificationWebSocket } from "./useNotificationWebSocket";
 
 export const useNotifications = () => {
   const dispatch = useDispatch();
@@ -27,25 +26,17 @@ export const useNotifications = () => {
   } = useSelector((state) => state.notifications);
 
   const { isAuthenticated, normalizedUserRole } = useAuth();
-  const pollingRef = useRef(null);
+  const userId = localStorage.getItem("userId");
 
-  // Fetch notifications on mount and start polling
+  // Fetch notifications once on mount
   useEffect(() => {
     if (!isAuthenticated) return;
-
     dispatch(fetchNotifications());
     dispatch(fetchUnreadCount());
-
-    pollingRef.current = setInterval(() => {
-      dispatch(fetchUnreadCount());
-    }, POLLING_INTERVAL);
-
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
-    };
   }, [dispatch, isAuthenticated]);
+
+  // Real-time push via WebSocket
+  useNotificationWebSocket(isAuthenticated ? userId : null);
 
   const refreshNotifications = useCallback(() => {
     dispatch(fetchNotifications());
