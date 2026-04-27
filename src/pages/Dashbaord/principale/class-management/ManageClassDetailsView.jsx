@@ -1862,20 +1862,19 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
 
       {/* Quick Actions Card */}
       <Card
-        title={
-          <span>
-            <PlusOutlined style={{ marginRight: 8 }} />
-            Actions rapides
-          </span>
-        }
         style={{
           marginBottom: 20,
           borderRadius: "12px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         }}
+        bodyStyle={{ padding: "12px 16px" }}
       >
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontWeight: 600, fontSize: "14px" }}>
+            <PlusOutlined style={{ marginRight: 8 }} />
+            Actions rapides
+          </span>
+          <div style={{ display: "flex", gap: 8 }}>
             <div
               onClick={() => {
                 if (onNavigateToCourseCreation) {
@@ -1885,34 +1884,30 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 }
               }}
               style={{
-                width: "100%",
-                height: "100px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: 6,
+                padding: "6px 14px",
+                borderRadius: "8px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 cursor: "pointer",
                 transition: "all 0.3s ease",
-                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                boxShadow: "0 2px 6px rgba(102, 126, 234, 0.3)",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-4px)";
-                e.currentTarget.style.boxShadow = "0 8px 20px rgba(102, 126, 234, 0.4)";
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.3)";
+                e.currentTarget.style.boxShadow = "0 2px 6px rgba(102, 126, 234, 0.3)";
               }}
             >
-              <BookOutlined style={{ fontSize: "32px", color: "white", marginBottom: "12px" }} />
-              <span style={{ color: "white", fontSize: "16px", fontWeight: 500 }}>
+              <BookOutlined style={{ fontSize: "14px", color: "white" }} />
+              <span style={{ color: "white", fontSize: "13px", fontWeight: 500 }}>
                 Créer un nouveau cours
               </span>
             </div>
-          </Col>
-          <Col xs={24} sm={12}>
             <div
               onClick={() => {
                 if (onNavigateToExerciseManagement) {
@@ -1922,34 +1917,32 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 }
               }}
               style={{
-                width: "100%",
-                height: "100px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: 6,
+                padding: "6px 14px",
+                borderRadius: "8px",
+                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
                 cursor: "pointer",
                 transition: "all 0.3s ease",
-                boxShadow: "0 4px 12px rgba(240, 147, 251, 0.3)",
+                boxShadow: "0 2px 6px rgba(240, 147, 251, 0.3)",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-4px)";
-                e.currentTarget.style.boxShadow = "0 8px 20px rgba(240, 147, 251, 0.4)";
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(240, 147, 251, 0.4)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(240, 147, 251, 0.3)";
+                e.currentTarget.style.boxShadow = "0 2px 6px rgba(240, 147, 251, 0.3)";
               }}
             >
-              <FileTextOutlined style={{ fontSize: "32px", color: "white", marginBottom: "12px" }} />
-              <span style={{ color: "white", fontSize: "16px", fontWeight: 500 }}>
+              <FileTextOutlined style={{ fontSize: "14px", color: "white" }} />
+              <span style={{ color: "white", fontSize: "13px", fontWeight: 500 }}>
                 Gestion des Exercices
               </span>
             </div>
-          </Col>
-        </Row>
+          </div>
+        </div>
       </Card>
 
       {/* Main Content Tabs */}

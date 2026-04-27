@@ -398,52 +398,33 @@ const ManageClassList = ({
           </div>
         )}
 
-        <div className="stats-grid hidden md:grid">
-          <div 
-            onClick={() => setStatusFilter("all")}
-            className={`stat-card stat-primary ${statusFilter === "all" ? "stat-active" : ""}`}
-            style={{ cursor: "pointer" }}
-          >
-            <div className="stat-header">
-              <div className="stat-icon">
-                <GraduationCap className="icon" />
+        <div style={{ display: "flex", gap: "12px", marginBottom: "12px", marginTop: "-8px", flexWrap: "wrap" }}>
+          {[
+            { icon: <GraduationCap size={16} />, value: totalClasses, label: "Total Classes", color: "#4a6da7", bg: "#eef2fb", filter: "all" },
+            { icon: <Trophy size={16} />, value: activeClasses, label: "Classes Actives", color: "#38a169", bg: "#f0fff4", filter: EtatClasse.ACTIF },
+            { icon: <Bell size={16} />, value: loadingRequests ? "…" : totalPendingRequests, label: "Demandes en Attente", color: "#d97706", bg: "#fffbeb", filter: EtatClasse.EN_ATTENTE_APPROBATION },
+          ].map(({ icon, value, label, color, bg, filter }) => (
+            <div
+              key={label}
+              onClick={() => setStatusFilter(filter)}
+              style={{
+                display: "flex", alignItems: "center", gap: "14px",
+                background: "white", border: `1px solid ${color}30`,
+                borderRadius: "10px", padding: "14px 32px",
+                cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+                outline: statusFilter === filter ? `2px solid ${color}` : "none",
+                transition: "all 0.2s",
+              }}
+            >
+              <div style={{ width: 40, height: 40, borderRadius: 8, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {icon}
               </div>
-              <div className="stat-value">{totalClasses}</div>
-              <div className="stat-label">Total Classes</div>
+              <div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "#1a202c", lineHeight: 1 }}>{value}</div>
+                <div style={{ fontSize: 12, color: "#718096", marginTop: 4 }}>{label}</div>
+              </div>
             </div>
-          </div>
-          <div 
-            onClick={() => setStatusFilter(EtatClasse.ACTIF)}
-            className={`stat-card stat-success ${statusFilter === EtatClasse.ACTIF ? "stat-active" : ""}`}
-            style={{ cursor: "pointer" }}
-          >
-            <div className="stat-header">
-              <div className="stat-icon">
-                <Trophy className="icon" />
-              </div>
-              <div className="stat-value">{activeClasses}</div>
-              <div className="stat-label">Classes Actives</div>
-            </div>
-          </div>
-          <div 
-            onClick={() => setStatusFilter(EtatClasse.EN_ATTENTE_APPROBATION)}
-            className={`stat-card stat-info ${statusFilter === EtatClasse.EN_ATTENTE_APPROBATION ? "stat-active" : ""}`}
-            style={{ cursor: "pointer" }}
-          >
-            <div className="stat-header">
-              <div className="stat-icon">
-                <Bell className="icon" />
-              </div>
-              <div className="stat-value">
-                {loadingRequests ? (
-                  <Loader className="loading-mini" />
-                ) : (
-                  totalPendingRequests
-                )}
-              </div>
-              <div className="stat-label">Demandes en Attente</div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* ALL FILTERS ON ONE LINE */}
