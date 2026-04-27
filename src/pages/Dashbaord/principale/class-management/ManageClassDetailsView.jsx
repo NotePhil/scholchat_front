@@ -466,8 +466,10 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
         scholchatService.getAllParents().catch(() => []),
       ]);
 
-      const enrich = (users, pool) =>
-        users.map(u => ({ ...(pool.find(p => p.id === u.id) || {}), ...u }));
+      const enrich = (users, pool) => {
+        const safePool = Array.isArray(pool) ? pool : [];
+        return users.map(u => ({ ...(safePool.find(p => p.id === u.id) || {}), ...u }));
+      };
 
       categorizedUsers.professeurs = enrich(categorizedUsers.professeurs, allProfessors);
       categorizedUsers.eleves = enrich(categorizedUsers.eleves, allStudents);
