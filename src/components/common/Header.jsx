@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import LogoImg from "../assets/images/logo.png";
+const LogoImg = process.env.PUBLIC_URL + "/scholchat.png";
 import { NavLink } from "react-router-dom";
 import { HiOutlineMenuAlt3, HiX } from "react-icons/hi";
 import { IoIosArrowDown } from "react-icons/io";
