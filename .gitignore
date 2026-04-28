@@ -1,1 +1,10 @@
 /node_modules
+
+# Robot Framework
+tests/robot/venv/
+tests/robot/output.xml
+tests/robot/log.html
+tests/robot/report.html
+output.xml
+log.html
+report.html
