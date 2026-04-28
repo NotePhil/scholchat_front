@@ -2,9 +2,7 @@
 
 # Robot Framework
 tests/robot/venv/
-tests/robot/output.xml
-tests/robot/log.html
-tests/robot/report.html
+tests/robot/results/
 output.xml
 log.html
 report.html
