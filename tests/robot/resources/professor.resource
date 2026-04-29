@@ -91,7 +91,7 @@ Complete Payment With Orange Money
     Click Element    xpath://button[contains(.,'Payer')]
     Wait Until Page Contains    Paiement accepté    timeout=15s
 
-# ── Cours (liste + création) ───────────────────────────────────────────────────
+# ── Cours ─────────────────────────────────────────────────────────────────────
 
 Open Courses Dropdown
     ${visible}=    Run Keyword And Return Status
@@ -142,15 +142,11 @@ Submit Course Form
 
 Go To Schedule Course
     Go To    http://localhost:3000/schoolchat/Principal/ProfessorDashboard/schedule-course
-    Wait Until Page Contains    Planifiez et gérez    timeout=10s
+    Wait Until Page Contains    Programmation des Cours    timeout=15s
 
 Open Programmer Form
-    # Button exists in toolbar OR in empty state
-    Wait Until Page Contains Element
-    ...    xpath://button[.//span[contains(text(),'Programmer un Cours')] or .//span[contains(text(),'Programmer mon premier cours')]]
-    ...    timeout=10s
-    Click Element
-    ...    xpath://button[.//span[contains(text(),'Programmer un Cours')] or .//span[contains(text(),'Programmer mon premier cours')]]
+    Wait Until Page Contains Element    xpath://button[.//span[contains(text(),'Programmer un Cours')]]    timeout=10s
+    Click Element    xpath://button[.//span[contains(text(),'Programmer un Cours')]]
     Wait Until Page Contains Element    xpath://select[@id='coursId']    timeout=10s
 
 Fill Schedule Form
@@ -159,20 +155,119 @@ Fill Schedule Form
     Select From List By Value    xpath://select[@id='etatCoursProgramme']    PLANIFIE
     Select From List By Label    xpath://select[@id='classeId']    ${classe_nom}
     Sleep    1s
-    Input Text    xpath://input[@id='dateCoursPrevue']    ${date_prevue}
+    Execute Javascript
+    ...    var input = document.getElementById('dateCoursPrevue');
+    ...    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    ...    setter.call(input, '${date_prevue}');
+    ...    input.dispatchEvent(new Event('input', {bubbles:true}));
+    ...    input.dispatchEvent(new Event('change', {bubbles:true}));
+    Sleep    0.5s
     Input Text    xpath://input[@id='lieu']    ${lieu}
     Input Text    xpath://textarea[@id='description']    ${description}
-    # Participants left empty → "Tout" by default
 
 Submit Schedule Form
-    Click Element    xpath://button[@form='course-form'][.//span[contains(text(),'Programmer') or text()='Créer']]
+    Click Element    xpath://button[@form='course-form'][.//span[contains(text(),'Programmer')]]
     Wait Until Page Contains    programmé avec succès    timeout=15s
-    Wait Until Page Does Not Contain Element    xpath://select[@id='coursId']    timeout=10s
+    Wait Until Page Does Not Contain Element    xpath://div[contains(@class,'fixed') and contains(@class,'inset-0') and contains(@class,'z-[9999]')]    timeout=10s
+    Sleep    0.5s
 
 # ── Exercises ─────────────────────────────────────────────────────────────────
 
 Go To Exercises
     Navigate To Sidebar Tab    Exercices
+    Wait Until Page Contains    Exercices    timeout=10s
+
+Open New Exercise Form
+    Wait Until Page Contains Element    xpath://button[.//span[contains(text(),'Nouveau')]]    timeout=10s
+    Click Element    xpath://button[.//span[contains(text(),'Nouveau')]]
+    Wait Until Page Contains    Créer un Nouvel Exercice    timeout=10s
+
+Click Ant Select By Placeholder
+    [Arguments]    ${placeholder}
+    # Click the ant-select-selector whose placeholder matches
+    Click Element    xpath://div[contains(@class,'ant-select-selector')][.//span[contains(@class,'ant-select-selection-placeholder') and contains(text(),'${placeholder}')]]
+    Sleep    0.3s
+
+Pick Ant Select Option
+    [Arguments]    ${option_text}
+    Wait Until Page Contains Element    xpath://div[contains(@class,'ant-select-dropdown') and not(contains(@style,'display: none'))]//div[contains(@class,'ant-select-item-option') and contains(.,'${option_text}')]    timeout=5s
+    Click Element    xpath://div[contains(@class,'ant-select-dropdown') and not(contains(@style,'display: none'))]//div[contains(@class,'ant-select-item-option') and contains(.,'${option_text}')]
+
+Fill Exercise Info
+    [Arguments]    ${nom}    ${niveau}    ${description}    ${matiere_nom}
+    # Nom
+    Wait Until Page Contains Element    xpath://input[@placeholder='Ex: Exercice de Mathématiques']    timeout=5s
+    Input Text    xpath://input[@placeholder='Ex: Exercice de Mathématiques']    ${nom}
+    # Niveau
+    Click Ant Select By Placeholder    Sélectionnez le niveau
+    Pick Ant Select Option    ${niveau}
+    # Restriction is already PRIVE by default - leave it
+    # Matières
+    Click Ant Select By Placeholder    Sélectionnez les matières
+    Pick Ant Select Option    ${matiere_nom}
+    Press Keys    None    ESCAPE
+    Sleep    0.3s
+    # Description (in the right column card)
+    Input Text    xpath://textarea[@placeholder="Décrivez l'exercice en détail..."]    ${description}
+
+Set Question Intitule
+    [Arguments]    ${text}
+    Wait Until Page Contains Element    xpath://textarea[@placeholder='Posez votre question ici...']    timeout=5s
+    Clear Element Text    xpath://textarea[@placeholder='Posez votre question ici...']
+    Input Text    xpath://textarea[@placeholder='Posez votre question ici...']    ${text}
+
+Set Question Type
+    [Arguments]    ${type_value}
+    # The type Select shows current value (e.g. "Question à Choix Multiple (QCM)")
+    # It is a single-value ant-select with a selection-item span (not placeholder)
+    # Find it by the fact it contains one of the known type option texts
+    Click Element    xpath://div[contains(@class,'ant-select-selector')][.//span[contains(@class,'ant-select-selection-item') and (contains(.,'QCM') or contains(.,'Vrai') or contains(.,'Réponse') or contains(.,'Association') or contains(.,'Classement') or contains(.,'Trous') or contains(.,'Développement'))]]
+    Wait Until Page Contains Element    xpath://div[contains(@class,'ant-select-dropdown') and not(contains(@style,'display: none'))]//div[contains(@class,'ant-select-item-option') and @data-value='${type_value}']    timeout=5s
+    Click Element    xpath://div[contains(@class,'ant-select-dropdown') and not(contains(@style,'display: none'))]//div[contains(@class,'ant-select-item-option') and @data-value='${type_value}']
+    Sleep    0.5s
+
+Fill QCM Choice
+    [Arguments]    ${index}    ${text}    ${is_correct}
+    # Inputs have placeholder "Choix 1", "Choix 2" etc.
+    Wait Until Page Contains Element    xpath://input[@placeholder='Choix ${index}']    timeout=5s
+    Clear Element Text    xpath://input[@placeholder='Choix ${index}']
+    Input Text    xpath://input[@placeholder='Choix ${index}']    ${text}
+    # Check the checkbox for the correct answer
+    Run Keyword If    '${is_correct}' == 'true'
+    ...    Execute Javascript    document.querySelectorAll('input[type="checkbox"]')[${index}-1].click()
+
+Fill Choice Input
+    [Arguments]    ${index}    ${text}
+    # For ASSOCIATION: placeholder "Ex: France - Paris"
+    # For CLASSEMENT: placeholder "Élément"
+    # For TROU: placeholder "Mot/Expression"
+    ${xpath}=    Set Variable    xpath:(//input[contains(@placeholder,'Ex: France') or contains(@placeholder,'lément') or contains(@placeholder,'Mot/Expression')])[${index}]
+    Wait Until Page Contains Element    ${xpath}    timeout=5s
+    Clear Element Text    ${xpath}
+    Input Text    ${xpath}    ${text}
+
+Add Question Button
+    Click Element    xpath://button[contains(.,'Ajouter la question') or contains(.,'Mettre à jour la question')]
+    Wait Until Page Contains    Question ajoutée    timeout=5s
+
+Select Vrai Faux
+    [Arguments]    ${choice}
+    Wait Until Page Contains Element    xpath://button[contains(@class,'flex-1') and contains(.,'${choice}')]    timeout=5s
+    Click Element    xpath://button[contains(@class,'flex-1') and contains(.,'${choice}')]
+
+Set Short Answer
+    [Arguments]    ${answer}
+    Wait Until Page Contains Element    xpath://input[@placeholder='Ex: H2O']    timeout=5s
+    Input Text    xpath://input[@placeholder='Ex: H2O']    ${answer}
+
+Set Long Answer
+    [Arguments]    ${answer}
+    Wait Until Page Contains Element    xpath://textarea[@placeholder='Décrivez la réponse attendue...']    timeout=5s
+    Input Text    xpath://textarea[@placeholder='Décrivez la réponse attendue...']    ${answer}
+
+Submit Exercise Form
+    Click Element    xpath://button[@type='submit' and contains(.,'Exercice')]
+    Wait Until Page Contains    Exercice créé avec succès    timeout=15s
 
 # ── Messages ──────────────────────────────────────────────────────────────────
 
