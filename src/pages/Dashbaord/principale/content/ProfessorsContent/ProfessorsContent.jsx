@@ -58,7 +58,6 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     if (role) {
       setUserRole(role.toUpperCase());
     }
-
     loadData();
   }, []);
 
@@ -69,12 +68,50 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [professorsData, classesData] = await Promise.all([
-        scholchatService.getAllProfessors(),
-        classService.obtenirToutesLesClasses(),
-      ]);
-      setProfessors(professorsData || []);
-      setClasses(classesData || []);
+      const role = (localStorage.getItem("userRole") || "").toUpperCase();
+      const currentUserId = localStorage.getItem("userId");
+
+      let professorsData = [];
+      let classesData = [];
+
+      if (role === "PROFESSEUR" && currentUserId) {
+        // A professor should only see professors in the same classes/establishment
+        const [allProfessors, userClasses] = await Promise.all([
+          scholchatService.getAllProfessors(),
+          classService.obtenirClassesUtilisateur(currentUserId),
+        ]);
+        classesData = userClasses || [];
+
+        // Get establishment IDs from the current professor's classes
+        const myClassIds = new Set(classesData.map(c => c.id));
+        const myEstablishmentIds = new Set(
+          classesData.filter(c => c.etablissement?.id).map(c => c.etablissement.id)
+        );
+
+        // Filter: only professors who share a class or establishment with current user, excluding self
+        professorsData = (allProfessors || []).filter(prof => {
+          if (prof.id === currentUserId) return false;
+          const profClassIds = (prof.moderatedClasses || []).map(c => c.id);
+          const sharesClass = profClassIds.some(id => myClassIds.has(id));
+          if (sharesClass) return true;
+          // Check establishment via classes
+          const profEstablishments = (prof.moderatedClasses || [])
+            .filter(c => c.etablissement?.id)
+            .map(c => c.etablissement.id);
+          return profEstablishments.some(id => myEstablishmentIds.has(id));
+        });
+      } else {
+        // Admin/gestionnaire sees all
+        const [allProfessors, allClasses] = await Promise.all([
+          scholchatService.getAllProfessors(),
+          classService.obtenirToutesLesClasses(),
+        ]);
+        professorsData = allProfessors || [];
+        classesData = allClasses || [];
+      }
+
+      setProfessors(professorsData);
+      setClasses(classesData);
     } catch (err) {
       setError("Erreur lors du chargement des données: " + err.message);
     } finally {

@@ -999,7 +999,7 @@ const CreateClassContent = ({
                       />
                       <label htmlFor="accesMajeur" className="text-sm text-purple-800 cursor-pointer">
                         <span className="font-semibold block">Classe Majeure</span>
-                        <span className="text-purple-600">Les élèves rejoignent par recherche d'email — pas d'ajout direct</span>
+                        <span className="text-purple-600">Les élèves rejoignent par recherche d'email</span>
                       </label>
                     </div>
 

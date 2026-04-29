@@ -317,7 +317,7 @@ const CoursProgrammerViewModal = ({
             {activeTab === "details" && (
               <div className="space-y-8">
                 {/* Course Information */}
-                <div className="bg-gradient-to-r from-white to-slate-50 rounded-2xl p-8 shadow-lg border border-slate-200">
+                <div className="bg-gradient-to-r from-white to-slate-50 rounded-2xl p-4 sm:p-8 shadow-lg border border-slate-200">
                   <h3 className="text-xl font-semibold text-slate-900 mb-6 flex items-center">
                     <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
                     Informations du Cours
@@ -325,10 +325,10 @@ const CoursProgrammerViewModal = ({
 
                   <div className="space-y-6">
                     {/* Course Header */}
-                    <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-3 sm:space-x-6">
                       <div className="relative">
-                        <div className="h-24 w-24 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shadow-xl">
-                          <span className="text-white font-bold text-2xl">
+                        <div className="h-16 w-16 sm:h-24 sm:w-24 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shadow-xl">
+                          <span className="text-white font-bold text-xl sm:text-2xl">
                             {getInitials(scheduledCourse.cours?.titre)}
                           </span>
                         </div>
@@ -350,7 +350,7 @@ const CoursProgrammerViewModal = ({
                         </div>
                       </div>
                       <div>
-                        <div className="text-2xl font-bold text-slate-900">
+                        <div className="text-lg sm:text-2xl font-bold text-slate-900">
                           {scheduledCourse.cours?.titre}
                         </div>
                         <div className="text-slate-600 font-medium mt-1">
@@ -462,7 +462,7 @@ const CoursProgrammerViewModal = ({
                   </div>
 
                   {scheduledCourse.description && (
-                    <div className="mt-8 pt-6 border-t border-slate-200">
+                    <div className="mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-slate-200">
                       <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
                         <FileText className="w-5 h-5 mr-2 text-indigo-600" />
                         Description
@@ -474,7 +474,7 @@ const CoursProgrammerViewModal = ({
                   )}
 
                   {/* Class Information */}
-                  <div className="mt-8 pt-6 border-t border-slate-200">
+                  <div className="mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-slate-200">
                     <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
                       <School className="w-5 h-5 mr-2 text-indigo-600" />
                       Classe Associée

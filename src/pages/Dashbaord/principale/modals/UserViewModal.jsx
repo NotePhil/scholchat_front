@@ -256,13 +256,11 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
   const getDocumentUrl = async (document) => {
     try {
-      const downloadData = await minioS3Service.generateDownloadUrl(
-        document.id
-      );
+      const downloadData = await minioS3Service.generateDownloadUrl(document.id);
       return downloadData.downloadUrl;
     } catch (error) {
       console.error("Failed to get document URL:", error);
-      return "https://via.placeholder.com/300x300?text=Document+Non+Trouvé";
+      return null;
     }
   };
 
@@ -277,57 +275,17 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
         return;
       }
 
-      // Fetch from MinIO media table
-      const documents = await minioS3Service.getUserMedia(userId);
-
-      // Get URLs for all documents using Promise.all
-      const documentsWithUrls = await Promise.all(
-        documents.map(async (doc) => ({
-          id: doc.id,
-          title: doc.fileName || "Document sans nom",
-          url: await getDocumentUrl(doc),
-          type: doc.contentType,
-          size: doc.fileSize,
-          uploadDate: doc.uploadedDate,
-          fileType: doc.fileType,
-          mediaType: doc.mediaType,
-        }))
-      );
-
-      // Also include direct image URLs from professor entity (cniUrlRecto, cniUrlVerso, selfieUrl)
+      // Only include direct image URLs that the user actually registered (cniUrlRecto, cniUrlVerso, selfieUrl)
       const directImages = [];
       
-      // Helper to process direct paths and get signed URLs
       const processDirectPath = async (path, title, idPrefix) => {
         if (!path) return null;
-        
-        // If it's already a full URL (http...), use it directly
         if (path.startsWith('http')) {
-          return {
-            id: `${idPrefix}-${userId}`,
-            title: title,
-            url: path,
-            type: "image/jpeg",
-            size: null,
-            uploadDate: null,
-            fileType: "IMAGE",
-            mediaType: "IMAGE",
-          };
+          return { id: `${idPrefix}-${userId}`, title, url: path, type: "image/jpeg", size: null, uploadDate: null, fileType: "IMAGE", mediaType: "IMAGE" };
         }
-        
-        // Otherwise, it's likely a path that needs signing
         const signedUrl = await minioS3Service.getMediaUrlByPath(path);
         if (signedUrl) {
-          return {
-            id: `${idPrefix}-${userId}`,
-            title: title,
-            url: signedUrl,
-            type: "image/jpeg",
-            size: null,
-            uploadDate: null,
-            fileType: "IMAGE",
-            mediaType: "IMAGE",
-          };
+          return { id: `${idPrefix}-${userId}`, title, url: signedUrl, type: "image/jpeg", size: null, uploadDate: null, fileType: "IMAGE", mediaType: "IMAGE" };
         }
         return null;
       };
@@ -342,10 +300,24 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       if (cniVerso) directImages.push(cniVerso);
       if (selfie) directImages.push(selfie);
 
-      // Merge: direct images first, then MinIO docs (avoid duplicates by URL)
-      const existingUrls = new Set(directImages.map(d => d.url));
-      const filteredMinIO = documentsWithUrls.filter(d => !existingUrls.has(d.url));
-      setUserDocuments([...directImages, ...filteredMinIO]);
+      // Also fetch MinIO media documents uploaded by the user
+      let minioDocuments = [];
+      try {
+        const documents = await minioS3Service.getUserMedia(userId);
+        const documentsWithUrls = (await Promise.all(
+          documents.map(async (doc) => {
+            const url = await getDocumentUrl(doc);
+            if (!url) return null;
+            return { id: doc.id, title: doc.fileName || "Document sans nom", url, type: doc.contentType, size: doc.fileSize, uploadDate: doc.uploadedDate, fileType: doc.fileType, mediaType: doc.mediaType };
+          })
+        )).filter(Boolean);
+        const existingUrls = new Set(directImages.map(d => d.url));
+        minioDocuments = documentsWithUrls.filter(d => !existingUrls.has(d.url));
+      } catch (minioErr) {
+        console.warn("Could not load MinIO documents:", minioErr);
+      }
+
+      setUserDocuments([...directImages, ...minioDocuments]);
     } catch (err) {
       console.error("Échec du chargement des documents:", err);
       setError("Échec du chargement des documents de l'utilisateur");
@@ -800,6 +772,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                             {images.map((doc, index) => (
                               <div
                                 key={doc.id}
+                                data-doc-card
                                 className="bg-white p-3 rounded-lg border-2 border-slate-200 group cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300"
                                 onClick={() => handleImageClick(doc)}
                               >
@@ -811,8 +784,8 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                       className="w-full h-32 sm:h-40 object-cover rounded-lg bg-slate-100 border group-hover:scale-105 transition-transform duration-300 shadow-sm"
                                       onError={(e) => {
                                         e.target.onerror = null;
-                                        e.target.src =
-                                          "https://via.placeholder.com/300x200?text=Image+Non+Trouvée";
+                                        const card = e.target.closest('[data-doc-card]');
+                                        if (card) card.style.display = 'none';
                                       }}
                                     />
                                   </div>

@@ -128,10 +128,10 @@ const CoursProgrammerContent = () => {
           const { course, programmation } = result.value;
           if (Array.isArray(programmation)) {
             programmation.forEach((scheduled) => {
-              allScheduledCourses.push({
-                ...scheduled,
-                cours: course,
-              });
+              // Only include scheduled courses that belong to this professor
+              if (!scheduled.professeurId || scheduled.professeurId === professorId) {
+                allScheduledCourses.push({ ...scheduled, cours: course });
+              }
             });
           }
         }
