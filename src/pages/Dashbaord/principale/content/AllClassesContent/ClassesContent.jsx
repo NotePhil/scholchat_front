@@ -54,6 +54,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
     salle: "",
     etablissementId: "",
     codeUnique: "",
+    accesMajeur: false,
   });
 
   const [newEstablishment, setNewEstablishment] = useState({
@@ -175,6 +176,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
         emploiDuTemps: newClass.emploiDuTemps,
         salle: newClass.salle,
         etablissementId: newClass.etablissementId || null,
+        accesMajeur: newClass.accesMajeur || false,
       };
 
       const createdClass = await classService.createClass(classData);
@@ -764,6 +766,23 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
                     }
                     required
                   />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="flex items-center space-x-2 cursor-pointer p-3 bg-purple-50 border border-purple-100 rounded-lg">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                      checked={newClass.accesMajeur}
+                      onChange={(e) =>
+                        setNewClass({ ...newClass, accesMajeur: e.target.checked })
+                      }
+                    />
+                    <div>
+                      <span className="text-sm font-bold text-purple-900">Activer l'Accès Majeur (Étudiant Adulte)</span>
+                      <p className="text-[10px] text-purple-600">L'ajout se fait uniquement par email (pas de demande d'accès standard)</p>
+                    </div>
+                  </label>
                 </div>
 
                 <div>

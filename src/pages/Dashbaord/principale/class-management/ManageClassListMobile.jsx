@@ -31,7 +31,10 @@ const ManageClassListMobile = ({
       {/* Header & Search */}
       <div className="sticky top-0 z-20 bg-gray-50 dark:bg-slate-950 pt-2 pb-4 space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-black dark:text-white">Classes</h2>
+          <div>
+            <h2 className="text-2xl font-black dark:text-white">Mes Classes</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Recherche dans vos classes</p>
+          </div>
           <button 
             onClick={onRefresh}
             className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-white/5"

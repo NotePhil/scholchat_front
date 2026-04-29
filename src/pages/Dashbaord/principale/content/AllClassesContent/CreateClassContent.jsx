@@ -531,6 +531,7 @@ const CreateClassContent = ({
     etablissement: "",
     codeUnique: "",
     moderator: "",
+    accesMajeur: false,
   });
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -643,6 +644,8 @@ const CreateClassContent = ({
           ? `${selectedProfessor.nom} ${selectedProfessor.prenom}`
           : ""
       );
+    } else if (name === "accesMajeur") {
+      setFormData((prev) => ({ ...prev, accesMajeur: e.target.checked }));
     } else if (name === "etablissement") {
       const establishment = establishments.find((etab) => etab.id === value);
       setSelectedEstablishment(establishment);
@@ -727,6 +730,9 @@ const CreateClassContent = ({
       if (formData.moderator) {
         classData.moderatorId = formData.moderator;
       }
+
+      // Add accesMajeur flag
+      classData.accesMajeur = formData.accesMajeur;
 
       // Add etablissementId if one is selected
       if (formData.etablissement) {
@@ -981,7 +987,23 @@ const CreateClassContent = ({
                       )}
                     </div>
 
-                    {/* Code Unique Field - Only show if establishment requires optionTokenGeneral */}
+                    {/* accesMajeur toggle */}
+                    <div className="flex items-start gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="accesMajeur"
+                        name="accesMajeur"
+                        checked={formData.accesMajeur}
+                        onChange={handleInputChange}
+                        className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                      />
+                      <label htmlFor="accesMajeur" className="text-sm text-purple-800 cursor-pointer">
+                        <span className="font-semibold block">Classe Majeure</span>
+                        <span className="text-purple-600">Les élèves rejoignent par recherche d'email — pas d'ajout direct</span>
+                      </label>
+                    </div>
+
+                    {/* Code Unique Field */}
                     {formData.etablissement &&
                       selectedEstablishment?.optionTokenGeneral && (
                         <div>

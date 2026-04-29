@@ -249,7 +249,7 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           </div>
         )}
 
-        <div className={`${isMobile ? 'hidden' : 'grid'} grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8`}>
+        <div className="hidden md:grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <div 
             onClick={() => setFilterStatus("all")}
             className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${

@@ -258,6 +258,7 @@ const ParentClassManagement = () => {
     severity: "success",
   });
   const [activationCode, setActivationCode] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [foundClass, setFoundClass] = useState(null);
   const [classroomModalOpen, setClassroomModalOpen] = useState(false);
@@ -514,26 +515,39 @@ const ParentClassManagement = () => {
       });
     }
   };
+
   const handleSearchClass = async () => {
-    if (!activationCode) {
-      showSnackbar("Veuillez entrer un code d'activation", "error");
+    if (!searchQuery.trim()) {
+      showSnackbar("Veuillez entrer un nom, un ID ou un code d'activation", "error");
       return;
     }
 
     try {
+      const query = searchQuery.trim().toLowerCase();
+      // Recherche par code d'activation exact, nom (contient) ou ID exact
       const matchedClass = allClasses.find(
-        (c) => c.codeActivation === activationCode
+        (c) => 
+          c.codeActivation?.toLowerCase() === query || 
+          c.nom?.toLowerCase().includes(query) ||
+          c.id?.toLowerCase() === query
       );
 
       if (matchedClass) {
         setFoundClass(matchedClass);
         setSelectedClass(matchedClass);
+        // Si trouvé par code, on le pré-remplit pour la demande
+        if (matchedClass.codeActivation?.toLowerCase() === query) {
+          setActivationCode(matchedClass.codeActivation);
+        } else {
+          setActivationCode(""); // Sinon on laisse vide ou on le laisse le remplir
+        }
         setIsRequestMode(true);
         setModalOpen(true);
         setSearchDialogOpen(false);
+        setSearchQuery(""); // Reset search query
       } else {
         showSnackbar(
-          "Aucune classe trouvée avec ce code d'activation",
+          "Aucune classe trouvée correspondant à votre recherche",
           "error"
         );
         setFoundClass(null);
@@ -545,8 +559,13 @@ const ParentClassManagement = () => {
 
   const handleRequestAccess = async (classe, code) => {
     try {
+      // For parents, use the selected child's ID; for students, use their own ID
+      const requestUserId = isParentRole
+        ? (localStorage.getItem("selectedChildId") || userId)
+        : userId;
+
       await AccederService.demanderAcces({
-        utilisateurId: userId,
+        utilisateurId: requestUserId,
         classeId: classe.id,
         codeActivation: code,
       });
@@ -1017,18 +1036,23 @@ const ParentClassManagement = () => {
           <DialogTitle>Rechercher une classe</DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Entrez le code d'activation fourni par l'enseignant pour
+              Entrez le nom, l'identifiant ou le code d'activation pour
               rechercher une classe.
             </Typography>
             <TextField
               autoFocus
               margin="dense"
-              label="Code d'activation"
+              label="Nom, ID ou Code d'activation"
               type="text"
               fullWidth
               variant="outlined"
-              value={activationCode}
-              onChange={(e) => setActivationCode(e.target.value)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  handleSearchClass();
+                }
+              }}
             />
           </DialogContent>
           <DialogActions>

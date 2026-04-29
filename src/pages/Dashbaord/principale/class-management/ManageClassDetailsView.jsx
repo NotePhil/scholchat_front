@@ -970,7 +970,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
       if (error.errorFields) {
         message.error("Veuillez sélectionner au moins un motif de rejet");
       } else {
-        message.error("Erreur lors du rejet de la classe");
+        message.error(error.message || "Erreur lors du rejet de la classe");
       }
     } finally {
       setActionLoading(null);
@@ -2017,6 +2017,16 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                           </Tag>
                         )}
                       </Descriptions.Item>
+                      {classDetails.accesMajeur && (
+                        <Descriptions.Item label="Type">
+                          <Tag color="purple" icon={<SafetyCertificateOutlined />}>
+                            Classe Majeure
+                          </Tag>
+                          <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                            Accès par email uniquement
+                          </Text>
+                        </Descriptions.Item>
+                      )}
                       {classDetails.createurId && (
                         <Descriptions.Item label="Créateur">
                           {classDetails.createurId === currentUserId ? (
@@ -2083,6 +2093,98 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
             }
             key="eleves"
           >
+            {/* For major classes: show email search to add students */}
+            {classDetails?.accesMajeur && (
+              <div style={{ marginBottom: 16, padding: 16, background: "#f0f7ff", borderRadius: 8, border: "1px solid #91caff" }}>
+                <Text strong style={{ color: "#1677ff" }}>
+                  🔑 Classe Majeure — Ajouter un élève par email
+                </Text>
+                <div style={{ marginTop: 8 }}>
+                  <Space.Compact style={{ width: "100%" }}>
+                    <Input
+                      placeholder="Email de l'élève à ajouter..."
+                      value={searchEmail}
+                      onChange={(e) => setSearchEmail(e.target.value)}
+                      onPressEnter={handleSearchUserByEmail}
+                    />
+                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearchUserByEmail} loading={searchLoading}>
+                      Rechercher
+                    </Button>
+                  </Space.Compact>
+                </div>
+                {searchResults.length > 0 && (
+                  <List
+                    style={{ marginTop: 8 }}
+                    size="small"
+                    dataSource={searchResults}
+                    renderItem={(u) => (
+                      <List.Item
+                        actions={[
+                          <Button
+                            type="primary"
+                            size="small"
+                            loading={actionLoading === `add-${u.id}`}
+                            onClick={async () => {
+                              try {
+                                setActionLoading(`add-${u.id}`);
+                                // 1. Create the request
+                                const request = await AccederService.demanderAcces({
+                                  utilisateurId: u.id,
+                                  classeId: classId,
+                                  codeActivation: classDetails.codeActivation,
+                                });
+                                
+                                // 2. Immediately approve it for Major Classes since Admin is doing it
+                                if (request && request.id) {
+                                  await AccederService.validerDemandeAcces(request.id);
+                                } else {
+                                  // Find the request if ID not returned directly
+                                  const requests = await AccederService.obtenirDemandesAccesPourClasse(classId);
+                                  const myRequest = requests.find(r => r.utilisateurId === u.id && r.etat === 'EN_ATTENTE');
+                                  if (myRequest) {
+                                    await AccederService.validerDemandeAcces(myRequest.id);
+                                  }
+                                }
+
+                                message.success(`${u.prenom} ${u.nom} ajouté(e) et approuvé(e) avec succès`);
+                                setSearchEmail("");
+                                setSearchResults([]);
+                                setRefreshKey(prev => prev + 1);
+                              } catch (err) {
+                                // If already has access or pending, just grant directly
+                                try {
+                                  const requests = await AccederService.obtenirDemandesAccesPourClasse(classId);
+                                  const existingRequest = requests.find(r => r.utilisateurId === u.id);
+                                  
+                                  if (existingRequest && existingRequest.etat === 'EN_ATTENTE') {
+                                    await AccederService.validerDemandeAcces(existingRequest.id);
+                                    message.success(`Accès accordé à ${u.prenom} ${u.nom}`);
+                                    setRefreshKey(prev => prev + 1);
+                                  } else {
+                                    message.error(err.message || "L'élève a déjà accès ou une erreur est survenue");
+                                  }
+                                } catch (e) {
+                                  message.error(err.message || "Erreur lors de l'ajout");
+                                }
+                              } finally {
+                                setActionLoading(null);
+                              }
+                            }}
+                          >
+                            Ajouter
+                          </Button>
+                        ]}
+                      >
+                        <List.Item.Meta
+                          title={`${u.prenom} ${u.nom}`}
+                          description={u.email}
+                        />
+                      </List.Item>
+                    )}
+                  />
+                )}
+              </div>
+            )}
             <UserTables
               users={users.eleves}
               loading={loading}

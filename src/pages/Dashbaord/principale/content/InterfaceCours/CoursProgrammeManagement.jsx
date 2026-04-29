@@ -184,24 +184,23 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
         showToast(`${allExercises.length} exercices chargés`, 'success');
       }
 
-      // Handle General Courses
+      // Handle General Courses - Filter by class level/section if possible to avoid unrelated courses
       if (Array.isArray(generalCourses)) {
-        setClassAllCourses(generalCourses.map(c => ({...c, type: 'COURSE'})));
+        const filteredGeneral = generalCourses.filter(c => 
+          !selectedClass || 
+          c.niveau === selectedClass.niveau || 
+          (c.matiere && selectedClass.matiere && c.matiere.toLowerCase().includes(selectedClass.matiere.toLowerCase()))
+        );
+        setClassAllCourses(filteredGeneral.map(c => ({...c, type: 'COURSE'})));
       } else {
         setClassAllCourses([]);
       }
 
-      // Merge and deduplicate scheduled courses
+      // Merge and deduplicate scheduled courses — only keep courses for this specific class
       const coursesMap = new Map();
-      if (Array.isArray(participantCourses)) {
-        participantCourses.forEach(c => coursesMap.set(c.id, c));
-      }
+      // Only use class-specific courses, NOT participant-wide courses
       if (Array.isArray(classCoursesData)) {
-        classCoursesData.forEach(c => {
-          if (!coursesMap.has(c.id)) {
-            coursesMap.set(c.id, c);
-          }
-        });
+        classCoursesData.forEach(c => coursesMap.set(c.id, c));
       }
 
       const allScheduledCourses = Array.from(coursesMap.values());
@@ -244,11 +243,10 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
         })
       );
 
-      // Filter final list for the selected class context
+      // Filter: only courses explicitly linked to this class
       const finalCourses = enrichedCourses.filter(c =>
         c.classeId === selectedClass.id ||
-        (c.classesIds && c.classesIds.includes(selectedClass.id)) ||
-        (c.participantsIds && c.participantsIds.includes(userId))
+        (c.classesIds && c.classesIds.includes(selectedClass.id))
       );
 
       setScheduledCourses(finalCourses);

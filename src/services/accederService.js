@@ -78,7 +78,7 @@ class AccederService {
   /**
    * Request access to a class with an activation code
    */
-  async demanderAcces({ utilisateurId, classeId, codeActivation }) {
+  async demanderAcces({ utilisateurId, classeId, codeActivation, estParent = false, eleveAssocieId = null }) {
     try {
       const actualUserId = utilisateurId || this.getUserId();
       if (!actualUserId) {
@@ -86,13 +86,15 @@ class AccederService {
       }
 
       console.log("Making POST request to:", `${this.apiUrl}/demandes`);
-      console.log("With params:", { actualUserId, classeId, codeActivation });
+      console.log("With params:", { actualUserId, classeId, codeActivation, estParent, eleveAssocieId });
 
       const response = await axios.post(`${this.apiUrl}/demandes`, null, {
         params: {
           utilisateurId: actualUserId,
           classeId,
           codeActivation,
+          estParent,
+          eleveAssocieId,
         },
         headers: {
           "Content-Type": "application/json",

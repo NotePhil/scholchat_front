@@ -277,6 +277,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
         return;
       }
 
+      // Fetch from MinIO media table
       const documents = await minioS3Service.getUserMedia(userId);
 
       // Get URLs for all documents using Promise.all
@@ -293,7 +294,58 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
         }))
       );
 
-      setUserDocuments(documentsWithUrls);
+      // Also include direct image URLs from professor entity (cniUrlRecto, cniUrlVerso, selfieUrl)
+      const directImages = [];
+      
+      // Helper to process direct paths and get signed URLs
+      const processDirectPath = async (path, title, idPrefix) => {
+        if (!path) return null;
+        
+        // If it's already a full URL (http...), use it directly
+        if (path.startsWith('http')) {
+          return {
+            id: `${idPrefix}-${userId}`,
+            title: title,
+            url: path,
+            type: "image/jpeg",
+            size: null,
+            uploadDate: null,
+            fileType: "IMAGE",
+            mediaType: "IMAGE",
+          };
+        }
+        
+        // Otherwise, it's likely a path that needs signing
+        const signedUrl = await minioS3Service.getMediaUrlByPath(path);
+        if (signedUrl) {
+          return {
+            id: `${idPrefix}-${userId}`,
+            title: title,
+            url: signedUrl,
+            type: "image/jpeg",
+            size: null,
+            uploadDate: null,
+            fileType: "IMAGE",
+            mediaType: "IMAGE",
+          };
+        }
+        return null;
+      };
+
+      const [cniRecto, cniVerso, selfie] = await Promise.all([
+        processDirectPath(user?.cniUrlRecto, "CNI Recto", "cni-recto"),
+        processDirectPath(user?.cniUrlVerso, "CNI Verso", "cni-verso"),
+        processDirectPath(user?.selfieUrl, "Selfie", "selfie")
+      ]);
+
+      if (cniRecto) directImages.push(cniRecto);
+      if (cniVerso) directImages.push(cniVerso);
+      if (selfie) directImages.push(selfie);
+
+      // Merge: direct images first, then MinIO docs (avoid duplicates by URL)
+      const existingUrls = new Set(directImages.map(d => d.url));
+      const filteredMinIO = documentsWithUrls.filter(d => !existingUrls.has(d.url));
+      setUserDocuments([...directImages, ...filteredMinIO]);
     } catch (err) {
       console.error("Échec du chargement des documents:", err);
       setError("Échec du chargement des documents de l'utilisateur");
