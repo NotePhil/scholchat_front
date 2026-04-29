@@ -182,16 +182,22 @@ Open New Exercise Form
     Click Element    xpath://button[.//span[contains(text(),'Nouveau')]]
     Wait Until Page Contains    Créer un Nouvel Exercice    timeout=10s
 
-Click Ant Select By Placeholder
-    [Arguments]    ${placeholder}
-    # Click the ant-select-selector whose placeholder matches
-    Click Element    xpath://div[contains(@class,'ant-select-selector')][.//span[contains(@class,'ant-select-selection-placeholder') and contains(text(),'${placeholder}')]]
-    Sleep    0.3s
+# Ant Design v6: input[@id='X'] is inside ant-select-content
+# The clickable outer div is 2 levels up: ant-select-content -> ant-select
+# Options render in a portal with class ant-select-item-option-content
 
-Pick Ant Select Option
-    [Arguments]    ${option_text}
-    Wait Until Page Contains Element    xpath://div[contains(@class,'ant-select-dropdown') and not(contains(@style,'display: none'))]//div[contains(@class,'ant-select-item-option') and contains(.,'${option_text}')]    timeout=5s
-    Click Element    xpath://div[contains(@class,'ant-select-dropdown') and not(contains(@style,'display: none'))]//div[contains(@class,'ant-select-item-option') and contains(.,'${option_text}')]
+Open Ant Select
+    [Arguments]    ${input_id}
+    # ant-select-content is direct parent, ant-select is grandparent
+    Click Element    xpath://input[@id='${input_id}']/parent::div/parent::div[contains(@class,'ant-select')]
+    Sleep    0.5s
+
+Pick Ant Option
+    [Arguments]    ${text}
+    # Options use @title attribute on the ant-select-item-option div
+    Wait Until Page Contains Element    xpath://div[contains(@class,'ant-select-item-option') and @title='${text}']    timeout=8s
+    Click Element    xpath://div[contains(@class,'ant-select-item-option') and @title='${text}']
+    Sleep    0.3s
 
 Fill Exercise Info
     [Arguments]    ${nom}    ${niveau}    ${description}    ${matiere_nom}
@@ -199,15 +205,17 @@ Fill Exercise Info
     Wait Until Page Contains Element    xpath://input[@placeholder='Ex: Exercice de Mathématiques']    timeout=5s
     Input Text    xpath://input[@placeholder='Ex: Exercice de Mathématiques']    ${nom}
     # Niveau
-    Click Ant Select By Placeholder    Sélectionnez le niveau
-    Pick Ant Select Option    ${niveau}
-    # Restriction is already PRIVE by default - leave it
-    # Matières
-    Click Ant Select By Placeholder    Sélectionnez les matières
-    Pick Ant Select Option    ${matiere_nom}
+    Open Ant Select    niveau
+    Pick Ant Option    ${niveau}
+    # Restriction already PRIVE by default
+    # Matières - type in search to filter then pick
+    Open Ant Select    matiereIds
+    Input Text    xpath://input[@id='matiereIds']    ${matiere_nom}
+    Sleep    0.5s
+    Pick Ant Option    ${matiere_nom}
     Press Keys    None    ESCAPE
     Sleep    0.3s
-    # Description (in the right column card)
+    # Description
     Input Text    xpath://textarea[@placeholder="Décrivez l'exercice en détail..."]    ${description}
 
 Set Question Intitule
@@ -218,29 +226,21 @@ Set Question Intitule
 
 Set Question Type
     [Arguments]    ${type_value}
-    # The type Select shows current value (e.g. "Question à Choix Multiple (QCM)")
-    # It is a single-value ant-select with a selection-item span (not placeholder)
-    # Find it by the fact it contains one of the known type option texts
-    Click Element    xpath://div[contains(@class,'ant-select-selector')][.//span[contains(@class,'ant-select-selection-item') and (contains(.,'QCM') or contains(.,'Vrai') or contains(.,'Réponse') or contains(.,'Association') or contains(.,'Classement') or contains(.,'Trous') or contains(.,'Développement'))]]
-    Wait Until Page Contains Element    xpath://div[contains(@class,'ant-select-dropdown') and not(contains(@style,'display: none'))]//div[contains(@class,'ant-select-item-option') and @data-value='${type_value}']    timeout=5s
-    Click Element    xpath://div[contains(@class,'ant-select-dropdown') and not(contains(@style,'display: none'))]//div[contains(@class,'ant-select-item-option') and @data-value='${type_value}']
+    Click Element    xpath://div[contains(@class,'ant-select-content-value') and (contains(.,'QCM') or contains(.,'Vrai') or contains(.,'Réponse') or contains(.,'Association') or contains(.,'Classement') or contains(.,'Trous') or contains(.,'Développement'))]/parent::div/parent::div[contains(@class,'ant-select')]
+    Wait Until Page Contains Element    xpath://div[contains(@class,'ant-select-item-option') and @data-value='${type_value}']    timeout=5s
+    Click Element    xpath://div[contains(@class,'ant-select-item-option') and @data-value='${type_value}']
     Sleep    0.5s
 
 Fill QCM Choice
     [Arguments]    ${index}    ${text}    ${is_correct}
-    # Inputs have placeholder "Choix 1", "Choix 2" etc.
     Wait Until Page Contains Element    xpath://input[@placeholder='Choix ${index}']    timeout=5s
     Clear Element Text    xpath://input[@placeholder='Choix ${index}']
     Input Text    xpath://input[@placeholder='Choix ${index}']    ${text}
-    # Check the checkbox for the correct answer
     Run Keyword If    '${is_correct}' == 'true'
     ...    Execute Javascript    document.querySelectorAll('input[type="checkbox"]')[${index}-1].click()
 
 Fill Choice Input
     [Arguments]    ${index}    ${text}
-    # For ASSOCIATION: placeholder "Ex: France - Paris"
-    # For CLASSEMENT: placeholder "Élément"
-    # For TROU: placeholder "Mot/Expression"
     ${xpath}=    Set Variable    xpath:(//input[contains(@placeholder,'Ex: France') or contains(@placeholder,'lément') or contains(@placeholder,'Mot/Expression')])[${index}]
     Wait Until Page Contains Element    ${xpath}    timeout=5s
     Clear Element Text    ${xpath}
