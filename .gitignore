@@ -1,4 +1,5 @@
 /node_modules
+/build
 
 # Robot Framework
 tests/robot/venv/
