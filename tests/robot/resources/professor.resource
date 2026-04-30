@@ -141,7 +141,7 @@ Submit Course Form
 # ── Programmer le Cours ────────────────────────────────────────────────────────
 
 Go To Schedule Course
-    Go To    http://localhost:3000/schoolchat/Principal/ProfessorDashboard/schedule-course
+    Go To    https://scholchat-front-kult.onrender.com/schoolchat/Principal/ProfessorDashboard/schedule-course
     Wait Until Page Contains    Programmation des Cours    timeout=15s
 
 Open Programmer Form

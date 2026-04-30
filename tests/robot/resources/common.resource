@@ -2,7 +2,7 @@
 Library    SeleniumLibrary
 
 *** Variables ***
-${BASE_URL}         http://localhost:3000
+${BASE_URL}         https://scholchat-front-kult.onrender.com
 ${LOGIN_URL}        ${BASE_URL}/schoolchat/login
 ${BROWSER}          Chrome
 ${SPEED}            0.3s
