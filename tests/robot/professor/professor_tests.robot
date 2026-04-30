@@ -192,94 +192,27 @@ Initialise Unique Names
     Page Should Contain    ${COURS_TITRE}
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# STEP 6 — EXERCISES
+# STEP 6 — EXERCISES : open page only, do NOT create a new exercise
 # ═══════════════════════════════════════════════════════════════════════════════
 
 18 - Navigate To Exercises
-    [Documentation]    Professor opens the Exercices section
+    [Documentation]    Professor opens the Exercices section — no new exercise is created
     Go To Exercises
-
-19 - Open New Exercise Form
-    [Documentation]    Click the Nouveau button to open the exercise creation form
-    Open New Exercise Form
-
-20 - Fill Exercise General Information
-    [Documentation]    Fill exercise name, level 3ème, description and select the matière
-    Fill Exercise Info
-    ...    ${EXERCISE_NOM}
-    ...    ${EXERCISE_NIVEAU}
-    ...    ${EXERCISE_DESC}
-    ...    ${MATIERE_NOM}
-
-21 - Add QCM Question
-    [Documentation]    QCM: Quelle est la solution de l'équation 2x + 6 = 0 ?
-    Set Question Intitule    Quelle est la solution de l equation 2x + 6 = 0 ?
-    Set Question Type    QCM
-    Fill QCM Choice    1    x = 3    false
-    Fill QCM Choice    2    x = -3    true
-    Add Question Button
-
-22 - Add Vrai Faux Question
-    [Documentation]    Vrai/Faux: L'équation 3x = 9 a pour solution x = 3
-    Set Question Intitule    L equation 3x = 9 a pour solution x = 3. Vrai ou Faux ?
-    Set Question Type    VRAI_FAUX
-    Select Vrai Faux    Vrai
-    Add Question Button
-
-23 - Add Reponse Courte Question
-    [Documentation]    Réponse courte: solution de x - 5 = 0
-    Set Question Intitule    Quelle est la valeur de x dans l equation x - 5 = 0 ?
-    Set Question Type    REPONSE_COURTE
-    Set Short Answer    x = 5
-    Add Question Button
-
-24 - Add Reponse Longue Question
-    [Documentation]    Réponse longue: résoudre un système d'équations
-    Set Question Intitule    Resolvez le systeme : 2x + y = 7 et x - y = 2
-    Set Question Type    REPONSE_LONGUE
-    Set Long Answer    En additionnant : 3x = 9 donc x = 3. Par substitution : y = 1. Solution : x = 3 et y = 1.
-    Add Question Button
-
-25 - Add Association Question
-    [Documentation]    Association: associer equations et solutions
-    Set Question Intitule    Associez chaque equation a sa solution
-    Set Question Type    ASSOCIATION
-    Fill Choice Input    1    2x = 8 donc x = 4
-    Fill Choice Input    2    3x = 12 donc x = 4
-    Add Question Button
-
-26 - Add Classement Question
-    [Documentation]    Classement: ordonner les etapes de resolution
-    Set Question Intitule    Classez les etapes de resolution de 2x + 4 = 10
-    Set Question Type    CLASSEMENT
-    Fill Choice Input    1    Ecrire l equation : 2x + 4 = 10
-    Fill Choice Input    2    Soustraire 4 des deux membres : 2x = 6
-    Add Question Button
-
-27 - Add Texte A Trous Question
-    [Documentation]    Texte a trous: completer la propriete
-    Set Question Intitule    Pour resoudre ax = b avec a different de 0, on divise par ___
-    Set Question Type    TROU
-    Fill Choice Input    1    a
-    Fill Choice Input    2    b
-    Add Question Button
-
-28 - Add Developpement Question
-    [Documentation]    Développement: démontrer une propriété
-    Set Question Intitule    Demontrez que si ax + b = 0 avec a different de 0, alors x = -b divise par a
-    Set Question Type    DEVELOPPEMENT
-    Set Long Answer    On part de ax + b = 0. On soustrait b : ax = -b. On divise par a : x = -b/a. CQFD.
-    Add Question Button
-
-29 - Submit Exercise And Verify
-    [Documentation]    Submit the exercise form and verify success message
-    Submit Exercise Form
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STEP 7 — MESSAGES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-30 - Navigate To Messages
-    [Documentation]    Professor opens the Messagerie section
+19 - Navigate To Messages
+    [Documentation]    Professor navigates to the Messagerie section from the sidebar
     Go To Messages
     Page Should Contain Element    xpath://h1[contains(text(),'Message')]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STEP 8 — LOGOUT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+20 - Logout Professor
+    [Documentation]    Click the logout button in the sidebar and confirm in the modal
+    Logout
+    Wait Until Location Contains    /schoolchat/login    timeout=15s

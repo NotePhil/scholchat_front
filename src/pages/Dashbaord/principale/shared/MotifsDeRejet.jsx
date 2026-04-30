@@ -106,7 +106,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
 
   useEffect(() => {
     fetchMotifs();
-  }, [selectedType, fetchMotifs]); // Re-fetch when type changes
+  }, [selectedType]); // Re-fetch when type changes
 
   // Form validation
   const validateMotif = () => {
