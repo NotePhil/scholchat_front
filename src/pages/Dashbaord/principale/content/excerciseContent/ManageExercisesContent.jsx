@@ -23,7 +23,8 @@ import StudentExerciseView from "./StudentExerciseView";
 
 const { Title, Text } = Typography;
 
-const ManageExercisesContent = ({ onBack }) => {
+const ManageExercisesContent = ({ onBack, setActiveTab }) => {
+  const selectedClassId = localStorage.getItem("selectedClassId") || null;
   const [exercises, setExercises] = useState([]);
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
   const [editingExerciseId, setEditingExerciseId] = useState(null);
@@ -273,6 +274,19 @@ const ManageExercisesContent = ({ onBack }) => {
               </Text>
             </div>
 
+            {selectedClassId && canCreateExercise && (
+              <Alert
+                message={`Exercices de la classe sélectionnée`}
+                description={`Classe ID: ${selectedClassId} — Les nouveaux exercices créés seront associés à cette classe.`}
+                type="info"
+                showIcon
+                closable
+                className="mb-4"
+                style={{ borderRadius: "8px" }}
+                onClose={() => localStorage.removeItem("selectedClassId")}
+              />
+            )}
+
             {successMessage && (
               <Alert
                 message={successMessage}
@@ -364,6 +378,7 @@ const ManageExercisesContent = ({ onBack }) => {
               onCancel={handleBackToList}
               onError={setError}
               onSuccess={setSuccessMessage}
+              defaultClassId={selectedClassId}
             />
           </div>
         )}

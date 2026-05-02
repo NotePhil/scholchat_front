@@ -40,10 +40,44 @@ import { useAuth } from '../../../../../context/AuthContext';
 const { Text, Title, Paragraph } = Typography;
 const { TabPane } = Tabs;
 
+const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
+
+const fetchWithAuth = async (url) => {
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res;
+};
+
+const processHtmlImages = async (html, blobUrls) => {
+  if (!html) return html;
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  const imgs = div.querySelectorAll('img');
+  await Promise.all(Array.from(imgs).map(async (img) => {
+    const src = img.getAttribute('src') || '';
+    if (!src || src.startsWith('data:') || src.startsWith('blob:')) return;
+    if (src.startsWith(API_BASE) || src.includes('/media/')) {
+      try {
+        const res = await fetchWithAuth(src.startsWith('http') ? src : `${API_BASE}${src}`);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        blobUrls.push(blobUrl);
+        img.src = blobUrl;
+      } catch (e) {
+        console.warn('Could not load image with auth:', src);
+      }
+    }
+  }));
+  return div.innerHTML;
+};
+
 const CourseDetailsView = ({ courseId, onBack }) => {
   const { user } = useAuth();
   const [course, setCourse] = useState(null);
   const [chapters, setChapters] = useState([]);
+  const [processedContents, setProcessedContents] = useState({});
+  const blobUrlsRef = React.useRef([]);
   const [expandedChapters, setExpandedChapters] = useState(new Set());
   const [progression, setProgression] = useState({ pourcentage: 0, chapitresCompletesIds: [] });
   const [loading, setLoading] = useState(true);
@@ -61,6 +95,9 @@ const CourseDetailsView = ({ courseId, onBack }) => {
 
   useEffect(() => {
     fetchCourseDetails();
+    return () => {
+      blobUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
+    };
   }, [courseId]);
 
   const fetchProgression = async () => {
@@ -125,6 +162,19 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       setChapters(formattedChapters);
       setExpandedChapters(new Set(formattedChapters.map(ch => ch.id)));
       fetchProgression();
+
+      // Process chapter HTML to replace proxy image URLs with authenticated blob URLs
+      const processed = {};
+      await Promise.all(formattedChapters.map(async (ch) => {
+        if (ch.contenu) {
+          try {
+            processed[ch.id] = await processHtmlImages(ch.contenu, blobUrlsRef.current);
+          } catch (e) {
+            processed[ch.id] = ch.contenu;
+          }
+        }
+      }));
+      setProcessedContents(processed);
       
       // Extract embedded files from chapter HTML content
       extractFilesFromChapters(formattedChapters);
@@ -440,14 +490,14 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const renderChapterContent = (content) => {
-    if (!content) return <p className="text-gray-500 italic">Aucun contenu disponible</p>;
-    
+  const renderChapterContent = (content, chapterId) => {
+    const html = (chapterId && processedContents[chapterId]) || content;
+    if (!html) return <p className="text-gray-500 italic">Aucun contenu disponible</p>;
     return (
       <div className="prose max-w-none">
-        <div 
+        <div
           className="text-gray-700 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: html }}
         />
       </div>
     );
@@ -700,7 +750,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                                 Contenu du chapitre
                               </h4>
                               <div className="bg-white rounded-lg p-4 shadow-sm">
-                                {renderChapterContent(chapter.contenu)}
+                                {renderChapterContent(chapter.contenu, chapter.id)}
                               </div>
                             </div>
                           )}
