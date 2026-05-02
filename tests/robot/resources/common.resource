@@ -2,7 +2,7 @@
 Library    SeleniumLibrary
 
 *** Variables ***
-${BASE_URL}         http://localhost:3000
+${BASE_URL}         https://scholchat-front-kult.onrender.com
 ${LOGIN_URL}        ${BASE_URL}/schoolchat/login
 ${BROWSER}          Chrome
 ${SPEED}            0.3s
@@ -63,3 +63,7 @@ Logout
     Wait Until Page Contains Element    xpath://button[contains(@class,'modal-custom') or contains(.,'Confirmer') or contains(.,'Confirm')]    timeout=5s
     Click Element    xpath://button[contains(.,'Confirmer') or contains(.,'Confirm')]
     Wait Until Location Contains    /schoolchat/login    timeout=10s
+
+Scroll Element Into View
+    [Arguments]    ${locator}
+    Execute Javascript    document.evaluate("${locator}", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.scrollIntoView({behavior: 'smooth', block: 'center'})
