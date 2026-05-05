@@ -276,10 +276,16 @@ const SignUp = ({ theme }) => {
       setCreatedUserId(newUserId);
       localStorage.setItem("createdUserId", newUserId);
 
-      // If existing active user adding a new role, go straight to login
+      // If existing active user adding a new role, show message and navigate to login
       const userData = response.data;
       if (userData.etat === "ACTIVE" || userData.etat === "AWAITING_VALIDATION") {
-        navigate("/schoolchat/login");
+        showAlert(
+          formData.type === "professeur" 
+            ? "Demande de profil professeur reçue. Elle sera active après validation par l'administration." 
+            : "Rôle ajouté avec succès! Vous pouvez vous connecter.", 
+          "success"
+        );
+        setTimeout(() => navigate("/schoolchat/login"), 2000);
         return;
       }
 

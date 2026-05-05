@@ -93,6 +93,7 @@ const ActivitiesContent = () => {
   const [editUploadedImages, setEditUploadedImages] = useState([]);
   const [editUploading, setEditUploading] = useState(false);
   const editFileInputRef = useRef(null);
+  const [userPublicationClassIds, setUserPublicationClassIds] = useState([]);
 
   const loadClasses = async () => {
     if (formData.visibility !== 'PRIVATE') return;
@@ -126,7 +127,13 @@ const ActivitiesContent = () => {
       }
 
       // Filter active classes only
-      setClasses(classesData.filter(c => c.etat === 'ACTIF' || !c.etat));
+      const activeClasses = classesData.filter(c => c.etat === 'ACTIF' || !c.etat);
+      setClasses(activeClasses);
+      
+      // Store IDs for permission checking
+      if (isAdmin || isProfessor) {
+        setUserPublicationClassIds(activeClasses.map(c => c.id));
+      }
     } catch (error) {
       console.error('Error loading classes:', error);
       setClasses([]);
@@ -141,7 +148,37 @@ const ActivitiesContent = () => {
 
   useEffect(() => {
     loadEvents();
+    // Initial load of classes to get publication rights for permission checking
+    loadPublicationRights();
   }, []);
+
+  const loadPublicationRights = async () => {
+    const userRole = localStorage.getItem('userRole') || '';
+    const userId = localStorage.getItem('userId');
+    const isAdmin = userRole.toUpperCase().includes('ADMIN');
+    const isProfessor = userRole.toUpperCase().includes('PROFESSOR') || userRole.toUpperCase().includes('TUTOR');
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+
+    try {
+      let classesData = [];
+      if (isAdmin) {
+        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (response.ok) classesData = await response.json();
+      } else if (isProfessor) {
+        const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (resp.ok) classesData = await resp.json();
+      }
+
+      const activeIds = classesData.filter(c => c.etat === 'ACTIF' || !c.etat).map(c => c.id);
+      setUserPublicationClassIds(activeIds);
+    } catch (e) {
+      console.error('Error loading publication rights:', e);
+    }
+  };
 
   useEffect(() => {
     loadClasses();
@@ -1187,27 +1224,34 @@ const ActivitiesContent = () => {
                               {activity.timestamp}
                             </p>
                           </div>
-                          {canCreateEvent && (
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <button
-                                onClick={() => openEditModal(activity)}
-                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
-                                title="Modifier"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setConfirmDeleteId(activity.id)}
-                                disabled={deletingId === activity.id}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all disabled:opacity-50"
-                                title="Supprimer"
-                              >
-                                {deletingId === activity.id
-                                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                                  : <Trash2 className="w-4 h-4" />}
-                              </button>
-                            </div>
-                          )}
+                          {(() => {
+                            const currentUserId = localStorage.getItem('userId');
+                            const isCreator = activity.createurId === currentUserId;
+                            const hasPublicationRight = activity.selectedClasses && activity.selectedClasses.some(classId => userPublicationClassIds.includes(classId));
+                            const canEdit = isAdmin || isCreator || hasPublicationRight;
+
+                            return canEdit && (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <button
+                                  onClick={() => openEditModal(activity)}
+                                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
+                                  title="Modifier"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(activity.id)}
+                                  disabled={deletingId === activity.id}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all disabled:opacity-50"
+                                  title="Supprimer"
+                                >
+                                  {deletingId === activity.id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <Trash2 className="w-4 h-4" />}
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {/* Post Title + Content */}
