@@ -115,43 +115,50 @@ const CourseContentView = ({ course, onBack }) => {
         course.chapitres.map(async (chapter) => {
           let processedContent = chapter.contenu || "";
 
-          const minioPathRegex =
-            /(?:https?:\/\/[^\/\s]+\/)?(images|videos|documents)\/[^"\s<>]+\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|txt)/g;
+          // Extract src URLs from img tags and regenerate presigned URLs if they are MinIO paths
+          const imgSrcRegex = /src="(https?:\/\/[^"]+)"/g;
           let match;
-          const pathsToProcess = [];
+          const urlsToRefresh = [];
 
-          while ((match = minioPathRegex.exec(processedContent)) !== null) {
-            pathsToProcess.push(match[0]);
-          }
-
-          for (const path of pathsToProcess) {
-            try {
-              const cleanPath = path.replace(/^https?:\/\/[^\/]+\//, "");
-              const downloadData =
-                await minioS3Service.generateDownloadUrlByPath(cleanPath);
-
-              if (downloadData && downloadData.downloadUrl) {
-                processedContent = processedContent.replace(
-                  new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
-                  downloadData.downloadUrl
-                );
-              }
-            } catch (error) {
-              console.warn(`Failed to generate download URL for ${path}:`, error);
+          while ((match = imgSrcRegex.exec(processedContent)) !== null) {
+            const url = match[1];
+            // Only refresh MinIO/S3 URLs (presigned URLs expire)
+            if (url.includes('users/') && (url.includes('/images/') || url.includes('/documents/') || url.includes('/videos/'))) {
+              urlsToRefresh.push({ original: url, match: match[0] });
             }
           }
 
-          return {
-            ...chapter,
-            processedContent,
-          };
+          // Also extract href URLs from anchor tags
+          const hrefRegex = /href="(https?:\/\/[^"]+)"/g;
+          while ((match = hrefRegex.exec(processedContent)) !== null) {
+            const url = match[1];
+            if (url.includes('users/') && (url.includes('/images/') || url.includes('/documents/') || url.includes('/videos/'))) {
+              urlsToRefresh.push({ original: url, match: match[0] });
+            }
+          }
+
+          for (const { original, match: matchStr } of urlsToRefresh) {
+            try {
+              // Extract the path after the host
+              const urlObj = new URL(original);
+              const cleanPath = urlObj.pathname.replace(/^\//, '');
+              const downloadData = await minioS3Service.generateDownloadUrlByPath(cleanPath);
+              if (downloadData && downloadData.downloadUrl) {
+                processedContent = processedContent.split(original).join(downloadData.downloadUrl);
+              }
+            } catch (error) {
+              console.warn(`Failed to refresh URL:`, error);
+            }
+          }
+
+          return { ...chapter, processedContent };
         })
       );
 
       setProcessedChapters(processedChaps);
     } catch (error) {
       console.error("Error processing chapter content:", error);
-      setProcessedChapters(course.chapitres || []);
+      setProcessedChapters(course.chapitres.map(ch => ({ ...ch, processedContent: ch.contenu || '' })));
     }
   };
 
@@ -251,15 +258,64 @@ const CourseContentView = ({ course, onBack }) => {
   const renderChapterContent = (content) => {
     if (!content) return null;
 
-    const formattedContent = content.replace(/\n/g, "<br>");
-
     return (
-      <div
-        className="prose prose-sm max-w-none text-slate-700 leading-relaxed course-content-container"
-        dangerouslySetInnerHTML={{ __html: formattedContent }}
-        style={{ wordBreak: "break-word" }}
-        onClick={handleDocumentClick}
-      />
+      <>
+        <div
+          className="course-content-container text-slate-700 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: content }}
+          style={{ wordBreak: "break-word" }}
+          onClick={handleDocumentClick}
+        />
+        <style>{`
+          .course-content-container img {
+            max-width: 250px;
+            max-height: 200px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: block;
+            margin: 8px 0;
+          }
+          .course-content-container div[data-file-id] {
+            margin: 8px 0;
+            padding: 8px 12px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .course-content-container a {
+            color: #3b82f6;
+            text-decoration: underline;
+            font-weight: 500;
+            cursor: pointer;
+          }
+          .course-content-container a:hover {
+            color: #1d4ed8;
+          }
+          .course-content-container ul {
+            list-style-type: disc;
+            padding-left: 2em;
+            margin: 0.5em 0;
+          }
+          .course-content-container ol {
+            list-style-type: decimal;
+            padding-left: 2em;
+            margin: 0.5em 0;
+          }
+          .course-content-container li {
+            margin: 0.25em 0;
+          }
+          .course-content-container p {
+            margin: 0.5em 0;
+          }
+        `}</style>
+      </>
     );
   };
 
