@@ -21,23 +21,23 @@ const FILE_META = {
   file:   { color: "bg-gray-100 text-gray-600",  label: "Fichier" },
 };
 
-// Full-screen image popup with zoom
+// Image popup scoped inside the panel (absolute) — does NOT cover the video conference
 const ImagePopup = ({ url, fileName, onClose }) => {
   const [zoom, setZoom] = useState(1);
   return (
-    <div className="fixed inset-0 z-[10000] bg-black/90 flex flex-col" onClick={onClose}>
-      <div className="flex items-center justify-between px-4 py-3 bg-black/60 flex-shrink-0" onClick={e => e.stopPropagation()}>
-        <span className="text-white text-sm font-medium truncate">{fileName}</span>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setZoom(z => Math.max(0.5, z - 0.25))} className="p-1.5 bg-white/20 hover:bg-white/30 rounded text-white"><ZoomOut className="w-4 h-4" /></button>
-          <span className="text-white text-xs w-12 text-center">{Math.round(zoom * 100)}%</span>
-          <button onClick={() => setZoom(z => Math.min(4, z + 0.25))} className="p-1.5 bg-white/20 hover:bg-white/30 rounded text-white"><ZoomIn className="w-4 h-4" /></button>
-          <a href={url} download={fileName} target="_blank" rel="noreferrer" className="p-1.5 bg-white/20 hover:bg-white/30 rounded text-white"><Download className="w-4 h-4" /></a>
-          <button onClick={onClose} className="p-1.5 bg-red-500/80 hover:bg-red-600 rounded text-white"><X className="w-4 h-4" /></button>
+    <div className="absolute inset-0 z-50 bg-black/95 flex flex-col" onClick={onClose}>
+      <div className="flex items-center justify-between px-3 py-2 bg-black/70 flex-shrink-0" onClick={e => e.stopPropagation()}>
+        <span className="text-white text-xs font-medium truncate flex-1 mr-2">{fileName}</span>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => setZoom(z => Math.max(0.25, z - 0.25))} className="p-1 bg-white/20 hover:bg-white/30 rounded text-white"><ZoomOut className="w-3.5 h-3.5" /></button>
+          <span className="text-white text-xs w-10 text-center">{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZoom(z => Math.min(5, z + 0.25))} className="p-1 bg-white/20 hover:bg-white/30 rounded text-white"><ZoomIn className="w-3.5 h-3.5" /></button>
+          <a href={url} download={fileName} target="_blank" rel="noreferrer" className="p-1 bg-white/20 hover:bg-white/30 rounded text-white"><Download className="w-3.5 h-3.5" /></a>
+          <button onClick={onClose} className="p-1 bg-red-500/80 hover:bg-red-600 rounded text-white"><X className="w-3.5 h-3.5" /></button>
         </div>
       </div>
-      <div className="flex-1 overflow-auto flex items-center justify-center p-4" onClick={e => e.stopPropagation()}>
-        <img src={url} alt={fileName} style={{ transform: `scale(${zoom})`, transformOrigin: "center", transition: "transform 0.2s", maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />
+      <div className="flex-1 overflow-auto flex items-center justify-center p-3" onClick={e => e.stopPropagation()}>
+        <img src={url} alt={fileName} style={{ transform: `scale(${zoom})`, transformOrigin: "center", transition: "transform 0.15s", maxWidth: "100%", objectFit: "contain" }} />
       </div>
     </div>
   );
@@ -202,7 +202,8 @@ const ChapterPanel = ({ chapitres = [], currentChapitreId, progress = [], isMode
   const [contentExpanded, setContentExpanded] = useState(true);
   const [processedContent, setProcessedContent] = useState("");
   const [mediaItems, setMediaItems] = useState([]);
-  const [imagePopup, setImagePopup] = useState(null); // { url, fileName }
+  const [imagePopup, setImagePopup] = useState(null);
+  const [fileViewer, setFileViewer] = useState(null);
 
   const isCompleted = (chapId) => progress.some(p => p.chapitreId === chapId && p.completed);
   const isCurrent = (chapId) => chapId === currentChapitreId;
@@ -224,29 +225,58 @@ const ChapterPanel = ({ chapitres = [], currentChapitreId, progress = [], isMode
   }, [currentChap?.id, currentChap?.contenu]);
 
   const handleContentClick = (e) => {
-    if (e.target.tagName === "IMG") {
-      const url = e.target.getAttribute("src");
-      const fileName = e.target.getAttribute("alt") || "Image";
-      if (url) { e.preventDefault(); setImagePopup({ url, fileName }); }
+    // Click on image → popup
+    const img = e.target.closest("img");
+    if (img) {
+      const url = img.getAttribute("src");
+      const fileName = img.getAttribute("alt") || "Image";
+      if (url) { e.preventDefault(); e.stopPropagation(); setImagePopup({ url, fileName }); }
       return;
     }
+    // Click on anchor → open viewer or new tab
     const anchor = e.target.closest("a");
     if (anchor) {
       const href = anchor.getAttribute("href");
       if (href && href.startsWith("http")) {
         e.preventDefault();
-        window.open(href, "_blank", "noreferrer");
+        const t = getFileType(href, "");
+        if (t === "image") {
+          setImagePopup({ url: href, fileName: anchor.textContent.trim() || "Image" });
+        } else {
+          setFileViewer({ url: href, fileName: anchor.textContent.trim() || href.split("/").pop().split("?")[0] || "Fichier", contentType: "" });
+        }
+      }
+      return;
+    }
+    // Click on file container div[data-file-id] (span-based, no anchor yet)
+    const fileDiv = e.target.closest("div[data-file-id]");
+    if (fileDiv) {
+      e.preventDefault();
+      const innerAnchor = fileDiv.querySelector("a");
+      if (innerAnchor) {
+        const href = innerAnchor.getAttribute("href");
+        const t = getFileType(href, "");
+        if (t === "image") setImagePopup({ url: href, fileName: innerAnchor.textContent.trim() || "Image" });
+        else setFileViewer({ url: href, fileName: innerAnchor.textContent.trim() || "Fichier", contentType: "" });
+        return;
+      }
+      // Span-only file link — match by filename in mediaItems
+      const nameSpan = fileDiv.querySelector("span:last-child");
+      const name = nameSpan?.textContent?.trim();
+      if (name) {
+        const match = mediaItems.find(m => m.fileName === name);
+        if (match) {
+          const t = getFileType(match.url, match.contentType);
+          if (t === "image") setImagePopup({ url: match.url, fileName: match.fileName });
+          else setFileViewer({ url: match.url, fileName: match.fileName, contentType: match.contentType });
+        }
       }
     }
   };
 
   return (
     <>
-      {imagePopup && (
-        <ImagePopup url={imagePopup.url} fileName={imagePopup.fileName} onClose={() => setImagePopup(null)} />
-      )}
-
-      <div className="flex flex-col h-full bg-white dark:bg-gray-800 overflow-hidden">
+      <div className="flex flex-col h-full bg-white dark:bg-gray-800 overflow-hidden relative">
         {/* Chapter list */}
         <div className="border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900">
@@ -390,6 +420,33 @@ const ChapterPanel = ({ chapitres = [], currentChapitreId, progress = [], isMode
             </div>
           )}
         </div>
+
+        {/* Image popup — scoped inside panel, does NOT cover the video */}
+        {imagePopup && (
+          <ImagePopup url={imagePopup.url} fileName={imagePopup.fileName} onClose={() => setImagePopup(null)} />
+        )}
+
+        {/* File viewer overlay inside panel */}
+        {fileViewer && (
+          <div className="absolute inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col">
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate flex-1">{fileViewer.fileName}</span>
+              <a href={fileViewer.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded text-xs">
+                <ExternalLink className="w-3 h-3" /> Ouvrir
+              </a>
+              <button onClick={() => setFileViewer(null)} className="p-1 bg-red-100 hover:bg-red-200 rounded text-red-600"><X className="w-3.5 h-3.5" /></button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={getFileType(fileViewer.url, fileViewer.contentType) === "pdf"
+                  ? `${fileViewer.url}#toolbar=1&navpanes=0`
+                  : `https://docs.google.com/viewer?url=${encodeURIComponent(fileViewer.url)}&embedded=true`}
+                className="w-full h-full border-0"
+                title={fileViewer.fileName}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
