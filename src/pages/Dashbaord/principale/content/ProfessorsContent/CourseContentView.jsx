@@ -16,12 +16,8 @@ import {
   Phone,
   AlertCircle,
   Search,
-  Filter,
-  ChevronDown,
   Download,
   Eye,
-  Grid,
-  List,
   CheckCircle,
   XCircle,
   Activity,
@@ -43,8 +39,6 @@ const CourseContentView = ({ course, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [documentSearchTerm, setDocumentSearchTerm] = useState("");
-  const [documentFilter, setDocumentFilter] = useState("all");
-  const [documentViewMode, setDocumentViewMode] = useState("grid");
   const [viewerConfig, setViewerConfig] = useState({
     isOpen: false,
     url: "",
@@ -59,25 +53,52 @@ const CourseContentView = ({ course, onBack }) => {
   }, [course]);
 
   useEffect(() => {
-    filterDocuments();
-  }, [documentSearchTerm, documentFilter, courseDocuments]);
-
-  useEffect(() => {
-    if (course && course.chapitres) {
-      processChapterContent();
+    if (processedChapters.length > 0) {
+      const docs = extractDocumentsFromChapters(
+        processedChapters.map((ch) => ({ ...ch, contenu: ch.processedContent || ch.contenu }))
+      );
+      setCourseDocuments(docs);
+      setFilteredDocuments(docs);
+    } else if (course?.chapitres) {
+      const docs = extractDocumentsFromChapters(course.chapitres);
+      setCourseDocuments(docs);
+      setFilteredDocuments(docs);
     }
-  }, [course]);
+  }, [processedChapters]);
+
+  const extractDocumentsFromChapters = (chapitres) => {
+    const docs = [];
+    if (!chapitres) return docs;
+    chapitres.forEach((chapter) => {
+      const content = chapter.contenu || "";
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(`<div>${content}</div>`, "text/html");
+
+      // Extract images
+      doc.querySelectorAll("img").forEach((img) => {
+        const src = img.getAttribute("src");
+        if (src && src.startsWith("http")) {
+          const name = img.getAttribute("alt") || src.split("/").pop().split("?")[0];
+          docs.push({ id: src, title: name, url: src, type: "image", chapterTitle: chapter.titre });
+        }
+      });
+
+      // Extract file links (anchors)
+      doc.querySelectorAll("a[href]").forEach((a) => {
+        const href = a.getAttribute("href");
+        if (href && href.startsWith("http")) {
+          const name = a.textContent.trim() || href.split("/").pop().split("?")[0];
+          docs.push({ id: href, title: name, url: href, type: "file", chapterTitle: chapter.titre });
+        }
+      });
+    });
+    return docs;
+  };
 
   const fetchCourseData = async () => {
     try {
       setIsLoading(true);
 
-      // Fetch documents - placeholder for now
-      const documents = [];
-      setCourseDocuments(documents);
-      setFilteredDocuments(documents);
-
-      // Handle participants if available
       if (course.participants && course.participants.length > 0) {
         setParticipants(course.participants);
       } else if (course.eleves && course.eleves.length > 0) {
@@ -91,21 +112,7 @@ const CourseContentView = ({ course, onBack }) => {
     }
   };
 
-  const filterDocuments = () => {
-    let filtered = courseDocuments;
-
-    if (documentSearchTerm) {
-      filtered = filtered.filter((doc) =>
-        doc.title.toLowerCase().includes(documentSearchTerm.toLowerCase())
-      );
-    }
-
-    if (documentFilter !== "all") {
-      filtered = filtered.filter((doc) => doc.type === documentFilter);
-    }
-
-    setFilteredDocuments(filtered);
-  };
+  const filterDocuments = () => {};
 
   const processChapterContent = async () => {
     if (!course.chapitres) return;
@@ -231,26 +238,26 @@ const CourseContentView = ({ course, onBack }) => {
   };
 
   const handleDocumentClick = (e) => {
-    // Intercept clicks on links or elements with data-file-url
-    const target = e.target.closest('a') || e.target.closest('[data-file-url]');
-    if (target) {
-      const url = target.getAttribute('href') || target.getAttribute('data-file-url');
-      const fileName = target.textContent || target.getAttribute('data-file-name') || "Document";
-      
-      // If it's a file we can view, prevent default and open viewer
-      if (url && (
-        url.includes('.pdf') || 
-        url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png') || 
-        url.includes('.mp4') || url.includes('.webm') ||
-        url.includes('.ppt') || url.includes('.doc') || url.includes('.xls')
-      )) {
+    // Click on image → popup viewer
+    if (e.target.tagName === "IMG") {
+      const url = e.target.getAttribute("src");
+      const fileName = e.target.getAttribute("alt") || "Image";
+      if (url && url.startsWith("http")) {
         e.preventDefault();
-        setViewerConfig({
-          isOpen: true,
-          url,
-          fileName,
-          contentType: "" // Let viewer determine from URL
-        });
+        e.stopPropagation();
+        setViewerConfig({ isOpen: true, url, fileName, contentType: "image" });
+        return;
+      }
+    }
+    // Click on anchor link → open viewer
+    const anchor = e.target.closest("a");
+    if (anchor) {
+      const url = anchor.getAttribute("href");
+      const fileName = anchor.textContent.trim() || url?.split("/").pop().split("?")[0] || "Document";
+      if (url && url.startsWith("http")) {
+        e.preventDefault();
+        e.stopPropagation();
+        setViewerConfig({ isOpen: true, url, fileName, contentType: "" });
       }
     }
   };
@@ -873,74 +880,62 @@ const CourseContentView = ({ course, onBack }) => {
                     <FileText className="w-5 h-5 mr-2 text-indigo-600" />
                     Documents ({filteredDocuments.length})
                   </h3>
-
-                  {/* Document Controls */}
-                  <div className="flex items-center space-x-4">
-                    {/* Search */}
-                    <div className="relative">
-                      <Search
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-                        size={16}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Rechercher documents..."
-                        value={documentSearchTerm}
-                        onChange={(e) => setDocumentSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-sm"
-                      />
-                    </div>
-
-                    {/* View Mode Toggle */}
-                    <div className="flex bg-slate-100 rounded-lg p-1">
-                      <button
-                        onClick={() => setDocumentViewMode("grid")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                          documentViewMode === "grid"
-                            ? "bg-white text-indigo-600 shadow-sm"
-                            : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        <Grid className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setDocumentViewMode("list")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                          documentViewMode === "list"
-                            ? "bg-white text-indigo-600 shadow-sm"
-                            : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        <List className="w-4 h-4" />
-                      </button>
-                    </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input
+                      type="text"
+                      placeholder="Rechercher..."
+                      value={documentSearchTerm}
+                      onChange={(e) => {
+                        setDocumentSearchTerm(e.target.value);
+                        const q = e.target.value.toLowerCase();
+                        setFilteredDocuments(
+                          q ? courseDocuments.filter((d) => d.title.toLowerCase().includes(q)) : courseDocuments
+                        );
+                      }}
+                      className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
                   </div>
                 </div>
 
-                {/* Documents Content */}
                 {filteredDocuments.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                       <FileText className="w-8 h-8 text-slate-400" />
                     </div>
-                    <h4 className="text-lg font-medium text-slate-900 mb-2">
-                      Aucun document disponible
-                    </h4>
-                    <p className="text-slate-600">
-                      Aucun document n'a été associé à ce cours.
-                    </p>
+                    <h4 className="text-lg font-medium text-slate-900 mb-2">Aucun document disponible</h4>
+                    <p className="text-slate-600">Aucun document n'a été associé à ce cours.</p>
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <FileText className="w-8 h-8 text-slate-400" />
-                    </div>
-                    <h4 className="text-lg font-medium text-slate-900 mb-2">
-                      Documents à venir
-                    </h4>
-                    <p className="text-slate-600">
-                      La gestion des documents sera bientôt disponible.
-                    </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredDocuments.map((doc, index) => {
+                      const isImage = doc.type === "image";
+                      return (
+                        <button
+                          key={doc.id || index}
+                          onClick={() => setViewerConfig({ isOpen: true, url: doc.url, fileName: doc.title, contentType: isImage ? "image" : "" })}
+                          className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md hover:border-indigo-300 transition-all text-left group"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${ isImage ? "bg-purple-50" : "bg-blue-50" }`}>
+                              {isImage ? (
+                                <img src={doc.url} alt={doc.title} className="w-10 h-10 object-cover rounded-lg" />
+                              ) : (
+                                <FileText className={`w-5 h-5 ${ isImage ? "text-purple-500" : "text-blue-500" }`} />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-900 truncate group-hover:text-indigo-600 transition-colors">{doc.title}</p>
+                              <p className="text-xs text-slate-500 mt-0.5 truncate">{doc.chapterTitle}</p>
+                              <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${ isImage ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700" }`}>
+                                {isImage ? "Image" : "Fichier"}
+                              </span>
+                            </div>
+                            <Eye className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 flex-shrink-0 mt-1 transition-colors" />
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
