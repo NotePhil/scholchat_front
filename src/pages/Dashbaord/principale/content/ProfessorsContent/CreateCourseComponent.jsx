@@ -50,6 +50,7 @@ const RichTextEditor = ({
 }) => {
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+  const savedRangeRef = useRef(null);
   const [pendingFiles, setPendingFiles] = useState([]);
 
   const execCommand = (command, value = null) => {
@@ -61,6 +62,22 @@ const RichTextEditor = ({
     if (editorRef.current) {
       const htmlContent = editorRef.current.innerHTML;
       onChange(htmlContent);
+    }
+  };
+
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+    }
+  };
+
+  const restoreSelection = () => {
+    editorRef.current.focus();
+    if (savedRangeRef.current) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(savedRangeRef.current);
     }
   };
 
@@ -79,12 +96,28 @@ const RichTextEditor = ({
     }
   };
 
+  const insertNodeAtSavedRange = (node) => {
+    restoreSelection();
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      // Ensure the range is inside the editor
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        range.insertNode(node);
+        range.setStartAfter(node);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        savedRangeRef.current = range.cloneRange();
+        return;
+      }
+    }
+    editorRef.current.appendChild(node);
+  };
+
   const handleFileInputChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-
-    const selection = window.getSelection();
-    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
 
     for (const file of files) {
       const timestamp = Date.now() + Math.random();
@@ -100,6 +133,7 @@ const RichTextEditor = ({
         const img = document.createElement("img");
         img.src = URL.createObjectURL(file);
         img.alt = file.name;
+        img.dataset.fileId = fileId;
         img.style.maxWidth = "250px";
         img.style.maxHeight = "200px";
         img.style.width = "auto";
@@ -166,24 +200,11 @@ const RichTextEditor = ({
         imgContainer.onmouseenter = () => controls.style.opacity = "1";
         imgContainer.onmouseleave = () => controls.style.opacity = "0";
 
-        if (range) {
-          range.insertNode(imgContainer);
-          range.setStartAfter(imgContainer);
-          range.collapse(false);
-        } else {
-          editorRef.current.appendChild(imgContainer);
-        }
+        insertNodeAtSavedRange(imgContainer);
       } else {
         const linkContainer = document.createElement("div");
         linkContainer.dataset.fileId = fileId;
-        linkContainer.style.margin = "8px 0";
-        linkContainer.style.padding = "8px 12px";
-        linkContainer.style.backgroundColor = "#f8fafc";
-        linkContainer.style.border = "1px solid #e2e8f0";
-        linkContainer.style.borderRadius = "6px";
-        linkContainer.style.display = "flex";
-        linkContainer.style.alignItems = "center";
-        linkContainer.style.gap = "8px";
+        linkContainer.style.cssText = "margin: 8px 0; padding: 8px 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; gap: 8px;";
 
         const icon = document.createElement("span");
         icon.innerHTML = "📄";
@@ -197,13 +218,7 @@ const RichTextEditor = ({
         linkContainer.appendChild(icon);
         linkContainer.appendChild(link);
 
-        if (range) {
-          range.insertNode(linkContainer);
-          range.setStartAfter(linkContainer);
-          range.collapse(false);
-        } else {
-          editorRef.current.appendChild(linkContainer);
-        }
+        insertNodeAtSavedRange(linkContainer);
       }
 
       setPendingFiles((prev) => [
@@ -463,6 +478,7 @@ const RichTextEditor = ({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
+            saveSelection();
             fileInputRef.current?.click();
           }}
           className="p-2 hover:bg-slate-200 rounded text-slate-600 flex items-center gap-1"
@@ -490,7 +506,8 @@ const RichTextEditor = ({
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); saveSelection(); }}
+        onKeyUp={saveSelection}
         onDoubleClick={handleDoubleClick}
         className="w-full min-h-[150px] p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-inset"
         style={{
@@ -693,7 +710,7 @@ const ChapterEditor = ({
   totalChapters,
   onSave,
   onCancel,
-  onFileUpload,
+  onFileAdd,
 }) => {
   const [formData, setFormData] = useState({
     titre: "",
@@ -829,7 +846,7 @@ const ChapterEditor = ({
             }
             placeholder="Contenu détaillé du chapitre..."
             chapterIndex={chapterNumber - 1}
-            onFileUpload={onFileUpload}
+            onFileAdd={onFileAdd}
           />
           {errors.contenu && (
             <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -1004,33 +1021,32 @@ const CreateCourseComponent = ({
   };
 
   const updateContentWithUploadedFiles = (content, fileUrlMap) => {
-    let updatedContent = content;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div id="root">${content}</div>`, "text/html");
+    const root = doc.getElementById("root");
 
-    // Update images
-    const imgRegex = /<img[^>]*data-file-id="([^"]*)"[^>]*>/g;
-    updatedContent = updatedContent.replace(imgRegex, (match, fileId) => {
-      const url = fileUrlMap.get(fileId);
-      if (url) {
-        return match.replace(/src="[^"]*"/, `src="${url}"`);
-      }
-      return match;
+    // Update images: data-file-id is on the <img> itself
+    root.querySelectorAll("img[data-file-id]").forEach((img) => {
+      const url = fileUrlMap.get(img.dataset.fileId);
+      if (url) img.src = url;
     });
 
-    // Update file links
-    const divRegex = /<div[^>]*data-file-id="([^"]*)"[^>]*>.*?<\/div>/g;
-    updatedContent = updatedContent.replace(divRegex, (match, fileId) => {
-      const url = fileUrlMap.get(fileId);
+    // Update file link containers: replace blob placeholder with real anchor
+    root.querySelectorAll("div[data-file-id]").forEach((div) => {
+      const url = fileUrlMap.get(div.dataset.fileId);
       if (url) {
-        const fileName = pendingFiles.get(fileId)?.name || "File";
-        return match.replace(
-          /<span[^>]*>([^<]*)<\/span>/,
-          `<a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: underline; font-weight: 500;">$1</a>`
-        );
+        const nameSpan = div.querySelector("span:last-child");
+        const fileName = nameSpan?.textContent || pendingFiles.get(div.dataset.fileId)?.name || "File";
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.target = "_blank";
+        anchor.style.cssText = "color: #3b82f6; text-decoration: underline; font-weight: 500;";
+        anchor.textContent = fileName;
+        if (nameSpan) nameSpan.replaceWith(anchor);
       }
-      return match;
     });
 
-    return updatedContent;
+    return root.innerHTML;
   };
 
   const handleSaveChapter = (chapterData) => {
