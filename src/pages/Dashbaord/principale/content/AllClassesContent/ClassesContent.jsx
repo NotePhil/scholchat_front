@@ -15,6 +15,7 @@ import {
   Clock,
   Loader2,
   Mail,
+  LogIn,
 } from "lucide-react";
 import classService from "../../../../../services/ClassService";
 import establishmentService from "../../../../../services/EstablishmentService";
@@ -40,7 +41,8 @@ const ClassesContentMobile = ({
   accessToken,
   setAccessToken,
   userRole,
-  accessRequestCounts
+  accessRequestCounts,
+  programmationCounts
 }) => {
   const tabs = [
     { id: "all", label: "All" },
@@ -140,13 +142,13 @@ const ClassesContentMobile = ({
                   <p className="text-xs font-bold dark:text-white">{cls.eleves?.length || 0}</p>
                 </div>
               </div>
-              <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center space-x-2">
-                <CheckCircle size={14} className="text-green-500" />
-                <div>
-                  <p className="text-[8px] font-black text-gray-400 uppercase">Status</p>
-                  <p className="text-xs font-bold dark:text-white">{cls.statut}</p>
-                </div>
-              </div>
+                  <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center space-x-2">
+                    <BookOpen size={14} className="text-blue-500" />
+                    <div>
+                      <p className="text-[8px] font-black text-gray-400 uppercase">Cours programmés</p>
+                      <p className="text-xs font-bold dark:text-white">3</p>
+                    </div>
+                  </div>
             </div>
             {cls.etablissement && (
               <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 dark:bg-slate-900/50 rounded-xl mb-6 border border-gray-100 dark:border-white/5">
@@ -157,9 +159,10 @@ const ClassesContentMobile = ({
             <div className="flex space-x-2">
               <button
                 onClick={() => onManageClass(cls.id)}
-                className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2"
               >
-                GO TO CLASS
+                <LogIn size={18} />
+                ENTRER DANS LA CLASSE
               </button>
               <button className="p-4 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-2xl font-black text-xs transition-all active:scale-95">
                 <MoreVertical size={18} />
@@ -213,6 +216,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
   const [error, setError] = useState(null);
   const [requestRole, setRequestRole] = useState("eleve");
   const [accessRequestCounts, setAccessRequestCounts] = useState({});
+  const [programmationCounts, setProgrammationCounts] = useState({});
 
   const [newClass, setNewClass] = useState({
     nom: "",
@@ -254,10 +258,11 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
     fetchData();
   }, []);
   
-  // Load access request counts
+  // Load access request counts and programmation counts
   useEffect(() => {
     if (classes.length > 0) {
       loadAccessRequestCounts();
+      loadProgrammationCounts();
     }
   }, [classes]);
   
@@ -285,6 +290,73 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
       setAccessRequestCounts(counts);
     } catch (error) {
       console.error("Error loading access request counts:", error);
+    }
+  };
+
+  const loadProgrammationCounts = async () => {
+    try {
+      console.log('Loading programmation counts for classes:', classes.map(c => c.id));
+      const counts = {};
+      
+      // Get auth token
+      const token = localStorage.getItem('authToken') || localStorage.getItem('accessToken');
+      if (!token) {
+        console.warn('No auth token found for programmation counts');
+        return;
+      }
+      
+      // Get current user ID
+      const currentUserId = user?.id;
+      if (!currentUserId) {
+        console.warn('No current user ID found');
+        return;
+      }
+      
+      try {
+        console.log(`Fetching accessible programmations for user ${currentUserId}`);
+        
+        // Get all accessible programmations for the current user
+        const response = await fetch(
+          `${process.env.REACT_APP_API_BASE_URL}/cours-programmes/accessible/${currentUserId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const accessibleProgrammations = await response.json();
+          console.log(`Accessible programmations for user ${currentUserId}:`, accessibleProgrammations);
+          
+          // Count programmations by class
+          classes.forEach(classe => {
+            const classeProgrammations = accessibleProgrammations.filter(prog => 
+              prog.classesIds && prog.classesIds.includes(classe.id)
+            );
+            counts[classe.id] = classeProgrammations.length;
+            console.log(`Count for class ${classe.id} (${classe.nom}): ${counts[classe.id]}`);
+          });
+        } else {
+          console.warn(`API call failed for accessible programmations:`, response.status, response.statusText);
+          // Set all counts to 0 if API fails
+          classes.forEach(classe => {
+            counts[classe.id] = 0;
+          });
+        }
+      } catch (error) {
+        console.warn(`Could not load accessible programmations:`, error);
+        // Set all counts to 0 if there's an error
+        classes.forEach(classe => {
+          counts[classe.id] = 0;
+        });
+      }
+      
+      console.log('Final programmation counts:', counts);
+      setProgrammationCounts(counts);
+    } catch (error) {
+      console.error("Error loading programmation counts:", error);
     }
   };
 
@@ -504,6 +576,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
         setAccessToken={setAccessToken}
         userRole={user.role}
         accessRequestCounts={accessRequestCounts}
+        programmationCounts={programmationCounts}
       />
     );
   }
@@ -738,7 +811,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
                   </div>
                   <div className="flex items-center text-gray-600">
                     <BookOpen size={16} className="mr-1" />
-                    <span>{cls.salle}</span>
+                    <span>{programmationCounts[cls.id] || 0} cours programmés</span>
                   </div>
                 </div>
 
@@ -763,9 +836,10 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
                       {cls.statut === "ACTIF" && (
                         <button
                           onClick={() => onManageClass(cls.id)}
-                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center gap-1"
                         >
-                          Gérer
+                          <LogIn size={14} />
+                          Entrer
                         </button>
                       )}
                     </>

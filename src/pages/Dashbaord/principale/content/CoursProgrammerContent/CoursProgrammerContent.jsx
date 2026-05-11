@@ -22,6 +22,7 @@ import {
   PlayCircle,
   PauseCircle,
   XCircle,
+  Trash2,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { classService } from "../../../../../services/ClassService";
@@ -239,14 +240,40 @@ const CoursProgrammerContent = () => {
       setError("ID du professeur non disponible. Veuillez vous reconnecter.");
       return;
     }
-    setModalMode("edit");
-    // Normalize classeId from classesIds array if missing
-    const normalizedCourse = {
-      ...scheduledCourse,
-      coursId: scheduledCourse.coursId || scheduledCourse.cours?.id || "",
-      classeId: scheduledCourse.classeId || (scheduledCourse.classesIds && scheduledCourse.classesIds[0]) || "",
-    };
-    setSelectedScheduledCourse(normalizedCourse);
+    
+    // Check if this is a reprogramming case (finished or cancelled course)
+    const isReprogramming = scheduledCourse.etatCoursProgramme === "TERMINE" || scheduledCourse.etatCoursProgramme === "ANNULE";
+    
+    if (isReprogramming) {
+      // For reprogramming, create new course programming based on the existing one
+      setModalMode("create"); // Use create mode for new programming
+      const reprogramData = {
+        ...scheduledCourse,
+        id: undefined, // Remove ID to create new
+        etatCoursProgramme: "PLANIFIE", // Reset to planned state
+        dateCoursPrevue: null, // Clear previous date - user will set new date
+        dateDebutEffectif: null, // Clear effective dates
+        dateFinEffectif: null,
+        description: scheduledCourse.description?.includes("Annulé:") 
+          ? null // Clear cancellation reason
+          : scheduledCourse.description,
+        // Keep the course and class information
+        coursId: scheduledCourse.coursId || scheduledCourse.cours?.id || "",
+        classeId: scheduledCourse.classeId || (scheduledCourse.classesIds && scheduledCourse.classesIds[0]) || "",
+      };
+      setSelectedScheduledCourse(reprogramData);
+    } else {
+      // Normal edit for active courses
+      setModalMode("edit");
+      // Normalize classeId from classesIds array if missing
+      const normalizedCourse = {
+        ...scheduledCourse,
+        coursId: scheduledCourse.coursId || scheduledCourse.cours?.id || "",
+        classeId: scheduledCourse.classeId || (scheduledCourse.classesIds && scheduledCourse.classesIds[0]) || "",
+      };
+      setSelectedScheduledCourse(normalizedCourse);
+    }
+    
     setError("");
     setSuccess("");
     setShowScheduleModal(true);
@@ -306,6 +333,24 @@ const CoursProgrammerContent = () => {
     } catch (err) {
       console.error("Erreur lors de la fin:", err);
       setError("Erreur lors de la fin: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const handleDeleteCourse = async (scheduledId) => {
+    try {
+      setLoading(true);
+      setError("");
+      await coursProgrammerService.supprimerCoursProgramme(scheduledId);
+      setSuccess("Cours supprimé avec succès !");
+      setConfirmDeleteId(null);
+      await loadData(professorId);
+    } catch (err) {
+      console.error("Erreur lors de la suppression:", err);
+      setError("Erreur lors de la suppression: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -783,9 +828,27 @@ const CoursProgrammerContent = () => {
                         onClick={() => handleEditSchedule(scheduledCourse)}
                         className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                       >
-                        <Edit2 className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>Modifier</span>
+                        {scheduledCourse.etatCoursProgramme === "TERMINE" || scheduledCourse.etatCoursProgramme === "ANNULE" ? (
+                          <>
+                            <CalendarPlus className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Reprogrammer</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit2 className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Modifier</span>
+                          </>
+                        )}
                       </button>
+                      {(scheduledCourse.etatCoursProgramme === "ANNULE" || scheduledCourse.etatCoursProgramme === "TERMINE") && (
+                        <button
+                          onClick={() => setConfirmDeleteId(scheduledCourse.id)}
+                          className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>Supprimer</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -919,6 +982,36 @@ const CoursProgrammerContent = () => {
           />
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Supprimer le cours programmé</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              Cette action est irréversible. Le cours programmé sera définitivement supprimé.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 py-3 text-gray-600 font-semibold text-sm bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => handleDeleteCourse(confirmDeleteId)}
+                disabled={loading}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Suppression...</span></> : <span>Supprimer</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

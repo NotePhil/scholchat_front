@@ -226,31 +226,18 @@ const ActivitiesContent = () => {
   }, [activities, activeTab]);
 
   const getImageUrl = async (media) => {
+    if (!media.id) return null;
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
     try {
-      if (!media.id) return null;
-      // Try proxy first, fallback to presigned URL
-      const proxyUrl = `${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/content`;
-      // Test if proxy works by doing a HEAD request
-      try {
-        const testResp = await fetch(proxyUrl, { method: 'HEAD' });
-        if (testResp.ok) return proxyUrl;
-      } catch (e) { /* proxy failed, try presigned */ }
-      // Fallback: get presigned URL from backend
-      try {
-        const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-        const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/download-url`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          return data.url || proxyUrl;
-        }
-      } catch (e) { /* fallback to proxy */ }
-      return proxyUrl;
-    } catch (error) {
-      console.error('Failed to get image URL:', error);
-      return null;
-    }
+      const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/download-url`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        return data.url || null;
+      }
+    } catch (e) { /* ignore */ }
+    return `${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/content`;
   };
 
   const loadEvents = async () => {

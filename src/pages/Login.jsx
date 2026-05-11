@@ -52,6 +52,16 @@ export const Login = ({ theme }) => {
   const [pendingAuthData, setPendingAuthData] = useState(null);
   const [availableRoles, setAvailableRoles] = useState([]);
   const [availableChildren, setAvailableChildren] = useState([]);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState("");
+
+  useEffect(() => {
+    // Check for session expiry message
+    const sessionExpired = localStorage.getItem("sessionExpired");
+    if (sessionExpired === "true") {
+      setSessionExpiredMessage("Votre session a expiré. Veuillez vous reconnecter.");
+      localStorage.removeItem("sessionExpired");
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -344,13 +354,17 @@ export const Login = ({ theme }) => {
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-100 dark:border-gray-700"
         >
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
+            {(error || sessionExpiredMessage) && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm"
+                className={`border px-4 py-3 rounded-xl text-sm ${
+                  sessionExpiredMessage 
+                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-400'
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
+                }`}
               >
-                {error}
+                {sessionExpiredMessage || error}
               </motion.div>
             )}
 

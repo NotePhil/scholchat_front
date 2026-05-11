@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Calendar,
@@ -17,8 +18,11 @@ import {
   UserCheck,
   BookOpen,
   Timer,
+  UserX,
+  Activity,
 } from "lucide-react";
 import AccederService from "../../../../services/accederService";
+import liveSessionService from "../../../../services/LiveSessionService";
 
 const SCHEDULED_COURSE_STATES = {
   PLANIFIE: "PLANIFIE",
@@ -128,59 +132,127 @@ const CoursProgrammerViewModal = ({
   const [cancelReason, setCancelReason] = useState("");
   const [participants, setParticipants] = useState([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState([]);
+  const [loadingSessionHistory, setLoadingSessionHistory] = useState(false);
 
   useEffect(() => {
     const fetchParticipants = async () => {
-      if (!scheduledCourse?.participantsIds?.length) {
+      if (!scheduledCourse) {
         setParticipants([]);
         return;
       }
+
+      console.log("[CoursProgrammerViewModal] Fetching participants for course:", {
+        courseId: scheduledCourse?.cours?.id,
+        hasSpecificParticipants: scheduledCourse.participantsIds?.length > 0,
+        specificParticipantIds: scheduledCourse.participantsIds,
+        classIds: scheduledCourse.classesIds,
+        scheduledCourse: scheduledCourse
+      });
 
       try {
         setLoadingParticipants(true);
         const accessToken = localStorage.getItem('accessToken');
         
-        const participantDetails = await Promise.all(
-          scheduledCourse.participantsIds.map(async (participantId) => {
-            try {
-              const response = await fetch(
-                `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${participantId}`,
-                {
-                  headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                  },
+        let expectedParticipants = [];
+        
+        // Determine expected participants based on course programming logic
+        if (scheduledCourse.participantsIds && scheduledCourse.participantsIds.length > 0) {
+          // Specific participants were selected
+          const participantDetails = await Promise.all(
+            scheduledCourse.participantsIds.map(async (participantId) => {
+              try {
+                const response = await fetch(
+                  `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${participantId}`,
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${accessToken}`,
+                    },
+                  }
+                );
+                
+                if (!response.ok) {
+                  console.warn(`Failed to fetch user ${participantId}`);
+                  return null;
                 }
-              );
-              
-              if (!response.ok) {
-                console.warn(`Failed to fetch user ${participantId}`);
+                
+                const user = await response.json();
+                const firstName = user.prenom || "";
+                const lastName = user.nom || "";
+                const fullName = `${firstName} ${lastName}`.trim();
+                
+                return {
+                  id: user.id,
+                  name: fullName || user.email || `User ${user.id}`,
+                  email: user.email || "",
+                  type: user.role || user.type || "USER",
+                  originalData: user,
+                };
+              } catch (error) {
+                console.error(`Error fetching user ${participantId}:`, error);
                 return null;
               }
+            })
+          );
+          expectedParticipants = participantDetails.filter(Boolean);
+        } else if (scheduledCourse.classesIds && scheduledCourse.classesIds.length > 0) {
+          // No specific participants - get all students from the class
+          try {
+            const classId = scheduledCourse.classesIds[0]; // Take first class
+            const classUsersResponse = await fetch(
+              `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/${classId}/utilisateurs`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+              }
+            );
+            
+            if (classUsersResponse.ok) {
+              const classUsers = await classUsersResponse.json();
+              console.log("[CoursProgrammerViewModal] Raw class users response:", classUsers);
               
-              const user = await response.json();
-              const firstName = user.prenom || "";
-              const lastName = user.nom || "";
-              const fullName = `${firstName} ${lastName}`.trim();
+              // Filter to only include students (exclude professors but keep parents and other types)
+              expectedParticipants = classUsers
+                .filter(user => {
+                  const userType = (user.typeUtilisateur || "").toUpperCase();
+                  // Only exclude professors - keep students, parents, repetiteurs, etc.
+                  const isNotProfessor = !userType.includes("PROFESSEUR");
+                  console.log(`[CoursProgrammerViewModal] User ${user.id} (${user.prenom} ${user.nom}) type: ${userType}, included: ${isNotProfessor}`);
+                  return isNotProfessor;
+                })
+                .map(user => {
+                  const firstName = user.prenom || "";
+                  const lastName = user.nom || "";
+                  const fullName = `${firstName} ${lastName}`.trim();
+                  
+                  return {
+                    id: user.id,
+                    name: fullName || user.email || `User ${user.id}`,
+                    email: user.email || "",
+                    type: user.typeUtilisateur || "USER",
+                    originalData: user,
+                  };
+                });
               
-              return {
-                id: user.id,
-                name: fullName || user.email || `User ${user.id}`,
-                email: user.email || "",
-                type: user.role || user.type || "USER",
-                originalData: user,
-              };
-            } catch (error) {
-              console.error(`Error fetching user ${participantId}:`, error);
-              return null;
+              console.log("[CoursProgrammerViewModal] Filtered expected participants:", expectedParticipants);
+            } else {
+              console.error("[CoursProgrammerViewModal] Failed to fetch class users:", classUsersResponse.status, classUsersResponse.statusText);
             }
-          })
-        );
+          } catch (error) {
+            console.error("[CoursProgrammerViewModal] Error fetching class students:", error);
+          }
+        }
 
-        const validParticipants = participantDetails
-          .filter(Boolean)
+        const validParticipants = expectedParticipants
           .sort((a, b) => a.name.localeCompare(b.name));
 
         setParticipants(validParticipants);
+        console.log(`[AttendanceModal] Expected participants for course:`, {
+          hasSpecificParticipants: scheduledCourse.participantsIds?.length > 0,
+          totalExpected: validParticipants.length,
+          participants: validParticipants.map(p => ({ id: p.id, name: p.name }))
+        });
       } catch (error) {
         console.error("Error fetching participants:", error);
         setParticipants([]);
@@ -189,10 +261,45 @@ const CoursProgrammerViewModal = ({
       }
     };
 
-    if (scheduledCourse && activeTab === "participants") {
+    const fetchSessionHistory = async () => {
+      if (!scheduledCourse?.cours?.id) {
+        setSessionHistory([]);
+        return;
+      }
+
+      try {
+        setLoadingSessionHistory(true);
+        console.log("[AttendanceModal] Fetching session history for course:", scheduledCourse.cours.id);
+        
+        const sessions = await liveSessionService.getCourseSessionHistory(scheduledCourse.cours.id);
+        console.log("[AttendanceModal] Received session history:", sessions);
+        
+        if (sessions && sessions.length > 0) {
+          sessions.forEach((session, index) => {
+            console.log(`[AttendanceModal] Session ${index + 1}:`, {
+              id: session.sessionId,
+              status: session.status,
+              participants: session.participants?.length || 0,
+              participantDetails: session.participants
+            });
+          });
+        }
+        
+        setSessionHistory(sessions || []);
+      } catch (error) {
+        console.error("[AttendanceModal] Error fetching session history:", error);
+        setSessionHistory([]);
+      } finally {
+        setLoadingSessionHistory(false);
+      }
+    };
+
+    // Fetch data when modal opens or scheduledCourse changes
+    if (scheduledCourse) {
       fetchParticipants();
+      fetchSessionHistory();
     }
-  }, [scheduledCourse, activeTab]);
+  }, [scheduledCourse]); // Remove activeTab dependency
 
   if (!scheduledCourse) {
     return null;
@@ -232,8 +339,8 @@ const CoursProgrammerViewModal = ({
   const classDetails = getClassDetails(scheduledCourse);
   const currentClassId = getClassId(scheduledCourse);
 
-  return (
-    <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+  return createPortal(
+    <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-4 sm:px-8 py-4 sm:py-6 border-b border-slate-200">
@@ -295,7 +402,7 @@ const CoursProgrammerViewModal = ({
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
               }`}
             >
-              Participants ({scheduledCourse.participantsIds?.length || 0})
+              Participants ({participants.length})
             </button>
             <button
               onClick={() => setActiveTab("history")}
@@ -537,93 +644,233 @@ const CoursProgrammerViewModal = ({
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-slate-900 flex items-center">
                     <UserCheck className="w-5 h-5 mr-2 text-indigo-600" />
-                    Participants ({scheduledCourse.participantsIds?.length || 0}
-                    )
+                    Participants et Présence
                   </h3>
                 </div>
 
-                {loadingParticipants ? (
+                {/* Attendance Summary */}
+                {sessionHistory.length > 0 && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                    <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                      <Activity className="w-5 h-5 mr-2 text-blue-600" />
+                      Résumé des Sessions
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <div className="text-2xl font-bold text-blue-600">{sessionHistory.length}</div>
+                        <div className="text-sm text-slate-600">Sessions totales</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <div className="text-2xl font-bold text-green-600">
+                          {sessionHistory.filter(s => s.status === 'ENDED').length}
+                        </div>
+                        <div className="text-sm text-slate-600">Sessions terminées</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {Math.max(...sessionHistory.map(s => s.participants?.length || 0), 0)}
+                        </div>
+                        <div className="text-sm text-slate-600">Participation max</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {loadingParticipants || loadingSessionHistory ? (
                   <div className="text-center py-12">
                     <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                     </div>
                     <h4 className="text-lg font-medium text-slate-900 mb-2">
-                      Chargement des participants...
+                      Chargement des données de présence...
                     </h4>
                     <p className="text-slate-600">
-                      Veuillez patienter pendant que nous récupérons les
-                      informations.
-                    </p>
-                  </div>
-                ) : !scheduledCourse.participantsIds ||
-                  scheduledCourse.participantsIds.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <Users className="w-8 h-8 text-slate-400" />
-                    </div>
-                    <h4 className="text-lg font-medium text-slate-900 mb-2">
-                      Aucun participant inscrit
-                    </h4>
-                    <p className="text-slate-600">
-                      Aucun participant n'a été sélectionné pour ce cours.
+                      Veuillez patienter pendant que nous récupérons les informations.
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {participants.length === 0 ? (
-                      <div className="text-center py-8">
-                        <div className="mx-auto w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                          <AlertCircle className="w-6 h-6 text-amber-600" />
-                        </div>
-                        <h4 className="text-lg font-medium text-slate-900 mb-2">
-                          Participants non trouvés
+                  <div className="space-y-6">
+                    {/* Participants List with Attendance */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                      <div className="p-6 border-b border-slate-200">
+                        <h4 className="text-lg font-semibold text-slate-900 flex items-center">
+                          <Users className="w-5 h-5 mr-2 text-indigo-600" />
+                          {scheduledCourse.participantsIds && scheduledCourse.participantsIds.length > 0 ? (
+                            <span>Participants Sélectionnés ({participants.length})</span>
+                          ) : (
+                            <span>Tous les Étudiants de la Classe ({participants.length})</span>
+                          )}
                         </h4>
-                        <p className="text-slate-600 mb-4">
-                          Les informations des participants ne sont pas
-                          disponibles ou ils ont été supprimés de la classe.
-                        </p>
-
+                        {scheduledCourse.participantsIds && scheduledCourse.participantsIds.length > 0 ? (
+                          <p className="text-sm text-amber-600 mt-1 flex items-center">
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                            Cours réservé aux participants sélectionnés uniquement
+                          </p>
+                        ) : (
+                          <p className="text-sm text-blue-600 mt-1 flex items-center">
+                            <Users className="w-4 h-4 mr-1" />
+                            Tous les étudiants de la classe peuvent participer
+                          </p>
+                        )}
                       </div>
-                    ) : (
-                      participants.map((participant, index) => (
-                        <div
-                          key={participant.id}
-                          className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex items-start space-x-4">
-                            <div className="flex-shrink-0">
-                              <div className="h-12 w-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                                <span className="text-white font-medium text-sm">
-                                  {getInitials(participant.name)}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-slate-900 text-lg">
-                                {participant.name}
-                              </h4>
-                              {participant.email && (
-                                <p className="text-sm text-slate-600 mt-1 flex items-center">
-                                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
-                                    {participant.email}
-                                  </span>
-                                </p>
-                              )}
-                              <div className="flex items-center mt-2 space-x-3">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  {participant.type || "MEMBER"}
-                                </span>
-
-                              </div>
-                            </div>
-                            <div className="flex-shrink-0">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Inscrit
-                              </span>
-                            </div>
+                      
+                      {participants.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                            <Users className="w-8 h-8 text-slate-400" />
                           </div>
+                          <h4 className="text-lg font-medium text-slate-900 mb-2">
+                            {scheduledCourse.participantsIds && scheduledCourse.participantsIds.length > 0 ? (
+                              "Aucun participant spécifique"
+                            ) : (
+                              "Aucun étudiant dans la classe"
+                            )}
+                          </h4>
+                          <p className="text-slate-600">
+                            {scheduledCourse.participantsIds && scheduledCourse.participantsIds.length > 0 ? (
+                              "Les participants sélectionnés ne sont pas disponibles."
+                            ) : (
+                              "Aucun étudiant n'a été trouvé dans cette classe."
+                            )}
+                          </p>
                         </div>
-                      ))
+                      ) : (
+                        <div className="divide-y divide-slate-200">
+                          {participants.map((participant) => {
+                            // Calculate attendance for this participant
+                            const attendedSessions = sessionHistory.filter(session => 
+                              session.participants?.some(p => p.userId === participant.id)
+                            );
+                            const totalSessions = sessionHistory.length;
+                            const attendanceRate = totalSessions > 0 
+                              ? Math.round((attendedSessions.length / totalSessions) * 100)
+                              : 0;
+                            
+                            console.log(`[AttendanceModal] Participant ${participant.name}:`, {
+                              id: participant.id,
+                              attendedSessions: attendedSessions.length,
+                              totalSessions: totalSessions,
+                              attendanceRate: attendanceRate + '%',
+                              sessionsAttended: attendedSessions.map(s => s.sessionId)
+                            });
+                            
+                            return (
+                              <div key={participant.id} className="p-6 hover:bg-slate-50 transition-colors">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-start space-x-4 flex-1">
+                                    <div className="flex-shrink-0">
+                                      <div className="h-12 w-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
+                                        <span className="text-white font-medium text-sm">
+                                          {getInitials(participant.name)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className="font-semibold text-slate-900 text-lg">
+                                        {participant.name}
+                                      </h5>
+                                      {participant.email && (
+                                        <p className="text-sm text-slate-600 mt-1">
+                                          {participant.email}
+                                        </p>
+                                      )}
+                                      <div className="flex items-center mt-2 space-x-3">
+                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                          {participant.type || "MEMBER"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Attendance Info */}
+                                  <div className="flex-shrink-0 text-right">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      {attendanceRate >= 80 ? (
+                                        <CheckCircle className="w-5 h-5 text-green-500" />
+                                      ) : attendanceRate >= 50 ? (
+                                        <AlertCircle className="w-5 h-5 text-orange-500" />
+                                      ) : (
+                                        <UserX className="w-5 h-5 text-red-500" />
+                                      )}
+                                      <span className={`text-sm font-medium ${
+                                        attendanceRate >= 80 ? 'text-green-700' :
+                                        attendanceRate >= 50 ? 'text-orange-700' : 'text-red-700'
+                                      }`}>
+                                        {attendanceRate}% présence
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-slate-500">
+                                      {attendedSessions.length}/{totalSessions} sessions
+                                    </div>
+                                    {totalSessions > 0 && (
+                                      <div className="mt-2">
+                                        <div className="w-20 bg-slate-200 rounded-full h-2">
+                                          <div 
+                                            className={`h-2 rounded-full transition-all duration-300 ${
+                                              attendanceRate >= 80 ? 'bg-green-500' :
+                                              attendanceRate >= 50 ? 'bg-orange-500' : 'bg-red-500'
+                                            }`}
+                                            style={{ width: `${Math.max(attendanceRate, 5)}%` }}
+                                          ></div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Session History */}
+                    {sessionHistory.length > 0 && (
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                        <div className="p-6 border-b border-slate-200">
+                          <h4 className="text-lg font-semibold text-slate-900 flex items-center">
+                            <Clock className="w-5 h-5 mr-2 text-indigo-600" />
+                            Historique des Sessions ({sessionHistory.length})
+                          </h4>
+                        </div>
+                        <div className="divide-y divide-slate-200 max-h-96 overflow-y-auto">
+                          {sessionHistory.map((session, index) => (
+                            <div key={session.sessionId} className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className={`w-3 h-3 rounded-full ${
+                                    session.status === 'ENDED' ? 'bg-green-500' :
+                                    session.status === 'ACTIVE' ? 'bg-blue-500' : 'bg-gray-500'
+                                  }`}></div>
+                                  <div>
+                                    <div className="font-medium text-slate-900">
+                                      Session #{sessionHistory.length - index}
+                                    </div>
+                                    <div className="text-sm text-slate-600">
+                                      {session.startedAt && new Date(session.startedAt).toLocaleString('fr-FR')}
+                                      {session.endedAt && (
+                                        <span> - {new Date(session.endedAt).toLocaleTimeString('fr-FR')}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-medium text-slate-900">
+                                    {session.participants?.length || 0} participants
+                                  </div>
+                                  <div className={`text-xs px-2 py-1 rounded-full ${
+                                    session.status === 'ENDED' ? 'bg-green-100 text-green-700' :
+                                    session.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {session.status === 'ENDED' ? 'Terminée' :
+                                     session.status === 'ACTIVE' ? 'Active' : 'Inconnue'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -799,13 +1046,40 @@ const CoursProgrammerViewModal = ({
 
               <button
                 onClick={() => {
-                  onEdit(scheduledCourse);
+                  // For finished or cancelled courses, show reprogram option
+                  if (scheduledCourse.etatCoursProgramme === "TERMINE" || scheduledCourse.etatCoursProgramme === "ANNULE") {
+                    // Create a new course programming based on the current one
+                    const reprogramData = {
+                      ...scheduledCourse,
+                      id: undefined, // Remove ID to create new
+                      etatCoursProgramme: "PLANIFIE", // Reset to planned state
+                      dateCoursPrevue: null, // Clear previous date
+                      dateDebutEffectif: null, // Clear effective dates
+                      dateFinEffectif: null,
+                      description: scheduledCourse.description?.includes("Annulé:") 
+                        ? null // Clear cancellation reason
+                        : scheduledCourse.description
+                    };
+                    onEdit(reprogramData);
+                  } else {
+                    // Normal edit for active courses
+                    onEdit(scheduledCourse);
+                  }
                   onClose();
                 }}
                 className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center justify-center gap-2 transition-colors font-medium text-sm"
               >
-                <Edit2 className="w-4 h-4" />
-                Modifier
+                {scheduledCourse.etatCoursProgramme === "TERMINE" || scheduledCourse.etatCoursProgramme === "ANNULE" ? (
+                  <>
+                    <CalendarPlus className="w-4 h-4" />
+                    <span>Reprogrammer</span>
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="w-4 h-4" />
+                    <span>Modifier</span>
+                  </>
+                )}
               </button>
 
               <button
@@ -820,7 +1094,7 @@ const CoursProgrammerViewModal = ({
 
         {/* Cancel Reason Modal */}
         {showCancelReason && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-60">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10000]">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-4">
@@ -866,7 +1140,8 @@ const CoursProgrammerViewModal = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -42,6 +42,10 @@ const liveSessionService = {
   // GET /cours/{coursId}/progress  → 200 ChapitreProgressDTO[]
   getProgress: (coursId) =>
     api.get(`/cours/${coursId}/progress`).then(r => r.data),
+
+  // GET /cours/{coursId}/sessions  → 200 SessionResponseDTO[]
+  getCourseSessionHistory: (coursId) =>
+    api.get(`/cours/${coursId}/sessions`).then(r => r.data),
 };
 
 export default liveSessionService;

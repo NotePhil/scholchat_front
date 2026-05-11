@@ -43,6 +43,8 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
 
   // WebSocket events handler
   const handleWsEvent = useCallback((event) => {
+    console.log("[LiveSession] WebSocket event received:", event.event, event);
+    
     switch (event.event) {
       case "SESSION_STARTED":
         setSession(prev => ({ ...prev, ...event.session }));
@@ -55,15 +57,37 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
         setCurrentChapitreId(event.chapitreId);
         break;
       case "PARTICIPANT_JOINED":
-        // { userId, userName, totalParticipants }
-        setParticipants(prev => {
-          if (prev.find(p => p.userId === event.userId)) return prev;
-          return [...prev, { userId: event.userId, userName: event.userName }];
-        });
+        // { userId, userName, totalParticipants, participants }
+        console.log("[LiveSession] Participant joined:", event.userName, "Total:", event.totalParticipants);
+        if (event.participants && Array.isArray(event.participants)) {
+          // Use the full participant list from the event
+          setParticipants(event.participants);
+          console.log("[LiveSession] Updated participants list from event:", event.participants.length);
+        } else {
+          // Fallback to adding individual participant
+          setParticipants(prev => {
+            if (prev.find(p => p.userId === event.userId)) return prev;
+            const updated = [...prev, { userId: event.userId, userName: event.userName }];
+            console.log("[LiveSession] Updated participants list (fallback):", updated.length);
+            return updated;
+          });
+        }
         break;
       case "PARTICIPANT_LEFT":
-        // { userId, totalParticipants }
-        setParticipants(prev => prev.filter(p => p.userId !== event.userId));
+        // { userId, totalParticipants, participants }
+        console.log("[LiveSession] Participant left:", event.userId, "Total:", event.totalParticipants);
+        if (event.participants && Array.isArray(event.participants)) {
+          // Use the updated participant list from the event
+          setParticipants(event.participants);
+          console.log("[LiveSession] Updated participants list from event:", event.participants.length);
+        } else {
+          // Fallback to removing individual participant
+          setParticipants(prev => {
+            const updated = prev.filter(p => p.userId !== event.userId);
+            console.log("[LiveSession] Updated participants list (fallback):", updated.length);
+            return updated;
+          });
+        }
         break;
       case "HAND_RAISED":
         // { userId, userName }
@@ -92,11 +116,15 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
     const init = async () => {
       setLoading(true);
       try {
+        console.log("[LiveSession] Initializing session for course:", coursId);
+        
         let activeSession;
         try {
           activeSession = await liveSessionService.getActiveSession(coursId);
+          console.log("[LiveSession] Found active session:", activeSession.sessionId);
         } catch (e) {
           if (e.response?.status === 404) {
+            console.log("[LiveSession] No active session found for course:", coursId);
             setError("Aucune session active. Le professeur n'a pas encore démarré le cours.");
             setLoading(false);
             return;
@@ -105,7 +133,10 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
         }
 
         // Join — returns fresh SessionResponseDTO with own jitsiJwt
+        console.log("[LiveSession] Joining session:", activeSession.sessionId, "as user:", currentUserId);
         const joined = await liveSessionService.joinSession(coursId, activeSession.sessionId);
+        console.log("[LiveSession] Successfully joined session. Participants:", joined.participants?.length || 0);
+        
         setSession(joined);
         sessionRef.current = joined;
 
@@ -121,6 +152,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
         setChapitres(fullChapitres);
         setCurrentChapitreId(joined.currentChapitreId || fullChapitres[0]?.id || null);
         setParticipants(joined.participants || []);
+        console.log("[LiveSession] Set initial participants:", joined.participants?.length || 0);
 
         // Load my progress
         try {
@@ -129,6 +161,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
         } catch (e) { /* ignore */ }
 
       } catch (e) {
+        console.error("[LiveSession] Error initializing session:", e);
         setError(e.response?.data?.message || e.message || "Erreur lors du chargement de la session");
       } finally {
         setLoading(false);
@@ -139,7 +172,10 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
     return () => {
       // Best-effort leave on unmount
       const sid = sessionRef.current?.sessionId;
-      if (sid) liveSessionService.leaveSession(coursId, sid).catch(() => {});
+      if (sid) {
+        console.log("[LiveSession] Leaving session on unmount:", sid);
+        liveSessionService.leaveSession(coursId, sid).catch(() => {});
+      }
     };
   }, [coursId]);
 
@@ -390,7 +426,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
             />
           </div>
         </div>
-        <div className={`relative flex flex-col border-l border-gray-800 transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-[45%] max-w-sm xl:max-w-md"}`}>
+        <div className={`relative flex flex-col border-l border-gray-800 transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-[45%]"}`}>
           <button
             onClick={() => setPanelCollapsed(p => !p)}
             className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white p-1 rounded-l-lg transition-colors flex"

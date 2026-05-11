@@ -160,7 +160,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       
       setCourse(formattedCourse);
       setChapters(formattedChapters);
-      setExpandedChapters(new Set(formattedChapters.map(ch => ch.id)));
+      setExpandedChapters(new Set());
       fetchProgression();
 
       // Process chapter HTML to replace proxy image URLs with authenticated blob URLs
@@ -601,10 +601,6 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                       <span className="font-semibold">{chapters.length} chapitres</span>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10">
-                      <Clock className="w-4 h-4 text-purple-300" />
-                      <span className="font-semibold">{course?.duree || "12h 30min"}</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10">
                       <FileText className="w-4 h-4 text-emerald-300" />
                       <span className="font-semibold">{courseFiles.length} fichiers ressources</span>
                     </div>
@@ -691,8 +687,8 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                   </div>
                 )}
                 
-                {chapters.map((chapter) => (
-                  <div key={chapter.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
+                {chapters.map((chapter, index) => (
+                  <div key={chapter.id} className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
                     <div
                       className={`p-6 cursor-pointer transition-all duration-200 ${
                         chapter.locked ? 'bg-gray-50' : 'hover:bg-gray-50'
@@ -701,261 +697,191 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                          <div className={`p-2 rounded-lg ${chapter.completed ? 'bg-green-100' : 'bg-blue-100'}`}>
-                            {chapter.completed ? (
-                              <CheckCircle className="w-6 h-6 text-green-600" />
-                            ) : chapter.locked ? (
-                              <Lock className="w-6 h-6 text-gray-400" />
-                            ) : (
-                              <BookOpen className="w-6 h-6 text-blue-600" />
-                            )}
+                          <div className={`flex items-center justify-center w-12 h-12 rounded-xl font-bold text-white ${
+                            chapter.completed ? 'bg-green-500' : 
+                            chapter.locked ? 'bg-gray-400' : 'bg-blue-500'
+                          }`}>
+                            {index + 1}
                           </div>
                           <div>
-                            <h3 className={`text-lg font-bold ${chapter.locked ? 'text-gray-400' : 'text-gray-900'}`}>
-                              {chapter.titre}
+                            <h3 className={`text-xl font-bold ${chapter.locked ? 'text-gray-400' : 'text-gray-900'}`}>
+                              Chapitre {index + 1}: {chapter.titre}
                             </h3>
-                            <p className={`text-sm ${chapter.locked ? 'text-gray-400' : 'text-gray-600'}`}>
-                              {chapter.description}
-                            </p>
+                            {chapter.description && (
+                              <p className={`text-sm mt-1 ${chapter.locked ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {chapter.description}
+                              </p>
+                            )}
                             <div className="flex items-center space-x-4 mt-2">
-                              <span className={`text-xs ${chapter.locked ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {chapter.duree}
+                              <span className={`text-xs flex items-center ${chapter.locked ? 'text-gray-400' : 'text-gray-500'}`}>
+                                <FileText className="w-3 h-3 mr-1" />
+                                1 éléments
                               </span>
-                              <span className={`text-xs ${chapter.locked ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {chapter.materials.length} éléments
-                              </span>
+                              {progression.chapitresCompletesIds?.includes(chapter.id) && (
+                                <span className="text-xs text-green-600 font-medium flex items-center">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Terminé
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
-                        {!chapter.locked && (
-                          <div className="flex items-center space-x-2">
-                            {expandedChapters.has(chapter.id) ? (
-                              <ChevronDown className="w-5 h-5 text-gray-400" />
+                        <div className="flex items-center space-x-3">
+                          {/* Completion Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleItemCompletion(chapter.id);
+                            }}
+                            className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+                            title={progression.chapitresCompletesIds?.includes(chapter.id) ? "Chapitre terminé" : "Marquer comme terminé"}
+                          >
+                            {progression.chapitresCompletesIds?.includes(chapter.id) ? (
+                              <div className="relative">
+                                <CheckCircle className="w-8 h-8 text-emerald-500 fill-emerald-50 drop-shadow-sm transition-transform duration-300 group-hover:rotate-12" />
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
+                              </div>
                             ) : (
-                              <ChevronRight className="w-5 h-5 text-gray-400" />
+                              <Circle className="w-8 h-8 text-gray-300 hover:text-blue-400 transition-colors duration-300" />
                             )}
-                          </div>
-                        )}
+                          </button>
+                          
+                          {!chapter.locked && (
+                            <div className="flex items-center space-x-2">
+                              {expandedChapters.has(chapter.id) ? (
+                                <ChevronDown className="w-5 h-5 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="w-5 h-5 text-gray-400" />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     {expandedChapters.has(chapter.id) && !chapter.locked && (
                       <div className="border-t bg-gray-50">
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-6">
                           {/* Chapter Content */}
                           {chapter.contenu && (
-                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-                              <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                                <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
-                                Contenu du chapitre
-                              </h4>
-                              <div className="bg-white rounded-lg p-4 shadow-sm">
+                            <div className="bg-white rounded-xl p-6 border border-blue-100">
+                              <div className="prose max-w-none">
                                 {renderChapterContent(chapter.contenu, chapter.id)}
                               </div>
                             </div>
                           )}
                           
-                          {/* Course Files Section */}
-                          {courseFiles.length > 0 && (
-                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
-                              <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                                <FileText className="w-5 h-5 mr-2 text-green-600" />
-                                Fichiers du chapitre ({courseFiles.filter(f => f.chapterTitle === chapter.titre).length})
-                              </h4>
-                              
-                              {filesLoading ? (
-                                <div className="text-center py-4">
-                                  <div className="inline-flex items-center space-x-2 text-gray-600">
-                                    <div className="w-4 h-4 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin"></div>
-                                    <span>Extraction des fichiers...</span>
-                                  </div>
+                          {/* Chapter Resources and Files */}
+                          <div className="bg-white rounded-xl p-6 border border-green-100">
+                            <h4 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
+                              <FileText className="w-5 h-5 mr-2 text-green-600" />
+                              Ressources et fichiers
+                            </h4>
+                            
+                            {filesLoading ? (
+                              <div className="text-center py-8">
+                                <div className="inline-flex items-center space-x-2 text-gray-600">
+                                  <div className="w-5 h-5 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin"></div>
+                                  <span>Chargement des ressources...</span>
                                 </div>
-                              ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {courseFiles
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {courseFiles
+                                  .filter(file => file.chapterTitle === chapter.titre)
+                                  .length > 0 ? (
+                                  courseFiles
                                     .filter(file => file.chapterTitle === chapter.titre)
-                                    .map((file, index) => (
+                                    .map((file, fileIndex) => (
                                     <div
-                                      key={file.id || index}
-                                      className="bg-white rounded-lg p-3 border hover:shadow-md transition-all duration-200"
+                                      key={file.id || fileIndex}
+                                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:shadow-md transition-all duration-200 hover:bg-white"
                                     >
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                          <div className={`p-2 rounded-lg ${getFileTypeColor(file.fileName, file.contentType)}`}>
-                                            {getFileIcon(file.fileName, file.contentType)}
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <h5 className="font-medium text-gray-900 text-sm truncate" title={file.fileName}>
-                                              {file.fileName}
-                                            </h5>
-                                            <p className="text-xs text-gray-500">
-                                              {file.type === 'image' ? 'Image' : 'Document'}
-                                            </p>
+                                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                        <div className={`p-3 rounded-lg ${getFileTypeColor(file.fileName, file.contentType)}`}>
+                                          {getFileIcon(file.fileName, file.contentType)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h5 className="font-medium text-gray-900 truncate" title={file.fileName}>
+                                            {file.fileName}
+                                          </h5>
+                                          <div className="flex items-center space-x-2 mt-1">
+                                            <span className="text-xs font-medium text-gray-500 uppercase">
+                                              {file.type === 'image' ? 'Image' : 
+                                               file.type === 'video' ? 'Vidéo' : 
+                                               file.type === 'pdf' ? 'PDF' : 'Document'}
+                                            </span>
+                                            {file.fileSize > 0 && (
+                                              <>
+                                                <span className="text-gray-300">•</span>
+                                                <span className="text-xs text-gray-400">{formatFileSize(file.fileSize)}</span>
+                                              </>
+                                            )}
                                           </div>
                                         </div>
-                                        <div className="flex items-center space-x-1 ml-2">
-                                          <button
-                                            onClick={() => handleFilePreview(file)}
-                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                            title="Ouvrir"
-                                          >
-                                            <ExternalLink className="w-3 h-3" />
-                                          </button>
-                                          <button
-                                            onClick={() => handleFileDownload(file)}
-                                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
-                                            title="Télécharger"
-                                          >
-                                            <Download className="w-3 h-3" />
-                                          </button>
-                                        </div>
+                                      </div>
+                                      <div className="flex items-center space-x-2 ml-3">
+                                        <button
+                                          onClick={() => handleFilePreview(file)}
+                                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                          title="Ouvrir"
+                                        >
+                                          <Eye className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleFileDownload(file)}
+                                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                          title="Télécharger"
+                                        >
+                                          <Download className="w-4 h-4" />
+                                        </button>
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Chapter Materials */}
-                          {chapter.materials && chapter.materials.map((material) => (
-                            <div
-                              key={material.id}
-                              className="flex items-center justify-between p-4 bg-white rounded-lg border hover:shadow-md transition-all duration-200 cursor-pointer"
-                            >
-                              <div className="flex items-center space-x-4">
-                                <div className={`p-2 rounded-lg ${getItemTypeColor(material.type)}`}>
-                                  {getItemIcon(material.type)}
-                                </div>
-                                <div>
-                                  <h4 className="font-medium text-gray-900">{material.titre}</h4>
-                                  <div className="flex items-center space-x-3 text-sm text-gray-500">
-                                    {material.duree && (
-                                      <span className="flex items-center space-x-1">
-                                        <Clock className="w-3 h-3" />
-                                        <span>{material.duree}</span>
-                                      </span>
-                                    )}
-                                    {material.size && (
-                                      <span className="flex items-center space-x-1">
-                                        <FileText className="w-3 h-3" />
-                                        <span>{material.size}</span>
-                                      </span>
-                                    )}
+                                  ))
+                                ) : (
+                                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                                    <FileText className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-gray-500 text-sm">Aucune ressource disponible pour ce chapitre</p>
                                   </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-3">
-                                {material.type === 'video' && (
-                                  <button 
-                                    onClick={() => handlePlayVideo(material)}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                  >
-                                    <Play className="w-4 h-4" />
-                                  </button>
                                 )}
-                                {material.type === 'document' && (
-                                  <button 
-                                    onClick={() => handleFileDownload({ filePath: material.url, fileName: material.titre })}
-                                    className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </button>
-                                )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleItemCompletion(chapter.id);
-                                  }}
-                                  className="p-2 hover:bg-gray-50 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
-                                  title={progression.chapitresCompletesIds?.includes(chapter.id) ? "Chapitre terminé" : "Marquer comme terminé"}
-                                >
-                                  {progression.chapitresCompletesIds?.includes(chapter.id) ? (
-                                    <div className="relative">
-                                      <CheckCircle className="w-7 h-7 text-emerald-500 fill-emerald-50 drop-shadow-sm transition-transform duration-300 group-hover:rotate-12" />
-                                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
-                                    </div>
-                                  ) : (
-                                    <Circle className="w-7 h-7 text-gray-300 hover:text-blue-400 transition-colors duration-300" />
-                                  )}
-                                </button>
                               </div>
-                            </div>
-                          ))}
-                          
-                          {/* Exercises Section specific to course but displayed here for context */}
-                          {exercisesLoading ? (
-                            <div className="flex justify-center py-4">
-                              <div className="w-5 h-5 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin"></div>
-                            </div>
-                          ) : exercises.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-gray-100">
-                              <h4 className="text-sm font-bold text-amber-700 mb-3 flex items-center">
-                                <Target className="w-4 h-4 mr-2" />
-                                EXERCICES COMPLÉMENTAIRES
-                              </h4>
-                              <div className="space-y-2">
-                                {exercises.map((exo) => (
-                                  <div
-                                    key={exo.id}
-                                    className="flex items-center justify-between p-3 bg-amber-50/50 rounded-xl border border-amber-100 hover:border-amber-300 transition-all cursor-pointer group"
-                                    onClick={() => handleExerciseClick(exo)}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <div className="p-2 bg-white rounded-lg shadow-sm">
-                                        <Target className="w-4 h-4 text-amber-600" />
-                                      </div>
-                                      <div>
-                                        <Text strong className="text-amber-900 block">{exo.nom}</Text>
-                                        <Text type="secondary" className="text-xs">{exo.description || 'Pratiquez vos connaissances'}</Text>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                        exo.restriction === 'PUBLIC' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                      }`}>
-                                        {exo.restriction}
-                                      </span>
-                                      <button className="p-1.5 text-amber-600 hover:bg-amber-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <ChevronRight className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
                   </div>
                 ))}
                 
-                {/* Combined Resources Section */}
-                <div className="bg-white rounded-xl shadow-lg p-6 border border-blue-100">
+                {/* General Resources Section */}
+                <div className="bg-white rounded-xl shadow-lg p-6 border border-purple-100">
                   <div className="flex items-center justify-between mb-6">
-                    <h4 className="font-bold text-gray-900 flex items-center">
-                      <FileText className="w-5 h-5 mr-2 text-blue-600" />
-                      Ressources et fichiers ({courseFiles.length + minioFiles.length})
+                    <h4 className="font-bold text-gray-900 flex items-center text-xl">
+                      <FileText className="w-6 h-6 mr-3 text-purple-600" />
+                      Ressources générales du cours
                     </h4>
-                    <span className="text-xs text-gray-400 italic">
-                      Les fichiers inclus dans les chapitres et les documents joints
+                    <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      {minioFiles.length} documents
                     </span>
                   </div>
                   
+                  <p className="text-gray-600 text-sm mb-4 italic">
+                    Documents et fichiers supplémentaires fournis par le professeur pour l'ensemble du cours
+                  </p>
+                  
                   {filesLoading ? (
                     <div className="text-center py-12">
-                      <div className="inline-flex items-center space-x-3 text-blue-600">
-                        <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                        <span className="font-medium">Chargement des fichiers...</span>
+                      <div className="inline-flex items-center space-x-3 text-purple-600">
+                        <div className="w-6 h-6 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                        <span className="font-medium">Chargement des ressources générales...</span>
                       </div>
                     </div>
-                  ) : (courseFiles.length + minioFiles.length > 0) ? (
+                  ) : minioFiles.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {[...courseFiles, ...minioFiles].map((file, index) => (
+                      {minioFiles.map((file, index) => (
                         <div
                           key={file.id || index}
-                          className="group relative bg-gray-50 rounded-xl p-4 border border-transparent hover:border-blue-200 hover:bg-white hover:shadow-md transition-all duration-300"
+                          className="group relative bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-100 hover:border-purple-200 hover:shadow-md transition-all duration-300"
                         >
                           <div className="flex items-start space-x-3">
                             <div className={`p-3 rounded-xl ${getFileTypeColor(file.fileName, file.contentType)} group-hover:scale-110 transition-transform`}>
@@ -966,8 +892,10 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                                 {file.fileName || 'Fichier sans nom'}
                               </h5>
                               <div className="flex items-center space-x-2 mt-1">
-                                <span className="text-xs font-medium text-gray-500 uppercase">
-                                  {file.source === 'minio' ? 'Document' : (file.type || 'Lien')}
+                                <span className="text-xs font-medium text-purple-600 uppercase bg-purple-100 px-2 py-0.5 rounded">
+                                  {file.type === 'image' ? 'Image' : 
+                                   file.type === 'video' ? 'Vidéo' : 
+                                   file.type === 'pdf' ? 'PDF' : 'Document'}
                                 </span>
                                 {file.fileSize > 0 && (
                                   <>
@@ -976,11 +904,9 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                                   </>
                                 )}
                               </div>
-                              {file.chapterTitle && (
-                                <p className="text-[10px] text-blue-500 mt-1 font-medium bg-blue-50 inline-block px-1.5 py-0.5 rounded">
-                                  Dans: {file.chapterTitle}
-                                </p>
-                              )}
+                              <p className="text-xs text-gray-500 mt-1">
+                                Ressource générale du cours
+                              </p>
                             </div>
                             
                             <div className="absolute top-4 right-4 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1004,10 +930,10 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                      <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500 font-medium">Aucun fichier joint trouvé</p>
-                      <p className="text-sm text-gray-400 mt-1">Les fichiers du professeur apparaîtront ici.</p>
+                    <div className="text-center py-12 bg-gradient-to-r from-gray-50 to-purple-50 rounded-xl border-2 border-dashed border-purple-200">
+                      <FileText className="w-12 h-12 text-purple-300 mx-auto mb-3" />
+                      <p className="text-gray-500 font-medium">Aucune ressource générale disponible</p>
+                      <p className="text-sm text-gray-400 mt-1">Le professeur n'a pas encore ajouté de documents généraux pour ce cours.</p>
                     </div>
                   )}
                 </div>

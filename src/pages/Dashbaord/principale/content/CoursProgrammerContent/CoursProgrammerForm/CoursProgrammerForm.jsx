@@ -23,22 +23,8 @@ const schedulingSchema = yup.object().shape({
   classeId: yup.string().required("La classe est obligatoire"),
   dateCoursPrevue: yup
     .string()
-    .required("La date prevue est obligatoire")
-    .test(
-      "future-date",
-      "La date ne peut pas être dans le passé pour les nouveaux cours",
-      function (value) {
-        if (!value) return false;
-        // If we're editing, allow past dates (could be an existing schedule)
-        if (this.options.context?.modalMode === "edit") return true;
-        
-        const selectedDate = new Date(value);
-        const now = new Date();
-        // Allow a small buffer (5 mins) for network latency/entry time
-        now.setMinutes(now.getMinutes() - 5);
-        return selectedDate > now;
-      }
-    ),
+    .required("La date prevue est obligatoire"),
+    // Note: Date validation will be handled in the form submit logic
   dateDebutEffectif: yup
     .string()
     .nullable()
@@ -93,7 +79,8 @@ const schedulingSchema = yup.object().shape({
     })
     .positive("La capacité doit être positive")
     .integer("La capacité doit être un nombre entier"),
-  participantsIds: yup.array().of(yup.string()).nullable(),
+  // Allow empty participants array - participants are optional
+  participantsIds: yup.array().of(yup.string()).nullable().optional(),
   etatCoursProgramme: yup.string().required("L'état est obligatoire"),
 });
 
@@ -121,7 +108,7 @@ const CoursProgrammerForm = ({
     clearErrors,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(schedulingSchema, { context: { modalMode } }),
+    resolver: yupResolver(schedulingSchema),
     defaultValues: {
       participantsIds: [],
       etatCoursProgramme: "PLANIFIE",
@@ -294,7 +281,11 @@ const CoursProgrammerForm = ({
 
   // FIXED: Handle participant change properly
   const handleParticipantChange = (newSelectedIds) => {
-    console.log("Participant selection changed:", newSelectedIds);
+    console.log("Participant selection changed:", {
+      previous: selectedParticipants,
+      new: newSelectedIds,
+      classParticipants: classParticipants.length
+    });
     setSelectedParticipants(newSelectedIds);
     setValue("participantsIds", newSelectedIds, { shouldValidate: true });
   };
@@ -327,6 +318,35 @@ const CoursProgrammerForm = ({
     try {
       setSubmitError("");
 
+      // Validate required fields
+      if (!data.coursId) {
+        setSubmitError("Veuillez sélectionner un cours");
+        return;
+      }
+      if (!data.classeId) {
+        setSubmitError("Veuillez sélectionner une classe");
+        return;
+      }
+      if (!data.dateCoursPrevue) {
+        setSubmitError("Veuillez définir une date prévue");
+        return;
+      }
+      if (!data.lieu?.trim()) {
+        setSubmitError("Veuillez définir un lieu");
+        return;
+      }
+
+      // Validate date is not in the past for new courses
+      if (modalMode === "create") {
+        const selectedDate = new Date(data.dateCoursPrevue);
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - 5); // 5 min buffer
+        if (selectedDate <= now) {
+          setSubmitError("La date ne peut pas être dans le passé");
+          return;
+        }
+      }
+
       const formatDate = (dateString) => {
         if (!dateString) return null;
         return new Date(dateString).toISOString();
@@ -355,10 +375,17 @@ const CoursProgrammerForm = ({
         description: data.description?.trim() || null,
         etatCoursProgramme: data.etatCoursProgramme,
         classesIds: data.classeId ? [data.classeId] : [],
-        participantsIds: selectedParticipants.filter((id) => id),
+        // Filter and validate participant IDs
+        participantsIds: selectedParticipants
+          .filter((id) => id && typeof id === 'string' && id.trim())
+          .map(id => id.trim()),
       };
 
-      console.log("Submitting schedule data:", scheduleData);
+      console.log("Submitting schedule data:", {
+        ...scheduleData,
+        participantCount: scheduleData.participantsIds.length,
+        participantIds: scheduleData.participantsIds
+      });
       await onSubmit(scheduleData);
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -730,10 +757,15 @@ const CoursProgrammerForm = ({
                       <Users2 size={16} className="mr-2 text-indigo-600" />
                       Participants (optionnel)
                     </div>
-                    {!watchedClassId && (
+                    {!watchedClassId ? (
                       <span className="block text-xs text-amber-600 font-medium mt-1 flex items-center">
                         <AlertCircle size={12} className="mr-1" />
                         Sélectionnez d'abord une classe
+                      </span>
+                    ) : (
+                      <span className="block text-xs text-slate-500 mt-1">
+                        <strong>Aucune sélection :</strong> Tous les étudiants de la classe peuvent participer<br/>
+                        <strong>Sélection spécifique :</strong> Seuls les participants sélectionnés peuvent participer
                       </span>
                     )}
                   </label>
@@ -819,6 +851,39 @@ const CoursProgrammerForm = ({
                     </div>
                   </div>
                 )}
+
+              {/* Show info about participant selection */}
+              {watchedClassId && classParticipants.length > 0 && (
+                <div className="mt-4">
+                  {selectedParticipants.length === 0 ? (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start">
+                        <Users2 className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
+                        <div className="text-sm text-blue-700">
+                          <div className="font-medium mb-1">Cours ouvert à tous les étudiants de la classe</div>
+                          <div className="text-xs text-blue-600">
+                            Tous les {classParticipants.length} étudiants de la classe pourront rejoindre ce cours.
+                            Leur présence sera suivie automatiquement.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start">
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 mr-2 flex-shrink-0" />
+                        <div className="text-sm text-amber-700">
+                          <div className="font-medium mb-1">Cours réservé aux participants sélectionnés</div>
+                          <div className="text-xs text-amber-600">
+                            Seuls les {selectedParticipants.length} participants sélectionnés pourront rejoindre ce cours.
+                            Les autres étudiants de la classe n'y auront pas accès.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {errors.participantsIds && (
                 <p className="mt-1 text-sm text-red-600 flex items-center">

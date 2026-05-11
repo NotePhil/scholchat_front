@@ -1,51 +1,7 @@
 import axios from "axios";
+import { createAuthenticatedAxios, handleServiceError } from "../utils/axiosConfig";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL;
-
-const coursProgrammerApi = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
-
-coursProgrammerApi.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("cmr.notep.business.business.token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-coursProgrammerApi.interceptors.response.use(
-  (response) => {
-    console.log("API Response:", {
-      url: response.config.url,
-      method: response.config.method,
-      status: response.status,
-      data: response.data,
-    });
-    return response;
-  },
-  (error) => {
-    console.error("API Error:", {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
-    return Promise.reject(error);
-  }
-);
+const coursProgrammerApi = createAuthenticatedAxios();
 
 class CoursProgrammerService {
   async programmerCours(coursProgrammerData) {
@@ -114,34 +70,21 @@ class CoursProgrammerService {
         JSON.stringify(cleanedData, null, 2)
       );
 
-      // Validation des formats UUID
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-      if (!uuidRegex.test(cleanedData.coursId)) {
-        throw new Error(
-          `Format d'ID de cours invalide: ${cleanedData.coursId}`
-        );
+      // Basic validation - ensure IDs are not empty
+      if (!cleanedData.coursId || !cleanedData.coursId.trim()) {
+        throw new Error("L'ID du cours est requis");
       }
 
-      if (!uuidRegex.test(cleanedData.professeurId)) {
-        throw new Error(
-          `Format d'ID de professeur invalide: ${cleanedData.professeurId}`
-        );
+      if (!cleanedData.professeurId || !cleanedData.professeurId.trim()) {
+        throw new Error("L'ID du professeur est requis");
       }
 
-      for (const classeId of cleanedData.classesIds) {
-        if (!uuidRegex.test(classeId)) {
-          throw new Error(`Format d'ID de classe invalide: ${classeId}`);
-        }
+      if (cleanedData.classesIds.some(id => !id || !id.trim())) {
+        throw new Error("Tous les IDs de classe doivent être valides");
       }
 
-      for (const participantId of cleanedData.participantsIds) {
-        if (!uuidRegex.test(participantId)) {
-          throw new Error(
-            `Format d'ID de participant invalide: ${participantId}`
-          );
-        }
+      if (cleanedData.participantsIds.some(id => !id || !id.trim())) {
+        throw new Error("Tous les IDs de participant doivent être valides");
       }
 
       console.log("Envoi de la requête vers:", `/cours-programmes`);
@@ -551,22 +494,7 @@ class CoursProgrammerService {
   }
 
   handleError(error) {
-    console.error("Gestion de l'erreur:", error);
-
-    if (error.response) {
-      const errorMessage =
-        error.response.data?.message ||
-        error.response.data?.error ||
-        error.response.data?.details ||
-        `Erreur serveur (${error.response.status})`;
-      throw new Error(errorMessage);
-    } else if (error.request) {
-      throw new Error("Erreur réseau. Veuillez vérifier votre connexion.");
-    } else {
-      throw new Error(
-        "Erreur de configuration de la requête: " + error.message
-      );
-    }
+    return handleServiceError(error, "CoursProgrammerService");
   }
 }
 
