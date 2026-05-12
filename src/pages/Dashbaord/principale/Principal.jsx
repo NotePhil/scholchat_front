@@ -55,6 +55,7 @@ import ProfessorCoursesContent from "./content/ProfessorsContent/ProfessorCourse
 import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgrammerContent";
 import CoursProgrammeManagement from "./content/InterfaceCours/CoursProgrammeManagement";
 import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
+import StudentDevoirsContent from "./content/excerciseContent/StudentDevoirsContent";
 import ExerciseProgrammerContent from "./content/excerciseContent/ExerciseProgrammerContent";
 import ExerciseCorrectionsContent from "./content/excerciseContent/ExerciseCorrectionsContent";
 import MatiereContent from "./content/MatiereContent/MatiereContent";
@@ -551,6 +552,8 @@ const Principal = () => {
         return <CoursProgrammerContent {...contentProps} />;
       case "manage-exercises":
         return <ManageExercisesContent {...contentProps} />;
+      case "devoirs":
+        return <StudentDevoirsContent />
       case "schedule-exercise":
         return <ExerciseProgrammerContent {...contentProps} />;
       case "corrections-exercise":
@@ -647,6 +650,7 @@ const Principal = () => {
       "create-course": "Gérer les Cours",
       "schedule-course": "Programmer le Cours",
       "manage-exercises": "Gérer les Exercices",
+      "devoirs": "Mes Devoirs",
       "schedule-exercise": "Programmer les Exercices",
       "corrections-exercise": "Corrections des Exercices",
       "create-class": "Créer une Classe",

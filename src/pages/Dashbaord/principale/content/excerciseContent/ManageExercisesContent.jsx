@@ -19,9 +19,10 @@ import {
   GlobalOutlined,
   FileTextOutlined,
   ClockCircleOutlined,
+  TrophyOutlined,
   LockOutlined,
 } from "@ant-design/icons";
-import { exerciseService } from "../../../../../services/exerciseService";
+import { exerciseService, participationExerciseService } from "../../../../../services/exerciseService";
 import { exerciseProgrammerService } from "../../../../../services/exerciseService";
 import ExerciseList from "./ExerciseList";
 import CreateExerciseForm from "./CreateExerciseForm";
@@ -34,7 +35,9 @@ const { Title, Text } = Typography;
 const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const selectedClassId = localStorage.getItem("selectedClassId") || null;
   const [exercises, setExercises] = useState([]);
+  const [participationMap, setParticipationMap] = useState({});
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
+  const [selectedExerciseProgrammerId, setSelectedExerciseProgrammerId] = useState(null);
   const [editingExerciseId, setEditingExerciseId] = useState(null);
   const [currentView, setCurrentView] = useState("list"); // list, create, details, edit, take-exercise
   const [loading, setLoading] = useState(true);
@@ -135,6 +138,16 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
 
       setExercises(data || []);
       console.log("Fetched exercises:", data);
+
+      // For students: load participations to compute accurate header stats
+      if (selectedRole !== "PROFESSOR" && selectedRole !== "ADMIN" && selectedRole !== "TUTOR") {
+        try {
+          const participations = await participationExerciseService.getParticipationsByUtilisateur(userId);
+          const map = {};
+          (participations || []).forEach(p => { map[p.exerciseProgrammerId] = p; });
+          setParticipationMap(map);
+        } catch { /* non-blocking */ }
+      }
     } catch (error) {
       console.error("Error fetching exercises:", error);
       const errorMsg =
@@ -154,8 +167,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     message.success("Données actualisées avec succès");
   };
 
-  const handleSelectExercise = (exerciseId) => {
+  const handleSelectExercise = (exerciseId, exerciseProgrammerId) => {
     setSelectedExerciseId(exerciseId);
+    setSelectedExerciseProgrammerId(exerciseProgrammerId || null);
     // Students/parents go directly to take-exercise view
     if (!canCreateExercise) {
       setCurrentView("take-exercise");
@@ -168,6 +182,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
 
   const handleBackToList = () => {
     setSelectedExerciseId(null);
+    setSelectedExerciseProgrammerId(null);
     setEditingExerciseId(null);
     setCurrentView("list");
     setError("");
@@ -249,6 +264,25 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const selectedRoleForPerms = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
   const canCreateExercise = selectedRoleForPerms === "PROFESSOR" || selectedRoleForPerms === "ADMIN" || selectedRoleForPerms === "TUTOR";
 
+  // Student header stats derived from participationMap
+  const getStudentParticipation = (e) => {
+    if (e.exerciseProgrammerId && participationMap[e.exerciseProgrammerId])
+      return participationMap[e.exerciseProgrammerId];
+    if (participationMap[e.id])
+      return participationMap[e.id];
+    return null;
+  };
+  const studentTotal = exercises.length;
+  const studentDone = exercises.filter(e => {
+    const p = getStudentParticipation(e);
+    return p && (p.etatSoumission === "CORRIGE" || p.etatSoumission === "VALIDE" || p.etatSoumission === "SOUMIS" || p.etatSoumission === "EN_ATTENTE_CORRECTION");
+  }).length;
+  const studentCorrected = exercises.filter(e => {
+    const p = getStudentParticipation(e);
+    return p && (p.etatSoumission === "CORRIGE" || p.etatSoumission === "VALIDE");
+  }).length;
+  const studentTodo = studentTotal - studentDone;
+
   return (
     <div className="w-full px-2 py-3">
       <div className="w-full">
@@ -283,18 +317,23 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                 <div className="flex flex-wrap gap-2">
                   <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
                     <BookOutlined />
-                    <span className="text-sm font-semibold">{exercises.length}</span>
-                    <span className="text-xs opacity-80">exercice{exercises.length !== 1 ? "s" : ""}</span>
+                    <span className="text-sm font-semibold">{studentTotal}</span>
+                    <span className="text-xs opacity-80">exercice{studentTotal !== 1 ? "s" : ""}</span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
                     <CheckCircleOutlined />
-                    <span className="text-sm font-semibold">{exercises.filter(e => e.etat === "ACTIF").length}</span>
-                    <span className="text-xs opacity-80">actif{exercises.filter(e => e.etat === "ACTIF").length !== 1 ? "s" : ""}</span>
+                    <span className="text-sm font-semibold">{studentDone}</span>
+                    <span className="text-xs opacity-80">soumis</span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
-                    <GlobalOutlined />
-                    <span className="text-sm font-semibold">{exercises.filter(e => e.restriction === "PUBLIC").length}</span>
-                    <span className="text-xs opacity-80">public{exercises.filter(e => e.restriction === "PUBLIC").length !== 1 ? "s" : ""}</span>
+                    <TrophyOutlined />
+                    <span className="text-sm font-semibold">{studentCorrected}</span>
+                    <span className="text-xs opacity-80">corrigé{studentCorrected !== 1 ? "s" : ""}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
+                    <ClockCircleOutlined />
+                    <span className="text-sm font-semibold">{studentTodo}</span>
+                    <span className="text-xs opacity-80">à faire</span>
                   </div>
                 </div>
               </div>
@@ -440,6 +479,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                   canCreateExercise ? handleShowCreateForm : null
                 }
                 canCreate={canCreateExercise}
+                participationMap={participationMap}
               />
             )}
           </div>
@@ -488,6 +528,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         {currentView === "take-exercise" && selectedExerciseId && (
           <StudentExerciseView
             exerciseId={selectedExerciseId}
+            exerciseProgrammerId={selectedExerciseProgrammerId}
             onBack={handleBackToList}
             onComplete={() => {
               setSuccessMessage("Exercice soumis avec succès !");

@@ -247,11 +247,14 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
       // Update participation with final score
       if (userId && exerciseProgrammerId) {
         try {
+          const allAutoCorrect = exerciseResults.every(r => r.canAutoCorrect);
+          const etatSoumission = allAutoCorrect ? "CORRIGE" : "EN_ATTENTE_CORRECTION";
           await participationExerciseService.updateParticipation({
             utilisateurId: userId,
             exerciseProgrammerId,
             dateFin: new Date().toISOString(),
             note: `${score}/${max}`,
+            etatSoumission,
           });
         } catch (e) {
           console.warn("Could not update participation:", e);
@@ -284,7 +287,7 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
 
   if (error && !exercise) {
     return (
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+      <div className="w-full px-2 py-3">
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
           <div>
@@ -305,10 +308,13 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
     const hasPendingManual = results.some(r => !r.canAutoCorrect && r.isCorrect === null);
 
     return (
-      <div className="p-2 sm:p-4 max-w-3xl mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm">
-          <ArrowLeft className="w-4 h-4" /> Retour aux exercices
-        </button>
+      <div className="w-full px-2 py-3">
+        <div className="flex items-center gap-2 mb-3">
+          <button onClick={onBack} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
+            <ArrowLeft className="w-4 h-4 text-gray-600" />
+          </button>
+          <span className="text-sm text-gray-600 font-medium">Retour aux exercices</span>
+        </div>
 
         {/* Already completed badge */}
         {alreadyCompleted && (
@@ -440,26 +446,26 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
 
   // Exercise taking view
   return (
-    <div className="p-2 sm:p-6 max-w-3xl mx-auto">
+    <div className="w-full px-2 py-3">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+      <div className="flex items-center gap-2 mb-3">
+        <button onClick={onBack} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
+          <ArrowLeft className="w-4 h-4 text-gray-600" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">{exercise?.nom}</h1>
-          <p className="text-sm text-gray-500">{exercise?.description}</p>
+          <h1 className="text-base font-bold text-gray-900 truncate">{exercise?.nom}</h1>
+          {exercise?.description && <p className="text-xs text-gray-500 truncate">{exercise.description}</p>}
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-          <span>{answeredCount}/{questions.length} repondu(s)</span>
+      <div className="mb-4">
+        <div className="flex items-center justify-between text-xs text-gray-600 mb-1.5">
+          <span>{answeredCount}/{questions.length} répondu(s)</span>
           <span>{Math.round(progress)}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
-          <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="bg-indigo-600 h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
@@ -491,8 +497,8 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
         </button>
       </div>
 
-      {/* Questions - Mobile: one at a time, Desktop: all */}
-      <div className="space-y-4">
+      {/* Questions grid — 2 cols on lg+ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {questions.map((question, idx) => {
           const isCurrent = idx === currentQuestionIndex;
           const isAnswered = !!currentAnswers[question.id]?.value;
@@ -500,25 +506,25 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
           return (
             <div
               key={question.id}
-              className={`bg-white border rounded-xl p-4 sm:p-5 transition-all ${isCurrent ? "block" : "hidden sm:block"} ${isAnswered ? "border-indigo-200 bg-indigo-50/30" : "border-gray-200"}`}
+              className={`bg-white border rounded-xl p-3 transition-all ${isCurrent ? "block" : "hidden sm:block"} ${isAnswered ? "border-indigo-200 bg-indigo-50/30" : "border-gray-200"}`}
             >
               {/* Question header */}
-              <div className="flex items-start gap-3 mb-4">
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isAnswered ? "bg-indigo-500 text-white" : "bg-gray-200 text-gray-600"}`}>
+              <div className="flex items-start gap-2 mb-3">
+                <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isAnswered ? "bg-indigo-500 text-white" : "bg-gray-200 text-gray-600"}`}>
                   {idx + 1}
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900 text-sm sm:text-base">{question.intitule}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{question.typeQuestion}</span>
-                    <span className="text-xs text-gray-500">{question.points || 1} pt(s)</span>
+                  <p className="font-medium text-gray-900 text-sm">{question.intitule}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">{question.typeQuestion}</span>
+                    <span className="text-xs text-gray-400">{question.points || 1} pt(s)</span>
                   </div>
                 </div>
               </div>
 
               {/* Answer input based on type */}
               {question.typeQuestion === "QCM" && (
-                <div className="space-y-2 ml-11">
+                <div className="space-y-1.5 ml-9">
                   {(question.choixReponses || [])
                     .sort((a, b) => (a.ordreAffichage || 0) - (b.ordreAffichage || 0))
                     .map((choice) => (
@@ -541,7 +547,7 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
               )}
 
               {question.typeQuestion === "VRAI_FAUX" && (
-                <div className="flex gap-3 ml-11">
+                <div className="flex gap-2 ml-9">
                   {["Vrai", "Faux"].map((option) => (
                     <label
                       key={option}
@@ -562,7 +568,7 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
               )}
 
               {question.typeQuestion === "REPONSE_COURTE" && (
-                <div className="ml-11">
+                <div className="ml-9">
                   <input
                     type="text"
                     value={currentAnswers[question.id]?.value || ""}
@@ -574,7 +580,7 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
               )}
 
               {(question.typeQuestion === "REPONSE_LONGUE" || question.typeQuestion === "DEVELOPPEMENT") && (
-                <div className="ml-11">
+                <div className="ml-9">
                   <textarea
                     value={currentAnswers[question.id]?.value || ""}
                     onChange={(e) => handleAnswerChange(question.id, e.target.value, question.typeQuestion)}
@@ -586,7 +592,7 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
               )}
 
               {question.typeQuestion === "TROU" && (
-                <div className="ml-11">
+                <div className="ml-9">
                   <input
                     type="text"
                     value={currentAnswers[question.id]?.value || ""}

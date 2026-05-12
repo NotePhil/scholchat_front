@@ -24,31 +24,40 @@ const ExerciseList = ({
   onDelete,
   onCreateExercise,
   canCreate,
+  participationMap: participationMapProp,
 }) => {
   const [searchText, setSearchText] = useState("");
   const [filterNiveau, setFilterNiveau] = useState(null);
   const [filterEtat, setFilterEtat] = useState(null);
   const [filterRestriction, setFilterRestriction] = useState(null);
-  // Map: exerciseProgrammerId -> participation for current student
-  const [participationMap, setParticipationMap] = useState({});
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [studentPage, setStudentPage] = useState(1);
+  const [participationMapLocal, setParticipationMapLocal] = useState({});
 
   useEffect(() => {
-    if (canCreate) return; // only for students
+    if (canCreate || participationMapProp) return; // skip if prop provided or professor
     const userId = localStorage.getItem("selectedChildId") || localStorage.getItem("userId");
     if (!userId) return;
     participationExerciseService.getParticipationsByUtilisateur(userId)
       .then(data => {
         const map = {};
         (data || []).forEach(p => { map[p.exerciseProgrammerId] = p; });
-        setParticipationMap(map);
+        setParticipationMapLocal(map);
       })
       .catch(() => {});
-  }, [canCreate, exercises]);
+  }, [canCreate, participationMapProp, exercises]);
 
-  // Find participation for an exercise (match by exerciseProgrammerId embedded in exercise)
+  const participationMap = participationMapProp || participationMapLocal;
+
+  // Find participation for an exercise — tries all possible ID mappings
   const getParticipation = (exercise) => {
-    // exercise may have id = exerciseProgrammerId when coming from class fetch
-    return participationMap[exercise.id] || null;
+    // Class-fetched exerciseProgrammer objects carry exerciseProgrammerId explicitly
+    if (exercise.exerciseProgrammerId && participationMap[exercise.exerciseProgrammerId])
+      return participationMap[exercise.exerciseProgrammerId];
+    // For class-fetched objects where id IS the exerciseProgrammerId
+    if (participationMap[exercise.id])
+      return participationMap[exercise.id];
+    return null;
   };
 
   const SUBMISSION_CONFIG = {
@@ -283,82 +292,107 @@ const ExerciseList = ({
 
   // ── Student card view ──────────────────────────────────────────────────────
   if (!canCreate) {
-    const typeColors = {
-      QCM: "blue",
-      VRAI_FAUX: "cyan",
-      REPONSE_COURTE: "green",
-      REPONSE_LONGUE: "purple",
-      DEVELOPPEMENT: "purple",
-      TROU: "orange",
-    };
+    const PAGE_SIZE = 6;
 
-    const typeLabels = {
-      QCM: "QCM",
-      VRAI_FAUX: "Vrai / Faux",
-      REPONSE_COURTE: "Réponse courte",
-      REPONSE_LONGUE: "Réponse longue",
-      DEVELOPPEMENT: "Développement",
-      TROU: "Texte à trous",
-    };
+    // Categorise each exercise by submission status
+    const categorised = exercises.map(e => {
+      const p = getParticipation(e);
+      const s = p?.etatSoumission;
+      const isGraded = s === "CORRIGE" || s === "VALIDE";
+      const isSubmitted = !!s;
+      return { exercise: e, participation: p, submissionEtat: s, isGraded, isSubmitted,
+        isPending: s === "EN_ATTENTE_CORRECTION" };
+    });
+
+    const STATUS_TABS = [
+      { key: "all",      label: "Tous",     count: categorised.length },
+      { key: "todo",     label: "À faire",  count: categorised.filter(c => !c.isSubmitted).length },
+      { key: "soumis",   label: "Soumis",   count: categorised.filter(c => c.isSubmitted && !c.isGraded).length },
+      { key: "corriges", label: "Corrigés", count: categorised.filter(c => c.isGraded).length },
+    ];
+
+    const afterStatus = categorised.filter(({ isSubmitted, isGraded }) => {
+      if (statusFilter === "todo")     return !isSubmitted;
+      if (statusFilter === "soumis")   return isSubmitted && !isGraded;
+      if (statusFilter === "corriges") return isGraded;
+      return true;
+    });
+
+    const afterSearch = afterStatus.filter(({ exercise }) => {
+      const matchSearch = !searchText ||
+        exercise.nom?.toLowerCase().includes(searchText.toLowerCase()) ||
+        exercise.description?.toLowerCase().includes(searchText.toLowerCase());
+      const matchNiveau = !filterNiveau || exercise.niveau === filterNiveau;
+      return matchSearch && matchNiveau;
+    });
+
+    const totalPages = Math.max(1, Math.ceil(afterSearch.length / PAGE_SIZE));
+    const safePage = Math.min(studentPage, totalPages);
+    const paginated = afterSearch.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+    const handleStatusFilter = (key) => { setStatusFilter(key); setStudentPage(1); };
+    const handleSearch = (val) => { setSearchText(val); setStudentPage(1); };
+    const handleNiveau = (val) => { setFilterNiveau(val); setStudentPage(1); };
 
     return (
       <div className="w-full">
-        {/* Search + refresh */}
-        <Card size="small" className="mb-4">
-          <Row gutter={[8, 8]} align="middle">
-            <Col xs={24} sm={16} md={18}>
-              <Search
-                placeholder="Rechercher un exercice..."
-                allowClear
-                enterButton={<SearchOutlined />}
-                size="middle"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-              />
-            </Col>
-            <Col xs={12} sm={4} md={3}>
-              <Select
-                placeholder="Niveau"
-                allowClear
-                style={{ width: "100%" }}
-                size="middle"
-                value={filterNiveau}
-                onChange={setFilterNiveau}
+        {/* ── Filters bar ── */}
+        <div className="mb-3 rounded-xl overflow-hidden" style={{ border: "1px solid #e4eaf4" }}>
+          {/* Status tabs */}
+          <div className="flex border-b border-gray-100 bg-white overflow-x-auto">
+            {STATUS_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => handleStatusFilter(tab.key)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+                  statusFilter === tab.key
+                    ? "border-indigo-600 text-indigo-700 bg-indigo-50/60"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                }`}
               >
-                {["6ème","5ème","4ème","3ème","2nde","1ère","Terminale"].map(n => (
-                  <Option key={n} value={n}>{n}</Option>
-                ))}
-              </Select>
-            </Col>
-            <Col xs={12} sm={4} md={3}>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={onRefresh}
-                loading={refreshing}
-                size="middle"
-                style={{ width: "100%" }}
-              >
-                <span className="hidden sm:inline">Actualiser</span>
-              </Button>
-            </Col>
-          </Row>
-        </Card>
+                {tab.label}
+                <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold ${
+                  statusFilter === tab.key ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-500"
+                }`}>{tab.count}</span>
+              </button>
+            ))}
+          </div>
+          {/* Search + niveau + refresh */}
+          <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-gray-50">
+            <Search
+              placeholder="Rechercher..."
+              allowClear
+              size="small"
+              value={searchText}
+              onChange={(e) => handleSearch(e.target.value)}
+              style={{ flex: 1, minWidth: 160, maxWidth: 300 }}
+            />
+            <Select
+              placeholder="Niveau"
+              allowClear
+              size="small"
+              value={filterNiveau}
+              onChange={handleNiveau}
+              style={{ minWidth: 100 }}
+            >
+              {["6ème","5ème","4ème","3ème","2nde","1ère","Terminale"].map(n => (
+                <Option key={n} value={n}>{n}</Option>
+              ))}
+            </Select>
+            <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={refreshing} size="small">
+              <span className="hidden sm:inline">Actualiser</span>
+            </Button>
+          </div>
+        </div>
 
-        {/* Exercise cards */}
-        {filteredExercises.length === 0 ? (
-          <Empty description="Aucun exercice disponible" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        {/* ── Cards ── */}
+        {paginated.length === 0 ? (
+          <Empty description="Aucun exercice dans cette catégorie" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
           <Row gutter={[16, 16]}>
-            {filteredExercises.map((exercise) => {
+            {paginated.map(({ exercise, participation, submissionEtat, isGraded, isSubmitted, isPending }) => {
               const questionCount = exercise.questions?.length ?? exercise.nombreQuestions ?? 0;
-              const types = [...new Set((exercise.questions || []).map(q => q.typeQuestion).filter(Boolean))];
               const isActive = exercise.etat === "ACTIF";
-              const participation = getParticipation(exercise);
-              const submissionEtat = participation?.etatSoumission;
-              const isSubmitted = !!submissionEtat;
-              const isGraded = submissionEtat === "CORRIGE" || submissionEtat === "VALIDE";
-              const isPending = submissionEtat === "EN_ATTENTE_CORRECTION";
-
               return (
                 <Col xs={24} sm={12} lg={8} key={exercise.id}>
                   <Card
@@ -370,7 +404,6 @@ const ExerciseList = ({
                     }}
                     bodyStyle={{ padding: 16, display: "flex", flexDirection: "column", height: "100%" }}
                   >
-                    {/* Top: niveau + submission state */}
                     <div className="flex items-center justify-between mb-2">
                       <Tag color="cyan" className="text-xs m-0">{exercise.niveau || "N/A"}</Tag>
                       {isSubmitted
@@ -381,20 +414,14 @@ const ExerciseList = ({
                           </span>
                       }
                     </div>
-
-                    {/* Title */}
                     <Text strong className="text-sm sm:text-base block mb-1" style={{ lineHeight: 1.4 }}>
                       {exercise.nom}
                     </Text>
-
-                    {/* Description */}
                     {exercise.description && (
                       <Text type="secondary" className="text-xs block mb-3" style={{ lineHeight: 1.5 }}>
                         {exercise.description.length > 80 ? exercise.description.substring(0, 80) + "…" : exercise.description}
                       </Text>
                     )}
-
-                    {/* Grade if corrected */}
                     {isGraded && participation?.note && (
                       <div className="mb-2 px-2 py-1.5 rounded-lg flex items-center gap-2"
                         style={{ background: "#f5f3ff", border: "1px solid #ddd6fe" }}>
@@ -405,8 +432,6 @@ const ExerciseList = ({
                         )}
                       </div>
                     )}
-
-                    {/* Pending message */}
                     {isPending && (
                       <div className="mb-2 px-2 py-1.5 rounded-lg flex items-center gap-2"
                         style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
@@ -414,8 +439,6 @@ const ExerciseList = ({
                         <span className="text-xs text-orange-700">En attente de correction du professeur</span>
                       </div>
                     )}
-
-                    {/* Matieres */}
                     {exercise.matieres?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-3">
                         {exercise.matieres.slice(0, 3).map((m) => (
@@ -426,8 +449,6 @@ const ExerciseList = ({
                         {exercise.matieres.length > 3 && <Tag className="text-xs m-0">+{exercise.matieres.length - 3}</Tag>}
                       </div>
                     )}
-
-                    {/* Footer */}
                     <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
                       <span className="text-xs text-gray-500">
                         {questionCount > 0 ? `${questionCount} question${questionCount > 1 ? "s" : ""}` : "Questions à venir"}
@@ -436,7 +457,7 @@ const ExerciseList = ({
                         type={isSubmitted ? "default" : "primary"}
                         size="small"
                         icon={isSubmitted ? <EyeOutlined /> : <PlayCircleOutlined />}
-                        onClick={() => onSelectExercise(exercise.id)}
+                        onClick={() => onSelectExercise(exercise.exerciseId || exercise.id, exercise.exerciseProgrammerId || exercise.id)}
                         style={{ borderRadius: 8 }}
                       >
                         {isGraded ? "Voir correction" : isPending ? "Voir réponses" : isSubmitted ? "Voir" : "Commencer"}
@@ -447,6 +468,56 @@ const ExerciseList = ({
               );
             })}
           </Row>
+        )}
+
+        {/* ── Pagination ── */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
+            <span className="text-xs text-gray-500">
+              {afterSearch.length} exercice{afterSearch.length !== 1 ? "s" : ""} · page {safePage}/{totalPages}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                size="small"
+                disabled={safePage === 1}
+                onClick={() => setStudentPage(p => Math.max(1, p - 1))}
+                style={{ borderRadius: 6 }}
+              >
+                ‹
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "…" ? (
+                    <span key={`ellipsis-${idx}`} className="px-1 text-gray-400 text-xs">…</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      size="small"
+                      type={p === safePage ? "primary" : "default"}
+                      onClick={() => setStudentPage(p)}
+                      style={{ borderRadius: 6, minWidth: 28 }}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )
+              }
+              <Button
+                size="small"
+                disabled={safePage === totalPages}
+                onClick={() => setStudentPage(p => Math.min(totalPages, p + 1))}
+                style={{ borderRadius: 6 }}
+              >
+                ›
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     );

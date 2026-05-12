@@ -79,6 +79,7 @@ const MobileBottomNav = ({
       } else if (isParentOrStudent) {
         items.push(
           { icon: ClipboardList, label: "Exercices", color: "bg-amber-500", tab: "manage-exercises" },
+          { icon: FileText, label: "Devoirs", color: "bg-blue-700", tab: "devoirs" },
           { icon: Building2, label: "Classes", color: "bg-emerald-500", tab: "classes" },
           { icon: BookOpen, label: "Mes Cours", color: "bg-violet-500", tab: "cours" },
         );

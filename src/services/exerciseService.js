@@ -746,6 +746,7 @@ class ParticipationExerciseService {
         dateFin: participationData.dateFin,
         note: participationData.note,
         appreciation: participationData.appreciation,
+        etatSoumission: participationData.etatSoumission,
       };
 
       console.log(
