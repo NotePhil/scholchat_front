@@ -43,6 +43,10 @@ const ProgrammationCorrections = ({ prog }) => {
   const [gradeInputs, setGradeInputs] = useState({});
   const [saving, setSaving] = useState(null);
   const [saved, setSaved] = useState(new Set());
+  const [studentPage, setStudentPage] = useState(1);
+  const [questionPages, setQuestionPages] = useState({});
+  const STUDENT_PAGE_SIZE = 5;
+  const QUESTION_PAGE_SIZE = 3;
 
   useEffect(() => { loadData(); }, [prog.id]);
 
@@ -162,6 +166,17 @@ const ProgrammationCorrections = ({ prog }) => {
   }
 
   const pending = students.filter(s => s.participation?.etatSoumission === "EN_ATTENTE_CORRECTION").length;
+  const totalStudentPages = Math.ceil(students.length / STUDENT_PAGE_SIZE);
+  const paginatedStudents = students.slice((studentPage - 1) * STUDENT_PAGE_SIZE, studentPage * STUDENT_PAGE_SIZE);
+
+  const getQuestionPage = (studentId) => questionPages[studentId] || 1;
+  const setQuestionPage = (studentId, page) =>
+    setQuestionPages(prev => ({ ...prev, [studentId]: page }));
+  const totalQuestionPages = (studentId) => Math.ceil(questions.length / QUESTION_PAGE_SIZE);
+  const paginatedQuestions = (studentId) => {
+    const page = getQuestionPage(studentId);
+    return questions.slice((page - 1) * QUESTION_PAGE_SIZE, page * QUESTION_PAGE_SIZE);
+  };
 
   return (
     <div>
@@ -181,7 +196,7 @@ const ProgrammationCorrections = ({ prog }) => {
 
       {/* Students */}
       <div className="space-y-2">
-        {students.map(student => {
+        {paginatedStudents.map(student => {
           const score = getScore(student);
           const pct = maxPoints > 0 ? Math.round((score / maxPoints) * 100) : 0;
           const isExpanded = expandedStudent === student.id;
@@ -245,8 +260,9 @@ const ProgrammationCorrections = ({ prog }) => {
                     )}
                   </div>
 
-                  {/* Per-question */}
-                  {questions.map((q, idx) => {
+                  {/* Per-question with pagination */}
+                  {paginatedQuestions(student.id).map((q, idx) => {
+                    const globalIdx = (getQuestionPage(student.id) - 1) * QUESTION_PAGE_SIZE + idx;
                     const answer = student.answers.find(a => a.questionId === q.id);
                     const gradeKey = `${student.id}-${q.id}`;
                     const isAutoType = ["QCM", "VRAI_FAUX"].includes(q.typeQuestion);
@@ -254,7 +270,6 @@ const ProgrammationCorrections = ({ prog }) => {
                     const expectedAnswer = correctChoices.length > 0
                       ? correctChoices.map(c => c.texte).join(" / ")
                       : q.reponse || null;
-                    // For open questions: needs manual grading if answered but not yet graded
                     const needsGrading = !isAutoType && answer && answer.estCorrecte === null;
                     const alreadyGraded = answer && answer.estCorrecte !== null;
 
@@ -269,7 +284,7 @@ const ProgrammationCorrections = ({ prog }) => {
                         {/* Question header */}
                         <div className="flex items-center gap-2 px-3 py-2 border-b"
                           style={{ borderColor, background: needsGrading ? "#fffbeb" : alreadyGraded && answer.estCorrecte ? "#f0fdf4" : alreadyGraded ? "#fef2f2" : "#f9fafb" }}>
-                          <span className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-gray-700 flex-shrink-0">{idx + 1}</span>
+                          <span className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-gray-700 flex-shrink-0">{globalIdx + 1}</span>
                           <p className="text-sm font-semibold text-gray-900 flex-1">{q.intitule}</p>
                           <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 flex-shrink-0">
                             {q.points || 1} pt{(q.points || 1) > 1 ? "s" : ""}
@@ -368,12 +383,57 @@ const ProgrammationCorrections = ({ prog }) => {
                       </div>
                     );
                   })}
+                  {/* Question pagination */}
+                  {totalQuestionPages(student.id) > 1 && (
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <button
+                        onClick={() => setQuestionPage(student.id, Math.max(1, getQuestionPage(student.id) - 1))}
+                        disabled={getQuestionPage(student.id) === 1}
+                        className="px-2 py-1 text-xs rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                      >
+                        ‹ Préc.
+                      </button>
+                      <span className="text-xs text-gray-500">
+                        Q {(getQuestionPage(student.id) - 1) * QUESTION_PAGE_SIZE + 1}–{Math.min(getQuestionPage(student.id) * QUESTION_PAGE_SIZE, questions.length)} / {questions.length}
+                      </span>
+                      <button
+                        onClick={() => setQuestionPage(student.id, Math.min(totalQuestionPages(student.id), getQuestionPage(student.id) + 1))}
+                        disabled={getQuestionPage(student.id) === totalQuestionPages(student.id)}
+                        className="px-2 py-1 text-xs rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                      >
+                        Suiv. ›
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Student pagination */}
+      {totalStudentPages > 1 && (
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+          <button
+            onClick={() => { setStudentPage(p => Math.max(1, p - 1)); setExpandedStudent(null); }}
+            disabled={studentPage === 1}
+            className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+          >
+            ‹ Précédent
+          </button>
+          <span className="text-xs text-gray-500">
+            Page {studentPage} / {totalStudentPages} · {students.length} élève{students.length > 1 ? "s" : ""}
+          </span>
+          <button
+            onClick={() => { setStudentPage(p => Math.min(totalStudentPages, p + 1)); setExpandedStudent(null); }}
+            disabled={studentPage === totalStudentPages}
+            className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+          >
+            Suivant ›
+          </button>
+        </div>
+      )}
     </div>
   );
 };
