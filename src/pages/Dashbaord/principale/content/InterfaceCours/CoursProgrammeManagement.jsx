@@ -30,6 +30,49 @@ import {
 import CourseDetailsView from './CourseDetailsView';
 import LiveSession from '../CoursProgrammerContent/LiveSession/LiveSession';
 
+const Pagination = ({ total, page, totalPages, onPage }) => {
+  if (totalPages <= 1) return null;
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1);
+  const withEllipsis = pages.reduce((acc, p, i, arr) => {
+    if (i > 0 && p - arr[i - 1] > 1) acc.push('…');
+    acc.push(p);
+    return acc;
+  }, []);
+  return (
+    <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+      <span className="text-xs text-gray-500">{total} élément{total !== 1 ? 's' : ''} · page {page}/{totalPages}</span>
+      <div className="flex items-center gap-1">
+        <button
+          disabled={page === 1}
+          onClick={() => onPage(p => Math.max(1, p - 1))}
+          className="px-2 py-1 text-xs rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+        >‹</button>
+        {withEllipsis.map((p, i) =>
+          p === '…' ? (
+            <span key={`e${i}`} className="px-1 text-xs text-gray-400">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPage(p)}
+              className={`px-2.5 py-1 text-xs rounded border transition-colors ${
+                p === page
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'border-gray-200 hover:bg-gray-50'
+              }`}
+            >{p}</button>
+          )
+        )}
+        <button
+          disabled={page === totalPages}
+          onClick={() => onPage(p => Math.min(totalPages, p + 1))}
+          className="px-2 py-1 text-xs rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+        >›</button>
+      </div>
+    </div>
+  );
+};
+
 const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, userRole, tabData }) => {
   const [scheduledCourses, setScheduledCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
@@ -38,6 +81,12 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
   const [activeTab, setActiveTab] = useState("PROGRAMMED"); // PROGRAMMED, ALL_COURSES, EXERCISES
   const [loading, setLoading] = useState(false);
+
+  // Pagination
+  const PAGE_SIZE = 6;
+  const [pageProgrammed, setPageProgrammed] = useState(1);
+  const [pageAllCourses, setPageAllCourses] = useState(1);
+  const [pageExercises, setPageExercises] = useState(1);
 
   const showToast = (message, type = 'info') => {
     setToast({ show: true, message, type });
@@ -373,7 +422,13 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
     }
 
     setFilteredCourses(filtered);
+    setPageProgrammed(1);
   }, [searchTerm, statusFilter, scheduledCourses]);
+
+  // Reset other tab pages on search change
+  useEffect(() => { setPageAllCourses(1); }, [searchTerm]);
+  useEffect(() => { setPageExercises(1); }, [searchTerm]);
+  useEffect(() => { setPageProgrammed(1); setPageAllCourses(1); setPageExercises(1); }, [activeTab]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -473,50 +528,42 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
 
   // Main courses list view
   return (
-    <div>
-      <div className="max-w-7xl mx-auto p-3 sm:p-6">
+    <div className="w-full px-2 py-3">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg mb-4 sm:mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 sm:p-6 text-white pb-0">
-            <div className="flex items-center justify-between mb-4 gap-3">
-              <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+        <div className="bg-white rounded-xl shadow mb-3 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-white pb-0">
+            <div className="flex items-center justify-between mb-3 gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <button
                   onClick={handleBackToClasses}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
+                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
                 >
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className="w-4 h-4" />
                 </button>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <h1 className="text-lg sm:text-2xl font-bold flex items-center truncate">
-                      <GraduationCap className="w-5 h-5 sm:w-7 sm:h-7 mr-2 sm:mr-3 flex-shrink-0" />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-base font-bold flex items-center truncate">
+                      <GraduationCap className="w-4 h-4 mr-2 flex-shrink-0" />
                       <span className="truncate">{selectedClass?.nom || "Gestion des Cours"}</span>
                     </h1>
                     {onScheduleCourse && (
-                    <button
-                      onClick={onScheduleCourse}
-                      className="px-3 sm:px-4 py-1.5 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center space-x-2 text-xs sm:text-sm self-start"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Programmer</span>
-                    </button>
+                      <button
+                        onClick={onScheduleCourse}
+                        className="px-3 py-1 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1 text-xs"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Programmer
+                      </button>
                     )}
                   </div>
-                  <p className="text-blue-100 mt-1 text-sm truncate">
+                  <p className="text-blue-100 text-xs truncate">
                     {selectedClass ? `${selectedClass.niveau} - ${selectedClass.description || "Espace de classe"}` : 'Tous mes cours'}
                   </p>
                 </div>
               </div>
-              <div className="text-right flex-shrink-0 hidden sm:block">
-                <p className="text-blue-100 text-sm">
-                  {filteredCourses.length} cours programmés
-                </p>
-                <div className="flex items-center justify-end space-x-2 mt-1">
-                  <span className="px-2 py-0.5 bg-white/20 rounded text-xs">
-                    {activeTab === 'PROGRAMMED' ? 'Cours Programmés' : activeTab === 'ALL_COURSES' ? 'Tous les Cours' : 'Exercices'}
-                  </span>
-                </div>
-              </div>
+              <span className="text-blue-100 text-xs flex-shrink-0 hidden sm:block">
+                {filteredCourses.length} cours
+              </span>
             </div>
 
             {/* Sub-tabs for Class View */}
@@ -560,24 +607,24 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
           </div>
 
           {/* Filters */}
-          <div className="p-3 sm:p-6 bg-gray-50 border-t">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <div className="px-3 py-2 bg-gray-50 border-t">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Rechercher un cours..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
               </div>
-              <div className="flex items-center space-x-2">
-                <Filter className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full sm:w-auto px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                 >
                   <option value="TOUS">Tous les statuts</option>
                   <option value="PLANIFIE">Planifiés</option>
@@ -612,257 +659,196 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
         ) : (
           <>
             {activeTab === "PROGRAMMED" ? (
-              filteredCourses.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-                  <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {scheduledCourses.length === 0
-                      ? "Aucun cours programmé"
-                      : "Aucun cours trouvé"}
-                  </h3>
-                  <p className="text-gray-600">
-                    {scheduledCourses.length === 0
-                      ? "Il n'y a actuellement aucun cours programmé pour cette classe."
-                      : "Aucun cours ne correspond à vos critères de recherche."}
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  {filteredCourses.map((course) => {
-                    const cId = course.cours?.id || course.coursId;
-                    const activeSession = activeSessions[cId];
-                    const isLive = !!activeSession;
-                    const isEnded = course.etatCoursProgramme === 'TERMINE';
-                    const isPlanned = course.etatCoursProgramme === 'PLANIFIE';
-
-                    return (
-                    <div
-                      key={course.id}
-                      className={`bg-white rounded-xl shadow-lg transition-all duration-300 border-2 overflow-hidden ${
-                        isLive ? 'border-green-400 shadow-green-100' : 'border-gray-100 hover:shadow-xl'
-                      }`}
-                    >
-                      {/* LIVE banner */}
-                      {isLive && (
-                        <div className="bg-green-500 px-4 py-2 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                            <span className="text-white text-xs font-bold uppercase tracking-widest">Session en direct</span>
-                          </div>
-                          <span className="text-green-100 text-xs">{activeSession?.mode === 'VIDEO' ? '📹 Vidéo' : activeSession?.mode === 'AUDIO' ? '🎤 Audio' : '📚 Contenu'}</span>
-                        </div>
-                      )}
-
-                      {/* Card body — click to view details */}
-                      <div
-                        onClick={() => handleCourseClick(course)}
-                        className="p-4 sm:p-5 cursor-pointer"
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <h3 className="font-bold text-base text-gray-900 break-words">
-                                {course.cours?.titre || course.titre || 'Titre non disponible'}
-                              </h3>
-                              <div className={`px-2 py-0.5 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(course.etatCoursProgramme)}`}>
-                                <div className="flex items-center gap-1">
-                                  {getStatusIcon(course.etatCoursProgramme)}
-                                  <span>{getStatusText(course.etatCoursProgramme)}</span>
+              (() => {
+                const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
+                const safePage = Math.min(pageProgrammed, totalPages);
+                const paged = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+                return filteredCourses.length === 0 ? (
+                  <div className="bg-white rounded-xl shadow p-8 text-center">
+                    <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-base font-medium text-gray-900 mb-1">
+                      {scheduledCourses.length === 0 ? "Aucun cours programmé" : "Aucun cours trouvé"}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {scheduledCourses.length === 0
+                        ? "Il n'y a actuellement aucun cours programmé pour cette classe."
+                        : "Aucun cours ne correspond à vos critères de recherche."}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {paged.map((course) => {
+                        const cId = course.cours?.id || course.coursId;
+                        const activeSession = activeSessions[cId];
+                        const isLive = !!activeSession;
+                        return (
+                          <div key={course.id} className={`bg-white rounded-xl shadow-lg transition-all duration-300 border-2 overflow-hidden ${isLive ? 'border-green-400 shadow-green-100' : 'border-gray-100 hover:shadow-xl'}`}>
+                            {isLive && (
+                              <div className="bg-green-500 px-4 py-2 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                                  <span className="text-white text-xs font-bold uppercase tracking-widest">Session en direct</span>
                                 </div>
+                                <span className="text-green-100 text-xs">{activeSession?.mode === 'VIDEO' ? '📹 Vidéo' : activeSession?.mode === 'AUDIO' ? '🎤 Audio' : '📚 Contenu'}</span>
+                              </div>
+                            )}
+                            <div onClick={() => handleCourseClick(course)} className="p-3 sm:p-4 cursor-pointer">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                                    <h3 className="font-bold text-base text-gray-900 break-words">{course.cours?.titre || course.titre || 'Titre non disponible'}</h3>
+                                    <div className={`px-2 py-0.5 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(course.etatCoursProgramme)}`}>
+                                      <div className="flex items-center gap-1">{getStatusIcon(course.etatCoursProgramme)}<span>{getStatusText(course.etatCoursProgramme)}</span></div>
+                                    </div>
+                                  </div>
+                                  <p className="text-gray-500 text-xs line-clamp-2">{course.cours?.description || 'Description non disponible'}</p>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+                              </div>
+                              <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-3">
+                                <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{formatDate(course.dateCoursPrevue)}</span>
+                                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{formatTime(course.dateCoursPrevue)}</span>
+                                {course.lieu && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{course.lieu}</span>}
                               </div>
                             </div>
-                            <p className="text-gray-500 text-xs line-clamp-2">
-                              {course.cours?.description || 'Description non disponible'}
-                            </p>
+                            <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-0">
+                              {isLive ? (
+                                <button onClick={() => setLiveSession({ scheduledCourse: course, cours: course.cours, isModerator: false })} className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-sm transition-colors shadow">
+                                  <Radio className="w-4 h-4 animate-pulse" />Rejoindre la session en direct
+                                </button>
+                              ) : course.etatCoursProgramme === 'TERMINE' ? (
+                                <button onClick={() => handleCourseClick(course)} className="w-full flex items-center justify-center gap-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm transition-colors">
+                                  <Eye className="w-4 h-4" />Voir le contenu du cours
+                                </button>
+                              ) : course.etatCoursProgramme === 'ANNULE' ? (
+                                <div className="flex items-center gap-2 py-2 px-3 bg-red-50 rounded-xl"><AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" /><span className="text-xs text-red-500 font-medium">Ce cours a été annulé</span></div>
+                              ) : course.etatCoursProgramme === 'PLANIFIE' ? (
+                                <div className="flex items-center gap-2 py-2 px-3 bg-blue-50 rounded-xl"><Clock className="w-4 h-4 text-blue-400 flex-shrink-0" /><span className="text-xs text-blue-600 font-medium">En attente du démarrage par le professeur</span></div>
+                              ) : null}
+                            </div>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
-                        </div>
-
-                        <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-3">
-                          <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{formatDate(course.dateCoursPrevue)}</span>
-                          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{formatTime(course.dateCoursPrevue)}</span>
-                          {course.lieu && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{course.lieu}</span>}
-                        </div>
-                      </div>
-
-                      {/* Action footer */}
-                      <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-0">
-                        {isLive ? (
-                          <button
-                            onClick={() => setLiveSession({ scheduledCourse: course, cours: course.cours, isModerator: false })}
-                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-sm transition-colors shadow"
-                          >
-                            <Radio className="w-4 h-4 animate-pulse" />
-                            Rejoindre la session en direct
-                          </button>
-                        ) : course.etatCoursProgramme === 'TERMINE' ? (
-                          <button
-                            onClick={() => handleCourseClick(course)}
-                            className="w-full flex items-center justify-center gap-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm transition-colors"
-                          >
-                            <Eye className="w-4 h-4" />
-                            Voir le contenu du cours
-                          </button>
-                        ) : course.etatCoursProgramme === 'ANNULE' ? (
-                          <div className="flex items-center gap-2 py-2 px-3 bg-red-50 rounded-xl">
-                            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                            <span className="text-xs text-red-500 font-medium">Ce cours a été annulé</span>
-                          </div>
-                        ) : course.etatCoursProgramme === 'PLANIFIE' ? (
-                          <div className="flex items-center gap-2 py-2 px-3 bg-blue-50 rounded-xl">
-                            <Clock className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                            <span className="text-xs text-blue-600 font-medium">En attente du démarrage par le professeur</span>
-                          </div>
-                        ) : null}
-                      </div>
+                        );
+                      })}
                     </div>
-                    );
-                  })}
-                </div>
-              )
+                    <Pagination total={filteredCourses.length} page={safePage} totalPages={totalPages} onPage={setPageProgrammed} />
+                  </>
+                );
+              })()
             ) : activeTab === "ALL_COURSES" ? (
-              classAllCourses.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-                  <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Aucun document trouvé
-                  </h3>
-                  <p className="text-gray-600">
-                    Il n'y a pas encore de cours partagés dans cette classe.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {classAllCourses.filter(c => 
-                    !searchTerm || 
-                    c.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    c.description?.toLowerCase().includes(searchTerm.toLowerCase())
-                  ).map((course) => (
-                    <div
-                      key={course.id}
-                      onClick={() => handleCourseClick(course)}
-                      className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 p-6 flex flex-col"
-                    >
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 text-blue-600">
-                        <BookOpen className="w-6 h-6" />
-                      </div>
-                      <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{course.titre}</h3>
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-3 overflow-hidden flex-1">
-                        {course.description || "Aucune description disponible"}
-                      </p>
-                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
-                        <div className="flex items-center text-xs text-gray-500">
-                          <Clock className="w-3 h-3 mr-1" />
-                          <span>{new Date(course.dateCreation).toLocaleDateString()}</span>
-                        </div>
-                        <span className="text-blue-600 text-sm font-medium flex items-center">
-                          Ouvrir <ChevronRight className="w-4 h-4 ml-1" />
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            ) : (
-              // EXERCISES TAB
-              classExercises.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-                  <Activity className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Aucun exercice
-                  </h3>
-                  <p className="text-gray-600">
-                    Aucun exercice ou devoir n'a été programmé pour cette classe.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {classExercises.filter(e => 
-                    !searchTerm || 
-                    e.exercise?.titre?.toLowerCase().includes(searchTerm.toLowerCase())
-                  ).map((exo) => (
-                    <div
-                      key={exo.id}
-                      className="bg-white rounded-xl shadow-md p-6 border-l-4 border-indigo-500 hover:shadow-lg transition-all"
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-900">{exo.exercise?.titre || "Sans titre"}</h3>
-                          <div className="flex items-center text-sm text-gray-500 mt-1">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            <span>Prévu pour le {new Date(exo.dateExoPrevue).toLocaleDateString()}</span>
+              (() => {
+                const filtered = classAllCourses.filter(c =>
+                  !searchTerm ||
+                  c.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  c.description?.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+                const safePage = Math.min(pageAllCourses, totalPages);
+                const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+                return filtered.length === 0 ? (
+                  <div className="bg-white rounded-xl shadow p-8 text-center">
+                    <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-base font-medium text-gray-900 mb-1">Aucun document trouvé</h3>
+                    <p className="text-sm text-gray-600">Il n'y a pas encore de cours partagés dans cette classe.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {paged.map((course) => (
+                        <div key={course.id} onClick={() => handleCourseClick(course)} className="bg-white rounded-xl shadow hover:shadow-md transition-all duration-200 cursor-pointer border border-gray-100 p-4 flex flex-col">
+                          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-3 text-blue-600"><BookOpen className="w-5 h-5" /></div>
+                          <h3 className="font-bold text-gray-900 mb-1 text-sm line-clamp-2">{course.titre}</h3>
+                          <p className="text-gray-500 text-xs mb-3 line-clamp-2 flex-1">{course.description || "Aucune description disponible"}</p>
+                          <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
+                            <span className="text-xs text-gray-400 flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(course.dateCreation).toLocaleDateString()}</span>
+                            <span className="text-blue-600 text-xs font-medium flex items-center">Ouvrir <ChevronRight className="w-3 h-3 ml-0.5" /></span>
                           </div>
                         </div>
-                        <div className={`px-2 py-1 rounded text-xs font-bold ${exo.etat === 'ACTIF' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                          {exo.etat}
-                        </div>
-                      </div>
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                        {exo.exercise?.description || "Consigne de l'exercice..."}
-                      </p>
-                      <button className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-medium transition-colors">
-                        Accéder à l'exercice
-                      </button>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )
+                    <Pagination total={filtered.length} page={safePage} totalPages={totalPages} onPage={setPageAllCourses} />
+                  </>
+                );
+              })()
+            ) : (
+              (() => {
+                const filtered = classExercises.filter(e =>
+                  !searchTerm ||
+                  e.exercise?.titre?.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+                const safePage = Math.min(pageExercises, totalPages);
+                const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+                return filtered.length === 0 ? (
+                  <div className="bg-white rounded-xl shadow p-8 text-center">
+                    <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-base font-medium text-gray-900 mb-1">Aucun exercice</h3>
+                    <p className="text-sm text-gray-600">Aucun exercice ou devoir n'a été programmé pour cette classe.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {paged.map((exo) => (
+                        <div key={exo.id} className="bg-white rounded-xl shadow p-4 border-l-4 border-indigo-500 hover:shadow-md transition-all">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <h3 className="font-bold text-gray-900 text-sm">{exo.exercise?.titre || "Sans titre"}</h3>
+                              <div className="flex items-center text-xs text-gray-500 mt-0.5"><Calendar className="w-3 h-3 mr-1" /><span>Prévu le {new Date(exo.dateExoPrevue).toLocaleDateString()}</span></div>
+                            </div>
+                            <div className={`px-2 py-0.5 rounded text-xs font-bold ${exo.etat === 'ACTIF' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{exo.etat}</div>
+                          </div>
+                          <p className="text-gray-500 text-xs mb-3 line-clamp-2">{exo.exercise?.description || "Consigne de l'exercice..."}</p>
+                          <button className="w-full py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium transition-colors">Accéder à l'exercice</button>
+                        </div>
+                      ))}
+                    </div>
+                    <Pagination total={filtered.length} page={safePage} totalPages={totalPages} onPage={setPageExercises} />
+                  </>
+                );
+              })()
             )}
           </>
         )}
 
         {/* Statistics Card */}
         {filteredCourses.length > 0 && (
-          <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-              <Activity className="w-5 h-5 mr-2 text-indigo-600" />
+          <div className="mt-6 bg-white rounded-xl shadow-lg p-4">
+            <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
+              <Activity className="w-4 h-4 mr-2 text-indigo-600" />
               Statistiques des cours
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600 mb-1">
-                  {
-                    scheduledCourses.filter(
-                      (c) => c.etatCoursProgramme === "PLANIFIE"
-                    ).length
-                  }
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-xl font-bold text-blue-600 mb-0.5">
+                  {scheduledCourses.filter(c => c.etatCoursProgramme === "PLANIFIE").length}
                 </div>
-                <div className="text-sm text-gray-600">Planifiés</div>
+                <div className="text-xs text-gray-600">Planifiés</div>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600 mb-1">
-                  {
-                    scheduledCourses.filter(
-                      (c) => c.etatCoursProgramme === "EN_COURS"
-                    ).length
-                  }
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-xl font-bold text-green-600 mb-0.5">
+                  {scheduledCourses.filter(c => c.etatCoursProgramme === "EN_COURS").length}
                 </div>
-                <div className="text-sm text-gray-600">En cours</div>
+                <div className="text-xs text-gray-600">En cours</div>
               </div>
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-gray-600 mb-1">
-                  {
-                    scheduledCourses.filter(
-                      (c) => c.etatCoursProgramme === "TERMINE"
-                    ).length
-                  }
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-xl font-bold text-gray-600 mb-0.5">
+                  {scheduledCourses.filter(c => c.etatCoursProgramme === "TERMINE").length}
                 </div>
-                <div className="text-sm text-gray-600">Terminés</div>
+                <div className="text-xs text-gray-600">Terminés</div>
               </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600 mb-1">
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <div className="text-xl font-bold text-purple-600 mb-0.5">
                   {scheduledCourses.length}
                 </div>
-                <div className="text-sm text-gray-600">Total</div>
+                <div className="text-xs text-gray-600">Total</div>
               </div>
             </div>
           </div>
         )}
-      </div>
       {/* Toast Notification */}
       {toast.show && (
         <div className={`fixed bottom-10 right-10 z-[2000] px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3 
-          ${toast.type === 'success' ? 'bg-green-600' : 'bg-blue-600'} text-white animate-bounce-slow`}>
+          ${toast.type === 'success' ? 'bg-green-600' : 'bg-blue-600'} text-white`}>
           <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
           <span className="font-medium">{toast.message}</span>
         </div>
