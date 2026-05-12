@@ -7,11 +7,19 @@ import {
   Button,
   message,
   Spin,
+  Tag,
+  Divider,
 } from "antd";
 import {
   BookOutlined,
   PlusOutlined,
   ArrowLeftOutlined,
+  ReadOutlined,
+  CheckCircleOutlined,
+  GlobalOutlined,
+  FileTextOutlined,
+  ClockCircleOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import { exerciseService } from "../../../../../services/exerciseService";
 import { exerciseProgrammerService } from "../../../../../services/exerciseService";
@@ -120,6 +128,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         accessible.forEach(e => allMap.set(e.id, e));
         fromClasses.forEach(e => { if (!allMap.has(e.id)) allMap.set(e.id, e); });
         data = Array.from(allMap.values());
+        
+        // Filter out BROUILLON exercises for students/parents
+        data = data.filter(e => e.etat !== "BROUILLON");
       }
 
       setExercises(data || []);
@@ -244,35 +255,131 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         {/* List View */}
         {currentView === "list" && (
           <div className="p-4 sm:p-6">
-            <div className="mb-4 sm:mb-6">
-              <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                {onBack && (
-                  <Button
-                    icon={<ArrowLeftOutlined />}
-                    onClick={onBack}
-                    type="text"
-                    size="middle"
-                  />
-                )}
-                <Space align="center">
-                  <BookOutlined
-                    className="text-xl sm:text-2xl"
-                    style={{ color: "#4a6da7" }}
-                  />
-                  <Title level={2} className="m-0 text-lg sm:text-2xl">
-                    {canCreateExercise ? "Gestion des Exercices" : "Mes Exercices"}
-                  </Title>
-                </Space>
-              </div>
-              <Text
-                type="secondary"
-                className="text-sm sm:text-base block pl-0 sm:pl-10"
+            {/* ── Student header ── */}
+            {!canCreateExercise ? (
+              <div
+                className="mb-6 rounded-2xl p-5 sm:p-6"
+                style={{
+                  background: "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)",
+                  color: "#fff",
+                }}
               >
-                {canCreateExercise
-                  ? "Creez, gerez et programmez des exercices pour vos classes"
-                  : "Consultez et repondez aux exercices de vos classes"}
-              </Text>
-            </div>
+                <div className="flex items-center gap-3 mb-2">
+                  {onBack && (
+                    <Button
+                      icon={<ArrowLeftOutlined />}
+                      onClick={onBack}
+                      type="text"
+                      size="middle"
+                      style={{ color: "#fff" }}
+                    />
+                  )}
+                  <ReadOutlined style={{ fontSize: 28 }} />
+                  <span className="text-xl sm:text-2xl font-bold">Mes Exercices</span>
+                </div>
+                <p className="text-sm opacity-80 mb-4 pl-1">
+                  Retrouvez ici tous les exercices disponibles pour votre niveau. Cliquez sur un exercice pour le commencer.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center gap-2 bg-white/15 rounded-xl px-4 py-2">
+                    <BookOutlined />
+                    <span className="text-sm font-semibold">{exercises.length}</span>
+                    <span className="text-xs opacity-80">exercice{exercises.length !== 1 ? "s" : ""}</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white/15 rounded-xl px-4 py-2">
+                    <CheckCircleOutlined />
+                    <span className="text-sm font-semibold">{exercises.filter(e => e.etat === "ACTIF").length}</span>
+                    <span className="text-xs opacity-80">actif{exercises.filter(e => e.etat === "ACTIF").length !== 1 ? "s" : ""}</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white/15 rounded-xl px-4 py-2">
+                    <GlobalOutlined />
+                    <span className="text-sm font-semibold">{exercises.filter(e => e.restriction === "PUBLIC").length}</span>
+                    <span className="text-xs opacity-80">public{exercises.filter(e => e.restriction === "PUBLIC").length !== 1 ? "s" : ""}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* ── Professor / Admin header ── */
+              <div
+                className="mb-6 rounded-2xl overflow-hidden"
+                style={{ border: "1px solid #e8edf5" }}
+              >
+                {/* Top band */}
+                <div
+                  className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                  style={{
+                    background: "linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)",
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {onBack && (
+                      <Button
+                        icon={<ArrowLeftOutlined />}
+                        onClick={onBack}
+                        type="text"
+                        size="middle"
+                        style={{ color: "#fff", flexShrink: 0 }}
+                      />
+                    )}
+                    <div
+                      className="flex items-center justify-center rounded-xl"
+                      style={{ width: 44, height: 44, background: "rgba(255,255,255,0.15)", flexShrink: 0 }}
+                    >
+                      <BookOutlined style={{ fontSize: 22, color: "#fff" }} />
+                    </div>
+                    <div>
+                      <div className="text-white font-bold text-xl sm:text-2xl leading-tight">
+                        Gestion des Exercices
+                      </div>
+                      <div className="text-blue-100 text-sm mt-0.5 opacity-90">
+                        Créez, gérez et programmez des exercices pour vos classes
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={handleShowCreateForm}
+                    size="large"
+                    style={{
+                      background: "#fff",
+                      color: "#1a3a5c",
+                      border: "none",
+                      fontWeight: 600,
+                      borderRadius: 10,
+                      flexShrink: 0,
+                    }}
+                  >
+                    Nouvel exercice
+                  </Button>
+                </div>
+                {/* Stats strip */}
+                <div
+                  className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0"
+                  style={{ background: "#f8faff", borderTop: "1px solid #e8edf5" }}
+                >
+                  {[
+                    { label: "Total", value: exercises.length, color: "#2d6a9f", icon: <BookOutlined /> },
+                    { label: "Actifs", value: exercises.filter(e => e.etat === "ACTIF").length, color: "#389e0d", icon: <CheckCircleOutlined /> },
+                    { label: "Brouillons", value: exercises.filter(e => e.etat === "BROUILLON").length, color: "#d48806", icon: <ClockCircleOutlined /> },
+                    { label: "Publics", value: exercises.filter(e => e.restriction === "PUBLIC").length, color: "#531dab", icon: <GlobalOutlined /> },
+                  ].map(({ label, value, color, icon }) => (
+                    <div key={label} className="flex items-center gap-3 px-5 py-4">
+                      <div
+                        className="flex items-center justify-center rounded-lg"
+                        style={{ width: 36, height: 36, background: `${color}18`, flexShrink: 0 }}
+                      >
+                        <span style={{ color, fontSize: 16 }}>{icon}</span>
+                      </div>
+                      <div>
+                        <div className="font-bold text-lg leading-none" style={{ color }}>{value}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {selectedClassId && canCreateExercise && (
               <Alert
@@ -341,26 +448,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         {/* Create View */}
         {currentView === "create" && (
           <div className="p-4 sm:p-6">
-            <div className="mb-4 sm:mb-6">
-              <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                <Button
-                  icon={<ArrowLeftOutlined />}
-                  onClick={handleBackToList}
-                  type="text"
-                  size="middle"
-                />
-                <Space align="center">
-                  <PlusOutlined
-                    className="text-xl sm:text-2xl"
-                    style={{ color: "#4a6da7" }}
-                  />
-                  <Title level={2} className="m-0 text-lg sm:text-2xl">
-                    Créer un Exercice
-                  </Title>
-                </Space>
-              </div>
-            </div>
-
             {error && (
               <Alert
                 message={error}
@@ -372,7 +459,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                 onClose={() => setError("")}
               />
             )}
-
             <CreateExerciseForm
               onSubmit={handleCreateExercise}
               onCancel={handleBackToList}
