@@ -37,7 +37,7 @@ const decodeJWT = (token) => {
 export const Login = ({ theme }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { navigateToStoredPage } = useReturnToPage();
+  const { navigateToStoredPage: _unused } = useReturnToPage();
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: "",
@@ -219,7 +219,16 @@ export const Login = ({ theme }) => {
       "ROLE_GESTIONNAIRE": "/schoolchat/Principal/GestionnaireDashboard/activities",
     };
     const dashboardPath = rolePathMap[primaryRole] || rolePathMap["ROLE_ADMIN"];
-    navigateToStoredPage(primaryRole, dashboardPath);
+
+    // Check for a stored return page that matches this role's dashboard
+    const expectedDashboardType = dashboardPath.split("/")[3];
+    if (returnToPage && returnToPage.toLowerCase().includes('/schoolchat/principal') && returnToPage.includes(expectedDashboardType)) {
+      localStorage.removeItem("returnToPage");
+      window.location.href = returnToPage;
+    } else {
+      localStorage.removeItem("returnToPage");
+      window.location.href = dashboardPath;
+    }
   };
 
   const handleRoleSelected = async (role) => {

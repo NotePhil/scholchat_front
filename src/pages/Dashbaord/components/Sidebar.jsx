@@ -62,7 +62,7 @@ const Sidebar = ({
     const usersTabs = ["admin", "professors", "parents", "students", "others", "gestionnaires"];
     const classesTabs = ["create-class", "manage-class"];
     const establishmentsTabs = ["create-establishment", "manage-establishment"];
-    const exercisesTabs = ["manage-exercises"];
+    const exercisesTabs = ["manage-exercises", "schedule-exercise", "corrections-exercise"];
 
     setOpenDropdown((prev) => ({
       ...prev,
@@ -157,7 +157,12 @@ const Sidebar = ({
         {
           name: t('sidebar.exercises'),
           icon: ClipboardList,
-          tab: "manage-exercises",
+          dropdown: "exercises",
+          items: [
+            { name: "Mes exercices", tab: "manage-exercises" },
+            { name: "Programmer", tab: "schedule-exercise" },
+            { name: "Corrections", tab: "corrections-exercise" },
+          ],
         },
         {
           name: t('sidebar.manageUsers'),

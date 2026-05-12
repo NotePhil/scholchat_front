@@ -55,6 +55,8 @@ import ProfessorCoursesContent from "./content/ProfessorsContent/ProfessorCourse
 import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgrammerContent";
 import CoursProgrammeManagement from "./content/InterfaceCours/CoursProgrammeManagement";
 import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
+import ExerciseProgrammerContent from "./content/excerciseContent/ExerciseProgrammerContent";
+import ExerciseCorrectionsContent from "./content/excerciseContent/ExerciseCorrectionsContent";
 import MatiereContent from "./content/MatiereContent/MatiereContent";
 import GestionnaireDashboardContent from "./content/GestionnaireContent/GestionnaireDashboardContent";
 import MobileBottomNav from "../components/MobileBottomNav";
@@ -549,6 +551,10 @@ const Principal = () => {
         return <CoursProgrammerContent {...contentProps} />;
       case "manage-exercises":
         return <ManageExercisesContent {...contentProps} />;
+      case "schedule-exercise":
+        return <ExerciseProgrammerContent {...contentProps} />;
+      case "corrections-exercise":
+        return <ExerciseCorrectionsContent {...contentProps} />;
       case "classes":
         if (isParent) {
           return <ParentClassManagementClass {...contentProps} />;
@@ -641,6 +647,8 @@ const Principal = () => {
       "create-course": "Gérer les Cours",
       "schedule-course": "Programmer le Cours",
       "manage-exercises": "Gérer les Exercices",
+      "schedule-exercise": "Programmer les Exercices",
+      "corrections-exercise": "Corrections des Exercices",
       "create-class": "Créer une Classe",
       "manage-class": "Gérer une Classe",
       "create-establishment": "Créer un Établissement",
