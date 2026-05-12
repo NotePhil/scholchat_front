@@ -301,90 +301,136 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
     const autoGraded = results.filter((r) => r.canAutoCorrect);
     const manualReview = results.filter((r) => !r.canAutoCorrect);
     const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    const allGraded = results.every(r => r.isCorrect !== null);
+    const hasPendingManual = results.some(r => !r.canAutoCorrect && r.isCorrect === null);
 
     return (
-      <div className="p-2 sm:p-6 max-w-3xl mx-auto">
+      <div className="p-2 sm:p-4 max-w-3xl mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm">
           <ArrowLeft className="w-4 h-4" /> Retour aux exercices
         </button>
 
         {/* Already completed badge */}
         {alreadyCompleted && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2 text-blue-700 text-sm">
-            <CheckCircle className="w-5 h-5" />
-            <span className="font-medium">Exercice deja soumis - Vos reponses sont enregistrees</span>
+          <div className="mb-3 p-3 rounded-xl flex items-center gap-2 text-sm"
+            style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8" }}>
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="font-medium">Exercice déjà soumis — vos réponses sont enregistrées</span>
+          </div>
+        )}
+
+        {/* Pending correction banner */}
+        {hasPendingManual && (
+          <div className="mb-3 p-3 rounded-xl flex items-center gap-2 text-sm"
+            style={{ background: "#fff7ed", border: "1px solid #fed7aa", color: "#c2410c" }}>
+            <Clock className="w-4 h-4 flex-shrink-0" />
+            <span>Certaines questions sont en attente de correction par votre professeur.</span>
           </div>
         )}
 
         {/* Score Card */}
-        <div className={`rounded-2xl p-6 sm:p-8 mb-6 text-center ${percentage >= 70 ? "bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200" : percentage >= 40 ? "bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200" : "bg-gradient-to-br from-red-50 to-rose-50 border border-red-200"}`}>
-          <div className="mb-3">
-            <Award className={`w-12 h-12 mx-auto ${percentage >= 70 ? "text-green-500" : percentage >= 40 ? "text-yellow-500" : "text-red-500"}`} />
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
-            {totalScore} / {maxScore}
-          </h2>
-          <p className="text-lg text-gray-600">{percentage}%</p>
-          <p className="text-sm text-gray-500 mt-2">
-            {percentage >= 70 ? "Excellent travail !" : percentage >= 40 ? "Peut mieux faire" : "A revoir"}
-          </p>
-          {manualReview.length > 0 && (
-            <p className="text-xs text-amber-600 mt-3 bg-amber-50 rounded-lg px-3 py-1.5 inline-block">
-              {manualReview.length} question(s) en attente de correction manuelle
+        <div className={`rounded-2xl p-5 mb-4 text-center ${
+          hasPendingManual ? "bg-amber-50 border border-amber-200"
+          : percentage >= 70 ? "bg-green-50 border border-green-200"
+          : percentage >= 40 ? "bg-yellow-50 border border-yellow-200"
+          : "bg-red-50 border border-red-200"
+        }`}>
+          <Award className={`w-10 h-10 mx-auto mb-2 ${
+            hasPendingManual ? "text-amber-500"
+            : percentage >= 70 ? "text-green-500"
+            : percentage >= 40 ? "text-yellow-500" : "text-red-500"
+          }`} />
+          <h2 className="text-2xl font-bold text-gray-900">{totalScore} / {maxScore}</h2>
+          <p className="text-gray-500 text-sm mt-1">{percentage}%</p>
+          {hasPendingManual && (
+            <p className="text-xs text-amber-600 mt-2">
+              Score partiel — {manualReview.length} question(s) en attente de correction
             </p>
           )}
         </div>
 
         {/* Results per question */}
         <div className="space-y-3">
-          {results.map((result, idx) => (
-            <div key={result.questionId} className={`rounded-xl border p-4 ${result.isCorrect === true ? "bg-green-50 border-green-200" : result.isCorrect === false ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
-              <div className="flex items-start gap-3">
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${result.isCorrect === true ? "bg-green-500 text-white" : result.isCorrect === false ? "bg-red-500 text-white" : "bg-gray-400 text-white"}`}>
-                  {idx + 1}
+          {results.map((result, idx) => {
+            const isPending = !result.canAutoCorrect && result.isCorrect === null;
+            const isGraded = !result.canAutoCorrect && result.isCorrect !== null;
+
+            return (
+              <div key={result.questionId} className={`rounded-xl border overflow-hidden ${
+                result.isCorrect === true ? "border-green-200"
+                : result.isCorrect === false ? "border-red-200"
+                : isPending ? "border-amber-200" : "border-gray-200"
+              }`}>
+                {/* Question header */}
+                <div className={`flex items-center gap-2 px-3 py-2 ${
+                  result.isCorrect === true ? "bg-green-50"
+                  : result.isCorrect === false ? "bg-red-50"
+                  : isPending ? "bg-amber-50" : "bg-gray-50"
+                }`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                    result.isCorrect === true ? "bg-green-500 text-white"
+                    : result.isCorrect === false ? "bg-red-500 text-white"
+                    : "bg-gray-300 text-gray-700"
+                  }`}>{idx + 1}</div>
+                  <p className="font-medium text-gray-900 text-sm flex-1">{result.question}</p>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-white/70 text-gray-500 flex-shrink-0">
+                    {result.points}/{result.maxPoints} pt{result.maxPoints > 1 ? "s" : ""}
+                  </span>
+                  {result.isCorrect === true && <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />}
+                  {result.isCorrect === false && <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                  {isPending && <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 text-sm mb-2">{result.question}</p>
-                  <div className="space-y-1 text-sm">
-                    <p className="text-gray-700">
-                      <span className="font-medium">Votre reponse :</span> {result.studentAnswer}
-                    </p>
-                    {result.canAutoCorrect && !result.isCorrect && (
-                      <p className="text-green-700">
-                        <span className="font-medium">Bonne reponse :</span> {result.correctAnswer}
-                      </p>
-                    )}
-                    {!result.canAutoCorrect && result.isCorrect === null && (
-                      <p className="text-amber-600 text-xs flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> En attente de correction par le professeur
-                      </p>
-                    )}
-                    {!result.canAutoCorrect && result.isCorrect !== null && (
-                      <p className={`text-xs flex items-center gap-1 ${result.isCorrect ? "text-green-600" : "text-red-600"}`}>
-                        {result.isCorrect ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                        Corrige par le professeur
-                      </p>
-                    )}
-                    {result.note && (
-                      <p className="text-xs text-indigo-600 font-medium">Note: {result.note}</p>
-                    )}
-                    {result.appreciation && (
-                      <p className="text-xs text-gray-600 italic bg-gray-50 rounded px-2 py-1 mt-1">"{result.appreciation}"</p>
-                    )}
+
+                {/* Answer details */}
+                <div className="px-3 py-2 space-y-1.5 bg-white">
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs font-semibold text-gray-500 w-28 flex-shrink-0 pt-0.5">Votre réponse</span>
+                    <span className={`text-sm px-2 py-0.5 rounded flex-1 ${
+                      result.isCorrect === true ? "bg-green-50 text-green-800"
+                      : result.isCorrect === false ? "bg-red-50 text-red-800"
+                      : "bg-gray-50 text-gray-800"
+                    }`}>{result.studentAnswer || <span className="italic text-gray-400">Aucune réponse</span>}</span>
                   </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    {result.isCorrect === true && <CheckCircle className="w-4 h-4 text-green-500" />}
-                    {result.isCorrect === false && <XCircle className="w-4 h-4 text-red-500" />}
-                    <span className="text-xs text-gray-500">{result.points}/{result.maxPoints} pts</span>
-                  </div>
+
+                  {/* Correct answer for auto-graded wrong answers */}
+                  {result.canAutoCorrect && result.isCorrect === false && result.correctAnswer && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs font-semibold text-green-700 w-28 flex-shrink-0 pt-0.5">Bonne réponse</span>
+                      <span className="text-sm bg-green-50 text-green-800 px-2 py-0.5 rounded flex-1">{result.correctAnswer}</span>
+                    </div>
+                  )}
+
+                  {/* Pending */}
+                  {isPending && (
+                    <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded">
+                      <Clock className="w-3 h-3" /> En attente de correction par le professeur
+                    </div>
+                  )}
+
+                  {/* Professor correction */}
+                  {isGraded && (
+                    <div className="p-2 rounded-lg space-y-1" style={{ background: "#f5f3ff", border: "1px solid #ddd6fe" }}>
+                      <p className="text-xs font-semibold text-purple-700">Correction du professeur</p>
+                      {result.note && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Note :</span>
+                          <span className="text-xs font-bold text-purple-700">{result.note}</span>
+                        </div>
+                      )}
+                      {result.appreciation && (
+                        <p className="text-xs text-gray-600 italic">"{result.appreciation}"</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        <div className="mt-6 text-center">
-          <button onClick={onComplete || onBack} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors">
+        <div className="mt-5 text-center">
+          <button onClick={onComplete || onBack}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors text-sm">
             Terminer
           </button>
         </div>

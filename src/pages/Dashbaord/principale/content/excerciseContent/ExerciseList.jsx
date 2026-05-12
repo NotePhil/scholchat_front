@@ -1,39 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Table,
-  Button,
-  Space,
-  Tag,
-  Input,
-  Select,
-  Tooltip,
-  Popconfirm,
-  Empty,
-  Card,
-  Typography,
-  Row,
-  Col,
-  Statistic,
-  Badge,
-  Progress,
-  Divider,
+  Table, Button, Space, Tag, Input, Select, Tooltip,
+  Popconfirm, Empty, Card, Typography, Row, Col, Badge,
 } from "antd";
 import {
-  EyeOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  SearchOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  BookOutlined,
-  FileTextOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  PlayCircleOutlined,
-  CalendarOutlined,
-  TagOutlined,
-  FilterOutlined,
+  EyeOutlined, EditOutlined, DeleteOutlined, SearchOutlined,
+  PlusOutlined, ReloadOutlined, BookOutlined, PlayCircleOutlined,
+  CalendarOutlined, TagOutlined, FilterOutlined, CheckCircleOutlined,
+  ClockCircleOutlined, TrophyOutlined,
 } from "@ant-design/icons";
+import { participationExerciseService } from "../../../../../services/exerciseService";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -53,6 +29,46 @@ const ExerciseList = ({
   const [filterNiveau, setFilterNiveau] = useState(null);
   const [filterEtat, setFilterEtat] = useState(null);
   const [filterRestriction, setFilterRestriction] = useState(null);
+  // Map: exerciseProgrammerId -> participation for current student
+  const [participationMap, setParticipationMap] = useState({});
+
+  useEffect(() => {
+    if (canCreate) return; // only for students
+    const userId = localStorage.getItem("selectedChildId") || localStorage.getItem("userId");
+    if (!userId) return;
+    participationExerciseService.getParticipationsByUtilisateur(userId)
+      .then(data => {
+        const map = {};
+        (data || []).forEach(p => { map[p.exerciseProgrammerId] = p; });
+        setParticipationMap(map);
+      })
+      .catch(() => {});
+  }, [canCreate, exercises]);
+
+  // Find participation for an exercise (match by exerciseProgrammerId embedded in exercise)
+  const getParticipation = (exercise) => {
+    // exercise may have id = exerciseProgrammerId when coming from class fetch
+    return participationMap[exercise.id] || null;
+  };
+
+  const SUBMISSION_CONFIG = {
+    EN_COURS:              { label: "En cours",       color: "#d97706", bg: "#fffbeb", icon: <ClockCircleOutlined /> },
+    SOUMIS:                { label: "Soumis",         color: "#2563eb", bg: "#eff6ff", icon: <CheckCircleOutlined /> },
+    EN_ATTENTE_CORRECTION: { label: "En attente",     color: "#c2410c", bg: "#fff7ed", icon: <ClockCircleOutlined /> },
+    CORRIGE:               { label: "Corrigé",        color: "#7c3aed", bg: "#f5f3ff", icon: <TrophyOutlined /> },
+    VALIDE:                { label: "Validé",         color: "#16a34a", bg: "#f0fdf4", icon: <CheckCircleOutlined /> },
+  };
+
+  const SubmissionBadge = ({ etat }) => {
+    const c = SUBMISSION_CONFIG[etat];
+    if (!c) return null;
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+        style={{ color: c.color, background: c.bg, border: `1px solid ${c.color}30` }}>
+        {c.icon} {c.label}
+      </span>
+    );
+  };
 
   const getStatusTag = (status) => {
     const map = {
@@ -337,6 +353,11 @@ const ExerciseList = ({
               const questionCount = exercise.questions?.length ?? exercise.nombreQuestions ?? 0;
               const types = [...new Set((exercise.questions || []).map(q => q.typeQuestion).filter(Boolean))];
               const isActive = exercise.etat === "ACTIF";
+              const participation = getParticipation(exercise);
+              const submissionEtat = participation?.etatSoumission;
+              const isSubmitted = !!submissionEtat;
+              const isGraded = submissionEtat === "CORRIGE" || submissionEtat === "VALIDE";
+              const isPending = submissionEtat === "EN_ATTENTE_CORRECTION";
 
               return (
                 <Col xs={24} sm={12} lg={8} key={exercise.id}>
@@ -344,18 +365,21 @@ const ExerciseList = ({
                     hoverable
                     style={{
                       borderRadius: 12,
-                      border: isActive ? "1px solid #d6e4ff" : "1px solid #f0f0f0",
+                      border: isGraded ? "1px solid #ddd6fe" : isPending ? "1px solid #fed7aa" : isSubmitted ? "1px solid #bfdbfe" : isActive ? "1px solid #d6e4ff" : "1px solid #f0f0f0",
                       height: "100%",
                     }}
                     bodyStyle={{ padding: 16, display: "flex", flexDirection: "column", height: "100%" }}
                   >
-                    {/* Top: niveau + date */}
+                    {/* Top: niveau + submission state */}
                     <div className="flex items-center justify-between mb-2">
                       <Tag color="cyan" className="text-xs m-0">{exercise.niveau || "N/A"}</Tag>
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <CalendarOutlined />
-                        {exercise.dateCreation ? new Date(exercise.dateCreation).toLocaleDateString("fr-FR") : "—"}
-                      </span>
+                      {isSubmitted
+                        ? <SubmissionBadge etat={submissionEtat} />
+                        : <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <CalendarOutlined />
+                            {exercise.dateCreation ? new Date(exercise.dateCreation).toLocaleDateString("fr-FR") : "—"}
+                          </span>
+                      }
                     </div>
 
                     {/* Title */}
@@ -366,10 +390,29 @@ const ExerciseList = ({
                     {/* Description */}
                     {exercise.description && (
                       <Text type="secondary" className="text-xs block mb-3" style={{ lineHeight: 1.5 }}>
-                        {exercise.description.length > 80
-                          ? exercise.description.substring(0, 80) + "…"
-                          : exercise.description}
+                        {exercise.description.length > 80 ? exercise.description.substring(0, 80) + "…" : exercise.description}
                       </Text>
+                    )}
+
+                    {/* Grade if corrected */}
+                    {isGraded && participation?.note && (
+                      <div className="mb-2 px-2 py-1.5 rounded-lg flex items-center gap-2"
+                        style={{ background: "#f5f3ff", border: "1px solid #ddd6fe" }}>
+                        <TrophyOutlined style={{ color: "#7c3aed", fontSize: 13 }} />
+                        <span className="text-xs font-semibold text-purple-700">{participation.note}</span>
+                        {participation.appreciation && (
+                          <span className="text-xs text-purple-500 italic truncate">"{participation.appreciation}"</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Pending message */}
+                    {isPending && (
+                      <div className="mb-2 px-2 py-1.5 rounded-lg flex items-center gap-2"
+                        style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
+                        <ClockCircleOutlined style={{ color: "#c2410c", fontSize: 13 }} />
+                        <span className="text-xs text-orange-700">En attente de correction du professeur</span>
+                      </div>
                     )}
 
                     {/* Matieres */}
@@ -380,36 +423,23 @@ const ExerciseList = ({
                             <TagOutlined className="mr-1" />{m.nom || m}
                           </Tag>
                         ))}
-                        {exercise.matieres.length > 3 && (
-                          <Tag className="text-xs m-0">+{exercise.matieres.length - 3}</Tag>
-                        )}
+                        {exercise.matieres.length > 3 && <Tag className="text-xs m-0">+{exercise.matieres.length - 3}</Tag>}
                       </div>
                     )}
 
-                    {/* Question types */}
-                    {types.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {types.map((t) => (
-                          <Tag key={t} color={typeColors[t] || "default"} className="text-xs m-0">
-                            {typeLabels[t] || t}
-                          </Tag>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Footer: question count + CTA */}
+                    {/* Footer */}
                     <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
                       <span className="text-xs text-gray-500">
                         {questionCount > 0 ? `${questionCount} question${questionCount > 1 ? "s" : ""}` : "Questions à venir"}
                       </span>
                       <Button
-                        type="primary"
+                        type={isSubmitted ? "default" : "primary"}
                         size="small"
-                        icon={<PlayCircleOutlined />}
+                        icon={isSubmitted ? <EyeOutlined /> : <PlayCircleOutlined />}
                         onClick={() => onSelectExercise(exercise.id)}
                         style={{ borderRadius: 8 }}
                       >
-                        Commencer
+                        {isGraded ? "Voir correction" : isPending ? "Voir réponses" : isSubmitted ? "Voir" : "Commencer"}
                       </Button>
                     </div>
                   </Card>
