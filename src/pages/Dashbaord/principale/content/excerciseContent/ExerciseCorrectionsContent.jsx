@@ -248,60 +248,123 @@ const ProgrammationCorrections = ({ prog }) => {
                   {/* Per-question */}
                   {questions.map((q, idx) => {
                     const answer = student.answers.find(a => a.questionId === q.id);
-                    const needsManual = answer && answer.estCorrecte === null;
                     const gradeKey = `${student.id}-${q.id}`;
-                    const correctChoice = (q.choixReponses || []).find(c => c.estCorrect);
+                    const isAutoType = ["QCM", "VRAI_FAUX"].includes(q.typeQuestion);
+                    const correctChoices = (q.choixReponses || []).filter(c => c.estCorrect);
+                    const expectedAnswer = correctChoices.length > 0
+                      ? correctChoices.map(c => c.texte).join(" / ")
+                      : q.reponse || null;
+                    // For open questions: needs manual grading if answered but not yet graded
+                    const needsGrading = !isAutoType && answer && answer.estCorrecte === null;
+                    const alreadyGraded = answer && answer.estCorrecte !== null;
+
+                    let borderColor = "#e5e7eb";
+                    if (answer?.estCorrecte === true) borderColor = "#86efac";
+                    if (answer?.estCorrecte === false) borderColor = "#fca5a5";
+                    if (needsGrading) borderColor = "#fcd34d";
 
                     return (
-                      <div key={q.id} className={`p-3 rounded-xl border ${answer?.estCorrecte === true ? "bg-green-50 border-green-200" : answer?.estCorrecte === false ? "bg-red-50 border-red-200" : "bg-white border-gray-200"}`}>
-                        <div className="flex items-start gap-2 mb-2">
-                          <span className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">{idx + 1}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900">{q.intitule}</p>
-                            <span className="text-xs text-gray-400">{q.typeQuestion} · {q.points || 1} pt(s)</span>
-                          </div>
-                          {answer?.estCorrecte === true && <CheckCircle size={16} className="text-green-500 flex-shrink-0" />}
-                          {answer?.estCorrecte === false && <AlertCircle size={16} className="text-red-500 flex-shrink-0" />}
-                          {needsManual && <Clock size={16} className="text-amber-500 flex-shrink-0" />}
+                      <div key={q.id} className="rounded-xl border bg-white overflow-hidden"
+                        style={{ borderColor }}>
+                        {/* Question header */}
+                        <div className="flex items-center gap-2 px-3 py-2 border-b"
+                          style={{ borderColor, background: needsGrading ? "#fffbeb" : alreadyGraded && answer.estCorrecte ? "#f0fdf4" : alreadyGraded ? "#fef2f2" : "#f9fafb" }}>
+                          <span className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-gray-700 flex-shrink-0">{idx + 1}</span>
+                          <p className="text-sm font-semibold text-gray-900 flex-1">{q.intitule}</p>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 flex-shrink-0">
+                            {q.points || 1} pt{(q.points || 1) > 1 ? "s" : ""}
+                          </span>
+                          <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0"
+                            style={{ background: "#e0e7ff", color: "#4338ca" }}>
+                            {q.typeQuestion}
+                          </span>
+                          {answer?.estCorrecte === true && <CheckCircle size={15} className="text-green-500 flex-shrink-0" />}
+                          {answer?.estCorrecte === false && <AlertCircle size={15} className="text-red-500 flex-shrink-0" />}
+                          {needsGrading && <Clock size={15} className="text-amber-500 flex-shrink-0" />}
                         </div>
 
-                        {answer ? (
-                          <div className="ml-8 space-y-1">
-                            <p className="text-sm"><span className="font-medium text-gray-500">Réponse : </span>{answer.reponseUtilisateur}</p>
-                            {correctChoice && <p className="text-xs text-green-700"><span className="font-medium">Bonne réponse : </span>{correctChoice.texte}</p>}
-                            {!correctChoice && q.reponse && <p className="text-xs text-green-700"><span className="font-medium">Attendue : </span>{q.reponse}</p>}
+                        <div className="px-3 py-2 space-y-2">
+                          {/* Expected answer — always shown */}
+                          {expectedAnswer ? (
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs font-semibold text-green-700 w-28 flex-shrink-0 pt-0.5">Réponse attendue</span>
+                              <span className="text-sm text-green-800 bg-green-50 border border-green-200 px-2 py-1 rounded flex-1">{expectedAnswer}</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs font-semibold text-gray-400 w-28 flex-shrink-0 pt-0.5">Réponse attendue</span>
+                              <span className="text-xs text-gray-400 italic">Non définie</span>
+                            </div>
+                          )}
 
-                            {needsManual && (
-                              <div className="mt-2 p-2 rounded-lg" style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
-                                <p className="text-xs font-semibold text-orange-700 mb-2">Correction manuelle requise</p>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Select size="small" placeholder="Résultat"
-                                    value={gradeInputs[gradeKey]?.estCorrecte ?? undefined}
-                                    onChange={v => setInput(gradeKey, "estCorrecte", v)}
-                                    style={{ width: 110 }}>
-                                    <Select.Option value={true}>✓ Correct</Select.Option>
-                                    <Select.Option value={false}>✕ Incorrect</Select.Option>
-                                  </Select>
-                                  <Input size="small" placeholder="Note" value={gradeInputs[gradeKey]?.note || ""}
-                                    onChange={e => setInput(gradeKey, "note", e.target.value)} style={{ width: 70 }} />
-                                  <Input size="small" placeholder="Commentaire..."
-                                    value={gradeInputs[gradeKey]?.appreciation || ""}
-                                    onChange={e => setInput(gradeKey, "appreciation", e.target.value)}
-                                    style={{ flex: 1, minWidth: 120 }} />
-                                  <Button size="small" type="primary" icon={<Save size={12} />}
-                                    loading={saving === gradeKey}
-                                    onClick={() => saveGrade(student.id, q.id)}>
-                                    {saved.has(gradeKey) ? "✓" : "Sauver"}
-                                  </Button>
-                                </div>
+                          {/* Student answer */}
+                          {answer ? (
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs font-semibold text-gray-500 w-28 flex-shrink-0 pt-0.5">Réponse élève</span>
+                              <span className={`text-sm px-2 py-0.5 rounded flex-1 ${
+                                answer.estCorrecte === true ? "bg-green-50 text-green-800" :
+                                answer.estCorrecte === false ? "bg-red-50 text-red-800" :
+                                "bg-gray-50 text-gray-800"
+                              }`}>{answer.reponseUtilisateur}</span>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">Aucune réponse soumise</p>
+                          )}
+
+                          {/* Existing grade/comment */}
+                          {answer?.note && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-gray-500 w-28 flex-shrink-0">Note actuelle</span>
+                              <span className="text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded">{answer.note}</span>
+                              {answer.appreciation && <span className="text-xs text-gray-500 italic">"{answer.appreciation}"</span>}
+                            </div>
+                          )}
+
+                          {/* Manual grading panel — open questions only */}
+                          {!isAutoType && answer && (
+                            <div className="pt-1 border-t border-dashed border-gray-200">
+                              <p className="text-xs font-semibold text-orange-700 mb-1.5">
+                                {needsGrading ? "⚠ Correction manuelle requise" : "✎ Modifier la correction"}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {/* Correct / Incorrect buttons */}
+                                <button
+                                  onClick={() => setInput(gradeKey, "estCorrecte", true)}
+                                  className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                                    gradeInputs[gradeKey]?.estCorrecte === true
+                                      ? "bg-green-500 text-white border-green-500"
+                                      : "bg-white text-green-700 border-green-300 hover:bg-green-50"
+                                  }`}>
+                                  ✓ Correct
+                                </button>
+                                <button
+                                  onClick={() => setInput(gradeKey, "estCorrecte", false)}
+                                  className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                                    gradeInputs[gradeKey]?.estCorrecte === false
+                                      ? "bg-red-500 text-white border-red-500"
+                                      : "bg-white text-red-700 border-red-300 hover:bg-red-50"
+                                  }`}>
+                                  ✕ Incorrect
+                                </button>
+                                <Input size="small" placeholder={`Note (/${q.points || 1})`}
+                                  value={gradeInputs[gradeKey]?.note || ""}
+                                  onChange={e => setInput(gradeKey, "note", e.target.value)}
+                                  style={{ width: 90 }} />
+                                <Input size="small" placeholder="Commentaire..."
+                                  value={gradeInputs[gradeKey]?.appreciation || ""}
+                                  onChange={e => setInput(gradeKey, "appreciation", e.target.value)}
+                                  style={{ flex: 1, minWidth: 120 }} />
+                                <Button size="small" type="primary"
+                                  icon={<Save size={12} />}
+                                  loading={saving === gradeKey}
+                                  disabled={gradeInputs[gradeKey]?.estCorrecte === undefined && !gradeInputs[gradeKey]?.note}
+                                  onClick={() => saveGrade(student.id, q.id)}>
+                                  {saved.has(gradeKey) ? "Sauvegardé ✓" : "Sauver"}
+                                </Button>
                               </div>
-                            )}
-                            {answer.note && <p className="text-xs text-gray-400">Note : {answer.note}</p>}
-                            {answer.appreciation && <p className="text-xs text-gray-400 italic">"{answer.appreciation}"</p>}
-                          </div>
-                        ) : (
-                          <p className="ml-8 text-sm text-gray-400 italic">Pas de réponse</p>
-                        )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
