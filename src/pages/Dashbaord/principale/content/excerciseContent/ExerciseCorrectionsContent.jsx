@@ -49,15 +49,42 @@ const ProgrammationCorrections = ({ prog }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const exerciseId = prog.exerciseId || prog.exercise?.id;
-      const [q, a, p] = await Promise.all([
-        exerciseId ? questionReponseService.getQuestionsByExercise(exerciseId) : Promise.resolve([]),
-        exerciseId ? repondreService.getReponsesByExercise(exerciseId) : Promise.resolve([]),
-        participationExerciseService.getParticipationsByExercise(prog.id),
+      // 1. Fetch fresh programmation detail (contains full questions via summary + exerciseId via redacteurId)
+      const [freshProg, freshParticipations] = await Promise.all([
+        exerciseProgrammerService.getExerciseProgrammeById(prog.id).catch(() => prog),
+        participationExerciseService.getParticipationsByExercise(prog.id).catch(() => prog.participations || []),
       ]);
-      setQuestions(q || []);
-      setAnswers(a || []);
-      setParticipations(p || []);
+
+      // 2. Questions — fetch full questions using exerciseId from fresh prog
+      //    ExerciseProgrammer model has exerciseId field
+      const exerciseId = freshProg.exerciseId;
+      let resolvedQuestions = [];
+      if (exerciseId) {
+        resolvedQuestions = await questionReponseService
+          .getQuestionsByExercise(exerciseId).catch(() => freshProg.questions || []);
+      } else {
+        resolvedQuestions = freshProg.questions || [];
+      }
+
+      // 3. Answers — fetch per participant
+      const allAnswers = [];
+      const participantIds = [...new Set(freshParticipations.map(p => p.utilisateurId))];
+      if (participantIds.length > 0) {
+        const qIds = new Set(resolvedQuestions.map(q => q.id));
+        await Promise.all(
+          participantIds.map(async (uid) => {
+            const userAnswers = await repondreService
+              .getReponsesByUtilisateur(uid).catch(() => []);
+            userAnswers
+              .filter(a => qIds.size === 0 || qIds.has(a.questionId))
+              .forEach(a => allAnswers.push(a));
+          })
+        );
+      }
+
+      setQuestions(resolvedQuestions);
+      setAnswers(allAnswers);
+      setParticipations(freshParticipations);
     } catch (e) {
       console.error(e);
     } finally {
@@ -288,6 +315,82 @@ const ProgrammationCorrections = ({ prog }) => {
   );
 };
 
+const PROG_PAGE_SIZE = 6;
+
+const ProgList = ({ filtered, selectedProgId, setSelectedProgId, filterType, setFilterType, onRefresh, fmtDate }) => {
+  const [page, setPage] = useState(1);
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / PROG_PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PROG_PAGE_SIZE, page * PROG_PAGE_SIZE);
+
+  // Reset to page 1 when filter changes
+  React.useEffect(() => { setPage(1); }, [filterType]);
+
+  return (
+    <div className="bg-white rounded-xl shadow overflow-hidden">
+      <div className="px-3 py-2.5 border-b border-gray-100 flex items-center justify-between">
+        <span className="font-semibold text-gray-800 text-sm">Programmations</span>
+        <button onClick={onRefresh} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400">
+          <RefreshCw size={13} />
+        </button>
+      </div>
+      <div className="p-2 border-b border-gray-100">
+        <Select value={filterType} onChange={setFilterType} size="small" style={{ width: "100%" }}>
+          <Select.Option value="all">Tous les types</Select.Option>
+          <Select.Option value="DEVOIR">Devoirs</Select.Option>
+          <Select.Option value="EXERCICE">Exercices libres</Select.Option>
+        </Select>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {paginated.map(prog => (
+          <button key={prog.id}
+            onClick={() => setSelectedProgId(prog.id)}
+            className={`w-full text-left px-3 py-2.5 transition-colors ${
+              selectedProgId === prog.id
+                ? "bg-blue-50 border-l-2 border-blue-600"
+                : "hover:bg-gray-50 border-l-2 border-transparent"
+            }`}>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              {prog.typeAssignation === "DEVOIR"
+                ? <FileText size={12} className="text-purple-600 flex-shrink-0" />
+                : <BookOpen size={12} className="text-blue-600 flex-shrink-0" />}
+              <span className="text-sm font-medium text-gray-800 truncate">{prog.nom || "Exercice"}</span>
+            </div>
+            <div className="text-xs text-gray-400 ml-4">{fmtDate(prog.dateExoPrevue)}</div>
+            {prog.classesDiffusees?.length > 0 && (
+              <div className="text-xs text-gray-400 ml-4 truncate">
+                {prog.classesDiffusees.map(c => c.nom).join(", ")}
+              </div>
+            )}
+          </button>
+        ))}
+        {paginated.length === 0 && (
+          <div className="text-center py-6 text-gray-400 text-xs">Aucune programmation</div>
+        )}
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 bg-gray-50">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-2 py-1 text-xs rounded border border-gray-200 disabled:opacity-40 hover:bg-white transition-colors"
+          >
+            ‹ Préc.
+          </button>
+          <span className="text-xs text-gray-500">{page} / {totalPages}</span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-2 py-1 text-xs rounded border border-gray-200 disabled:opacity-40 hover:bg-white transition-colors"
+          >
+            Suiv. ›
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 const ExerciseCorrectionsContent = () => {
   const [programmations, setProgrammations] = useState([]);
@@ -303,8 +406,22 @@ const ExerciseCorrectionsContent = () => {
     try {
       const data = await exerciseProgrammerService.getExercisesProgrammesParProfesseur(userId);
       const sorted = (data || []).sort((a, b) => new Date(b.dateExoPrevue) - new Date(a.dateExoPrevue));
-      setProgrammations(sorted);
-      if (sorted.length > 0 && !selectedProgId) setSelectedProgId(sorted[0].id);
+
+      // Filter: only keep programmations that have at least one submission
+      const withSubmissions = await Promise.all(
+        sorted.map(async (prog) => {
+          try {
+            const participations = await participationExerciseService.getParticipationsByExercise(prog.id);
+            return (participations && participations.length > 0) ? prog : null;
+          } catch {
+            return null;
+          }
+        })
+      );
+      const filtered = withSubmissions.filter(Boolean);
+
+      setProgrammations(filtered);
+      if (filtered.length > 0 && !selectedProgId) setSelectedProgId(filtered[0].id);
     } catch {
       message.error("Erreur lors du chargement");
     } finally {
@@ -336,94 +453,66 @@ const ExerciseCorrectionsContent = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="w-full px-2 py-3">
 
       {/* Header */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
-        <div className="relative h-32 bg-gradient-to-r from-purple-600 to-indigo-700 px-8 flex items-end pb-6">
+      <div className="bg-white rounded-xl shadow overflow-hidden mb-3">
+        <div className="relative bg-gradient-to-r from-purple-600 to-indigo-700 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="absolute inset-0 opacity-10"
-            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-          <div className="relative flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <ClipboardCheck size={24} className="text-white" />
+            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
+          <div className="relative flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <ClipboardCheck size={18} className="text-white" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Corrections</h1>
-              <p className="text-purple-100 text-sm">Corrigez les soumissions de vos élèves</p>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-white leading-tight truncate">Corrections des Exercices</h1>
+              <p className="text-purple-100 text-xs">Corrigez les soumissions de vos élèves</p>
             </div>
           </div>
-        </div>
-        <div className="grid grid-cols-3 divide-x divide-gray-100">
-          {[
-            { label: "Programmations", value: programmations.length, color: "#7c3aed", bg: "#f5f3ff" },
-            { label: "Devoirs", value: programmations.filter(p => p.typeAssignation === "DEVOIR").length, color: "#c2410c", bg: "#fff7ed" },
-            { label: "Exercices libres", value: programmations.filter(p => p.typeAssignation === "EXERCICE").length, color: "#2563eb", bg: "#eff6ff" },
-          ].map(({ label, value, color, bg }) => (
-            <div key={label} className="flex items-center gap-3 px-6 py-4">
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: bg }}>
-                <span className="text-lg font-bold" style={{ color }}>{value}</span>
+          <div className="relative flex items-center gap-4 sm:gap-5 flex-shrink-0">
+            {[
+              { label: "Total", value: programmations.length, color: "#c4b5fd" },
+              { label: "Devoirs", value: programmations.filter(p => p.typeAssignation === "DEVOIR").length, color: "#fca5a5" },
+              { label: "Libres", value: programmations.filter(p => p.typeAssignation !== "DEVOIR").length, color: "#93c5fd" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="text-center">
+                <div className="text-lg font-bold" style={{ color }}>{value}</div>
+                <div className="text-xs text-purple-200">{label}</div>
               </div>
-              <div className="text-xs text-gray-500">{label}</div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
       {programmations.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
-          <ClipboardCheck size={48} className="text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">Aucune programmation</h3>
+        <div className="bg-white rounded-xl shadow p-10 text-center">
+          <ClipboardCheck size={40} className="text-gray-300 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-gray-700 mb-1">Aucune programmation</h3>
           <p className="text-gray-400 text-sm">Programmez d'abord des exercices pour voir les corrections ici.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
 
           {/* Left: programmation list */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <span className="font-semibold text-gray-800 text-sm">Programmations</span>
-                <button onClick={load} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
-                  <RefreshCw size={14} />
-                </button>
-              </div>
-              <div className="p-3 border-b border-gray-100">
-                <Select value={filterType} onChange={setFilterType} size="small" style={{ width: "100%" }}>
-                  <Select.Option value="all">Tous les types</Select.Option>
-                  <Select.Option value="DEVOIR">Devoirs</Select.Option>
-                  <Select.Option value="EXERCICE">Exercices libres</Select.Option>
-                </Select>
-              </div>
-              <div className="divide-y divide-gray-50 max-h-[600px] overflow-y-auto">
-                {filtered.map(prog => (
-                  <button key={prog.id}
-                    onClick={() => setSelectedProgId(prog.id)}
-                    className={`w-full text-left px-4 py-3 transition-colors ${selectedProgId === prog.id ? "bg-blue-50 border-l-2 border-blue-600" : "hover:bg-gray-50 border-l-2 border-transparent"}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      {prog.typeAssignation === "DEVOIR"
-                        ? <FileText size={13} className="text-purple-600 flex-shrink-0" />
-                        : <BookOpen size={13} className="text-blue-600 flex-shrink-0" />}
-                      <span className="text-sm font-medium text-gray-800 truncate">{prog.nom || "Exercice"}</span>
-                    </div>
-                    <div className="text-xs text-gray-400 ml-5">{fmtDate(prog.dateExoPrevue)}</div>
-                    {prog.classesDiffusees?.length > 0 && (
-                      <div className="text-xs text-gray-400 ml-5 truncate">
-                        {prog.classesDiffusees.map(c => c.nom).join(", ")}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <ProgList
+              filtered={filtered}
+              selectedProgId={selectedProgId}
+              setSelectedProgId={setSelectedProgId}
+              filterType={filterType}
+              setFilterType={setFilterType}
+              onRefresh={load}
+              fmtDate={fmtDate}
+            />
           </div>
 
           {/* Right: corrections panel */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-                <ClipboardCheck size={18} className="text-purple-600" />
+            <div className="bg-white rounded-xl shadow overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                <ClipboardCheck size={16} className="text-purple-600" />
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-gray-800 truncate">
+                  <h2 className="font-semibold text-gray-800 text-sm truncate">
                     {selectedProg?.nom || "Sélectionnez une programmation"}
                   </h2>
                   {selectedProg && (
@@ -434,12 +523,12 @@ const ExerciseCorrectionsContent = () => {
                   )}
                 </div>
               </div>
-              <div className="p-6">
+              <div className="p-4">
                 {selectedProg
                   ? <ProgrammationCorrections key={selectedProg.id} prog={selectedProg} />
                   : (
-                    <div className="text-center py-12">
-                      <ClipboardCheck size={36} className="text-gray-300 mx-auto mb-3" />
+                    <div className="text-center py-10">
+                      <ClipboardCheck size={32} className="text-gray-300 mx-auto mb-2" />
                       <p className="text-gray-500 text-sm">Sélectionnez une programmation à gauche</p>
                     </div>
                   )}

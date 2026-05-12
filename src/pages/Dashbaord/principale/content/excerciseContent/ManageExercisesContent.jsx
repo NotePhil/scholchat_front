@@ -250,21 +250,21 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const canCreateExercise = selectedRoleForPerms === "PROFESSOR" || selectedRoleForPerms === "ADMIN" || selectedRoleForPerms === "TUTOR";
 
   return (
-    <div className="p-2 sm:p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full px-2 py-3">
+      <div className="w-full">
         {/* List View */}
         {currentView === "list" && (
-          <div className="p-4 sm:p-6">
+          <div>
             {/* ── Student header ── */}
             {!canCreateExercise ? (
               <div
-                className="mb-6 rounded-2xl p-5 sm:p-6"
+                className="mb-4 rounded-xl p-4"
                 style={{
                   background: "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)",
                   color: "#fff",
                 }}
               >
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-1.5">
                   {onBack && (
                     <Button
                       icon={<ArrowLeftOutlined />}
@@ -274,24 +274,24 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                       style={{ color: "#fff" }}
                     />
                   )}
-                  <ReadOutlined style={{ fontSize: 28 }} />
-                  <span className="text-xl sm:text-2xl font-bold">Mes Exercices</span>
+                  <ReadOutlined style={{ fontSize: 22 }} />
+                  <span className="text-base font-bold">Mes Exercices</span>
                 </div>
-                <p className="text-sm opacity-80 mb-4 pl-1">
-                  Retrouvez ici tous les exercices disponibles pour votre niveau. Cliquez sur un exercice pour le commencer.
+                <p className="text-xs opacity-80 mb-3 pl-1">
+                  Retrouvez ici tous les exercices disponibles pour votre niveau.
                 </p>
-                <div className="flex flex-wrap gap-3">
-                  <div className="flex items-center gap-2 bg-white/15 rounded-xl px-4 py-2">
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
                     <BookOutlined />
                     <span className="text-sm font-semibold">{exercises.length}</span>
                     <span className="text-xs opacity-80">exercice{exercises.length !== 1 ? "s" : ""}</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/15 rounded-xl px-4 py-2">
+                  <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
                     <CheckCircleOutlined />
                     <span className="text-sm font-semibold">{exercises.filter(e => e.etat === "ACTIF").length}</span>
                     <span className="text-xs opacity-80">actif{exercises.filter(e => e.etat === "ACTIF").length !== 1 ? "s" : ""}</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/15 rounded-xl px-4 py-2">
+                  <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
                     <GlobalOutlined />
                     <span className="text-sm font-semibold">{exercises.filter(e => e.restriction === "PUBLIC").length}</span>
                     <span className="text-xs opacity-80">public{exercises.filter(e => e.restriction === "PUBLIC").length !== 1 ? "s" : ""}</span>
@@ -301,12 +301,12 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
             ) : (
               /* ── Professor / Admin header ── */
               <div
-                className="mb-6 rounded-2xl overflow-hidden"
+                className="mb-4 rounded-xl overflow-hidden"
                 style={{ border: "1px solid #e8edf5" }}
               >
                 {/* Top band */}
                 <div
-                  className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                  className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                   style={{
                     background: "linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)",
                   }}
@@ -322,16 +322,16 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                       />
                     )}
                     <div
-                      className="flex items-center justify-center rounded-xl"
-                      style={{ width: 44, height: 44, background: "rgba(255,255,255,0.15)", flexShrink: 0 }}
+                      className="flex items-center justify-center rounded-lg"
+                      style={{ width: 36, height: 36, background: "rgba(255,255,255,0.15)", flexShrink: 0 }}
                     >
-                      <BookOutlined style={{ fontSize: 22, color: "#fff" }} />
+                      <BookOutlined style={{ fontSize: 18, color: "#fff" }} />
                     </div>
-                    <div>
-                      <div className="text-white font-bold text-xl sm:text-2xl leading-tight">
+                    <div className="min-w-0">
+                      <div className="text-white font-bold text-base leading-tight truncate">
                         Gestion des Exercices
                       </div>
-                      <div className="text-blue-100 text-sm mt-0.5 opacity-90">
+                      <div className="text-blue-100 text-xs opacity-90">
                         Créez, gérez et programmez des exercices pour vos classes
                       </div>
                     </div>
@@ -340,13 +340,13 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                     type="primary"
                     icon={<PlusOutlined />}
                     onClick={handleShowCreateForm}
-                    size="large"
+                    size="middle"
                     style={{
                       background: "#fff",
                       color: "#1a3a5c",
                       border: "none",
                       fontWeight: 600,
-                      borderRadius: 10,
+                      borderRadius: 8,
                       flexShrink: 0,
                     }}
                   >
@@ -364,15 +364,15 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                     { label: "Brouillons", value: exercises.filter(e => e.etat === "BROUILLON").length, color: "#d48806", icon: <ClockCircleOutlined /> },
                     { label: "Publics", value: exercises.filter(e => e.restriction === "PUBLIC").length, color: "#531dab", icon: <GlobalOutlined /> },
                   ].map(({ label, value, color, icon }) => (
-                    <div key={label} className="flex items-center gap-3 px-5 py-4">
+                    <div key={label} className="flex items-center gap-2 px-4 py-3">
                       <div
                         className="flex items-center justify-center rounded-lg"
-                        style={{ width: 36, height: 36, background: `${color}18`, flexShrink: 0 }}
+                        style={{ width: 32, height: 32, background: `${color}18`, flexShrink: 0 }}
                       >
-                        <span style={{ color, fontSize: 16 }}>{icon}</span>
+                        <span style={{ color, fontSize: 14 }}>{icon}</span>
                       </div>
                       <div>
-                        <div className="font-bold text-lg leading-none" style={{ color }}>{value}</div>
+                        <div className="font-bold text-base leading-none" style={{ color }}>{value}</div>
                         <div className="text-xs text-gray-500 mt-0.5">{label}</div>
                       </div>
                     </div>
@@ -447,7 +447,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
 
         {/* Create View */}
         {currentView === "create" && (
-          <div className="p-4 sm:p-6">
+          <div>
             {error && (
               <Alert
                 message={error}
@@ -498,9 +498,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
 
         {/* Edit View */}
         {currentView === "edit" && editingExerciseId && (
-          <div className="p-4 sm:p-6">
-            <div className="mb-4 sm:mb-6">
-              <div className="flex items-center gap-2 sm:gap-3 mb-3">
+          <div>
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <Button
                   icon={<ArrowLeftOutlined />}
                   onClick={handleBackToList}

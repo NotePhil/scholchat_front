@@ -162,56 +162,48 @@ const ExerciseProgrammerContent = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="w-full px-2 py-3">
 
       {/* ── Header ── */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
-        <div className="relative h-32 bg-gradient-to-r from-blue-600 to-indigo-700 px-8 flex items-end pb-6">
+      <div className="bg-white rounded-xl shadow overflow-hidden mb-3">
+        <div className="relative bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="absolute inset-0 opacity-10"
-            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-          <div className="relative flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <Calendar size={24} className="text-white" />
+            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
+          <div className="relative flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Calendar size={18} className="text-white" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Programmer les Exercices</h1>
-              <p className="text-blue-100 text-sm">Assignez vos exercices aux classes avec dates et type</p>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-white leading-tight truncate">Programmer les Exercices</h1>
+              <p className="text-blue-100 text-xs">Assignez vos exercices aux classes avec dates et type</p>
             </div>
           </div>
-        </div>
-
-        {/* Stats strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100">
-          {[
-            { label: "Total programmés", value: stats.total, color: "#2563eb", icon: <ClipboardList size={16} /> },
-            { label: "Actifs / Publiés",  value: stats.actif,    color: "#16a34a", icon: <CheckCircle size={16} /> },
-            { label: "Exercices libres",  value: stats.exercices, color: "#0891b2", icon: <BookOpen size={16} /> },
-            { label: "Devoirs",           value: stats.devoirs,   color: "#7c3aed", icon: <FileText size={16} /> },
-          ].map(({ label, value, color, icon }) => (
-            <div key={label} className="flex items-center gap-3 px-6 py-4">
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: `${color}18` }}>
-                <span style={{ color }}>{icon}</span>
+          <div className="relative flex items-center gap-4 sm:gap-5 flex-shrink-0">
+            {[
+              { label: "Total",   value: stats.total,     color: "#93c5fd" },
+              { label: "Actifs",  value: stats.actif,     color: "#86efac" },
+              { label: "Libres",  value: stats.exercices, color: "#67e8f9" },
+              { label: "Devoirs", value: stats.devoirs,   color: "#c4b5fd" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="text-center">
+                <div className="text-lg font-bold" style={{ color }}>{value}</div>
+                <div className="text-xs text-blue-200">{label}</div>
               </div>
-              <div>
-                <div className="text-xl font-bold" style={{ color }}>{value}</div>
-                <div className="text-xs text-gray-500">{label}</div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
 
         {/* ── Form ── */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-              <Plus size={18} className="text-blue-600" />
-              <h2 className="font-semibold text-gray-800">Nouvelle programmation</h2>
+          <div className="bg-white rounded-xl shadow overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+              <Plus size={16} className="text-blue-600" />
+              <h2 className="font-semibold text-gray-800 text-sm">Nouvelle programmation</h2>
             </div>
-            <div className="p-6">
+            <div className="p-4">
               <Form form={form} layout="vertical" onFinish={handleSubmit}>
 
                 <Form.Item name="exerciseId" label={<span className="text-sm font-medium text-gray-700">Exercice</span>}
@@ -300,26 +292,26 @@ const ExerciseProgrammerContent = () => {
 
         {/* ── Programmations list ── */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white rounded-xl shadow overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ClipboardList size={18} className="text-blue-600" />
-                <h2 className="font-semibold text-gray-800">Programmations</h2>
+                <ClipboardList size={16} className="text-blue-600" />
+                <h2 className="font-semibold text-gray-800 text-sm">Programmations</h2>
                 <Badge count={programmations.length} style={{ backgroundColor: "#dbeafe", color: "#2563eb", boxShadow: "none", fontWeight: 600 }} />
               </div>
               <button onClick={loadProgs} disabled={progsLoading}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
-                <RefreshCw size={16} className={progsLoading ? "animate-spin" : ""} />
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
+                <RefreshCw size={14} className={progsLoading ? "animate-spin" : ""} />
               </button>
             </div>
 
             {progsLoading ? (
-              <div className="flex justify-center py-12"><Spin /></div>
+              <div className="flex justify-center py-10"><Spin /></div>
             ) : programmations.length === 0 ? (
-              <div className="text-center py-16">
-                <Calendar size={40} className="text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 font-medium">Aucune programmation</p>
-                <p className="text-gray-400 text-sm mt-1">Utilisez le formulaire pour programmer votre premier exercice</p>
+              <div className="text-center py-12">
+                <Calendar size={36} className="text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500 font-medium text-sm">Aucune programmation</p>
+                <p className="text-gray-400 text-xs mt-1">Utilisez le formulaire pour programmer votre premier exercice</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
@@ -330,7 +322,7 @@ const ExerciseProgrammerContent = () => {
                   const isExpired = fin && fin < now;
 
                   return (
-                    <div key={prog.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div key={prog.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 min-w-0 flex-1">
                           <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
