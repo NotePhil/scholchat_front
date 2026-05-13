@@ -222,27 +222,28 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   }
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="full-bleed-page">
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-6">
         {/* Header */}
-        <div className={`${cardBgClass} rounded-2xl shadow-lg border ${borderClass} p-6 mb-6`}>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} flex items-center justify-center shadow-lg`}>
-                <BookOpen className="w-6 h-6 text-white" />
+        <div className={`${cardBgClass} rounded-2xl shadow-sm border ${borderClass} p-4 sm:p-6 mb-4 sm:mb-6`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} flex items-center justify-center shadow-md flex-shrink-0`}>
+                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <h1 className={`text-3xl font-bold ${textClass}`}>{t('subjects.title')}</h1>
-                <p className={textSecondaryClass}>{t('subjects.subtitle')}</p>
+              <div className="min-w-0">
+                <h1 className={`text-lg sm:text-2xl font-bold ${textClass} leading-tight`}>{t('subjects.title')}</h1>
+                <p className={`text-xs sm:text-sm ${textSecondaryClass} truncate`}>{t('subjects.subtitle')}</p>
               </div>
             </div>
             {canManage && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} text-white text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105`}
+                className={`flex items-center gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all flex-shrink-0 text-sm`}
               >
-                <Plus className="w-5 h-5" />
-                {t('subjects.actions.new')}
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('subjects.actions.new')}</span>
+                <span className="sm:hidden">Nouveau</span>
               </button>
             )}
           </div>
@@ -250,168 +251,215 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
         {/* Message */}
         {message.text && (
-          <div className={`mb-6 p-4 rounded-xl border flex items-center gap-3 ${
+          <div className={`mb-4 p-3 rounded-xl border flex items-center gap-2 text-sm ${
             message.type === "success"
-              ? `bg-green-50 border-green-200 text-green-700 ${isDark ? "dark:bg-green-900/20 dark:border-green-800 dark:text-green-400" : ""}`
-              : `bg-red-50 border-red-200 text-red-700 ${isDark ? "dark:bg-red-900/20 dark:border-red-800 dark:text-red-400" : ""}`
+              ? "bg-green-50 border-green-200 text-green-700"
+              : "bg-red-50 border-red-200 text-red-700"
           }`}>
-            {message.type === "success" ? (
-              <CheckCircle className="w-5 h-5" />
-            ) : (
-              <AlertCircle className="w-5 h-5" />
-            )}
-            <span className="font-medium">{message.text}</span>
-            <button
-              onClick={() => setMessage({ text: "", type: "" })}
-              className="ml-auto hover:opacity-70"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {message.type === "success" ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+            <span className="flex-1">{message.text}</span>
+            <button onClick={() => setMessage({ text: "", type: "" })}><X className="w-4 h-4" /></button>
           </div>
         )}
 
-        {/* Search */}
-        <div className={`${cardBgClass} rounded-2xl shadow-lg border ${borderClass} p-6 mb-6`}>
-          <div className="flex flex-col md:flex-row gap-4">
+        {/* Search + Refresh */}
+        <div className={`${cardBgClass} rounded-2xl shadow-sm border ${borderClass} p-3 sm:p-4 mb-4 sm:mb-6`}>
+          <div className="flex gap-2">
             <div className="flex-1 relative">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${textSecondaryClass}`} />
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${textSecondaryClass}`} />
               <input
                 type="text"
                 placeholder={t('subjects.search.placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full pl-10 pr-4 py-3 rounded-xl border ${borderClass} ${inputBgClass} ${inputTextClass} focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300`}
+                className={`w-full pl-9 pr-3 py-2 rounded-xl border ${borderClass} ${inputBgClass} ${inputTextClass} focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm`}
               />
             </div>
             <button
               onClick={loadMatieres}
               disabled={loading}
-              className={`flex items-center gap-2 px-4 py-3 border ${borderClass} rounded-xl ${textClass} hover:${isDark ? "bg-gray-700" : "bg-gray-50"} transition-colors`}
+              className={`flex items-center gap-1.5 px-3 py-2 border ${borderClass} rounded-xl ${textClass} text-sm hover:bg-gray-50 transition-colors flex-shrink-0`}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-              {t('subjects.actions.refresh')}
+              <span className="hidden sm:inline">{t('subjects.actions.refresh')}</span>
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className={`${cardBgClass} rounded-2xl shadow-lg border ${borderClass} overflow-hidden`}>
+        <div className={`${cardBgClass} rounded-2xl shadow-sm border ${borderClass} overflow-hidden`}>
           {loading ? (
             <div className="p-12 text-center">
-              <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-              <p className={textSecondaryClass}>{t('common.actions.loading')}</p>
+              <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
+              <p className={`text-sm ${textSecondaryClass}`}>{t('common.actions.loading')}</p>
             </div>
           ) : currentMatieres.length === 0 ? (
-            <div className="p-12 text-center">
-              <BookOpen className={`w-16 h-16 ${textSecondaryClass} mx-auto mb-4`} />
-              <h3 className={`text-xl font-semibold ${textClass} mb-2`}>
+            <div className="p-10 text-center">
+              <BookOpen className={`w-12 h-12 ${textSecondaryClass} mx-auto mb-3`} />
+              <h3 className={`text-base font-semibold ${textClass} mb-1`}>
                 {searchTerm ? t('subjects.search.noResults') : t('subjects.search.empty')}
               </h3>
-              <p className={textSecondaryClass}>
-                {searchTerm 
-                  ? t('subjects.search.noResultsDesc')
-                  : t('subjects.search.emptyDesc')
-                }
+              <p className={`text-sm ${textSecondaryClass}`}>
+                {searchTerm ? t('subjects.search.noResultsDesc') : t('subjects.search.emptyDesc')}
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className={`${isDark ? "bg-gray-700" : "bg-gray-50"} border-b ${borderClass}`}>
-                  <tr>
-                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>{t('subjects.table.subject')}</th>
-                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>{t('subjects.table.description')}</th>
-                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>{t('subjects.table.creationDate')}</th>
-                    <th className={`px-6 py-4 text-left text-sm font-semibold ${textClass}`}>{t('subjects.table.status')}</th>
-                    {canManage && (
-                      <th className={`px-6 py-4 text-right text-sm font-semibold ${textClass}`}>Actions</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {currentMatieres.map((matiere, index) => (
-                    <tr key={index} className={`hover:${isDark ? "bg-gray-700" : "bg-gray-50"} transition-colors`}>
-                      <td className="px-6 py-4">
-                        <span className={`font-medium ${textClass}`}>{matiere.nom}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={textSecondaryClass}>{matiere.description || "Aucune description"}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar className={`w-4 h-4 ${textSecondaryClass}`} />
-                          <span className={textSecondaryClass}>{formatDate(matiere.dateCreation)}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          matiere.etat === "ACTIF" 
-                            ? `${isDark ? "bg-green-900/50 text-green-300" : "bg-green-100 text-green-800"}` 
-                            : `${isDark ? "bg-red-900/50 text-red-300" : "bg-red-100 text-red-800"}`
-                        }`}>
-                          {matiere.etat || "ACTIF"}
-                        </span>
-                      </td>
+            <>
+              {/* ── Mobile: card view ── */}
+              <div className="sm:hidden divide-y divide-gray-100">
+                {currentMatieres.map((matiere, index) => (
+                  <div key={index} className="p-4">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-semibold text-sm ${textClass} truncate`}>{matiere.nom}</p>
+                        {matiere.description && (
+                          <p className={`text-xs ${textSecondaryClass} mt-0.5 line-clamp-2`}>{matiere.description}</p>
+                        )}
+                      </div>
+                      <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        matiere.etat === "ACTIF"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}>
+                        {matiere.etat || "ACTIF"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className={`flex items-center gap-1 text-xs ${textSecondaryClass}`}>
+                        <Calendar className="w-3 h-3" />
+                        {formatDate(matiere.dateCreation)}
+                      </div>
                       {canManage && (
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleEdit(matiere)}
-                              className={`p-2 rounded-lg ${textSecondaryClass} hover:${isDark ? "bg-gray-700" : "bg-gray-100"} hover:text-blue-600 transition-colors`}
-                              title="Modifier"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(matiere)}
-                              className={`p-2 rounded-lg ${textSecondaryClass} hover:${isDark ? "bg-gray-700" : "bg-gray-100"} hover:text-red-600 transition-colors`}
-                              title="Supprimer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleEdit(matiere)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Modifier"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(matiere)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Desktop: table view ── */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className={`${isDark ? "bg-gray-700" : "bg-gray-50"} border-b ${borderClass}`}>
+                    <tr>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${textClass} uppercase tracking-wide`}>{t('subjects.table.subject')}</th>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${textClass} uppercase tracking-wide`}>{t('subjects.table.description')}</th>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${textClass} uppercase tracking-wide`}>{t('subjects.table.creationDate')}</th>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${textClass} uppercase tracking-wide`}>{t('subjects.table.status')}</th>
+                      {canManage && (
+                        <th className={`px-6 py-4 text-right text-xs font-semibold ${textClass} uppercase tracking-wide`}>Actions</th>
                       )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          
-          {/* Pagination */}
-          {showPagination && (
-            <div className={`px-6 py-4 border-t ${borderClass} flex items-center justify-between`}>
-              <div className={`text-sm ${textSecondaryClass}`}>
-                Affichage de {startIndex + 1} à {Math.min(endIndex, filteredMatieres.length)} sur {filteredMatieres.length} matières
+                  </thead>
+                  <tbody className={`divide-y ${borderClass}`}>
+                    {currentMatieres.map((matiere, index) => (
+                      <tr key={index} className={`hover:${isDark ? "bg-gray-700/50" : "bg-gray-50/60"} transition-colors`}>
+                        <td className="px-6 py-4">
+                          <span className={`font-medium text-sm ${textClass}`}>{matiere.nom}</span>
+                        </td>
+                        <td className="px-6 py-4 max-w-xs">
+                          <span className={`text-sm ${textSecondaryClass} line-clamp-2`}>{matiere.description || "—"}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className={`w-3.5 h-3.5 ${textSecondaryClass}`} />
+                            <span className={`text-sm ${textSecondaryClass}`}>{formatDate(matiere.dateCreation)}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                            matiere.etat === "ACTIF"
+                              ? `${isDark ? "bg-green-900/50 text-green-300" : "bg-green-100 text-green-700"}`
+                              : `${isDark ? "bg-red-900/50 text-red-300" : "bg-red-100 text-red-700"}`
+                          }`}>
+                            {matiere.etat || "ACTIF"}
+                          </span>
+                        </td>
+                        {canManage && (
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleEdit(matiere)}
+                                className={`p-2 rounded-lg ${textSecondaryClass} hover:text-blue-600 hover:bg-blue-50 transition-colors`}
+                                title="Modifier"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(matiere)}
+                                className={`p-2 rounded-lg ${textSecondaryClass} hover:text-red-600 hover:bg-red-50 transition-colors`}
+                                title="Supprimer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="flex items-center gap-2">
+            </>
+          )}
+
+          {/* Pagination — shared for both views */}
+          {showPagination && !loading && currentMatieres.length > 0 && (
+            <div className={`px-4 py-3 border-t ${borderClass} flex items-center justify-between gap-2`}>
+              <span className={`text-xs ${textSecondaryClass}`}>
+                {startIndex + 1}–{Math.min(endIndex, filteredMatieres.length)} / {filteredMatieres.length}
+              </span>
+              <div className="flex items-center gap-1">
                 <button
                   onClick={handlePrevious}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-lg border ${borderClass} ${textClass} hover:${isDark ? "bg-gray-700" : "bg-gray-50"} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`p-1.5 rounded-lg border ${borderClass} ${textClass} hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      currentPage === page
-                        ? `bg-gradient-to-r ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} text-white`
-                        : `border ${borderClass} ${textClass} hover:${isDark ? "bg-gray-700" : "bg-gray-50"}`
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                  .reduce((acc, p, idx, arr) => {
+                    if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) =>
+                    p === "…" ? (
+                      <span key={`e-${idx}`} className={`px-1 text-xs ${textSecondaryClass}`}>…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => handlePageChange(p)}
+                        className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${
+                          currentPage === p
+                            ? `bg-gradient-to-r ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} text-white`
+                            : `border ${borderClass} ${textClass} hover:bg-gray-50`
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
                 <button
                   onClick={handleNext}
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg border ${borderClass} ${textClass} hover:${isDark ? "bg-gray-700" : "bg-gray-50"} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`p-1.5 rounded-lg border ${borderClass} ${textClass} hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>

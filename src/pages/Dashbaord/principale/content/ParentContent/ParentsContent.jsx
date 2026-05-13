@@ -66,8 +66,8 @@ const ParentsContent = () => {
         scholchatService.getAllParents(),
         classService.obtenirToutesLesClasses(),
       ]);
-      setParents(parentsData || []);
-      setClasses(classesData || []);
+      setParents(Array.isArray(parentsData) ? parentsData : []);
+      setClasses(Array.isArray(classesData) ? classesData : []);
     } catch (err) {
       setError(t("parents.errors.loadData") + err.message);
     } finally {
@@ -76,7 +76,8 @@ const ParentsContent = () => {
   };
 
   const filterParents = () => {
-    let filtered = parents;
+    const safeParents = Array.isArray(parents) ? parents : [];
+    let filtered = safeParents;
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -250,7 +251,7 @@ const ParentsContent = () => {
                   {t("parents.stats.total")}
                 </p>
                 <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1">
-                  {parents.length}
+                  {Array.isArray(parents) ? parents.length : 0}
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg sm:rounded-xl">
@@ -276,7 +277,7 @@ const ParentsContent = () => {
                   {t("parents.stats.active")}
                 </p>
                 <p className="text-lg sm:text-3xl font-bold text-emerald-600 mt-1">
-                  {parents.filter((p) => p.etat === "ACTIVE").length}
+                  {(Array.isArray(parents) ? parents : []).filter((p) => p.etat === "ACTIVE").length}
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg sm:rounded-xl">
@@ -303,7 +304,7 @@ const ParentsContent = () => {
                 </p>
                 <p className="text-lg sm:text-3xl font-bold text-amber-600 mt-1">
                   {
-                    parents.filter(
+                    (Array.isArray(parents) ? parents : []).filter(
                       (p) =>
                         p.etat === "PENDING" || p.etat === "AWAITING_VALIDATION"
                     ).length
@@ -333,7 +334,7 @@ const ParentsContent = () => {
                   {t("parents.stats.inactive")}
                 </p>
                 <p className="text-lg sm:text-3xl font-bold text-red-600 mt-1">
-                  {parents.filter((p) => p.etat === "INACTIVE").length}
+                  {(Array.isArray(parents) ? parents : []).filter((p) => p.etat === "INACTIVE").length}
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-red-500 to-red-600 rounded-lg sm:rounded-xl">

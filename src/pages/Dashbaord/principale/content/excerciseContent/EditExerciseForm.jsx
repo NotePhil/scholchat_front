@@ -169,7 +169,8 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess, 
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
+    <div className="full-bleed-page">
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-4">
 
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 px-6 py-5 rounded-2xl"
@@ -301,6 +302,7 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess, 
           </Button>
         </div>
       </Form>
+    </div>
     </div>
   );
 };

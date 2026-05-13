@@ -540,26 +540,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         {/* Edit View */}
         {currentView === "edit" && editingExerciseId && (
           <div>
-            <div className="mb-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Button
-                  icon={<ArrowLeftOutlined />}
-                  onClick={handleBackToList}
-                  type="text"
-                  size="middle"
-                />
-                <Space align="center">
-                  <BookOutlined
-                    className="text-xl sm:text-2xl"
-                    style={{ color: "#4a6da7" }}
-                  />
-                  <Title level={2} className="m-0 text-lg sm:text-2xl">
-                    Modifier l'Exercice
-                  </Title>
-                </Space>
-              </div>
-            </div>
-
             {error && (
               <Alert
                 message={error}
