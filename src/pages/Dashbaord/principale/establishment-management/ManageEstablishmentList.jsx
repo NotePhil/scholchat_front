@@ -168,7 +168,7 @@ const ManageEstablishmentList = ({
 
   if (loading && establishments.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
             <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
@@ -186,22 +186,20 @@ const ManageEstablishmentList = ({
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+    <div className="full-bleed-page">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
-            <div className="p-2 sm:p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg sm:rounded-xl shadow-lg">
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-2 sm:p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg sm:rounded-xl shadow-lg flex-shrink-0">
               <Building2 className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent leading-tight">
                 Gestion des Établissements
               </h1>
-              <p className="text-slate-600 mt-1 text-xs sm:text-sm">
-                Gérez et supervisez tous les établissements du système
-              </p>
-              <p className="text-slate-500 mt-1 text-xs">
+              <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
                 {filteredEstablishments.length} établissement
                 {filteredEstablishments.length !== 1 ? "s" : ""} trouvé
                 {filteredEstablishments.length !== 1 ? "s" : ""} sur{" "}

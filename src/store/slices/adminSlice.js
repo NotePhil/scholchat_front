@@ -7,8 +7,7 @@ export const fetchAdmins = createAsyncThunk(
   "admin/fetchAdmins",
   async (_, { rejectWithValue }) => {
     try {
-      const usersData = await userService.getAllUsers();
-      return usersData?.filter((user) => user.admin === true) || [];
+      return await userService.getAdmins();
     } catch (error) {
       return rejectWithValue(error.message);
     }

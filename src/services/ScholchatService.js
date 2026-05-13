@@ -730,7 +730,7 @@ class ScholchatService {
   async validateProfessor(professorId) {
     try {
       const response = await api.post(
-        `/utilisateurs/professeurs/${professorId}/validate`
+        `/utilisateurs/professors/${professorId}/validate`
       );
       return response.data;
     } catch (error) {
@@ -738,12 +738,12 @@ class ScholchatService {
     }
   }
 
-  async rejectProfessor(professorId, rejectionData) {
+  async rejectProfessor(professorId, codeErreur, motifSupplementaire) {
     try {
-      const formData = this.createFormDataFromObject(rejectionData);
+      const params = new URLSearchParams({ codeErreur });
+      if (motifSupplementaire) params.append("motifSupplementaire", motifSupplementaire);
       const response = await api.post(
-        `/utilisateurs/professeurs/${professorId}/rejet`,
-        formData
+        `/utilisateurs/professeurs/${professorId}/rejet?${params.toString()}`
       );
       return response.data;
     } catch (error) {

@@ -570,6 +570,8 @@
 .full-bleed-page {
   margin: -30px;
   margin-top: 0;
+  /* Ensure content never touches the screen edges */
+  min-width: 0;
 }
 
 .messaging-sidebar {
@@ -1261,6 +1263,11 @@
   padding: 8px 12px !important;
   padding-top: 64px !important;
   padding-bottom: 80px !important;
+}
+
+.mobile-layout .full-bleed-page {
+  margin: -8px -12px;
+  margin-top: 0;
 }
 
 /* ========================================

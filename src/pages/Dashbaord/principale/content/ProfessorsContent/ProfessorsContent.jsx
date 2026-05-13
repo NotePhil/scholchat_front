@@ -184,14 +184,74 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
   const [viewingProfessor, setViewingProfessor] = useState(null);
   const [viewerConfig, setViewerConfig] = useState({ isOpen: false, url: "", fileName: "", contentType: "" });
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [motifs, setMotifs] = useState([]);
+  const [selectedMotifCode, setSelectedMotifCode] = useState("");
+  const [motifSupplementaire, setMotifSupplementaire] = useState("");
+  const [motifsLoading, setMotifsLoading] = useState(false);
 
   const handleViewUser = (professor) => {
     setViewingProfessor(professor);
+    setActionError("");
+    setActionSuccess("");
   };
 
   const handleSuccess = () => {
     setIsViewModalOpen(false);
     loadData();
+  };
+
+  const handleValidateProfessor = async (prof) => {
+    try {
+      setActionLoading(true);
+      setActionError("");
+      await scholchatService.validateProfessor(prof.id);
+      setActionSuccess("Professeur validé avec succès.");
+      // Refresh the professor data
+      const updated = await scholchatService.getProfessorById(prof.id);
+      setViewingProfessor(updated);
+      await loadData();
+    } catch (err) {
+      setActionError("Erreur lors de la validation : " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openRejectModal = async () => {
+    setShowRejectModal(true);
+    setSelectedMotifCode("");
+    setMotifSupplementaire("");
+    setMotifsLoading(true);
+    try {
+      const data = await scholchatService.getAllMotifs();
+      setMotifs(Array.isArray(data) ? data : []);
+    } catch {
+      setMotifs([]);
+    } finally {
+      setMotifsLoading(false);
+    }
+  };
+
+  const handleRejectProfessor = async () => {
+    if (!selectedMotifCode) return;
+    try {
+      setActionLoading(true);
+      setActionError("");
+      await scholchatService.rejectProfessor(viewingProfessor.id, selectedMotifCode, motifSupplementaire || undefined);
+      setShowRejectModal(false);
+      setActionSuccess("Professeur rejeté.");
+      const updated = await scholchatService.getProfessorById(viewingProfessor.id);
+      setViewingProfessor(updated);
+      await loadData();
+    } catch (err) {
+      setActionError("Erreur lors du rejet : " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const getInitials = (firstName, lastName) => {
@@ -226,6 +286,7 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)" }}>
             <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 pointer-events-none" style={{ background: "#fff" }} />
             <div className="relative px-3 sm:px-6 py-3 sm:py-4">
+              {/* Row 1: back button */}
               <div className="flex items-center gap-2 mb-3">
                 <button
                   onClick={() => setViewingProfessor(null)}
@@ -236,7 +297,8 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   Retour
                 </button>
               </div>
-              <div className="flex items-start gap-3">
+              {/* Row 2: identity */}
+              <div className="flex items-start gap-3 mb-3">
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white font-black text-base sm:text-lg flex-shrink-0"
                   style={{ background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.35)" }}>
                   {getInitials(prof.prenom, prof.nom)}
@@ -259,6 +321,33 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   </div>
                 </div>
               </div>
+              {/* Row 3: admin action buttons — centered, only for AWAITING_VALIDATION */}
+              {isAdmin && prof.etat === "AWAITING_VALIDATION" && (
+                <div className="flex items-center justify-center gap-3 pt-1 pb-1 flex-wrap">
+                  <button
+                    onClick={() => handleValidateProfessor(prof)}
+                    disabled={actionLoading}
+                    className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
+                    style={{ background: "#16a34a", color: "#fff", border: "2px solid #15803d" }}
+                  >
+                    {actionLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <UserCheck size={15} />
+                    )}
+                    Valider le professeur
+                  </button>
+                  <button
+                    onClick={openRejectModal}
+                    disabled={actionLoading}
+                    className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
+                    style={{ background: "#dc2626", color: "#fff", border: "2px solid #b91c1c" }}
+                  >
+                    <UserX size={15} />
+                    Rejeter le professeur
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -491,6 +580,126 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         contentType={viewerConfig.contentType}
         onClose={() => setViewerConfig({ isOpen: false, url: "", fileName: "", contentType: "" })}
       />
+
+      {/* Action feedback banners */}
+      {(actionSuccess || actionError) && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm">
+          {actionSuccess && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium"
+              style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
+              <UserCheck size={16} />
+              {actionSuccess}
+              <button onClick={() => setActionSuccess("")} className="ml-auto text-green-400 hover:text-green-600">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+          {actionError && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium"
+              style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+              <AlertTriangle size={16} />
+              {actionError}
+              <button onClick={() => setActionError("")} className="ml-auto text-red-400 hover:text-red-600">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Rejection modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between"
+              style={{ background: "linear-gradient(135deg, #fef2f2 0%, #fff 100%)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">
+                  <UserX size={16} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Rejeter le professeur</h3>
+                  <p className="text-xs text-slate-500">{prof.prenom} {prof.nom}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowRejectModal(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Motif de rejet <span className="text-red-500">*</span>
+                </label>
+                {motifsLoading ? (
+                  <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
+                    <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                    Chargement des motifs...
+                  </div>
+                ) : motifs.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">Aucun motif disponible.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {motifs.map((m) => (
+                      <label key={m.id}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          selectedMotifCode === m.code
+                            ? "border-red-400 bg-red-50"
+                            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                        }`}>
+                        <input
+                          type="radio"
+                          name="motif"
+                          value={m.code}
+                          checked={selectedMotifCode === m.code}
+                          onChange={() => setSelectedMotifCode(m.code)}
+                          className="mt-0.5 accent-red-600 flex-shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-700">{m.code}</p>
+                          {m.descriptif && <p className="text-xs text-slate-500 mt-0.5">{m.descriptif}</p>}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Motif supplémentaire <span className="text-slate-400 font-normal">(optionnel)</span>
+                </label>
+                <textarea
+                  value={motifSupplementaire}
+                  onChange={(e) => setMotifSupplementaire(e.target.value)}
+                  placeholder="Précisez si nécessaire..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none transition-all"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50/50">
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+                Annuler
+              </button>
+              <button
+                onClick={handleRejectProfessor}
+                disabled={!selectedMotifCode || actionLoading}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "#dc2626" }}>
+                {actionLoading ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <UserX size={14} />
+                )}
+                Confirmer le rejet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
     );
   }

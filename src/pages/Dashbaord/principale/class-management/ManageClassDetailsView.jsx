@@ -235,6 +235,13 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
   const [publicationRightsModalVisible, setPublicationRightsModalVisible] =
     useState(false);
 
+  // Admin class approval/rejection modal state
+  const [classRejectModalVisible, setClassRejectModalVisible] = useState(false);
+  const [classRejectMotifs, setClassRejectMotifs] = useState([]);
+  const [classRejectSelectedCode, setClassRejectSelectedCode] = useState("");
+  const [classRejectMotifSupp, setClassRejectMotifSupp] = useState("");
+  const [classRejectMotifsLoading, setClassRejectMotifsLoading] = useState(false);
+
   // Form and data states
   const [form] = Form.useForm();
   const [history, setHistory] = useState([]);
@@ -968,6 +975,39 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
     }
   };
 
+  // Admin: open class rejection modal and load motifs
+  const openClassRejectModal = async () => {
+    setClassRejectModalVisible(true);
+    setClassRejectSelectedCode("");
+    setClassRejectMotifSupp("");
+    setClassRejectMotifsLoading(true);
+    try {
+      const motifs = await rejectionServiceClass.getAllClassRejectionMotifs();
+      setClassRejectMotifs(Array.isArray(motifs) ? motifs : []);
+    } catch {
+      setClassRejectMotifs([]);
+    } finally {
+      setClassRejectMotifsLoading(false);
+    }
+  };
+
+  // Admin: confirm class rejection from modal
+  const confirmClassReject = async () => {
+    if (!classRejectSelectedCode) return;
+    try {
+      setActionLoading("admin-reject");
+      await classService.rejeterClasse(classId, classRejectSelectedCode);
+      message.success("Classe rejetée avec succès");
+      setClassRejectModalVisible(false);
+      await loadClassDetails();
+    } catch (error) {
+      console.error("Error rejecting class:", error);
+      message.error("Erreur lors du rejet de la classe");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleApprove = async () => {
     if (!classId) return;
 
@@ -1670,10 +1710,15 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 Retour
               </button>
               <button onClick={showDeleteConfirm}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-red-500/30"
-                style={{ background: "rgba(239,68,68,0.2)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.35)" }}>
-                <Trash2 size={12} />
-                <span className="hidden sm:inline">Supprimer</span>
+                disabled={actionLoading === "delete"}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
+                style={{ background: "#dc2626", color: "#fff", border: "2px solid #b91c1c" }}>
+                {actionLoading === "delete" ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Trash2 size={13} />
+                )}
+                Supprimer
               </button>
             </div>
 
@@ -1736,6 +1781,30 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 <History size={12} />
                 Historique
               </button>
+              {/* Admin approve/reject for pending classes */}
+              {(userRole === "ROLE_ADMIN" || userRole === "ADMIN") &&
+               (classDetails?.etat === "EN_ATTENTE_APPROBATION" || classDetails?.etat === "PENDING") && (
+                <>
+                  <button onClick={handleApprove}
+                    disabled={actionLoading === "approve"}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-60 shadow-md"
+                    style={{ background: "#16a34a", border: "2px solid #15803d" }}>
+                    {actionLoading === "approve" ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Check size={13} />
+                    )}
+                    Approuver
+                  </button>
+                  <button onClick={openClassRejectModal}
+                    disabled={actionLoading === "admin-reject"}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-60 shadow-md"
+                    style={{ background: "#dc2626", border: "2px solid #b91c1c" }}>
+                    <XIcon size={13} />
+                    Rejeter
+                  </button>
+                </>
+              )}
               {(canSelfApproveReject() && isClassPendingApproval()) && (
                 <>
                   <button onClick={handleSelfApprove}
@@ -2298,6 +2367,100 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
           </div>
         )}
       </Modal>
+
+      {/* ── Admin Class Rejection Modal ── */}
+      {classRejectModalVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between"
+              style={{ background: "linear-gradient(135deg, #fef2f2 0%, #fff 100%)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">
+                  <XIcon size={16} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Rejeter la classe</h3>
+                  <p className="text-xs text-slate-500">{classDetails?.nom}</p>
+                </div>
+              </div>
+              <button onClick={() => setClassRejectModalVisible(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400">
+                <XIcon size={16} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Motif de rejet <span className="text-red-500">*</span>
+                </label>
+                {classRejectMotifsLoading ? (
+                  <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
+                    <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                    Chargement des motifs...
+                  </div>
+                ) : classRejectMotifs.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">Aucun motif disponible.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {classRejectMotifs.map((m) => (
+                      <label key={m.id}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          classRejectSelectedCode === m.code
+                            ? "border-red-400 bg-red-50"
+                            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                        }`}>
+                        <input
+                          type="radio"
+                          name="classMotif"
+                          value={m.code}
+                          checked={classRejectSelectedCode === m.code}
+                          onChange={() => setClassRejectSelectedCode(m.code)}
+                          className="mt-0.5 accent-red-600 flex-shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-700">{m.code}</p>
+                          {m.descriptif && <p className="text-xs text-slate-500 mt-0.5">{m.descriptif}</p>}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Commentaire supplémentaire <span className="text-slate-400 font-normal">(optionnel)</span>
+                </label>
+                <textarea
+                  value={classRejectMotifSupp}
+                  onChange={(e) => setClassRejectMotifSupp(e.target.value)}
+                  placeholder="Précisez si nécessaire..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none transition-all"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50/50">
+              <button
+                onClick={() => setClassRejectModalVisible(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+                Annuler
+              </button>
+              <button
+                onClick={confirmClassReject}
+                disabled={!classRejectSelectedCode || actionLoading === "admin-reject"}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "#dc2626" }}>
+                {actionLoading === "admin-reject" ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <XIcon size={14} />
+                )}
+                Confirmer le rejet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

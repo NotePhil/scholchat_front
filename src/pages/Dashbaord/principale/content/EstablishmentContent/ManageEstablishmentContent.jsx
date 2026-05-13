@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Building } from "lucide-react";
 import EstablishmentService from "../../../../../services/EstablishmentService";
 import ManageEstablishmentList from "../../establishment-management/ManageEstablishmentList";
 import ManageEstablishmentDetailsView from "../../establishment-management/ManageEstablishmentDetailsView";
@@ -122,84 +121,21 @@ const ManageEstablishmentContent = ({ onBack, setActiveTab }) => {
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      <div>
-        {!selectedEstablishmentId && !editingEstablishment ? (
-          <div style={{ padding: "24px" }}>
-            <div style={{ marginBottom: "24px" }}>
-              <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
-                <Building style={{ fontSize: "24px", color: "#4a6da7", marginRight: "8px" }} />
-                <h2 style={{ margin: 0, color: "#2c3e50" }}>
-                  Gérer les Établissements
-                </h2>
-              </div>
-              <p style={{ color: "#666", fontSize: "16px" }}>
-                Gérez et supervisez tous les établissements du système
-              </p>
-            </div>
-
-            {error && (
-              <div
-                style={{
-                  backgroundColor: "#fee",
-                  border: "1px solid #fcc",
-                  color: "#c33",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  marginBottom: "16px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}
-              >
-                <span>{error}</span>
-                <button
-                  onClick={() => setError("")}
-                  style={{ background: "none", border: "none", color: "#c33", cursor: "pointer" }}
-                >
-                  ×
-                </button>
-              </div>
-            )}
-
-            {successMessage && (
-              <div
-                style={{
-                  backgroundColor: "#efe",
-                  border: "1px solid #cfc",
-                  color: "#3c3",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  marginBottom: "16px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}
-              >
-                <span>{successMessage}</span>
-                <button
-                  onClick={() => setSuccessMessage("")}
-                  style={{ background: "none", border: "none", color: "#3c3", cursor: "pointer" }}
-                >
-                  ×
-                </button>
-              </div>
-            )}
-
-            <ManageEstablishmentList
-              establishments={establishments}
-              loading={loading}
-              error={error}
-              successMessage={successMessage}
-              refreshing={refreshing}
-              onSelectEstablishment={handleSelectEstablishment}
-              onEditEstablishment={handleEditEstablishment}
-              onRefresh={handleRefresh}
-              onDelete={handleDeleteEstablishment}
-              onBack={onBack}
-              onNavigateToCreate={setActiveTab ? () => setActiveTab("create-establishment") : undefined}
-            />
-          </div>
+    <>
+      {!selectedEstablishmentId && !editingEstablishment ? (
+        <ManageEstablishmentList
+            establishments={establishments}
+            loading={loading}
+            error={error}
+            successMessage={successMessage}
+            refreshing={refreshing}
+            onSelectEstablishment={handleSelectEstablishment}
+            onEditEstablishment={handleEditEstablishment}
+            onRefresh={handleRefresh}
+            onDelete={handleDeleteEstablishment}
+            onBack={onBack}
+            onNavigateToCreate={setActiveTab ? () => setActiveTab("create-establishment") : undefined}
+          />
         ) : editingEstablishment ? (
           <CreateEstablishmentContent
             editingEstablishment={editingEstablishment}
@@ -218,8 +154,7 @@ const ManageEstablishmentContent = ({ onBack, setActiveTab }) => {
             onEdit={handleEditEstablishment}
           />
         )}
-      </div>
-    </div>
+    </>
   );
 };
 

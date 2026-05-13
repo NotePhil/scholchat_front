@@ -27,6 +27,16 @@ class UserService {
     }
   }
 
+  // Get all admin users
+  async getAdmins() {
+    try {
+      const response = await userApi.get("/utilisateurs/admins");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   // Get all users - No authentication token required
   async getAllUsers() {
     try {
