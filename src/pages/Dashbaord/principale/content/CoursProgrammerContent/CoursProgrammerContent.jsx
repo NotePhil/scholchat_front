@@ -438,19 +438,18 @@ const CoursProgrammerContent = () => {
   }
 
   return (
-    <div className="relative">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {/* Header Section */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
-            <div className="p-2 sm:p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg sm:rounded-xl shadow-lg flex-shrink-0">
-              <CalendarPlus className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+    <div className="full-bleed-page">
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-4">
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div className="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-md flex-shrink-0">
+              <CalendarPlus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent break-words hyphens-auto">
+              <h1 className="text-lg sm:text-2xl font-bold text-slate-900 leading-tight">
                 Programmation des Cours
               </h1>
-              <p className="text-slate-600 mt-1 text-xs sm:text-sm break-words">
+              <p className="text-slate-500 text-xs sm:text-sm">
                 Planifiez et gérez les sessions de vos cours
               </p>
             </div>
@@ -459,44 +458,28 @@ const CoursProgrammerContent = () => {
 
         {/* Messages d'alerte */}
         {success && (
-          <div className="mb-4 sm:mb-6 bg-green-50 border border-green-200 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start min-w-0 flex-1">
-                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div className="ml-3 min-w-0 flex-1">
-                  <p className="text-green-800 font-medium text-sm">Succès</p>
-                  <p className="text-green-700 text-xs sm:text-sm mt-1 break-words hyphens-auto overflow-wrap-break-word">
-                    {success}
-                  </p>
-                </div>
+          <div className="mb-3 sm:mb-4 bg-green-50 border border-green-200 rounded-xl p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0 flex-1">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <p className="text-green-700 text-xs sm:text-sm break-words">{success}</p>
               </div>
-              <button
-                onClick={() => setSuccess("")}
-                className="text-green-400 hover:text-green-600 flex-shrink-0"
-              >
-                <X className="w-3 h-3 sm:w-4 sm:h-4" />
+              <button onClick={() => setSuccess("")} className="text-green-400 hover:text-green-600 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="mb-4 sm:mb-6 bg-red-50 border border-red-200 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start min-w-0 flex-1">
-                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 mt-0.5 flex-shrink-0" />
-                <div className="ml-3 min-w-0 flex-1">
-                  <p className="text-red-800 font-medium text-sm">Erreur</p>
-                  <p className="text-red-700 text-xs sm:text-sm mt-1 break-words hyphens-auto overflow-wrap-break-word">
-                    {error}
-                  </p>
-                </div>
+          <div className="mb-3 sm:mb-4 bg-red-50 border border-red-200 rounded-xl p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0 flex-1">
+                <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-red-700 text-xs sm:text-sm break-words">{error}</p>
               </div>
-              <button
-                onClick={() => setError("")}
-                className="text-red-400 hover:text-red-600 flex-shrink-0"
-              >
-                <X className="w-3 h-3 sm:w-4 sm:h-4" />
+              <button onClick={() => setError("")} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -510,143 +493,98 @@ const CoursProgrammerContent = () => {
         />
 
         {/* Barre de contrôle */}
-        <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg mb-6 sm:mb-8">
-          <div className="flex flex-col space-y-3 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between lg:space-x-6">
-            <div className="relative flex-1 max-w-full lg:max-w-md">
-              <Search
-                className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400 flex-shrink-0"
-                size={16}
-              />
+        <div className="bg-white border border-slate-100 rounded-xl p-3 sm:p-4 shadow-sm mb-4 sm:mb-8">
+          {/* Row 1: Search + Add button */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input
                 type="text"
                 placeholder="Rechercher par cours, lieu, classe..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm"
+                className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all"
               />
             </div>
-
-            <div className="flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4">
-              <div className="relative flex-1 min-[480px]:flex-none min-w-0">
-                <Filter
-                  className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400 flex-shrink-0"
-                  size={14}
-                />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full pl-8 sm:pl-12 pr-6 sm:pr-8 py-2 sm:py-3 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
-                >
-                  <option value="all">Tous les statuts</option>
-                  <option value="PLANIFIE">Planifié</option>
-                  <option value="EN_COURS">En cours</option>
-                  <option value="TERMINE">Terminé</option>
-                  <option value="ANNULE">Annulé</option>
-                </select>
-                <ChevronDown
-                  className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-slate-400 flex-shrink-0"
-                  size={14}
-                />
-              </div>
-
-              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg sm:rounded-xl px-3 py-2 sm:py-3 shadow-sm min-w-0 self-center min-[480px]:self-auto">
-                <Hash className="text-slate-400 flex-shrink-0" size={14} />
-                <select
-                  value={pageSize}
-                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="text-xs sm:text-sm bg-transparent border-none focus:ring-0 cursor-pointer min-w-0"
-                >
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-slate-600 text-xs hidden sm:inline whitespace-nowrap">
-                  par page
-                </span>
-              </div>
-
-              <div className="flex bg-slate-100 rounded-lg sm:rounded-xl p-1 self-center min-[480px]:self-auto">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "grid"
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <Grid size={14} className="sm:w-4 sm:h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode("table")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "table"
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <List size={14} className="sm:w-4 sm:h-4" />
-                </button>
-              </div>
-
-              <button
-                onClick={handleRefresh}
-                disabled={loading}
-                className="p-2 sm:p-3 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg sm:rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 self-center min-[480px]:self-auto"
-                title="Actualiser les données"
-              >
-                <RefreshCw
-                  size={16}
-                  className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`}
-                />
-              </button>
-
-              <button
-                onClick={handleScheduleCourse}
-                disabled={loading}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                <Plus size={16} className="sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="hidden sm:inline">Programmer un Cours</span>
-                <span className="sm:hidden">Programmer</span>
-              </button>
-            </div>
+            <button
+              onClick={handleScheduleCourse}
+              disabled={loading}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-3 sm:px-5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-md font-medium text-sm disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+            >
+              <Plus size={15} className="flex-shrink-0" />
+              <span className="hidden sm:inline">Programmer un Cours</span>
+              <span className="sm:hidden">Programmer</span>
+            </button>
           </div>
 
-          {/* Résultats de recherche */}
+          {/* Row 2: Filters + controls */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Status filter */}
+            <div className="relative flex-1 min-w-[130px]">
+              <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+              >
+                <option value="all">Tous les statuts</option>
+                <option value="PLANIFIE">Planifié</option>
+                <option value="EN_COURS">En cours</option>
+                <option value="TERMINE">Terminé</option>
+                <option value="ANNULE">Annulé</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+            </div>
+
+            {/* Page size */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 flex-shrink-0">
+              <Hash className="text-slate-400" size={13} />
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="text-xs bg-transparent border-none focus:ring-0 cursor-pointer"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <span className="text-slate-500 text-xs hidden sm:inline">/ page</span>
+            </div>
+
+            {/* View toggle */}
+            <div className="flex bg-slate-100 rounded-lg p-0.5 flex-shrink-0">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <Grid size={15} />
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <List size={15} />
+              </button>
+            </div>
+
+            {/* Refresh */}
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+              title="Actualiser"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
+
+          {/* Results count */}
           {filteredScheduledCourses.length > 0 && (
-            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-200">
-              <p className="text-xs sm:text-sm text-slate-600 break-words hyphens-auto overflow-wrap-break-word">
-                <span className="font-medium text-slate-800">
-                  {filteredScheduledCourses.length}
-                </span>{" "}
-                {filteredScheduledCourses.length === 1
-                  ? "cours trouvé"
-                  : "cours trouvés"}
-                {searchTerm && (
-                  <span>
-                    {" "}
-                    pour "
-                    <span className="font-medium break-words hyphens-auto overflow-wrap-break-word">
-                      {searchTerm}
-                    </span>
-                    "
-                  </span>
-                )}
-                {filterStatus !== "all" && (
-                  <span>
-                    {" "}
-                    avec le statut "
-                    <span className="font-medium">
-                      {filterStatus === "PLANIFIE" && "Planifié"}
-                      {filterStatus === "EN_COURS" && "En cours"}
-                      {filterStatus === "TERMINE" && "Terminé"}
-                      {filterStatus === "ANNULE" && "Annulé"}
-                    </span>
-                    "
-                  </span>
-                )}
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <p className="text-xs text-slate-500">
+                <span className="font-semibold text-slate-700">{filteredScheduledCourses.length}</span>{" "}
+                {filteredScheduledCourses.length === 1 ? "cours trouvé" : "cours trouvés"}
+                {searchTerm && <span> pour "<span className="font-medium text-slate-700">{searchTerm}</span>"</span>}
               </p>
             </div>
           )}
@@ -654,7 +592,7 @@ const CoursProgrammerContent = () => {
 
         {/* Liste des cours programmés - Updated for single column on small screens */}
         {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
             {filteredScheduledCourses
               .slice(0, pageSize)
               .map((scheduledCourse) => {

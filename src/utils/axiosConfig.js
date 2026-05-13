@@ -48,6 +48,10 @@ export const createAuthenticatedAxios = () => {
 
 // Centralized authentication error handling
 export const handleAuthenticationError = () => {
+  // Save current location before clearing so we can show the expired message
+  const currentPath = window.location.pathname;
+  const isOnDashboard = currentPath.includes('/schoolchat/Principal');
+
   // Clear all auth data
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
@@ -62,18 +66,30 @@ export const handleAuthenticationError = () => {
   localStorage.removeItem("decodedToken");
   localStorage.removeItem("authResponse");
   localStorage.removeItem("loginTime");
-  
-  // Set session expired flag
-  localStorage.setItem("sessionExpired", "true");
-  
-  // Dispatch storage event to trigger auth context update
+
+  // Use sessionStorage so the Login page cleanup (which only touches localStorage) won't erase it
+  sessionStorage.setItem("sessionExpired", "true");
+
+  // Dispatch a custom event — Principal.jsx listens for this and shows the
+  // "Session expirée" modal before navigating, avoiding a hard reload blank screen
+  window.dispatchEvent(new CustomEvent('auth:sessionExpired'));
+
+  // Also dispatch storage event to trigger auth context update
   window.dispatchEvent(new StorageEvent('storage', {
     key: 'isAuthenticated',
     newValue: null
   }));
-  
-  // Redirect to login page
-  window.location.href = '/schoolchat/login';
+
+  // Only redirect if we're actually on a protected page and no modal handler caught it
+  // Use a short delay so the modal can show first if Principal is mounted
+  if (isOnDashboard) {
+    setTimeout(() => {
+      // If still on the dashboard (modal didn't navigate away), do a hard redirect
+      if (window.location.pathname.includes('/schoolchat/Principal')) {
+        window.location.replace('/schoolchat/login');
+      }
+    }, 3000);
+  }
 };
 
 // Enhanced error handler for services

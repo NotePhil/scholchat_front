@@ -4,205 +4,31 @@ import {
   Plus,
   Search,
   Filter,
-  Eye,
   Edit2,
-  Trash2,
   Clock,
-  Users,
   Calendar,
   CheckCircle,
-  XCircle,
   AlertCircle,
-  MoreVertical,
   ChevronDown,
-  PlayCircle,
-  PauseCircle,
   FileText,
   Star,
   TrendingUp,
   Activity,
   Grid,
   List,
-  Download,
-  Share2,
-  Archive,
   X,
   RefreshCw,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { matiereService } from "../../../../../services/MatiereService";
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
 
 import CreateCourseComponent from "./CreateCourseComponent";
 import CourseContentView from "./CourseContentView";
-import MultiSelectDropdown from "./MultiSelectDropdown";
 import CourseCard from "./CourseCard";
 import CourseTableRow from "./CourseTableRow";
-import { useSelector } from "react-redux";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight } from "lucide-react";
-
-const ProfessorCoursesContentMobile = ({
-  courses,
-  searchTerm,
-  setSearchTerm,
-  filterStatus,
-  setFilterStatus,
-  onViewCourse,
-  onEditCourse,
-  onCreateCourse,
-  onRefresh,
-  loading
-}) => {
-  const tabs = [
-    { id: "all", label: "All", icon: BookOpen, color: "bg-blue-600" },
-    { id: "PUBLIE", label: "Published", icon: CheckCircle, color: "bg-green-600" },
-    { id: "BROUILLON", label: "Drafts", icon: FileText, color: "bg-yellow-600" }
-  ];
-
-  const filteredCourses = courses.filter(course => {
-    const matchesSearch = course.titre?.toLowerCase().includes(searchTerm.toLowerCase());
-    if (filterStatus === "all") return matchesSearch;
-    return matchesSearch && course.etat === filterStatus;
-  });
-
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-slate-950 pb-32">
-      <header className="px-6 pt-8 pb-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-black dark:text-white">My Courses</h1>
-          <button onClick={onRefresh} className="p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm">
-            <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
-          </button>
-        </div>
-        <div className="relative mb-6">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search courses..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-800 py-4 pl-12 pr-4 rounded-3xl shadow-xl shadow-blue-500/5 border border-gray-100 dark:border-white/5 outline-none focus:border-blue-500 transition-all dark:text-white"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          <div className="bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-lg border border-gray-100 dark:border-white/5">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
-                <TrendingUp size={14} />
-              </div>
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Growth</span>
-            </div>
-            <p className="text-2xl font-black dark:text-white">+{courses.length}</p>
-          </div>
-          <div className="bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-lg border border-gray-100 dark:border-white/5">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="p-2 bg-green-500/10 text-green-500 rounded-lg">
-                <Star size={14} />
-              </div>
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active</span>
-            </div>
-            <p className="text-2xl font-black dark:text-white">{courses.filter(c => c.etat === "PUBLIE").length}</p>
-          </div>
-        </div>
-        <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-2">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setFilterStatus(tab.id)}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                filterStatus === tab.id
-                ? `${tab.color} text-white shadow-lg`
-                : "bg-white dark:bg-slate-800 text-gray-500 border border-gray-100 dark:border-white/5"
-              }`}
-            >
-              <tab.icon size={14} />
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </header>
-
-      <div className="px-4 space-y-4">
-        {filteredCourses.map((course, idx) => (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: idx * 0.05 }}
-            key={course.id}
-            onClick={() => onViewCourse(course)}
-            className="bg-white dark:bg-slate-800 p-6 rounded-[32px] shadow-xl border border-gray-100 dark:border-white/5 active:scale-95 transition-all group overflow-hidden relative"
-          >
-            <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
-              <BookOpen size={120} />
-            </div>
-            <div className="flex justify-between items-start mb-4">
-              <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                course.etat === 'PUBLIE' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'
-              }`}>
-                {course.etat}
-              </div>
-              <MoreVertical size={18} className="text-gray-300" />
-            </div>
-            <h3 className="text-xl font-black dark:text-white mb-2 leading-tight">{course.titre}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-6 font-medium leading-relaxed">
-              {course.description || "No description provided for this course."}
-            </p>
-            <div className="flex items-center justify-between pt-4 border-t border-gray-50 dark:border-white/5">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-black text-[10px]">
-                  {course.matiere?.nom?.charAt(0) || "M"}
-                </div>
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate max-w-[100px]">
-                  {course.matiere?.nom || "Subject"}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); onEditCourse(course); }}
-                  className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-xl"
-                >
-                  <Edit2 size={16} />
-                </button>
-                <div className="flex items-center space-x-1 text-gray-400">
-                  <Clock size={12} />
-                  <span className="text-[10px] font-bold">{new Date(course.dateCreation).toLocaleDateString()}</span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-
-        {filteredCourses.length === 0 && (
-          <div className="py-20 text-center">
-            <div className="p-8 bg-gray-100 dark:bg-slate-800 rounded-full w-fit mx-auto mb-6">
-              <FileText size={48} className="text-gray-300" />
-            </div>
-            <h4 className="text-lg font-black dark:text-white">No courses found</h4>
-            <p className="text-sm text-gray-500 font-medium">Create your first course to get started</p>
-          </div>
-        )}
-      </div>
-
-      <button
-        onClick={onCreateCourse}
-        className="fixed bottom-28 right-6 w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 z-[30] active:scale-95 transition-transform"
-      >
-        <Plus size={32} />
-      </button>
-    </div>
-  );
-};
-
-const COURSE_STATES = {
-  BROUILLON: "BROUILLON",
-  PUBLIE: "PUBLIE",
-};
+import { motion } from "framer-motion";
 
 const ProfessorCoursesContent = ({ setActiveTab }) => {
-  const isMobile = useSelector((state) => state.ui.isMobile);
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -212,10 +38,7 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [modalMode, setModalMode] = useState("create");
   const [subjects, setSubjects] = useState([]);
-  const [selectedMatiereIds, setSelectedMatiereIds] = useState([]);
   const [viewingCourse, setViewingCourse] = useState(null);
   const [showCourseContent, setShowCourseContent] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
@@ -396,36 +219,19 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
     );
   }
 
-  if (isMobile && !showCreateForm && !showEditForm && !showCourseContent) {
-    return (
-      <ProfessorCoursesContentMobile 
-        courses={courses}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        filterStatus={filterStatus}
-        setFilterStatus={setFilterStatus}
-        onViewCourse={handleViewCourse}
-        onEditCourse={handleEditCourse}
-        onCreateCourse={handleCreateCourse}
-        onRefresh={loadCourses}
-        loading={loading}
-      />
-    );
-  }
-
   return (
-    <div className="relative">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
-            <div className="p-2 sm:p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg sm:rounded-xl shadow-lg">
-              <BookOpen className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+    <div className="full-bleed-page">
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-4">
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-md flex-shrink-0">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-slate-900 leading-tight">
                 Mes Cours
               </h1>
-              <p className="text-slate-600 mt-1 text-xs sm:text-sm">
+              <p className="text-slate-500 text-xs sm:text-sm">
                 Gérez vos cours et suivez vos programmes d'enseignement
               </p>
             </div>
@@ -433,232 +239,141 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
         </div>
 
         {success && (
-          <div className="mb-4 sm:mb-6 bg-green-50 border border-green-200 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start">
-                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5" />
-                <div className="ml-3">
-                  <p className="text-green-800 font-medium text-sm">Succès</p>
-                  <p className="text-green-700 text-xs sm:text-sm mt-1">
-                    {success}
-                  </p>
-                </div>
+          <div className="mb-3 bg-green-50 border border-green-200 rounded-xl p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0 flex-1">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <p className="text-green-700 text-xs sm:text-sm break-words">{success}</p>
               </div>
-              <button
-                onClick={() => setSuccess("")}
-                className="text-green-400 hover:text-green-600"
-              >
-                <X className="w-3 h-3 sm:w-4 sm:h-4" />
+              <button onClick={() => setSuccess("")} className="text-green-400 hover:text-green-600 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="mb-4 sm:mb-6 bg-red-50 border border-red-200 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start">
-                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 mt-0.5" />
-                <div className="ml-3">
-                  <p className="text-red-800 font-medium text-sm">Erreur</p>
-                  <p className="text-red-700 text-xs sm:text-sm mt-1">
-                    {error}
-                  </p>
-                </div>
+          <div className="mb-3 bg-red-50 border border-red-200 rounded-xl p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0 flex-1">
+                <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-red-700 text-xs sm:text-sm break-words">{error}</p>
               </div>
-              <button
-                onClick={() => setError("")}
-                className="text-red-400 hover:text-red-600"
-              >
-                <X className="w-3 h-3 sm:w-4 sm:h-4" />
+              <button onClick={() => setError("")} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
 
-        <div className="hidden md:grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div
-            onClick={() => setFilterStatus('all')}
-            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
-              filterStatus === 'all' ? 'ring-2 ring-blue-500' : ''
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-xs sm:text-sm font-medium">
-                  Total Cours
-                </p>
-                <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1">
-                  {courses.length}
-                </p>
+        <div className="hidden sm:grid sm:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          {[
+            { label: 'Total Cours', value: courses.length, color: 'text-slate-900', icon: BookOpen, iconBg: 'bg-blue-100', iconColor: 'text-blue-600', ring: 'ring-blue-500', filter: 'all', sub: 'Tous les cours', subIcon: TrendingUp },
+            { label: 'Brouillon', value: courses.filter(c => c.etat === 'BROUILLON').length, color: 'text-yellow-600', icon: FileText, iconBg: 'bg-yellow-100', iconColor: 'text-yellow-600', ring: 'ring-yellow-500', filter: 'BROUILLON', sub: 'Non publiés', subIcon: Activity },
+            { label: 'Publiés', value: courses.filter(c => c.etat === 'PUBLIE').length, color: 'text-green-600', icon: CheckCircle, iconBg: 'bg-green-100', iconColor: 'text-green-600', ring: 'ring-green-500', filter: 'PUBLIE', sub: 'Disponibles', subIcon: Star },
+          ].map((stat) => (
+            <div
+              key={stat.filter}
+              onClick={() => setFilterStatus(stat.filter)}
+              className={`bg-white border border-slate-100 rounded-xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all cursor-pointer ${filterStatus === stat.filter ? `ring-2 ${stat.ring}` : ''}`}
+            >
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <p className="text-slate-500 text-[10px] sm:text-xs font-medium truncate">{stat.label}</p>
+                <div className={`p-1.5 ${stat.iconBg} rounded-lg flex-shrink-0`}>
+                  <stat.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${stat.iconColor}`} />
+                </div>
               </div>
-              <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg sm:rounded-xl">
-                <BookOpen className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
-              </div>
-            </div>
-            <div className="mt-2 sm:mt-4 flex items-center">
-              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2" />
-              <span className="text-slate-500 text-xs sm:text-sm">
-                Tous les cours
-              </span>
-            </div>
-          </div>
-
-          <div 
-            onClick={() => setFilterStatus('BROUILLON')}
-            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
-              filterStatus === 'BROUILLON' ? 'ring-2 ring-yellow-500' : ''
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-xs sm:text-sm font-medium">
-                  Brouillon
-                </p>
-                <p className="text-lg sm:text-3xl font-bold text-yellow-600 mt-1">
-                  {courses.filter((c) => c.etat === "BROUILLON").length}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg sm:rounded-xl">
-                <FileText className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
+              <p className={`text-xl sm:text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+              <div className="mt-1.5 flex items-center gap-1">
+                <stat.subIcon className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                <span className="text-slate-400 text-[10px] sm:text-xs truncate">{stat.sub}</span>
               </div>
             </div>
-            <div className="mt-2 sm:mt-4 flex items-center">
-              <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2" />
-              <span className="text-slate-500 text-xs sm:text-sm">
-                Non publiés
-              </span>
-            </div>
-          </div>
-
-          <div 
-            onClick={() => setFilterStatus('PUBLIE')}
-            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
-              filterStatus === 'PUBLIE' ? 'ring-2 ring-green-500' : ''
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-xs sm:text-sm font-medium">
-                  Publiés
-                </p>
-                <p className="text-lg sm:text-3xl font-bold text-green-600 mt-1">
-                  {courses.filter((c) => c.etat === "PUBLIE").length}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-lg sm:rounded-xl">
-                <CheckCircle className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
-              </div>
-            </div>
-            <div className="mt-2 sm:mt-4 flex items-center">
-              <Star className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2" />
-              <span className="text-slate-500 text-xs sm:text-sm">
-                Disponibles
-              </span>
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg mb-6 sm:mb-8">
-          <div className="flex flex-col space-y-3 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between lg:space-x-6">
-            <div className="relative flex-1 max-w-full lg:max-w-md">
-              <Search
-                className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                size={16}
-              />
+        <div className="bg-white border border-slate-100 rounded-xl p-3 sm:p-4 shadow-sm mb-4 sm:mb-6">
+          {/* Row 1: Search + New Course button */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input
                 type="text"
                 placeholder="Rechercher par titre, description, matière..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm"
+                className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
               />
             </div>
-
-            <div className="flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4">
-              <div className="relative flex-1 min-[480px]:flex-none min-w-0">
-                <Filter
-                  className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                  size={14}
-                />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full pl-8 sm:pl-12 pr-6 sm:pr-8 py-2 sm:py-3 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
-                >
-                  <option value="all">Tous les statuts</option>
-                  <option value="BROUILLON">Brouillon</option>
-                  <option value="PUBLIE">Publié</option>
-                </select>
-                <ChevronDown
-                  className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-                  size={14}
-                />
-              </div>
-
-              <div className="flex bg-slate-100 rounded-lg sm:rounded-xl p-1 self-center min-[480px]:self-auto">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "grid"
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <Grid size={14} className="sm:w-4 sm:h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode("table")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "table"
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <List size={14} className="sm:w-4 sm:h-4" />
-                </button>
-              </div>
-
-              <button
-                onClick={() => setActiveTab("schedule-course")}
-                className="bg-white hover:bg-slate-50 text-slate-700 px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg border border-slate-200 font-medium text-sm sm:text-base"
+            <button
+              onClick={handleCreateCourse}
+              disabled={createLoading}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 text-white px-3 sm:px-5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-md font-medium text-sm whitespace-nowrap flex-shrink-0"
+            >
+              {createLoading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Plus size={15} />
+              )}
+              <span className="hidden sm:inline">Nouveau Cours</span>
+              <span className="sm:hidden">Nouveau</span>
+            </button>
+          </div>
+          {/* Row 2: Filter + view toggle + schedule + refresh */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[120px]">
+              <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
               >
-                <Calendar size={16} className="sm:w-5 sm:h-5 text-indigo-600" />
-                Programmer
+                <option value="all">Tous les statuts</option>
+                <option value="BROUILLON">Brouillon</option>
+                <option value="PUBLIE">Publié</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+            </div>
+
+            {/* View toggle */}
+            <div className="flex bg-slate-100 rounded-lg p-0.5 flex-shrink-0">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <Grid size={15} />
               </button>
-
               <button
-                onClick={handleCreateCourse}
-                disabled={createLoading}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-indigo-400 disabled:to-purple-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium text-sm sm:text-base"
+                onClick={() => setViewMode("table")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
               >
-                {createLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Chargement...
-                  </>
-                ) : (
-                  <>
-                    <Plus size={16} className="sm:w-5 sm:h-5" />
-                    Nouveau Cours
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={loadCourses}
-                disabled={loading}
-                className="bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed text-slate-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg border border-slate-200"
-                title="Actualiser"
-              >
-                <RefreshCw size={16} className={`sm:w-5 sm:h-5 ${loading ? 'animate-spin' : ''}`} />
+                <List size={15} />
               </button>
             </div>
+
+            {/* Schedule button */}
+            <button
+              onClick={() => setActiveTab("schedule-course")}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-all shadow-sm font-medium text-xs sm:text-sm flex-shrink-0"
+            >
+              <Calendar size={14} className="text-indigo-600 flex-shrink-0" />
+              <span className="hidden sm:inline">Programmer</span>
+            </button>
+
+            {/* Refresh */}
+            <button
+              onClick={loadCourses}
+              disabled={loading}
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+              title="Actualiser"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            </button>
           </div>
         </div>
 
         {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
             {filteredCourses.map((course) => (
               <CourseCard
                 key={course.id}

@@ -284,10 +284,10 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const studentTodo = studentTotal - studentDone;
 
   return (
-    <div className="w-full px-2 py-3">
-      <div className="w-full">
-        {/* List View */}
-        {currentView === "list" && (
+    <div className="full-bleed-page">
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-4">
+      {/* List View */}
+      {currentView === "list" && (
           <div>
             {/* ── Student header ── */}
             {!canCreateExercise ? (
@@ -392,9 +392,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                     Nouvel exercice
                   </Button>
                 </div>
-                {/* Stats strip */}
+                {/* Stats strip — hidden on mobile */}
                 <div
-                  className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0"
+                  className="hidden sm:grid sm:grid-cols-4 divide-x"
                   style={{ background: "#f8faff", borderTop: "1px solid #e8edf5" }}
                 >
                   {[

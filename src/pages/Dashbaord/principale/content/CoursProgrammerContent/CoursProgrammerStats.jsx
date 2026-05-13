@@ -86,58 +86,43 @@ const CoursProgrammerStats = ({ scheduledCourses, filterStatus, setFilterStatus 
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6 mb-6 sm:mb-8">
+    <div className="hidden sm:grid sm:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3 mb-4 sm:mb-6">
       {stats.map((stat, index) => (
         <div
           key={index}
           onClick={() => setFilterStatus(stat.filterValue)}
-          className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer ${
-            index === 0 ? 'col-span-2 sm:col-span-1' : 'col-span-1'
-          } ${
+          className={`bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer ${
             filterStatus === stat.filterValue ? `ring-2 ${stat.ringColor}` : ''
           }`}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-slate-600 text-xs sm:text-sm font-medium mb-1 sm:mb-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-slate-500 text-[11px] sm:text-xs font-medium mb-1 truncate">
                 {stat.label}
               </p>
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <p
-                  className={`text-xl sm:text-3xl font-bold ${stat.textColor}`}
-                >
+              <div className="flex items-center gap-1 flex-wrap">
+                <p className={`text-xl sm:text-2xl font-bold leading-none ${stat.textColor}`}>
                   {stat.value}
                 </p>
                 {totalScheduled > 0 && (
-                  <div
-                    className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full text-xs font-medium ${stat.bgColor} ${stat.textColor}`}
-                  >
+                  <span className={`text-[10px] font-semibold px-1 py-0.5 rounded-full ${stat.bgColor} ${stat.textColor}`}>
                     {Math.round((stat.value / totalScheduled) * 100)}%
-                  </div>
+                  </span>
                 )}
               </div>
             </div>
-            <div
-              className={`p-2 sm:p-3 ${stat.iconBg} rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform duration-200`}
-            >
-              <stat.icon
-                className={`w-4 h-4 sm:w-6 sm:h-6 ${stat.iconColor}`}
-              />
+            <div className={`p-1.5 sm:p-2 ${stat.iconBg} rounded-lg group-hover:scale-110 transition-transform duration-200 flex-shrink-0`}>
+              <stat.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${stat.iconColor}`} />
             </div>
           </div>
 
           {totalScheduled > 0 && (
-            <div className="mt-2 sm:mt-4">
-              <div className="w-full bg-slate-200 rounded-full h-1.5 sm:h-2">
+            <div className="mt-2">
+              <div className="w-full bg-slate-100 rounded-full h-1">
                 <div
-                  className={`bg-gradient-to-r ${stat.color} h-1.5 sm:h-2 rounded-full transition-all duration-500 ease-out`}
-                  style={{
-                    width: `${Math.min(
-                      (stat.value / totalScheduled) * 100,
-                      100
-                    )}%`,
-                  }}
-                ></div>
+                  className={`bg-gradient-to-r ${stat.color} h-1 rounded-full transition-all duration-500 ease-out`}
+                  style={{ width: `${Math.min((stat.value / totalScheduled) * 100, 100)}%` }}
+                />
               </div>
             </div>
           )}

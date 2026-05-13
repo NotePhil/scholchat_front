@@ -565,6 +565,13 @@
   padding-top: 110px;
 }
 
+/* Full-bleed pages manage their own internal padding.
+   Negative margins cancel out the parent content-body padding at every breakpoint. */
+.full-bleed-page {
+  margin: -30px;
+  margin-top: 0;
+}
+
 .messaging-sidebar {
   background: white;
   border-left: 1px solid #e1e4e8;
@@ -959,6 +966,11 @@
     padding: 25px;
     padding-top: 105px;
   }
+
+  .full-bleed-page {
+    margin: -25px;
+    margin-top: 0;
+  }
 }
 
 @media (max-width: 992px) {
@@ -1026,12 +1038,17 @@
   }
 
   .content-header h1 {
-    font-size: 1.4rem;
+    display: none;
   }
 
   .content-body {
-    padding: 20px 15px;
-    padding-top: 95px;
+    padding: 20px 12px;
+    padding-top: 90px;
+  }
+
+  .full-bleed-page {
+    margin: -20px -12px;
+    margin-top: 0;
   }
 
   .menu-toggle-btn {
@@ -1081,16 +1098,17 @@
   }
 
   .content-header h1 {
-    font-size: 1.2rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 150px;
+    display: none;
   }
 
   .content-body {
     padding: 15px 12px;
-    padding-top: 90px;
+    padding-top: 85px;
+  }
+
+  .full-bleed-page {
+    margin: -15px -12px;
+    margin-top: 0;
   }
 
   .sidebar-header {
@@ -1139,8 +1157,7 @@
 
 @media (max-width: 320px) {
   .content-header h1 {
-    font-size: 1.1rem;
-    max-width: 120px;
+    display: none;
   }
 
   .sidebar-header h2 {
@@ -1150,6 +1167,11 @@
   .content-body {
     padding: 12px 10px;
     padding-top: 85px;
+  }
+
+  .full-bleed-page {
+    margin: -12px -10px;
+    margin-top: 0;
   }
 }
 

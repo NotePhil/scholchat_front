@@ -337,6 +337,15 @@ const Principal = () => {
     };
   }, []);
 
+  // Listen for session expiry events dispatched by the axios interceptor
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setShowTokenExpiredModal(true);
+    };
+    window.addEventListener('auth:sessionExpired', handleSessionExpired);
+    return () => window.removeEventListener('auth:sessionExpired', handleSessionExpired);
+  }, []);
+
   useEffect(() => {
     if (!normalizedUserRole) return;
     // Don't do any navigation if we already have both dashboardType and section
@@ -851,14 +860,16 @@ const Principal = () => {
           <div className="header-actions" style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            flexShrink: 0
+            gap: '6px',
+            flexShrink: 0,
+            minWidth: 0,
+            overflow: 'visible'
           }}>
             {/* Install PWA button */}
             {canInstall && (
               <button
                 onClick={installApp}
-                className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                className="hidden sm:flex items-center gap-1 px-2 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
                 title="Installer l'application"
                 style={{ minHeight: '36px' }}
               >
@@ -867,10 +878,10 @@ const Principal = () => {
               </button>
             )}
 
-            {/* Refresh button */}
+            {/* Refresh button - hidden on very small screens */}
             <button
               onClick={() => window.location.reload()}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="hidden xs:flex p-2 hover:bg-gray-100 rounded-lg transition-colors"
               title="Actualiser"
               style={{ minHeight: '36px', minWidth: '36px' }}
             >
@@ -887,7 +898,7 @@ const Principal = () => {
               return (
                 <button
                   onClick={() => setShowRoleSwitchModal(true)}
-                  className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
+                  className="hidden sm:flex items-center gap-1 px-2 py-1.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
                   title="Changer de role"
                   style={{ minHeight: '36px' }}
                 >
@@ -1190,7 +1201,7 @@ const Principal = () => {
           className={`content-body ${
             isDark ? "bg-gray-900 text-white" : "bg-gray-50"
           }`}
-          style={{ paddingTop: isMobile ? "64px" : "100px" }}
+          style={{ paddingTop: isMobile ? "80px" : "100px" }}
         >
           {renderContent()}
         </div>

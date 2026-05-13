@@ -6,7 +6,7 @@ import {
 import {
   EyeOutlined, EditOutlined, DeleteOutlined, SearchOutlined,
   PlusOutlined, ReloadOutlined, BookOutlined, PlayCircleOutlined,
-  CalendarOutlined, TagOutlined, FilterOutlined, CheckCircleOutlined,
+  CalendarOutlined, TagOutlined, CheckCircleOutlined,
   ClockCircleOutlined, TrophyOutlined,
 } from "@ant-design/icons";
 import { participationExerciseService } from "../../../../../services/exerciseService";
@@ -32,6 +32,7 @@ const ExerciseList = ({
   const [filterRestriction, setFilterRestriction] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [studentPage, setStudentPage] = useState(1);
+  const [professorPage, setProfessorPage] = useState(1);
   const [participationMapLocal, setParticipationMapLocal] = useState({});
 
   useEffect(() => {
@@ -524,73 +525,173 @@ const ExerciseList = ({
   }
 
   // ── Professor / Admin table view ────────────────────────────────────────────
+  const PROF_PAGE_SIZE = 8;
+  const profTotalPages = Math.max(1, Math.ceil(filteredExercises.length / PROF_PAGE_SIZE));
+  const safeProfPage = Math.min(professorPage, profTotalPages);
+  const paginatedProfExercises = filteredExercises.slice((safeProfPage - 1) * PROF_PAGE_SIZE, safeProfPage * PROF_PAGE_SIZE);
+
   return (
     <div className="w-full">
-      {/* Filters bar */}
-      <div
-        className="flex flex-wrap items-center gap-3 mb-4 px-4 py-3 rounded-xl"
-        style={{ background: "#f4f7fb", border: "1px solid #e4eaf4" }}
-      >
-        <FilterOutlined style={{ color: "#2d6a9f", fontSize: 15 }} />
-        <Input.Search
-          placeholder="Rechercher un exercice..."
-          allowClear
-          size="middle"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ maxWidth: 280, borderRadius: 8 }}
-        />
-        <Select
-          placeholder="Niveau"
-          allowClear
-          size="middle"
-          value={filterNiveau}
-          onChange={setFilterNiveau}
-          style={{ minWidth: 110 }}
-        >
-          {["6ème","5ème","4ème","3ème","2nde","1ère","Terminale","Licence 1","Licence 2","Licence 3"].map(n => (
-            <Option key={n} value={n}>{n}</Option>
-          ))}
-        </Select>
-        <Select
-          placeholder="Statut"
-          allowClear
-          size="middle"
-          value={filterEtat}
-          onChange={setFilterEtat}
-          style={{ minWidth: 110 }}
-        >
-          <Option value="ACTIF">Actif</Option>
-          <Option value="BROUILLON">Brouillon</Option>
-          <Option value="INACTIF">Inactif</Option>
-        </Select>
-        <Select
-          placeholder="Visibilité"
-          allowClear
-          size="middle"
-          value={filterRestriction}
-          onChange={setFilterRestriction}
-          style={{ minWidth: 110 }}
-        >
-          <Option value="PUBLIC">Public</Option>
-          <Option value="PRIVE">Privé</Option>
-        </Select>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={onRefresh}
-          loading={refreshing}
-          size="middle"
-          style={{ marginLeft: "auto", borderRadius: 8 }}
-        >
-          Actualiser
-        </Button>
+      {/* ── Compact filter bar ── */}
+      <div className="bg-white border border-slate-100 rounded-xl p-3 mb-4 shadow-sm">
+        {/* Row 1: Search + Refresh */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="relative flex-1">
+            <SearchOutlined className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" style={{ fontSize: 13 }} />
+            <input
+              placeholder="Rechercher un exercice..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none"
+            />
+          </div>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={onRefresh}
+            loading={refreshing}
+            size="middle"
+            style={{ borderRadius: 8, flexShrink: 0 }}
+          >
+            <span className="hidden sm:inline">Actualiser</span>
+          </Button>
+        </div>
+        {/* Row 2: Niveau + Statut + Visibilité */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select
+            placeholder="Niveau"
+            allowClear
+            size="small"
+            value={filterNiveau}
+            onChange={setFilterNiveau}
+            style={{ flex: 1, minWidth: 90 }}
+          >
+            {["6ème","5ème","4ème","3ème","2nde","1ère","Terminale","Licence 1","Licence 2","Licence 3"].map(n => (
+              <Option key={n} value={n}>{n}</Option>
+            ))}
+          </Select>
+          <Select
+            placeholder="Statut"
+            allowClear
+            size="small"
+            value={filterEtat}
+            onChange={setFilterEtat}
+            style={{ flex: 1, minWidth: 90 }}
+          >
+            <Option value="ACTIF">Actif</Option>
+            <Option value="BROUILLON">Brouillon</Option>
+            <Option value="INACTIF">Inactif</Option>
+          </Select>
+          <Select
+            placeholder="Visibilité"
+            allowClear
+            size="small"
+            value={filterRestriction}
+            onChange={setFilterRestriction}
+            style={{ flex: 1, minWidth: 90 }}
+          >
+            <Option value="PUBLIC">Public</Option>
+            <Option value="PRIVE">Privé</Option>
+          </Select>
+        </div>
+        {filteredExercises.length > 0 && (
+          <p className="text-xs text-slate-500 mt-2">
+            <span className="font-semibold text-slate-700">{filteredExercises.length}</span> exercice{filteredExercises.length !== 1 ? "s" : ""} trouvé{filteredExercises.length !== 1 ? "s" : ""}
+          </p>
+        )}
       </div>
 
-      {/* Table */}
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ border: "1px solid #e4eaf4", background: "#fff" }}
-      >
+      {/* ── Mobile: card view ── */}
+      <div className="sm:hidden">
+        {paginatedProfExercises.length === 0 ? (
+          <Empty description="Aucun exercice trouvé" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        ) : (
+          <div className="space-y-3">
+            {paginatedProfExercises.map((record) => (
+              <div
+                key={record.id}
+                className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-900 truncate">{record.nom}</p>
+                    {record.description && (
+                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{record.description}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button type="text" size="small" icon={<EyeOutlined style={{ color: "#2d6a9f" }} />}
+                      onClick={() => onSelectExercise(record.id)} style={{ borderRadius: 6 }} />
+                    <Button type="text" size="small" icon={<EditOutlined style={{ color: "#595959" }} />}
+                      onClick={() => onSelectExercise(record.id)} style={{ borderRadius: 6 }} />
+                    {canCreate && (
+                      <Popconfirm title="Supprimer l'exercice" description={`Supprimer "${record.nom}" ?`}
+                        onConfirm={() => onDelete(record.id)} okText="Oui" cancelText="Non" okButtonProps={{ danger: true }}>
+                        <Button type="text" size="small" icon={<DeleteOutlined />} danger style={{ borderRadius: 6 }} />
+                      </Popconfirm>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {record.niveau && (
+                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium"
+                      style={{ background: "#e0f7fa", color: "#00838f", border: "1px solid #b2ebf2" }}>
+                      {record.niveau}
+                    </span>
+                  )}
+                  {getStatusTag(record.etat)}
+                  {getRestrictionTag(record.restriction)}
+                  {record.dateCreation && (
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {new Date(record.dateCreation).toLocaleDateString("fr-FR")}
+                    </span>
+                  )}
+                </div>
+                {record.matieres?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {record.matieres.slice(0, 3).map((m) => (
+                      <span key={m.id || m} className="inline-block px-1.5 py-0.5 rounded text-xs"
+                        style={{ background: "#f3e8ff", color: "#7c3aed" }}>
+                        {m.nom || m}
+                      </span>
+                    ))}
+                    {record.matieres.length > 3 && <span className="text-xs text-gray-400">+{record.matieres.length - 3}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Mobile pagination */}
+        {profTotalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+            <span className="text-xs text-gray-500">
+              {filteredExercises.length} exercice{filteredExercises.length !== 1 ? "s" : ""} · page {safeProfPage}/{profTotalPages}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button size="small" disabled={safeProfPage === 1}
+                onClick={() => setProfessorPage(p => Math.max(1, p - 1))} style={{ borderRadius: 6 }}>‹</Button>
+              {Array.from({ length: profTotalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === profTotalPages || Math.abs(p - safeProfPage) <= 1)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                  acc.push(p); return acc;
+                }, [])
+                .map((p, idx) => p === "…"
+                  ? <span key={`e-${idx}`} className="px-1 text-gray-400 text-xs">…</span>
+                  : <Button key={p} size="small" type={p === safeProfPage ? "primary" : "default"}
+                      onClick={() => setProfessorPage(p)} style={{ borderRadius: 6, minWidth: 28 }}>{p}</Button>
+                )}
+              <Button size="small" disabled={safeProfPage === profTotalPages}
+                onClick={() => setProfessorPage(p => Math.min(profTotalPages, p + 1))} style={{ borderRadius: 6 }}>›</Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Desktop: table view ── */}
+      <div className="hidden sm:block rounded-xl overflow-hidden"
+        style={{ border: "1px solid #e4eaf4", background: "#fff" }}>
         <Table
           columns={columns}
           dataSource={filteredExercises}
@@ -599,12 +700,10 @@ const ExerciseList = ({
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            showQuickJumper: window.innerWidth > 768,
+            showQuickJumper: true,
             showTotal: (total, range) =>
               <span className="text-xs text-gray-500">{range[0]}–{range[1]} sur {total} exercice{total > 1 ? "s" : ""}</span>,
             pageSizeOptions: ["10", "20", "50"],
-            responsive: true,
-            simple: window.innerWidth < 768,
           }}
           scroll={{ x: 780 }}
           rowClassName={(_, idx) => idx % 2 === 0 ? "" : "bg-slate-50/60"}
@@ -615,12 +714,7 @@ const ExerciseList = ({
                   <div className="py-6">
                     <p className="text-sm text-gray-500 mb-3">Aucun exercice trouvé</p>
                     {canCreate && onCreateExercise && (
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={onCreateExercise}
-                        style={{ borderRadius: 8 }}
-                      >
+                      <Button type="primary" icon={<PlusOutlined />} onClick={onCreateExercise} style={{ borderRadius: 8 }}>
                         Créer votre premier exercice
                       </Button>
                     )}

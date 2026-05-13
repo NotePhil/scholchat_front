@@ -799,13 +799,13 @@ const ActivitiesContent = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative -mx-[30px] -mt-4">
       {/* Facebook-like Layout: Sidebar + Main Content */}
-      <div className={`mx-auto max-w-7xl ${isMobile ? 'pb-32' : ''}`}>
+      <div className={`w-full px-4 lg:px-6 ${isMobile ? 'pb-32' : ''}`}>
         <div className="flex gap-0 lg:gap-6">
           {/* Left Sidebar - Hidden on mobile, visible on desktop */}
-          <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0">
-            <div className="sticky top-20 space-y-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3">
+          <aside className="hidden lg:block lg:w-80 xl:w-96 lg:flex-shrink-0">
+            <div className="sticky top-20 space-y-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
               {[
                 { key: 'all', label: 'Fil d\'actualite', icon: Home, color: 'text-gray-700', bg: '' },
                 { key: 'user', label: 'Mes publications', icon: Store, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
@@ -849,7 +849,7 @@ const ActivitiesContent = () => {
 
           {/* Main Content Area */}
           <main className="flex-1 min-w-0">
-            <div className={`max-w-2xl mx-auto ${isMobile ? 'px-0 py-2' : 'px-0 sm:px-4 py-4 sm:py-6'}`}>
+            <div className={`w-full ${isMobile ? 'px-0 py-2' : 'px-0 sm:px-4 py-4 sm:py-6'}`}>
               {/* Mobile Header with Tabs - Sticky for better accessibility */}
               <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 rounded-none shadow-md mb-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between p-4">

@@ -55,11 +55,11 @@ export const Login = ({ theme }) => {
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState("");
 
   useEffect(() => {
-    // Check for session expiry message
-    const sessionExpired = localStorage.getItem("sessionExpired");
+    // Check for session expiry message — stored in sessionStorage so localStorage cleanup can't erase it
+    const sessionExpired = sessionStorage.getItem("sessionExpired");
     if (sessionExpired === "true") {
       setSessionExpiredMessage("Votre session a expiré. Veuillez vous reconnecter.");
-      localStorage.removeItem("sessionExpired");
+      sessionStorage.removeItem("sessionExpired");
     }
   }, []);
 
@@ -295,6 +295,7 @@ export const Login = ({ theme }) => {
       localStorage.removeItem("decodedToken");
       localStorage.removeItem("authResponse");
       localStorage.removeItem("loginTime");
+      // Note: do NOT touch sessionStorage here — sessionExpired flag lives there
       if (returnToPage) {
         localStorage.setItem("returnToPage", returnToPage);
       }

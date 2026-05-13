@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   BookOpen,
@@ -16,14 +16,12 @@ import {
   Phone,
   AlertCircle,
   Search,
-  Download,
   Eye,
   CheckCircle,
-  XCircle,
-  Activity,
-  Edit2,
   Share2,
   Archive,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { minioS3Service } from "../../../../../services/minioS3";
 import { useNavigate } from "react-router-dom";
@@ -31,6 +29,7 @@ import DocumentViewer from "../../../../../components/viewers/DocumentViewer";
 
 const CourseContentView = ({ course, onBack }) => {
   const navigate = useNavigate();
+  const tabsRef = useRef(null);
   const [processedChapters, setProcessedChapters] = useState([]);
   const [activeTab, setActiveTab] = useState("details");
   const [participants, setParticipants] = useState([]);
@@ -39,6 +38,8 @@ const CourseContentView = ({ course, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [documentSearchTerm, setDocumentSearchTerm] = useState("");
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const [viewerConfig, setViewerConfig] = useState({
     isOpen: false,
     url: "",
@@ -113,6 +114,31 @@ const CourseContentView = ({ course, onBack }) => {
   };
 
   const filterDocuments = () => {};
+
+  const checkTabScroll = () => {
+    const el = tabsRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    checkTabScroll();
+    el.addEventListener("scroll", checkTabScroll);
+    window.addEventListener("resize", checkTabScroll);
+    return () => {
+      el.removeEventListener("scroll", checkTabScroll);
+      window.removeEventListener("resize", checkTabScroll);
+    };
+  }, [processedChapters, participants, courseDocuments]);
+
+  const scrollTabs = (dir) => {
+    const el = tabsRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === "left" ? -120 : 120, behavior: "smooth" });
+  };
 
   const processChapterContent = async () => {
     if (!course.chapitres) return;
@@ -331,108 +357,128 @@ const CourseContentView = ({ course, onBack }) => {
   }
 
   return (
-    <div>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <button
-              onClick={onBack}
-              className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div className="flex items-center justify-between flex-1">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg">
-                  <BookOpen className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                    Détails du Cours
-                  </h1>
-                  <div className="flex items-center gap-3 mt-2">
-                    <p className="text-slate-600">{course?.titre}</p>
-                    {getStatusBadge(course?.etat)}
-                  </div>
-                </div>
-              </div>
+    <div className="full-bleed-page">
+      <div className="w-full">
+
+        {/* ── Hero header ── */}
+        <div className="relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)" }}>
+          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 pointer-events-none"
+            style={{ background: "#fff" }} />
+
+          <div className="relative px-3 sm:px-6 py-3 sm:py-4">
+            {/* Row 1: back + programme */}
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-semibold transition-all hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+              >
+                <ArrowLeft size={14} />
+                Retour
+              </button>
               <button
                 onClick={() => navigate('/schoolchat/Principal/ProfessorDashboard/schedule-course', { state: { course } })}
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all flex items-center gap-2 shadow-lg"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
               >
-                <CalendarPlus size={18} />
-                Programmer
+                <CalendarPlus size={14} />
+                <span>Programmer</span>
               </button>
+            </div>
+
+            {/* Row 2: title + meta — NO abbreviation avatar */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h1 className="text-white font-bold text-base sm:text-xl leading-tight m-0">
+                  {course?.titre}
+                </h1>
+                {getStatusBadge(course?.etat)}
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                {course?.matiere?.nom && (
+                  <span className="flex items-center gap-1 text-blue-100 text-xs">
+                    <School size={10} />{course.matiere.nom}
+                  </span>
+                )}
+                {course?.dateCreation && (
+                  <span className="flex items-center gap-1 text-blue-100 text-xs">
+                    <Calendar size={10} />{formatDate(course.dateCreation)}
+                  </span>
+                )}
+                {course?.redacteur && (
+                  <span className="flex items-center gap-1 text-blue-100 text-xs">
+                    <User size={10} />
+                    {`${course.redacteur.prenom || ""} ${course.redacteur.nom || ""}`.trim() || "Professeur"}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
-          <div className="border-b border-slate-200 px-6">
-            <div className="flex space-x-6">
-              <button
-                onClick={() => setActiveTab("details")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                  activeTab === "details"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                }`}
-              >
-                Détails
-              </button>
-              {(processedChapters.length > 0 ||
-                (course?.chapitres && course.chapitres.length > 0)) && (
-                <button
-                  onClick={() => setActiveTab("chapters")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                    activeTab === "chapters"
-                      ? "border-indigo-500 text-indigo-600"
-                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                  }`}
-                >
-                  Chapitres (
-                  {processedChapters.length || course?.chapitres?.length || 0})
-                </button>
-              )}
-              {participants.length > 0 && (
-                <button
-                  onClick={() => setActiveTab("participants")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                    activeTab === "participants"
-                      ? "border-indigo-500 text-indigo-600"
-                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                  }`}
-                >
-                  Participants ({participants.length})
-                </button>
-              )}
-              <button
-                onClick={() => setActiveTab("documents")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                  activeTab === "documents"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                }`}
-              >
-                Documents ({courseDocuments.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("history")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                  activeTab === "history"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                }`}
-              >
-                Historique
-              </button>
-            </div>
-          </div>
+        {/* ── Scrollable tab bar with arrow buttons ── */}
+        <div className="bg-white border-b border-slate-200 relative">
+          {/* Left scroll arrow */}
+          {canScrollLeft && (
+            <button
+              onClick={() => scrollTabs("left")}
+              className="absolute left-0 top-0 bottom-0 z-10 flex items-center px-1.5 bg-gradient-to-r from-white via-white to-transparent"
+              aria-label="Défiler à gauche"
+            >
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-all">
+                <ChevronLeft size={14} />
+              </span>
+            </button>
+          )}
 
-          {/* Content */}
-          <div className="p-6">
+          {/* Right scroll arrow */}
+          {canScrollRight && (
+            <button
+              onClick={() => scrollTabs("right")}
+              className="absolute right-0 top-0 bottom-0 z-10 flex items-center px-1.5 bg-gradient-to-l from-white via-white to-transparent"
+              aria-label="Défiler à droite"
+            >
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-all">
+                <ChevronRight size={14} />
+              </span>
+            </button>
+          )}
+
+          {/* Tabs */}
+          <div
+            ref={tabsRef}
+            className="flex overflow-x-auto px-3 sm:px-6"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {[
+              { key: "details", label: "Détails" },
+              ...(processedChapters.length > 0 || (course?.chapitres?.length > 0)
+                ? [{ key: "chapters", label: `Chapitres (${processedChapters.length || course?.chapitres?.length || 0})` }]
+                : []),
+              ...(participants.length > 0
+                ? [{ key: "participants", label: `Participants (${participants.length})` }]
+                : []),
+              { key: "documents", label: `Documents (${courseDocuments.length})` },
+              { key: "history", label: "Historique" },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex-shrink-0 py-3 px-4 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                  activeTab === tab.key
+                    ? "border-indigo-600 text-indigo-700"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Tab content ── */}
+        <div className="px-3 sm:px-6 py-4 sm:py-6">
             {error && (
               <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-center border border-red-200">
                 <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
@@ -442,276 +488,169 @@ const CourseContentView = ({ course, onBack }) => {
 
             {/* Details Tab */}
             {activeTab === "details" && (
-              <div className="space-y-8">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Course Information */}
-                <div className="bg-gradient-to-r from-white to-slate-50 rounded-2xl p-8 shadow-lg border border-slate-200">
-                  <h3 className="text-xl font-semibold text-slate-900 mb-6 flex items-center">
-                    <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
-                    Informations du Cours
-                  </h3>
-
-                  <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Course Avatar and basic info */}
-                    <div className="flex-shrink-0">
-                      <div className="flex items-center space-x-6">
-                        <div className="relative">
-                          <div className="h-24 w-24 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shadow-xl">
-                            <span className="text-white font-bold text-2xl">
-                              {getInitials(course?.titre)}
-                            </span>
-                          </div>
-                          <div className="absolute -bottom-2 -right-2">
-                            <div
-                              className={`w-6 h-6 rounded-full border-4 border-white ${
-                                course?.etat === "PUBLIE"
-                                  ? "bg-emerald-500"
-                                  : course?.etat === "BROUILLON"
-                                  ? "bg-yellow-500"
-                                  : course?.etat === "EN_ATTENTE_VALIDATION"
-                                  ? "bg-blue-500"
-                                  : "bg-red-500"
-                              }`}
-                            ></div>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold text-slate-900">
-                            {course?.titre}
-                          </div>
-                          <div className="text-slate-600 font-medium mt-1">
-                            {course?.matiere?.nom || "Matière non définie"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Course Details Grid */}
-                    <div className="flex-1">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-blue-50 rounded-lg">
-                              <Calendar className="w-4 h-4 text-blue-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500 font-medium">
-                                Date de début
-                              </p>
-                              <p className="text-slate-900">
-                                {formatDate(course?.dateHeureDebut)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-green-50 rounded-lg">
-                              <Clock className="w-4 h-4 text-green-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500 font-medium">
-                                Date de fin
-                              </p>
-                              <p className="text-slate-900">
-                                {formatDate(course?.dateHeureFin)}
-                              </p>
-                            </div>
-                          </div>
-
-                          {course?.dateCreation && (
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-purple-50 rounded-lg">
-                                <CalendarPlus className="w-4 h-4 text-purple-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-slate-500 font-medium">
-                                  Date de création
-                                </p>
-                                <p className="text-slate-900">
-                                  {formatDate(course.dateCreation)}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-amber-50 rounded-lg">
-                              <MapPin className="w-4 h-4 text-amber-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500 font-medium">
-                                Lieu
-                              </p>
-                              <p className="text-slate-900">
-                                {course?.lieu || "Non spécifié"}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-indigo-50 rounded-lg">
-                              <User className="w-4 h-4 text-indigo-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500 font-medium">
-                                Professeur
-                              </p>
-                              <p className="text-slate-900">
-                                {course?.redacteur?.nom ||
-                                course?.redacteur?.prenom
-                                  ? `${course.redacteur.prenom || ""} ${
-                                      course.redacteur.nom || ""
-                                    }`.trim()
-                                  : "Non spécifié"}
-                              </p>
-                            </div>
-                          </div>
-
-                          {course?.duree && (
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-rose-50 rounded-lg">
-                                <Timer className="w-4 h-4 text-rose-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-slate-500 font-medium">
-                                  Durée
-                                </p>
-                                <p className="text-slate-900">
-                                  {course.duree} minutes
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2"
+                    style={{ background: "#f8faff" }}>
+                    <BookOpen size={14} className="text-indigo-600" />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      Informations du Cours
+                    </span>
                   </div>
-
-                  {course?.description && (
-                    <div className="mt-8 pt-6 border-t border-slate-200">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <FileText className="w-5 h-5 mr-2 text-indigo-600" />
-                        Description
-                      </h4>
-                      <p className="text-slate-700 leading-relaxed">
-                        {course.description}
+                  <div className="p-4 sm:p-6">
+                    {/* Title + subject — no avatar */}
+                    <div className="mb-4 pb-4 border-b border-slate-100">
+                      <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
+                        {course?.titre}
+                      </h2>
+                      <p className="text-sm text-slate-500 mt-0.5">
+                        {course?.matiere?.nom || "Matière non définie"}
                       </p>
                     </div>
-                  )}
 
-                  {course?.contenu && (
-                    <div className="mt-8 pt-6 border-t border-slate-200">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
-                        Contenu du cours
-                      </h4>
-                      <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                        <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                          {course.contenu}
-                        </p>
+                    {/* Details grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
+                          <Calendar size={14} className="text-blue-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-400 font-medium">Date de début</p>
+                          <p className="text-sm text-slate-800 font-medium">{formatDate(course?.dateHeureDebut)}</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  {course?.references && (
-                    <div className="mt-8 pt-6 border-t border-slate-200">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <FileText className="w-5 h-5 mr-2 text-indigo-600" />
-                        Références
-                      </h4>
-                      <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                        <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                          {course.references}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-50 rounded-lg flex-shrink-0">
+                          <Clock size={14} className="text-green-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-400 font-medium">Date de fin</p>
+                          <p className="text-sm text-slate-800 font-medium">{formatDate(course?.dateHeureFin)}</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Subject Information */}
-                  {(course?.matiere ||
-                    (course?.matieres && course.matieres.length > 0)) && (
-                    <div className="mt-8 pt-6 border-t border-slate-200">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <School className="w-5 h-5 mr-2 text-indigo-600" />
-                        {course?.matieres && course.matieres.length > 1
-                          ? "Matières Associées"
-                          : "Matière Associée"}
-                      </h4>
-
-                      {course?.matiere ? (
-                        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h5 className="font-medium text-slate-900">
-                                {course.matiere.nom}
-                              </h5>
-                              {course.matiere.description && (
-                                <p className="text-sm text-slate-600 mt-1">
-                                  {course.matiere.description}
-                                </p>
-                              )}
-                              {course.matiere.coefficient && (
-                                <div className="mt-2">
-                                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                                    Coefficient: {course.matiere.coefficient}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            <span
-                              className={`text-xs px-2 py-1 rounded-full ${
-                                course.matiere.etat === "ACTIF"
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : "bg-amber-100 text-amber-800"
-                              }`}
-                            >
-                              {course.matiere.etat}
-                            </span>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-50 rounded-lg flex-shrink-0">
+                          <MapPin size={14} className="text-amber-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-400 font-medium">Lieu</p>
+                          <p className="text-sm text-slate-800 font-medium">{course?.lieu || "Non spécifié"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-50 rounded-lg flex-shrink-0">
+                          <User size={14} className="text-indigo-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-400 font-medium">Professeur</p>
+                          <p className="text-sm text-slate-800 font-medium">
+                            {course?.redacteur?.nom || course?.redacteur?.prenom
+                              ? `${course.redacteur.prenom || ""} ${course.redacteur.nom || ""}`.trim()
+                              : "Non spécifié"}
+                          </p>
+                        </div>
+                      </div>
+                      {course?.dateCreation && (
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-purple-50 rounded-lg flex-shrink-0">
+                            <CalendarPlus size={14} className="text-purple-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-slate-400 font-medium">Date de création</p>
+                            <p className="text-sm text-slate-800 font-medium">{formatDate(course.dateCreation)}</p>
                           </div>
                         </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {course.matieres.map((matiere, index) => (
-                            <div
-                              key={matiere.id || index}
-                              className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h5 className="font-medium text-slate-900">
-                                    {matiere.nom}
-                                  </h5>
-                                  {matiere.description && (
-                                    <p className="text-sm text-slate-600 mt-1">
-                                      {matiere.description}
-                                    </p>
-                                  )}
-                                  {matiere.coefficient && (
-                                    <div className="mt-2">
-                                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                                        Coefficient: {matiere.coefficient}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                                <span
-                                  className={`text-xs px-2 py-1 rounded-full ${
-                                    matiere.etat === "ACTIF"
-                                      ? "bg-emerald-100 text-emerald-800"
-                                      : "bg-amber-100 text-amber-800"
-                                  }`}
-                                >
-                                  {matiere.etat || "ACTIF"}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+                      )}
+                      {course?.duree && (
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-rose-50 rounded-lg flex-shrink-0">
+                            <Timer size={14} className="text-rose-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-slate-400 font-medium">Durée</p>
+                            <p className="text-sm text-slate-800 font-medium">{course.duree} minutes</p>
+                          </div>
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
                 </div>
+
+                {/* Description */}
+                {course?.description && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2"
+                      style={{ background: "#f8faff" }}>
+                      <FileText size={14} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Description</span>
+                    </div>
+                    <div className="p-4 sm:p-6">
+                      <p className="text-slate-700 leading-relaxed text-sm sm:text-base">{course.description}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Contenu */}
+                {course?.contenu && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2"
+                      style={{ background: "#f8faff" }}>
+                      <BookOpen size={14} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Contenu du cours</span>
+                    </div>
+                    <div className="p-4 sm:p-6">
+                      <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm sm:text-base">{course.contenu}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Références */}
+                {course?.references && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2"
+                      style={{ background: "#f8faff" }}>
+                      <FileText size={14} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Références</span>
+                    </div>
+                    <div className="p-4 sm:p-6">
+                      <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm sm:text-base">{course.references}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Matière(s) */}
+                {(course?.matiere || (course?.matieres?.length > 0)) && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2"
+                      style={{ background: "#f8faff" }}>
+                      <School size={14} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        {course?.matieres?.length > 1 ? "Matières Associées" : "Matière Associée"}
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 space-y-3">
+                      {(course?.matiere ? [course.matiere] : course.matieres).map((m, i) => (
+                        <div key={m.id || i} className="flex items-start justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900 text-sm">{m.nom}</p>
+                            {m.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{m.description}</p>}
+                            {m.coefficient && (
+                              <span className="inline-block mt-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                                Coeff: {m.coefficient}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
+                            m.etat === "ACTIF" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                          }`}>
+                            {m.etat || "ACTIF"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1063,51 +1002,8 @@ const CourseContentView = ({ course, onBack }) => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 mt-6">
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-600">
-                Détails du cours
-              </div>
-
-              <div className="flex items-center space-x-3">
-                {/* Action buttons based on course state */}
-                <button
-                  onClick={() => {
-                    // Handle share functionality
-                    if (navigator.share) {
-                      navigator.share({
-                        title: course?.titre,
-                        text: course?.description || "Cours partagé",
-                        url: window.location.href,
-                      });
-                    } else {
-                      // Fallback: copy to clipboard
-                      navigator.clipboard.writeText(window.location.href);
-                      alert("Lien copié dans le presse-papiers !");
-                    }
-                  }}
-                  className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
-                >
-                  <Share2 className="w-4 h-4" />
-                  Partager
-                </button>
-
-                <button
-                  onClick={onBack}
-                  className="px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium"
-                >
-                  Retour
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        </div>{/* end tab content */}
+      </div>{/* end w-full */}
       <DocumentViewer
         isOpen={viewerConfig.isOpen}
         url={viewerConfig.url}
