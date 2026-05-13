@@ -293,7 +293,7 @@ class ScholchatService {
   // ============ Parent Management ============
   async getAllParents() {
     try {
-      const response = await api.get("/parents");
+      const response = await api.get("/parents/summary");
       return response.data;
     } catch (error) {
       this.handleError(error);

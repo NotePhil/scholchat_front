@@ -23,7 +23,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
-import { classService } from "../../../../../services/ClassService";
+import accederService from "../../../../../services/accederService";
+import parentService from "../../../../../services/parentService";
 import ParentModal from "../../modals/ParentModal";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import UserViewModalParentStudent from "../../modals/UserViewModalParentStudent";
@@ -62,12 +63,21 @@ const ParentsContent = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [parentsData, classesData] = await Promise.all([
-        scholchatService.getAllParents(),
-        classService.obtenirToutesLesClasses(),
-      ]);
-      setParents(Array.isArray(parentsData) ? parentsData : []);
-      setClasses(Array.isArray(classesData) ? classesData : []);
+      const rawParents = await scholchatService.getAllParents();
+      const safeParents = Array.isArray(rawParents) ? rawParents : [];
+
+      const enriched = await Promise.all(
+        safeParents.map(async (p) => {
+          try { p.classes = await accederService.obtenirClassesAccessibles(p.id); }
+          catch { p.classes = []; }
+          try { p.enfants = await parentService.getChildren(p.id); }
+          catch { p.enfants = []; }
+          return p;
+        })
+      );
+
+      setParents(enriched);
+      setClasses([]);
     } catch (err) {
       setError(t("parents.errors.loadData") + err.message);
     } finally {
@@ -190,8 +200,8 @@ const ParentsContent = () => {
   }
 
   return (
-    <div>
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+    <div className="full-bleed-page">
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-6">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center space-x-2 sm:space-x-3 mb-4">

@@ -26,7 +26,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
-import { classService } from "../../../../../services/ClassService";
+import accederService from "../../../../../services/accederService";
 import { Badge } from "antd";
 import { motion } from "framer-motion";
 import StudentModal from "../../modals/StudentModal";
@@ -67,12 +67,23 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [studentsData, classesData] = await Promise.all([
-        scholchatService.getAllStudents(),
-        classService.obtenirToutesLesClasses(),
-      ]);
-      setStudents(studentsData || []);
-      setClasses(classesData || []);
+      const studentsData = await scholchatService.getAllStudents();
+      const safeStudents = Array.isArray(studentsData) ? studentsData : [];
+
+      // Fetch classes per student using /acceder/utilisateurs/{id}/classes
+      const studentsWithClasses = await Promise.all(
+        safeStudents.map(async (student) => {
+          try {
+            const studentClasses = await accederService.obtenirClassesAccessibles(student.id);
+            return { ...student, classes: Array.isArray(studentClasses) ? studentClasses : [] };
+          } catch {
+            return { ...student, classes: [] };
+          }
+        })
+      );
+
+      setStudents(studentsWithClasses);
+      setClasses([]);
     } catch (err) {
       setError("Erreur lors du chargement des données: " + err.message);
     } finally {
@@ -167,9 +178,10 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     }
   };
 
+  const [viewingStudent, setViewingStudent] = useState(null);
+
   const handleViewUser = (student) => {
-    setCurrentUser(student);
-    setIsViewModalOpen(true);
+    setViewingStudent(student);
   };
 
   const handleSuccess = () => {
@@ -185,6 +197,148 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
   const isAdmin = userRole === "ADMIN";
 
+  // ── Student detail view ──────────────────────────────────────────────────
+  if (viewingStudent) {
+    const s = viewingStudent;
+    const sc = {
+      ACTIVE:              { label: "Actif",      bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+      INACTIVE:            { label: "Inactif",    bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+      PENDING:             { label: "En attente", bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+      AWAITING_VALIDATION: { label: "En attente", bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+    }[s.etat] || { label: s.etat, bg: "#f3f4f6", color: "#6b7280", border: "#e5e7eb" };
+
+    return (
+      <div className="full-bleed-page">
+        <div className="w-full">
+          {/* Hero banner */}
+          <div className="relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)" }}>
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 pointer-events-none" style={{ background: "#fff" }} />
+            <div className="relative px-3 sm:px-6 py-3 sm:py-4">
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  onClick={() => setViewingStudent(null)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-semibold transition-all hover:bg-white/20"
+                  style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                  Retour
+                </button>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white font-black text-base sm:text-lg flex-shrink-0"
+                  style={{ background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.35)" }}>
+                  {getInitials(s.prenom, s.nom)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h1 className="text-white font-bold text-base sm:text-xl leading-tight m-0">{s.prenom} {s.nom}</h1>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+                      style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>{sc.label}</span>
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {s.email && <span className="text-blue-100 text-xs">{s.email}</span>}
+                    {s.niveau && <span className="text-blue-100 text-xs">{s.niveau}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="px-3 sm:px-6 py-4 sm:py-6">
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+              {/* Left: personal info */}
+              <div className="lg:w-72 xl:w-80 flex-shrink-0">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2" style={{ background: "#f8faff" }}>
+                    <School size={13} className="text-indigo-600" />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Informations</span>
+                  </div>
+                  <div className="px-4 py-3 space-y-3">
+                    {[
+                      { icon: <Mail size={13} />, label: "Email", value: s.email },
+                      { icon: <Phone size={13} />, label: "Téléphone", value: s.telephone },
+                      { icon: <MapPin size={13} />, label: "Adresse", value: s.adresse },
+                      { icon: <GraduationCap size={13} />, label: "Niveau", value: s.niveau },
+                      { icon: <Calendar size={13} />, label: "Inscrit le", value: s.creationDate ? new Date(s.creationDate).toLocaleDateString("fr-FR") : null },
+                    ].filter(r => r.value).map((row, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-slate-400 mt-0.5 flex-shrink-0">{row.icon}</span>
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-400 font-medium">{row.label}</p>
+                          <p className="text-sm text-slate-800 break-words">{row.value}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: classes */}
+              <div className="flex-1 min-w-0">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between" style={{ background: "#f8faff" }}>
+                    <div className="flex items-center gap-2">
+                      <Users size={13} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Classes Accessibles</span>
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold"
+                        style={{ background: "#e0e7ff", color: "#4f46e5" }}>
+                        {s.classes?.length || 0}
+                      </span>
+                    </div>
+                  </div>
+                  {!s.classes?.length ? (
+                    <div className="px-4 py-10 text-center">
+                      <Users size={32} className="text-slate-200 mx-auto mb-3" />
+                      <p className="text-slate-400 text-sm">Aucune classe associée</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-50">
+                      {s.classes.map((cls, i) => (
+                        <div key={cls.id || i} className="px-4 py-3.5 hover:bg-slate-50/60 transition-colors">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <p className="text-sm font-semibold text-slate-800">{cls.nom}</p>
+                                {cls.niveau && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-medium"
+                                    style={{ background: "#e0f7fa", color: "#00838f", border: "1px solid #b2ebf2" }}>
+                                    {cls.niveau}
+                                  </span>
+                                )}
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  cls.etat === "ACTIF" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                }`}>{cls.etat}</span>
+                              </div>
+                              {cls.etablissement && (
+                                <p className="text-xs text-slate-500">{cls.etablissement.nom} — {cls.etablissement.localisation}</p>
+                              )}
+                              {cls.moderator && typeof cls.moderator === 'object' && (
+                                <p className="text-xs text-slate-400 mt-0.5">
+                                  Modérateur: {cls.moderator.prenom} {cls.moderator.nom}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              {cls.accesMajeur && <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">Accès majeur</span>}
+                              {cls.paymentRequired && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Payant</span>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main list ──────────────────────────────────────────────────────────────
   if (loading && students.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -205,8 +359,8 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   }
 
   return (
-    <div>
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+    <div className="full-bleed-page">
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-6">
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
             <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg sm:rounded-xl shadow-lg">
@@ -865,15 +1019,6 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             userType="élève"
           />
         </>
-      )}
-
-      {isViewModalOpen && (
-        <UserViewEleve
-          user={currentUser}
-          onClose={() => setIsViewModalOpen(false)}
-          onSuccess={handleSuccess}
-          userType="student"
-        />
       )}
     </div>
   );

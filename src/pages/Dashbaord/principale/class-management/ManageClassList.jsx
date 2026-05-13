@@ -1,170 +1,34 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  GraduationCap,
-  Search,
-  Edit,
-  Trash2,
-  Plus,
-  Users,
-  School,
-  Clock,
-  PowerOff,
-  Check,
-  Calendar,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Loader,
-  Eye,
-  Key,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  RefreshCw,
-  Settings,
-  UserCheck,
-  UserX,
-  X,
-  Sparkles,
-  ArrowLeft,
-  Trophy,
-  MoreHorizontal,
-  SortAsc,
-  CalendarDays,
-  UserPlus,
-  Bell,
-  Zap,
+  GraduationCap, Search, Edit, Plus, Calendar,
+  CheckCircle, XCircle, AlertCircle, Loader, Settings,
+  ChevronLeft, ChevronRight, RefreshCw, X, Zap, Bell,
+  Trophy, Filter,
 } from "lucide-react";
-import { useSelector } from "react-redux";
-import { motion } from "framer-motion";
-import AccederService, {
-  EtatDemandeAcces,
-} from "../../../../services/accederService";
+import AccederService from "../../../../services/accederService";
 import ClassEditModal from "./ClassEditPage";
-import "./ManageClassList.css";
 
-const ManageClassListMobile = ({
-  classes,
-  loading,
-  searchTerm,
-  setSearchTerm,
-  handleManageClass,
-  handleEditClass,
-  pendingRequests,
-  onRefresh,
-  onNavigateToCreate
-}) => {
+/* ── Status helpers ─────────────────────────────────────────────────────── */
+const EtatClasse = { ACTIF: "ACTIF", EN_ATTENTE_APPROBATION: "EN_ATTENTE_APPROBATION", INACTIF: "INACTIF" };
+
+const STATUS_CFG = {
+  ACTIF:                   { label: "Actif",      bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0", dot: "bg-green-500" },
+  EN_ATTENTE_APPROBATION:  { label: "En attente", bg: "#fffbeb", color: "#d97706", border: "#fde68a", dot: "bg-amber-500 animate-pulse" },
+  INACTIF:                 { label: "Inactif",    bg: "#fef2f2", color: "#dc2626", border: "#fecaca", dot: "bg-red-500" },
+};
+
+const StatusBadge = ({ etat }) => {
+  const cfg = STATUS_CFG[etat] || { label: etat, bg: "#f3f4f6", color: "#6b7280", border: "#e5e7eb", dot: "bg-gray-400" };
   return (
-    <div className="flex flex-col space-y-4 px-4 pb-32 pt-2 bg-gray-50 dark:bg-slate-950 min-h-screen">
-      <div className="sticky top-0 z-20 bg-gray-50 dark:bg-slate-950 pt-2 pb-4 space-y-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-black dark:text-white">Mes Classes</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Recherche dans vos classes</p>
-          </div>
-          <button
-            onClick={onRefresh}
-            className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-white/5"
-          >
-            <RefreshCw size={20} className="text-blue-600" />
-          </button>
-        </div>
-
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search classes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-800 py-4 pl-12 pr-4 rounded-3xl shadow-xl shadow-blue-500/5 border border-gray-100 dark:border-white/5 outline-none focus:border-blue-500 transition-all dark:text-white"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {classes.map((classe, idx) => {
-          const pendingCount = pendingRequests[classe.id] || 0;
-          return (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-              key={classe.id}
-              className="bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-xl border border-gray-100 dark:border-white/5 relative overflow-hidden group"
-            >
-              {pendingCount > 0 && (
-                <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-lg shadow-red-500/20 z-10">
-                  {pendingCount} REQUESTS
-                </div>
-              )}
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="p-4 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/20">
-                  <GraduationCap size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black dark:text-white leading-tight">{classe.nom}</h3>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{classe.niveau}</span>
-                    <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                    <div className="flex items-center text-[10px] font-bold text-blue-600 uppercase">
-                      <CheckCircle size={10} className="mr-1" />
-                      <span>{classe.etat}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-gray-100 dark:border-white/5">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Students</p>
-                  <p className="text-sm font-bold dark:text-white">{classe.eleves?.length || 0}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-gray-100 dark:border-white/5">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Created</p>
-                  <p className="text-sm font-bold dark:text-white">{new Date(classe.dateCreation).toLocaleDateString()}</p>
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleManageClass(classe)}
-                  className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs transition-all shadow-lg shadow-blue-500/20 active:scale-95"
-                >
-                  MANAGE
-                </button>
-                <button
-                  onClick={() => handleEditClass(classe)}
-                  className="p-4 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-2xl font-black text-xs transition-all active:scale-95"
-                >
-                  <Edit size={18} />
-                </button>
-              </div>
-            </motion.div>
-          );
-        })}
-
-        {classes.length === 0 && (
-          <div className="py-20 text-center">
-            <div className="p-6 bg-gray-100 dark:bg-slate-800 rounded-full w-fit mx-auto mb-4">
-              <GraduationCap size={40} className="text-gray-400" />
-            </div>
-            <h4 className="font-bold dark:text-white">No classes found</h4>
-            <p className="text-xs text-gray-500">Try adjusting your search terms</p>
-          </div>
-        )}
-      </div>
-
-      {onNavigateToCreate && (
-        <button
-          onClick={onNavigateToCreate}
-          className="fixed bottom-28 right-6 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 z-[30]"
-        >
-          <Plus size={28} />
-        </button>
-      )}
-    </div>
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0"
+      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
+    </span>
   );
 };
 
+/* ── Main component ─────────────────────────────────────────────────────── */
 const ManageClassList = ({
   classes = [],
   loading = false,
@@ -177,662 +41,362 @@ const ManageClassList = ({
   onNavigateToCreate,
   userRole = "professeur",
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage]   = useState(1);
+  const [pageSize, setPageSize]         = useState(12);
+  const [searchTerm, setSearchTerm]     = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [niveauFilter, setNiveauFilter] = useState("all");
-  const [dateRange, setDateRange] = useState(null);
-  const [sortBy, setSortBy] = useState("dateCreation");
-  const [sortOrder, setSortOrder] = useState("desc");
+  const [sortBy, setSortBy]             = useState("dateCreation");
+  const [sortOrder, setSortOrder]       = useState("desc");
   const [pendingRequests, setPendingRequests] = useState({});
-  const [selectedClass, setSelectedClass] = useState(null);
   const [editingClass, setEditingClass] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(null);
-  const [showApprovalModal, setShowApprovalModal] = useState(null);
-  const [showDeactivationModal, setShowDeactivationModal] = useState(null);
-  const [showAccessRequestModal, setShowAccessRequestModal] = useState(false);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [accessToken, setAccessToken] = useState("");
-  const [deactivationReason, setDeactivationReason] = useState("");
-  const [deactivationComment, setDeactivationComment] = useState("");
   const [loadingRequests, setLoadingRequests] = useState(false);
 
-  const EtatClasse = {
-    ACTIF: "ACTIF",
-    EN_ATTENTE_APPROBATION: "EN_ATTENTE_APPROBATION",
-    INACTIF: "INACTIF",
-  };
-
-  const getStatusColor = (etat) => {
-    switch (etat) {
-      case EtatClasse.ACTIF:
-        return "status-active";
-      case EtatClasse.EN_ATTENTE_APPROBATION:
-        return "status-pending";
-      case EtatClasse.INACTIF:
-        return "status-inactive";
-      default:
-        return "status-default";
-    }
-  };
-
-  const getStatusText = (etat) => {
-    switch (etat) {
-      case EtatClasse.ACTIF:
-        return "Actif";
-      case EtatClasse.EN_ATTENTE_APPROBATION:
-        return "En attente";
-      case EtatClasse.INACTIF:
-        return "Inactif";
-      default:
-        return "Inconnu";
-    }
-  };
-
-  const getStatusIcon = (etat) => {
-    switch (etat) {
-      case EtatClasse.ACTIF:
-        return <CheckCircle className="status-icon" />;
-      case EtatClasse.EN_ATTENTE_APPROBATION:
-        return <Clock className="status-icon" />;
-      case EtatClasse.INACTIF:
-        return <XCircle className="status-icon" />;
-      default:
-        return <AlertCircle className="status-icon" />;
-    }
-  };
-
-  // Load pending requests for all classes
-  const loadPendingRequestsForAllClasses = async () => {
-    if (!classes || classes.length === 0) return;
-
-    try {
-      setLoadingRequests(true);
-      const requestsMap = {};
-
-      // Use AccederService like ClassAccessRequests does
-      for (const classe of classes) {
+  /* ── Load pending access requests ── */
+  const loadPendingRequests = async () => {
+    if (!classes.length) return;
+    setLoadingRequests(true);
+    const map = {};
+    await Promise.all(
+      classes.map(async (cls) => {
         try {
-          const requests = await AccederService.obtenirDemandesAccesPourClasse(
-            classe.id
-          );
-          const pendingCount = (requests || []).filter(
-            (req) => req.etat === "EN_ATTENTE"
-          ).length;
-          requestsMap[classe.id] = pendingCount;
-          console.log(`Class ${classe.nom}: ${pendingCount} pending requests`);
-        } catch (err) {
-          console.error(`Error loading requests for class ${classe.id}:`, err);
-          requestsMap[classe.id] = 0;
-        }
-      }
-
-      console.log("All pending requests:", requestsMap);
-      setPendingRequests(requestsMap);
-    } catch (error) {
-      console.error("Error loading pending requests:", error);
-    } finally {
-      setLoadingRequests(false);
-    }
+          const reqs = await AccederService.obtenirDemandesAccesPourClasse(cls.id);
+          map[cls.id] = (reqs || []).filter(r => r.etat === "EN_ATTENTE").length;
+        } catch { map[cls.id] = 0; }
+      })
+    );
+    setPendingRequests(map);
+    setLoadingRequests(false);
   };
 
-  // Load pending requests when classes change
-  useEffect(() => {
-    if (classes && classes.length > 0) {
-      loadPendingRequestsForAllClasses();
-    }
-  }, [classes]);
+  useEffect(() => { if (classes.length) loadPendingRequests(); }, [classes]);
+  useEffect(() => { if (refreshing) loadPendingRequests(); }, [refreshing]);
 
-  // Refresh pending requests when refreshing
-  useEffect(() => {
-    if (refreshing) {
-      loadPendingRequestsForAllClasses();
-    }
-  }, [refreshing]);
+  /* ── Derived stats ── */
+  const totalClasses    = classes.length;
+  const activeClasses   = classes.filter(c => c.etat === EtatClasse.ACTIF).length;
+  const pendingClasses  = classes.filter(c => c.etat === EtatClasse.EN_ATTENTE_APPROBATION).length;
+  const totalAccessReqs = Object.values(pendingRequests).reduce((s, n) => s + n, 0);
+  const totalPending    = totalAccessReqs + pendingClasses;
 
-  const sortedAndFilteredClasses = useMemo(() => {
-    let filtered = classes.filter((classe) => {
-      const matchesSearch =
-        classe.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        classe.niveau.toLowerCase().includes(searchTerm.toLowerCase());
+  /* ── Unique niveaux ── */
+  const uniqueNiveaux = [...new Set(classes.map(c => c.niveau).filter(Boolean))];
 
-      const matchesStatus =
-        statusFilter === "all" || classe.etat === statusFilter;
-      const matchesNiveau =
-        niveauFilter === "all" || classe.niveau === niveauFilter;
-
-      const matchesDate =
-        !dateRange ||
-        !dateRange[0] ||
-        !dateRange[1] ||
-        (new Date(classe.dateCreation) >= new Date(dateRange[0]) &&
-          new Date(classe.dateCreation) <= new Date(dateRange[1]));
-
-      return matchesSearch && matchesStatus && matchesNiveau && matchesDate;
+  /* ── Filter + sort ── */
+  const filtered = useMemo(() => {
+    let list = classes.filter(c => {
+      const q = searchTerm.toLowerCase();
+      const matchSearch = !q || c.nom?.toLowerCase().includes(q) || c.niveau?.toLowerCase().includes(q);
+      const matchStatus = statusFilter === "all" || c.etat === statusFilter;
+      const matchNiveau = niveauFilter === "all" || c.niveau === niveauFilter;
+      return matchSearch && matchStatus && matchNiveau;
     });
 
-    // Sort: Classes with pending requests first, then by date
-    filtered.sort((a, b) => {
-      const aPendingCount = pendingRequests[a.id] || 0;
-      const bPendingCount = pendingRequests[b.id] || 0;
-
-      // First priority: classes with pending requests
-      if (aPendingCount > 0 && bPendingCount === 0) return -1;
-      if (aPendingCount === 0 && bPendingCount > 0) return 1;
-
-      // If both have pending requests, sort by count (highest first)
-      if (aPendingCount > 0 && bPendingCount > 0) {
-        if (aPendingCount !== bPendingCount) {
-          return bPendingCount - aPendingCount;
-        }
-      }
-
-      // Then apply normal sorting
-      let aValue = a[sortBy];
-      let bValue = b[sortBy];
-
-      if (sortBy === "dateCreation") {
-        aValue = new Date(aValue);
-        bValue = new Date(bValue);
-      } else if (sortBy === "eleveCount") {
-        aValue = a.eleves?.length || 0;
-        bValue = b.eleves?.length || 0;
-      }
-
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
+    list.sort((a, b) => {
+      const ap = pendingRequests[a.id] || 0;
+      const bp = pendingRequests[b.id] || 0;
+      if (ap > 0 && bp === 0) return -1;
+      if (ap === 0 && bp > 0) return 1;
+      if (ap !== bp) return bp - ap;
+      let av = a[sortBy], bv = b[sortBy];
+      if (sortBy === "dateCreation") { av = new Date(av); bv = new Date(bv); }
+      else if (sortBy === "eleveCount") { av = a.eleves?.length || 0; bv = b.eleves?.length || 0; }
+      return sortOrder === "asc" ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
     });
+    return list;
+  }, [classes, searchTerm, statusFilter, niveauFilter, sortBy, sortOrder, pendingRequests]);
 
-    return filtered;
-  }, [
-    classes,
-    searchTerm,
-    statusFilter,
-    niveauFilter,
-    dateRange,
-    sortBy,
-    sortOrder,
-    pendingRequests,
-  ]);
-
-  const paginatedClasses = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return sortedAndFilteredClasses.slice(startIndex, startIndex + pageSize);
-  }, [sortedAndFilteredClasses, currentPage, pageSize]);
-
-  const totalClasses = classes.length;
-  const activeClasses = classes.filter(
-    (c) => c.etat === EtatClasse.ACTIF
-  ).length;
-  const pendingClasses = classes.filter(
-    (c) => c.etat === EtatClasse.EN_ATTENTE_APPROBATION
-  ).length;
-  const totalStudents = classes.reduce(
-    (sum, c) => sum + (c.eleves?.length || 0),
-    0
-  );
-  const totalParents = classes.reduce(
-    (sum, c) => sum + (c.parents?.length || 0),
-    0
-  );
-
-  // Calculate total pending requests (access requests + pending class approvals)
-  const totalAccessRequests = Object.values(pendingRequests).reduce(
-    (sum, count) => sum + count,
-    0
-  );
-  const totalPendingRequests = totalAccessRequests + pendingClasses;
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage    = Math.min(currentPage, totalPages);
+  const paginated   = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const clearFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setNiveauFilter("all");
-    setDateRange(null);
-    setSortBy("dateCreation");
-    setSortOrder("desc");
-    setCurrentPage(1);
+    setSearchTerm(""); setStatusFilter("all"); setNiveauFilter("all");
+    setSortBy("dateCreation"); setSortOrder("desc"); setCurrentPage(1);
   };
 
-  const uniqueNiveaux = [...new Set(classes.map((c) => c.niveau))];
+  const handleRefresh = async () => { await onRefresh(); await loadPendingRequests(); };
 
-  const handleManageClass = (classe) => {
-    if (onSelectClass) {
-      onSelectClass(classe.id);
-    }
-  };
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const handleRefreshWithRequests = async () => {
-    if (onRefresh) {
-      await onRefresh();
-    }
-    // Reload pending requests after refresh
-    await loadPendingRequestsForAllClasses();
-  };
-
-  const handleEditClass = (classe) => {
-    setEditingClass(classe);
-  };
-
-  const handleSaveEdit = async () => {
-    await onRefresh();
-    setEditingClass(null);
-  };
-
-  const isMobile = useSelector((state) => state.ui.isMobile);
-
+  /* ── Loading state ── */
   if (loading && classes.length === 0) {
     return (
-      <div className="loading-container">
-        <div className="loading-content">
-          <Loader className="loading-spinner" />
-          <p className="loading-text">Chargement des classes...</p>
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="relative">
+          <div className="w-12 h-12 border-4 border-blue-200 rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-blue-600 rounded-full animate-spin absolute top-0 left-0"
+            style={{ clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)" }} />
         </div>
+        <p className="mt-4 text-slate-500 text-sm font-medium">Chargement des classes...</p>
       </div>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <ManageClassListMobile
-        classes={sortedAndFilteredClasses}
-        loading={loading}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        handleManageClass={handleManageClass}
-        handleEditClass={handleEditClass}
-        pendingRequests={pendingRequests}
-        onRefresh={handleRefreshWithRequests}
-        onNavigateToCreate={onNavigateToCreate}
-      />
     );
   }
 
   return (
-    <div className="manage-container">
-      <div className="manage-wrapper">
-        <div className="header-card">
-          <div className="header-content">
-            <div className="header-left">
-              {onBack && (
-                <button onClick={onBack} className="back-btn">
-                  <ArrowLeft className="back-icon" />
+    <div className="w-full">
+
+      {/* ── Hero header ── */}
+      <div className="relative overflow-hidden mb-4 sm:mb-6 rounded-2xl"
+        style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)" }}>
+        <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 pointer-events-none" style={{ background: "#fff" }} />
+        <div className="relative px-4 sm:px-6 py-4 sm:py-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.35)" }}>
+                <GraduationCap size={20} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-white font-bold text-base sm:text-xl leading-tight">Gestion des Classes</h1>
+                <p className="text-blue-100 text-xs mt-0.5">Gérez et supervisez toutes les classes de votre établissement</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={handleRefresh} disabled={refreshing || loadingRequests}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-semibold transition-all hover:bg-white/20 disabled:opacity-50"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}>
+                <RefreshCw size={14} className={refreshing || loadingRequests ? "animate-spin" : ""} />
+                <span className="hidden sm:inline">{refreshing ? "Actualisation..." : "Actualiser"}</span>
+              </button>
+              {onNavigateToCreate && (
+                <button onClick={onNavigateToCreate}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}>
+                  <Plus size={14} />
+                  <span className="hidden sm:inline">Créer une Classe</span>
                 </button>
               )}
-              <div className="header-info">
-                <div className="header-icon">
-                  <GraduationCap className="icon" />
-                </div>
-                <div className="header-text">
-                  <h1 className="header-title">Gestion des Classes</h1>
-                  <p className="header-subtitle">
-                    Gérez et supervisez toutes les classes de votre
-                    établissement
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="header-actions">
-              <button
-                onClick={handleRefreshWithRequests}
-                disabled={refreshing || loadingRequests}
-                className="btn btn-secondary"
-              >
-                <RefreshCw
-                  className={`btn-icon ${
-                    refreshing || loadingRequests ? "spinning" : ""
-                  }`}
-                />
-                <span className="btn-text">
-                  {refreshing || loadingRequests
-                    ? "Actualisation..."
-                    : "Actualiser"}
-                </span>
-              </button>
             </div>
           </div>
-        </div>
-
-        {error && (
-          <div className="alert alert-error">
-            <AlertCircle className="alert-icon" />
-            <p className="alert-text">{error}</p>
-            <button onClick={() => {}} className="alert-close">
-              <X className="close-icon" />
-            </button>
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="alert alert-success">
-            <CheckCircle className="alert-icon" />
-            <p className="alert-text">{successMessage}</p>
-            <button onClick={() => {}} className="alert-close">
-              <X className="close-icon" />
-            </button>
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: "12px", marginBottom: "12px", marginTop: "-8px", flexWrap: "wrap" }}>
-          {[
-            { icon: <GraduationCap size={16} />, value: totalClasses, label: "Total Classes", color: "#4a6da7", bg: "#eef2fb", filter: "all" },
-            { icon: <Trophy size={16} />, value: activeClasses, label: "Classes Actives", color: "#38a169", bg: "#f0fff4", filter: EtatClasse.ACTIF },
-            { icon: <Bell size={16} />, value: loadingRequests ? "…" : totalPendingRequests, label: "Demandes en Attente", color: "#d97706", bg: "#fffbeb", filter: EtatClasse.EN_ATTENTE_APPROBATION },
-          ].map(({ icon, value, label, color, bg, filter }) => (
-            <div
-              key={label}
-              onClick={() => setStatusFilter(filter)}
-              style={{
-                display: "flex", alignItems: "center", gap: "14px",
-                background: "white", border: `1px solid ${color}30`,
-                borderRadius: "10px", padding: "14px 32px",
-                cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-                outline: statusFilter === filter ? `2px solid ${color}` : "none",
-                transition: "all 0.2s",
-              }}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: 8, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {icon}
-              </div>
-              <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#1a202c", lineHeight: 1 }}>{value}</div>
-                <div style={{ fontSize: 12, color: "#718096", marginTop: 4 }}>{label}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ALL FILTERS ON ONE LINE */}
-        <div className="filters-card">
-          <div className="filters-row-all">
-            <div className="search-wrapper-inline">
-              <Search className="search-icon" />
-              <input
-                type="text"
-                placeholder="Rechercher une classe..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-            </div>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value={EtatClasse.ACTIF}>Actif</option>
-              <option value={EtatClasse.EN_ATTENTE_APPROBATION}>
-                En attente
-              </option>
-              <option value={EtatClasse.INACTIF}>Inactif</option>
-            </select>
-
-            <select
-              value={niveauFilter}
-              onChange={(e) => setNiveauFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">Tous les niveaux</option>
-              {uniqueNiveaux.map((niveau) => (
-                <option key={niveau} value={niveau}>
-                  {niveau}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="filter-select"
-            >
-              <option value={12}>12 par page</option>
-              <option value={18}>18 par page</option>
-              <option value={24}>24 par page</option>
-            </select>
-
-            <button onClick={clearFilters} className="btn btn-outline">
-              <X className="btn-icon" />
-              <span className="btn-text">Effacer</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="classes-card">
-          {loadingRequests && (
-            <div className="loading-requests-notice">
-              <Loader className="loading-spinner-small" />
-              <span>Chargement des demandes d'accès...</span>
-            </div>
-          )}
-
-          {sortedAndFilteredClasses.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-content">
-                <GraduationCap className="empty-icon" />
-                <h3 className="empty-title">Aucune classe trouvée</h3>
-                <p className="empty-description">
-                  Aucune classe ne correspond à vos critères de recherche
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="classes-grid">
-                {paginatedClasses.map((classe) => {
-                  const pendingCount = pendingRequests[classe.id] || 0;
-
-                  return (
-                    <div key={classe.id} className="class-card">
-                      {classe.isNew && (
-                        <div className="new-badge">
-                          <Sparkles className="new-icon" />
-                          <span>NOUVEAU</span>
-                        </div>
-                      )}
-
-                      {pendingCount > 0 && (
-                        <div
-                          className={`pending-badge ${
-                            pendingCount > 9 ? "large-count" : ""
-                          }`}
-                        >
-                          <span>
-                            {pendingCount > 99 ? "99+" : pendingCount}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="card-content">
-                        <div className="card-header">
-                          <div className="card-title-section">
-                            <div className="class-info">
-                              <div className="class-icon">
-                                <GraduationCap className="icon" />
-                              </div>
-                              <div className="class-details">
-                                <h3 className="class-name">{classe.nom}</h3>
-                                <p className="class-level">{classe.niveau}</p>
-                              </div>
-                            </div>
-                            <div
-                              className={`status-badge ${getStatusColor(
-                                classe.etat
-                              )}`}
-                            >
-                              {getStatusIcon(classe.etat)}
-                              <span>{getStatusText(classe.etat)}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="date-section">
-                          <Calendar className="date-icon" />
-                          <span className="date-text">
-                            {classe.dateCreation &&
-                            classe.dateCreation !== null &&
-                            classe.dateCreation !== ""
-                              ? `Créée le ${new Date(
-                                  classe.dateCreation
-                                ).toLocaleDateString("fr-FR", {
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                })}`
-                              : "Date non disponible"}
-                          </span>
-                        </div>
-
-                        <div
-                          className="date-section"
-                          style={{ marginTop: "8px", marginBottom: "12px" }}
-                        >
-                          <span className="date-text">
-                            Demandes:{" "}
-                            {loadingRequests ? (
-                              <Loader
-                                className="loading-mini-stat"
-                                style={{
-                                  display: "inline-block",
-                                  marginLeft: "4px",
-                                }}
-                              />
-                            ) : (
-                              <strong>{pendingCount}</strong>
-                            )}
-                          </span>
-                        </div>
-
-                        {pendingCount > 0 && (
-                          <div className="pending-requests-info">
-                            <Zap className="pending-icon" />
-                            <span className="pending-text">
-                              {pendingCount} nouvelle
-                              {pendingCount > 1 ? "s" : ""} demande
-                              {pendingCount > 1 ? "s" : ""} d'accès
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="card-actions">
-                          <button
-                            onClick={() => handleManageClass(classe)}
-                            className="action-btn action-primary"
-                          >
-                            <Settings className="action-icon" />
-                            <span>Gérer</span>
-                          </button>
-                          <button
-                            onClick={() => handleEditClass(classe)}
-                            className="action-btn action-secondary"
-                          >
-                            <Edit className="action-icon" />
-                            <span>Modifier</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {Math.ceil(sortedAndFilteredClasses.length / pageSize) > 1 && (
-                <div className="pagination-container">
-                  <div className="pagination-info">
-                    Affichage de {(currentPage - 1) * pageSize + 1} à{" "}
-                    {Math.min(
-                      currentPage * pageSize,
-                      sortedAndFilteredClasses.length
-                    )}{" "}
-                    sur {sortedAndFilteredClasses.length} classes
-                  </div>
-                  <div className="pagination-controls">
-                    <button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="pagination-btn"
-                    >
-                      <ChevronLeft className="pagination-icon" />
-                    </button>
-                    {Array.from(
-                      {
-                        length: Math.ceil(
-                          sortedAndFilteredClasses.length / pageSize
-                        ),
-                      },
-                      (_, i) => {
-                        const page = i + 1;
-                        const isCurrentPage = page === currentPage;
-                        const totalPages = Math.ceil(
-                          sortedAndFilteredClasses.length / pageSize
-                        );
-                        const shouldShow =
-                          page === 1 ||
-                          page === totalPages ||
-                          (page >= currentPage - 1 && page <= currentPage + 1);
-
-                        if (!shouldShow) {
-                          if (
-                            page === currentPage - 2 ||
-                            page === currentPage + 2
-                          ) {
-                            return (
-                              <span key={page} className="pagination-ellipsis">
-                                ...
-                              </span>
-                            );
-                          }
-                          return null;
-                        }
-
-                        return (
-                          <button
-                            key={page}
-                            onClick={() => handlePageChange(page)}
-                            className={`pagination-btn ${
-                              isCurrentPage ? "active" : ""
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        );
-                      }
-                    )}
-                    <button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={
-                        currentPage ===
-                        Math.ceil(sortedAndFilteredClasses.length / pageSize)
-                      }
-                      className="pagination-btn"
-                    >
-                      <ChevronRight className="pagination-icon" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
         </div>
       </div>
 
-      {/* Edit Class Modal */}
+      {/* ── Stats cards — hidden on mobile ── */}
+      <div className="hidden sm:grid sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {[
+          { icon: <GraduationCap size={16} />, value: totalClasses,  label: "Total Classes",       color: "#2d6a9f", bg: "#eff6ff", ring: "ring-blue-500",  filter: "all" },
+          { icon: <Trophy size={16} />,        value: activeClasses,  label: "Classes Actives",     color: "#16a34a", bg: "#f0fdf4", ring: "ring-green-500", filter: EtatClasse.ACTIF },
+          { icon: <Bell size={16} />,          value: loadingRequests ? "…" : totalPending, label: "Demandes en Attente", color: "#d97706", bg: "#fffbeb", ring: "ring-amber-500", filter: EtatClasse.EN_ATTENTE_APPROBATION },
+        ].map(({ icon, value, label, color, bg, ring, filter }) => (
+          <div key={label} onClick={() => setStatusFilter(filter)}
+            className={`bg-white border border-slate-100 rounded-xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === filter ? `ring-2 ${ring}` : ""}`}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-slate-500 text-xs font-medium mb-1 truncate">{label}</p>
+                <p className="text-2xl sm:text-3xl font-bold leading-none" style={{ color }}>{value}</p>
+              </div>
+              <div className="p-2 rounded-lg flex-shrink-0" style={{ background: bg, color }}>
+                {icon}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Filter bar ── */}
+      <div className="bg-white border border-slate-100 rounded-xl p-3 sm:p-4 shadow-sm mb-4 sm:mb-6">
+        {/* Row 1: search */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+            <input
+              type="text"
+              placeholder="Rechercher une classe par nom ou niveau..."
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none"
+            />
+          </div>
+          {(searchTerm || statusFilter !== "all" || niveauFilter !== "all") && (
+            <button onClick={clearFilters}
+              className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex-shrink-0">
+              <X size={13} /> Effacer
+            </button>
+          )}
+        </div>
+        {/* Row 2: filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[110px]">
+            <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-7 pr-5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer outline-none">
+              <option value="all">Tous les statuts</option>
+              <option value={EtatClasse.ACTIF}>Actif</option>
+              <option value={EtatClasse.EN_ATTENTE_APPROBATION}>En attente</option>
+              <option value={EtatClasse.INACTIF}>Inactif</option>
+            </select>
+          </div>
+          <div className="relative flex-1 min-w-[110px]">
+            <select value={niveauFilter} onChange={e => { setNiveauFilter(e.target.value); setCurrentPage(1); }}
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer outline-none">
+              <option value="all">Tous les niveaux</option>
+              {uniqueNiveaux.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 flex-shrink-0">
+            <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="text-xs bg-transparent border-none focus:ring-0 cursor-pointer outline-none">
+              {[6, 12, 18, 24].map(s => <option key={s} value={s}>{s} / page</option>)}
+            </select>
+          </div>
+        </div>
+        {filtered.length > 0 && (
+          <p className="text-xs text-slate-400 mt-2">
+            <span className="font-semibold text-slate-600">{filtered.length}</span> classe{filtered.length !== 1 ? "s" : ""} trouvée{filtered.length !== 1 ? "s" : ""}
+          </p>
+        )}
+      </div>
+
+      {/* ── Class grid ── */}
+      {filtered.length === 0 ? (
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-10 text-center">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <GraduationCap size={32} className="text-slate-300" />
+          </div>
+          <h3 className="text-base font-semibold text-slate-700 mb-1">Aucune classe trouvée</h3>
+          <p className="text-sm text-slate-400">
+            {searchTerm || statusFilter !== "all" || niveauFilter !== "all"
+              ? "Essayez de modifier vos filtres."
+              : "Vous n'avez pas encore de classes."}
+          </p>
+          {onNavigateToCreate && (
+            <button onClick={onNavigateToCreate}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+              style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}>
+              <Plus size={15} /> Créer une classe
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+            {paginated.map((cls) => {
+              const pending = pendingRequests[cls.id] || 0;
+              const studentCount = cls.eleves?.length || 0;
+              return (
+                <div key={cls.id}
+                  className="bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden group">
+
+                  {/* Card top band */}
+                  <div className="h-1.5 w-full"
+                    style={{ background: cls.etat === EtatClasse.ACTIF ? "linear-gradient(90deg,#16a34a,#4ade80)" : cls.etat === EtatClasse.EN_ATTENTE_APPROBATION ? "linear-gradient(90deg,#d97706,#fbbf24)" : "linear-gradient(90deg,#dc2626,#f87171)" }} />
+
+                  <div className="p-4 sm:p-5">
+                    {/* Header row */}
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+                          <GraduationCap size={18} className="text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-slate-900 text-sm leading-tight truncate">{cls.nom}</h3>
+                          {cls.niveau && (
+                            <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-medium"
+                              style={{ background: "#e0f7fa", color: "#00838f", border: "1px solid #b2ebf2" }}>
+                              {cls.niveau}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <StatusBadge etat={cls.etat} />
+                        {pending > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white">
+                            <Zap size={9} /> {pending}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Meta row */}
+                    <div className="flex items-center gap-4 mb-3 text-xs text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar size={11} />
+                        {cls.dateCreation
+                          ? new Date(cls.dateCreation).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                          : "—"}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                        {studentCount} élève{studentCount !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+
+                    {/* Établissement */}
+                    {cls.etablissement?.nom && (
+                      <p className="text-xs text-slate-400 mb-3 truncate">
+                        🏫 {cls.etablissement.nom}
+                        {cls.etablissement.localisation ? ` — ${cls.etablissement.localisation}` : ""}
+                      </p>
+                    )}
+
+                    {/* Pending requests notice */}
+                    {pending > 0 && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3 text-xs font-semibold"
+                        style={{ background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa" }}>
+                        <Bell size={12} />
+                        {pending} demande{pending > 1 ? "s" : ""} d'accès en attente
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-3 border-t border-slate-50">
+                      <button onClick={() => onSelectClass(cls.id)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-90"
+                        style={{ background: "linear-gradient(135deg,#1e3a5f,#2d6a9f)" }}>
+                        <Settings size={13} /> Gérer
+                      </button>
+                      <button onClick={() => setEditingClass(cls)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                        <Edit size={13} /> Modifier
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Pagination ── */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+              <span className="text-xs text-slate-400">
+                {filtered.length} classe{filtered.length !== 1 ? "s" : ""} · page {safePage}/{totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button disabled={safePage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                  <ChevronLeft size={15} />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                  .reduce((acc, p, idx, arr) => {
+                    if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                    acc.push(p); return acc;
+                  }, [])
+                  .map((p, idx) => p === "…"
+                    ? <span key={`e-${idx}`} className="px-1 text-xs text-slate-400">…</span>
+                    : <button key={p} onClick={() => setCurrentPage(p)}
+                        className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${p === safePage ? "bg-indigo-600 text-white" : "border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                        {p}
+                      </button>
+                  )}
+                <button disabled={safePage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Edit modal ── */}
       {editingClass && (
         <ClassEditModal
           classe={editingClass}
           onClose={() => setEditingClass(null)}
-          onSave={handleSaveEdit}
+          onSave={async () => { await onRefresh(); setEditingClass(null); }}
           userRole={userRole}
         />
       )}

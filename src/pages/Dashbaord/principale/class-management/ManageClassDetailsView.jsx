@@ -1,5 +1,5 @@
 // ManageClassDetailsView.jsx - UPDATED VERSION WITH SELF-APPROVAL FEATURE
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Form,
   message,
@@ -31,6 +31,7 @@ import {
   GraduationCap,
   Calendar,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   UserPlus,
   RefreshCw,
@@ -137,484 +138,62 @@ const RenderUserModal = ({ user, visible, onClose }) => {
   }
 };
 
-const ManageClassDetailsMobile = ({
-  classDetails,
-  users,
-  statistics,
-  loading,
-  onBack,
-  onRefresh,
-  handleApproveRequest,
-  handleRejectRequest,
-  handleRemoveAccess,
-  handleViewUser,
-  handleApprove,
-  handleReject,
-  handleSelfApprove,
-  canSelfManage,
-  isPending,
-  actionLoading,
-  onAssignModerator,
-  onManageRights,
-  onViewHistory,
-  onDelete,
-  moderatorsWithRights,
-  handleModeratorRemove,
-  onNavigateToExerciseManagement,
-  onNavigateToCourseCreation,
-}) => {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [memberFilter, setMemberFilter] = useState("all");
-  const [codeCopied, setCodeCopied] = useState(false);
 
-  const isClassPending = classDetails?.etat === "EN_ATTENTE_APPROBATION" ||
-                         classDetails?.etat === "EN_ATTENTE" ||
-                         classDetails?.etat === "PENDING";
+/* ── Scrollable tab bar with arrow buttons ─────────────────────────────── */
+const TabScrollBar = ({ activeTab, onTabChange, tabs }) => {
+  const ref = React.useRef(null);
+  const [canLeft, setCanLeft] = React.useState(false);
+  const [canRight, setCanRight] = React.useState(false);
 
-  const tabs = [
-    { id: "overview", label: "Infos", icon: GraduationCap },
-    { id: "professeurs", label: `Profs (${statistics.professeurs})`, icon: User },
-    { id: "eleves", label: `Élèves (${statistics.eleves})`, icon: Users },
-    { id: "parents", label: `Parents (${statistics.parents})`, icon: Users },
-    { id: "utilisateurs", label: `Autres (${statistics.utilisateurs})`, icon: User },
-    { id: "requests", label: `Demandes (${statistics.accessRequests})`, icon: Clock },
-    { id: "settings", label: "Gestion", icon: Settings }
-  ];
-
-  const currentModerator = classDetails?.moderator ||
-    (moderatorsWithRights?.length > 0 ? moderatorsWithRights[0] : null);
-
-  const getStatusConfig = (etat) => {
-    const config = {
-      ACTIF: { color: "bg-green-100 text-green-700", text: "Actif" },
-      ACTIVE: { color: "bg-green-100 text-green-700", text: "Actif" },
-      INACTIF: { color: "bg-red-100 text-red-700", text: "Inactif" },
-      INACTIVE: { color: "bg-red-100 text-red-700", text: "Inactif" },
-      EN_ATTENTE_APPROBATION: { color: "bg-orange-100 text-orange-700", text: "En attente" },
-      EN_ATTENTE: { color: "bg-orange-100 text-orange-700", text: "En attente" },
-      PENDING: { color: "bg-orange-100 text-orange-700", text: "En attente" },
-    };
-    return config[etat] || { color: "bg-gray-100 text-gray-600", text: etat };
+  const check = () => {
+    const el = ref.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 4);
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
   };
 
-  const getPublicationLabel = (droit) => {
-    const labels = {
-      TOUS: "Tous peuvent publier",
-      MODERATEUR_SEULEMENT: "Modérateur seulement",
-      PARENTS_ET_MODERATEUR: "Parents et modérateur",
-      PROFESSEURS_SEULEMENT: "Professeurs seulement",
-    };
-    return labels[droit] || droit || "Professeurs seulement";
-  };
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    check();
+    el.addEventListener("scroll", check);
+    window.addEventListener("resize", check);
+    return () => { el.removeEventListener("scroll", check); window.removeEventListener("resize", check); };
+  }, [tabs]);
 
-  const handleCopyCode = () => {
-    const code = classDetails?.codeActivation || classDetails?.id?.substring(0, 6).toUpperCase();
-    if (code) {
-      navigator.clipboard.writeText(code);
-      setCodeCopied(true);
-      setTimeout(() => setCodeCopied(false), 2000);
-    }
-  };
-
-  const statusConfig = getStatusConfig(classDetails?.etat);
-
-  const StatBox = ({ label, value, color }) => (
-    <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center flex-1">
-      <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-1">{label}</span>
-      <span className={`text-lg font-black ${color}`}>{value}</span>
-    </div>
-  );
-
-  const InfoRow = ({ label, value, icon: Icon, colorClass = "text-blue-600", bgClass = "bg-blue-50 dark:bg-blue-900/20", extra }) => (
-    <div className="flex items-center justify-between py-3 gap-2">
-      <div className="flex items-center space-x-3 shrink-0">
-        <div className={`p-2 ${bgClass} ${colorClass} rounded-xl`}>
-          <Icon size={16} />
-        </div>
-        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">{label}</span>
-      </div>
-      <div className="flex items-center gap-2 min-w-0 justify-end">
-        <span className="text-xs font-black dark:text-white text-right truncate max-w-[150px]">{value || "—"}</span>
-        {extra}
-      </div>
-    </div>
-  );
-
-  const UserCard = ({ user, showRemove = true }) => (
-    <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl flex items-center shadow-sm border border-gray-100 dark:border-white/5">
-      <div className="flex items-center space-x-3 flex-1 min-w-0">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center font-bold text-blue-600 shrink-0">
-          {user.prenom?.charAt(0) || "?"}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h4 className="text-sm font-bold dark:text-white truncate">{user.prenom} {user.nom}</h4>
-          <p className="text-[10px] text-gray-400 font-bold truncate">{user.email || ""}</p>
-          {user.typeUtilisateur && (
-            <span className="text-[8px] bg-blue-600/10 text-blue-600 px-2 py-0.5 rounded font-black uppercase tracking-widest inline-block mt-1">
-              {user.typeUtilisateur}
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-1 shrink-0 ml-2">
-        <button onClick={() => handleViewUser(user)} className="p-2 text-blue-500 rounded-xl hover:bg-blue-50">
-          <Eye size={16} />
-        </button>
-        {showRemove && handleRemoveAccess && (
-          <button onClick={() => handleRemoveAccess(user)} className="p-2 text-red-400 rounded-xl hover:bg-red-50">
-            <Trash2 size={16} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
-  const EmptyState = ({ message }) => (
-    <div className="py-12 text-center">
-      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-        <Users size={24} className="text-gray-300" />
-      </div>
-      <p className="text-sm font-bold text-gray-400">{message}</p>
-    </div>
-  );
-
-  const renderUserList = (userList, emptyMessage) => {
-    if (!userList || userList.length === 0) return <EmptyState message={emptyMessage} />;
-    return (
-      <div className="space-y-3">
-        {userList.map((user) => <UserCard key={user.id} user={user} />)}
-      </div>
-    );
-  };
+  const scroll = (dir) => ref.current?.scrollBy({ left: dir === "left" ? -120 : 120, behavior: "smooth" });
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-slate-950 pb-32">
-      <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-4 pt-4 pb-2">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-3 min-w-0">
-            <button onClick={onBack} className="p-2 -ml-2 text-gray-600 dark:text-gray-300 shrink-0">
-              <ArrowLeft size={22} />
-            </button>
-            <div className="min-w-0">
-              <h1 className="text-base font-black dark:text-white leading-tight truncate">
-                {classDetails?.nom || "Détails Classe"}
-              </h1>
-              <div className="flex items-center space-x-2 flex-wrap">
-                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${statusConfig.color}`}>
-                  {statusConfig.text}
-                </span>
-                <span className="text-[10px] font-bold text-gray-400">
-                  {statistics.eleves + statistics.professeurs + statistics.parents + statistics.utilisateurs} participants
-                </span>
-              </div>
-            </div>
-          </div>
-          <button onClick={onRefresh} className="p-2.5 bg-gray-100 dark:bg-slate-800 rounded-2xl text-blue-600 shrink-0">
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+    <div className="bg-white border-b border-slate-200 relative">
+      {canLeft && (
+        <button onClick={() => scroll("left")}
+          className="absolute left-0 top-0 bottom-0 z-10 flex items-center px-1.5 bg-gradient-to-r from-white via-white to-transparent">
+          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-all">
+            <ChevronLeft size={14} />
+          </span>
+        </button>
+      )}
+      {canRight && (
+        <button onClick={() => scroll("right")}
+          className="absolute right-0 top-0 bottom-0 z-10 flex items-center px-1.5 bg-gradient-to-l from-white via-white to-transparent">
+          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-all">
+            <ChevronRight size={14} />
+          </span>
+        </button>
+      )}
+      <div ref={ref} className="flex overflow-x-auto px-3 sm:px-6" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        {tabs.map(tab => (
+          <button key={tab.key} onClick={() => onTabChange(tab.key)}
+            className={`flex-shrink-0 flex items-center gap-1.5 py-3 px-4 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+              activeTab === tab.key
+                ? "border-indigo-600 text-indigo-700"
+                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+            }`}>
+            {tab.icon}
+            {tab.label}
           </button>
-        </div>
-
-        {canSelfManage && (
-          <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-800/30">
-            <div className="flex items-start space-x-2">
-              <Crown size={14} className="text-blue-600 mt-0.5 shrink-0" />
-              <p className="text-[10px] font-bold text-blue-700 dark:text-blue-300">
-                Vous etes le createur. Classe independante avec paiement valide - vous pouvez l'approuver vous-meme.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {isPending && (
-          <div className="flex space-x-2 mb-3">
-            {canSelfManage ? (
-              <>
-                <button
-                  onClick={handleSelfApprove}
-                  disabled={actionLoading === "self-approve"}
-                  className="flex-1 flex items-center justify-center space-x-2 py-3 bg-green-500 text-white rounded-2xl font-black text-[10px] shadow-lg shadow-green-500/20 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {actionLoading === "self-approve" ? <RefreshCw size={14} className="animate-spin" /> : <Crown size={14} />}
-                  <span>APPROUVER MA CLASSE</span>
-                </button>
-                <button
-                  onClick={handleReject}
-                  disabled={actionLoading === "self-reject"}
-                  className="flex-1 flex items-center justify-center space-x-2 py-3 bg-red-500 text-white rounded-2xl font-black text-[10px] shadow-lg shadow-red-500/20 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  <Crown size={14} />
-                  <span>REJETER</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={handleApprove}
-                  disabled={actionLoading === "approve"}
-                  className="flex-1 flex items-center justify-center space-x-2 py-3 bg-green-500 text-white rounded-2xl font-black text-[10px] shadow-lg shadow-green-500/20 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {actionLoading === "approve" ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-                  <span>APPROUVER</span>
-                </button>
-                <button
-                  onClick={handleReject}
-                  disabled={actionLoading === "reject"}
-                  className="flex-1 flex items-center justify-center space-x-2 py-3 bg-red-500 text-white rounded-2xl font-black text-[10px] shadow-lg shadow-red-500/20 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {actionLoading === "reject" ? <RefreshCw size={14} className="animate-spin" /> : <XIcon size={14} />}
-                  <span>REJETER</span>
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-1.5 px-4 py-2.5 rounded-2xl text-[10px] font-black transition-all whitespace-nowrap ${
-                activeTab === tab.id
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                : "bg-white dark:bg-slate-800 text-gray-500 border border-gray-100 dark:border-white/5"
-              }`}
-            >
-              <tab.icon size={12} />
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </header>
-
-      <main className="flex-1 p-4">
-        <AnimatePresence mode="wait">
-          {activeTab === "overview" && (
-            <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
-              <div className="grid grid-cols-2 gap-3">
-                <StatBox label="Professeurs" value={statistics.professeurs} color="text-purple-600" />
-                <StatBox label="Eleves" value={statistics.eleves} color="text-blue-600" />
-                <StatBox label="Parents" value={statistics.parents} color="text-orange-600" />
-                <StatBox label="Demandes" value={statistics.accessRequests} color="text-red-600" />
-              </div>
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-[28px] shadow-sm border border-gray-100 dark:border-white/5">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-gray-400">Informations de la classe</h3>
-                <div className="divide-y divide-gray-50 dark:divide-white/5">
-                  <InfoRow label="Nom" value={classDetails?.nom} icon={User} />
-                  <InfoRow label="Niveau" value={classDetails?.niveau} icon={GraduationCap} colorClass="text-purple-500" bgClass="bg-purple-50" />
-                  <InfoRow
-                    label="Code"
-                    value={classDetails?.codeActivation || classDetails?.id?.substring(0, 6).toUpperCase()}
-                    icon={Shield}
-                    colorClass="text-indigo-500"
-                    bgClass="bg-indigo-50"
-                    extra={
-                      <button onClick={handleCopyCode} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
-                        {codeCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="text-gray-400" />}
-                      </button>
-                    }
-                  />
-                  <InfoRow
-                    label="Cree le"
-                    value={classDetails?.dateCreation ? new Date(classDetails.dateCreation).toLocaleDateString('fr-FR') : "Non disponible"}
-                    icon={Calendar}
-                    colorClass="text-amber-500"
-                    bgClass="bg-amber-50"
-                  />
-                  <div className="flex items-center justify-between py-3 gap-2">
-                    <div className="flex items-center space-x-3 shrink-0">
-                      <div className="p-2 bg-orange-50 text-orange-500 rounded-xl"><Activity size={16} /></div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Statut</span>
-                    </div>
-                    <span className={`text-[10px] font-black px-3 py-1 rounded-full ${statusConfig.color}`}>{statusConfig.text}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 gap-2">
-                    <div className="flex items-center space-x-3 shrink-0">
-                      <div className="p-2 bg-emerald-50 text-emerald-500 rounded-xl"><FileText size={16} /></div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Publication</span>
-                    </div>
-                    <span className="text-[10px] font-black dark:text-white text-right bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full max-w-[160px] truncate">
-                      {getPublicationLabel(classDetails?.droitPublication)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 gap-2">
-                    <div className="flex items-center space-x-3 shrink-0">
-                      <div className="p-2 bg-teal-50 text-teal-500 rounded-xl"><School size={16} /></div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Etablissement</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 min-w-0 justify-end">
-                      <span className="text-xs font-black dark:text-white text-right truncate max-w-[120px]">
-                        {classDetails?.etablissement?.nom || "Non assigne"}
-                      </span>
-                      {!classDetails?.etablissement?.nom && (
-                        <span className="text-[8px] font-black bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full whitespace-nowrap">
-                          Independante
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-[28px] shadow-sm border border-gray-100 dark:border-white/5">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Moderateur</h3>
-                  {currentModerator && (moderatorsWithRights?.length > 0 || classDetails?.moderator) && (
-                    <button onClick={handleModeratorRemove} disabled={actionLoading === "removeModerator"} className="text-[9px] font-black text-red-500 uppercase tracking-tighter disabled:opacity-50">
-                      {actionLoading === "removeModerator" ? "..." : "Retirer"}
-                    </button>
-                  )}
-                </div>
-                {currentModerator ? (
-                  <div className="flex items-center space-x-4">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-blue-600/20 shrink-0">
-                      {currentModerator.prenom?.charAt(0) || "M"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-sm dark:text-white truncate">{currentModerator.prenom} {currentModerator.nom}</h4>
-                      <p className="text-[10px] text-gray-400 font-bold truncate">{currentModerator.email}</p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <button onClick={() => handleViewUser(currentModerator)} className="text-[10px] font-black text-blue-600 flex items-center">
-                          VOIR PROFIL <ChevronRight size={12} className="ml-1" />
-                        </button>
-                        {!isClassPending && (
-                          <button onClick={onAssignModerator} className="text-[10px] font-black text-purple-600 flex items-center">
-                            CHANGER <UserPlus size={12} className="ml-1" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-6 text-center border-2 border-dashed border-gray-100 dark:border-white/5 rounded-2xl">
-                    <UserPlus size={24} className="mx-auto mb-2 text-gray-300" />
-                    <p className="text-[10px] font-bold text-gray-400 mb-2">AUCUN MODERATEUR ASSIGNE</p>
-                    <button onClick={onAssignModerator} disabled={isClassPending} className="text-[10px] font-black text-blue-600 disabled:text-gray-300 disabled:cursor-not-allowed">
-                      {isClassPending ? "Approuvez d'abord la classe" : "ASSIGNER MAINTENANT"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === "professeurs" && (
-            <motion.div key="professeurs" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-              <div className="flex justify-between items-center mb-4 px-1">
-                <h2 className="text-base font-black dark:text-white">Professeurs</h2>
-                <span className="text-[10px] font-black bg-purple-100 text-purple-600 px-3 py-1 rounded-full">{statistics.professeurs}</span>
-              </div>
-              {renderUserList(users.professeurs, "Aucun professeur dans cette classe")}
-            </motion.div>
-          )}
-
-          {activeTab === "eleves" && (
-            <motion.div key="eleves" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-              <div className="flex justify-between items-center mb-4 px-1">
-                <h2 className="text-base font-black dark:text-white">Eleves</h2>
-                <span className="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-full">{statistics.eleves}</span>
-              </div>
-              {renderUserList(users.eleves, "Aucun eleve dans cette classe")}
-            </motion.div>
-          )}
-
-          {activeTab === "parents" && (
-            <motion.div key="parents" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-              <div className="flex justify-between items-center mb-4 px-1">
-                <h2 className="text-base font-black dark:text-white">Parents</h2>
-                <span className="text-[10px] font-black bg-orange-100 text-orange-600 px-3 py-1 rounded-full">{statistics.parents}</span>
-              </div>
-              {renderUserList(users.parents, "Aucun parent dans cette classe")}
-            </motion.div>
-          )}
-
-          {activeTab === "utilisateurs" && (
-            <motion.div key="utilisateurs" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-              <div className="flex justify-between items-center mb-4 px-1">
-                <h2 className="text-base font-black dark:text-white">Utilisateurs</h2>
-                <span className="text-[10px] font-black bg-gray-200 text-gray-600 px-3 py-1 rounded-full">{statistics.utilisateurs}</span>
-              </div>
-              {renderUserList(users.utilisateurs, "Aucun utilisateur dans cette classe")}
-            </motion.div>
-          )}
-
-          {activeTab === "requests" && (
-            <motion.div key="requests" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-              <div className="flex justify-between items-center px-1 mb-4">
-                <h2 className="text-base font-black dark:text-white">Demandes d'acces</h2>
-                <span className="bg-red-500 text-white text-[10px] font-black px-3 py-1.5 rounded-xl">{users.accessRequests?.length || 0} EN ATTENTE</span>
-              </div>
-              {(!users.accessRequests || users.accessRequests.length === 0) ? (
-                <EmptyState message="Aucune demande d'acces en attente" />
-              ) : (
-                users.accessRequests.map((req) => (
-                  <div key={req.id} className="bg-white dark:bg-slate-800 p-5 rounded-[28px] shadow-sm border border-gray-100 dark:border-white/5">
-                    <div className="flex items-center space-x-4 mb-4">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 font-black text-lg shrink-0">
-                        {req.nom?.charAt(0) || "?"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-black text-sm dark:text-white truncate">{req.prenom} {req.nom}</h4>
-                        <p className="text-[10px] text-gray-500 font-bold truncate">{req.email}</p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-[8px] bg-blue-600/10 text-blue-600 px-2 py-0.5 rounded font-black uppercase tracking-widest">{req.typeUtilisateur || "INCONNU"}</span>
-                          {req.dateDemande && <span className="text-[8px] text-gray-400 font-bold">{new Date(req.dateDemande).toLocaleDateString('fr-FR')}</span>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button onClick={() => handleApproveRequest(req)} className="py-3 bg-green-500 text-white rounded-2xl font-black text-[10px] shadow-lg shadow-green-500/10 active:scale-95 transition-all">
-                        APPROUVER
-                      </button>
-                      <button onClick={() => handleRejectRequest(req)} className="py-3 bg-gray-100 dark:bg-slate-700 text-red-500 rounded-2xl font-black text-[10px] active:scale-95 transition-all">
-                        REJETER
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </motion.div>
-          )}
-
-          {activeTab === "settings" && (
-            <motion.div key="settings" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-              <section className="bg-white dark:bg-slate-800 rounded-[28px] shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
-                <div className="p-5 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-slate-800/50">
-                  <h3 className="text-xs font-black dark:text-white uppercase tracking-widest text-blue-600">Actions</h3>
-                </div>
-                <div className="divide-y divide-gray-100 dark:divide-white/5">
-                  {[
-                    { label: "Assigner Moderateur", icon: UserPlus, color: "text-purple-500", bg: "bg-purple-50", action: onAssignModerator, disabled: isClassPending, disabledText: "Approuvez d'abord" },
-                    { label: "Droits de Publication", icon: FileText, color: "text-emerald-500", bg: "bg-emerald-50", action: onManageRights, disabled: isClassPending, disabledText: "Approuvez d'abord" },
-                    onNavigateToExerciseManagement ? { label: "Gestion des Exercices", icon: GraduationCap, color: "text-indigo-500", bg: "bg-indigo-50", action: () => onNavigateToExerciseManagement(classDetails?.id), disabled: isClassPending, disabledText: "Approuvez d'abord" } : null,
-                    onNavigateToCourseCreation ? { label: "Créer un cours", icon: School, color: "text-teal-500", bg: "bg-teal-50", action: () => onNavigateToCourseCreation(classDetails?.id), disabled: isClassPending, disabledText: "Approuvez d'abord" } : null,
-                    { label: "Historique d'Activation", icon: History, color: "text-blue-500", bg: "bg-blue-50", action: onViewHistory, disabled: false, loading: actionLoading === "history" },
-                    { label: "Supprimer la Classe", icon: XCircle, color: "text-red-500", bg: "bg-red-50", action: onDelete, disabled: false, loading: actionLoading === "delete" }
-                  ].filter(Boolean).map((opt, i) => (
-                    <button
-                      key={i}
-                      onClick={opt.disabled ? undefined : opt.action}
-                      disabled={opt.disabled || opt.loading}
-                      className={`w-full p-5 flex items-center justify-between transition-colors ${opt.disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-50 dark:hover:bg-slate-700/50 active:scale-[0.99]"}`}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className={`p-3 ${opt.bg} ${opt.color} rounded-2xl`}>
-                          {opt.loading ? <RefreshCw size={18} className="animate-spin" /> : <opt.icon size={18} />}
-                        </div>
-                        <div className="text-left">
-                          <span className="font-black text-sm dark:text-white block">{opt.label}</span>
-                          {opt.disabled && opt.disabledText && <span className="text-[9px] text-orange-500 font-bold">{opt.disabledText}</span>}
-                        </div>
-                      </div>
-                      {!opt.disabled && <ChevronRight size={18} className="text-gray-300" />}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
+        ))}
+      </div>
     </div>
   );
 };
@@ -2046,233 +1625,11 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
     return <Text type="secondary">Aucun modérateur assigné</Text>;
   };
 
-  const isMobile = useSelector((state) => state.ui.isMobile);
-
   if (loading) {
     return (
       <div className="loading-container">
         <Spin size="large" />
       </div>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <>
-        <ManageClassDetailsMobile
-          classDetails={classDetails}
-          users={users}
-          statistics={statistics}
-          loading={loading}
-          onBack={onBack}
-          onRefresh={() => setRefreshKey(prev => prev + 1)}
-          handleApproveRequest={handleApproveRequest}
-          handleRejectRequest={handleRejectRequest}
-          handleRemoveAccess={handleRemoveAccess}
-          handleViewUser={(user) => {
-            setSelectedUser(user);
-            setUserViewModalVisible(true);
-          }}
-          handleApprove={handleApprove}
-          handleReject={showRejectConfirm}
-          handleSelfApprove={handleSelfApprove}
-          canSelfManage={canSelfApproveReject() && isClassPendingApproval()}
-          isPending={classDetails?.etat === "EN_ATTENTE_APPROBATION" || classDetails?.etat === "EN_ATTENTE"}
-          actionLoading={actionLoading}
-          onAssignModerator={() => setModeratorModalVisible(true)}
-          onManageRights={() => setPublicationRightsModalVisible(true)}
-          onViewHistory={fetchActivationHistory}
-          onDelete={showDeleteConfirm}
-          moderatorsWithRights={moderatorsWithRights}
-          handleModeratorRemove={handleModeratorRemove}
-          onNavigateToExerciseManagement={onNavigateToExerciseManagement}
-          onNavigateToCourseCreation={onNavigateToCourseCreation}
-        />
-
-        {/* Modals must render outside mobile component so they still show */}
-        {userViewModalVisible && selectedUser && (
-          <RenderUserModal
-            user={selectedUser}
-            visible={userViewModalVisible}
-            onClose={handleCloseModal}
-          />
-        )}
-
-        <Modal
-          title="Rejeter la demande d'accès"
-          open={rejectModalVisible}
-          onCancel={() => {
-            setRejectModalVisible(false);
-            setRejectReason("");
-            setRejectingUser(null);
-          }}
-          footer={[
-            <Button key="cancel" onClick={() => setRejectModalVisible(false)}>Annuler</Button>,
-            <Button key="reject" type="primary" danger onClick={confirmRejectRequest}>Rejeter</Button>,
-          ]}
-        >
-          <p>Veuillez saisir le motif du rejet pour {rejectingUser?.prenom} {rejectingUser?.nom}:</p>
-          <Input.TextArea
-            rows={4}
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Motif du rejet..."
-          />
-        </Modal>
-
-        <Modal
-          title="Historique d'activation"
-          open={historyModalVisible}
-          onCancel={() => setHistoryModalVisible(false)}
-          footer={null}
-          width="95%"
-        >
-          <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-            {history.length === 0 ? (
-              <Text type="secondary">Aucun historique disponible</Text>
-            ) : (
-              history.map((item) => (
-                <div key={item.id} style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", marginBottom: "8px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <Text strong>{item.active ? "Activation" : "Désactivation"} - {item.etatClasse}</Text>
-                    <Text type="secondary">{new Date(item.dateActivation).toLocaleString()}</Text>
-                  </div>
-                  {item.motifDesactivation && (
-                    <div style={{ marginTop: 8 }}><Text>Motif: {item.motifDesactivation}</Text></div>
-                  )}
-                  <div style={{ marginTop: 8 }}>
-                    <Tag color={item.active ? "green" : "red"}>{item.active ? "Actif" : "Inactif"}</Tag>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Modal>
-
-        <Modal
-          title="Assigner un modérateur"
-          open={moderatorModalVisible}
-          onCancel={() => {
-            setModeratorModalVisible(false);
-            setModeratorSearchQuery("");
-            setModeratorSearchResults([]);
-            setSelectedModerator(null);
-          }}
-          footer={null}
-          width="95%"
-        >
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Rechercher un professeur:</Text>
-            <Space.Compact style={{ width: "100%", marginTop: 8 }}>
-              <Input
-                placeholder="Nom ou email du professeur"
-                value={moderatorSearchQuery}
-                onChange={(e) => setModeratorSearchQuery(e.target.value)}
-                onPressEnter={handleSearchModerator}
-              />
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearchModerator} loading={moderatorSearchLoading}>
-                Rechercher
-              </Button>
-            </Space.Compact>
-          </div>
-          {moderatorSearchResults.length > 0 && (
-            <List
-              size="small"
-              dataSource={moderatorSearchResults}
-              renderItem={(professor) => (
-                <List.Item
-                  actions={[
-                    <Button type="link" onClick={() => setSelectedModerator(professor)} disabled={selectedModerator?.id === professor.id}>
-                      {selectedModerator?.id === professor.id ? "Sélectionné" : "Sélectionner"}
-                    </Button>,
-                  ]}
-                >
-                  <List.Item.Meta
-                    title={`${professor.nom} ${professor.prenom}`}
-                    description={professor.email}
-                  />
-                </List.Item>
-              )}
-            />
-          )}
-          {selectedModerator && (
-            <div style={{ marginTop: 16 }}>
-              <Divider />
-              <Text strong>Sélectionné: {selectedModerator.nom} {selectedModerator.prenom}</Text>
-              <div style={{ marginTop: 12, textAlign: "right" }}>
-                <Space>
-                  <Button onClick={() => { setSelectedModerator(null); setModeratorSearchResults([]); }}>Annuler</Button>
-                  <Button type="primary" onClick={handleModeratorAssign} loading={actionLoading === "moderator"}>Assigner</Button>
-                </Space>
-              </div>
-            </div>
-          )}
-        </Modal>
-
-        <Modal
-          title="Gérer les droits de publication"
-          open={publicationRightsModalVisible}
-          onCancel={() => {
-            setPublicationRightsModalVisible(false);
-            setSearchEmail("");
-            setSearchResults([]);
-            setSelectedUserForRights(null);
-          }}
-          footer={null}
-          width="95%"
-        >
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Rechercher un utilisateur:</Text>
-            <Space.Compact style={{ width: "100%", marginTop: 8 }}>
-              <Input
-                placeholder="Nom ou email de l'utilisateur"
-                value={searchEmail}
-                onChange={(e) => setSearchEmail(e.target.value)}
-                onPressEnter={handleSearchUserByEmail}
-              />
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearchUserByEmail} loading={searchLoading}>
-                Rechercher
-              </Button>
-            </Space.Compact>
-          </div>
-          {searchResults.length > 0 && (
-            <List
-              size="small"
-              dataSource={searchResults}
-              renderItem={(user) => (
-                <List.Item
-                  actions={[
-                    <Button type="link" onClick={() => setSelectedUserForRights(user)} disabled={selectedUserForRights?.id === user.id}>
-                      {selectedUserForRights?.id === user.id ? "Sélectionné" : "Sélectionner"}
-                    </Button>,
-                  ]}
-                >
-                  <List.Item.Meta
-                    title={`${user.nom} ${user.prenom}`}
-                    description={user.email}
-                  />
-                </List.Item>
-              )}
-            />
-          )}
-          {selectedUserForRights && (
-            <div style={{ marginTop: 16 }}>
-              <Divider />
-              <Text strong>Droits pour {selectedUserForRights.nom} {selectedUserForRights.prenom}:</Text>
-              <div style={{ marginTop: 8 }}>
-                <div><Checkbox checked={publicationRights.peutPublier} onChange={(e) => setPublicationRights({ ...publicationRights, peutPublier: e.target.checked })}>Peut publier</Checkbox></div>
-                <div><Checkbox checked={publicationRights.peutModerer} onChange={(e) => setPublicationRights({ ...publicationRights, peutModerer: e.target.checked })}>Peut modérer</Checkbox></div>
-              </div>
-              <div style={{ marginTop: 12, textAlign: "right" }}>
-                <Space>
-                  <Button onClick={() => { setSelectedUserForRights(null); setSearchEmail(""); setSearchResults([]); }}>Annuler</Button>
-                  <Button type="primary" onClick={handleAssignPublicationRights} loading={actionLoading === "assignPublicationRights"}>Assigner les droits</Button>
-                </Space>
-              </div>
-            </div>
-          )}
-        </Modal>
-      </>
     );
   }
 
@@ -2295,479 +1652,299 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
   }
 
   return (
-    <div style={{ padding: "24px" }}>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "24px",
-          paddingBottom: "16px",
-          borderBottom: "2px solid #f0f2f5",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={onBack}
-            style={{
-              marginRight: "16px",
-              borderRadius: "8px",
-              background: "#f8f9fa",
-              borderColor: "#e1e4e8",
-            }}
-          />
-          <div>
-            <Title level={3} style={{ margin: 0, color: "#2c3e50" }}>
-              <BookOutlined style={{ marginRight: "8px", color: "#4a6da7" }} />
-              Gestion de la classe
-            </Title>
-            <Text strong style={{ fontSize: "18px", color: "#4a6da7" }}>
-              {classDetails?.nom}
-            </Text>
-          </div>
-        </div>
+    <>
+    <div className="w-full">
 
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {classDetails?.etat && getStatusTag(classDetails.etat)}
-          {usersWithPublicationRights.some(u => u.id === currentUserId && u.peutPublier) && (
-            <Tag icon={<CheckOutlined />} color="blue">
-              Droits de publication
-            </Tag>
-          )}
-          {moderatorsWithRights.some(u => u.id === currentUserId) && (
-            <Tag icon={<CrownOutlined />} color="purple">
-              Modérateur
-            </Tag>
-          )}
-          {canSelfApproveReject() && isClassPendingApproval() && (
-            <Tag icon={<CrownOutlined />} color="gold">
-              En attente de votre approbation
-            </Tag>
-          )}
-          <div
-            style={{
-              padding: "8px 16px",
-              background: "linear-gradient(135deg, #4a6da7 0%, #3a5069 100%)",
-              borderRadius: "20px",
-              color: "white",
-              fontWeight: 600,
-              fontSize: "12px",
-            }}
-          >
-            <TeamOutlined style={{ marginRight: "6px" }} />
-            {classDetails?.nombreEtudiants || classDetails?.effectif || classDetails?.nombreParticipants || classDetails?.totalParticipants || classDetails?.count || statistics.eleves || 0} participants
-          </div>
-        </div>
-      </div>
+        {/* ── Hero header ── */}
+        <div className="relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)" }}>
+          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 pointer-events-none" style={{ background: "#fff" }} />
+          <div className="relative px-3 sm:px-6 py-3 sm:py-4">
 
-      {/* Statistics Cards */}
-      <div className="hidden md:block">
-        <StatisticsCards statistics={statistics} loading={loading} />
-      </div>
-
-      {/* Action Buttons */}
-      {renderActionButtons()}
-
-      {/* Quick Actions Card */}
-      <Card
-        style={{
-          marginBottom: 20,
-          borderRadius: "12px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        }}
-        bodyStyle={{ padding: "12px 16px" }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontWeight: 600, fontSize: "14px" }}>
-            <PlusOutlined style={{ marginRight: 8 }} />
-            Actions rapides
-          </span>
-          <div style={{ display: "flex", gap: 8 }}>
-            <div
-              onClick={() => {
-                if (onNavigateToCourseCreation) {
-                  onNavigateToCourseCreation(classId);
-                } else {
-                  message.info("Navigation vers la création de cours");
-                }
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                boxShadow: "0 2px 6px rgba(102, 126, 234, 0.3)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 2px 6px rgba(102, 126, 234, 0.3)";
-              }}
-            >
-              <BookOutlined style={{ fontSize: "14px", color: "white" }} />
-              <span style={{ color: "white", fontSize: "13px", fontWeight: 500 }}>
-                Créer un nouveau cours
-              </span>
+            {/* Row 1: back + delete */}
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <button onClick={onBack}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-semibold transition-all hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}>
+                <ArrowLeft size={14} />
+                Retour
+              </button>
+              <button onClick={showDeleteConfirm}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-red-500/30"
+                style={{ background: "rgba(239,68,68,0.2)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.35)" }}>
+                <Trash2 size={12} />
+                <span className="hidden sm:inline">Supprimer</span>
+              </button>
             </div>
-            <div
-              onClick={() => {
-                if (onNavigateToExerciseManagement) {
-                  onNavigateToExerciseManagement(classId);
-                } else {
-                  message.info("Navigation vers la gestion des exercices");
-                }
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                boxShadow: "0 2px 6px rgba(240, 147, 251, 0.3)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(240, 147, 251, 0.4)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 2px 6px rgba(240, 147, 251, 0.3)";
-              }}
-            >
-              <FileTextOutlined style={{ fontSize: "14px", color: "white" }} />
-              <span style={{ color: "white", fontSize: "13px", fontWeight: 500 }}>
-                Gestion des Exercices
-              </span>
-            </div>
-          </div>
-        </div>
-      </Card>
 
-      {/* Main Content Tabs */}
-      <Card className="tabs-container">
-        <Tabs activeKey={activeTab} onChange={handleTabChange}>
-          <TabPane
-            tab={
-              <span>
-                <BookOutlined />
-                Aperçu
-              </span>
-            }
-            key="overview"
-          >
-            <div className="overview-content">
-              <Row gutter={[16, 16]}>
-                <Col xs={24} md={12}>
-                  <Card title="Informations de la classe" size="small">
-                    <Descriptions column={1} bordered size="small">
-                      <Descriptions.Item label="Nom">
-                        {classDetails.nom}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Niveau">
-                        {classDetails.niveau}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Code d'activation">
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                          }}
-                        >
-                          <Text
-                            code
-                            style={{ fontSize: "14px", fontWeight: "bold" }}
-                          >
-                            {classDetails.codeActivation}
-                          </Text>
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<CopyOutlined />}
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                classDetails.codeActivation
-                              );
-                              message.success("Code d'activation copié!");
-                            }}
-                            title="Copier le code d'activation"
-                          />
-                        </div>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Date de création">
-                        {classDetails.dateCreation ? (
-                          new Date(classDetails.dateCreation).toLocaleDateString('fr-FR')
-                        ) : (
-                          "Date non disponible"
-                        )}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Statut">
-                        {getStatusTag(classDetails.etat)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Droits de publication">
-                        {getPublicationRightsTag(classDetails.droitPublication)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Établissement">
-                        {classDetails.etablissement?.nom || "Non assigné"}
-                        {!classDetails.etablissement?.nom && (
-                          <Tag color="orange" style={{ marginLeft: 8 }}>
-                            Classe indépendante
-                          </Tag>
-                        )}
-                      </Descriptions.Item>
-                      {classDetails.accesMajeur && (
-                        <Descriptions.Item label="Type">
-                          <Tag color="purple" icon={<SafetyCertificateOutlined />}>
-                            Classe Majeure
-                          </Tag>
-                          <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
-                            Accès par email uniquement
-                          </Text>
-                        </Descriptions.Item>
-                      )}
-                      {classDetails.createurId && (
-                        <Descriptions.Item label="Créateur">
-                          {classDetails.createurId === currentUserId ? (
-                            <Tag icon={<CrownOutlined />} color="gold">
-                              Vous
-                            </Tag>
-                          ) : (
-                            "Utilisateur ID: " + classDetails.createurId
-                          )}
-                        </Descriptions.Item>
-                      )}
-                      
-                      {/* Current User Rights */}
-                      <Descriptions.Item label="Mes Droits">
-                        <Space wrap>
-                          {usersWithPublicationRights.some(u => u.id === currentUserId && u.peutPublier) ? (
-                            <Tag color="blue">Publication autorisée</Tag>
-                          ) : (
-                            <Tag color="default">Pas de droits de publication</Tag>
-                          )}
-                          {moderatorsWithRights.some(u => u.id === currentUserId) && (
-                            <Tag color="purple">Modérateur</Tag>
-                          )}
-                        </Space>
-                      </Descriptions.Item>
-                    </Descriptions>
-                  </Card>
-                </Col>
-
-                <Col xs={24} md={12}>
-                  <Card title="Modérateur" size="small">
-                    {renderModeratorInfo()}
-                  </Card>
-                </Col>
-              </Row>
-            </div>
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span>
-                <UserOutlined />
-                Professeurs ({users.professeurs.length})
-              </span>
-            }
-            key="professeurs"
-          >
-            <UserTables
-              users={users.professeurs}
-              loading={loading}
-              userType="professeurs"
-              onViewUser={handleViewUser}
-              onRemoveAccess={handleRemoveAccess}
-              currentTab={activeTab}
-            />
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span>
-                <TeamOutlined />
-                Élèves ({users.eleves.length})
-              </span>
-            }
-            key="eleves"
-          >
-            {/* For major classes: show email search to add students */}
-            {classDetails?.accesMajeur && (
-              <div style={{ marginBottom: 16, padding: 16, background: "#f0f7ff", borderRadius: 8, border: "1px solid #91caff" }}>
-                <Text strong style={{ color: "#1677ff" }}>
-                  🔑 Classe Majeure — Ajouter un élève par email
-                </Text>
-                <div style={{ marginTop: 8 }}>
-                  <Space.Compact style={{ width: "100%" }}>
-                    <Input
-                      placeholder="Email de l'élève à ajouter..."
-                      value={searchEmail}
-                      onChange={(e) => setSearchEmail(e.target.value)}
-                      onPressEnter={handleSearchUserByEmail}
-                    />
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearchUserByEmail} loading={searchLoading}>
-                      Rechercher
-                    </Button>
-                  </Space.Compact>
+            {/* Row 2: class identity */}
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.35)" }}>
+                <GraduationCap size={20} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h1 className="text-white font-bold text-base sm:text-xl leading-tight m-0">{classDetails?.nom}</h1>
+                  {classDetails?.etat && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+                      style={{
+                        background: classDetails.etat === "ACTIF" ? "#f0fdf4" : classDetails.etat === "EN_ATTENTE_APPROBATION" ? "#fffbeb" : "#fef2f2",
+                        color: classDetails.etat === "ACTIF" ? "#16a34a" : classDetails.etat === "EN_ATTENTE_APPROBATION" ? "#d97706" : "#dc2626",
+                        border: `1px solid ${classDetails.etat === "ACTIF" ? "#bbf7d0" : classDetails.etat === "EN_ATTENTE_APPROBATION" ? "#fde68a" : "#fecaca"}`,
+                      }}>
+                      {classDetails.etat === "ACTIF" ? "Actif" : classDetails.etat === "EN_ATTENTE_APPROBATION" ? "En attente" : "Inactif"}
+                    </span>
+                  )}
                 </div>
-                {searchResults.length > 0 && (
-                  <List
-                    style={{ marginTop: 8 }}
-                    size="small"
-                    dataSource={searchResults}
-                    renderItem={(u) => (
-                      <List.Item
-                        actions={[
-                          <Button
-                            type="primary"
-                            size="small"
-                            loading={actionLoading === `add-${u.id}`}
+                <div className="flex items-center gap-3 flex-wrap">
+                  {classDetails?.niveau && <span className="text-blue-100 text-xs">{classDetails.niveau}</span>}
+                  {classDetails?.etablissement?.nom && <span className="text-blue-100 text-xs">🏫 {classDetails.etablissement.nom}</span>}
+                  <span className="text-blue-100 text-xs">
+                    <TeamOutlined style={{ marginRight: 4 }} />
+                    {statistics.eleves || 0} participants
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: management action buttons — centered group */}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <button onClick={() => setRefreshKey(prev => prev + 1)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                Actualiser
+              </button>
+              <button onClick={() => setModeratorModalVisible(true)}
+                disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20 disabled:opacity-40"
+                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                <UserPlus size={12} />
+                Modérateur
+              </button>
+              <button onClick={() => setPublicationRightsModalVisible(true)}
+                disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20 disabled:opacity-40"
+                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                <Shield size={12} />
+                Droits
+              </button>
+              <button onClick={fetchActivationHistory}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                <History size={12} />
+                Historique
+              </button>
+              {(canSelfApproveReject() && isClassPendingApproval()) && (
+                <>
+                  <button onClick={handleSelfApprove}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg,#16a34a,#15803d)" }}>
+                    <Check size={12} /> Approuver
+                  </button>
+                  <button onClick={showRejectConfirm}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-red-500/30"
+                    style={{ background: "rgba(239,68,68,0.2)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.35)" }}>
+                    <XIcon size={12} /> Rejeter
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Stats cards — hidden on mobile ── */}
+        <div className="hidden sm:block px-3 sm:px-6 pt-4">
+          <StatisticsCards statistics={statistics} loading={loading} />
+        </div>
+
+        {/* ── Quick actions CTA card — below stats ── */}
+        {(onNavigateToCourseCreation || onNavigateToExerciseManagement) && (
+          <div className="px-3 sm:px-6 pt-3">
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4 flex items-center gap-3 flex-wrap">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Actions rapides</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {onNavigateToCourseCreation && (
+                  <button onClick={() => onNavigateToCourseCreation(classId)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
+                    style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+                    <BookOutlined style={{ fontSize: 14 }} />
+                    Créer un nouveau cours
+                  </button>
+                )}
+                {onNavigateToExerciseManagement && (
+                  <button onClick={() => onNavigateToExerciseManagement(classId)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
+                    style={{ background: "linear-gradient(135deg,#f093fb,#f5576c)" }}>
+                    <FileTextOutlined style={{ fontSize: 14 }} />
+                    Gestion des Exercices
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Scrollable tab bar with arrow buttons ── */}
+        <TabScrollBar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          tabs={[
+            { key: "overview",        label: "Aperçu",                    icon: <BookOutlined /> },
+            { key: "professeurs",     label: `Professeurs (${users.professeurs.length})`, icon: <UserOutlined /> },
+            { key: "eleves",          label: `Élèves (${users.eleves.length})`,           icon: <TeamOutlined /> },
+            { key: "parents",         label: `Parents (${users.parents.length})`,         icon: <TeamOutlined /> },
+            { key: "utilisateurs",    label: `Utilisateurs (${users.utilisateurs.length})`, icon: <UserOutlined /> },
+            { key: "access-requests", label: `Demandes (${users.accessRequests.length})`, icon: <ClockCircleOutlined /> },
+          ]}
+        />
+
+        {/* ── Tab content ── */}
+        <div className="px-3 sm:px-6 py-4 sm:py-6">
+
+          {/* Aperçu */}
+          {activeTab === "overview" && (
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+              {/* Left: class info */}
+              <div className="lg:w-80 flex-shrink-0">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2" style={{ background: "#f8faff" }}>
+                    <BookOutlined style={{ color: "#4f46e5", fontSize: 13 }} />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Informations de la classe</span>
+                  </div>
+                  <div className="px-4 py-3 space-y-3">
+                    {[
+                      { label: "Nom", value: classDetails.nom },
+                      { label: "Niveau", value: classDetails.niveau },
+                      { label: "Date de création", value: classDetails.dateCreation ? new Date(classDetails.dateCreation).toLocaleDateString("fr-FR") : "—" },
+                      { label: "Établissement", value: classDetails.etablissement?.nom || "Classe indépendante" },
+                    ].map((row, i) => (
+                      <div key={i} className="flex items-start justify-between gap-2">
+                        <span className="text-xs text-slate-400 font-medium flex-shrink-0">{row.label}</span>
+                        <span className="text-sm text-slate-800 font-medium text-right">{row.value}</span>
+                      </div>
+                    ))}
+                    {/* Code d'activation */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs text-slate-400 font-medium flex-shrink-0">Code d'activation</span>
+                      <div className="flex items-center gap-1.5">
+                        <code className="text-sm font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{classDetails.codeActivation}</code>
+                        <button onClick={() => { navigator.clipboard.writeText(classDetails.codeActivation); message.success("Code copié !"); }}
+                          className="p-1 rounded hover:bg-slate-100 transition-colors text-slate-400 hover:text-indigo-600">
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    {/* Statut */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs text-slate-400 font-medium flex-shrink-0">Statut</span>
+                      {getStatusTag(classDetails.etat)}
+                    </div>
+                    {/* Droits de publication */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs text-slate-400 font-medium flex-shrink-0">Droits de publication</span>
+                      {getPublicationRightsTag(classDetails.droitPublication)}
+                    </div>
+                    {classDetails.accesMajeur && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold"
+                        style={{ background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe" }}>
+                        <SafetyCertificateOutlined /> Classe Majeure — Accès par email
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: moderator */}
+              <div className="flex-1 min-w-0">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2" style={{ background: "#f8faff" }}>
+                    <CrownOutlined style={{ color: "#4f46e5", fontSize: 13 }} />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Modérateur</span>
+                  </div>
+                  <div className="px-4 py-4">
+                    {renderModeratorInfo()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Professeurs */}
+          {activeTab === "professeurs" && (
+            <UserTables users={users.professeurs} loading={loading} userType="professeurs"
+              onViewUser={handleViewUser} onRemoveAccess={handleRemoveAccess} currentTab={activeTab} />
+          )}
+
+          {/* Élèves */}
+          {activeTab === "eleves" && (
+            <div>
+              {classDetails?.accesMajeur && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <p className="text-sm font-semibold text-blue-700 mb-2">🔑 Classe Majeure — Ajouter un élève par email</p>
+                  <div className="flex gap-2">
+                    <Input placeholder="Email de l'élève..." value={searchEmail}
+                      onChange={e => setSearchEmail(e.target.value)} onPressEnter={handleSearchUserByEmail}
+                      prefix={<SearchOutlined />} style={{ borderRadius: 8 }} />
+                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearchUserByEmail}
+                      loading={searchLoading} style={{ borderRadius: 8 }}>Rechercher</Button>
+                  </div>
+                  {searchResults.length > 0 && (
+                    <List style={{ marginTop: 8 }} size="small" dataSource={searchResults}
+                      renderItem={u => (
+                        <List.Item actions={[
+                          <Button type="primary" size="small" loading={actionLoading === `add-${u.id}`}
                             onClick={async () => {
                               try {
                                 setActionLoading(`add-${u.id}`);
-                                // 1. Create the request
-                                const request = await AccederService.demanderAcces({
-                                  utilisateurId: u.id,
-                                  classeId: classId,
-                                  codeActivation: classDetails.codeActivation,
-                                });
-                                
-                                // 2. Immediately approve it for Major Classes since Admin is doing it
-                                if (request && request.id) {
-                                  await AccederService.validerDemandeAcces(request.id);
-                                } else {
-                                  // Find the request if ID not returned directly
-                                  const requests = await AccederService.obtenirDemandesAccesPourClasse(classId);
-                                  const myRequest = requests.find(r => r.utilisateurId === u.id && r.etat === 'EN_ATTENTE');
-                                  if (myRequest) {
-                                    await AccederService.validerDemandeAcces(myRequest.id);
-                                  }
+                                const request = await AccederService.demanderAcces({ utilisateurId: u.id, classeId: classId, codeActivation: classDetails.codeActivation });
+                                if (request?.id) { await AccederService.validerDemandeAcces(request.id); }
+                                else {
+                                  const reqs = await AccederService.obtenirDemandesAccesPourClasse(classId);
+                                  const r = reqs.find(r => r.utilisateurId === u.id && r.etat === "EN_ATTENTE");
+                                  if (r) await AccederService.validerDemandeAcces(r.id);
                                 }
+                                message.success(`${u.prenom} ${u.nom} ajouté(e)`);
+                                setSearchEmail(""); setSearchResults([]); setRefreshKey(p => p + 1);
+                              } catch (err) { message.error(err.message || "Erreur"); }
+                              finally { setActionLoading(null); }
+                            }}>Ajouter</Button>
+                        ]}>
+                          <List.Item.Meta title={`${u.prenom} ${u.nom}`} description={u.email} />
+                        </List.Item>
+                      )} />
+                  )}
+                </div>
+              )}
+              <UserTables users={users.eleves} loading={loading} userType="eleves"
+                onViewUser={handleViewUser} onRemoveAccess={handleRemoveAccess} currentTab={activeTab} />
+            </div>
+          )}
 
-                                message.success(`${u.prenom} ${u.nom} ajouté(e) et approuvé(e) avec succès`);
-                                setSearchEmail("");
-                                setSearchResults([]);
-                                setRefreshKey(prev => prev + 1);
-                              } catch (err) {
-                                // If already has access or pending, just grant directly
-                                try {
-                                  const requests = await AccederService.obtenirDemandesAccesPourClasse(classId);
-                                  const existingRequest = requests.find(r => r.utilisateurId === u.id);
-                                  
-                                  if (existingRequest && existingRequest.etat === 'EN_ATTENTE') {
-                                    await AccederService.validerDemandeAcces(existingRequest.id);
-                                    message.success(`Accès accordé à ${u.prenom} ${u.nom}`);
-                                    setRefreshKey(prev => prev + 1);
-                                  } else {
-                                    message.error(err.message || "L'élève a déjà accès ou une erreur est survenue");
-                                  }
-                                } catch (e) {
-                                  message.error(err.message || "Erreur lors de l'ajout");
-                                }
-                              } finally {
-                                setActionLoading(null);
-                              }
-                            }}
-                          >
-                            Ajouter
-                          </Button>
-                        ]}
-                      >
-                        <List.Item.Meta
-                          title={`${u.prenom} ${u.nom}`}
-                          description={u.email}
-                        />
-                      </List.Item>
-                    )}
-                  />
-                )}
-              </div>
-            )}
-            <UserTables
-              users={users.eleves}
-              loading={loading}
-              userType="eleves"
-              onViewUser={handleViewUser}
-              onRemoveAccess={handleRemoveAccess}
-              currentTab={activeTab}
-            />
-          </TabPane>
+          {/* Parents */}
+          {activeTab === "parents" && (
+            <UserTables users={users.parents} loading={loading} userType="parents"
+              onViewUser={handleViewUser} onRemoveAccess={handleRemoveAccess} currentTab={activeTab} />
+          )}
 
-          <TabPane
-            tab={
-              <span>
-                <TeamOutlined />
-                Parents ({users.parents.length})
-              </span>
-            }
-            key="parents"
-          >
-            <UserTables
-              users={users.parents}
-              loading={loading}
-              userType="parents"
-              onViewUser={handleViewUser}
-              onRemoveAccess={handleRemoveAccess}
-              currentTab={activeTab}
-            />
-          </TabPane>
+          {/* Utilisateurs */}
+          {activeTab === "utilisateurs" && (
+            <UserTables users={users.utilisateurs} loading={loading} userType="utilisateurs"
+              onViewUser={handleViewUser} onRemoveAccess={handleRemoveAccess}
+              onDeleteUser={handleDeleteUser} currentTab={activeTab} />
+          )}
 
-          {/* NEW: Utilisateurs Tab */}
-          <TabPane
-            tab={
-              <span>
-                <UserOutlined />
-                Utilisateurs ({users.utilisateurs.length})
-              </span>
-            }
-            key="utilisateurs"
-          >
-            <UserTables
-              users={users.utilisateurs}
-              loading={loading}
-              userType="utilisateurs"
-              onViewUser={handleViewUser}
-              onRemoveAccess={handleRemoveAccess}
-              onDeleteUser={handleDeleteUser}
-              currentTab={activeTab}
-            />
-          </TabPane>
+          {/* Demandes d'accès */}
+          {activeTab === "access-requests" && (
+            <UserTables users={users.accessRequests} loading={loading} userType="access-requests"
+              onViewUser={handleViewUser} onApproveRequest={handleApproveRequest}
+              onRejectRequest={handleRejectRequest} currentTab={activeTab} />
+          )}
 
-          <TabPane
-            tab={
-              <span>
-                <ClockCircleOutlined />
-                Demandes d'accès ({statistics.accessRequests})
-              </span>
-            }
-            key="access-requests"
-          >
-            <UserTables
-              users={users.accessRequests}
-              loading={loading}
-              userType="access-requests"
-              onViewUser={handleViewUser}
-              onApproveRequest={handleApproveRequest}
-              onRejectRequest={handleRejectRequest}
-              currentTab={activeTab}
-            />
-          </TabPane>
-        </Tabs>
-      </Card>
+        </div>{/* end tab content */}
+      </div>{/* end w-full */}
 
-      {/* User View Modal - Dynamic based on user type */}
       {userViewModalVisible && selectedUser && (
         <RenderUserModal
           user={selectedUser}
@@ -3121,7 +2298,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
           </div>
         )}
       </Modal>
-    </div>
+    </>
   );
 };
 
