@@ -949,33 +949,57 @@ const CreateCourseComponent = ({
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
 
+  // Extracts relative storage key from a full Wasabi/MinIO URL (never use raw URLs)
+  const toRelativePath = (raw) => {
+    if (!raw || !raw.startsWith("http")) return raw;
+    try {
+      const pathname = new URL(raw).pathname.replace(/^\//, "");
+      const idx = pathname.indexOf("users/");
+      if (idx >= 0) return pathname.slice(idx);
+      const parts = pathname.split("/");
+      return parts.length > 1 ? parts.slice(1).join("/") : pathname;
+    } catch { return raw; }
+  };
+
+  // Returns true for any URL that points to stored media (not backend proxy, not blob)
+  const isStorageUrl = (url) => {
+    if (!url) return false;
+    if (url.startsWith("blob:")) return false; // local blob — handled by upload flow
+    const apiBase = process.env.REACT_APP_API_BASE_URL || "";
+    if (apiBase && url.startsWith(apiBase)) return false; // already a backend proxy URL
+    return url.startsWith("http");
+  };
+
   // Refresh presigned MinIO URLs inside HTML chapter content
   const refreshChapterContentUrls = async (html) => {
     if (!html) return html;
     const parser = new DOMParser();
     const doc = parser.parseFromString(`<div id="root">${html}</div>`, "text/html");
     const root = doc.getElementById("root");
-    const isMinioPath = (url) => url && url.startsWith("http") &&
-      (url.includes("/images/") || url.includes("/documents/") || url.includes("/videos/"));
+
     const refreshUrl = async (url) => {
       try {
-        const pathName = new URL(url).pathname.replace(/^\//, "");
-        const data = await minioS3Service.generateDownloadUrlByPath(pathName);
+        const data = await minioS3Service.generateDownloadUrlByPath(toRelativePath(url));
         return data?.downloadUrl || url;
       } catch { return url; }
     };
+
     const tasks = [
       ...Array.from(root.querySelectorAll("img")).map(async img => {
         const src = img.getAttribute("src");
-        if (isMinioPath(src)) img.setAttribute("src", await refreshUrl(src));
+        if (isStorageUrl(src)) img.setAttribute("src", await refreshUrl(src));
       }),
-      ...Array.from(root.querySelectorAll("video source, video[src]")).map(async el => {
-        const src = el.getAttribute("src");
-        if (isMinioPath(src)) el.setAttribute("src", await refreshUrl(src));
+      ...Array.from(root.querySelectorAll("video")).map(async video => {
+        const src = video.getAttribute("src");
+        if (isStorageUrl(src)) video.setAttribute("src", await refreshUrl(src));
+        video.querySelectorAll("source").forEach(async s => {
+          const ssrc = s.getAttribute("src");
+          if (isStorageUrl(ssrc)) s.setAttribute("src", await refreshUrl(ssrc));
+        });
       }),
       ...Array.from(root.querySelectorAll("a[href]")).map(async a => {
         const href = a.getAttribute("href");
-        if (isMinioPath(href)) a.setAttribute("href", await refreshUrl(href));
+        if (isStorageUrl(href)) a.setAttribute("href", await refreshUrl(href));
       }),
     ];
     await Promise.all(tasks);

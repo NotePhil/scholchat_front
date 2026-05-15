@@ -23,7 +23,33 @@ import { rejectionService } from "../../../../services/RejectionService";
 import { minioS3Service } from "../../../../services/minioS3";
 import { useTranslation } from "../../../../hooks/useTranslation";
 
-// Resolves MinIO path or raw URL into a presigned URL, with unmount safety
+// Extracts the relative storage path from a full Wasabi/MinIO URL.
+// Direct Wasabi URLs require presigned access; we must go through the proxy.
+const toRelativePath = (raw) => {
+  if (!raw || !raw.startsWith("http")) return raw;
+  try {
+    const pathname = new URL(raw).pathname.replace(/^\//, "");
+    // Path contains 'users/' — that's always the start of our storage key
+    const idx = pathname.indexOf("users/");
+    if (idx >= 0) return pathname.slice(idx);
+    // Fallback: strip first segment (bucket name) for path-style URLs
+    const parts = pathname.split("/");
+    return parts.length > 1 ? parts.slice(1).join("/") : pathname;
+  } catch {
+    return raw;
+  }
+};
+
+// Resolves ANY path (relative or full Wasabi URL) into a proxied presigned URL
+const resolveMediaUrl = async (path) => {
+  if (!path) return null;
+  try {
+    return await minioS3Service.getMediaUrlByPath(toRelativePath(path));
+  } catch {
+    return null;
+  }
+};
+
 const ProfilePhotoAvatar = ({ user }) => {
   const [photoUrl, setPhotoUrl] = useState(null);
   const path = user?.selfieUrl;
@@ -31,12 +57,8 @@ const ProfilePhotoAvatar = ({ user }) => {
     if (!path) return;
     let cancelled = false;
     (async () => {
-      try {
-        const url = path.startsWith("http")
-          ? path
-          : await minioS3Service.getMediaUrlByPath(path);
-        if (!cancelled && url) setPhotoUrl(url);
-      } catch { /* ignore */ }
+      const url = await resolveMediaUrl(path);
+      if (!cancelled && url) setPhotoUrl(url);
     })();
     return () => { cancelled = true; };
   }, [path]);
@@ -315,14 +337,10 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       
       const processDirectPath = async (path, title, idPrefix) => {
         if (!path) return null;
-        if (path.startsWith('http')) {
-          return { id: `${idPrefix}-${userId}`, title, url: path, type: "image/jpeg", size: null, uploadDate: null, fileType: "IMAGE", mediaType: "IMAGE" };
-        }
-        const signedUrl = await minioS3Service.getMediaUrlByPath(path);
-        if (signedUrl) {
-          return { id: `${idPrefix}-${userId}`, title, url: signedUrl, type: "image/jpeg", size: null, uploadDate: null, fileType: "IMAGE", mediaType: "IMAGE" };
-        }
-        return null;
+        // Always go through proxy — never expose raw Wasabi URLs (AccessDenied)
+        const signedUrl = await resolveMediaUrl(path);
+        if (!signedUrl) return null;
+        return { id: `${idPrefix}-${userId}`, title, url: signedUrl, type: "image/jpeg", size: null, uploadDate: null, fileType: "IMAGE", mediaType: "IMAGE" };
       };
 
       const [cniRecto, cniVerso, selfie] = await Promise.all([

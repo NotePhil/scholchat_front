@@ -35,6 +35,18 @@ import { getDarkModeClasses } from "../../../../../utils/darkModeUtils";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useSelector } from "react-redux";
 
+// Extracts relative storage key from full Wasabi/MinIO URL — never use raw URLs directly
+const toRelativePath = (raw) => {
+  if (!raw || !raw.startsWith("http")) return raw;
+  try {
+    const pathname = new URL(raw).pathname.replace(/^\//, "");
+    const idx = pathname.indexOf("users/");
+    if (idx >= 0) return pathname.slice(idx);
+    const parts = pathname.split("/");
+    return parts.length > 1 ? parts.slice(1).join("/") : pathname;
+  } catch { return raw; }
+};
+
 // Resolves a MinIO path or raw URL into a presigned URL, with unmount safety
 const ProfileAvatar = ({ path, initials, size = "w-12 h-12", textSize = "text-base" }) => {
   const [photoUrl, setPhotoUrl] = React.useState(null);
@@ -43,9 +55,7 @@ const ProfileAvatar = ({ path, initials, size = "w-12 h-12", textSize = "text-ba
     let cancelled = false;
     const load = async () => {
       try {
-        const url = path.startsWith("http")
-          ? path
-          : await minioS3Service.getMediaUrlByPath(path);
+        const url = await minioS3Service.getMediaUrlByPath(toRelativePath(path));
         if (!cancelled && url) setPhotoUrl(url);
       } catch { /* ignore */ }
     };
@@ -83,9 +93,7 @@ const DocumentCard = ({ path, label, icon, onView }) => {
     let cancelled = false;
     const load = async () => {
       try {
-        const url = path.startsWith("http")
-          ? path
-          : await minioS3Service.getMediaUrlByPath(path);
+        const url = await minioS3Service.getMediaUrlByPath(toRelativePath(path));
         if (!cancelled && url) setResolvedUrl(url);
       } catch { /* ignore */ }
     };
