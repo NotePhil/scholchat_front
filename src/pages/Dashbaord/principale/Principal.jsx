@@ -854,7 +854,6 @@ const Principal = () => {
             >
               <Menu size={24} />
             </button>
-            <h1>{getTabDisplayName()}</h1>
           </div>
           <div className="header-actions" style={{
             display: 'flex',

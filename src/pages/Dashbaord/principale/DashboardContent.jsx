@@ -1,874 +1,502 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useTranslation } from '../../../hooks/useTranslation';
-import { useSelector } from 'react-redux';
+import { useTranslation } from "../../../hooks/useTranslation";
+import { useSelector } from "react-redux";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  Area,
-  AreaChart,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
 import {
-  BookOpen,
-  Users,
-  GraduationCap,
-  School,
-  TrendingUp,
-  Award,
-  FileText,
-  Clock,
-  Target,
-  Activity,
-  Plus,
-  CheckCircle,
-  AlertCircle,
-  Calendar,
-  BarChart3,
-  UserCheck,
-  UserX,
-  Mail,
-  Phone,
+  BookOpen, Users, GraduationCap, TrendingUp, Award, FileText,
+  Target, Activity, CheckCircle, Calendar, BarChart3,
+  RefreshCw, School, Layers, Clock,
 } from "lucide-react";
 import { scholchatService } from "../../../services/ScholchatService";
-import ClassService from "../../../services/ClassService";
-import establishmentService from "../../../services/EstablishmentService";
-import { coursService } from "../../../services/CoursService";
-import {
-  ArrowRight,
-  Bell,
-  Search as SearchIcon,
-  MessageCircle,
-} from "lucide-react";
-
-// MatiereService (inline since you provided it)
 import axios from "axios";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL;
-
+// ─── Inline MatiereService ────────────────────────────────────────────────────
 const matiereApi = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
+  baseURL: process.env.REACT_APP_API_BASE_URL,
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
 });
-
-matiereApi.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-class MatiereService {
+matiereApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem("authToken") || localStorage.getItem("accessToken");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+const matiereService = {
   async getAllMatieres() {
-    try {
-      const response = await matiereApi.get("/matieres");
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async createMatiere(matiereData) {
-    try {
-      if (!matiereData.nom) {
-        throw new Error("Subject name is required");
-      }
-      const response = await matiereApi.post("/matieres", matiereData);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async getMatiereByName(nom) {
-    try {
-      if (!nom) {
-        throw new Error("Subject name is required");
-      }
-      const response = await matiereApi.get(`/matieres/${nom}`);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  handleError(error) {
-    if (error.response) {
-      const errorMessage = "An error occurred";
-      throw new Error(errorMessage);
-    } else if (error.request) {
-      throw new Error("Network error. Please check your connection.");
-    } else {
-      throw new Error("Request setup error: " + error.message);
-    }
-  }
-}
-
-const matiereService = new MatiereService();
-
-const MobileDashboardContent = ({ stats, isDark, t, fetchDashboardData }) => {
-  const StatItem = ({ icon: Icon, label, value, color, desc }) => (
-    <div className="bg-white dark:bg-slate-800 p-4 rounded-[32px] shadow-xl shadow-blue-500/5 border border-gray-100 dark:border-white/5 flex items-center space-x-4">
-      <div className={`p-4 rounded-2xl ${color} bg-opacity-10 text-opacity-100 shadow-inner`}>
-        <Icon size={24} className={color.replace('bg-', 'text-')} />
-      </div>
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">{label}</p>
-        <h3 className="text-xl font-black dark:text-white leading-tight">{value}</h3>
-        <p className="text-[10px] text-gray-500 font-bold">{desc}</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="flex flex-col space-y-6 pb-32 pt-4 px-4 bg-gray-50 dark:bg-slate-950 min-h-screen">
-      <section className="flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-black dark:text-white tracking-tighter">Hello, Prince</h1>
-          <p className="text-xs font-bold text-blue-600 uppercase tracking-[0.2em]">Dashboard Overview</p>
-        </div>
-        <div className="flex space-x-2">
-          <button className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-white/5 text-gray-600 dark:text-gray-300">
-            <SearchIcon size={20} />
-          </button>
-          <button className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-white/5 text-gray-600 dark:text-gray-300 relative">
-            <Bell size={20} />
-            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
-          </button>
-        </div>
-      </section>
-
-      <section className="bg-white dark:bg-slate-800 p-6 rounded-[40px] shadow-xl border border-gray-100 dark:border-white/5">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-lg font-black dark:text-white">Success Trend</h3>
-            <p className="text-xs text-gray-500">Weekly student performance</p>
-          </div>
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl">
-            <TrendingUp size={20} />
-          </div>
-        </div>
-        <div className="h-40">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={[
-              {day: 'M', val: 40}, {day: 'T', val: 30}, {day: 'W', val: 65},
-              {day: 'T', val: 45}, {day: 'F', val: 80}, {day: 'S', val: 55}
-            ]}>
-              <defs>
-                <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey="val" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorVal)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
-
-      <section>
-        <div className="flex justify-between items-center mb-4 px-2">
-          <h3 className="text-lg font-black dark:text-white">Keep Going</h3>
-          <button className="text-blue-600 font-bold text-xs flex items-center">
-            View All <ArrowRight size={14} className="ml-1" />
-          </button>
-        </div>
-        <div className="space-y-3">
-          <div className="bg-white dark:bg-slate-800 p-4 rounded-[28px] shadow-lg border border-gray-100 dark:border-white/5 flex items-center justify-between group">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-blue-500 text-white rounded-2xl shadow-lg shadow-blue-500/20">
-                <Calendar size={20} />
-              </div>
-              <div>
-                <h4 className="font-bold text-sm dark:text-white">Mathematics 101</h4>
-                <p className="text-[10px] text-gray-500">Live in 15 minutes</p>
-              </div>
-            </div>
-            <button className="p-2 text-gray-400 group-hover:text-blue-600 transition-colors">
-              <ArrowRight size={20} />
-            </button>
-          </div>
-          <div className="bg-white dark:bg-slate-800 p-4 rounded-[28px] shadow-lg border border-gray-100 dark:border-white/5 flex items-center justify-between group">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-green-500 text-white rounded-2xl shadow-lg shadow-green-500/20">
-                <Activity size={20} />
-              </div>
-              <div>
-                <h4 className="font-bold text-sm dark:text-white">Science Project</h4>
-                <p className="text-[10px] text-gray-500">Draft due tomorrow</p>
-              </div>
-            </div>
-            <button className="p-2 text-gray-400 group-hover:text-green-600 transition-colors">
-              <ArrowRight size={20} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-slate-900 rounded-[40px] p-8 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-20">
-          <MessageCircle size={100} />
-        </div>
-        <h3 className="text-2xl font-black mb-2 px-1">Community</h3>
-        <p className="text-gray-400 text-sm mb-6 max-w-[200px]">Join 2,400+ students and teachers in the forum.</p>
-        <button className="bg-white text-slate-900 px-6 py-3 rounded-2xl font-black text-sm shadow-xl">
-          Join Chat
-        </button>
-      </section>
-    </div>
-  );
+    try { return (await matiereApi.get("/matieres")).data; } catch { return []; }
+  },
 };
 
+// ─── Colour palette for charts ────────────────────────────────────────────────
+const CHART_COLORS = [
+  "#3B82F6","#6366F1","#10B981","#F59E0B","#EF4444",
+  "#8B5CF6","#EC4899","#14B8A6","#F97316","#06B6D4",
+];
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+const StatCard = ({ title, value, icon: Icon, gradient, trend, subtitle, isDark }) => (
+  <motion.div
+    whileHover={{ y: -4, scale: 1.01 }}
+    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+    className={`relative overflow-hidden rounded-2xl p-5 shadow-lg border ${
+      isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+    }`}
+  >
+    {/* gradient blob */}
+    <div
+      className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-10 blur-2xl pointer-events-none"
+      style={{ background: gradient }}
+    />
+    <div className="relative z-10 flex items-start justify-between">
+      <div>
+        <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+          {title}
+        </p>
+        <p className={`text-3xl font-black leading-none ${isDark ? "text-white" : "text-slate-900"}`}>
+          {typeof value === "number" ? value.toLocaleString() : value}
+        </p>
+        {subtitle && (
+          <p className={`text-xs mt-1.5 flex items-center gap-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
+            {subtitle}
+          </p>
+        )}
+      </div>
+      <div className="p-3 rounded-xl shadow-md flex-shrink-0" style={{ background: gradient }}>
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+    </div>
+    {trend && (
+      <div className={`mt-4 pt-3 border-t flex items-center gap-2 ${isDark ? "border-slate-700" : "border-slate-100"}`}>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+          <TrendingUp className="w-3 h-3" /> {trend}
+        </span>
+        <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>ce mois</span>
+      </div>
+    )}
+  </motion.div>
+);
+
+// ─── Chart card wrapper ───────────────────────────────────────────────────────
+const ChartCard = ({ title, icon: Icon, children, isDark, className = "" }) => (
+  <div className={`rounded-2xl border shadow-sm p-5 ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"} ${className}`}>
+    <div className="flex items-center justify-between mb-4">
+      <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{title}</h3>
+      <Icon className="w-4 h-4 text-slate-400" />
+    </div>
+    {children}
+  </div>
+);
+
+// ─── Main component ───────────────────────────────────────────────────────────
 const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const { t, changeLanguage } = useTranslation();
   const currentLanguage = useSelector((state) => state.ui.currentLanguage);
-  const isMobile = useSelector((state) => state.ui.isMobile);
-  
-  // Sync Redux language with translation hook
-  useEffect(() => {
-    if (currentLanguage) {
-      changeLanguage(currentLanguage);
-    }
-  }, [currentLanguage, changeLanguage]);
-  const [dashboardData, setDashboardData] = useState({
-    users: [],
-    professors: [],
-    parents: [],
-    students: [],
-    classes: [],
-    establishments: [],
-    courses: [],
-    matieres: [],
-    loading: true,
-    error: null,
-  });
 
+  useEffect(() => { if (currentLanguage) changeLanguage(currentLanguage); }, [currentLanguage]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalProfessors: 0,
-    totalParents: 0,
-    totalStudents: 0,
-    totalClasses: 0,
-    totalEstablishments: 0,
-    totalCourses: 0,
-    totalMatieres: 0,
-    totalExercises: 0,
-    pendingProfessors: 0,
-    activeProfessors: 0,
-    activeClasses: 0,
-    pendingClasses: 0,
-    averageProgress: 0,
-    completionRate: 0,
+    totalCourses: 0, totalExercises: 0, activeClasses: 0,
+    averageProgress: 0, totalMatieres: 0, totalStudents: 0,
+    totalProfessors: 0, pendingProfessors: 0, completionRate: 0,
   });
+  const [matieres, setMatieres] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [professors, setProfessors] = useState([]);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setDashboardData((prev) => ({ ...prev, loading: true, error: null }));
-
-      // Fetch all data in parallel
-      const [
-        users,
-        professors,
-        parents,
-        students,
-        classes,
-        establishments,
-        pendingProfessors,
-        matieres,
-      ] = await Promise.allSettled([
-        scholchatService.getAllUsers(),
+      const [profRes, classRes, matRes, pendRes] = await Promise.allSettled([
         scholchatService.getAllProfessors(),
-        scholchatService.getAllParents(),
-        scholchatService.getAllStudents(),
         scholchatService.getAllClasses(),
-        scholchatService.getAllEstablishments(),
-        scholchatService.getPendingProfessors(),
         matiereService.getAllMatieres(),
+        scholchatService.getPendingProfessors(),
       ]);
+      const profs   = profRes.status   === "fulfilled" ? profRes.value   || [] : [];
+      const cls     = classRes.status  === "fulfilled" ? classRes.value  || [] : [];
+      const mats    = matRes.status    === "fulfilled" ? matRes.value    || [] : [];
+      const pending = pendRes.status   === "fulfilled" ? pendRes.value   || [] : [];
 
-      // Extract successful results
-      const successfulResults = {
-        users: users.status === "fulfilled" ? users.value || [] : [],
-        professors:
-          professors.status === "fulfilled" ? professors.value || [] : [],
-        parents: parents.status === "fulfilled" ? parents.value || [] : [],
-        students: students.status === "fulfilled" ? students.value || [] : [],
-        classes: classes.status === "fulfilled" ? classes.value || [] : [],
-        establishments:
-          establishments.status === "fulfilled"
-            ? establishments.value || []
-            : [],
-        pendingProfessors:
-          pendingProfessors.status === "fulfilled"
-            ? pendingProfessors.value || []
-            : [],
-        matieres: matieres.status === "fulfilled" ? matieres.value || [] : [],
-        courses: [],
-      };
-
-      // Calculate statistics
-      const calculatedStats = {
-        totalUsers: successfulResults.users.length,
-        totalProfessors: successfulResults.professors.length,
-        totalParents: successfulResults.parents.length,
-        totalStudents: successfulResults.students.length,
-        totalClasses: successfulResults.classes.length,
-        totalEstablishments: successfulResults.establishments.length,
-        totalMatieres: successfulResults.matieres.length,
-        totalCourses: successfulResults.courses ? successfulResults.courses.length : 0,
+      setProfessors(profs);
+      setClasses(cls);
+      setMatieres(mats);
+      setStats({
+        totalCourses: 0,
         totalExercises: 0,
-        pendingProfessors: successfulResults.pendingProfessors.length,
-        activeProfessors: successfulResults.professors.filter(
-          (p) => p.etat === "ACTIVE"
-        ).length,
-        activeClasses: successfulResults.classes.filter(
-          (c) => c.etat === "ACTIF"
-        ).length,
-        pendingClasses: successfulResults.classes.filter(
-          (c) => c.etat === "EN_ATTENTE_APPROBATION"
-        ).length,
+        activeClasses: cls.filter((c) => c.etat === "ACTIF").length,
         averageProgress: 0,
+        totalMatieres: mats.length,
+        totalStudents: 0,
+        totalProfessors: profs.length,
+        pendingProfessors: pending.length,
         completionRate: 0,
-      };
-
-      setDashboardData({
-        ...successfulResults,
-        loading: false,
-        error: null,
       });
-
-      setStats(calculatedStats);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setDashboardData((prev) => ({
-        ...prev,
-        loading: false,
-        error: t('dashboard.errors.loadFailed'),
-      }));
+    } catch (e) {
+      setError("Erreur lors du chargement des données.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Prepare chart data
-  const courseDistributionData = dashboardData.matieres.map(
-    (matiere, index) => ({
-      name: matiere.nom || `${t('dashboard.charts.subject')} ${index + 1}`,
-      courses: Math.floor(Math.random() * 50) + 10,
-      color: [
-        "#3B82F6",
-        "#10B981",
-        "#F59E0B",
-        "#EF4444",
-        "#8B5CF6",
-        "#EC4899",
-        "#14B8A6",
-        "#F97316",
-      ][index % 8],
-    })
-  );
+  useEffect(() => { fetchData(); }, []);
 
-  const studentProgressData = dashboardData.classes
-    .slice(0, 8)
-    .map((classe) => ({
-      class: classe.nom || t('dashboard.charts.class'),
-      progress: Math.floor(Math.random() * 30) + 70,
-      students: Math.floor(Math.random() * 15) + 20,
-    }));
+  // ── Chart data ──────────────────────────────────────────────────────────────
+  const pieData = matieres.slice(0, 10).map((m, i) => ({
+    name: m.nom || `Matière ${i + 1}`,
+    value: Math.floor(Math.random() * 40) + 10,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
 
-  const monthlyTrendsData = [
-    {
-      month: t('dashboard.months.jan'),
-      courses: Math.floor(stats.totalCourses * 0.1),
-      exercises: Math.floor(stats.totalExercises * 0.08),
-      completions: Math.floor(stats.totalStudents * 2.3),
-    },
-    {
-      month: t('dashboard.months.feb'),
-      courses: Math.floor(stats.totalCourses * 0.15),
-      exercises: Math.floor(stats.totalExercises * 0.12),
-      completions: Math.floor(stats.totalStudents * 3.1),
-    },
-    {
-      month: t('dashboard.months.mar'),
-      courses: Math.floor(stats.totalCourses * 0.2),
-      exercises: Math.floor(stats.totalExercises * 0.18),
-      completions: Math.floor(stats.totalStudents * 2.8),
-    },
-    {
-      month: t('dashboard.months.apr'),
-      courses: Math.floor(stats.totalCourses * 0.25),
-      exercises: Math.floor(stats.totalExercises * 0.22),
-      completions: Math.floor(stats.totalStudents * 3.5),
-    },
-    {
-      month: t('dashboard.months.may'),
-      courses: Math.floor(stats.totalCourses * 0.3),
-      exercises: Math.floor(stats.totalExercises * 0.28),
-      completions: Math.floor(stats.totalStudents * 4.2),
-    },
-    {
-      month: t('dashboard.months.jun'),
-      courses: stats.totalCourses,
-      exercises: stats.totalExercises,
-      completions: Math.floor(stats.totalStudents * 4.8),
-    },
+  const barData = classes.slice(0, 8).map((c) => ({
+    name: c.nom ? (c.nom.length > 10 ? c.nom.slice(0, 10) + "…" : c.nom) : "Classe",
+    progression: Math.floor(Math.random() * 35) + 60,
+  }));
+
+  const areaData = [
+    { mois: "Jan", cours: 4, exercices: 8 },
+    { mois: "Fév", cours: 7, exercices: 14 },
+    { mois: "Mar", cours: 5, exercices: 11 },
+    { mois: "Avr", cours: 9, exercices: 18 },
+    { mois: "Mai", cours: 12, exercices: 22 },
+    { mois: "Jun", cours: stats.totalCourses || 10, exercices: stats.totalExercises || 20 },
   ];
 
-  const exerciseCompletionData = [
-    { name: t('dashboard.completion.completed'), value: stats.completionRate || 0, color: "#10B981" },
-    { name: t('dashboard.completion.inProgress'), value: 15.3, color: "#6366F1" },
-    { name: t('dashboard.completion.notStarted'), value: 6.2, color: "#F43F5E" },
+  const statusData = [
+    { name: "Terminés",    value: stats.completionRate || 0,  color: "#10B981" },
+    { name: "En cours",    value: 15,                          color: "#6366F1" },
+    { name: "Non démarrés",value: 6,                           color: "#F43F5E" },
   ];
 
-  const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }) => (
-    <motion.div
-      whileHover={isMobile ? {} : { y: -5, scale: 1.02 }}
-      className={`relative overflow-hidden ${isDark ? 'bg-gray-800/80' : 'bg-white/80'} backdrop-blur-md rounded-2xl shadow-xl border ${isDark ? 'border-white/5' : 'border-white/20'} ${isMobile ? 'p-3' : 'p-5 sm:p-6'} group transition-all duration-300`}
-    >
-      <div className={`absolute top-0 right-0 w-32 h-32 ${color.replace('bg-', 'bg-')}/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`}></div>
+  // ── Recent activity (static placeholders enriched with real data) ───────────
+  const recentItems = [
+    { icon: BookOpen,   color: "text-blue-600",   bg: "bg-blue-50",   label: "Nouveau cours publié",          sub: professors[0] ? `${professors[0].prenom} ${professors[0].nom}` : "Professeur",  time: "Il y a 2h" },
+    { icon: CheckCircle,color: "text-emerald-600", bg: "bg-emerald-50",label: "Exercices complétés",           sub: classes[0]?.nom || "Classe 3ème A",                                             time: "Il y a 3h" },
+    { icon: Users,      color: "text-purple-600",  bg: "bg-purple-50", label: "Nouvelle classe créée",         sub: "Admin",                                                                        time: "Il y a 5h" },
+    { icon: Award,      color: "text-amber-600",   bg: "bg-amber-50",  label: "Jalon de progression atteint",  sub: "Système",                                                                      time: "Hier" },
+    { icon: FileText,   color: "text-indigo-600",  bg: "bg-indigo-50", label: "Matière mise à jour",           sub: professors[1] ? `${professors[1].prenom} ${professors[1].nom}` : "Professeur",  time: "Il y a 2j" },
+  ];
 
-      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} relative z-10`}>
-        <div className={`flex items-center ${isMobile ? 'justify-between' : ''}`}>
-          <div className={`${isMobile ? 'p-2 rounded-xl' : 'p-4 rounded-2xl'} ${color} shadow-lg ${isMobile ? '' : `shadow-${color.split('-')[1]}-500/30 transform group-hover:rotate-12`} transition-transform duration-300 ${isMobile ? 'order-2' : ''}`}>
-            <Icon className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'} text-white`} />
-          </div>
-          {isMobile && (
-            <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'} order-1`}>
-              {title}
-            </p>
-          )}
+  // ── Loading / error states ──────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-slate-50"}`}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin" />
+          <p className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}>Chargement du tableau de bord…</p>
         </div>
-        <div className={`flex-1 min-w-0 ${isMobile ? '' : 'pr-4'}`}>
-          {!isMobile && (
-            <p className={`text-xs sm:text-sm font-bold uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
-              {title}
-            </p>
-          )}
-          <p className={`${isMobile ? 'text-xl' : 'text-2xl sm:text-3xl lg:text-4xl'} font-black ${isDark ? 'text-white' : 'text-gray-900'} leading-none`}>
-            {typeof value === "number" ? value.toLocaleString() : value}
-          </p>
-          {subtitle && (
-            <p className={`text-[10px] sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} ${isMobile ? 'mt-1' : 'mt-2'} flex items-center gap-1`}>
-              <span className="w-1 h-1 rounded-full bg-blue-500"></span>
-              {subtitle}
-            </p>
-          )}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-slate-50"}`}>
+        <div className="text-center space-y-4">
+          <p className={`${isDark ? "text-slate-300" : "text-slate-600"}`}>{error}</p>
+          <button onClick={fetchData} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`min-h-screen ${isDark ? "bg-slate-900" : "bg-slate-50"}`}>
+      {/* ── Page Header ─────────────────────────────────────────────────── */}
+      <div className={`sticky top-0 z-30 border-b backdrop-blur-xl ${isDark ? "bg-slate-900/90 border-slate-700" : "bg-white/90 border-slate-200"}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-4 sm:py-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className={`text-xl sm:text-2xl font-black tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
+                  Tableau de Bord
+                </h1>
+                <p className={`text-xs flex items-center gap-1.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <Calendar className="w-3 h-3" />
+                  {new Date().toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={fetchData}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span className="hidden sm:inline">Actualiser</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {trend && !isMobile && (
-        <div className="flex items-center mt-6 pt-4 border-t border-gray-100/10 text-xs sm:text-sm relative z-10">
-          <div className="flex items-center bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full mr-2">
-            <TrendingUp className="h-3 w-3 mr-1" />
-            <span className="font-bold">{trend}</span>
-          </div>
-          <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'} italic`}>{t('dashboard.stats.thisMonth')}</span>
-        </div>
-      )}
-    </motion.div>
-  );
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
-  const RecentActivity = () => {
-    const recentActivities = [
-      {
-        id: 1,
-        type: "course_created",
-        title: t('dashboard.activities.newCourse'),
-        user: dashboardData.professors[0]?.nom || "Prof. Martin",
-        time: t('dashboard.activities.hoursAgo', { count: 2 }),
-        icon: BookOpen,
-        color: "text-blue-600",
-      },
-      {
-        id: 2,
-        type: "exercise_completed",
-        title: t('dashboard.activities.exerciseCompleted', { count: Math.floor(Math.random() * 30 + 15) }),
-        user: dashboardData.classes[0]?.nom || "Classe 3ème A",
-        time: t('dashboard.activities.hoursAgo', { count: 3 }),
-        icon: CheckCircle,
-        color: "text-green-600",
-      },
-      {
-        id: 3,
-        type: "class_created",
-        title: t('dashboard.activities.newClass'),
-        user: "Admin",
-        time: t('dashboard.activities.hoursAgo', { count: 5 }),
-        icon: Users,
-        color: "text-purple-600",
-      },
-      {
-        id: 4,
-        type: "progress_milestone",
-        title: t('dashboard.activities.progressReached'),
-        user: t('dashboard.activities.system'),
-        time: t('dashboard.activities.daysAgo', { count: 1 }),
-        icon: Award,
-        color: "text-yellow-600",
-      },
-      {
-        id: 5,
-        type: "subject_updated",
-        title: t('dashboard.activities.subjectUpdated'),
-        user: dashboardData.professors[1]?.nom || "Prof. Dubois",
-        time: t('dashboard.activities.daysAgo', { count: 2 }),
-        icon: FileText,
-        color: "text-indigo-600",
-      },
-    ];
-
-    return (
-      <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4 sm:p-6`}>
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h3 className={`text-base sm:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {t('dashboard.recentActivities')}
-          </h3>
-          <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+        {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+          <StatCard
+            title="Cours disponibles"
+            value={stats.totalCourses}
+            icon={BookOpen}
+            gradient="linear-gradient(135deg,#3b82f6,#6366f1)"
+            trend="+12%"
+            subtitle={`${stats.totalMatieres} matières`}
+            isDark={isDark}
+          />
+          <StatCard
+            title="Exercices"
+            value={stats.totalExercises}
+            icon={Target}
+            gradient="linear-gradient(135deg,#10b981,#059669)"
+            trend="+18%"
+            subtitle={`${stats.completionRate}% complété`}
+            isDark={isDark}
+          />
+          <StatCard
+            title="Classes actives"
+            value={stats.activeClasses}
+            icon={Users}
+            gradient="linear-gradient(135deg,#8b5cf6,#7c3aed)"
+            trend="+8%"
+            subtitle={`${stats.totalStudents} élèves`}
+            isDark={isDark}
+          />
+          <StatCard
+            title="Progression moyenne"
+            value={`${stats.averageProgress}%`}
+            icon={BarChart3}
+            gradient="linear-gradient(135deg,#f59e0b,#d97706)"
+            trend="+5%"
+            subtitle="Toutes les classes"
+            isDark={isDark}
+          />
         </div>
-        <div className="space-y-3 sm:space-y-4">
-          {recentActivities.map((activity) => (
-            <div key={activity.id} className="flex items-start space-x-3">
-              <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 ${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-full flex items-center justify-center`}>
-                <activity.icon
-                  className={`h-3 w-3 sm:h-4 sm:w-4 ${activity.color}`}
-                />
+
+        {/* ── Secondary KPIs ─────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5">
+          {[
+            { label: "Professeurs",       value: stats.totalProfessors,  icon: GraduationCap, color: "#3b82f6" },
+            { label: "En attente valid.", value: stats.pendingProfessors, icon: Clock,         color: "#f59e0b" },
+            { label: "Matières",          value: stats.totalMatieres,    icon: Layers,        color: "#8b5cf6" },
+            { label: "Établissements",    value: 0,                      icon: School,        color: "#10b981" },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className={`rounded-2xl border p-4 flex items-center gap-3 ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"} shadow-sm`}
+            >
+              <div className="p-2.5 rounded-xl flex-shrink-0" style={{ background: item.color + "20" }}>
+                <item.icon className="w-4 h-4" style={{ color: item.color }} />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-xs sm:text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'} leading-tight`}>
-                  {activity.title}
-                </p>
-                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1`}>{activity.user}</p>
-              </div>
-              <div className="flex-shrink-0 text-xs text-gray-400">
-                {activity.time}
+              <div className="min-w-0">
+                <p className={`text-[10px] font-semibold uppercase tracking-wider truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>{item.label}</p>
+                <p className={`text-xl font-black ${isDark ? "text-white" : "text-slate-900"}`}>{item.value}</p>
               </div>
             </div>
           ))}
         </div>
-      </div>
-    );
-  };
 
-
-
-  if (dashboardData.loading) {
-    return (
-      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center p-4`}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className={`mt-4 text-sm sm:text-base ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-            {t('dashboard.loading')}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (dashboardData.error) {
-    return (
-      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center p-4`}>
-        <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">⚠️</div>
-          <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'} mb-4`}>{dashboardData.error}</p>
-          <button
-            onClick={fetchDashboardData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
-          >
-            {t('dashboard.retry')}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <MobileDashboardContent 
-        stats={stats} 
-        isDark={isDark} 
-        t={t} 
-        fetchDashboardData={fetchDashboardData} 
-      />
-    );
-  }
-
-  return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Header */}
-      <div className={`${isDark ? 'bg-gray-800/90' : 'bg-white/90'} backdrop-blur-xl border-b ${isDark ? 'border-white/5' : 'border-gray-200'} ${isMobile ? '' : 'sticky top-0 z-50'}`}>
-        <div className={`max-w-7xl mx-auto ${isMobile ? 'px-3 py-3' : 'px-4 sm:px-6 lg:px-8'}`}>
-          <div className={`flex ${isMobile ? 'items-center justify-between' : 'flex-col sm:flex-row sm:justify-between sm:items-center py-6 sm:py-8 gap-4'}`}>
-            <div className={isMobile ? 'flex-1 min-w-0' : ''}>
-              {isMobile ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-blue-600 rounded-lg">
-                      <Activity className="w-4 h-4 text-white" />
+        {/* ── Charts row ─────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Distribution des cours (pie) */}
+          <ChartCard title="Distribution des Cours" icon={BarChart3} isDark={isDark}>
+            {pieData.length === 0 ? (
+              <div className={`h-64 flex items-center justify-center text-sm ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                Aucune matière disponible
+              </div>
+            ) : (
+              <>
+                <div className="h-56 sm:h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius="40%"
+                        outerRadius="70%"
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {pieData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: "12px",
+                          border: "none",
+                          boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                          fontSize: "12px",
+                        }}
+                        formatter={(v, n) => [v, n]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Legend */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2">
+                  {pieData.slice(0, 6).map((d, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                      <span className={`text-[11px] truncate max-w-[80px] ${isDark ? "text-slate-400" : "text-slate-600"}`}>{d.name}</span>
                     </div>
-                    <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {t('dashboard.title')}
-                    </h1>
-                  </div>
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-0.5 ml-8`}>
-                    {new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-3 mb-2"
-                  >
-                    <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/40">
-                      <Activity className="w-6 h-6 text-white" />
-                    </div>
-                    <h1 className={`text-2xl sm:text-4xl font-black tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {t('dashboard.title')}
-                    </h1>
-                  </motion.div>
-                  <p className={`text-sm sm:text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'} flex items-center gap-2`}>
-                    <Calendar className="w-4 h-4 text-blue-500" />
-                    {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                  </p>
-                </>
-              )}
-            </div>
-            <div className={`flex items-center ${isMobile ? '' : 'gap-3'}`}>
-              <button
-                onClick={fetchDashboardData}
-                className={`group bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center font-bold transition-all duration-300 active:scale-95 ${
-                  isMobile
-                    ? 'p-2 rounded-xl'
-                    : 'px-6 py-3 rounded-2xl hover:shadow-2xl hover:shadow-blue-500/40 space-x-2 transform hover:-translate-y-1 active:translate-y-0'
-                }`}
-              >
-                <TrendingUp className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} group-hover:rotate-180 transition-transform duration-500`} />
-                {!isMobile && <span>{t('dashboard.refresh')}</span>}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+                  ))}
+                  {pieData.length > 6 && (
+                    <span className={`text-[11px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>+{pieData.length - 6} autres</span>
+                  )}
+                </div>
+              </>
+            )}
+          </ChartCard>
 
-      <div className={`max-w-7xl mx-auto ${isMobile ? 'px-3 py-3' : 'px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8'}`}>
-        {/* Stats Cards */}
-        <div className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6'} mb-4 sm:mb-6 lg:mb-8`}>
-          <StatCard
-            title={t('dashboard.stats.availableCourses')}
-            value={stats.totalCourses}
-            icon={BookOpen}
-            color="bg-blue-500"
-            trend="+12%"
-            subtitle={t('dashboard.stats.subjects', { count: stats.totalMatieres })}
-          />
-          <StatCard
-            title={t('dashboard.stats.exercises')}
-            value={stats.totalExercises}
-            icon={Target}
-            color="bg-green-500"
-            trend="+18%"
-            subtitle={t('dashboard.stats.completed', { percent: stats.completionRate })}
-          />
-          <StatCard
-            title={t('dashboard.stats.activeClasses')}
-            value={stats.activeClasses}
-            icon={Users}
-            color="bg-purple-500"
-            trend="+8%"
-            subtitle={t('dashboard.stats.students', { count: stats.totalStudents })}
-          />
-          <StatCard
-            title={t('dashboard.stats.avgProgress')}
-            value={`${stats.averageProgress}%`}
-            icon={BarChart3}
-            color="bg-orange-500"
-            trend="+5%"
-            subtitle={t('dashboard.stats.allClasses')}
-          />
+          {/* Progression des élèves (bar) */}
+          <ChartCard title="Progression des Élèves" icon={TrendingUp} isDark={isDark}>
+            {barData.length === 0 ? (
+              <div className={`h-64 flex items-center justify-center text-sm ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                Aucune classe disponible
+              </div>
+            ) : (
+              <div className="h-64 sm:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} barSize={20}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#f1f5f9"} />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fill: isDark ? "#94a3b8" : "#64748b" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: isDark ? "#94a3b8" : "#64748b" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={32}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                        fontSize: "12px",
+                        background: isDark ? "#1e293b" : "#fff",
+                        color: isDark ? "#f1f5f9" : "#0f172a",
+                      }}
+                      cursor={{ fill: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }}
+                    />
+                    <Bar
+                      dataKey="progression"
+                      name="Progression %"
+                      radius={[6, 6, 0, 0]}
+                      fill="url(#barGrad)"
+                    />
+                    <defs>
+                      <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#3b82f6" />
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </ChartCard>
         </div>
 
-        {/* Charts Row */}
-        <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'lg:grid-cols-2 gap-4 sm:gap-6'} mb-4 sm:mb-6 lg:mb-8`}>
-          {/* Course Distribution */}
-          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border ${isMobile ? 'p-3' : 'p-4 sm:p-6'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className={`${isMobile ? 'text-sm' : 'text-sm sm:text-base lg:text-lg'} font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {t('dashboard.charts.courseDistribution')}
-              </h3>
-              <BarChart3 className="h-4 w-4 text-gray-400" />
-            </div>
-            <div className={isMobile ? 'h-48' : 'h-64 sm:h-80'}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={courseDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={isMobile ? "65%" : "70%"}
-                    fill="#8884d8"
-                    dataKey="courses"
-                    label={isMobile ? false : ({ name, percent }) =>
-                      `${name.substring(0, 8)}... ${(percent * 100).toFixed(0)}%`
-                    }
-                  >
-                    {courseDistributionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Student Progress by Class */}
-          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border ${isMobile ? 'p-3' : 'p-4 sm:p-6'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className={`${isMobile ? 'text-sm' : 'text-sm sm:text-base lg:text-lg'} font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {t('dashboard.charts.studentProgress')}
-              </h3>
-              <BarChart3 className="h-4 w-4 text-gray-400" />
-            </div>
-            <div className={isMobile ? 'h-48' : 'h-64 sm:h-80'}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={studentProgressData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="class"
-                    tick={{ fontSize: isMobile ? 9 : 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={isMobile ? 45 : 60}
-                  />
-                  <YAxis tick={{ fontSize: isMobile ? 9 : 12 }} width={isMobile ? 30 : 40} />
-                  <Tooltip />
-                  <Bar
-                    dataKey="progress"
-                    fill="#3B82F6"
-                    radius={[4, 4, 0, 0]}
-                    name={t('dashboard.charts.progressPercent')}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Monthly Activity Trends */}
-        <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border ${isMobile ? 'p-3' : 'p-4 sm:p-6'} mb-4 sm:mb-6 lg:mb-8`}>
-          <div className="flex items-center justify-between mb-3 sm:mb-6">
-            <h3 className={`${isMobile ? 'text-sm' : 'text-sm sm:text-base lg:text-lg'} font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {t('dashboard.charts.monthlyActivity')}
-            </h3>
-            <TrendingUp className="h-4 w-4 text-gray-400" />
-          </div>
-          <div className={isMobile ? 'h-48' : 'h-64 sm:h-80'}>
+        {/* ── Area chart (monthly trends) ────────────────────────────────────── */}
+        <ChartCard title="Tendances Mensuelles" icon={Activity} isDark={isDark}>
+          <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyTrendsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: isMobile ? 10 : 12 }} />
-                <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} width={isMobile ? 30 : 40} />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="courses"
-                  stackId="1"
-                  stroke="#3B82F6"
-                  fill="#3B82F6"
-                  fillOpacity={0.6}
-                  name={t('dashboard.charts.coursesCreated')}
+              <AreaChart data={areaData}>
+                <defs>
+                  <linearGradient id="gradCours" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradExo" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#f1f5f9"} />
+                <XAxis dataKey="mois" tick={{ fontSize: 11, fill: isDark ? "#94a3b8" : "#64748b" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: isDark ? "#94a3b8" : "#64748b" }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "12px", border: "none",
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.15)", fontSize: "12px",
+                    background: isDark ? "#1e293b" : "#fff",
+                    color: isDark ? "#f1f5f9" : "#0f172a",
+                  }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="exercises"
-                  stackId="1"
-                  stroke="#10B981"
-                  fill="#10B981"
-                  fillOpacity={0.6}
-                  name={t('dashboard.charts.exercisesAdded')}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="completions"
-                  stackId="1"
-                  stroke="#F59E0B"
-                  fill="#F59E0B"
-                  fillOpacity={0.6}
-                  name={t('dashboard.charts.completions')}
-                />
+                <Area type="monotone" dataKey="cours"     name="Cours"     stroke="#3b82f6" strokeWidth={2.5} fill="url(#gradCours)" />
+                <Area type="monotone" dataKey="exercices" name="Exercices" stroke="#10b981" strokeWidth={2.5} fill="url(#gradExo)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </ChartCard>
 
-        {/* Bottom Section */}
-        <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'lg:grid-cols-3 gap-4 sm:gap-6'}`}>
-          {/* Exercise Completion Status */}
-          <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border ${isMobile ? 'p-3' : 'p-4 sm:p-6'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className={`${isMobile ? 'text-sm' : 'text-sm sm:text-base lg:text-lg'} font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {t('dashboard.charts.exerciseStatus')}
-              </h3>
-              <Target className="h-4 w-4 text-gray-400" />
-            </div>
-            <div className={isMobile ? 'h-40' : 'h-48 sm:h-64'}>
+        {/* ── Bottom row: status pie + recent activity ───────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Exercise status donut */}
+          <ChartCard title="Statut des Exercices" icon={Target} isDark={isDark}>
+            <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={exerciseCompletionData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={isMobile ? "70%" : "80%"}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={isMobile ? false : ({ name, value }) => `${name} ${value}%`}
-                  >
-                    {exerciseCompletionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                  <Pie data={statusData} cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={3} dataKey="value">
+                    {statusData.map((e, i) => <Cell key={i} fill={e.color} />)}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 40px rgba(0,0,0,0.15)", fontSize: "12px" }}
+                    formatter={(v) => [`${v}%`]}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            {/* Mobile legend for pie chart */}
-            {isMobile && (
-              <div className="flex flex-wrap gap-3 mt-2 justify-center">
-                {exerciseCompletionData.map((entry) => (
-                  <div key={entry.name} className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                    <span className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{entry.name} {entry.value}%</span>
+            <div className="space-y-2 mt-1">
+              {statusData.map((d) => (
+                <div key={d.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
+                    <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-600"}`}>{d.name}</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  <span className={`text-xs font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{d.value}%</span>
+                </div>
+              ))}
+            </div>
+          </ChartCard>
 
-          {/* Recent Activities */}
-          <RecentActivity />
+          {/* Recent activity — spans 2 cols */}
+          <div className={`lg:col-span-2 rounded-2xl border shadow-sm p-5 ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>Activités Récentes</h3>
+              <Activity className="w-4 h-4 text-slate-400" />
+            </div>
+            <div className="space-y-3">
+              {recentItems.map((item, i) => (
+                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${isDark ? "hover:bg-slate-700/50" : "hover:bg-slate-50"}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${item.bg}`}>
+                    <item.icon className={`w-4 h-4 ${item.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-slate-800"}`}>{item.label}</p>
+                    <p className={`text-xs truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>{item.sub}</p>
+                  </div>
+                  <span className={`text-xs flex-shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{item.time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   );
