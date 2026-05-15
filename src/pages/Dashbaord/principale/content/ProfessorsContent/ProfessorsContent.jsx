@@ -72,6 +72,91 @@ const ProfileAvatar = ({ path, initials, size = "w-12 h-12", textSize = "text-ba
   );
 };
 
+// Resolves a MinIO path for a document and renders a clickable card
+const DocumentCard = ({ path, label, icon, onView }) => {
+  const [resolvedUrl, setResolvedUrl] = React.useState(null);
+  const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(path);
+  const isPdf = /\.pdf(\?|$)/i.test(path);
+
+  React.useEffect(() => {
+    if (!path) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const url = path.startsWith("http")
+          ? path
+          : await minioS3Service.getMediaUrlByPath(path);
+        if (!cancelled && url) setResolvedUrl(url);
+      } catch { /* ignore */ }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [path]);
+
+  const contentType = isImage ? "image" : isPdf ? "application/pdf" : "";
+
+  return (
+    <div className="group flex flex-col rounded-xl border border-slate-100 overflow-hidden hover:border-indigo-300 hover:shadow-md transition-all">
+      <button
+        onClick={() => resolvedUrl && onView({ url: resolvedUrl, fileName: label, contentType })}
+        className="relative bg-slate-50 flex items-center justify-center w-full focus:outline-none"
+        style={{ height: 120 }}
+        title={`Voir ${label}`}
+      >
+        {isImage && resolvedUrl ? (
+          <img
+            src={resolvedUrl}
+            alt={label}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            {isPdf ? (
+              <>
+                <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
+                  <span className="text-red-600 font-black text-sm">PDF</span>
+                </div>
+                <span className="text-xs text-slate-400 font-medium">Document PDF</span>
+              </>
+            ) : resolvedUrl === null && path ? (
+              <div className="w-6 h-6 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-2xl">
+                  {icon}
+                </div>
+                <span className="text-xs text-slate-400 font-medium">Cliquer pour voir</span>
+              </>
+            )}
+          </div>
+        )}
+        <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/10 transition-colors flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2 shadow-lg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-600"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+        </div>
+      </button>
+      <div className="px-3 py-2 flex items-center justify-between bg-white">
+        <span className="text-xs font-semibold text-slate-700">{label}</span>
+        {resolvedUrl && (
+          <a
+            href={resolvedUrl}
+            download={label}
+            onClick={(e) => e.stopPropagation()}
+            className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
+            title="Télécharger"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-slate-500">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+          </a>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const { t } = useTranslation();
   const language = useSelector((state) => state.language?.currentLanguage || 'fr');
@@ -534,76 +619,17 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                           { url: prof.cniUrlRecto, label: "CNI Recto", icon: "🪪" },
                           { url: prof.cniUrlVerso, label: "CNI Verso", icon: "🪪" },
                           { url: prof.selfieUrl,   label: "Selfie",    icon: "🤳" },
-                        ].filter(d => d.url).map((doc, i) => {
-                          const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(doc.url);
-                          const isPdf   = /\.pdf(\?|$)/i.test(doc.url);
-                          const contentType = isImage ? "image" : isPdf ? "application/pdf" : "";
-                          return (
-                            <div key={i} className="group flex flex-col rounded-xl border border-slate-100 overflow-hidden hover:border-indigo-300 hover:shadow-md transition-all">
-                              {/* Clickable preview area */}
-                              <button
-                                onClick={() => setViewerConfig({ isOpen: true, url: doc.url, fileName: doc.label, contentType })}
-                                className="relative bg-slate-50 flex items-center justify-center w-full focus:outline-none"
-                                style={{ height: 120 }}
-                                title={`Voir ${doc.label}`}
-                              >
-                                {isImage ? (
-                                  <img
-                                    src={doc.url}
-                                    alt={doc.label}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                      e.target.nextSibling.style.display = 'flex';
-                                    }}
-                                  />
-                                ) : null}
-                                {/* Fallback / PDF icon */}
-                                <div
-                                  className="absolute inset-0 flex flex-col items-center justify-center gap-2"
-                                  style={{ display: isImage ? 'none' : 'flex' }}
-                                >
-                                  {isPdf ? (
-                                    <>
-                                      <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
-                                        <span className="text-red-600 font-black text-sm">PDF</span>
-                                      </div>
-                                      <span className="text-xs text-slate-400 font-medium">Document PDF</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-2xl">
-                                        {doc.icon}
-                                      </div>
-                                      <span className="text-xs text-slate-400 font-medium">Cliquer pour voir</span>
-                                    </>
-                                  )}
-                                </div>
-                                {/* Hover overlay */}
-                                <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/10 transition-colors flex items-center justify-center">
-                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2 shadow-lg">
-                                    <Eye size={16} className="text-indigo-600" />
-                                  </div>
-                                </div>
-                              </button>
-                              {/* Label + download */}
-                              <div className="px-3 py-2 flex items-center justify-between bg-white">
-                                <span className="text-xs font-semibold text-slate-700">{doc.label}</span>
-                                <a
-                                  href={doc.url}
-                                  download={doc.label}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
-                                  title="Télécharger"
-                                >
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-slate-500">
-                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                                  </svg>
-                                </a>
-                              </div>
-                            </div>
-                          );
-                        })}
+                        ].filter(d => d.url).map((doc, i) => (
+                          <DocumentCard
+                            key={i}
+                            path={doc.url}
+                            label={doc.label}
+                            icon={doc.icon}
+                            onView={({ url, fileName, contentType }) =>
+                              setViewerConfig({ isOpen: true, url, fileName, contentType })
+                            }
+                          />
+                        ))}
                       </div>
                     </div>
                   </div>
