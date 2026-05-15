@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { matiereService } from "../../../../../services/MatiereService";
+import { classService } from "../../../../../services/ClassService";
+import { coursProgrammerService } from "../../../../../services/coursProgrammerService";
 
 import CreateCourseComponent from "./CreateCourseComponent";
 import CourseContentView from "./CourseContentView";
@@ -36,6 +38,9 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
   const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterClassId, setFilterClassId] = useState(null);
+  const [filterClassName, setFilterClassName] = useState("");
+  const [professorClasses, setProfessorClasses] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [subjects, setSubjects] = useState([]);
@@ -46,15 +51,36 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
   const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
-    loadCourses();
+    const savedClassId = localStorage.getItem("selectedClassId");
+    if (savedClassId) {
+      localStorage.removeItem("selectedClassId");
+      setFilterClassId(savedClassId);
+      loadCourses(savedClassId);
+    } else {
+      loadCourses(null);
+    }
     loadSubjects();
+    loadProfessorClasses(savedClassId || null);
   }, []);
 
   useEffect(() => {
     filterCourses();
   }, [courses, searchTerm, filterStatus]);
 
-  const loadCourses = async () => {
+  const loadProfessorClasses = async (preselectedClassId) => {
+    try {
+      const userId = localStorage.getItem("userId");
+      if (!userId) return;
+      const classes = await classService.obtenirClassesUtilisateur(userId);
+      setProfessorClasses(classes || []);
+      if (preselectedClassId && classes) {
+        const cls = classes.find(c => String(c.id) === String(preselectedClassId));
+        if (cls) setFilterClassName(cls.nom || cls.name || cls.titre || `Classe ${cls.id}`);
+      }
+    } catch { /* non-blocking */ }
+  };
+
+  const loadCourses = async (classeId) => {
     try {
       setLoading(true);
       setError("");
@@ -62,14 +88,38 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       if (!professorId) {
         throw new Error("ID du professeur non trouvé");
       }
-      const coursesData = await coursService.getCoursByProfesseur(professorId);
-      setCourses(coursesData || []);
+      const allCourses = await coursService.getCoursByProfesseur(professorId);
+      if (classeId) {
+        // Load scheduled courses for the class to find which course IDs are in it
+        try {
+          const scheduled = await coursProgrammerService.obtenirProgrammationParClasse(classeId);
+          const courseIdsInClass = new Set(
+            (scheduled || [])
+              .map(sc => sc.coursId || sc.cours?.id)
+              .filter(Boolean)
+              .map(String)
+          );
+          const filtered = (allCourses || []).filter(c => courseIdsInClass.has(String(c.id)));
+          setCourses(filtered);
+        } catch {
+          setCourses(allCourses || []);
+        }
+      } else {
+        setCourses(allCourses || []);
+      }
     } catch (err) {
       console.error("Error loading courses:", err);
       setError("Erreur lors du chargement des cours: " + err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClassFilterChange = (classId) => {
+    const cls = professorClasses.find(c => String(c.id) === String(classId));
+    setFilterClassId(classId || null);
+    setFilterClassName(cls ? (cls.nom || cls.name || cls.titre || `Classe ${cls.id}`) : "");
+    loadCourses(classId || null);
   };
 
   const loadSubjects = async () => {
@@ -292,6 +342,23 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           ))}
         </div>
 
+        {filterClassId && filterClassName && (
+          <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3 shadow-sm flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <BookOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <p className="text-blue-700 text-xs sm:text-sm font-medium truncate">
+                Cours de la classe : <span className="font-bold">{filterClassName}</span>
+              </p>
+            </div>
+            <button
+              onClick={() => handleClassFilterChange("")}
+              className="text-blue-400 hover:text-blue-600 flex-shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         <div className="bg-white border border-slate-100 rounded-xl p-3 sm:p-4 shadow-sm mb-4 sm:mb-6">
           {/* Row 1: Search + New Course button */}
           <div className="flex items-center gap-2 mb-3">
@@ -335,6 +402,26 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
             </div>
 
+            {/* Class filter */}
+            {professorClasses.length > 0 && (
+              <div className="relative flex-1 min-w-[130px]">
+                <BookOpen className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+                <select
+                  value={filterClassId || ""}
+                  onChange={(e) => handleClassFilterChange(e.target.value)}
+                  className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+                >
+                  <option value="">Toutes les classes</option>
+                  {professorClasses.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.nom || cls.name || cls.titre || `Classe ${cls.id}`}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+              </div>
+            )}
+
             {/* View toggle */}
             <div className="flex bg-slate-100 rounded-lg p-0.5 flex-shrink-0">
               <button
@@ -362,7 +449,7 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
 
             {/* Refresh */}
             <button
-              onClick={loadCourses}
+              onClick={() => loadCourses(filterClassId)}
               disabled={loading}
               className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
               title="Actualiser"
@@ -430,12 +517,14 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
                 <BookOpen className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400" />
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
-                {searchTerm || filterStatus !== "all"
+                {searchTerm || filterStatus !== "all" || filterClassId
                   ? "Aucun cours trouvé"
                   : "Aucun cours créé"}
               </h3>
               <p className="text-slate-600 text-sm sm:text-base mb-4 sm:mb-6 max-w-md mx-auto">
-                {searchTerm || filterStatus !== "all"
+                {filterClassId
+                  ? `Aucun cours trouvé pour la classe ${filterClassName || filterClassId}. Créez un cours associé à cette classe.`
+                  : searchTerm || filterStatus !== "all"
                   ? "Essayez de modifier vos critères de recherche ou de filtrage."
                   : "Commencez par créer votre premier cours pour vos étudiants."}
               </p>

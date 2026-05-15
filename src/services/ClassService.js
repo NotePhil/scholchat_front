@@ -345,6 +345,22 @@ class ClassService {
   }
 
   /**
+   * Gets a class by its activation code
+   * @param {string} code - The activation code
+   * @returns {Promise<Object>} The class data
+   */
+  async obtenirClasseParCode(code) {
+    try {
+      return await this.axiosRequest(`/classes/by-code/${code}`, {
+        method: "get",
+      });
+    } catch (error) {
+      console.error("Error getting class by code:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Updates publication rights for a class
    * @param {string} idClasse - The class ID
    * @param {string} droitPublication - The new publication rights

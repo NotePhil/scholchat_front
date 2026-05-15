@@ -17,6 +17,7 @@ import {
   Tabs,
   List,
   Checkbox,
+  Table,
 } from "antd";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
@@ -80,6 +81,9 @@ import PublicationRightsService from "../../../../services/PublicationRightsServ
 import AccederService, {
   EtatDemandeAcces,
 } from "../../../../services/accederService";
+import { coursProgrammerService } from "../../../../services/coursProgrammerService";
+import { exerciseProgrammerService } from "../../../../services/exerciseProgrammerService";
+import { activityFeedService } from "../../../../services/ActivityFeedService";
 
 // Import separated components
 import UserTables from "./components/UserTables";
@@ -198,7 +202,7 @@ const TabScrollBar = ({ activeTab, onTabChange, tabs }) => {
   );
 };
 
-const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCourseCreation, onNavigateToExerciseManagement }) => {
+const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCourseCreation, onNavigateToExerciseManagement, onNavigateToCoursManagement }) => {
   const [classDetails, setClassDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(initialTab || "overview");
@@ -248,6 +252,12 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
   const [professors, setProfessors] = useState([]);
   const [rejectionMotifs, setRejectionMotifs] = useState([]);
   const [selectedPublicationRight, setSelectedPublicationRight] = useState("");
+  
+  // NEW: Additional module states
+  const [courses, setCourses] = useState([]);
+  const [exercises, setExercises] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [moduleLoading, setModuleLoading] = useState(false);
 
   // Publication rights states
   const [searchEmail, setSearchEmail] = useState("");
@@ -377,6 +387,13 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
       const accessResult = await loadUsersWithAccess();
       await loadAccessRequests();
       await loadModeratorsAndRights();
+      
+      // Load additional modules
+      await Promise.all([
+        loadCourses(),
+        loadExercises(),
+        loadEvents()
+      ]);
     } catch (error) {
       message.error("Erreur lors du chargement des détails de la classe");
       console.error("Error loading class details:", error);
@@ -730,6 +747,76 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
       console.error("Error loading access requests:", error);
       message.error("Erreur lors du chargement des demandes d'accès");
     }
+  };
+
+  const loadCourses = async () => {
+    try {
+      const data = await coursProgrammerService.obtenirProgrammationParClasse(classId);
+      // Sort by status: EN_COURS (0), PLANIFIE (1), ANNULE (2), TERMINE (3)
+      const sorted = (data || []).sort((a, b) => {
+        const order = { "EN_COURS": 0, "PLANIFIE": 1, "ANNULE": 2, "TERMINE": 3 };
+        return (order[a.etatCoursProgramme] ?? 99) - (order[b.etatCoursProgramme] ?? 99);
+      });
+      setCourses(sorted);
+    } catch (error) {
+      console.error("Error loading courses:", error);
+    }
+  };
+
+  const loadExercises = async () => {
+    try {
+      const data = await exerciseProgrammerService.getExercisesProgrammesParClasse(classId);
+      // Sort by status: ACTIF/PUBLIE (0), BROUILLON (1), EN_ATTENTE_CORRECTION (2), CORRIGE (3), ANNULE (4)
+      const sorted = (data || []).sort((a, b) => {
+        const order = { 
+          "ACTIF": 0, "PUBLIE": 0, 
+          "BROUILLON": 1, 
+          "EN_ATTENTE_CORRECTION": 2, 
+          "CORRIGE": 3, 
+          "ANNULE": 4 
+        };
+        return (order[a.etat] ?? order[a.etatExercise] ?? 99) - (order[b.etat] ?? order[b.etatExercise] ?? 99);
+      });
+      setExercises(sorted);
+    } catch (error) {
+      console.error("Error loading exercises:", error);
+    }
+  };
+
+  const loadEvents = async () => {
+    try {
+      const allEvents = await activityFeedService.getActivities();
+      // Filter by classId
+      const classEvents = allEvents.filter(event => 
+        event.classesIds && event.classesIds.includes(classId)
+      );
+      // Sort by status: EN_COURS (0), PLANIFIE/A_VENIR (1), PASSE (2), ANNULE (3)
+      const sorted = classEvents.sort((a, b) => {
+        const order = { "EN_COURS": 0, "PLANIFIE": 1, "A_VENIR": 1, "PASSE": 2, "ANNULE": 3 };
+        return (order[a.etat] ?? 99) - (order[b.etat] ?? 99);
+      });
+      setEvents(sorted);
+    } catch (error) {
+      console.error("Error loading events:", error);
+    }
+  };
+
+  const isUserModerator = () => {
+    // Students and parents are never moderators
+    const role = (userRole || "").toUpperCase();
+    if (role.includes("ELEVE") || role.includes("STUDENT") || role.includes("PARENT")) return false;
+
+    if (role === "ADMIN" || role === "ROLE_ADMIN" || role === "ADMINISTRATEUR") return true;
+
+    if (!currentUserId) return false;
+
+    // Check if user is assigned moderator (check both object and flat field)
+    if (classDetails?.moderatorId === currentUserId) return true;
+    if (classDetails?.moderator?.id === currentUserId) return true;
+    if (classDetails?.createurId === currentUserId) return true;
+
+    // Check if user is in moderatorsWithRights (professors only)
+    return moderatorsWithRights.some(m => m.id === currentUserId);
   };
 
   const fetchProfessors = async () => {
@@ -1709,17 +1796,19 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 <ArrowLeft size={14} />
                 Retour
               </button>
-              <button onClick={showDeleteConfirm}
-                disabled={actionLoading === "delete"}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
-                style={{ background: "#dc2626", color: "#fff", border: "2px solid #b91c1c" }}>
-                {actionLoading === "delete" ? (
-                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Trash2 size={13} />
-                )}
-                Supprimer
-              </button>
+              {(userRole === "ROLE_ADMIN" || userRole === "ADMIN") && (
+                <button onClick={showDeleteConfirm}
+                  disabled={actionLoading === "delete"}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
+                  style={{ background: "#dc2626", color: "#fff", border: "2px solid #b91c1c" }}>
+                  {actionLoading === "delete" ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 size={13} />
+                  )}
+                  Supprimer
+                </button>
+              )}
             </div>
 
             {/* Row 2: class identity */}
@@ -1761,20 +1850,26 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
                 Actualiser
               </button>
-              <button onClick={() => setModeratorModalVisible(true)}
-                disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20 disabled:opacity-40"
-                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
-                <UserPlus size={12} />
-                Modérateur
-              </button>
-              <button onClick={() => setPublicationRightsModalVisible(true)}
-                disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20 disabled:opacity-40"
-                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
-                <Shield size={12} />
-                Droits
-              </button>
+              {(userRole === "ROLE_ADMIN" || userRole === "ADMIN" ||
+                classDetails?.createurId === currentUserId ||
+                classDetails?.moderatorId === currentUserId) && (
+                <button onClick={() => setModeratorModalVisible(true)}
+                  disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20 disabled:opacity-40"
+                  style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                  <UserPlus size={12} />
+                  Modérateur
+                </button>
+              )}
+              {(userRole === "ROLE_ADMIN" || userRole === "ADMIN" || isUserModerator()) && (
+                <button onClick={() => setPublicationRightsModalVisible(true)}
+                  disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20 disabled:opacity-40"
+                  style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                  <Shield size={12} />
+                  Droits
+                </button>
+              )}
               <button onClick={fetchActivationHistory}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20"
                 style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
@@ -1829,17 +1924,25 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
         </div>
 
         {/* ── Quick actions CTA card — below stats ── */}
-        {(onNavigateToCourseCreation || onNavigateToExerciseManagement) && (
+        {(onNavigateToCourseCreation || onNavigateToExerciseManagement || onNavigateToCoursManagement) && (
           <div className="px-3 sm:px-6 pt-3">
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4 flex items-center gap-3 flex-wrap">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Actions rapides</span>
               <div className="flex items-center gap-2 flex-wrap">
+                {onNavigateToCoursManagement && (
+                  <button onClick={() => onNavigateToCoursManagement(classId)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
+                    style={{ background: "linear-gradient(135deg,#0ea5e9,#4f46e5)" }}>
+                    <BookOutlined style={{ fontSize: 14 }} />
+                    Gestion des Cours
+                  </button>
+                )}
                 {onNavigateToCourseCreation && (
                   <button onClick={() => onNavigateToCourseCreation(classId)}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
                     style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
-                    <BookOutlined style={{ fontSize: 14 }} />
-                    Créer un nouveau cours
+                    <PlusOutlined style={{ fontSize: 14 }} />
+                    Créer un cours
                   </button>
                 )}
                 {onNavigateToExerciseManagement && (
@@ -1866,6 +1969,11 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
             { key: "parents",         label: `Parents (${users.parents.length})`,         icon: <TeamOutlined /> },
             { key: "utilisateurs",    label: `Utilisateurs (${users.utilisateurs.length})`, icon: <UserOutlined /> },
             { key: "access-requests", label: `Demandes (${users.accessRequests.length})`, icon: <ClockCircleOutlined /> },
+            ...(!["ROLE_ADMIN","ADMIN","ADMINISTRATEUR"].includes((userRole||"").toUpperCase()) ? [
+              { key: "courses",   label: `Cours (${courses.length})`,     icon: <BookOutlined /> },
+              { key: "exercises", label: `Exercices (${exercises.length})`, icon: <FileTextOutlined /> },
+            ] : []),
+            { key: "events",          label: `Événements (${events.length})`,             icon: <Calendar /> },
           ]}
         />
 
@@ -1942,8 +2050,16 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
 
           {/* Professeurs */}
           {activeTab === "professeurs" && (
-            <UserTables users={users.professeurs} loading={loading} userType="professeurs"
-              onViewUser={handleViewUser} onRemoveAccess={handleRemoveAccess} currentTab={activeTab} />
+            <UserTables 
+              users={users.professeurs} 
+              loading={loading} 
+              userType="professeurs"
+              onViewUser={handleViewUser} 
+              onRemoveAccess={handleRemoveAccess} 
+              currentTab={activeTab}
+              userRole={userRole}
+              isModerator={isUserModerator()}
+            />
           )}
 
           {/* Élèves */}
@@ -1986,29 +2102,181 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                   )}
                 </div>
               )}
-              <UserTables users={users.eleves} loading={loading} userType="eleves"
-                onViewUser={handleViewUser} onRemoveAccess={handleRemoveAccess} currentTab={activeTab} />
+              <UserTables 
+                users={users.eleves} 
+                loading={loading} 
+                userType="eleves"
+                onViewUser={handleViewUser} 
+                onRemoveAccess={handleRemoveAccess} 
+                currentTab={activeTab} 
+                userRole={userRole}
+                isModerator={isUserModerator()}
+              />
             </div>
           )}
 
           {/* Parents */}
           {activeTab === "parents" && (
-            <UserTables users={users.parents} loading={loading} userType="parents"
-              onViewUser={handleViewUser} onRemoveAccess={handleRemoveAccess} currentTab={activeTab} />
+            <UserTables 
+              users={users.parents} 
+              loading={loading} 
+              userType="parents"
+              onViewUser={handleViewUser} 
+              onRemoveAccess={handleRemoveAccess} 
+              currentTab={activeTab} 
+              userRole={userRole}
+              isModerator={isUserModerator()}
+            />
           )}
 
           {/* Utilisateurs */}
           {activeTab === "utilisateurs" && (
-            <UserTables users={users.utilisateurs} loading={loading} userType="utilisateurs"
-              onViewUser={handleViewUser} onRemoveAccess={handleRemoveAccess}
-              onDeleteUser={handleDeleteUser} currentTab={activeTab} />
+            <UserTables 
+              users={users.utilisateurs} 
+              loading={loading} 
+              userType="utilisateurs"
+              onViewUser={handleViewUser} 
+              onRemoveAccess={handleRemoveAccess}
+              onDeleteUser={handleDeleteUser} 
+              currentTab={activeTab} 
+              userRole={userRole}
+              isModerator={isUserModerator()}
+            />
           )}
 
           {/* Demandes d'accès */}
           {activeTab === "access-requests" && (
-            <UserTables users={users.accessRequests} loading={loading} userType="access-requests"
-              onViewUser={handleViewUser} onApproveRequest={handleApproveRequest}
-              onRejectRequest={handleRejectRequest} currentTab={activeTab} />
+            <UserTables 
+              users={users.accessRequests} 
+              loading={loading} 
+              userType="access-requests"
+              onViewUser={handleViewUser} 
+              onApproveRequest={handleApproveRequest}
+              onRejectRequest={handleRejectRequest} 
+              currentTab={activeTab} 
+              userRole={userRole}
+              isModerator={isUserModerator()}
+            />
+          )}
+
+          {/* Cours */}
+          {activeTab === "courses" && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-bold text-slate-800">Cours programmés</h3>
+                  <Text type="secondary" className="text-xs">Cours publics de la classe (visibles par tous les membres)</Text>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Tag color="blue">{courses.filter(c => !c.participantsIds?.length).length} cours publics</Tag>
+                  {onNavigateToCoursManagement && (
+                    <Button
+                      size="small"
+                      icon={<BookOutlined />}
+                      onClick={() => onNavigateToCoursManagement(classId)}
+                    >
+                      Voir tout
+                    </Button>
+                  )}
+                  {isUserModerator() && onNavigateToCourseCreation && (
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => onNavigateToCourseCreation(classId)}
+                    >
+                      Programmer
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Table
+                dataSource={courses.filter(c => !c.participantsIds?.length)}
+                rowKey="id"
+                columns={[
+                  { title: 'Cours', dataIndex: ['cours', 'titre'], key: 'titre', render: (v, r) => v || r.description || '—' },
+                  { title: 'Date prévue', dataIndex: 'dateCoursPrevue', key: 'date', render: d => d ? new Date(d).toLocaleString('fr-FR') : '—' },
+                  { title: 'Lieu', dataIndex: 'lieu', key: 'lieu', render: v => v || '—' },
+                  { title: 'Statut', dataIndex: 'etatCoursProgramme', key: 'etat', render: e => {
+                    const colorMap = { "EN_COURS": "green", "PLANIFIE": "blue", "ANNULE": "red", "TERMINE": "default" };
+                    const labelMap = { "EN_COURS": "En cours", "PLANIFIE": "Planifié", "ANNULE": "Annulé", "TERMINE": "Terminé" };
+                    return <Tag color={colorMap[e] || "default"}>{labelMap[e] || e}</Tag>;
+                  }},
+                ]}
+                pagination={{ pageSize: 10 }}
+                locale={{ emptyText: "Aucun cours public programmé pour cette classe" }}
+              />
+            </div>
+          )}
+
+          {/* Exercices */}
+          {activeTab === "exercises" && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-bold text-slate-800">Exercices programmés</h3>
+                  <Text type="secondary" className="text-xs">Liste des exercices pour cette classe</Text>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tag color="purple">{exercises.length} exercices</Tag>
+                  {isUserModerator() && onNavigateToExerciseManagement && (
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => onNavigateToExerciseManagement(classId)}
+                      style={{ backgroundColor: '#9333ea', borderColor: '#9333ea' }}
+                    >
+                      Programmer
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Table 
+                dataSource={exercises}
+                rowKey="id"
+                columns={[
+                  { title: 'Date Prévue', dataIndex: 'dateExoPrevue', key: 'date', render: d => new Date(d).toLocaleString('fr-FR') },
+                  { title: 'Statut', dataIndex: 'etat', key: 'etat', render: e => {
+                    const colorMap = { "ACTIF": "green", "PUBLIE": "green", "BROUILLON": "orange", "EN_ATTENTE_CORRECTION": "blue", "CORRIGE": "cyan", "ANNULE": "red" };
+                    return <Tag color={colorMap[e] || "default"}>{e}</Tag>
+                  }},
+                  { title: 'Actions', key: 'actions', render: (_, record) => (
+                    <Button type="link" size="small" onClick={() => onNavigateToExerciseManagement?.(classId)}>Détails</Button>
+                  )}
+                ]}
+                pagination={{ pageSize: 10 }}
+                locale={{ emptyText: "Aucun exercice programmé pour cette classe" }}
+              />
+            </div>
+          )}
+
+          {/* Événements */}
+          {activeTab === "events" && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-bold text-slate-800">Événements de la classe</h3>
+                  <Text type="secondary" className="text-xs">Actualités et événements à venir</Text>
+                </div>
+                <Tag color="orange">{events.length} événements</Tag>
+              </div>
+              <Table 
+                dataSource={events}
+                rowKey="id"
+                columns={[
+                  { title: 'Titre', dataIndex: 'titre', key: 'titre' },
+                  { title: 'Lieu', dataIndex: 'lieu', key: 'lieu' },
+                  { title: 'Début', dataIndex: 'heureDebut', key: 'debut', render: d => new Date(d).toLocaleString('fr-FR') },
+                  { title: 'Statut', dataIndex: 'etat', key: 'etat', render: e => {
+                    const colorMap = { "EN_COURS": "green", "PLANIFIE": "blue", "A_VENIR": "blue", "PASSE": "default", "ANNULE": "red" };
+                    return <Tag color={colorMap[e] || "default"}>{e}</Tag>
+                  }}
+                ]}
+                pagination={{ pageSize: 10 }}
+                locale={{ emptyText: "Aucun événement pour cette classe" }}
+              />
+            </div>
           )}
 
         </div>{/* end tab content */}

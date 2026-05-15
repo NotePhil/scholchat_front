@@ -7,25 +7,15 @@ import { IoIosArrowDown } from "react-icons/io";
 import { FiSun, FiMoon, FiGlobe, FiDownload } from "react-icons/fi";
 import { useTranslation } from "../../hooks/useTranslation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useInstallApp } from "../PWAInstallPrompt";
+import { InstallButton } from "../PWAInstallPrompt";
 
 export const Header = ({ theme, setTheme }) => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [productsDropdown, setProductsDropdown] = useState(false);
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language, changeLanguage } = useTranslation();
-  const { canInstall, install: installApp } = useInstallApp();
-
-  const handleInstallClick = () => {
-    if (canInstall) {
-      installApp();
-    }
-    // On production with HTTPS, canInstall will be true and native prompt shows
-    // On localhost without HTTPS, button is hidden
-  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -246,18 +236,8 @@ export const Header = ({ theme, setTheme }) => {
                 <span className="w-8 text-center">{language === "fr" ? "EN" : "FR"}</span>
               </motion.button>
 
-              {/* Install App Button */}
-              {canInstall && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleInstallClick}
-                  className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-700/50 hover:bg-green-100 dark:hover:bg-green-900/30 transition-all"
-                >
-                  <FiDownload size={16} />
-                  Installer
-                </motion.button>
-              )}
+              {/* Install App Button — always visible, no popup */}
+              <InstallButton variant="with-label" />
 
               {/* Auth Buttons */}
               <div className="flex items-center space-x-3 pl-2 border-l border-gray-200 dark:border-gray-700 ml-3">
@@ -428,16 +408,10 @@ export const Header = ({ theme, setTheme }) => {
                       </motion.button>
                     </div>
 
-                    {canInstall && (
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => { handleInstallClick(); setOpen(false); }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 mb-3 text-sm font-bold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-700/50"
-                      >
-                        <FiDownload size={16} />
-                        Installer l'application
-                      </motion.button>
-                    )}
+                    {/* Install button — always visible in mobile menu */}
+                    <div className="mb-3 flex justify-center">
+                      <InstallButton variant="with-label" className="w-full justify-center px-4 py-2.5 border border-indigo-200 rounded-xl" />
+                    </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <NavLink

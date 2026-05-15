@@ -2,6 +2,7 @@
 import React from "react";
 import { Menu, Bell } from "lucide-react";
 import ThemeSelector from "./ThemeSelector";
+import { InstallButton } from "../../../components/PWAInstallPrompt";
 
 export default function Header({
   showSidebar,
@@ -39,6 +40,10 @@ export default function Header({
             setCurrentTheme={setCurrentTheme}
             colorSchemes={colorSchemes}
           />
+
+          {/* Install app icon — always visible, no popup */}
+          <InstallButton />
+
           <div className="relative">
             <Bell
               className={`w-6 h-6 ${

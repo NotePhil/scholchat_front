@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import classService from "../../../../../services/ClassService";
 import establishmentService from "../../../../../services/EstablishmentService";
+import accederService from "../../../../../services/accederService";
 import { useAuth } from "../../../../../context/AuthContext";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,10 +52,13 @@ const ClassesContentMobile = ({
   ];
 
   const filteredClasses = classes.filter(cls => {
-    const matchesSearch = cls.nom.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = 
+      (cls.nom || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cls.codeActivation || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cls.niveau || "").toLowerCase().includes(searchTerm.toLowerCase());
     if (currentTab === "all") return matchesSearch;
-    if (currentTab === "active") return matchesSearch && cls.statut === "ACTIF";
-    if (currentTab === "pending") return matchesSearch && cls.statut === "EN_ATTENTE_APPROBATION";
+    if (currentTab === "active") return matchesSearch && (cls.etat === "ACTIF" || cls.statut === "ACTIF");
+    if (currentTab === "pending") return matchesSearch && (cls.etat === "EN_ATTENTE_APPROBATION" || cls.statut === "EN_ATTENTE_APPROBATION");
     return matchesSearch;
   });
 
@@ -362,24 +366,27 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
 
   // Filter classes based on search term, tab, and user role
   const filteredClasses = classes.filter((cls) => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
-      cls.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cls.matiere.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (cls.professeur &&
-        cls.professeur.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (cls.etablissement &&
-        cls.etablissement.nom.toLowerCase().includes(searchTerm.toLowerCase()));
+      (cls.nom || "").toLowerCase().includes(searchLower) ||
+      (cls.matiere || "").toLowerCase().includes(searchLower) ||
+      (cls.codeActivation || "").toLowerCase().includes(searchLower) ||
+      (cls.niveau || "").toLowerCase().includes(searchLower) ||
+      (cls.professeur?.nom || "").toLowerCase().includes(searchLower) ||
+      (cls.etablissement?.nom || "").toLowerCase().includes(searchLower);
 
     let statusMatch = false;
+    const currentStatus = cls.etat || cls.statut;
+    
     if (currentTab === "all") statusMatch = true;
-    else if (currentTab === "active") statusMatch = cls.statut === "ACTIF";
-    else if (currentTab === "inactive") statusMatch = cls.statut === "INACTIF";
+    else if (currentTab === "active") statusMatch = currentStatus === "ACTIF";
+    else if (currentTab === "inactive") statusMatch = currentStatus === "INACTIF";
     else if (currentTab === "pending")
-      statusMatch = cls.statut === "EN_ATTENTE_APPROBATION";
+      statusMatch = currentStatus === "EN_ATTENTE_APPROBATION" || currentStatus === "EN_ATTENTE";
 
     let roleMatch = true;
     if (user.role === "PROFESSEUR") {
-      roleMatch = cls.professeur?.id === user.id;
+      roleMatch = (cls.professeur?.id === user.id || cls.moderator?.id === user.id || cls.moderatorId === user.id);
     } else if (user.role === "ETABLISSEMENT") {
       roleMatch = cls.etablissement?.id === user.etablissementId;
     }
@@ -519,11 +526,20 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
         throw new Error("Veuillez entrer un token valide");
       }
 
-      const foundClass = await classService.getClassByToken(accessToken);
+      setLoading(true);
+      setError("");
+
+      const foundClass = await classService.obtenirClasseParCode(accessToken);
+      if (!foundClass) {
+        throw new Error("Aucune classe trouvée avec ce code");
+      }
+      
       setSelectedClass(foundClass);
       setShowAccessModal(true);
     } catch (error) {
       setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -531,10 +547,23 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
   const submitAccessRequest = async () => {
     try {
       setLoading(true);
-      await classService.requestClassAccess(accessToken, requestRole);
-      alert("Demande d'accès envoyée avec succès");
+      
+      const currentUserId = localStorage.getItem("userId");
+      
+      await accederService.demanderAcces({
+        utilisateurId: currentUserId,
+        classeId: selectedClass.id,
+        codeActivation: accessToken,
+        estParent: user.role === "PARENT"
+      });
+
+      alert("Demande d'accès envoyée avec succès au modérateur de la classe");
       setShowAccessModal(false);
       setAccessToken("");
+      
+      // Optionally refresh the class list
+      const updatedClasses = await classService.obtenirClassesUtilisateur(currentUserId);
+      setClasses(updatedClasses);
     } catch (error) {
       setError(error.message);
     } finally {

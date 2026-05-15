@@ -949,6 +949,39 @@ const CreateCourseComponent = ({
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
 
+  // Refresh presigned MinIO URLs inside HTML chapter content
+  const refreshChapterContentUrls = async (html) => {
+    if (!html) return html;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div id="root">${html}</div>`, "text/html");
+    const root = doc.getElementById("root");
+    const isMinioPath = (url) => url && url.startsWith("http") &&
+      (url.includes("/images/") || url.includes("/documents/") || url.includes("/videos/"));
+    const refreshUrl = async (url) => {
+      try {
+        const pathName = new URL(url).pathname.replace(/^\//, "");
+        const data = await minioS3Service.generateDownloadUrlByPath(pathName);
+        return data?.downloadUrl || url;
+      } catch { return url; }
+    };
+    const tasks = [
+      ...Array.from(root.querySelectorAll("img")).map(async img => {
+        const src = img.getAttribute("src");
+        if (isMinioPath(src)) img.setAttribute("src", await refreshUrl(src));
+      }),
+      ...Array.from(root.querySelectorAll("video source, video[src]")).map(async el => {
+        const src = el.getAttribute("src");
+        if (isMinioPath(src)) el.setAttribute("src", await refreshUrl(src));
+      }),
+      ...Array.from(root.querySelectorAll("a[href]")).map(async a => {
+        const href = a.getAttribute("href");
+        if (isMinioPath(href)) a.setAttribute("href", await refreshUrl(href));
+      }),
+    ];
+    await Promise.all(tasks);
+    return root.innerHTML;
+  };
+
   // Initialize form with existing course data in edit mode
   useEffect(() => {
     if (editMode && courseToEdit) {
@@ -956,14 +989,20 @@ const CreateCourseComponent = ({
       setValue("description", courseToEdit.description || "");
       setValue("restriction", courseToEdit.restriction || "PRIVE");
       setValue("references", courseToEdit.references || "");
-      
+
       const matiereIds = courseToEdit.matieres?.map(m => String(m.id)) || [];
       setSelectedMatiereIds(matiereIds);
       setValue("matieres", matiereIds);
-      
+
       if (courseToEdit.chapitres && courseToEdit.chapitres.length > 0) {
         const sortedChapters = [...courseToEdit.chapitres].sort((a, b) => a.ordre - b.ordre);
-        setSavedChapters(sortedChapters);
+        // Refresh presigned URLs in chapter content before displaying
+        Promise.all(
+          sortedChapters.map(async (ch) => ({
+            ...ch,
+            contenu: await refreshChapterContentUrls(ch.contenu),
+          }))
+        ).then(setSavedChapters);
       }
     }
   }, [editMode, courseToEdit, setValue]);

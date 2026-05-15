@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Space, Typography, Alert, Button, message, Spin, Input, Modal } from "antd";
-import { BookOutlined, SearchOutlined, KeyOutlined, CheckCircleOutlined, ClockCircleOutlined, LockOutlined } from "@ant-design/icons";
+import { Space, Typography, Alert, Button, message, Spin, Input, Modal, Tag } from "antd";
+import { BookOutlined, SearchOutlined, KeyOutlined, CheckCircleOutlined, ClockCircleOutlined, LockOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { classService } from "../../../../../services/ClassService";
 import AccederService from "../../../../../services/accederService";
 import ManageClassList from "../../class-management/ManageClassList";
@@ -20,8 +20,9 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Search all classes state
+  // Unified search state
   const [globalSearch, setGlobalSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [globalSearchResults, setGlobalSearchResults] = useState([]);
   const [globalSearchLoading, setGlobalSearchLoading] = useState(false);
   const [globalSearchDone, setGlobalSearchDone] = useState(false);
@@ -34,6 +35,8 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
   const [requestLoading, setRequestLoading] = useState(false);
 
   const userId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+  const currentUserRole = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
+  const isAdmin = currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRATEUR";
 
   // Update selected class if tabData changes (e.g. from notification)
   useEffect(() => {
@@ -132,18 +135,29 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
     setSuccessMessage(t('classes.manage.successRefresh', "Données actualisées avec succès"));
   };
 
-  // Search ALL classes by name
+  const handleClearSearch = () => {
+    setGlobalSearch("");
+    setAppliedSearch("");
+    setGlobalSearchResults([]);
+    setGlobalSearchDone(false);
+    setAccessStatusMap({});
+    setMyClassIds(new Set());
+  };
+
+  // Search ALL classes by name, level, or activation code
   const handleGlobalSearch = async () => {
     if (!globalSearch.trim()) return;
+    setAppliedSearch(globalSearch.trim());
     try {
       setGlobalSearchLoading(true);
       setGlobalSearchDone(false);
       const all = await classService.obtenirToutesLesClasses();
-      const term = globalSearch.toLowerCase();
+      const term = globalSearch.toLowerCase().trim();
       const results = (all || []).filter(
         (c) =>
           c.nom?.toLowerCase().includes(term) ||
-          c.niveau?.toLowerCase().includes(term)
+          c.niveau?.toLowerCase().includes(term) ||
+          c.codeActivation?.toLowerCase().includes(term)
       );
 
       // Check access status for each result
@@ -230,9 +244,18 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
   const handleNavigateToExerciseManagement = (classId) => {
     console.log("Navigating to exercise management for class:", classId);
     if (setActiveTab) {
-      // Store the class ID in localStorage for the exercise management page
       localStorage.setItem("selectedClassId", classId);
       setActiveTab("manage-exercises");
+    } else {
+      message.warning("Navigation non disponible");
+    }
+  };
+
+  const handleNavigateToCoursManagement = (classId) => {
+    console.log("Navigating to cours management for class:", classId);
+    if (setActiveTab) {
+      localStorage.setItem("selectedClassId", classId);
+      setActiveTab("schedule-course");
     } else {
       message.warning("Navigation non disponible");
     }
@@ -266,6 +289,101 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
               />
             )}
 
+            {/* ── UNIFIED SEARCH (single bar + single button) ── */}
+            <div className="mb-4 bg-white border border-slate-100 rounded-xl shadow-sm p-4">
+              <div className="flex gap-2">
+                <Input
+                  size="large"
+                  placeholder="Rechercher une classe par code, nom ou niveau..."
+                  value={globalSearch}
+                  onChange={e => setGlobalSearch(e.target.value)}
+                  onPressEnter={handleGlobalSearch}
+                  prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+                  suffix={
+                    globalSearch ? (
+                      <span
+                        onClick={handleClearSearch}
+                        style={{ cursor: "pointer", color: "#94a3b8", fontSize: 13 }}
+                      >✕</span>
+                    ) : null
+                  }
+                  style={{ borderRadius: 10 }}
+                />
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<SearchOutlined />}
+                  loading={globalSearchLoading}
+                  onClick={handleGlobalSearch}
+                  style={{ borderRadius: 10, minWidth: 130, background: "#4f46e5", borderColor: "#4f46e5" }}
+                >
+                  Rechercher
+                </Button>
+              </div>
+
+              {/* Results after search */}
+              {globalSearchDone && globalSearchResults.length === 0 && (
+                <Alert
+                  style={{ marginTop: 12, borderRadius: 8 }}
+                  type="info"
+                  showIcon
+                  message="Aucune classe trouvée avec ce code ou ce nom."
+                />
+              )}
+
+              {globalSearchDone && globalSearchResults.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {globalSearchResults.map(cls => {
+                    const status = accessStatusMap[cls.id];
+                    const hasAccess = myClassIds.has(cls.id) || status === "APPROVED";
+                    const isPending = status === "EN_ATTENTE";
+                    return (
+                      <div key={cls.id}
+                        className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{cls.nom}</p>
+                          <p className="text-xs text-slate-500">
+                            {cls.niveau}{cls.etablissement?.nom ? ` • ${cls.etablissement.nom}` : ""}
+                            {cls.codeActivation && (
+                              <span className="ml-2 font-mono text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                Code : {cls.codeActivation}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {hasAccess ? (
+                            <>
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full mr-2">
+                                <CheckCircleOutlined /> Accès accordé
+                              </span>
+                              <Button size="small" onClick={() => handleSelectClass(cls.id)} style={{ borderRadius: 6 }}>
+                                Gérer
+                              </Button>
+                            </>
+                          ) : isPending ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                              <ClockCircleOutlined /> Demande en attente
+                            </span>
+                          ) : (
+                            <Button
+                              size="small"
+                              type="primary"
+                              icon={<LockOutlined />}
+                              onClick={() => { setAccessModal({ open: true, classe: cls }); setActivationCode(""); }}
+                              style={{ borderRadius: 6, background: "#4f46e5", borderColor: "#4f46e5" }}
+                            >
+                              Demander l'accès
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <ManageClassList
               classes={classes}
               loading={loading}
@@ -276,6 +394,9 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
               onRefresh={handleRefresh}
               onBack={onBack}
               onNavigateToCreate={setActiveTab ? () => setActiveTab("create-class") : undefined}
+              currentUserId={userId}
+              currentUserRole={localStorage.getItem("userRole") || ""}
+              externalSearch={globalSearchDone ? appliedSearch : ""}
             />
           </div>
         ) : (
@@ -286,8 +407,9 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
             onRefresh={handleRefresh}
             onError={setError}
             onSuccess={setSuccessMessage}
-            onNavigateToCourseCreation={handleNavigateToCourseCreation}
-            onNavigateToExerciseManagement={handleNavigateToExerciseManagement}
+            onNavigateToCourseCreation={isAdmin ? undefined : handleNavigateToCourseCreation}
+            onNavigateToExerciseManagement={isAdmin ? undefined : handleNavigateToExerciseManagement}
+            onNavigateToCoursManagement={isAdmin ? undefined : handleNavigateToCoursManagement}
           />
         )}
       </div>

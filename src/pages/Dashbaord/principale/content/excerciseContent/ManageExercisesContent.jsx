@@ -24,6 +24,7 @@ import {
 } from "@ant-design/icons";
 import { exerciseService, participationExerciseService } from "../../../../../services/exerciseService";
 import { exerciseProgrammerService } from "../../../../../services/exerciseService";
+import { classService } from "../../../../../services/ClassService";
 import ExerciseList from "./ExerciseList";
 import CreateExerciseForm from "./CreateExerciseForm";
 import EditExerciseForm from "./EditExerciseForm";
@@ -33,7 +34,11 @@ import StudentExerciseView from "./StudentExerciseView";
 const { Title, Text } = Typography;
 
 const ManageExercisesContent = ({ onBack, setActiveTab }) => {
-  const selectedClassId = localStorage.getItem("selectedClassId") || null;
+  const initClassId = localStorage.getItem("selectedClassId") || null;
+  const [filterClassId, setFilterClassId] = useState(initClassId);
+  const [filterClassName, setFilterClassName] = useState("");
+  const [professorClasses, setProfessorClasses] = useState([]);
+  const [allExercises, setAllExercises] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [participationMap, setParticipationMap] = useState({});
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
@@ -60,10 +65,65 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     }
   }, [error]);
 
+  // Re-filter when class filter changes via dropdown
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!cancelled) await applyClassFilter(allExercises, filterClassId);
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [filterClassId, allExercises]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load all data on mount
   useEffect(() => {
+    if (initClassId) localStorage.removeItem("selectedClassId");
     fetchExercises();
+    loadProfessorClasses();
   }, []);
+
+  const loadProfessorClasses = async () => {
+    try {
+      const userId = localStorage.getItem("userId");
+      if (!userId) return;
+      const role = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
+      if (role !== "PROFESSOR" && role !== "ADMIN" && role !== "TUTOR") return;
+      const classes = await classService.obtenirClassesUtilisateur(userId);
+      setProfessorClasses(classes || []);
+      // Resolve class name for pre-selected filter
+      if (initClassId && classes) {
+        const cls = classes.find(c => String(c.id) === String(initClassId));
+        if (cls) setFilterClassName(cls.nom || cls.name || cls.titre || `Classe ${cls.id}`);
+      }
+    } catch { /* non-blocking */ }
+  };
+
+  const applyClassFilter = async (data, classId) => {
+    if (!classId) {
+      setExercises(data);
+      return;
+    }
+    try {
+      // Load exercise-programmer records for this class — they carry exerciseId
+      const programmers = await exerciseProgrammerService.getExercisesProgrammesParClasse(classId);
+      const ids = new Set(
+        (programmers || [])
+          .map(p => p.exerciseId || p.exercise?.id)
+          .filter(Boolean)
+          .map(String)
+      );
+      // ids.size === 0 means no exercises programmed for this class yet
+      setExercises(ids.size > 0 ? data.filter(e => ids.has(String(e.id))) : []);
+    } catch {
+      setExercises(data); // fallback: show all when API unreachable
+    }
+  };
+
+  const handleClassFilterChange = (classId) => {
+    const cls = professorClasses.find(c => String(c.id) === String(classId));
+    setFilterClassId(classId || null);
+    setFilterClassName(cls ? (cls.nom || cls.name || cls.titre || `Classe ${cls.id}`) : "");
+  };
 
   const fetchExercises = async () => {
     try {
@@ -136,8 +196,10 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         data = data.filter(e => e.etat !== "BROUILLON");
       }
 
-      setExercises(data || []);
-      console.log("Fetched exercises:", data);
+      const safeData = data || [];
+      setAllExercises(safeData);
+      await applyClassFilter(safeData, filterClassId);
+      console.log("Fetched exercises:", safeData);
 
       // For students: load participations to compute accurate header stats
       if (selectedRole !== "PROFESSOR" && selectedRole !== "ADMIN" && selectedRole !== "TUTOR") {
@@ -398,10 +460,10 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                   style={{ background: "#f8faff", borderTop: "1px solid #e8edf5" }}
                 >
                   {[
-                    { label: "Total", value: exercises.length, color: "#2d6a9f", icon: <BookOutlined /> },
-                    { label: "Actifs", value: exercises.filter(e => e.etat === "ACTIF").length, color: "#389e0d", icon: <CheckCircleOutlined /> },
-                    { label: "Brouillons", value: exercises.filter(e => e.etat === "BROUILLON").length, color: "#d48806", icon: <ClockCircleOutlined /> },
-                    { label: "Publics", value: exercises.filter(e => e.restriction === "PUBLIC").length, color: "#531dab", icon: <GlobalOutlined /> },
+                    { label: "Total", value: allExercises.length, color: "#2d6a9f", icon: <BookOutlined /> },
+                    { label: "Actifs", value: allExercises.filter(e => e.etat === "ACTIF").length, color: "#389e0d", icon: <CheckCircleOutlined /> },
+                    { label: "Brouillons", value: allExercises.filter(e => e.etat === "BROUILLON").length, color: "#d48806", icon: <ClockCircleOutlined /> },
+                    { label: "Publics", value: allExercises.filter(e => e.restriction === "PUBLIC").length, color: "#531dab", icon: <GlobalOutlined /> },
                   ].map(({ label, value, color, icon }) => (
                     <div key={label} className="flex items-center gap-2 px-4 py-3">
                       <div
@@ -420,17 +482,35 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
               </div>
             )}
 
-            {selectedClassId && canCreateExercise && (
-              <Alert
-                message={`Exercices de la classe sélectionnée`}
-                description={`Classe ID: ${selectedClassId} — Les nouveaux exercices créés seront associés à cette classe.`}
-                type="info"
-                showIcon
-                closable
-                className="mb-4"
-                style={{ borderRadius: "8px" }}
-                onClose={() => localStorage.removeItem("selectedClassId")}
-              />
+            {canCreateExercise && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {professorClasses.length > 0 && (
+                  <div className="relative min-w-[160px]">
+                    <select
+                      value={filterClassId || ""}
+                      onChange={(e) => handleClassFilterChange(e.target.value)}
+                      className="w-full pl-3 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+                    >
+                      <option value="">Toutes les classes</option>
+                      {professorClasses.map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.nom || cls.name || cls.titre || `Classe ${cls.id}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {filterClassId && filterClassName && (
+                  <Alert
+                    message={`Classe : ${filterClassName}`}
+                    type="info"
+                    showIcon
+                    closable
+                    style={{ borderRadius: "8px", padding: "4px 12px", flex: 1 }}
+                    onClose={() => handleClassFilterChange("")}
+                  />
+                )}
+              </div>
             )}
 
             {successMessage && (

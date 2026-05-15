@@ -26,6 +26,7 @@ import {
   FileText,
 } from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
+import { minioS3Service } from "../../../../../services/minioS3";
 import ProfessorModal from "../../modals/ProfessorModal";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import UserViewModal from "../../modals/UserViewModal";
@@ -33,6 +34,43 @@ import DocumentViewer from "../../../../../components/viewers/DocumentViewer";
 import { getDarkModeClasses } from "../../../../../utils/darkModeUtils";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useSelector } from "react-redux";
+
+// Resolves a MinIO path or raw URL into a presigned URL, with unmount safety
+const ProfileAvatar = ({ path, initials, size = "w-12 h-12", textSize = "text-base" }) => {
+  const [photoUrl, setPhotoUrl] = React.useState(null);
+  React.useEffect(() => {
+    if (!path) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const url = path.startsWith("http")
+          ? path
+          : await minioS3Service.getMediaUrlByPath(path);
+        if (!cancelled && url) setPhotoUrl(url);
+      } catch { /* ignore */ }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [path]);
+
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={initials}
+        className={`${size} rounded-2xl object-cover flex-shrink-0`}
+        style={{ border: "2px solid rgba(255,255,255,0.35)" }}
+        onError={() => setPhotoUrl(null)}
+      />
+    );
+  }
+  return (
+    <div className={`${size} rounded-2xl flex items-center justify-center text-white font-black ${textSize} flex-shrink-0`}
+      style={{ background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.35)" }}>
+      {initials}
+    </div>
+  );
+};
 
 const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const { t } = useTranslation();
@@ -299,10 +337,12 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               </div>
               {/* Row 2: identity */}
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white font-black text-base sm:text-lg flex-shrink-0"
-                  style={{ background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.35)" }}>
-                  {getInitials(prof.prenom, prof.nom)}
-                </div>
+                <ProfileAvatar
+                  path={prof.selfieUrl}
+                  initials={getInitials(prof.prenom, prof.nom)}
+                  size="w-12 h-12 sm:w-14 sm:h-14"
+                  textSize="text-base sm:text-lg"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h1 className="text-white font-bold text-base sm:text-xl leading-tight m-0">

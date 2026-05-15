@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { classService, EtatClasse } from "../../../../../services/ClassService";
 import ClassModals from "../../modals/ClassModals";
 import PublicationRightsService from "../../../../../services/PublicationRightsService";
+import accederService from "../../../../../services/accederService";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useSelector } from "react-redux";
 
@@ -129,32 +130,9 @@ const ClassesListContent = ({
         default:
           if (currentUserId) {
             try {
-              const rightsResponse =
-                await PublicationRightsService.getClassesWithRightsForUser(
-                  currentUserId
-                );
-              if (rightsResponse.success && rightsResponse.data) {
-                const classPromises = rightsResponse.data.map(
-                  async (classId) => {
-                    try {
-                      return await classService.obtenirClasse(classId);
-                    } catch (error) {
-                      console.error(`Error loading class ${classId}:`, error);
-                      return null;
-                    }
-                  }
-                );
-
-                const classesData = await Promise.all(classPromises);
-                data = classesData.filter((cls) => cls !== null);
-              } else {
-                data = [];
-              }
+              data = await classService.obtenirClassesUtilisateur(currentUserId);
             } catch (error) {
-              console.warn(
-                "Failed to load classes with publication rights:",
-                error
-              );
+              console.warn("Failed to load user classes:", error);
               data = [];
             }
           } else {
@@ -221,15 +199,14 @@ const ClassesListContent = ({
       await Promise.all(
         classes.map(async (classe) => {
           try {
-            const response = await fetch(
-              `${process.env.REACT_APP_API_BASE_URL}/acceder/demandes/classe/${classe.id}`
-            );
-            if (response.ok) {
-              const requests = await response.json();
+            const requests = await accederService.obtenirDemandesAccesPourClasse(classe.id);
+            if (requests && Array.isArray(requests)) {
               const pendingCount = requests.filter(
                 (req) => req.etat === "EN_ATTENTE"
               ).length;
               counts[classe.id] = pendingCount;
+            } else {
+              counts[classe.id] = 0;
             }
           } catch (error) {
             console.error(
@@ -252,6 +229,24 @@ const ClassesListContent = ({
     return publicationRights[classId].some((user) => user.id === currentUserId);
   };
 
+  const isModerator = (classe) => {
+    if (userRole === "administrateur") return true;
+    if (!classe) return false;
+    
+    // Check if user is the moderator assigned to the class
+    if (classe.moderator?.id === currentUserId || classe.moderatorId === currentUserId) return true;
+    
+    // Check if user is the creator (using various possible field names)
+    if (classe.createurId === currentUserId || classe.utilisateurId === currentUserId) return true;
+    
+    // Check if user has explicit moderation rights
+    if (publicationRights[classe.id]) {
+      return publicationRights[classe.id].some(user => user.id === currentUserId && user.peutModerer);
+    }
+    
+    return false;
+  };
+
   const applyFiltersAndSearch = () => {
     let filtered = [...classes];
 
@@ -259,19 +254,20 @@ const ClassesListContent = ({
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (cls) =>
-          cls.nom.toLowerCase().includes(searchLower) ||
-          cls.niveau.toLowerCase().includes(searchLower) ||
+          (cls.nom || "").toLowerCase().includes(searchLower) ||
+          (cls.niveau || "").toLowerCase().includes(searchLower) ||
+          (cls.codeActivation || "").toLowerCase().includes(searchLower) ||
           (cls.etablissement?.nom || "").toLowerCase().includes(searchLower)
       );
     }
 
     if (statusFilter !== "TOUS") {
-      filtered = filtered.filter((cls) => cls.etat === statusFilter);
+      filtered = filtered.filter((cls) => (cls.etat || cls.statut) === statusFilter);
     }
 
     if (etablissementFilter !== "TOUS") {
       filtered = filtered.filter(
-        (cls) => cls.etablissement?.id === etablissementFilter
+        (cls) => (cls.etablissement?.id || cls.etablissementId) === etablissementFilter
       );
     }
 
@@ -370,16 +366,45 @@ const ClassesListContent = ({
   };
 
   const handleAccessRequest = async () => {
+    if (!accessToken.trim()) {
+      setError("Veuillez entrer un token d'accès");
+      return;
+    }
+
     try {
       setActionLoading("access-request");
-      console.log("Processing access request with token:", accessToken);
+      setError("");
+      setSuccessMessage("");
+
+      console.log("Searching for class with token:", accessToken);
+      
+      // 1. Find class by activation code
+      const targetClass = await classService.obtenirClasseParCode(accessToken);
+      
+      if (!targetClass || !targetClass.id) {
+        throw new Error("Classe non trouvée avec ce code");
+      }
+
+      console.log("Found class:", targetClass);
+
+      // 2. Request access
+      const currentUserId = localStorage.getItem("userId");
+      await accederService.demanderAcces({
+        utilisateurId: currentUserId,
+        classeId: targetClass.id,
+        codeActivation: accessToken,
+        estParent: userRole === "parent"
+      });
+
+      setSuccessMessage("Demande d'accès envoyée avec succès au modérateur");
       setShowAccessRequestModal(false);
       setAccessToken("");
-      setSuccessMessage("Demande d'accès envoyée");
-      setError("");
+      
+      // Optional: reload counts or classes if needed
+      await loadClasses();
     } catch (error) {
       console.error("Error processing access request:", error);
-      setError("Token invalide ou erreur lors de la demande");
+      setError(error.message || "Token invalide ou erreur lors de la demande");
     } finally {
       setActionLoading(null);
     }
@@ -541,7 +566,7 @@ const ClassesListContent = ({
                       className={`bg-white/20 text-white ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-6 py-2'} rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5`}
                     >
                       <Key className={`${isMobile ? 'w-3.5 h-3.5' : 'w-5 h-5'}`} />
-                      {!isMobile && t('classes.accessToken', 'Accès Token')}
+                      {!isMobile && t('classes.accessRequest', 'Demande accès à une autre classe')}
                     </button>
                     <button
                       onClick={onNavigateToCreate}
@@ -820,8 +845,7 @@ const ClassesListContent = ({
                               onClick={() => handleEdit(classe)}
                               disabled={
                                 actionLoading === "edit" ||
-                                (userRole === "professeur" &&
-                                  !hasPublicationRights(classe.id))
+                                (userRole === "professeur" && !isModerator(classe))
                               }
                               className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed col-span-2"
                             >
@@ -837,8 +861,8 @@ const ClassesListContent = ({
 
                         {/* Secondary Row - More Compact */}
                         <div className="flex gap-1.5">
-                          {userRole === "administrateur" &&
-                            classe.etat === EtatClasse.ACTIF && (
+                          {(userRole === "administrateur" ||
+                            (userRole === "professeur" && isModerator(classe))) && (
                               <button
                                 onClick={() => handleManagePublicationRights(classe)}
                                 disabled={loadingRights[classe.id]}
@@ -854,8 +878,7 @@ const ClassesListContent = ({
                             )}
 
                           {(userRole === "administrateur" ||
-                            (userRole === "professeur" &&
-                              hasPublicationRights(classe.id))) && (
+                            (userRole === "professeur" && isModerator(classe))) && (
                             <button
                               onClick={() => setShowDeleteModal(classe)}
                               disabled={actionLoading === classe.id}

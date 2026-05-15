@@ -59,17 +59,31 @@ const CoursProgrammerContent = () => {
   const [launcherCourse, setLauncherCourse] = useState(null);
   const [launchLoading, setLaunchLoading] = useState(false);
   const [liveSession, setLiveSession] = useState(null); // { scheduledCourse, cours, isModerator }
+  const [filterClassId, setFilterClassId] = useState(""); // class filter
+  const didMountRef = React.useRef(false);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
+    const preselectedClassId = localStorage.getItem("selectedClassId");
+    if (preselectedClassId) {
+      localStorage.removeItem("selectedClassId");
+      setFilterClassId(preselectedClassId);
+    }
     if (userId) {
       setProfessorId(userId);
-      loadData(userId);
+      loadData(userId, preselectedClassId || null);
     } else {
       setError("ID du professeur non trouvé. Veuillez vous reconnecter.");
       setLoading(false);
     }
+    didMountRef.current = true;
   }, []);
+
+  // Reload when user manually changes the class filter dropdown
+  useEffect(() => {
+    if (!didMountRef.current || !professorId) return;
+    loadData(professorId, filterClassId || null);
+  }, [filterClassId]);
 
   // Handle auto-open if course is passed in state
   useEffect(() => {
@@ -84,62 +98,44 @@ const CoursProgrammerContent = () => {
 
   useEffect(() => {
     filterScheduledCourses();
-  }, [scheduledCourses, searchTerm, filterStatus]);
+  }, [scheduledCourses, searchTerm, filterStatus, filterClassId]);
 
-  const loadData = async (professorId) => {
+  const loadData = async (professorId, classIdFilter = null) => {
     try {
       setLoading(true);
       setError("");
-
-      console.log("Chargement des données pour le professeur:", professorId);
 
       const [coursesData, classesData] = await Promise.all([
         coursService.getCoursByProfesseur(professorId),
         classService.obtenirClassesUtilisateur(professorId),
       ]);
 
-      console.log("Cours récupérés:", coursesData);
-      console.log("Classes récupérées:", classesData);
-
       setCourses(coursesData || []);
       setClasses(classesData || []);
 
-      // Chargement de la programmation pour chaque cours
-      const scheduledPromises = (coursesData || []).map(async (course) => {
-        try {
-          const programmation =
-            await coursProgrammerService.obtenirProgrammationParCours(
-              course.id
-            );
-          return { course, programmation };
-        } catch (error) {
-          console.warn(
-            `Erreur lors du chargement de la programmation pour le cours ${course.id}:`,
-            error
-          );
-          return { course, programmation: [] };
-        }
+      const coursesMap = new Map((coursesData || []).map(c => [String(c.id), c]));
+
+      // Always load professor's own full schedule in one call
+      const [profScheduled, classScheduled] = await Promise.allSettled([
+        coursProgrammerService.obtenirProgrammationParProfesseur(professorId),
+        classIdFilter
+          ? coursProgrammerService.obtenirProgrammationParClasse(classIdFilter)
+          : Promise.resolve([]),
+      ]);
+
+      const profItems = profScheduled.status === "fulfilled" ? (profScheduled.value || []) : [];
+      const classItems = classScheduled.status === "fulfilled" ? (classScheduled.value || []) : [];
+
+      // Merge: start with class items (includes other professors), then add own items not already present
+      const merged = new Map();
+      [...classItems, ...profItems].forEach(sc => {
+        if (sc?.id) merged.set(String(sc.id), {
+          ...sc,
+          cours: sc.cours || coursesMap.get(String(sc.coursId)) || null,
+        });
       });
 
-      const scheduledResults = await Promise.allSettled(scheduledPromises);
-
-      const allScheduledCourses = [];
-      scheduledResults.forEach((result) => {
-        if (result.status === "fulfilled" && result.value.programmation) {
-          const { course, programmation } = result.value;
-          if (Array.isArray(programmation)) {
-            programmation.forEach((scheduled) => {
-              // Only include scheduled courses that belong to this professor
-              if (!scheduled.professeurId || scheduled.professeurId === professorId) {
-                allScheduledCourses.push({ ...scheduled, cours: course });
-              }
-            });
-          }
-        }
-      });
-
-      console.log("Cours programmés chargés:", allScheduledCourses);
-      setScheduledCourses(allScheduledCourses);
+      setScheduledCourses(Array.from(merged.values()));
     } catch (err) {
       console.error("Erreur lors du chargement des données:", err);
       setError("Erreur lors du chargement des données: " + err.message);
@@ -151,24 +147,25 @@ const CoursProgrammerContent = () => {
   const filterScheduledCourses = () => {
     let filtered = scheduledCourses;
 
+    // Class filter: keep only sessions that include this class in classesIds
+    if (filterClassId) {
+      filtered = filtered.filter(sc =>
+        Array.isArray(sc.classesIds) &&
+        sc.classesIds.some(id => String(id) === String(filterClassId))
+      );
+    }
+
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (scheduled) =>
-          scheduled.cours?.titre?.toLowerCase().includes(searchLower) ||
-          scheduled.lieu?.toLowerCase().includes(searchLower) ||
-          scheduled.description?.toLowerCase().includes(searchLower) ||
-          classes
-            .find((c) => scheduled.classesIds?.includes(c.id))
-            ?.nom?.toLowerCase()
-            .includes(searchLower)
+      filtered = filtered.filter(sc =>
+        sc.cours?.titre?.toLowerCase().includes(searchLower) ||
+        sc.lieu?.toLowerCase().includes(searchLower) ||
+        sc.description?.toLowerCase().includes(searchLower)
       );
     }
 
     if (filterStatus !== "all") {
-      filtered = filtered.filter(
-        (scheduled) => scheduled.etatCoursProgramme === filterStatus
-      );
+      filtered = filtered.filter(sc => sc.etatCoursProgramme === filterStatus);
     }
 
     setFilteredScheduledCourses(filtered);
@@ -456,6 +453,20 @@ const CoursProgrammerContent = () => {
           </div>
         </div>
 
+        {/* Class context banner */}
+        {filterClassId && (
+          <div className="mb-3 bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-indigo-700 text-xs sm:text-sm font-medium">
+              <Users size={14} className="flex-shrink-0" />
+              Cours publics de la classe : <strong>{classes.find(c => c.id === filterClassId)?.nom || filterClassId}</strong>
+            </div>
+            <button onClick={() => { setFilterClassId(""); loadData(professorId); }}
+              className="text-indigo-400 hover:text-indigo-600 flex-shrink-0">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Messages d'alerte */}
         {success && (
           <div className="mb-3 sm:mb-4 bg-green-50 border border-green-200 rounded-xl p-3 shadow-sm">
@@ -519,6 +530,22 @@ const CoursProgrammerContent = () => {
 
           {/* Row 2: Filters + controls */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Class filter */}
+            <div className="relative flex-1 min-w-[150px]">
+              <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+              <select
+                value={filterClassId}
+                onChange={(e) => setFilterClassId(e.target.value)}
+                className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+              >
+                <option value="">Toutes les classes</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nom}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+            </div>
+
             {/* Status filter */}
             <div className="relative flex-1 min-w-[130px]">
               <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />

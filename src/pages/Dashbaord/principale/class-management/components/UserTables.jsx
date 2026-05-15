@@ -21,6 +21,8 @@ const UserTables = ({
   onRejectRequest,
   currentTab,
   classId,
+  userRole,
+  isModerator,
 }) => {
   useEffect(() => {
     console.log(`UserTables - ${userType}:`, users);
@@ -337,55 +339,63 @@ const UserTables = ({
 
           {type === "access-requests" ? (
             <>
-              <Tooltip title="Approuver la demande">
-                <Button
-                  icon={<CheckOutlined />}
-                  size="small"
-                  type="primary"
-                  onClick={() => onApproveRequest(record)}
-                />
-              </Tooltip>
-              <Tooltip title="Rejeter la demande">
-                <Button
-                  icon={<CloseOutlined />}
-                  size="small"
-                  danger
-                  onClick={() => onRejectRequest(record)}
-                />
-              </Tooltip>
+              {isModerator && (
+                <>
+                  <Tooltip title="Approuver la demande">
+                    <Button
+                      icon={<CheckOutlined />}
+                      size="small"
+                      type="primary"
+                      onClick={() => onApproveRequest(record)}
+                    />
+                  </Tooltip>
+                  <Tooltip title="Rejeter la demande">
+                    <Button
+                      icon={<CloseOutlined />}
+                      size="small"
+                      danger
+                      onClick={() => onRejectRequest(record)}
+                    />
+                  </Tooltip>
+                </>
+              )}
             </>
           ) : (
             <>
-              <Popconfirm
-                title={`Retirer l'accès de cet utilisateur ?`}
-                description="Cette action retirera l'accès de l'utilisateur à cette classe."
-                onConfirm={() => onRemoveAccess(record)}
-                okText="Oui"
-                cancelText="Non"
-              >
-                <Tooltip title="Retirer l'accès à la classe">
-                  <Button icon={<UserDeleteOutlined />} size="small" danger />
-                </Tooltip>
-              </Popconfirm>
+              {isModerator && (
+                <Popconfirm
+                  title={`Retirer l'accès de cet utilisateur ?`}
+                  description="Cette action retirera l'accès de l'utilisateur à cette classe."
+                  onConfirm={() => onRemoveAccess(record)}
+                  okText="Oui"
+                  cancelText="Non"
+                >
+                  <Tooltip title="Retirer l'accès à la classe">
+                    <Button icon={<UserDeleteOutlined />} size="small" danger />
+                  </Tooltip>
+                </Popconfirm>
+              )}
 
-              {/* Show delete button for all user types including utilisateurs */}
-              <Popconfirm
-                title={`Supprimer définitivement cet utilisateur ?`}
-                description="Cette action supprimera complètement l'utilisateur du système. Cette action est irréversible."
-                onConfirm={() => handleDeleteUser(record.id, type)}
-                okText="Supprimer"
-                cancelText="Annuler"
-                okType="danger"
-              >
-                <Tooltip title="Supprimer l'utilisateur du système">
-                  <Button
-                    icon={<DeleteOutlined />}
-                    size="small"
-                    danger
-                    type="primary"
-                  />
-                </Tooltip>
-              </Popconfirm>
+              {/* Show delete button only for administrators */}
+              {(userRole === "ADMIN" || userRole === "ROLE_ADMIN" || userRole === "administrateur") && (
+                <Popconfirm
+                  title={`Supprimer définitivement cet utilisateur ?`}
+                  description="Cette action supprimera complètement l'utilisateur du système. Cette action est irréversible."
+                  onConfirm={() => handleDeleteUser(record.id, type)}
+                  okText="Supprimer"
+                  cancelText="Annuler"
+                  okType="danger"
+                >
+                  <Tooltip title="Supprimer l'utilisateur du système">
+                    <Button
+                      icon={<DeleteOutlined />}
+                      size="small"
+                      danger
+                      type="primary"
+                    />
+                  </Tooltip>
+                </Popconfirm>
+              )}
             </>
           )}
         </Space>

@@ -23,6 +23,41 @@ import { rejectionService } from "../../../../services/RejectionService";
 import { minioS3Service } from "../../../../services/minioS3";
 import { useTranslation } from "../../../../hooks/useTranslation";
 
+// Resolves MinIO path or raw URL into a presigned URL, with unmount safety
+const ProfilePhotoAvatar = ({ user }) => {
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const path = user?.selfieUrl;
+  useEffect(() => {
+    if (!path) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const url = path.startsWith("http")
+          ? path
+          : await minioS3Service.getMediaUrlByPath(path);
+        if (!cancelled && url) setPhotoUrl(url);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [path]);
+
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={`${user?.prenom} ${user?.nom}`}
+        className="h-16 w-16 rounded-full object-cover shadow-lg"
+        onError={() => setPhotoUrl(null)}
+      />
+    );
+  }
+  return (
+    <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
+      {user?.nom?.charAt(0)}{user?.prenom?.charAt(0)}
+    </div>
+  );
+};
+
 // Image Modal Component for zooming - Updated with better z-index
 const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
   const [zoom, setZoom] = useState(1);
@@ -661,10 +696,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
                   {/* User Avatar and Name */}
                   <div className="flex items-center mb-6">
-                    <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
-                      {user?.nom?.charAt(0)}
-                      {user?.prenom?.charAt(0)}
-                    </div>
+                    <ProfilePhotoAvatar user={user} />
                     <div className="ml-4">
                       <div className="text-xl font-bold text-slate-900">
                         {user?.nom} {user?.prenom}
