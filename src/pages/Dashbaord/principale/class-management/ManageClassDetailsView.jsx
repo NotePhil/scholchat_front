@@ -853,6 +853,28 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
     }
   };
 
+  // Map { professorId: boolean } of publication rights for professors in this class
+  const publicationRightsMap = Object.fromEntries(
+    (usersWithPublicationRights || []).map((u) => [u.id, true])
+  );
+
+  const handleTogglePublicationRights = async (professor, grant) => {
+    try {
+      if (grant) {
+        await PublicationRightsService.assignPublicationRights(professor.id, classId, true, false);
+        message.success(`Droit de publication accordé à ${professor.prenom} ${professor.nom}`);
+      } else {
+        await PublicationRightsService.removePublicationRights(professor.id, classId);
+        message.success(`Droit de publication retiré à ${professor.prenom} ${professor.nom}`);
+      }
+      // Refresh publication rights list
+      const rightsResult = await PublicationRightsService.getUsersWithRightsForClass(classId);
+      if (rightsResult.success) setUsersWithPublicationRights(rightsResult.data || []);
+    } catch (err) {
+      message.error(err.message || "Erreur lors de la mise à jour des droits de publication");
+    }
+  };
+
   const handleViewUser = (user) => {
     if (!user) {
       console.error("Cannot view user: user is null or undefined");
@@ -1830,6 +1852,23 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                       {classDetails.etat === "ACTIF" ? "Actif" : classDetails.etat === "EN_ATTENTE_APPROBATION" ? "En attente" : "Inactif"}
                     </span>
                   )}
+                  {/* Role badge */}
+                  {(() => {
+                    const isCreator = classDetails?.creatorId === currentUserId || classDetails?.creator_id === currentUserId;
+                    const isMod = classDetails?.moderator?.id === currentUserId || classDetails?.moderatorId === currentUserId;
+                    const hasPubRight = usersWithPublicationRights?.some(u => u.id === currentUserId);
+                    let label, bg, color;
+                    if (isCreator)         { label = "Créateur";             bg = "#eef2ff"; color = "#4f46e5"; }
+                    else if (isMod)        { label = "Modérateur";           bg = "#ecfeff"; color = "#0891b2"; }
+                    else if (hasPubRight)  { label = "Droit de publication"; bg = "#f5f3ff"; color = "#7c3aed"; }
+                    else                   { label = "Membre";               bg = "#f8fafc"; color = "#64748b"; }
+                    return (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+                        style={{ background: bg, color, border: `1px solid ${color}33` }}>
+                        {label}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   {classDetails?.niveau && <span className="text-blue-100 text-xs">{classDetails.niveau}</span>}
@@ -2056,6 +2095,8 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
               userType="professeurs"
               onViewUser={handleViewUser} 
               onRemoveAccess={handleRemoveAccess} 
+              onTogglePublicationRights={isUserModerator() ? handleTogglePublicationRights : undefined}
+              publicationRightsMap={publicationRightsMap}
               currentTab={activeTab}
               userRole={userRole}
               isModerator={isUserModerator()}
@@ -2165,10 +2206,10 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex flex-col">
                   <h3 className="text-sm font-bold text-slate-800">Cours programmés</h3>
-                  <Text type="secondary" className="text-xs">Cours publics de la classe (visibles par tous les membres)</Text>
+                  <Text type="secondary" className="text-xs">Cours de la classe (visibles par tous les membres)</Text>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Tag color="blue">{courses.filter(c => !c.participantsIds?.length).length} cours publics</Tag>
+                  <Tag color="blue">{courses.length} cours</Tag>
                   {onNavigateToCoursManagement && (
                     <Button
                       size="small"
@@ -2191,7 +2232,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 </div>
               </div>
               <Table
-                dataSource={courses.filter(c => !c.participantsIds?.length)}
+                dataSource={courses}
                 rowKey="id"
                 columns={[
                   { title: 'Cours', dataIndex: ['cours', 'titre'], key: 'titre', render: (v, r) => v || r.description || '—' },
@@ -2204,7 +2245,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                   }},
                 ]}
                 pagination={{ pageSize: 10 }}
-                locale={{ emptyText: "Aucun cours public programmé pour cette classe" }}
+                locale={{ emptyText: "Aucun cours programmé pour cette classe" }}
               />
             </div>
           )}

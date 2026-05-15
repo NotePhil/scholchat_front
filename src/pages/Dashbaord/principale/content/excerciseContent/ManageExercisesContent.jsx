@@ -584,7 +584,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
               onCancel={handleBackToList}
               onError={setError}
               onSuccess={setSuccessMessage}
-              defaultClassId={selectedClassId}
+              defaultClassId={filterClassId}
             />
           </div>
         )}

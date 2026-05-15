@@ -726,7 +726,8 @@ const CreateClassContent = ({
         niveau: formData.niveau.trim(),
       };
 
-      // Add moderatorId if a moderator is selected
+      // Add moderatorId if a different moderator is selected, always send creatorId
+      classData.creatorId = currentUserId;
       if (formData.moderator) {
         classData.moderatorId = formData.moderator;
       }
@@ -755,18 +756,6 @@ const CreateClassContent = ({
       const createdClassId = response.classe?.id || response.id;
       console.log("Extracted class ID:", createdClassId);
       setCreatedClassId(createdClassId);
-
-      // Assign publication rights to creator
-      if (currentUserId && createdClassId) {
-        const rightsAssigned = await assignPublicationRightsToCreator(
-          createdClassId
-        );
-        if (!rightsAssigned) {
-          console.warn(
-            "Class created but publication rights assignment failed"
-          );
-        }
-      }
 
       setSuccess(true);
       setCountdown(5);
@@ -1090,7 +1079,7 @@ const CreateClassContent = ({
                               ? t('classes.create.form.loading.professors', "Chargement des professeurs...")
                               : t('classes.create.form.select.moderator', "Vous serez le modérateur par défaut")}
                           </option>
-                          {professors.map((professor) => (
+                          {professors.filter((professor) => professor.id !== currentUserId).map((professor) => (
                             <option key={professor.id} value={professor.id}>
                               {professor.nom} {professor.prenom}
                             </option>

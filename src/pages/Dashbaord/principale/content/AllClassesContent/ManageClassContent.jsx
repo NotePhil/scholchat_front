@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Space, Typography, Alert, Button, message, Spin, Input, Modal, Tag } from "antd";
-import { BookOutlined, SearchOutlined, KeyOutlined, CheckCircleOutlined, ClockCircleOutlined, LockOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { Typography, Alert, Button, message, Spin, Input, Modal } from "antd";
+import { SearchOutlined, KeyOutlined, CheckCircleOutlined, ClockCircleOutlined, LockOutlined, UsergroupAddOutlined, SendOutlined } from "@ant-design/icons";
 import { classService } from "../../../../../services/ClassService";
 import AccederService from "../../../../../services/accederService";
 import ManageClassList from "../../class-management/ManageClassList";
@@ -8,31 +8,34 @@ import ManageClassDetailsView from "../../class-management/ManageClassDetailsVie
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useSelector } from "react-redux";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
   const { t } = useTranslation();
   const isMobile = useSelector((state) => state.ui.isMobile);
-  const [classes, setClasses] = useState([]);
+  const [classes, setClasses] = useState([]);                // access-only (member)
+  const [publicationClasses, setPublicationClasses] = useState([]); // pub rights only
+  const [assignedModeratorClasses, setAssignedModeratorClasses] = useState([]); // moderator but not creator
+  const [moderatedClasses, setModeratedClasses] = useState([]);     // created by user
   const [selectedClassId, setSelectedClassId] = useState(tabData?.classId || null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Unified search state
-  const [globalSearch, setGlobalSearch] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
-  const [globalSearchResults, setGlobalSearchResults] = useState([]);
-  const [globalSearchLoading, setGlobalSearchLoading] = useState(false);
-  const [globalSearchDone, setGlobalSearchDone] = useState(false);
+  // Join class modal state (replaces the top search bar)
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
+  const [joinSearch, setJoinSearch] = useState("");
+  const [joinSearchResults, setJoinSearchResults] = useState([]);
+  const [joinSearchLoading, setJoinSearchLoading] = useState(false);
+  const [joinSearchDone, setJoinSearchDone] = useState(false);
   const [myClassIds, setMyClassIds] = useState(new Set());
   const [accessStatusMap, setAccessStatusMap] = useState({});
 
-  // Access request modal state
-  const [accessModal, setAccessModal] = useState({ open: false, classe: null });
-  const [activationCode, setActivationCode] = useState("");
-  const [requestLoading, setRequestLoading] = useState(false);
+  // Inline access request state (no separate modal)
+  const [expandedAccessId, setExpandedAccessId] = useState(null); // which class row is expanded
+  const [activationCodes, setActivationCodes] = useState({}); // { [classId]: code }
+  const [requestLoadingId, setRequestLoadingId] = useState(null); // which class is submitting
 
   const userId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
   const currentUserRole = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
@@ -87,17 +90,15 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
       setError("");
 
       const userId = getUserId();
-      if (!userId) {
-        return;
-      }
+      if (!userId) return;
 
-      // Admin sees ALL classes, gestionnaire sees classes in their establishments, others see their own
       const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase();
-      let data;
+
       if (selectedRole.includes("ADMIN")) {
-        data = await classService.obtenirToutesLesClasses();
+        const data = await classService.obtenirToutesLesClasses();
+        setClasses(data || []);
+        setPublicationClasses([]);
       } else if (selectedRole.includes("GESTIONNAIRE")) {
-        // Get all classes then filter by gestionnaire's establishments
         const allClasses = await classService.obtenirToutesLesClasses();
         try {
           const token = localStorage.getItem("accessToken");
@@ -107,19 +108,62 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
           if (etabResp.ok) {
             const allEtabs = await etabResp.json();
             const myEtabIds = allEtabs.filter(e => e.gestionnaireId === userId).map(e => e.id);
-            data = (allClasses || []).filter(c => myEtabIds.includes(c.etablissementId));
+            setClasses((allClasses || []).filter(c => myEtabIds.includes(c.etablissementId)));
           } else {
-            data = [];
+            setClasses([]);
           }
         } catch (e) {
-          data = [];
+          setClasses([]);
         }
+        setPublicationClasses([]);
       } else {
-        data = await classService.obtenirClassesUtilisateur(userId);
-      }
-      setClasses(data || []);
+        // Fetch both sources in parallel:
+        // 1. New endpoint: classes with peutModerer flag (created vs granted rights)
+        // 2. Acceder endpoint: all classes user has access to (includes members)
+        const [detailResult, accResult] = await Promise.allSettled([
+          classService.axiosRequest(`/droits-publication/utilisateurs/${userId}/classes-avec-droits`, { method: "get" }),
+          classService.axiosRequest(`/acceder/utilisateurs/${userId}/classes`, { method: "get" }),
+        ]);
 
-      console.log("Fetched user classes:", data);
+        // Classes with publication rights detail: [{ classe, peutPublier, peutModerer }]
+        const detailList = detailResult.status === "fulfilled" && Array.isArray(detailResult.value)
+          ? detailResult.value : [];
+
+        // All accessible classes (members + rights)
+        const accClasses = accResult.status === "fulfilled" && Array.isArray(accResult.value)
+          ? accResult.value : [];
+
+        // Split publication-rights classes into 3 buckets:
+        // 1. Created by user (estCreateur=true, peutModerer=true)
+        // 2. Moderated but not created (peutModerer=true, estCreateur=false)
+        // 3. Publication rights only (peutModerer=false)
+        const moderated = detailList
+          .filter(d => d.peutModerer && d.estCreateur)
+          .map(d => ({ ...d.classe, _classRole: "created" }));
+
+        const assignedModerator = detailList
+          .filter(d => d.peutModerer && !d.estCreateur)
+          .map(d => ({ ...d.classe, _classRole: "assigned-moderator" }));
+
+        const granted = detailList
+          .filter(d => !d.peutModerer)
+          .map(d => ({ ...d.classe, _classRole: "publication" }));
+
+        // Build set of all IDs that have publication rights
+        const pubIds = new Set(detailList.map(d => d.classe?.id).filter(Boolean));
+
+        // Access-only: in acceder but NOT in publication rights
+        const accessOnly = accClasses
+          .filter(c => !pubIds.has(c.id))
+          .map(c => ({ ...c, _classRole: "access" }));
+
+        setModeratedClasses(moderated);
+        setAssignedModeratorClasses(assignedModerator);
+        setPublicationClasses(granted);
+        setClasses(accessOnly);
+      }
+
+      console.log("Fetched user classes done");
     } catch (error) {
       console.error("Error fetching user classes:", error);
       setError(t('classes.manage.errorLoad', "Erreur lors du chargement de vos classes"));
@@ -135,24 +179,27 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
     setSuccessMessage(t('classes.manage.successRefresh', "Données actualisées avec succès"));
   };
 
-  const handleClearSearch = () => {
-    setGlobalSearch("");
-    setAppliedSearch("");
-    setGlobalSearchResults([]);
-    setGlobalSearchDone(false);
+  const handleClearJoinSearch = () => {
+    setJoinSearch("");
+    setJoinSearchResults([]);
+    setJoinSearchDone(false);
     setAccessStatusMap({});
     setMyClassIds(new Set());
   };
 
+  const handleCloseJoinModal = () => {
+    setJoinModalOpen(false);
+    handleClearJoinSearch();
+  };
+
   // Search ALL classes by name, level, or activation code
-  const handleGlobalSearch = async () => {
-    if (!globalSearch.trim()) return;
-    setAppliedSearch(globalSearch.trim());
+  const handleJoinSearch = async () => {
+    if (!joinSearch.trim()) return;
     try {
-      setGlobalSearchLoading(true);
-      setGlobalSearchDone(false);
+      setJoinSearchLoading(true);
+      setJoinSearchDone(false);
       const all = await classService.obtenirToutesLesClasses();
-      const term = globalSearch.toLowerCase().trim();
+      const term = joinSearch.toLowerCase().trim();
       const results = (all || []).filter(
         (c) =>
           c.nom?.toLowerCase().includes(term) ||
@@ -162,7 +209,7 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
 
       // Check access status for each result
       const statusMap = {};
-      const myIds = new Set(classes.map((c) => c.id));
+      const myIds = new Set([...classes, ...publicationClasses, ...assignedModeratorClasses, ...moderatedClasses].map((c) => c.id));
       setMyClassIds(myIds);
 
       await Promise.all(
@@ -184,36 +231,37 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
       );
 
       setAccessStatusMap(statusMap);
-      setGlobalSearchResults(results);
-      setGlobalSearchDone(true);
+      setJoinSearchResults(results);
+      setJoinSearchDone(true);
     } catch (err) {
       message.error("Erreur lors de la recherche");
     } finally {
-      setGlobalSearchLoading(false);
+      setJoinSearchLoading(false);
     }
   };
 
-  // Submit access request
-  const handleRequestAccess = async () => {
-    if (!activationCode.trim()) {
+  // Submit inline access request for a specific class
+  const handleRequestAccess = async (cls) => {
+    const code = (activationCodes[cls.id] || "").trim();
+    if (!code) {
       message.error("Veuillez entrer le code d'activation de la classe");
       return;
     }
     try {
-      setRequestLoading(true);
+      setRequestLoadingId(cls.id);
       await AccederService.demanderAcces({
         utilisateurId: userId,
-        classeId: accessModal.classe.id,
-        codeActivation: activationCode.trim(),
+        classeId: cls.id,
+        codeActivation: code,
       });
       message.success("Demande d'accès envoyée ! En attente d'approbation.");
-      setAccessStatusMap((prev) => ({ ...prev, [accessModal.classe.id]: "EN_ATTENTE" }));
-      setAccessModal({ open: false, classe: null });
-      setActivationCode("");
+      setAccessStatusMap((prev) => ({ ...prev, [cls.id]: "EN_ATTENTE" }));
+      setExpandedAccessId(null);
+      setActivationCodes((prev) => { const n = { ...prev }; delete n[cls.id]; return n; });
     } catch (err) {
       message.error(err.message || "Erreur lors de la demande d'accès");
     } finally {
-      setRequestLoading(false);
+      setRequestLoadingId(null);
     }
   };
 
@@ -267,7 +315,7 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
         {!selectedClassId ? (
           <div className="w-full px-3 sm:px-6 py-3 sm:py-6">
 
-                        {error && (
+            {error && (
               <Alert
                 message={error}
                 type="error"
@@ -289,103 +337,43 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
               />
             )}
 
-            {/* ── UNIFIED SEARCH (single bar + single button) ── */}
-            <div className="mb-4 bg-white border border-slate-100 rounded-xl shadow-sm p-4">
-              <div className="flex gap-2">
-                <Input
-                  size="large"
-                  placeholder="Rechercher une classe par code, nom ou niveau..."
-                  value={globalSearch}
-                  onChange={e => setGlobalSearch(e.target.value)}
-                  onPressEnter={handleGlobalSearch}
-                  prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
-                  suffix={
-                    globalSearch ? (
-                      <span
-                        onClick={handleClearSearch}
-                        style={{ cursor: "pointer", color: "#94a3b8", fontSize: 13 }}
-                      >✕</span>
-                    ) : null
-                  }
-                  style={{ borderRadius: 10 }}
-                />
-                <Button
-                  type="primary"
-                  size="large"
-                  icon={<SearchOutlined />}
-                  loading={globalSearchLoading}
-                  onClick={handleGlobalSearch}
-                  style={{ borderRadius: 10, minWidth: 130, background: "#4f46e5", borderColor: "#4f46e5" }}
-                >
-                  Rechercher
-                </Button>
-              </div>
-
-              {/* Results after search */}
-              {globalSearchDone && globalSearchResults.length === 0 && (
-                <Alert
-                  style={{ marginTop: 12, borderRadius: 8 }}
-                  type="info"
-                  showIcon
-                  message="Aucune classe trouvée avec ce code ou ce nom."
-                />
-              )}
-
-              {globalSearchDone && globalSearchResults.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {globalSearchResults.map(cls => {
-                    const status = accessStatusMap[cls.id];
-                    const hasAccess = myClassIds.has(cls.id) || status === "APPROVED";
-                    const isPending = status === "EN_ATTENTE";
-                    return (
-                      <div key={cls.id}
-                        className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-slate-800 truncate">{cls.nom}</p>
-                          <p className="text-xs text-slate-500">
-                            {cls.niveau}{cls.etablissement?.nom ? ` • ${cls.etablissement.nom}` : ""}
-                            {cls.codeActivation && (
-                              <span className="ml-2 font-mono text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
-                                Code : {cls.codeActivation}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex-shrink-0">
-                          {hasAccess ? (
-                            <>
-                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full mr-2">
-                                <CheckCircleOutlined /> Accès accordé
-                              </span>
-                              <Button size="small" onClick={() => handleSelectClass(cls.id)} style={{ borderRadius: 6 }}>
-                                Gérer
-                              </Button>
-                            </>
-                          ) : isPending ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                              <ClockCircleOutlined /> Demande en attente
-                            </span>
-                          ) : (
-                            <Button
-                              size="small"
-                              type="primary"
-                              icon={<LockOutlined />}
-                              onClick={() => { setAccessModal({ open: true, classe: cls }); setActivationCode(""); }}
-                              style={{ borderRadius: 6, background: "#4f46e5", borderColor: "#4f46e5" }}
-                            >
-                              Demander l'accès
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+            {/* ── JOIN ANOTHER CLASS BANNER ── */}
+            <div
+              className="mb-5 flex items-center justify-between gap-4 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
+                  <UsergroupAddOutlined style={{ color: "#4f46e5", fontSize: 18 }} />
                 </div>
-              )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-indigo-900 leading-tight">
+                    Rejoindre une autre classe
+                  </p>
+                  <p className="text-xs text-indigo-500 mt-0.5 hidden sm:block">
+                    Recherchez une classe par nom, niveau ou code et demandez l'accès.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                onClick={() => setJoinModalOpen(true)}
+                style={{
+                  borderRadius: 8,
+                  background: "#4f46e5",
+                  borderColor: "#4f46e5",
+                  flexShrink: 0,
+                }}
+              >
+                {isMobile ? "Rechercher" : "Demander l'accès"}
+              </Button>
             </div>
 
             <ManageClassList
               classes={classes}
+              publicationClasses={publicationClasses}
+              assignedModeratorClasses={assignedModeratorClasses}
+              moderatedClasses={moderatedClasses}
               loading={loading}
               error={error}
               successMessage={successMessage}
@@ -396,7 +384,7 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
               onNavigateToCreate={setActiveTab ? () => setActiveTab("create-class") : undefined}
               currentUserId={userId}
               currentUserRole={localStorage.getItem("userRole") || ""}
-              externalSearch={globalSearchDone ? appliedSearch : ""}
+              externalSearch=""
             />
           </div>
         ) : (
@@ -414,65 +402,225 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
         )}
       </div>
 
-      {/* Access Request Modal */}
+      {/* ── JOIN CLASS MODAL ── */}
       <Modal
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <KeyOutlined style={{ color: "#667eea" }} />
-            <span>Demande d'accès — {accessModal.classe?.nom}</span>
-          </div>
-        }
-        open={accessModal.open}
-        onCancel={() => { setAccessModal({ open: false, classe: null }); setActivationCode(""); }}
-        footer={null}
-        width={isMobile ? "95%" : 480}
-        centered
-      >
-        {accessModal.classe && (
-          <div>
-            <div style={{ background: "#f8f9fa", borderRadius: 8, padding: "12px 16px", marginBottom: 20 }}>
-              <div style={{ fontWeight: 600, color: "#2c3e50" }}>{accessModal.classe.nom}</div>
-              <div style={{ fontSize: 13, color: "#718096", marginTop: 4 }}>
-                Niveau : {accessModal.classe.niveau}
-                {accessModal.classe.etablissement?.nom && ` • ${accessModal.classe.etablissement.nom}`}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <UsergroupAddOutlined style={{ color: "#4f46e5", fontSize: 16 }} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: "#1e293b" }}>
+                Rejoindre une classe
+              </div>
+              <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 400 }}>
+                Recherchez par nom, niveau ou code d'activation
               </div>
             </div>
+          </div>
+        }
+        open={joinModalOpen}
+        onCancel={handleCloseJoinModal}
+        footer={null}
+        width={isMobile ? "95%" : 560}
+        centered
+        styles={{ body: { paddingTop: 8 } }}
+      >
+        {/* Search bar inside modal */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <Input
+            size="large"
+            placeholder="Nom, niveau ou code de la classe..."
+            value={joinSearch}
+            onChange={e => { setJoinSearch(e.target.value); if (!e.target.value) handleClearJoinSearch(); }}
+            onPressEnter={handleJoinSearch}
+            prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+            suffix={
+              joinSearch ? (
+                <span
+                  onClick={handleClearJoinSearch}
+                  style={{ cursor: "pointer", color: "#94a3b8", fontSize: 13 }}
+                >✕</span>
+              ) : null
+            }
+            style={{ borderRadius: 10 }}
+            autoFocus
+          />
+          <Button
+            type="primary"
+            size="large"
+            icon={<SearchOutlined />}
+            loading={joinSearchLoading}
+            onClick={handleJoinSearch}
+            style={{ borderRadius: 10, background: "#4f46e5", borderColor: "#4f46e5", flexShrink: 0 }}
+          >
+            Rechercher
+          </Button>
+        </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <Text strong style={{ display: "block", marginBottom: 8 }}>
-                Code d'activation de la classe *
-              </Text>
-              <Input
-                placeholder="Entrez le code fourni par le modérateur..."
-                value={activationCode}
-                onChange={(e) => setActivationCode(e.target.value)}
-                onPressEnter={handleRequestAccess}
-                prefix={<LockOutlined style={{ color: "#aaa" }} />}
-                size="large"
-                style={{ borderRadius: 8 }}
-              />
-              <Text type="secondary" style={{ fontSize: 12, marginTop: 6, display: "block" }}>
-                Demandez le code d'activation au modérateur ou à l'établissement.
-              </Text>
-            </div>
+        {/* Loading spinner */}
+        {joinSearchLoading && (
+          <div style={{ textAlign: "center", padding: "32px 0" }}>
+            <Spin size="large" />
+            <p style={{ marginTop: 12, color: "#94a3b8", fontSize: 13 }}>
+              Recherche en cours…
+            </p>
+          </div>
+        )}
 
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <Button
-                onClick={() => { setAccessModal({ open: false, classe: null }); setActivationCode(""); }}
-                style={{ borderRadius: 8 }}
-              >
-                Annuler
-              </Button>
-              <Button
-                type="primary"
-                loading={requestLoading}
-                onClick={handleRequestAccess}
-                icon={<KeyOutlined />}
-                style={{ borderRadius: 8, background: "#667eea", borderColor: "#667eea" }}
-              >
-                Envoyer la demande
-              </Button>
-            </div>
+        {/* No results */}
+        {!joinSearchLoading && joinSearchDone && joinSearchResults.length === 0 && (
+          <Alert
+            style={{ borderRadius: 8 }}
+            type="info"
+            showIcon
+            message="Aucune classe trouvée avec ce nom, niveau ou code."
+          />
+        )}
+
+        {/* Results list */}
+        {!joinSearchLoading && joinSearchDone && joinSearchResults.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <p style={{ fontSize: 12, color: "#94a3b8", margin: "0 0 4px" }}>
+              {joinSearchResults.length} résultat{joinSearchResults.length > 1 ? "s" : ""} trouvé{joinSearchResults.length > 1 ? "s" : ""}
+            </p>
+            {joinSearchResults.map(cls => {
+              const status = accessStatusMap[cls.id];
+              const hasAccess = myClassIds.has(cls.id) || status === "APPROVED";
+              const isPending = status === "EN_ATTENTE";
+              const isExpanded = expandedAccessId === cls.id;
+
+              return (
+                <div
+                  key={cls.id}
+                  style={{
+                    borderRadius: 10,
+                    border: isExpanded ? "1px solid #c7d2fe" : "1px solid #e2e8f0",
+                    background: isExpanded ? "#f5f3ff" : "#f8fafc",
+                    overflow: "hidden",
+                    transition: "border-color 0.2s, background 0.2s",
+                  }}
+                >
+                  {/* Class row */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "12px 14px",
+                  }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {cls.nom}
+                      </p>
+                      <p style={{ margin: "3px 0 0", fontSize: 12, color: "#64748b" }}>
+                        {cls.niveau}{cls.etablissement?.nom ? ` • ${cls.etablissement.nom}` : ""}
+                      </p>
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      {hasAccess ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                            fontSize: 11, fontWeight: 600, color: "#15803d",
+                            background: "#f0fdf4", border: "1px solid #bbf7d0",
+                            padding: "3px 10px", borderRadius: 20
+                          }}>
+                            <CheckCircleOutlined /> Accès accordé
+                          </span>
+                          <Button
+                            size="small"
+                            onClick={() => { handleSelectClass(cls.id); handleCloseJoinModal(); }}
+                            style={{ borderRadius: 6 }}
+                          >
+                            Gérer
+                          </Button>
+                        </div>
+                      ) : isPending ? (
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          fontSize: 11, fontWeight: 600, color: "#92400e",
+                          background: "#fffbeb", border: "1px solid #fde68a",
+                          padding: "3px 10px", borderRadius: 20
+                        }}>
+                          <ClockCircleOutlined /> En attente
+                        </span>
+                      ) : !isExpanded ? (
+                        <Button
+                          size="small"
+                          type="primary"
+                          icon={<LockOutlined />}
+                          onClick={() => {
+                            setExpandedAccessId(cls.id);
+                            setActivationCodes(prev => ({ ...prev, [cls.id]: "" }));
+                          }}
+                          style={{ borderRadius: 6, background: "#4f46e5", borderColor: "#4f46e5" }}
+                        >
+                          Demander l'accès
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          onClick={() => setExpandedAccessId(null)}
+                          style={{ borderRadius: 6, color: "#64748b" }}
+                        >
+                          Annuler
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Inline access request panel — expands below the row */}
+                  {isExpanded && (
+                    <div style={{
+                      borderTop: "1px solid #c7d2fe",
+                      padding: "14px 14px 16px",
+                      background: "#fff",
+                    }}>
+                      <Text strong style={{ fontSize: 13, color: "#374151", display: "block", marginBottom: 8 }}>
+                        Code d'activation de la classe *
+                      </Text>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <Input
+                          placeholder="Entrez le code fourni par le modérateur…"
+                          value={activationCodes[cls.id] || ""}
+                          onChange={e => setActivationCodes(prev => ({ ...prev, [cls.id]: e.target.value }))}
+                          onPressEnter={() => handleRequestAccess(cls)}
+                          prefix={<LockOutlined style={{ color: "#a5b4fc" }} />}
+                          style={{ borderRadius: 8, flex: 1 }}
+                          autoFocus
+                        />
+                        <Button
+                          type="primary"
+                          icon={<SendOutlined />}
+                          loading={requestLoadingId === cls.id}
+                          onClick={() => handleRequestAccess(cls)}
+                          style={{ borderRadius: 8, background: "#4f46e5", borderColor: "#4f46e5", flexShrink: 0 }}
+                        >
+                          Envoyer
+                        </Button>
+                      </div>
+                      <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: "block" }}>
+                        Demandez le code d'activation au modérateur ou à l'établissement.
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Empty state before search */}
+        {!joinSearchLoading && !joinSearchDone && (
+          <div style={{ textAlign: "center", padding: "24px 0 8px", color: "#94a3b8" }}>
+            <UsergroupAddOutlined style={{ fontSize: 36, marginBottom: 10, opacity: 0.4 }} />
+            <p style={{ margin: 0, fontSize: 13 }}>
+              Entrez un nom, un niveau ou un code pour trouver une classe.
+            </p>
           </div>
         )}
       </Modal>

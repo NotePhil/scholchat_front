@@ -1,12 +1,12 @@
-// components/UserTables.jsx - UPDATED WITH DATE DE CRÉATION FOR ALL USER TYPES
 import React, { useState, useEffect } from "react";
-import { Table, Tag, Button, Space, Popconfirm, Tooltip, message } from "antd";
+import { Table, Tag, Button, Space, Popconfirm, Tooltip, Switch, message } from "antd";
 import {
   EyeOutlined,
   UserDeleteOutlined,
   CheckOutlined,
   CloseOutlined,
   DeleteOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { scholchatService } from "../../../../../services/ScholchatService";
 
@@ -16,9 +16,11 @@ const UserTables = ({
   userType,
   onViewUser,
   onRemoveAccess,
-  onDeleteUser, // Handler for deleting users from system
+  onDeleteUser,
   onApproveRequest,
   onRejectRequest,
+  onTogglePublicationRights,
+  publicationRightsMap,
   currentTab,
   classId,
   userRole,
@@ -125,6 +127,23 @@ const UserTables = ({
           title: "Matricule",
           dataIndex: "matriculeProfesseur",
           key: "matriculeProfesseur",
+        },
+        {
+          title: "Droit de publication",
+          key: "droitPublication",
+          render: (_, record) => {
+            if (!isModerator) return null;
+            const hasRight = publicationRightsMap?.[record.id] ?? false;
+            return (
+              <Switch
+                size="small"
+                checked={hasRight}
+                checkedChildren="Oui"
+                unCheckedChildren="Non"
+                onChange={(checked) => onTogglePublicationRights?.(record, checked)}
+              />
+            );
+          },
         },
         {
           title: "Date de création",
