@@ -63,7 +63,15 @@ const ParentsContent = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const rawParents = await scholchatService.getAllParents();
+      const role = localStorage.getItem("userRole")?.toUpperCase();
+      const userId = localStorage.getItem("userId");
+
+      let rawParents;
+      if (role === "PROFESSOR" || role === "ROLE_PROFESSOR") {
+        rawParents = await parentService.getParentsByProfesseur(userId);
+      } else {
+        rawParents = await scholchatService.getAllParents();
+      }
       const safeParents = Array.isArray(rawParents) ? rawParents : [];
 
       const enriched = await Promise.all(
@@ -178,7 +186,7 @@ const ParentsContent = () => {
     }`.toUpperCase();
   };
 
-  const isAdmin = userRole === "ADMIN";
+  const isAdmin = userRole === "ADMIN" || userRole === "ROLE_ADMIN";
 
   if (loading && parents.length === 0) {
     return (

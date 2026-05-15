@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import accederService from "../../../../../services/accederService";
+import parentService from "../../../../../services/parentService";
 import { Badge } from "antd";
 import { motion } from "framer-motion";
 import StudentModal from "../../modals/StudentModal";
@@ -67,7 +68,15 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const studentsData = await scholchatService.getAllStudents();
+      const role = localStorage.getItem("userRole")?.toUpperCase();
+      const userId = localStorage.getItem("userId");
+
+      let studentsData;
+      if (role === "PROFESSOR" || role === "ROLE_PROFESSOR") {
+        studentsData = await parentService.getElevesByProfesseur(userId);
+      } else {
+        studentsData = await scholchatService.getAllStudents();
+      }
       const safeStudents = Array.isArray(studentsData) ? studentsData : [];
 
       // Fetch classes per student using /acceder/utilisateurs/{id}/classes
@@ -195,7 +204,7 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     }`.toUpperCase();
   };
 
-  const isAdmin = userRole === "ADMIN";
+  const isAdmin = userRole === "ADMIN" || userRole === "ROLE_ADMIN";
 
   // ── Student detail view ──────────────────────────────────────────────────
   if (viewingStudent) {

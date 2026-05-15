@@ -27,6 +27,26 @@ class ParentService {
    * @param {string} parentId - Parent's user ID
    * @returns {Promise<Array>} List of children (Eleves)
    */
+  async getParentsByProfesseur(professeurId) {
+    try {
+      const response = await api.get(`/parents/professeur/${professeurId}`);
+      return response.data || [];
+    } catch (error) {
+      console.error("Error fetching parents for professor:", error);
+      return [];
+    }
+  }
+
+  async getElevesByProfesseur(professeurId) {
+    try {
+      const response = await api.get(`/profil-eleves/professeur/${professeurId}`);
+      return response.data || [];
+    } catch (error) {
+      console.error("Error fetching eleves for professor:", error);
+      return [];
+    }
+  }
+
   async getChildren(parentId) {
     try {
       const response = await api.get(`/parents/${parentId}/enfants`);

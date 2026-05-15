@@ -203,10 +203,27 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
       const rawRole = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
       const currentUserId = localStorage.getItem("userId");
 
-      // All roles see all professors — filtering by shared class was too restrictive
-      const allProfessors = await scholchatService.getAllProfessors();
-      setProfessors(Array.isArray(allProfessors) ? allProfessors : []);
-      setClasses([]);
+      let allProfessors;
+      if (rawRole === "ADMIN" || rawRole === "ADMINISTRATEUR" || rawRole === "GESTIONNAIRE") {
+        // Admin/gestionnaire: see all professors
+        allProfessors = await scholchatService.getAllProfessors();
+      } else if (rawRole === "PROFESSOR" || rawRole === "PROFESSEUR") {
+        // Professor: see only collaborators (professors with pub rights on their classes), excluding self
+        try {
+          const response = await fetch(
+            `${process.env.REACT_APP_API_BASE_URL}/professeurs/moderateur/${currentUserId}/collaborateurs`,
+            { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
+          );
+          allProfessors = response.ok ? await response.json() : [];
+        } catch { allProfessors = []; }
+      } else {
+        allProfessors = [];
+      }
+
+      // Always exclude self
+      const filtered = (Array.isArray(allProfessors) ? allProfessors : [])
+        .filter(p => p.id !== currentUserId);
+      setProfessors(filtered);
     } catch (err) {
       setError("Erreur lors du chargement des données: " + err.message);
     } finally {
