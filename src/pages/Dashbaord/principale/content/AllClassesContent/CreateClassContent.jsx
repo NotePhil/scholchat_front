@@ -530,19 +530,15 @@ const CreateClassContent = ({
     niveau: "",
     etablissement: "",
     codeUnique: "",
-    moderator: "",
     accesMajeur: false,
   });
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const navigate = useNavigate();
-  const [selectedProfessorName, setSelectedProfessorName] = useState("");
   const [establishments, setEstablishments] = useState([]);
-  const [professors, setProfessors] = useState([]);
   const [selectedEstablishment, setSelectedEstablishment] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingEstablishments, setLoadingEstablishments] = useState(true);
-  const [loadingProfessors, setLoadingProfessors] = useState(true);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(5);
@@ -555,46 +551,18 @@ const CreateClassContent = ({
     const loadData = async () => {
       try {
         setLoadingEstablishments(true);
-        setLoadingProfessors(true);
-
-        const establishmentsData =
-          await establishmentService.getAllEstablishments();
+        const establishmentsData = await establishmentService.getAllEstablishments();
         setEstablishments(establishmentsData || []);
-
-        const professorsData = await scholchatService.getAllProfessors();
-        const gestionnairesData = await scholchatService.getAllGestionnaires();
-        
-        // Combine professors and gestionnaires
-        const allModerators = [
-          ...(professorsData || []),
-          ...(gestionnairesData || [])
-        ];
-        setProfessors(allModerators);
-
-        // Pre-select current user as moderator if they are a professor or gestionnaire
-        if (isProfessor || isGestionnaire) {
-          const matchingProf = allModerators.find(p => p.id === currentUserId);
-          if (matchingProf) {
-            setFormData(prev => ({
-              ...prev,
-              moderator: currentUserId
-            }));
-            setSelectedProfessorName(`${matchingProf.nom} ${matchingProf.prenom}`);
-          }
-        }
-        
       } catch (error) {
         console.error("Error loading data:", error);
         setEstablishments([]);
-        setProfessors([]);
       } finally {
         setLoadingEstablishments(false);
-        setLoadingProfessors(false);
       }
     };
 
     loadData();
-  }, [isProfessor, isGestionnaire, currentUser, selectedProfessorName]);
+  }, [currentUser]);
 
   const generateToken = () => {
     const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -633,18 +601,7 @@ const CreateClassContent = ({
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === "moderator") {
-      const selectedProfessor = professors.find((prof) => prof.id === value);
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-      setSelectedProfessorName(
-        selectedProfessor
-          ? `${selectedProfessor.nom} ${selectedProfessor.prenom}`
-          : ""
-      );
-    } else if (name === "accesMajeur") {
+    if (name === "accesMajeur") {
       setFormData((prev) => ({ ...prev, accesMajeur: e.target.checked }));
     } else if (name === "etablissement") {
       const establishment = establishments.find((etab) => etab.id === value);
@@ -726,11 +683,8 @@ const CreateClassContent = ({
         niveau: formData.niveau.trim(),
       };
 
-      // Add moderatorId if a different moderator is selected, always send creatorId
       classData.creatorId = currentUserId;
-      if (formData.moderator) {
-        classData.moderatorId = formData.moderator;
-      }
+      classData.moderatorId = currentUserId;
 
       // Add accesMajeur flag
       classData.accesMajeur = formData.accesMajeur;
@@ -1060,44 +1014,6 @@ const CreateClassContent = ({
                       )}
                     </div>
 
-                    {/* Moderator (Professor) - Optional */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('classes.create.form.moderator', "Modérateur")} (Optionnel)
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <select
-                          name="moderator"
-                          value={formData.moderator}
-                          onChange={handleInputChange}
-                          disabled={loadingProfessors}
-                          className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
-                        >
-                          <option value="">
-                            {loadingProfessors
-                              ? t('classes.create.form.loading.professors', "Chargement des professeurs...")
-                              : t('classes.create.form.select.moderator', "Vous serez le modérateur par défaut")}
-                          </option>
-                          {professors.filter((professor) => professor.id !== currentUserId).map((professor) => (
-                            <option key={professor.id} value={professor.id}>
-                              {professor.nom} {professor.prenom}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      {formData.moderator && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          {t('classes.create.form.info.selected', "Sélectionné")}: {selectedProfessorName}
-                        </p>
-                      )}
-                      {!formData.moderator && (
-                        <p className="mt-1 text-xs text-blue-600">
-                          💡 Vous serez automatiquement défini comme modérateur
-                        </p>
-                      )}
-                    </div>
-
                     {/* Information Panel */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-start gap-3">
@@ -1165,7 +1081,6 @@ const CreateClassContent = ({
                       disabled={
                         loading ||
                         loadingEstablishments ||
-                        loadingProfessors ||
                         isProcessingPayment
                       }
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
