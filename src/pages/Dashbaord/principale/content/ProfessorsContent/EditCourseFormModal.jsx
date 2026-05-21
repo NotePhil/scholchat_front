@@ -94,7 +94,7 @@ const RichTextEditor = ({
     // Validate files
     for (const file of files) {
       if (!file.name || file.name.trim() === "") {
-        alert("Un des fichiers sélectionnés n'a pas de nom valide.");
+        alert("Un des fichiers sélectionnés n'a pas de nom valide. Ou na pas été retrouvé");
         return;
       }
     }
