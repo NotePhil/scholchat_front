@@ -2062,12 +2062,21 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                       <span className="text-xs text-slate-400 font-medium flex-shrink-0">Droits de publication</span>
                       {getPublicationRightsTag(classDetails.droitPublication)}
                     </div>
-                    {classDetails.accesMajeur && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold"
-                        style={{ background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe" }}>
-                        <SafetyCertificateOutlined /> Classe Majeure — Accès par email
-                      </div>
-                    )}
+                    {/* Accès majeur */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs text-slate-400 font-medium flex-shrink-0">Accès majeur</span>
+                      {classDetails.accesMajeur ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                          style={{ background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe" }}>
+                          <SafetyCertificateOutlined style={{ fontSize: 10 }} /> Classe Majeure — email
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                          style={{ background: "#f1f5f9", color: "#94a3b8", border: "1px solid #e2e8f0" }}>
+                          Accès standard
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

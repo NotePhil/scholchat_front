@@ -9,6 +9,7 @@ import {
   CrownOutlined,
   TeamOutlined,
   UserOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { Edit } from "lucide-react";
 import { classService } from "../../../../services/ClassService";
@@ -60,6 +61,21 @@ const ClassCard = ({ cls, role, onSelectClass, onEdit, canEdit }) => {
 
       {/* Role badge */}
       <RoleBadge role={role} />
+
+      {/* accesMajeur indicator */}
+      <div className="flex items-center gap-1.5">
+        {cls.accesMajeur ? (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe" }}>
+            <SafetyCertificateOutlined style={{ fontSize: 10 }} /> Classe Majeure
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+            style={{ background: "#f1f5f9", color: "#94a3b8", border: "1px solid #e2e8f0" }}>
+            Accès standard
+          </span>
+        )}
+      </div>
 
       {/* Meta */}
       <div className="space-y-0.5">
