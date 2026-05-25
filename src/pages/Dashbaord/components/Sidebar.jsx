@@ -58,7 +58,7 @@ const Sidebar = ({
   } = useAuth();
 
   useEffect(() => {
-    const coursesTabs = ["create-course", "schedule-course"];
+    const coursesTabs = ["courses", "create-course", "schedule-course"];
     const usersTabs = ["admin", "professors", "parents", "students", "others", "gestionnaires"];
     const classesTabs = ["create-class", "manage-class"];
     const establishmentsTabs = ["create-establishment", "manage-establishment"];
@@ -145,7 +145,7 @@ const Sidebar = ({
           icon: Book,
           dropdown: "courses",
           items: [
-            { name: t('sidebar.courses'), tab: "create-course" },
+            { name: t('sidebar.courses'), tab: "courses" },
             { name: t('sidebar.scheduleCourse'), tab: "schedule-course" },
           ],
         },

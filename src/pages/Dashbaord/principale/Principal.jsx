@@ -52,6 +52,7 @@ import ParentClassManagement from "./ParentSidebar/ParentClassManagement";
 import ParentClassManagementClass from "./ParentSidebar/ParentClassManagementClass";
 import NotificationIcon from "./modals/NotificationIcon";
 import ProfessorCoursesContent from "./content/ProfessorsContent/ProfessorCoursesContent";
+import CreateCourseContent from "./content/ProfessorsContent/CreateCourseContent";
 import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgrammerContent";
 import CoursProgrammeManagement from "./content/InterfaceCours/CoursProgrammeManagement";
 import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
@@ -425,9 +426,9 @@ const Principal = () => {
   }, []);
 
   const handleTabChange = useCallback(
-    (tab) => {
-      // Skip if already on this tab
-      if (tab === activeTab) return;
+    (tab, queryParams = null) => {
+      // Skip if already on this tab, unless query params are provided (e.g. pre-filtering)
+      if (tab === activeTab && !queryParams) return;
 
       setShowManageClass(false);
       dispatch(setActiveTabAction(tab));
@@ -450,7 +451,8 @@ const Principal = () => {
         }
       }
 
-      navigate(`/schoolchat/Principal/${dashboard}/${tab}`);
+      const search = queryParams ? `?${new URLSearchParams(queryParams).toString()}` : '';
+      navigate(`/schoolchat/Principal/${dashboard}/${tab}${search}`);
 
       if (isMobile || isCustomBreakpoint) {
         dispatch(setSidebar(false));
@@ -554,8 +556,15 @@ const Principal = () => {
         return <StudentsContent {...contentProps} />;
       case "others":
         return <OthersContent {...contentProps} />;
-      case "create-course":
+      case "courses":
         return <ProfessorCoursesContent {...contentProps} setActiveTab={handleTabChange} />;
+      case "create-course":
+        return (
+          <CreateCourseContent
+            {...contentProps}
+            onBack={() => handleTabChange("courses")}
+          />
+        );
       case "schedule-course":
         return <CoursProgrammerContent {...contentProps} />;
       case "manage-exercises":
@@ -655,7 +664,8 @@ const Principal = () => {
       students: "Gérer Élèves",
       others: "Gérer Autres Utilisateurs",
       activities: "Activités",
-      "create-course": "Gérer les Cours",
+      "courses": "Gérer les Cours",
+      "create-course": "Créer un Cours",
       "schedule-course": "Programmer le Cours",
       "manage-exercises": "Gérer les Exercices",
       "devoirs": "Mes Devoirs",

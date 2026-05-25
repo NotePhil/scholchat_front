@@ -64,9 +64,15 @@ const CoursProgrammerContent = () => {
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
-    const preselectedClassId = localStorage.getItem("selectedClassId");
-    if (preselectedClassId) {
+    // Support classId from URL query params (e.g. navigating from class details)
+    const searchParams = new URLSearchParams(location.search);
+    const queryClassId = searchParams.get("classId");
+    // Also support legacy localStorage approach as fallback
+    const preselectedClassId = queryClassId || localStorage.getItem("selectedClassId");
+    if (!queryClassId && localStorage.getItem("selectedClassId")) {
       localStorage.removeItem("selectedClassId");
+    }
+    if (preselectedClassId) {
       setFilterClassId(preselectedClassId);
     }
     if (userId) {
@@ -84,6 +90,16 @@ const CoursProgrammerContent = () => {
     if (!didMountRef.current || !professorId) return;
     loadData(professorId, filterClassId || null);
   }, [filterClassId]);
+
+  // Handle classId passed via URL query param (e.g. navigating from class details while already on this tab)
+  useEffect(() => {
+    if (!didMountRef.current) return;
+    const searchParams = new URLSearchParams(location.search);
+    const queryClassId = searchParams.get("classId");
+    if (queryClassId && queryClassId !== filterClassId) {
+      setFilterClassId(queryClassId);
+    }
+  }, [location.search]);
 
   // Handle auto-open if course is passed in state
   useEffect(() => {

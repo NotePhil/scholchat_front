@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Empty, Spin, Button, Input, Tag, message,
+  Empty, Spin, Button, Input, Tag, message, Modal, Alert,
 } from "antd";
 import {
   BookOutlined,
@@ -14,6 +14,7 @@ import {
   ArrowRightOutlined,
   PlusOutlined,
   BankOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
 import { classService } from "../../../../services/ClassService";
 import { coursProgrammerService } from "../../../../services/coursProgrammerService";
@@ -78,6 +79,8 @@ const StudentClassList = ({ isParentView = false }) => {
   const [showSearchModal,     setShowSearchModal]     = useState(false);
   const [showAddChild,        setShowAddChild]        = useState(false);
   const [searchCode,          setSearchCode]          = useState("");
+  const [searchLoading,       setSearchLoading]       = useState(false);
+  const [searchDone,          setSearchDone]          = useState(false);
   const [pendingMsg,          setPendingMsg]          = useState(null);
 
   // ── child switch listener ──────────────────────────────────────────────────
@@ -170,19 +173,37 @@ const StudentClassList = ({ isParentView = false }) => {
   };
 
   // ── search & join ──────────────────────────────────────────────────────────
-  const handleSearchJoin = () => {
-    const code = searchCode.trim().toLowerCase();
-    if (!code) { message.warning("Entrez un code ou un nom de classe"); return; }
-    const found = allClasses.find(
-      c => c.codeActivation?.toLowerCase() === code ||
-           c.nom?.toLowerCase().includes(code) ||
-           c.id?.toLowerCase() === code
-    );
-    if (!found) { message.error("Aucune classe trouvée"); return; }
-    setSelectedClass(found);
-    setShowSearchModal(false);
+  const handleClearSearch = () => {
     setSearchCode("");
-    setShowRequestModal(true);
+    setSearchDone(false);
+    setSelectedClass(null);
+  };
+
+  const handleCloseSearchModal = () => {
+    setShowSearchModal(false);
+    handleClearSearch();
+  };
+
+  const handleSearchJoin = async () => {
+    const code = searchCode.trim();
+    if (!code) { message.warning("Entrez le code d'activation de la classe"); return; }
+    try {
+      setSearchLoading(true);
+      setSearchDone(false);
+      setSelectedClass(null);
+      // Exact match on activation code only
+      const found = allClasses.find(c => c.codeActivation === code);
+      setSearchDone(true);
+      if (found) {
+        setSelectedClass(found);
+        setShowSearchModal(false);
+        setShowRequestModal(true);
+      }
+    } catch (e) {
+      message.error("Erreur lors de la recherche");
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   const handleRequestAccess = async (classe, code) => {
@@ -195,10 +216,11 @@ const StudentClassList = ({ isParentView = false }) => {
       message.success("Demande envoyée avec succès");
       setAccessMap(prev => ({ ...prev, [classe.id]: "PENDING" }));
       setUserClasses(prev => prev.some(c => c.id === classe.id) ? prev : [...prev, classe]);
+      setShowRequestModal(false);
+      handleClearSearch();
       return true;
     } catch (e) {
-      message.error(e.message || "Erreur lors de la demande d'accès");
-      return false;
+      throw e;
     }
   };
 
@@ -445,7 +467,7 @@ const StudentClassList = ({ isParentView = false }) => {
                       </button>
                     ) : (
                       <button
-                        onClick={() => { setSelectedClass(classe); setShowRequestModal(true); }}
+                        onClick={() => setShowSearchModal(true)}
                         className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors"
                         style={{ background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe" }}
                       >
@@ -460,46 +482,102 @@ const StudentClassList = ({ isParentView = false }) => {
         </div>
       )}
 
-      {/* ── Search / Join modal ── */}
-      {showSearchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.5)" }}
-          onClick={() => setShowSearchModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
-            onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-gray-900 mb-1">Rejoindre une classe</h3>
-            <p className="text-xs text-gray-500 mb-4">Entrez le code d'activation, le nom ou l'ID de la classe.</p>
-            <Input
-              autoFocus
-              placeholder="Code, nom ou ID..."
-              value={searchCode}
-              onChange={e => setSearchCode(e.target.value)}
-              onPressEnter={handleSearchJoin}
-              size="large"
-              style={{ borderRadius: 10, marginBottom: 12 }}
-            />
-            <div className="flex gap-2">
-              <Button block onClick={() => { setShowSearchModal(false); setSearchCode(""); }} style={{ borderRadius: 8 }}>
-                Annuler
-              </Button>
-              <Button block type="primary" onClick={handleSearchJoin} style={{ borderRadius: 8 }}>
-                Rechercher
-              </Button>
+      {/* ── Search / Join modal (Ant Design, same as professor side) ── */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <UsergroupAddOutlined style={{ color: "#4f46e5", fontSize: 16 }} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: "#1e293b" }}>
+                Rejoindre une classe
+              </div>
+              <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 400 }}>
+                Entrez le code exact de la classe
+              </div>
             </div>
           </div>
+        }
+        open={showSearchModal}
+        onCancel={handleCloseSearchModal}
+        footer={null}
+        width={480}
+        centered
+        styles={{ body: { paddingTop: 8 } }}
+      >
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <Input
+            size="large"
+            placeholder="Code d'activation de la classe..."
+            value={searchCode}
+            onChange={e => { setSearchCode(e.target.value); if (!e.target.value) handleClearSearch(); }}
+            onPressEnter={handleSearchJoin}
+            prefix={<LockOutlined style={{ color: "#94a3b8" }} />}
+            suffix={
+              searchCode ? (
+                <span onClick={handleClearSearch} style={{ cursor: "pointer", color: "#94a3b8", fontSize: 13 }}>✕</span>
+              ) : null
+            }
+            style={{ borderRadius: 10 }}
+            autoFocus
+          />
+          <Button
+            type="primary"
+            size="large"
+            icon={<SearchOutlined />}
+            loading={searchLoading}
+            onClick={handleSearchJoin}
+            style={{ borderRadius: 10, background: "#4f46e5", borderColor: "#4f46e5", flexShrink: 0 }}
+          >
+            Rechercher
+          </Button>
         </div>
-      )}
 
-      {/* ── Request access modal (reuse existing) ── */}
-      {showRequestModal && selectedClass && (
+        {searchLoading && (
+          <div style={{ textAlign: "center", padding: "32px 0" }}>
+            <Spin size="large" />
+            <p style={{ marginTop: 12, color: "#94a3b8", fontSize: 13 }}>Recherche en cours…</p>
+          </div>
+        )}
+
+        {!searchLoading && searchDone && !selectedClass && (
+          <Alert
+            style={{ borderRadius: 8 }}
+            type="error"
+            showIcon
+            message="Aucune classe trouvée avec ce code. Vérifiez le code et réessayez."
+          />
+        )}
+
+        {!searchLoading && !searchDone && (
+          <div style={{ textAlign: "center", padding: "24px 0 8px", color: "#94a3b8" }}>
+            <LockOutlined style={{ fontSize: 36, marginBottom: 10, opacity: 0.4 }} />
+            <p style={{ margin: 0, fontSize: 13 }}>
+              Entrez le code exact fourni par le modérateur de la classe.
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Request access modal — code pre-filled and locked ── */}
+      {selectedClass && (
         <ParentClassManagementModal
           open={showRequestModal}
-          onClose={() => { setShowRequestModal(false); setSelectedClass(null); }}
+          onClose={() => {
+            setShowRequestModal(false);
+            setSelectedClass(null);
+            setShowSearchModal(true);
+          }}
           classe={selectedClass}
+          hasAccess={false}
           isRequestMode={true}
           onRequestAccess={handleRequestAccess}
-          activationCode=""
-          isCodeReadOnly={false}
+          activationCode={searchCode}
+          isCodeReadOnly={true}
         />
       )}
 

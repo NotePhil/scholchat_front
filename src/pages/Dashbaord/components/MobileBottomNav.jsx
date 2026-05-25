@@ -129,7 +129,7 @@ const MobileBottomNav = ({
         ];
       } else if (showMore === "courses") {
         items = [
-          { icon: BookOpen, label: "Cours", color: "bg-emerald-500", tab: "create-course" },
+          { icon: BookOpen, label: "Cours", color: "bg-emerald-500", tab: "courses" },
           { icon: Book, label: "Programmer", color: "bg-cyan-500", tab: "schedule-course" },
         ];
       }

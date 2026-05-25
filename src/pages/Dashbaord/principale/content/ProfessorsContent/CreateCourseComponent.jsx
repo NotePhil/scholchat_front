@@ -1257,15 +1257,16 @@ const CreateCourseComponent = ({
 
   return (
     <div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="w-full px-0 py-2">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
             <button
               onClick={onBack}
-              className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 transition-all shadow-sm flex-shrink-0"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={16} />
+              Retour
             </button>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
@@ -1458,11 +1459,11 @@ const CreateCourseComponent = ({
         </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-center gap-6 pt-6 pb-12">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 pt-6 pb-12 px-2 sm:px-0">
             <button
               type="button"
               onClick={onBack}
-              className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors rounded-lg hover:bg-slate-100 flex items-center justify-center gap-2 border border-slate-300"
+              className="w-full sm:w-auto px-6 py-3 text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 font-semibold transition-all rounded-xl flex items-center justify-center gap-2 shadow-sm"
             >
               <ArrowLeft size={16} />
               Annuler
@@ -1470,7 +1471,7 @@ const CreateCourseComponent = ({
             <button
               type="submit"
               disabled={savedChapters.length === 0 || isSubmitting}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <>

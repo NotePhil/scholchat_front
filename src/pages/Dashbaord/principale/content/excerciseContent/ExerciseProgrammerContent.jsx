@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Form, DatePicker, Select, Button, message, Spin, Badge, Modal, Popconfirm,
 } from "antd";
 import {
   Calendar, ClipboardList, Users, BookOpen, FileText,
   Trash2, Eye, RefreshCw, Plus, Send, Clock, CheckCircle,
-  AlertCircle, ChevronRight,
+  AlertCircle, ChevronRight, ArrowLeft, Filter, Search,
 } from "lucide-react";
 import {
   exerciseService,
@@ -17,9 +18,6 @@ const { Option } = Select;
 
 const getUserId = () =>
   sessionStorage.getItem("userId") || localStorage.getItem("userId");
-
-const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
 const fmtDateTime = (d) =>
   d ? new Date(d).toLocaleString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -57,19 +55,29 @@ const EtatBadge = ({ etat }) => {
 };
 
 const ExerciseProgrammerContent = () => {
+  const location = useLocation();
+
+  // ── Data state ──
   const [exercises, setExercises] = useState([]);
   const [programmations, setProgrammations] = useState([]);
   const [classes, setClasses] = useState([]);
+
+  // ── Loading state ──
   const [loading, setLoading] = useState(true);
   const [progsLoading, setProgsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+
+  // ── UI state ──
+  const [view, setView] = useState("list"); // "list" | "form"
   const [detailProg, setDetailProg] = useState(null);
+  const [filterClassId, setFilterClassId] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [form] = Form.useForm();
-
   const userId = getUserId();
 
+  // ── Load exercises and classes (for form dropdowns) ──
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
@@ -87,6 +95,7 @@ const ExerciseProgrammerContent = () => {
     }
   }, [userId]);
 
+  // ── Load programmations ──
   const loadProgs = useCallback(async () => {
     if (!userId) return;
     setProgsLoading(true);
@@ -100,11 +109,27 @@ const ExerciseProgrammerContent = () => {
     }
   }, [userId]);
 
+  // ── On mount: read classId from URL query param ──
   useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const queryClassId = searchParams.get("classId");
+    if (queryClassId) setFilterClassId(queryClassId);
     load();
     loadProgs();
-  }, [load, loadProgs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // ── When URL query param changes (already mounted, same tab) ──
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const queryClassId = searchParams.get("classId");
+    if (queryClassId && queryClassId !== filterClassId) {
+      setFilterClassId(queryClassId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
+  // ── Submit form ──
   const handleSubmit = async (values) => {
     if (!userId) { message.error("Utilisateur non connecté"); return; }
     setSubmitting(true);
@@ -123,6 +148,7 @@ const ExerciseProgrammerContent = () => {
       message.success("Exercice programmé et diffusé avec succès !");
       form.resetFields();
       await loadProgs();
+      setView("list");
     } catch (e) {
       message.error(e.message || "Erreur lors de la programmation");
     } finally {
@@ -130,6 +156,7 @@ const ExerciseProgrammerContent = () => {
     }
   };
 
+  // ── Delete ──
   const handleDelete = async (id) => {
     setDeletingId(id);
     try {
@@ -143,12 +170,29 @@ const ExerciseProgrammerContent = () => {
     }
   };
 
+  // ── Filtered list ──
+  const filtered = programmations.filter(prog => {
+    const matchClass = !filterClassId || (
+      Array.isArray(prog.classesDiffusees) &&
+      prog.classesDiffusees.some(c => String(c.id) === String(filterClassId))
+    );
+    const matchSearch = !searchTerm || (
+      (prog.nom || "").toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    return matchClass && matchSearch;
+  });
+
+  // ── Stats ──
   const stats = {
-    total: programmations.length,
-    actif: programmations.filter(p => p.etat === "ACTIF" || p.etat === "PUBLIE").length,
-    devoirs: programmations.filter(p => p.typeAssignation === "DEVOIR").length,
-    exercices: programmations.filter(p => p.typeAssignation === "EXERCICE").length,
+    total: filtered.length,
+    actif: filtered.filter(p => p.etat === "ACTIF" || p.etat === "PUBLIE").length,
+    devoirs: filtered.filter(p => p.typeAssignation === "DEVOIR").length,
+    exercices: filtered.filter(p => p.typeAssignation === "EXERCICE").length,
   };
+
+  const selectedClassName = filterClassId
+    ? (classes.find(c => String(c.id) === String(filterClassId))?.nom || "")
+    : "";
 
   if (loading) {
     return (
@@ -161,53 +205,50 @@ const ExerciseProgrammerContent = () => {
     );
   }
 
-  return (
-    <div className="w-full px-2 py-3">
-
-      {/* ── Header ── */}
-      <div className="bg-white rounded-xl shadow overflow-hidden mb-3">
-        <div className="relative bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="absolute inset-0 opacity-10"
-            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
-          <div className="relative flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Calendar size={18} className="text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base font-bold text-white leading-tight truncate">Programmer les Exercices</h1>
-              <p className="text-blue-100 text-xs">Assignez vos exercices aux classes avec dates et type</p>
-            </div>
-          </div>
-          <div className="relative flex items-center gap-4 sm:gap-5 flex-shrink-0">
-            {[
-              { label: "Total",   value: stats.total,     color: "#93c5fd" },
-              { label: "Actifs",  value: stats.actif,     color: "#86efac" },
-              { label: "Libres",  value: stats.exercices, color: "#67e8f9" },
-              { label: "Devoirs", value: stats.devoirs,   color: "#c4b5fd" },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="text-center">
-                <div className="text-lg font-bold" style={{ color }}>{value}</div>
-                <div className="text-xs text-blue-200">{label}</div>
+  // ════════════════════════════════════════════
+  // FORM VIEW
+  // ════════════════════════════════════════════
+  if (view === "form") {
+    return (
+      <div className="w-full px-2 py-3">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
+          <div className="relative bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3 flex items-center gap-3">
+            <div className="absolute inset-0 opacity-10"
+              style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
+            <button
+              onClick={() => { setView("list"); form.resetFields(); }}
+              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-medium transition-colors flex-shrink-0"
+            >
+              <ArrowLeft size={15} /> Retour
+            </button>
+            <div className="relative flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Plus size={18} className="text-white" />
               </div>
-            ))}
+              <div className="min-w-0">
+                <h1 className="text-base font-bold text-white leading-tight">Nouvelle programmation</h1>
+                <p className="text-purple-100 text-xs">Assignez un exercice à vos classes avec dates et type</p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-
-        {/* ── Form ── */}
-        <div className="lg:col-span-2">
+        {/* Form card */}
+        <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-xl shadow overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-              <Plus size={16} className="text-blue-600" />
-              <h2 className="font-semibold text-gray-800 text-sm">Nouvelle programmation</h2>
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+              <ClipboardList size={16} className="text-purple-600" />
+              <h2 className="font-semibold text-gray-800 text-sm">Détails de la programmation</h2>
             </div>
-            <div className="p-4">
+            <div className="p-5">
               <Form form={form} layout="vertical" onFinish={handleSubmit}>
 
-                <Form.Item name="exerciseId" label={<span className="text-sm font-medium text-gray-700">Exercice</span>}
-                  rules={[{ required: true, message: "Sélectionnez un exercice" }]}>
+                <Form.Item
+                  name="exerciseId"
+                  label={<span className="text-sm font-medium text-gray-700">Exercice</span>}
+                  rules={[{ required: true, message: "Sélectionnez un exercice" }]}
+                >
                   <Select placeholder="Choisir un exercice" showSearch optionFilterProp="children" size="large">
                     {exercises.map(e => (
                       <Option key={e.id} value={e.id}>
@@ -220,8 +261,12 @@ const ExerciseProgrammerContent = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item name="typeAssignation" label={<span className="text-sm font-medium text-gray-700">Type d'assignation</span>}
-                  initialValue="EXERCICE" rules={[{ required: true }]}>
+                <Form.Item
+                  name="typeAssignation"
+                  label={<span className="text-sm font-medium text-gray-700">Type d'assignation</span>}
+                  initialValue="EXERCICE"
+                  rules={[{ required: true }]}
+                >
                   <Select size="large">
                     <Option value="EXERCICE">
                       <div className="flex items-center gap-2">
@@ -244,10 +289,12 @@ const ExerciseProgrammerContent = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item name="classeIds" label={<span className="text-sm font-medium text-gray-700">Classes</span>}
-                  rules={[{ required: true, message: "Sélectionnez au moins une classe" }]}>
-                  <Select mode="multiple" placeholder="Sélectionner les classes" size="large"
-                    optionFilterProp="children">
+                <Form.Item
+                  name="classeIds"
+                  label={<span className="text-sm font-medium text-gray-700">Classes</span>}
+                  rules={[{ required: true, message: "Sélectionnez au moins une classe" }]}
+                >
+                  <Select mode="multiple" placeholder="Sélectionner les classes" size="large" optionFilterProp="children">
                     {classes.map(c => (
                       <Option key={c.id} value={c.id}>
                         {c.nom}{c.niveau ? ` — ${c.niveau}` : ""}
@@ -256,16 +303,24 @@ const ExerciseProgrammerContent = () => {
                   </Select>
                 </Form.Item>
 
-                <div className="grid grid-cols-1 gap-3">
-                  <Form.Item name="dateExoPrevue" label={<span className="text-sm font-medium text-gray-700">Date prévue</span>}
-                    rules={[{ required: true, message: "Requis" }]}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Form.Item
+                    name="dateExoPrevue"
+                    label={<span className="text-sm font-medium text-gray-700">Date prévue</span>}
+                    rules={[{ required: true, message: "Requis" }]}
+                  >
                     <DatePicker style={{ width: "100%" }} showTime format="DD/MM/YYYY HH:mm" size="large" />
                   </Form.Item>
-                  <Form.Item name="dateDebutExoEffectif" label={<span className="text-sm font-medium text-gray-700">Début effectif</span>}
-                    rules={[{ required: true, message: "Requis" }]}>
+                  <Form.Item
+                    name="dateDebutExoEffectif"
+                    label={<span className="text-sm font-medium text-gray-700">Début effectif</span>}
+                    rules={[{ required: true, message: "Requis" }]}
+                  >
                     <DatePicker style={{ width: "100%" }} showTime format="DD/MM/YYYY HH:mm" size="large" />
                   </Form.Item>
-                  <Form.Item name="dateFinExoEffectif" label={<span className="text-sm font-medium text-gray-700">Fin effective</span>}
+                  <Form.Item
+                    name="dateFinExoEffectif"
+                    label={<span className="text-sm font-medium text-gray-700">Fin effective</span>}
                     rules={[
                       { required: true, message: "Requis" },
                       ({ getFieldValue }) => ({
@@ -275,120 +330,243 @@ const ExerciseProgrammerContent = () => {
                           return Promise.reject(new Error("Doit être après le début"));
                         },
                       }),
-                    ]}>
+                    ]}
+                  >
                     <DatePicker style={{ width: "100%" }} showTime format="DD/MM/YYYY HH:mm" size="large" />
                   </Form.Item>
                 </div>
 
-                <Button type="primary" htmlType="submit" loading={submitting}
-                  icon={<Send size={16} />} size="large" block
-                  style={{ background: "linear-gradient(135deg, #2563eb, #4f46e5)", border: "none", borderRadius: 10, fontWeight: 600, marginTop: 8 }}>
-                  Programmer et diffuser
-                </Button>
+                <div className="flex gap-3 mt-2">
+                  <Button
+                    onClick={() => { setView("list"); form.resetFields(); }}
+                    size="large"
+                    style={{ borderRadius: 10, flex: 1 }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={submitting}
+                    icon={<Send size={16} />}
+                    size="large"
+                    style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)", border: "none", borderRadius: 10, fontWeight: 600, flex: 2 }}
+                  >
+                    Programmer et diffuser
+                  </Button>
+                </div>
               </Form>
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* ── Programmations list ── */}
-        <div className="lg:col-span-3">
-          <div className="bg-white rounded-xl shadow overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ClipboardList size={16} className="text-blue-600" />
-                <h2 className="font-semibold text-gray-800 text-sm">Programmations</h2>
-                <Badge count={programmations.length} style={{ backgroundColor: "#dbeafe", color: "#2563eb", boxShadow: "none", fontWeight: 600 }} />
-              </div>
-              <button onClick={loadProgs} disabled={progsLoading}
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
-                <RefreshCw size={14} className={progsLoading ? "animate-spin" : ""} />
-              </button>
+  // ════════════════════════════════════════════
+  // LIST VIEW (default)
+  // ════════════════════════════════════════════
+  return (
+    <div className="w-full px-2 py-3">
+
+      {/* ── Header ── */}
+      <div className="bg-white rounded-xl shadow overflow-hidden mb-3">
+        <div className="relative bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="absolute inset-0 opacity-10"
+            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
+          <div className="relative flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Calendar size={18} className="text-white" />
             </div>
-
-            {progsLoading ? (
-              <div className="flex justify-center py-10"><Spin /></div>
-            ) : programmations.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar size={36} className="text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 font-medium text-sm">Aucune programmation</p>
-                <p className="text-gray-400 text-xs mt-1">Utilisez le formulaire pour programmer votre premier exercice</p>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-white leading-tight truncate">Programmer les Exercices</h1>
+              <p className="text-blue-100 text-xs">
+                {selectedClassName
+                  ? `Classe : ${selectedClassName}`
+                  : "Assignez vos exercices aux classes avec dates et type"}
+              </p>
+            </div>
+          </div>
+          <div className="relative flex items-center gap-4 sm:gap-5 flex-shrink-0">
+            {[
+              { label: "Total",   value: stats.total,     color: "#93c5fd" },
+              { label: "Actifs",  value: stats.actif,     color: "#86efac" },
+              { label: "Libres",  value: stats.exercices, color: "#67e8f9" },
+              { label: "Devoirs", value: stats.devoirs,   color: "#c4b5fd" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="text-center">
+                <div className="text-lg font-bold" style={{ color }}>{value}</div>
+                <div className="text-xs text-blue-200">{label}</div>
               </div>
-            ) : (
-              <div className="divide-y divide-gray-50">
-                {programmations.map(prog => {
-                  const exo = exercises.find(e => e.id === prog.exerciseId) || {};
-                  const now = new Date();
-                  const fin = prog.dateFinExoEffectif ? new Date(prog.dateFinExoEffectif) : null;
-                  const isExpired = fin && fin < now;
-
-                  return (
-                    <div key={prog.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 min-w-0 flex-1">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
-                            style={{ background: prog.typeAssignation === "DEVOIR" ? "#f5f3ff" : "#eff6ff" }}>
-                            {prog.typeAssignation === "DEVOIR"
-                              ? <FileText size={18} style={{ color: "#7c3aed" }} />
-                              : <BookOpen size={18} style={{ color: "#2563eb" }} />}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                              <span className="font-semibold text-gray-900 text-sm truncate">
-                                {prog.nom || exo.nom || "Exercice"}
-                              </span>
-                              <TypeBadge type={prog.typeAssignation} />
-                              <EtatBadge etat={prog.etat} />
-                              {isExpired && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600">
-                                  <AlertCircle size={10} /> Expiré
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-                              <span className="flex items-center gap-1">
-                                <Clock size={11} /> {fmtDateTime(prog.dateDebutExoEffectif)}
-                              </span>
-                              <ChevronRight size={11} className="text-gray-300" />
-                              <span>{fmtDateTime(prog.dateFinExoEffectif)}</span>
-                            </div>
-                            {prog.classesDiffusees?.length > 0 && (
-                              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                                <Users size={11} className="text-gray-400" />
-                                {prog.classesDiffusees.map(c => (
-                                  <span key={c.id} className="px-1.5 py-0.5 rounded text-xs bg-cyan-50 text-cyan-700 border border-cyan-100">
-                                    {c.nom}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button onClick={() => setDetailProg(prog)}
-                            className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors">
-                            <Eye size={15} />
-                          </button>
-                          <Popconfirm title="Supprimer cette programmation ?" onConfirm={() => handleDelete(prog.id)}
-                            okText="Supprimer" cancelText="Annuler" okButtonProps={{ danger: true }}>
-                            <button className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                              disabled={deletingId === prog.id}>
-                              {deletingId === prog.id
-                                ? <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                                : <Trash2 size={15} />}
-                            </button>
-                          </Popconfirm>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Detail modal */}
+      {/* ── Filters + action bar ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3 mb-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        {/* Search */}
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Rechercher par nom d'exercice..."
+            className="w-full pl-7 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+          />
+        </div>
+
+        {/* Class filter */}
+        <div className="relative min-w-[180px]">
+          <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
+          <select
+            value={filterClassId}
+            onChange={e => setFilterClassId(e.target.value)}
+            className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+          >
+            <option value="">Toutes les classes</option>
+            {classes.map(c => (
+              <option key={c.id} value={c.id}>{c.nom}</option>
+            ))}
+          </select>
+          <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+        </div>
+
+        {/* Refresh */}
+        <button
+          onClick={loadProgs}
+          disabled={progsLoading}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 flex-shrink-0"
+          title="Actualiser"
+        >
+          <RefreshCw size={14} className={progsLoading ? "animate-spin" : ""} />
+        </button>
+
+        {/* New programmation button */}
+        <button
+          onClick={() => setView("form")}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 shadow-sm flex-shrink-0"
+          style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)" }}
+        >
+          <Plus size={15} />
+          Programmer un exercice
+        </button>
+      </div>
+
+      {/* ── List ── */}
+      <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ClipboardList size={16} className="text-blue-600" />
+            <h2 className="font-semibold text-gray-800 text-sm">Programmations</h2>
+            <Badge
+              count={filtered.length}
+              style={{ backgroundColor: "#dbeafe", color: "#2563eb", boxShadow: "none", fontWeight: 600 }}
+            />
+            {filterClassId && selectedClassName && (
+              <span className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full font-medium">
+                {selectedClassName}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {progsLoading ? (
+          <div className="flex justify-center py-10"><Spin /></div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <Calendar size={36} className="text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-500 font-medium text-sm">
+              {filterClassId ? "Aucune programmation pour cette classe" : "Aucune programmation"}
+            </p>
+            <p className="text-gray-400 text-xs mt-1">
+              Cliquez sur « Programmer un exercice » pour commencer
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {filtered.map(prog => {
+              const exo = exercises.find(e => e.id === prog.exerciseId) || {};
+              const now = new Date();
+              const fin = prog.dateFinExoEffectif ? new Date(prog.dateFinExoEffectif) : null;
+              const isExpired = fin && fin < now;
+
+              return (
+                <div key={prog.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                        style={{ background: prog.typeAssignation === "DEVOIR" ? "#f5f3ff" : "#eff6ff" }}>
+                        {prog.typeAssignation === "DEVOIR"
+                          ? <FileText size={18} style={{ color: "#7c3aed" }} />
+                          : <BookOpen size={18} style={{ color: "#2563eb" }} />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="font-semibold text-gray-900 text-sm truncate">
+                            {prog.nom || exo.nom || "Exercice"}
+                          </span>
+                          <TypeBadge type={prog.typeAssignation} />
+                          <EtatBadge etat={prog.etat} />
+                          {isExpired && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600">
+                              <AlertCircle size={10} /> Expiré
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Clock size={11} /> {fmtDateTime(prog.dateDebutExoEffectif)}
+                          </span>
+                          <ChevronRight size={11} className="text-gray-300" />
+                          <span>{fmtDateTime(prog.dateFinExoEffectif)}</span>
+                        </div>
+                        {prog.classesDiffusees?.length > 0 && (
+                          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                            <Users size={11} className="text-gray-400" />
+                            {prog.classesDiffusees.map(c => (
+                              <span key={c.id} className="px-1.5 py-0.5 rounded text-xs bg-cyan-50 text-cyan-700 border border-cyan-100">
+                                {c.nom}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => setDetailProg(prog)}
+                        className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+                      >
+                        <Eye size={15} />
+                      </button>
+                      <Popconfirm
+                        title="Supprimer cette programmation ?"
+                        onConfirm={() => handleDelete(prog.id)}
+                        okText="Supprimer"
+                        cancelText="Annuler"
+                        okButtonProps={{ danger: true }}
+                      >
+                        <button
+                          className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                          disabled={deletingId === prog.id}
+                        >
+                          {deletingId === prog.id
+                            ? <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                            : <Trash2 size={15} />}
+                        </button>
+                      </Popconfirm>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Detail modal ── */}
       <Modal
         open={!!detailProg}
         onCancel={() => setDetailProg(null)}
@@ -404,12 +582,12 @@ const ExerciseProgrammerContent = () => {
         {detailProg && (
           <div className="space-y-3 pt-2">
             {[
-              { label: "Exercice", value: detailProg.nom || "—" },
-              { label: "Type", value: <TypeBadge type={detailProg.typeAssignation} /> },
-              { label: "Statut", value: <EtatBadge etat={detailProg.etat} /> },
-              { label: "Date prévue", value: fmtDateTime(detailProg.dateExoPrevue) },
+              { label: "Exercice",       value: detailProg.nom || "—" },
+              { label: "Type",           value: <TypeBadge type={detailProg.typeAssignation} /> },
+              { label: "Statut",         value: <EtatBadge etat={detailProg.etat} /> },
+              { label: "Date prévue",    value: fmtDateTime(detailProg.dateExoPrevue) },
               { label: "Début effectif", value: fmtDateTime(detailProg.dateDebutExoEffectif) },
-              { label: "Fin effective", value: fmtDateTime(detailProg.dateFinExoEffectif) },
+              { label: "Fin effective",  value: fmtDateTime(detailProg.dateFinExoEffectif) },
               {
                 label: "Classes",
                 value: detailProg.classesDiffusees?.length > 0

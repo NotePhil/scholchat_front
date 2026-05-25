@@ -1989,7 +1989,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
                     style={{ background: "linear-gradient(135deg,#f093fb,#f5576c)" }}>
                     <FileTextOutlined style={{ fontSize: 14 }} />
-                    Gestion des Exercices
+                    Exercices Programmer
                   </button>
                 )}
               </div>

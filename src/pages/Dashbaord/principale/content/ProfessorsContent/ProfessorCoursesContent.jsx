@@ -42,13 +42,11 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
   const [filterClassName, setFilterClassName] = useState("");
   const [professorClasses, setProfessorClasses] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
-  const [showCreateForm, setShowCreateForm] = useState(false);
   const [subjects, setSubjects] = useState([]);
   const [viewingCourse, setViewingCourse] = useState(null);
   const [showCourseContent, setShowCourseContent] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [showEditForm, setShowEditForm] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
     const savedClassId = localStorage.getItem("selectedClassId");
@@ -150,16 +148,12 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
     setFilteredCourses(filtered);
   };
 
-  const handleCreateCourse = async () => {
-    setCreateLoading(true);
-    // Small delay to show loading state
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setShowCreateForm(true);
-    setCreateLoading(false);
+  const handleCreateCourse = () => {
+    if (setActiveTab) setActiveTab("create-course");
   };
 
   const handleBackFromCreate = () => {
-    setShowCreateForm(false);
+    // no-op: kept for compatibility if called elsewhere
   };
 
   const handleBackFromCourseContent = () => {
@@ -229,19 +223,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           </p>
         </div>
       </div>
-    );
-  }
-
-  if (showCreateForm) {
-    return (
-      <CreateCourseComponent
-        onBack={handleBackFromCreate}
-        subjects={subjects}
-        setSuccess={setSuccess}
-        setError={setError}
-        loadCourses={loadCourses}
-        setLoading={setLoading}
-      />
     );
   }
 
@@ -374,14 +355,9 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
             </div>
             <button
               onClick={handleCreateCourse}
-              disabled={createLoading}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 text-white px-3 sm:px-5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-md font-medium text-sm whitespace-nowrap flex-shrink-0"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-3 sm:px-5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-md font-medium text-sm whitespace-nowrap flex-shrink-0"
             >
-              {createLoading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Plus size={15} />
-              )}
+              <Plus size={15} />
               <span className="hidden sm:inline">Nouveau Cours</span>
               <span className="sm:hidden">Nouveau</span>
             </button>
@@ -531,20 +507,10 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
               {!searchTerm && filterStatus === "all" && (
                 <button
                   onClick={handleCreateCourse}
-                  disabled={createLoading}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-indigo-400 disabled:to-purple-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto text-sm sm:text-base"
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto text-sm sm:text-base"
                 >
-                  {createLoading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Chargement...
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={16} className="sm:w-5 sm:h-5" />
-                      Créer mon premier cours
-                    </>
-                  )}
+                  <Plus size={16} className="sm:w-5 sm:h-5" />
+                  Créer mon premier cours
                 </button>
               )}
             </div>
