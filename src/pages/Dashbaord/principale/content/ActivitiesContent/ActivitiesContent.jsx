@@ -24,7 +24,9 @@ import {
   Video,
   Store,
   Bell,
-  BookOpen
+  BookOpen,
+  Lock,
+  Globe
 } from "lucide-react";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
 import { minioS3Service } from "../../../../../services/minioS3";
@@ -38,6 +40,99 @@ import { motion } from "framer-motion";
  * All API calls preserved, enhanced UI/UX
  */
 import { useAuth } from "../../../../../hooks/useAuth";
+
+/**
+ * VideoPlayer — fetches video with auth headers (avoids CORS/MinIO issues),
+ * then autoplays when 75% visible in viewport, pauses when scrolled away.
+ */
+const VideoPlayer = ({ src, className }) => {
+  const videoRef = useRef(null);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch video with auth token → create blob URL
+  useEffect(() => {
+    if (!src) return;
+    let objectUrl = null;
+    setError(false);
+    setLoading(true);
+    setBlobUrl(null);
+
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+
+    fetch(src, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [src]);
+
+  // IntersectionObserver: autoplay when 75% visible, pause otherwise
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !blobUrl) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.75) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.75 }
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [blobUrl]);
+
+  if (loading) {
+    return (
+      <div className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}>
+        <Loader2 className="w-8 h-8 animate-spin opacity-60" />
+        <span className="text-xs">Chargement...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}>
+        <Video className="w-8 h-8 opacity-50" />
+        <span className="text-xs">Vidéo indisponible</span>
+      </div>
+    );
+  }
+
+  return (
+    <video
+      ref={videoRef}
+      src={blobUrl}
+      className={`${className} max-w-full`}
+      controls
+      playsInline
+      muted
+      loop
+      preload="auto"
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
+};
 
 const ActivitiesContent = () => {
   const { t } = useTranslation();
@@ -71,6 +166,7 @@ const ActivitiesContent = () => {
   });
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [createFormError, setCreateFormError] = useState("");
   const [formData, setFormData] = useState({
     titre: "",
     description: "",
@@ -228,6 +324,13 @@ const ActivitiesContent = () => {
   const getImageUrl = async (media) => {
     if (!media.id) return null;
     const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+
+    // For videos: always use the backend proxy URL (avoids MinIO CORS issues).
+    // The VideoPlayer component will fetch it with auth headers and create a blob URL.
+    if ((media.mediaType || '').toUpperCase() === 'VIDEO') {
+      return `${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/content`;
+    }
+
     try {
       const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/download-url`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -252,10 +355,14 @@ const ActivitiesContent = () => {
           if (event.medias && event.medias.length > 0) {
             const mediaItems = await Promise.all(
               event.medias
-                .filter(media => (media.mediaType === 'IMAGE' || media.mediaType === 'VIDEO') && media.id)
+                .filter(media => {
+                  const mt = (media.mediaType || '').toUpperCase();
+                  return (mt === 'IMAGE' || mt === 'PHOTO' || mt === 'VIDEO') && media.id;
+                })
                 .map(async (media) => {
                   const url = await getImageUrl(media);
-                  return url ? { type: media.mediaType, url } : null;
+                  const normalizedType = (media.mediaType || '').toUpperCase() === 'VIDEO' ? 'VIDEO' : 'IMAGE';
+                  return url ? { type: normalizedType, url } : null;
                 })
             );
             medias.push(...mediaItems.filter(item => item !== null));
@@ -357,7 +464,9 @@ const ActivitiesContent = () => {
             titre: event.titre,
             description: event.description,
             content: event.description,
-            timestamp: new Date(event.heureDebut).toLocaleString(),
+            timestamp: event.creationDate
+              ? new Date(event.creationDate).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+              : new Date(event.heureDebut).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
             eventDetails: {
               title: event.titre,
               description: event.description,
@@ -483,7 +592,7 @@ const ActivitiesContent = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.titre || !formData.description) {
-      alert(t('activities.validation.requiredFields'));
+      setCreateFormError(t('activities.validation.requiredFields', 'Veuillez remplir tous les champs obligatoires.'));
       return;
     }
 
@@ -510,12 +619,14 @@ const ActivitiesContent = () => {
         selectedClasses: []
       });
       setUploadedImages([]);
+      setCreateFormError("");
       setShowCreateForm(false);
       
       await loadEvents();
     } catch (error) {
       console.error('Error creating event:', error);
-      alert(t('activities.errors.createEventFailed'));
+      const msg = error?.response?.data?.message || error?.response?.data || error?.message || t('activities.errors.createEventFailed', 'Échec de la création de l\'événement');
+      setCreateFormError(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setLoading(false);
     }
@@ -725,8 +836,9 @@ const ActivitiesContent = () => {
   };
 
   const handleCreateEvent = async () => {
+    setCreateFormError("");
     if (!formData.titre || !formData.description || !formData.lieu || !formData.heureDebut) {
-      alert(t('activities.validation.requiredFields'));
+      setCreateFormError(t('activities.validation.requiredFields', 'Veuillez remplir tous les champs obligatoires.'));
       return;
     }
 
@@ -776,6 +888,7 @@ const ActivitiesContent = () => {
       await activityFeedService.createEvent(eventData);
 
       setShowCreateForm(false);
+      setCreateFormError("");
       setFormData({
         titre: "",
         description: "",
@@ -787,11 +900,14 @@ const ActivitiesContent = () => {
       });
       setUploadedImages([]);
       
+      // Small delay to let the backend fully persist media before re-fetching
+      await new Promise(resolve => setTimeout(resolve, 800));
       await loadEvents();
       
     } catch (error) {
       console.error('Error creating event:', error);
-      alert(`${t('activities.errors.createEventFailed')}: ${error.message}`);
+      const msg = error?.response?.data?.message || error?.response?.data || error?.message || t('activities.errors.createEventFailed', 'Échec de la création de l\'événement');
+      setCreateFormError(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setLoading(false);
       setUploading(false);
@@ -910,7 +1026,7 @@ const ActivitiesContent = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   className={`fixed inset-0 z-[1100] flex ${isMobile ? 'items-end' : 'items-center justify-center p-4'} bg-black/60 backdrop-blur-sm overflow-hidden`}
                   onClick={(e) => {
-                    if (e.target === e.currentTarget) setShowCreateForm(false);
+                    if (e.target === e.currentTarget) { setShowCreateForm(false); setCreateFormError(""); }
                   }}
                 >
                   <div className={`bg-white dark:bg-gray-800 shadow-2xl w-full ${isMobile ? 'h-[92vh] rounded-t-[32px]' : 'max-w-2xl max-h-[90vh] rounded-2xl'} overflow-hidden flex flex-col relative`}>
@@ -923,7 +1039,7 @@ const ActivitiesContent = () => {
                         {isMobile && <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Partagez avec votre communauté</p>}
                       </div>
                       <button
-                        onClick={() => setShowCreateForm(false)}
+                        onClick={() => { setShowCreateForm(false); setCreateFormError(""); }}
                         className="p-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-2xl transition-all"
                       >
                         <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
@@ -981,42 +1097,32 @@ const ActivitiesContent = () => {
                             <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
                               {t('activities.form.status', 'Visibilité')}
                             </label>
-                            <div className="relative">
-                              <select
-                                value={formData.visibility}
-                                onChange={(e) => handleInputChange("visibility", e.target.value)}
-                                className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none transition-all font-bold"
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleInputChange("visibility", "PUBLIC")}
+                                className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl border-2 font-bold text-xs transition-all ${
+                                  formData.visibility === "PUBLIC"
+                                    ? "bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:border-blue-400 dark:text-blue-300"
+                                    : "bg-gray-50 border-gray-100 text-gray-500 dark:bg-gray-900 dark:border-white/5 dark:text-gray-400 hover:border-gray-300"
+                                }`}
                               >
-                                <option value="PUBLIC">🌍 Public (Tout le monde)</option>
-                                <option value="PRIVATE">🔒 Privé (Classes spécifiques)</option>
-                              </select>
-                              <ChevronDown className="absolute right-4 top-4.5 w-5 h-5 text-gray-400 pointer-events-none" />
+                                <Globe className="w-4 h-4 flex-shrink-0" />
+                                <span className="uppercase tracking-widest text-[10px]">Public</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleInputChange("visibility", "PRIVATE")}
+                                className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl border-2 font-bold text-xs transition-all ${
+                                  formData.visibility === "PRIVATE"
+                                    ? "bg-purple-50 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300"
+                                    : "bg-gray-50 border-gray-100 text-gray-500 dark:bg-gray-900 dark:border-white/5 dark:text-gray-400 hover:border-gray-300"
+                                }`}
+                              >
+                                <Lock className="w-4 h-4 flex-shrink-0" />
+                                <span className="uppercase tracking-widest text-[10px]">Privé</span>
+                              </button>
                             </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                              {t('activities.form.startTime', 'Date & Heure Début')} *
-                            </label>
-                            <input
-                              type="datetime-local"
-                              value={formData.heureDebut}
-                              onChange={(e) => handleInputChange("heureDebut", e.target.value)}
-                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                              {t('activities.form.endTime', 'Heure Fin (Optionnel)')}
-                            </label>
-                            <input
-                              type="datetime-local"
-                              value={formData.heureFin}
-                              onChange={(e) => handleInputChange("heureFin", e.target.value)}
-                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
-                            />
                           </div>
                         </div>
 
@@ -1061,6 +1167,31 @@ const ActivitiesContent = () => {
                             )}
                           </motion.div>
                         )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                              {t('activities.form.startTime', 'Date & Heure Début')} *
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={formData.heureDebut}
+                              onChange={(e) => handleInputChange("heureDebut", e.target.value)}
+                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                              {t('activities.form.endTime', 'Heure Fin (Optionnel)')}
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={formData.heureFin}
+                              onChange={(e) => handleInputChange("heureFin", e.target.value)}
+                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
+                            />
+                          </div>
+                        </div>
 
                         <div>
                           <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
@@ -1121,9 +1252,16 @@ const ActivitiesContent = () => {
                     </div>
 
                     {/* Sticky Footer */}
-                    <div className="sticky bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 p-6 flex items-center justify-between gap-4 z-20" style={{ paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 24px) + 24px)' : '24px' }}>
+                    <div className="sticky bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 p-6 flex flex-col gap-3 z-20" style={{ paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 24px) + 24px)' : '24px' }}>
+                      {createFormError && (
+                        <div className="flex items-start gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl text-red-700 dark:text-red-300 text-xs font-medium">
+                          <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <span>{createFormError}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-4">
                       <button
-                        onClick={() => setShowCreateForm(false)}
+                        onClick={() => { setShowCreateForm(false); setCreateFormError(""); }}
                         className="flex-1 py-4 text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest text-[10px] hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all"
                       >
                         {t('common.actions.cancel', 'Annuler')}
@@ -1142,6 +1280,7 @@ const ActivitiesContent = () => {
                           <span>{t('activities.actions.createEvent', 'Publier l\'Événement')}</span>
                         )}
                       </button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -1253,18 +1392,27 @@ const ActivitiesContent = () => {
 
                         {/* Event details badge - Location and Date on same line */}
                         {(activity.eventDetails?.location || activity.eventDetails?.startTime || activity.eventDetails?.endTime) && (
-                          <div className={`flex items-center justify-between ${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 mb-1`}>
+                          <div className={`flex flex-col gap-1 ${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 mb-1`}>
                             {activity.eventDetails?.location && (
                               <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
+                                <MapPin className="w-3 h-3 flex-shrink-0" />
                                 {activity.eventDetails.location}
                               </span>
                             )}
-                            {(activity.eventDetails?.startTime || activity.eventDetails?.endTime) && (
-                              <span className="flex items-center gap-1 ml-auto">
-                                <Clock className="w-3 h-3" />
-                                {activity.eventDetails.startTime && new Date(activity.eventDetails.startTime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                {activity.eventDetails.endTime && ` → ${new Date(activity.eventDetails.endTime).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+                            {activity.eventDetails?.startTime && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3 flex-shrink-0 text-blue-500" />
+                                <span className="font-medium text-gray-600 dark:text-gray-300">
+                                  {new Date(activity.eventDetails.startTime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </span>
+                            )}
+                            {activity.eventDetails?.endTime && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 flex-shrink-0 text-orange-400" />
+                                <span className="font-medium text-gray-600 dark:text-gray-300">
+                                  {new Date(activity.eventDetails.endTime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </span>
                               </span>
                             )}
                           </div>
@@ -1281,7 +1429,9 @@ const ActivitiesContent = () => {
                       </div>
 
                       {/* Media Gallery - Facebook-style grid */}
-                      {activity.medias && activity.medias.length > 0 && (() => {
+                      {activity.medias && activity.medias.length > 0 && (
+                        <div className="w-full overflow-hidden">
+                        {(() => {
                         const medias = activity.medias;
                         const allImageUrls = medias.filter(m => m.type === 'IMAGE').map(m => m.url);
                         const MediaItem = ({ media, index, className, overlay }) => (
@@ -1295,7 +1445,7 @@ const ActivitiesContent = () => {
                             }}
                           >
                             {media.type === 'VIDEO' ? (
-                              <video src={media.url} controls playsInline className="w-full h-full object-cover" onClick={e => e.stopPropagation()} />
+                              <VideoPlayer src={media.url} className="w-full h-full object-cover" />
                             ) : (
                               <img src={media.url} alt={`media-${index}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                             )}
@@ -1352,6 +1502,8 @@ const ActivitiesContent = () => {
                           </div>
                         );
                       })()}
+                        </div>
+                      )}
 
                       {/* Engagement Stats */}
                       {(activity.likes > 0 || activity.participants > 0 || activity.comments.length > 0) && (
