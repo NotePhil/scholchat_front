@@ -55,41 +55,53 @@ const CourseContentView = ({ course, onBack }) => {
 
   useEffect(() => {
     if (processedChapters.length > 0) {
-      const docs = extractDocumentsFromChapters(
-        processedChapters.map((ch) => ({ ...ch, contenu: ch.processedContent || ch.contenu }))
-      );
-      setCourseDocuments(docs);
-      setFilteredDocuments(docs);
-    } else if (course?.chapitres) {
-      const docs = extractDocumentsFromChapters(course.chapitres);
+      // Use processedChapters directly (they already have processedContent with proxied URLs)
+      const docs = extractDocumentsFromChapters(processedChapters);
       setCourseDocuments(docs);
       setFilteredDocuments(docs);
     }
+    // Don't fall back to raw chapitres — wait for processChapterContent to finish
+    // (avoids showing broken Wasabi URLs in the Documents tab)
   }, [processedChapters]);
 
   const extractDocumentsFromChapters = (chapitres) => {
     const docs = [];
     if (!chapitres) return docs;
+
+    // Only list documents that are backend proxy URLs (already verified & owned by this course)
+    // Skip raw Wasabi/S3 URLs (they'd be AccessDenied) and blob: URLs
+    const apiBase = process.env.REACT_APP_API_BASE_URL || "";
+    const isProxied = (url) => url && apiBase && url.startsWith(apiBase) && url.includes("/media/");
+
     chapitres.forEach((chapter) => {
-      const content = chapter.contenu || "";
+      const content = chapter.processedContent || chapter.contenu || "";
       const parser = new DOMParser();
       const doc = parser.parseFromString(`<div>${content}</div>`, "text/html");
 
-      // Extract images
+      // Extract images (only proxied URLs — direct Wasabi links excluded)
       doc.querySelectorAll("img").forEach((img) => {
         const src = img.getAttribute("src");
-        if (src && src.startsWith("http")) {
-          const name = img.getAttribute("alt") || src.split("/").pop().split("?")[0];
+        if (src && isProxied(src)) {
+          const name = img.getAttribute("alt") || src.split("/").pop().split("?")[0] || "Image";
           docs.push({ id: src, title: name, url: src, type: "image", chapterTitle: chapter.titre });
         }
       });
 
-      // Extract file links (anchors)
+      // Extract file links (only proxied URLs)
       doc.querySelectorAll("a[href]").forEach((a) => {
         const href = a.getAttribute("href");
-        if (href && href.startsWith("http")) {
-          const name = a.textContent.trim() || href.split("/").pop().split("?")[0];
+        if (href && isProxied(href)) {
+          const name = a.textContent.trim() || href.split("/").pop().split("?")[0] || "Fichier";
           docs.push({ id: href, title: name, url: href, type: "file", chapterTitle: chapter.titre });
+        }
+      });
+
+      // Extract videos (only proxied URLs)
+      doc.querySelectorAll("video, video source").forEach((el) => {
+        const src = el.getAttribute("src");
+        if (src && isProxied(src)) {
+          const name = src.split("/").pop().split("?")[0] || "Vidéo";
+          docs.push({ id: src, title: name, url: src, type: "video", chapterTitle: chapter.titre });
         }
       });
     });
@@ -140,6 +152,27 @@ const CourseContentView = ({ course, onBack }) => {
     el.scrollBy({ left: dir === "left" ? -120 : 120, behavior: "smooth" });
   };
 
+  // Extract relative storage key from a full Wasabi/MinIO URL (never use direct URLs)
+  const toRelativePath = (raw) => {
+    if (!raw || !raw.startsWith("http")) return raw;
+    try {
+      const pathname = new URL(raw).pathname.replace(/^\//, "");
+      const idx = pathname.indexOf("users/");
+      if (idx >= 0) return pathname.slice(idx);
+      const parts = pathname.split("/");
+      return parts.length > 1 ? parts.slice(1).join("/") : pathname;
+    } catch { return raw; }
+  };
+
+  // Returns true for any direct storage URL that needs proxying (not a backend proxy, not blob)
+  const isStorageUrl = (url) => {
+    if (!url) return false;
+    if (url.startsWith("blob:")) return false;
+    const apiBase = process.env.REACT_APP_API_BASE_URL || "";
+    if (apiBase && url.startsWith(apiBase)) return false; // already a proxy URL
+    return url.startsWith("http");
+  };
+
   const processChapterContent = async () => {
     if (!course.chapitres) return;
 
@@ -148,39 +181,26 @@ const CourseContentView = ({ course, onBack }) => {
         course.chapitres.map(async (chapter) => {
           let processedContent = chapter.contenu || "";
 
-          // Extract src URLs from img tags and regenerate presigned URLs if they are MinIO paths
-          const imgSrcRegex = /src="(https?:\/\/[^"]+)"/g;
+          // Collect all storage URLs that need to be replaced with backend proxy URLs
+          const urlsToRefresh = new Set();
+          const allUrlRegex = /(src|href)="(https?:\/\/[^"]+)"/g;
           let match;
-          const urlsToRefresh = [];
-
-          while ((match = imgSrcRegex.exec(processedContent)) !== null) {
-            const url = match[1];
-            // Only refresh MinIO/S3 URLs (presigned URLs expire)
-            if (url.includes('users/') && (url.includes('/images/') || url.includes('/documents/') || url.includes('/videos/'))) {
-              urlsToRefresh.push({ original: url, match: match[0] });
-            }
+          while ((match = allUrlRegex.exec(processedContent)) !== null) {
+            const url = match[2];
+            if (isStorageUrl(url)) urlsToRefresh.add(url);
           }
 
-          // Also extract href URLs from anchor tags
-          const hrefRegex = /href="(https?:\/\/[^"]+)"/g;
-          while ((match = hrefRegex.exec(processedContent)) !== null) {
-            const url = match[1];
-            if (url.includes('users/') && (url.includes('/images/') || url.includes('/documents/') || url.includes('/videos/'))) {
-              urlsToRefresh.push({ original: url, match: match[0] });
-            }
-          }
-
-          for (const { original, match: matchStr } of urlsToRefresh) {
+          // Replace each storage URL with the backend proxy URL
+          for (const original of urlsToRefresh) {
             try {
-              // Extract the path after the host
-              const urlObj = new URL(original);
-              const cleanPath = urlObj.pathname.replace(/^\//, '');
-              const downloadData = await minioS3Service.generateDownloadUrlByPath(cleanPath);
-              if (downloadData && downloadData.downloadUrl) {
+              const relativePath = toRelativePath(original);
+              const downloadData = await minioS3Service.generateDownloadUrlByPath(relativePath);
+              if (downloadData?.downloadUrl) {
+                // Use a global replace (all occurrences in the HTML)
                 processedContent = processedContent.split(original).join(downloadData.downloadUrl);
               }
-            } catch (error) {
-              console.warn(`Failed to refresh URL:`, error);
+            } catch {
+              // Keep original — will fail gracefully in the browser
             }
           }
 
@@ -191,7 +211,7 @@ const CourseContentView = ({ course, onBack }) => {
       setProcessedChapters(processedChaps);
     } catch (error) {
       console.error("Error processing chapter content:", error);
-      setProcessedChapters(course.chapitres.map(ch => ({ ...ch, processedContent: ch.contenu || '' })));
+      setProcessedChapters(course.chapitres.map(ch => ({ ...ch, processedContent: ch.contenu || "" })));
     }
   };
 

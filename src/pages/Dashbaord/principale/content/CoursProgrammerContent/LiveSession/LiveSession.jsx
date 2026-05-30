@@ -179,6 +179,24 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
     };
   }, [coursId]);
 
+  // Poll session status every 15s so students auto-close when professor ends the session
+  // (fallback for when WebSocket SESSION_ENDED event is missed)
+  useEffect(() => {
+    if (sessionEnded || !coursId || isModerator) return;
+    const interval = setInterval(async () => {
+      try {
+        await liveSessionService.getActiveSession(coursId);
+        // If the call succeeds, session is still active — do nothing
+      } catch (e) {
+        // 404 means no active session → professor ended it
+        if (e?.response?.status === 404) {
+          setSessionEnded(true);
+        }
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [coursId, sessionEnded, isModerator]);
+
   const handleSelectChapter = async (chapitreId) => {
     if (!isModerator || !session) return;
     setChapterChanging(true);

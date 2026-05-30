@@ -116,6 +116,13 @@ const StudentDevoirsContent = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Re-fetch when parent switches child
+  useEffect(() => {
+    const onChildChanged = () => load();
+    window.addEventListener("childChanged", onChildChanged);
+    return () => window.removeEventListener("childChanged", onChildChanged);
+  }, [load]);
+
   // ── if a devoir is selected, show the exercise view ──────────────────────────
   if (selectedDevoir) {
     return (

@@ -202,7 +202,7 @@ const TabScrollBar = ({ activeTab, onTabChange, tabs }) => {
   );
 };
 
-const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCourseCreation, onNavigateToExerciseManagement, onNavigateToCoursManagement }) => {
+const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCourseCreation, onNavigateToExerciseManagement, onNavigateToCoursManagement, onNavigateToEvents }) => {
   const [classDetails, setClassDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(initialTab || "overview");
@@ -987,73 +987,18 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
             break;
         }
 
-        // If we found the user, add them to the appropriate category immediately
-        if (approvedUser && userCategory) {
-          console.log(
-            "Adding approved user to category:",
-            userCategory,
-            approvedUser
-          );
-
-          // Force update the users state immediately
-          setUsers((prevUsers) => {
-            const updatedUsers = { ...prevUsers };
-
-            // Remove from access requests
-            updatedUsers.accessRequests = updatedUsers.accessRequests.filter(
-              (req) => req.id !== request.id
-            );
-
-            // Add to the appropriate category (avoid duplicates)
-            const existsInCategory = updatedUsers[userCategory].some(
-              (user) => user.id === approvedUser.id
-            );
-
-            if (!existsInCategory) {
-              updatedUsers[userCategory] = [
-                ...updatedUsers[userCategory],
-                {
-                  ...approvedUser,
-                  // Ensure proper type marking for the table
-                  type: userType?.toLowerCase() || "utilisateur",
-                  typeUtilisateur: userType,
-                  etat: "ACTIF",
-                },
-              ];
-            }
-
-            console.log("Updated users state:", updatedUsers);
-            return updatedUsers;
-          });
-
-          // Update statistics immediately
-          setStatistics((prevStats) => {
-            const updatedStats = { ...prevStats };
-            updatedStats.accessRequests = Math.max(
-              0,
-              updatedStats.accessRequests - 1
-            );
-            updatedStats[userCategory] = updatedStats[userCategory] + 1;
-            return updatedStats;
-          });
-
-          message.success(
-            `Demande approuvée avec succès. ${approvedUser.prenom} ${approvedUser.nom} a été ajouté(e) aux ${userCategory}.`
-          );
-        } else {
-          console.warn("Could not find full user data for approved request");
-          message.success("Demande approuvée avec succès");
-          // Still refresh to get updated data
-          setRefreshKey((prev) => prev + 1);
-        }
-      } catch (userFetchError) {
-        console.error(
-          "Error fetching user details after approval:",
-          userFetchError
+        message.success(
+          approvedUser
+            ? `Demande approuvée. ${approvedUser.prenom || ""} ${approvedUser.nom || ""} a été ajouté(e).`
+            : "Demande approuvée avec succès"
         );
+      } catch (userFetchError) {
+        console.warn("Could not fetch user details after approval:", userFetchError);
         message.success("Demande approuvée avec succès");
-        setRefreshKey((prev) => prev + 1);
       }
+      // Always reload class data to reflect the approval
+      await loadAccessRequests();
+      await loadClassDetails();
     } catch (error) {
       message.error("Erreur lors de l'approbation de la demande");
       console.error("Error approving request:", error);
@@ -1077,7 +1022,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
       setRejectModalVisible(false);
       setRejectReason("");
       setRejectingUser(null);
-      setRefreshKey((prev) => prev + 1);
+      await loadAccessRequests();
     } catch (error) {
       message.error("Erreur lors du rejet de la demande");
       console.error("Error rejecting request:", error);
@@ -1544,6 +1489,10 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
 
   const handleTabChange = (key) => {
     setActiveTab(key);
+    // Reload access requests fresh each time the tab is opened
+    if (key === "access-requests") {
+      loadAccessRequests();
+    }
   };
 
   const getStatusTag = (etat) => {
@@ -1990,6 +1939,14 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                     style={{ background: "linear-gradient(135deg,#f093fb,#f5576c)" }}>
                     <FileTextOutlined style={{ fontSize: 14 }} />
                     Exercices Programmer
+                  </button>
+                )}
+                {onNavigateToEvents && (
+                  <button onClick={() => onNavigateToEvents(classId)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
+                    style={{ background: "linear-gradient(135deg,#f6a623,#e07b00)" }}>
+                    <Calendar size={14} />
+                    Événements
                   </button>
                 )}
               </div>

@@ -62,18 +62,19 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
           });
           if (progResp.ok) {
             const progData = await progResp.json();
-            // The programmer response has the exercise info
-            if (progData.redacteurId) {
-              // It's already an exercise response from class fetch
+            // exerciseId field in programmer object points to base exercise
+            const baseId = progData.exerciseId || progData.exercise?.id;
+            if (baseId) {
+              actualExerciseId = baseId;
+              try {
+                exerciseData = await exerciseService.getExerciseById(baseId);
+              } catch { exerciseData = progData.exercise || progData; }
+            } else {
               exerciseData = progData;
               actualExerciseId = progData.id;
             }
-            // Try to get questions from the source exercise
-            if (progData.questions && progData.questions.length > 0) {
-              questionsData = progData.questions;
-            } else {
-              questionsData = await questionReponseService.getQuestionsByExercise(actualExerciseId);
-            }
+            // Always fetch questions from base exercise to get choixReponses
+            questionsData = await questionReponseService.getQuestionsByExercise(actualExerciseId);
           }
         } catch (e2) {
           console.warn("Could not load as programmer either:", e2);

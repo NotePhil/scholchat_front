@@ -318,6 +318,9 @@ const StudentParentStats = ({
                   onClick={() => {
                     setSelectedChild(child);
                     setShowStudentDropdown(false);
+                    // Sync to localStorage so other pages (exercises, devoirs, etc.) pick up the selected child
+                    localStorage.setItem("selectedChildId", child.id);
+                    window.dispatchEvent(new Event("childChanged"));
                   }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors first:rounded-t-lg last:rounded-b-lg ${
                     selectedChild?.id === child.id
@@ -426,11 +429,20 @@ const StudentParentStats = ({
           </h3>
           <div className="text-center py-6">
             <Users className={`h-10 w-10 mx-auto mb-2 ${themeColors.textSecondary} opacity-40`} />
-            <p className={`text-sm ${themeColors.textSecondary}`}>
+            <p className={`text-sm ${themeColors.textSecondary} mb-3`}>
               {userRole === "parent"
                 ? "Cet enfant n'est inscrit dans aucune classe"
                 : "Vous n'êtes inscrit dans aucune classe"}
             </p>
+            {setActiveTab && (
+              <button
+                onClick={() => setActiveTab(userRole === "parent" ? "my-children" : "manage-class")}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+              >
+                <Users className="w-4 h-4" />
+                {userRole === "parent" ? "Inscrire mon enfant" : "Rechercher une classe"}
+              </button>
+            )}
           </div>
         </div>
       );
@@ -617,7 +629,10 @@ const StudentParentStats = ({
               </p>
             </div>
             <div className={`flex items-center ${isMobile ? "gap-2" : "space-x-4"}`}>
-              {/* Child switcher moved to header */}
+              {/* Child selector for parents */}
+              {userRole === "parent" && children.length > 0 && (
+                <StudentSelector />
+              )}
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}

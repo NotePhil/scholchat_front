@@ -416,8 +416,32 @@ const ExerciseList = ({
                       }
                     </div>
                     <Text strong className="text-sm sm:text-base block mb-1" style={{ lineHeight: 1.4 }}>
-                      {exercise.nom}
+                      {exercise.nom || exercise.exercise?.nom || "Sans titre"}
                     </Text>
+                    {/* Class name */}
+                    {exercise.classeNom && (
+                      <div className="flex items-center gap-1 mb-1">
+                        <BookOutlined style={{ fontSize: 11, color: "#6366f1" }} />
+                        <span className="text-xs text-indigo-600 font-semibold truncate">{exercise.classeNom}</span>
+                      </div>
+                    )}
+                    {/* Start / end time */}
+                    {(exercise.dateExoPrevue || exercise.dateDebutExoEffectif) && (
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {exercise.dateExoPrevue && (
+                          <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                            <CalendarOutlined style={{ fontSize: 10 }} />
+                            Prévu: {new Date(exercise.dateExoPrevue).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                        {exercise.dateFinExoEffectif && (
+                          <span className="text-[11px] text-red-400 flex items-center gap-1">
+                            <ClockCircleOutlined style={{ fontSize: 10 }} />
+                            Fin: {new Date(exercise.dateFinExoEffectif).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {exercise.description && (
                       <Text type="secondary" className="text-xs block mb-3" style={{ lineHeight: 1.5 }}>
                         {exercise.description.length > 80 ? exercise.description.substring(0, 80) + "…" : exercise.description}

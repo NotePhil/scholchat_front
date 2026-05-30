@@ -75,6 +75,17 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     return () => { cancelled = true; };
   }, [filterClassId, allExercises]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Re-fetch when parent switches child (childChanged event)
+  useEffect(() => {
+    const onChildChanged = () => {
+      setAllExercises([]);
+      setExercises([]);
+      fetchExercises();
+    };
+    window.addEventListener("childChanged", onChildChanged);
+    return () => window.removeEventListener("childChanged", onChildChanged);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load all data on mount
   useEffect(() => {
     if (initClassId) localStorage.removeItem("selectedClassId");
@@ -144,56 +155,83 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         throw new Error("Utilisateur non connecté. Veuillez vous reconnecter.");
       }
 
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      const baseUrl = process.env.REACT_APP_API_BASE_URL;
+      const authHeader = { Authorization: `Bearer ${token}` };
       let data = [];
 
       if (selectedRole === "PROFESSOR" || selectedRole === "TUTOR") {
-        data = await exerciseService.getExercisesByProfesseur(userId);
+        // Own exercises
+        const ownExercises = await exerciseService.getExercisesByProfesseur(userId);
+        // Also load exercises from classes where professor has publication rights (class-access)
+        try {
+          const classesResp = await fetch(`${baseUrl}/droits-publication/utilisateurs/${userId}/classes`, { headers: authHeader });
+          const accessClasses = classesResp.ok ? await classesResp.json() : [];
+          const allMap = new Map();
+          (ownExercises || []).forEach(e => allMap.set(String(e.id), e));
+          for (const cls of (accessClasses || [])) {
+            try {
+              const programmers = await exerciseProgrammerService.getExercisesProgrammesParClasse(cls.id);
+              (programmers || []).forEach(p => {
+                const exId = String(p.exerciseId || p.exercise?.id || p.id);
+                if (!allMap.has(exId)) {
+                  // Normalize programmer object so ExerciseList can render it
+                  const ex = p.exercise || {};
+                  allMap.set(exId, { ...ex, id: exId, nom: ex.nom || p.nom || "Sans titre", exerciseProgrammerId: p.id, classeIds: p.classeIds || [] });
+                }
+              });
+            } catch { /* non-blocking */ }
+          }
+          data = Array.from(allMap.values());
+        } catch {
+          data = ownExercises || [];
+        }
       } else if (selectedRole === "ADMIN") {
         data = await exerciseService.getExercisesAccessibles(userId);
       } else {
-        // Students and parents: get accessible exercises + exercises programmed for their classes
-        const [accessibleExercises, classExercises] = await Promise.allSettled([
-          exerciseService.getExercisesAccessibles(userId),
-          // Fetch exercises from user's classes
-          (async () => {
-            try {
-              const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
-              const baseUrl = process.env.REACT_APP_API_BASE_URL;
-              // Get user's classes first
-              const classesResp = await fetch(`${baseUrl}/acceder/utilisateurs/${userId}/classes`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              if (!classesResp.ok) return [];
-              const classes = await classesResp.json();
-              // Get exercises programmed for each class
-              const allExercises = [];
+        // Students and parents: ONLY show exercises from their enrolled classes (not globally accessible ones)
+        try {
+          const classesResp = await fetch(`${baseUrl}/acceder/utilisateurs/${userId}/classes`, { headers: authHeader });
+          if (!classesResp.ok) {
+            data = []; // no classes → no exercises
+          } else {
+            const classes = await classesResp.json();
+            if (!classes || classes.length === 0) {
+              data = []; // no classes → no exercises
+            } else {
+              // Build a classId→name map for display
+              const classNameMap = {};
+              classes.forEach(c => { classNameMap[String(c.id)] = c.nom || c.name || `Classe ${c.id}`; });
+              const allMap = new Map();
               for (const cls of classes) {
                 try {
-                  const exoResp = await fetch(`${baseUrl}/exercises-programmer/classe/${cls.id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                  });
+                  const exoResp = await fetch(`${baseUrl}/exercises-programmer/classe/${cls.id}`, { headers: authHeader });
                   if (exoResp.ok) {
                     const exos = await exoResp.json();
-                    allExercises.push(...exos);
+                    exos.forEach(e => {
+                      if (!allMap.has(e.id)) {
+                        const classIds = e.classeIds || e.classesIds || [];
+                        const classeNom = classIds.map(id => classNameMap[String(id)]).filter(Boolean).join(", ") || cls.nom || cls.name || "";
+                        // exerciseId = base exercise ID; exerciseProgrammerId = this programmer record's ID (e.id)
+                        const baseExerciseId = e.exerciseId || e.exercise?.id;
+                        allMap.set(e.id, {
+                          ...e,
+                          exerciseId: baseExerciseId,
+                          exerciseProgrammerId: e.id,
+                          nom: e.nom || e.exercise?.nom || "Sans titre",
+                          classeNom,
+                        });
+                      }
+                    });
                   }
-                } catch (e) { /* ignore */ }
+                } catch { /* ignore */ }
               }
-              return allExercises;
-            } catch (e) { return []; }
-          })(),
-        ]);
-
-        const accessible = accessibleExercises.status === "fulfilled" ? accessibleExercises.value || [] : [];
-        const fromClasses = classExercises.status === "fulfilled" ? classExercises.value || [] : [];
-
-        // Merge and deduplicate by ID
-        const allMap = new Map();
-        accessible.forEach(e => allMap.set(e.id, e));
-        fromClasses.forEach(e => { if (!allMap.has(e.id)) allMap.set(e.id, e); });
-        data = Array.from(allMap.values());
-        
-        // Filter out BROUILLON exercises for students/parents
-        data = data.filter(e => e.etat !== "BROUILLON");
+              data = Array.from(allMap.values()).filter(e => e.etat !== "BROUILLON");
+            }
+          }
+        } catch {
+          data = [];
+        }
       }
 
       const safeData = data || [];

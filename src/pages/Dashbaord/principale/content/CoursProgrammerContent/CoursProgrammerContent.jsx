@@ -151,6 +151,31 @@ const CoursProgrammerContent = () => {
         });
       });
 
+      // For scheduled courses whose course object is still missing (from other professors),
+      // fetch them individually so they display with the correct title
+      const missingCourseIds = Array.from(merged.values())
+        .filter(sc => !sc.cours && sc.coursId)
+        .map(sc => String(sc.coursId));
+
+      if (missingCourseIds.length > 0) {
+        const uniqueIds = [...new Set(missingCourseIds)];
+        await Promise.allSettled(
+          uniqueIds.map(async (courseId) => {
+            try {
+              const c = await coursService.getCoursById(courseId);
+              if (c) {
+                coursesMap.set(String(c.id), c);
+                merged.forEach((sc, key) => {
+                  if (String(sc.coursId) === String(c.id) && !sc.cours) {
+                    merged.set(key, { ...sc, cours: c });
+                  }
+                });
+              }
+            } catch { /* ignore */ }
+          })
+        );
+      }
+
       setScheduledCourses(Array.from(merged.values()));
     } catch (err) {
       console.error("Erreur lors du chargement des données:", err);

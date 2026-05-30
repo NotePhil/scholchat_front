@@ -81,20 +81,18 @@ const VideoPlayer = ({ src, className }) => {
     };
   }, [src]);
 
-  // IntersectionObserver: autoplay when 75% visible, pause otherwise
+  // IntersectionObserver: pause when scrolled out of view (no forced autoplay)
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !blobUrl) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.75) {
-          video.play().catch(() => {});
-        } else {
+        if (!entry.isIntersecting) {
           video.pause();
         }
       },
-      { threshold: 0.75 }
+      { threshold: 0.25 }
     );
 
     observer.observe(video);
@@ -126,9 +124,7 @@ const VideoPlayer = ({ src, className }) => {
       className={`${className} max-w-full`}
       controls
       playsInline
-      muted
-      loop
-      preload="auto"
+      preload="metadata"
       onClick={(e) => e.stopPropagation()}
     />
   );
@@ -190,6 +186,12 @@ const ActivitiesContent = () => {
   const [editUploading, setEditUploading] = useState(false);
   const editFileInputRef = useRef(null);
   const [userPublicationClassIds, setUserPublicationClassIds] = useState([]);
+  const [classFilterId, setClassFilterId] = useState(() => {
+    const saved = localStorage.getItem("selectedClassId");
+    if (saved) { localStorage.removeItem("selectedClassId"); return saved; }
+    return null;
+  });
+  const [classFilterName, setClassFilterName] = useState("");
 
   const loadClasses = async () => {
     if (formData.visibility !== 'PRIVATE') return;
@@ -318,8 +320,15 @@ const ActivitiesContent = () => {
         filtered = activities;
     }
     
+    // Apply class filter if active (navigated from class management)
+    if (classFilterId) {
+      filtered = filtered.filter(a =>
+        (a.selectedClasses || []).some(id => String(id) === String(classFilterId))
+      );
+    }
+
     setFilteredActivities(filtered);
-  }, [activities, activeTab]);
+  }, [activities, activeTab, classFilterId]);
 
   const getImageUrl = async (media) => {
     if (!media.id) return null;
@@ -478,6 +487,7 @@ const ActivitiesContent = () => {
             },
             participantsIds: event.participantsIds || [],
             heureDebut: event.heureDebut,
+            creationDate: event.creationDate,
             visibility: event.visibility || 'PUBLIC',
             selectedClasses: classIds,
             createurId: event.createurId,
@@ -485,7 +495,12 @@ const ActivitiesContent = () => {
         })
       );
       
-      activitiesWithMedias.sort((a, b) => new Date(b.heureDebut) - new Date(a.heureDebut));
+      // Sort by creation date (most recent first); fall back to start time if unavailable
+      activitiesWithMedias.sort((a, b) => {
+        const da = a.creationDate ? new Date(a.creationDate) : new Date(a.heureDebut);
+        const db = b.creationDate ? new Date(b.creationDate) : new Date(b.heureDebut);
+        return db - da;
+      });
 
       // Filter based on role and visibility
       const currentUserId = localStorage.getItem('userId');
@@ -1076,75 +1091,61 @@ const ActivitiesContent = () => {
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                              {t('activities.form.location', 'Lieu')} *
-                            </label>
-                            <div className="relative">
-                              <MapPin className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
-                              <input
-                                type="text"
-                                value={formData.lieu}
-                                onChange={(e) => handleInputChange("lieu", e.target.value)}
-                                className="w-full pl-12 pr-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
-                                placeholder={t('activities.form.locationPlaceholder', 'Ex: Salle 101')}
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                              {t('activities.form.status', 'Visibilité')}
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleInputChange("visibility", "PUBLIC")}
-                                className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl border-2 font-bold text-xs transition-all ${
-                                  formData.visibility === "PUBLIC"
-                                    ? "bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:border-blue-400 dark:text-blue-300"
-                                    : "bg-gray-50 border-gray-100 text-gray-500 dark:bg-gray-900 dark:border-white/5 dark:text-gray-400 hover:border-gray-300"
-                                }`}
-                              >
-                                <Globe className="w-4 h-4 flex-shrink-0" />
-                                <span className="uppercase tracking-widest text-[10px]">Public</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleInputChange("visibility", "PRIVATE")}
-                                className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl border-2 font-bold text-xs transition-all ${
-                                  formData.visibility === "PRIVATE"
-                                    ? "bg-purple-50 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300"
-                                    : "bg-gray-50 border-gray-100 text-gray-500 dark:bg-gray-900 dark:border-white/5 dark:text-gray-400 hover:border-gray-300"
-                                }`}
-                              >
-                                <Lock className="w-4 h-4 flex-shrink-0" />
-                                <span className="uppercase tracking-widest text-[10px]">Privé</span>
-                              </button>
-                            </div>
+                        {/* Visibility toggle — full width */}
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                            {t('activities.form.status', 'Visibilité')}
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleInputChange("visibility", "PUBLIC")}
+                              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 font-bold text-xs transition-all ${
+                                formData.visibility === "PUBLIC"
+                                  ? "bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:border-blue-400 dark:text-blue-300"
+                                  : "bg-gray-50 border-gray-100 text-gray-500 dark:bg-gray-900 dark:border-white/5 dark:text-gray-400 hover:border-gray-300"
+                              }`}
+                            >
+                              <Globe className="w-4 h-4 flex-shrink-0" />
+                              <span className="uppercase tracking-widest text-[10px]">Public</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleInputChange("visibility", "PRIVATE")}
+                              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 font-bold text-xs transition-all ${
+                                formData.visibility === "PRIVATE"
+                                  ? "bg-purple-50 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300"
+                                  : "bg-gray-50 border-gray-100 text-gray-500 dark:bg-gray-900 dark:border-white/5 dark:text-gray-400 hover:border-gray-300"
+                              }`}
+                            >
+                              <Lock className="w-4 h-4 flex-shrink-0" />
+                              <span className="uppercase tracking-widest text-[10px]">Privé</span>
+                            </button>
                           </div>
                         </div>
 
+                        {/* Classes — directly below Privé, scrollable for many classes */}
                         {formData.visibility === "PRIVATE" && (
                           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                             <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
                               {t('activities.form.selectClasses', 'Classes Concernées')} *
                             </label>
                             {loadingClasses ? (
-                              <div className="flex items-center space-x-2 py-4">
+                              <div className="flex items-center space-x-2 py-3">
                                 <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
                                 <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Recherche des classes...</span>
                               </div>
+                            ) : classes.length === 0 ? (
+                              <p className="text-xs text-gray-400 py-2">Aucune classe disponible</p>
                             ) : (
-                              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar p-1">
+                              <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1 border border-gray-100 dark:border-white/5 rounded-2xl p-2">
                                 {classes.map((cls) => (
-                                  <label 
-                                    key={cls.id} 
+                                  <label
+                                    key={cls.id}
                                     className={`flex items-center space-x-2 p-3 rounded-xl border transition-all cursor-pointer ${
                                       formData.selectedClasses?.includes(cls.id)
-                                        ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
-                                        : 'bg-gray-50 border-gray-100 dark:bg-gray-900 dark:border-white/5'
+                                        ? 'bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800'
+                                        : 'bg-gray-50 border-gray-100 dark:bg-gray-900 dark:border-white/5 hover:border-purple-200'
                                     }`}
                                   >
                                     <input
@@ -1158,7 +1159,7 @@ const ActivitiesContent = () => {
                                           handleInputChange("selectedClasses", (formData.selectedClasses || []).filter(id => id !== classId));
                                         }
                                       }}
-                                      className="w-4 h-4 rounded-lg border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 flex-shrink-0"
                                     />
                                     <span className="text-[10px] font-black uppercase tracking-tighter truncate dark:text-white">{cls.nom || cls.name}</span>
                                   </label>
@@ -1167,6 +1168,23 @@ const ActivitiesContent = () => {
                             )}
                           </motion.div>
                         )}
+
+                        {/* Lieu — below classes */}
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                            {t('activities.form.location', 'Lieu')} *
+                          </label>
+                          <div className="relative">
+                            <MapPin className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
+                            <input
+                              type="text"
+                              value={formData.lieu}
+                              onChange={(e) => handleInputChange("lieu", e.target.value)}
+                              className="w-full pl-12 pr-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                              placeholder={t('activities.form.locationPlaceholder', 'Ex: Salle 101')}
+                            />
+                          </div>
+                        </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -1287,6 +1305,17 @@ const ActivitiesContent = () => {
               )}
 
               {/* Activities Feed */}
+              {/* Class filter banner */}
+              {classFilterId && (
+                <div className="mb-3 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-2">
+                  <span className="text-sm text-amber-700 dark:text-amber-300 font-medium flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Événements de la classe {classFilterName || classFilterId}
+                  </span>
+                  <button onClick={() => { setClassFilterId(null); setClassFilterName(""); }} className="text-amber-400 hover:text-amber-600 text-xs font-bold">✕</button>
+                </div>
+              )}
+
               <div className="space-y-4">
                 {loadingActivities ? (
                   <div className="flex justify-center items-center py-12">

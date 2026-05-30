@@ -220,9 +220,13 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
         classeId: cls.id,
         codeActivation: activationCode,
       });
-      message.success("Demande d'accès envoyée ! En attente d'approbation.");
+      message.success("Demande d'accès envoyée avec succès !");
+      // Close ALL modals and clear search on success
       setJoinDetailsOpen(false);
+      setJoinModalOpen(false);
       handleClearJoinSearch();
+      // Refresh class list so the new access appears
+      handleRefresh();
       return true;
     } catch (err) {
       throw err;
@@ -358,6 +362,12 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
             onNavigateToCourseCreation={isAdmin ? undefined : handleNavigateToCourseCreation}
             onNavigateToExerciseManagement={isAdmin ? undefined : handleNavigateToExerciseManagement}
             onNavigateToCoursManagement={isAdmin ? undefined : handleNavigateToCoursManagement}
+            onNavigateToEvents={(classId) => {
+              if (setActiveTab) {
+                localStorage.setItem("selectedClassId", classId);
+                setActiveTab("activities");
+              }
+            }}
           />
         )}
       </div>

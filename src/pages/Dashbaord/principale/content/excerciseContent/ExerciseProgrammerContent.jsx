@@ -32,6 +32,15 @@ const ETAT_CONFIG = {
   PUBLIE:    { label: "Publié",    color: "#2563eb", bg: "#eff6ff" },
   BROUILLON: { label: "Brouillon", color: "#d97706", bg: "#fffbeb" },
   INACTIF:   { label: "Inactif",   color: "#6b7280", bg: "#f9fafb" },
+  EXPIRE:    { label: "Expiré",    color: "#991b1b", bg: "#fef2f2" },
+};
+
+// Returns effective display status: if end date passed and was active, show Expiré
+const getEffectiveEtat = (prog) => {
+  if ((prog.etat === "ACTIF" || prog.etat === "PUBLIE") && prog.dateFinExoEffectif) {
+    if (new Date(prog.dateFinExoEffectif) < new Date()) return "EXPIRE";
+  }
+  return prog.etat;
 };
 
 const TypeBadge = ({ type }) => {
@@ -508,12 +517,7 @@ const ExerciseProgrammerContent = () => {
                             {prog.nom || exo.nom || "Exercice"}
                           </span>
                           <TypeBadge type={prog.typeAssignation} />
-                          <EtatBadge etat={prog.etat} />
-                          {isExpired && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600">
-                              <AlertCircle size={10} /> Expiré
-                            </span>
-                          )}
+                          <EtatBadge etat={getEffectiveEtat(prog)} />
                         </div>
                         <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
                           <span className="flex items-center gap-1">
@@ -584,7 +588,7 @@ const ExerciseProgrammerContent = () => {
             {[
               { label: "Exercice",       value: detailProg.nom || "—" },
               { label: "Type",           value: <TypeBadge type={detailProg.typeAssignation} /> },
-              { label: "Statut",         value: <EtatBadge etat={detailProg.etat} /> },
+              { label: "Statut",         value: <EtatBadge etat={getEffectiveEtat(detailProg)} /> },
               { label: "Date prévue",    value: fmtDateTime(detailProg.dateExoPrevue) },
               { label: "Début effectif", value: fmtDateTime(detailProg.dateDebutExoEffectif) },
               { label: "Fin effective",  value: fmtDateTime(detailProg.dateFinExoEffectif) },
