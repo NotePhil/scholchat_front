@@ -123,7 +123,7 @@ const StudentClassList = ({ isParentView = false }) => {
         if (reqs.length === 0) return;
         const latest = reqs[reqs.length - 1];
         const classId = nonApproved[i].id;
-        if (!map[classId]) map[classId] = latest.statut || "PENDING";
+        if (!map[classId]) map[classId] = latest.etat || "PENDING";
       });
 
       setAccessMap(map);

@@ -11,6 +11,7 @@ const MessageList = ({
   toggleMessageSelection,
   toggleStarMessage,
   handleMarkAsRead,
+  markReadLocally,
   handleDeleteMessage,
   handleBulkDelete,
   handleEmptyTrash,
@@ -26,7 +27,9 @@ const MessageList = ({
   getUserInitials,
   getUserDisplay,
   formatDate,
+  currentUser,
 }) => {
+  const userId = localStorage.getItem('userId');
   return (
     <div className="flex-1 flex flex-col">
       <div className={`px-6 py-3 border-b flex items-center gap-4 ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}>
@@ -110,13 +113,28 @@ const MessageList = ({
                     : isDark
                     ? "hover:bg-gray-800"
                     : "hover:bg-gray-50"
-                } ${!message.read ? "border-l-4 border-blue-500" : ""}`}
+                } ${
+                  // Only show unread indicator when current user is a recipient (not sender)
+                  !message.read && message.expediteur?.id !== userId
+                    ? "border-l-4 border-blue-500"
+                    : ""
+                }`}
                 onClick={() => {
                   setSelectedMessage(message);
-                  const threadIds = message.thread
-                    ? message.thread.filter(m => !m.read).map(m => m.id)
-                    : (!message.read ? [message.id] : []);
-                  threadIds.forEach(id => handleMarkAsRead(id, true));
+                  // Get all unread messages in this thread
+                  const threadMsgs = message.thread
+                    ? message.thread.filter(m => !m.read)
+                    : (!message.read ? [message] : []);
+
+                  threadMsgs.forEach(m => {
+                    if (m.expediteur?.id !== userId) {
+                      // Received — call API to mark as read
+                      handleMarkAsRead(m.id, true);
+                    } else {
+                      // Sent — update local state only (sender viewing their own sent msg)
+                      markReadLocally(m.id);
+                    }
+                  });
                 }}
               >
                 <input
@@ -153,19 +171,25 @@ const MessageList = ({
 <div className="flex-1 min-w-0">
   <div className="flex items-center justify-between mb-1">
     <div className="flex items-center gap-2">
-      <span className={`font-medium truncate ${!message.read ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}>
+      <span className={`font-medium truncate ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}>
         {getUserDisplay(message.expediteur)}
       </span>
       <span className={`text-xs px-2 py-1 rounded-full ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}>
         {message.expediteur?.role}
       </span>
     </div>
-    <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-      {formatDate(message.dateCreation)}
-    </span>
+    <div className="flex items-center gap-2">
+      {/* Blue dot for sent messages not yet read by recipient — disappears when selected */}
+      {message.expediteur?.id === userId && !message.read && selectedMessage?.id !== message.id && (
+        <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" title="Non lu par le destinataire" />
+      )}
+      <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+        {formatDate(message.dateCreation)}
+      </span>
+    </div>
   </div>
   <div className="flex items-center justify-between mb-1">
-    <span className={`font-medium text-sm ${!message.read ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"} truncate`}>
+    <span className={`font-medium text-sm ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"} truncate`}>
       {message.objet || "Sans objet"}
     </span>
     {message.isConversation && (

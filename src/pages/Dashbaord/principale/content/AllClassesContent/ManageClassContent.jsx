@@ -220,15 +220,20 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
         classeId: cls.id,
         codeActivation: activationCode,
       });
-      message.success("Demande d'accès envoyée avec succès !");
-      // Close ALL modals and clear search on success
+      // Close ALL modals first, then show success
       setJoinDetailsOpen(false);
       setJoinModalOpen(false);
       handleClearJoinSearch();
+      setSuccessMessage("Demande d'accès envoyée avec succès !");
       // Refresh class list so the new access appears
       handleRefresh();
       return true;
     } catch (err) {
+      // Close modals and show error in parent
+      setJoinDetailsOpen(false);
+      setJoinModalOpen(false);
+      handleClearJoinSearch();
+      setError(err.message || "Une erreur est survenue lors de la demande d'accès");
       throw err;
     }
   };
@@ -461,7 +466,7 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
       {joinFoundClass && (
         <ParentClassManagementModal
           open={joinDetailsOpen}
-          onClose={() => { setJoinDetailsOpen(false); setJoinModalOpen(true); }}
+          onClose={() => { setJoinDetailsOpen(false); }}
           classe={joinFoundClass}
           hasAccess={false}
           onRequestAccess={handleRequestAccess}

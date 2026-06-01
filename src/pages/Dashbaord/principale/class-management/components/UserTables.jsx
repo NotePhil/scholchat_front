@@ -25,6 +25,8 @@ const UserTables = ({
   classId,
   userRole,
   isModerator,
+  currentUserId,
+  classCreatorId,
 }) => {
   useEffect(() => {
     console.log(`UserTables - ${userType}:`, users);
@@ -133,7 +135,22 @@ const UserTables = ({
           key: "droitPublication",
           render: (_, record) => {
             if (!isModerator) return null;
+            // A professor cannot toggle their own publication rights
+            const isSelf = currentUserId && record.id === currentUserId;
             const hasRight = publicationRightsMap?.[record.id] ?? false;
+            if (isSelf) {
+              return (
+                <Tooltip title="Vous ne pouvez pas modifier vos propres droits de publication">
+                  <Switch
+                    size="small"
+                    checked={hasRight}
+                    checkedChildren="Oui"
+                    unCheckedChildren="Non"
+                    disabled
+                  />
+                </Tooltip>
+              );
+            }
             return (
               <Switch
                 size="small"
@@ -382,17 +399,22 @@ const UserTables = ({
           ) : (
             <>
               {isModerator && (
-                <Popconfirm
-                  title={`Retirer l'accès de cet utilisateur ?`}
-                  description="Cette action retirera l'accès de l'utilisateur à cette classe."
-                  onConfirm={() => onRemoveAccess(record)}
-                  okText="Oui"
-                  cancelText="Non"
-                >
-                  <Tooltip title="Retirer l'accès à la classe">
-                    <Button icon={<UserDeleteOutlined />} size="small" danger />
-                  </Tooltip>
-                </Popconfirm>
+                <>
+                  {/* Hide remove button for the connected user's own row */}
+                  {!(currentUserId && record.id === currentUserId) && (
+                    <Popconfirm
+                      title={`Retirer l'accès de cet utilisateur ?`}
+                      description="Cette action retirera l'accès de l'utilisateur à cette classe."
+                      onConfirm={() => onRemoveAccess(record)}
+                      okText="Oui"
+                      cancelText="Non"
+                    >
+                      <Tooltip title="Retirer l'accès à la classe">
+                        <Button icon={<UserDeleteOutlined />} size="small" danger />
+                      </Tooltip>
+                    </Popconfirm>
+                  )}
+                </>
               )}
 
               {/* Show delete button only for administrators */}

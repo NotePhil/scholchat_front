@@ -94,6 +94,12 @@ const AccountActivation = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        // If already activated (ACTIVE state), go straight to password page
+        if (errorData?.message?.includes("PENDING") || errorData?.message?.includes("ACTIVE")) {
+          setActivationStatus("success");
+          navigate("/schoolchat/PasswordPage", { state: { activationToken: token, email } });
+          return;
+        }
         throw new Error(
           errorData?.message || "L'activation a échoué. Veuillez réessayer."
         );

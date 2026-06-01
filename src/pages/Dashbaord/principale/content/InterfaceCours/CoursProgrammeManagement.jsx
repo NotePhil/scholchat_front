@@ -78,6 +78,7 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [classExercises, setClassExercises] = useState([]);
   const [classAllCourses, setClassAllCourses] = useState([]);
+  const [classNamesMap, setClassNamesMap] = useState({}); // classeId -> nom
   const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
   const [activeTab, setActiveTab] = useState("PROGRAMMED"); // PROGRAMMED, ALL_COURSES, EXERCISES
   const [loading, setLoading] = useState(false);
@@ -106,6 +107,29 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   const isParentRoleCPM = (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT");
   const userId = isParentRoleCPM ? (localStorage.getItem("selectedChildId") || parentIdCPM) : parentIdCPM;
   const isProfessorOrAdmin = userRole === 'professor' || userRole === 'admin' || userRole?.includes('PROFESSOR') || userRole?.includes('ADMIN');
+
+  const resolveClassNames = async (courses) => {
+    const { classService } = await import('../../../../../services/ClassService').catch(() => ({ classService: null }));
+    if (!classService) return;
+    const ids = [...new Set(
+      courses.flatMap(c => c.classesIds || (c.classeId ? [c.classeId] : []))
+    )].filter(Boolean);
+    if (ids.length === 0) return;
+    const entries = await Promise.allSettled(ids.map(id => classService.obtenirClasseParId(id)));
+    const map = {};
+    ids.forEach((id, i) => {
+      if (entries[i].status === 'fulfilled' && entries[i].value?.nom) {
+        map[id] = entries[i].value.nom;
+      }
+    });
+    setClassNamesMap(prev => ({ ...prev, ...map }));
+  };
+
+  const getCoursClassName = (course) => {
+    if (selectedClass) return selectedClass.nom;
+    const id = (course.classesIds && course.classesIds[0]) || course.classeId;
+    return id ? (classNamesMap[id] || id) : '';
+  };
 
   // Poll active sessions + sync course statuses
   useEffect(() => {
@@ -299,6 +323,7 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
       );
 
       setScheduledCourses(finalCourses);
+      resolveClassNames(finalCourses);
       
       // Auto-switch tab if no programmed courses but general courses exist
       if (finalCourses.length === 0 && generalCourses?.length > 0) {
@@ -388,6 +413,7 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
       console.log("All enriched courses count:", enrichedCourses.length);
       setScheduledCourses(enrichedCourses);
       setFilteredCourses(enrichedCourses);
+      resolveClassNames(enrichedCourses);
     } catch (error) {
       console.error("Error fetching all user courses:", error);
       setError(`Erreur lors du chargement des cours: ${error.message}`);
@@ -703,6 +729,11 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                                     </div>
                                   </div>
                                   <p className="text-gray-500 text-xs line-clamp-2">{course.cours?.description || 'Description non disponible'}</p>
+                                  {getCoursClassName(course) && (
+                                    <p className="text-indigo-600 text-xs font-medium mt-1 flex items-center gap-1">
+                                      <GraduationCap className="w-3 h-3" />{getCoursClassName(course)}
+                                    </p>
+                                  )}
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
                               </div>

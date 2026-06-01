@@ -40,8 +40,11 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     description: "",
   });
 
-  const { isAdmin, isProfessor } = useAuth();
-  const canManage = isAdmin || isProfessor;
+  const { isAdmin, isProfessor, isGestionnaire } = useAuth();
+  // Only admins and gestionnaires (coordinators) can create/edit/delete subjects
+  const canManage = isAdmin || isGestionnaire;
+  // Professors can view the list but not modify
+  const canView = canManage || isProfessor;
 
   const bgClass = isDark ? "bg-gray-900" : "bg-gray-50";
   const cardBgClass = isDark ? "bg-gray-800" : "bg-white";
@@ -52,10 +55,10 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const inputTextClass = isDark ? "text-white" : "text-gray-900";
 
   useEffect(() => {
-    if (canManage) {
+    if (canView) {
       loadMatieres();
     }
-  }, [canManage]);
+  }, [canView]);
 
   const loadMatieres = async () => {
     try {
@@ -206,7 +209,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  if (!canManage) {
+  if (!canView) {
     return (
       <div className="flex items-center justify-center py-20 p-6">
         <div className={`${cardBgClass} rounded-2xl shadow-lg border ${borderClass} p-8 text-center max-w-md`}>
@@ -214,7 +217,6 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
           <h2 className={`text-2xl font-bold ${textClass} mb-2`}>Accès Restreint</h2>
           <p className={textSecondaryClass}>
             Vous n'avez pas les permissions nécessaires pour accéder à cette section.
-            Seuls les administrateurs et professeurs peuvent gérer les matières.
           </p>
         </div>
       </div>

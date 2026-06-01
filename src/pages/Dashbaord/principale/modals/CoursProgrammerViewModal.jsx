@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import AccederService from "../../../../services/accederService";
 import liveSessionService from "../../../../services/LiveSessionService";
+import { userService } from "../../../../services/userService";
 
 const SCHEDULED_COURSE_STATES = {
   PLANIFIE: "PLANIFIE",
@@ -126,8 +127,30 @@ const CoursProgrammerViewModal = ({
   onEnd,
   onCancel,
   classes = [],
+  currentUserId = null,
 }) => {
   const [activeTab, setActiveTab] = useState("details");
+  const [professorName, setProfessorName] = useState(null);
+
+  const userId = currentUserId || localStorage.getItem("userId");
+  const isOwn = scheduledCourse
+    ? String(scheduledCourse.professeurId) === String(userId)
+    : true;
+
+  // Fetch professor name when the course belongs to another professor
+  useEffect(() => {
+    if (!scheduledCourse || isOwn || !scheduledCourse.professeurId) {
+      setProfessorName(null);
+      return;
+    }
+    userService.getUserById(scheduledCourse.professeurId)
+      .then(user => {
+        if (user) {
+          setProfessorName(`${user.prenom || ""} ${user.nom || ""}`.trim() || user.email || null);
+        }
+      })
+      .catch(() => setProfessorName(null));
+  }, [scheduledCourse?.professeurId, isOwn]);
   const [showCancelReason, setShowCancelReason] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [participants, setParticipants] = useState([]);
@@ -634,6 +657,29 @@ const CoursProgrammerViewModal = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Programmé par — only shown for courses from other professors */}
+                  {!isOwn && (
+                    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200">
+                      <h4 className="text-lg font-semibold text-slate-900 mb-3 flex items-center">
+                        <User className="w-5 h-5 mr-2 text-amber-500" />
+                        Programmé par
+                      </h4>
+                      <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-4">
+                        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-amber-800 text-sm">
+                            {professorName || "Autre professeur"}
+                          </p>
+                          <p className="text-xs text-amber-600 mt-0.5">
+                            Ce cours a été programmé par un autre professeur de la classe
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

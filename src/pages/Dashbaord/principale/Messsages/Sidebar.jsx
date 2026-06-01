@@ -1,5 +1,5 @@
 import React from "react";
-import { Send, Inbox, Edit, Star, Circle, Trash2 } from "lucide-react";
+import { Send, Inbox, Edit, Star, Trash2 } from "lucide-react";
 
 const Sidebar = ({
   isDark,
@@ -16,33 +16,27 @@ const Sidebar = ({
       key: "all",
       label: "Boite de reception",
       icon: Inbox,
-      count: messageCounts.all,
-      badge: messageCounts.unread > 0 ? messageCounts.unread : null,
+      // red badge = unread received only
+      badge: messageCounts.unreadReceived > 0 ? messageCounts.unreadReceived : null,
     },
     {
       key: "starred",
       label: "Messages suivis",
       icon: Star,
-      count: messageCounts.starred
+      count: messageCounts.starred,
     },
     {
       key: "sent",
       label: "Envoyes",
       icon: Send,
-      count: messageCounts.sent,
-    },
-    {
-      key: "unread",
-      label: "Non lus",
-      icon: Circle,
-      count: messageCounts.unread,
-      badge: messageCounts.unread > 0 ? messageCounts.unread : null,
+      // badge = sent messages not yet read by recipient
+      badge: messageCounts.sent > 0 ? messageCounts.sent : null,
     },
     {
       key: "trash",
       label: "Corbeille",
       icon: Trash2,
-      count: messageCounts.trash
+      count: messageCounts.trash,
     },
   ];
 

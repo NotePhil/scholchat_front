@@ -13,7 +13,7 @@ const messageApi = axios.create({
 
 // Request interceptor to handle different content types and authentication
 messageApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem("accessToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -469,6 +469,17 @@ class MessageService {
     try {
       const response = await messageApi.get(
         `/messages/utilisateur/${utilisateurId}/non-lus`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async compterNonLus(utilisateurId) {
+    try {
+      const response = await messageApi.get(
+        `/messages/utilisateur/${utilisateurId}/non-lus/count`
       );
       return response.data;
     } catch (error) {

@@ -10,6 +10,7 @@ const MessageDetailPanel = ({
   getUserDisplay,
   currentUser,
   onRefreshMessages,
+  handleMarkAsRead,
 }) => {
   const [showReplyField, setShowReplyField] = useState(false);
   const [replyContent, setReplyContent] = useState("");

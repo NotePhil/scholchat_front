@@ -71,20 +71,11 @@ const ParentClassManagementModal = ({
     setError("");
 
     try {
-      const success = await onRequestAccess(classe, activationCode);
-
-      if (success) {
-        setHasPendingRequest(true);
-        onClose();
-      }
+      await onRequestAccess(classe, activationCode);
+      // Parent handles closing modals and showing success/error messages
     } catch (err) {
       console.error("Error submitting access request:", err);
-      if (err.message.includes("Une demande d'accès est déjà en attente")) {
-        setError("Une demande d'accès est déjà en attente pour cette classe");
-        setHasPendingRequest(true);
-      } else {
-        setError(err.message || "Une erreur est survenue");
-      }
+      // Parent handles closing and error display — nothing to do here
     } finally {
       setLoading(false);
     }

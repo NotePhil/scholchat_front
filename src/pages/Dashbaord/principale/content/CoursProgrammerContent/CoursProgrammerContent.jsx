@@ -23,6 +23,7 @@ import {
   PauseCircle,
   XCircle,
   Trash2,
+  UserCheck,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { classService } from "../../../../../services/ClassService";
@@ -131,18 +132,26 @@ const CoursProgrammerContent = () => {
 
       const coursesMap = new Map((coursesData || []).map(c => [String(c.id), c]));
 
-      // Always load professor's own full schedule in one call
-      const [profScheduled, classScheduled] = await Promise.allSettled([
+      // Fetch professor's own schedule + class-based schedules in parallel
+      // When a specific class is selected, fetch that class only
+      // When no filter, fetch ALL accessible classes so we see courses from other professors too
+      const classIdsToFetch = classIdFilter
+        ? [classIdFilter]
+        : (classesData || []).map(c => c.id);
+
+      const [profScheduled, ...classScheduledResults] = await Promise.allSettled([
         coursProgrammerService.obtenirProgrammationParProfesseur(professorId),
-        classIdFilter
-          ? coursProgrammerService.obtenirProgrammationParClasse(classIdFilter)
-          : Promise.resolve([]),
+        ...classIdsToFetch.map(cId =>
+          coursProgrammerService.obtenirProgrammationParClasse(cId)
+        ),
       ]);
 
       const profItems = profScheduled.status === "fulfilled" ? (profScheduled.value || []) : [];
-      const classItems = classScheduled.status === "fulfilled" ? (classScheduled.value || []) : [];
+      const classItems = classScheduledResults
+        .filter(r => r.status === "fulfilled")
+        .flatMap(r => r.value || []);
 
-      // Merge: start with class items (includes other professors), then add own items not already present
+      // Merge: class items first (includes other professors), then own items
       const merged = new Map();
       [...classItems, ...profItems].forEach(sc => {
         if (sc?.id) merged.set(String(sc.id), {
@@ -377,6 +386,7 @@ const CoursProgrammerContent = () => {
   };
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [confirmCancelId, setConfirmCancelId] = useState(null);
 
   const handleDeleteCourse = async (scheduledId) => {
     try {
@@ -672,6 +682,18 @@ const CoursProgrammerContent = () => {
                   className="w-full min-w-0 overflow-hidden"
                 >
                   <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col">
+                    {/* Ownership banner */}
+                    {String(scheduledCourse.professeurId) === String(professorId) ? (
+                      <div className="flex items-center gap-1.5 mb-3 px-2 py-1 bg-indigo-50 border border-indigo-100 rounded-lg w-fit text-xs font-medium text-indigo-700">
+                        <UserCheck className="w-3 h-3 flex-shrink-0" />
+                        Votre cours
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 mb-3 px-2 py-1 bg-amber-50 border border-amber-100 rounded-lg w-fit text-xs font-medium text-amber-700">
+                        <Users className="w-3 h-3 flex-shrink-0" />
+                        Cours d'un autre professeur
+                      </div>
+                    )}
                     {/* Course Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-start space-x-3 min-w-0 flex-1">
@@ -785,8 +807,9 @@ const CoursProgrammerContent = () => {
                       )}
                     </div>
 
-                    {/* Action Buttons - includes start/end/cancel for mobile visibility */}
+                    {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-slate-100">
+                      {/* Start/Cancel/Edit available to all professors with access */}
                       {scheduledCourse.etatCoursProgramme === "PLANIFIE" && (
                         <button
                           onClick={() => handleStartCourse(scheduledCourse.id)}
@@ -816,13 +839,14 @@ const CoursProgrammerContent = () => {
                       )}
                       {(scheduledCourse.etatCoursProgramme === "PLANIFIE" || scheduledCourse.etatCoursProgramme === "EN_COURS") && (
                         <button
-                          onClick={() => handleCancelCourse(scheduledCourse.id, "Annulé par le professeur")}
+                          onClick={() => setConfirmCancelId(scheduledCourse.id)}
                           className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                         >
                           <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
                           <span className="hidden sm:inline">Annuler</span>
                         </button>
                       )}
+                      {/* View available to all */}
                       <button
                         onClick={() => handleViewSchedule(scheduledCourse)}
                         className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
@@ -830,6 +854,7 @@ const CoursProgrammerContent = () => {
                         <Eye className="w-3.5 h-3.5 flex-shrink-0" />
                         <span>Voir</span>
                       </button>
+                      {/* Edit/Reprogrammer available to all */}
                       <button
                         onClick={() => handleEditSchedule(scheduledCourse)}
                         className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
@@ -846,7 +871,8 @@ const CoursProgrammerContent = () => {
                           </>
                         )}
                       </button>
-                      {(scheduledCourse.etatCoursProgramme === "ANNULE" || scheduledCourse.etatCoursProgramme === "TERMINE") && (
+                      {/* Delete restricted to creator only */}
+                      {String(scheduledCourse.professeurId) === String(professorId) && (
                         <button
                           onClick={() => setConfirmDeleteId(scheduledCourse.id)}
                           className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
@@ -985,6 +1011,7 @@ const CoursProgrammerContent = () => {
             onEnd={handleEndCourse}
             onCancel={handleCancelCourse}
             classes={classes}
+            currentUserId={professorId}
           />
         )}
       </div>
@@ -1013,6 +1040,42 @@ const CoursProgrammerContent = () => {
                 className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Suppression...</span></> : <span>Supprimer</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {confirmCancelId && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Annuler le cours programmé</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              Êtes-vous sûr de vouloir annuler ce cours ? Cette action est irréversible.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmCancelId(null)}
+                className="flex-1 py-3 text-gray-600 font-semibold text-sm bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+              >
+                Retour
+              </button>
+              <button
+                onClick={() => {
+                  handleCancelCourse(confirmCancelId, "Annulé par le professeur");
+                  setConfirmCancelId(null);
+                }}
+                disabled={loading}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading
+                  ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Annulation...</span></>
+                  : <span>Confirmer</span>
+                }
               </button>
             </div>
           </div>

@@ -11,6 +11,8 @@ import {
   repondreService,
   participationExerciseService,
 } from "../../../../../services/exerciseService";
+import { classService } from "../../../../../services/ClassService";
+import { userService } from "../../../../../services/userService";
 
 const getUserId = () =>
   sessionStorage.getItem("userId") || localStorage.getItem("userId");
@@ -478,6 +480,11 @@ const ProgList = ({ filtered, selectedProgId, setSelectedProgId, filterType, set
                 ? <FileText size={12} className="text-purple-600 flex-shrink-0" />
                 : <BookOpen size={12} className="text-blue-600 flex-shrink-0" />}
               <span className="text-sm font-medium text-gray-800 truncate">{prog.nom || "Exercice"}</span>
+              {!prog.isOwn && (
+                <span className="ml-auto flex-shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                  Autre prof.
+                </span>
+              )}
             </div>
             <div className="text-xs text-gray-400 ml-4">{fmtDate(prog.dateExoPrevue)}</div>
             {prog.classesDiffusees?.length > 0 && (
@@ -520,6 +527,7 @@ const ExerciseCorrectionsContent = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProgId, setSelectedProgId] = useState(null);
   const [filterType, setFilterType] = useState("all");
+  const [professorName, setProfessorName] = useState(null);
 
   const userId = getUserId();
 
@@ -527,8 +535,34 @@ const ExerciseCorrectionsContent = () => {
     if (!userId) return;
     setLoading(true);
     try {
-      const data = await exerciseProgrammerService.getExercisesProgrammesParProfesseur(userId);
-      const sorted = (data || []).sort((a, b) => new Date(b.dateExoPrevue) - new Date(a.dateExoPrevue));
+      // Fetch all accessible classes (publication rights + acceder)
+      const allClasses = await classService.obtenirClassesUtilisateur(userId);
+      const classIdsToFetch = (allClasses || []).map(c => c.id);
+
+      // Fetch own programmations + all accessible class programmations in parallel
+      const [ownResult, ...classResults] = await Promise.allSettled([
+        exerciseProgrammerService.getExercisesProgrammesParProfesseur(userId),
+        ...classIdsToFetch.map(cId =>
+          exerciseProgrammerService.getExercisesProgrammesParClasse(cId)
+        ),
+      ]);
+
+      const ownItems = ownResult.status === "fulfilled" ? (ownResult.value || []) : [];
+      const classItems = classResults
+        .filter(r => r.status === "fulfilled")
+        .flatMap(r => r.value || []);
+
+      // Merge by programmer record ID — class items first
+      const merged = new Map();
+      [...classItems, ...ownItems].forEach(p => {
+        if (p?.id) merged.set(String(p.id), {
+          ...p,
+          isOwn: String(p.programmeParId) === String(userId),
+        });
+      });
+
+      const sorted = Array.from(merged.values())
+        .sort((a, b) => new Date(b.dateExoPrevue) - new Date(a.dateExoPrevue));
 
       // Filter: only keep programmations that have at least one submission
       const withSubmissions = await Promise.all(
@@ -554,13 +588,26 @@ const ExerciseCorrectionsContent = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Resolve professor name when a non-own programmation is selected
+  const selectedProg = programmations.find(p => p.id === selectedProgId);
+  useEffect(() => {
+    if (!selectedProg || selectedProg.isOwn || !selectedProg.programmeParId) {
+      setProfessorName(null);
+      return;
+    }
+    userService.getUserById(selectedProg.programmeParId)
+      .then(user => {
+        if (user) setProfessorName(`${user.prenom || ""} ${user.nom || ""}`.trim() || user.email || null);
+        else setProfessorName(null);
+      })
+      .catch(() => setProfessorName(null));
+  }, [selectedProg?.id, selectedProg?.isOwn]);
+
   const filtered = programmations.filter(p => {
     if (filterType === "DEVOIR") return p.typeAssignation === "DEVOIR";
     if (filterType === "EXERCICE") return p.typeAssignation === "EXERCICE";
     return true;
   });
-
-  const selectedProg = programmations.find(p => p.id === selectedProgId);
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }) : "—";
 
@@ -646,6 +693,17 @@ const ExerciseCorrectionsContent = () => {
                   )}
                 </div>
               </div>
+              {/* "Programmé par" banner for non-own programmations */}
+              {selectedProg && !selectedProg.isOwn && (
+                <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
+                  <Users size={14} className="text-amber-500 flex-shrink-0" />
+                  <span className="text-xs text-amber-700 font-medium">
+                    Programmé par{" "}
+                    <span className="font-bold">{professorName || "un autre professeur"}</span>
+                    {" "}— vous avez accès via la classe partagée
+                  </span>
+                </div>
+              )}
               <div className="p-4">
                 {selectedProg
                   ? <ProgrammationCorrections key={selectedProg.id} prog={selectedProg} />

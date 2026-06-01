@@ -210,6 +210,17 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
 
+  // When initialTab changes (e.g. from notification click while already viewing this class),
+  // switch to the requested tab and reload its data
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      setActiveTab(initialTab);
+      if (initialTab === "access-requests") {
+        loadAccessRequests();
+      }
+    }
+  }, [initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Users data from new approach - UPDATED to include utilisateurs
   const [users, setUsers] = useState({
     professeurs: [],
@@ -2066,6 +2077,8 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
               currentTab={activeTab}
               userRole={userRole}
               isModerator={isUserModerator()}
+              currentUserId={currentUserId}
+              classCreatorId={classDetails?.createurId}
             />
           )}
 
@@ -2118,6 +2131,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 currentTab={activeTab} 
                 userRole={userRole}
                 isModerator={isUserModerator()}
+                currentUserId={currentUserId}
               />
             </div>
           )}
@@ -2133,6 +2147,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
               currentTab={activeTab} 
               userRole={userRole}
               isModerator={isUserModerator()}
+              currentUserId={currentUserId}
             />
           )}
 
@@ -2148,6 +2163,7 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
               currentTab={activeTab} 
               userRole={userRole}
               isModerator={isUserModerator()}
+              currentUserId={currentUserId}
             />
           )}
 
@@ -2243,7 +2259,12 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                 dataSource={exercises}
                 rowKey="id"
                 columns={[
-                  { title: 'Date Prévue', dataIndex: 'dateExoPrevue', key: 'date', render: d => new Date(d).toLocaleString('fr-FR') },
+                  { title: 'Exercice', key: 'nom', render: (_, record) => (
+                    <span className="font-medium text-slate-800">
+                      {record.nom || record.exercise?.nom || record.exerciseNom || '—'}
+                    </span>
+                  )},
+                  { title: 'Date Prévue', dataIndex: 'dateExoPrevue', key: 'date', render: d => d ? new Date(d).toLocaleString('fr-FR') : '—' },
                   { title: 'Statut', dataIndex: 'etat', key: 'etat', render: e => {
                     const colorMap = { "ACTIF": "green", "PUBLIE": "green", "BROUILLON": "orange", "EN_ATTENTE_CORRECTION": "blue", "CORRIGE": "cyan", "ANNULE": "red" };
                     return <Tag color={colorMap[e] || "default"}>{e}</Tag>

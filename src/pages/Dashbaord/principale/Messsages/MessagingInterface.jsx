@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Sidebar from "./Sidebar";
 import MessageList from "./MessageList";
 import MessageDetailPanel from "./MessageDetailPanel";
@@ -17,7 +17,6 @@ import {
   MessageSquare,
   Inbox,
   SendHorizontal,
-  Mail,
   Star,
   Trash2,
   RefreshCw,
@@ -153,9 +152,8 @@ const MobileMessagingInterface = ({
   };
 
   const filterTabs = [
-    { id: "all", label: "Inbox", icon: Inbox, count: messageCounts?.all },
+    { id: "all", label: "Inbox", icon: Inbox, count: messageCounts?.unreadReceived },
     { id: "sent", label: "Envoyés", icon: SendHorizontal, count: messageCounts?.sent },
-    { id: "unread", label: "Non lus", icon: Mail, count: messageCounts?.unread },
     { id: "trash", label: "Corbeille", icon: Trash2, count: messageCounts?.trash },
   ];
 
@@ -302,7 +300,13 @@ const MobileMessagingInterface = ({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.03 }}
               key={msg.id || idx}
-              onClick={() => setSelectedThread(msg)}
+              onClick={() => {
+                setSelectedThread(msg);
+                const threadIds = msg.thread
+                  ? msg.thread.filter(m => !m.read && m.expediteur?.id !== currentUser?.id).map(m => m.id)
+                  : (!msg.read && msg.expediteur?.id !== currentUser?.id ? [msg.id] : []);
+                threadIds.forEach(id => handleMarkAsRead(id, true));
+              }}
               className="w-full flex items-center space-x-4 p-4 rounded-[28px] bg-white dark:bg-slate-800 shadow-sm border border-transparent hover:border-blue-500/20 active:scale-[0.98] transition-all group"
             >
               <div className="relative">
@@ -423,6 +427,7 @@ const MessagingInterface = ({
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [recipientSearch, setRecipientSearch] = useState("");
   const [selectedClasses, setSelectedClasses] = useState([]);
   const [isGeneralMessage, setIsGeneralMessage] = useState(false);
@@ -446,6 +451,17 @@ const MessagingInterface = ({
     }
     return { subject: "Sans objet", messageBody: contenu };
   };
+
+  const fetchUnreadCount = useCallback(async () => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+    try {
+      const count = await messageService.compterNonLus(userId);
+      setUnreadCount(typeof count === 'number' ? count : 0);
+    } catch (e) {
+      // silently ignore — fallback to client-side count
+    }
+  }, []);
 
   const fetchMessages = useCallback(async () => {
     const parentId = localStorage.getItem('userId');
@@ -533,6 +549,7 @@ const MessagingInterface = ({
 
       setAllMessages(allMessages);
       setError(null);
+      fetchUnreadCount();
     } catch (err) {
       console.error("Error fetching messages:", err);
       setError("Erreur lors du chargement des messages");
@@ -577,11 +594,6 @@ const MessagingInterface = ({
           msg.expediteur.id === userId
         );
         break;
-      case "unread":
-        filteredMessages = filteredMessages.filter(msg =>
-          !msg.read && msg.destinataires.some(dest => dest.id === userId)
-        );
-        break;
       case "starred":
         filteredMessages = filteredMessages.filter(msg => msg.starred);
         break;
@@ -612,6 +624,10 @@ const MessagingInterface = ({
   }, [fetchMessages]);
 
   useEffect(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount]);
+
+  useEffect(() => {
     filterMessages();
   }, [filterMessages]);
 
@@ -624,22 +640,32 @@ const MessagingInterface = ({
 
   const getMessageCounts = () => {
     const userId = localStorage.getItem('userId');
-    const receivedMessages = allMessages.filter(msg =>
+
+    // Deduplicate allMessages by id first
+    const uniqueMessages = allMessages.filter(
+      (msg, idx, self) => self.findIndex(m => m.id === msg.id) === idx
+    );
+
+    const receivedMessages = uniqueMessages.filter(msg =>
       msg.destinataires.some(dest => dest.id === userId)
     );
-    const sentMessages = allMessages.filter(msg =>
+    const unreadReceived = receivedMessages.filter(msg => !msg.read);
+
+    const sentMessages = uniqueMessages.filter(msg =>
       msg.expediteur.id === userId
     );
-    const unreadMessages = allMessages.filter(msg =>
-      !msg.read && msg.destinataires.some(dest => dest.id === userId)
-    );
-    const starredMessages = allMessages.filter(msg => msg.starred);
+    const unreadSent = sentMessages.filter(msg => !msg.read);
+
+    const starredMessages = uniqueMessages.filter(msg => msg.starred);
+
     return {
-      all: receivedMessages.length,
-      sent: sentMessages.length,
-      unread: unreadMessages.length,
+      totalReceived: receivedMessages.length,
+      unreadReceived: unreadReceived.length,
+      all: unreadReceived.length,       // inbox badge = unread received only
+      unread: unreadReceived.length,
+      sent: unreadSent.length,          // sent badge = unread by recipient only
       starred: starredMessages.length,
-      trash: trashMessages.length
+      trash: trashMessages.length,
     };
   };
 
@@ -715,18 +741,25 @@ const MessagingInterface = ({
 
   const handleMarkAsRead = async (messageId, newRead) => {
     const userId = localStorage.getItem('userId');
-    // Optimistic update — filterMessages useEffect re-derives messages immediately
+    // Optimistically update the message read state
     setAllMessages(prev => prev.map(msg =>
       msg.id === messageId ? { ...msg, read: newRead } : msg
     ));
-    // Fire API — no await so UI is instant
-    messageService.setStatutLu(messageId, userId, newRead).catch(e => {
-      console.warn('Could not update read status:', e.message);
-      // Revert on failure
-      setAllMessages(prev => prev.map(msg =>
-        msg.id === messageId ? { ...msg, read: !newRead } : msg
-      ));
-    });
+    messageService.setStatutLu(messageId, userId, newRead)
+      .catch(e => {
+        console.warn('Could not update read status:', e.message);
+        // Revert on failure
+        setAllMessages(prev => prev.map(msg =>
+          msg.id === messageId ? { ...msg, read: !newRead } : msg
+        ));
+      });
+  };
+
+  // Mark as read locally only (no API call) — used for sent messages viewed by sender
+  const markReadLocally = (messageId) => {
+    setAllMessages(prev => prev.map(msg =>
+      msg.id === messageId ? { ...msg, read: true } : msg
+    ));
   };
 
   const handleDeleteMessage = async (messageId) => {
@@ -936,6 +969,7 @@ const MessagingInterface = ({
         toggleMessageSelection={toggleMessageSelection}
         toggleStarMessage={toggleStarMessage}
         handleMarkAsRead={handleMarkAsRead}
+        markReadLocally={markReadLocally}
         handleDeleteMessage={handleDeleteMessage}
         handleBulkDelete={handleBulkDelete}
         handleEmptyTrash={handleEmptyTrash}
@@ -951,6 +985,7 @@ const MessagingInterface = ({
         getUserInitials={getUserInitials}
         getUserDisplay={getUserDisplay}
         formatDate={formatDate}
+        currentUser={currentUser}
       />
       {selectedMessage && (
         <MessageDetailPanel
@@ -962,6 +997,7 @@ const MessagingInterface = ({
           getUserDisplay={getUserDisplay}
           currentUser={currentUser}
           onRefreshMessages={handleRefresh}
+          handleMarkAsRead={handleMarkAsRead}
         />
       )}
      {showCompose && (

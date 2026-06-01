@@ -13,6 +13,7 @@ import {
   exerciseProgrammerService,
 } from "../../../../../services/exerciseService";
 import { classService } from "../../../../../services/ClassService";
+import { userService } from "../../../../../services/userService";
 
 const { Option } = Select;
 
@@ -109,8 +110,62 @@ const ExerciseProgrammerContent = () => {
     if (!userId) return;
     setProgsLoading(true);
     try {
-      const data = await exerciseProgrammerService.getExercisesProgrammesParProfesseur(userId);
-      setProgrammations((data || []).sort((a, b) => new Date(b.dateExoPrevue) - new Date(a.dateExoPrevue)));
+      // Fetch all accessible classes (publication rights + acceder)
+      const allClasses = await classService.obtenirClassesUtilisateur(userId);
+      const classIdsToFetch = (allClasses || []).map(c => c.id);
+
+      // Fetch own programmations + all accessible class programmations in parallel
+      const [ownResult, ...classResults] = await Promise.allSettled([
+        exerciseProgrammerService.getExercisesProgrammesParProfesseur(userId),
+        ...classIdsToFetch.map(cId =>
+          exerciseProgrammerService.getExercisesProgrammesParClasse(cId)
+        ),
+      ]);
+
+      const ownItems = ownResult.status === "fulfilled" ? (ownResult.value || []) : [];
+      const classItems = classResults
+        .filter(r => r.status === "fulfilled")
+        .flatMap(r => r.value || []);
+
+      // Merge by programmer record ID — class items first so other professors' entries are included
+      const merged = new Map();
+      [...classItems, ...ownItems].forEach(p => {
+        if (p?.id) merged.set(String(p.id), {
+          ...p,
+          // Flag: true if this professor programmed it
+          isOwn: String(p.programmeParId) === String(userId),
+        });
+      });
+
+      // Resolve professor names for non-own records
+      const nonOwnIds = [...new Set(
+        Array.from(merged.values())
+          .filter(p => !p.isOwn && p.programmeParId)
+          .map(p => String(p.programmeParId))
+      )];
+      const professorNames = {};
+      await Promise.allSettled(
+        nonOwnIds.map(async (profId) => {
+          try {
+            const user = await userService.getUserById(profId);
+            if (user) {
+              professorNames[profId] = `${user.prenom || ""} ${user.nom || ""}`.trim() || user.email || profId;
+            }
+          } catch { /* ignore */ }
+        })
+      );
+
+      // Attach professor name to each non-own record
+      merged.forEach((p, key) => {
+        if (!p.isOwn && p.programmeParId) {
+          merged.set(key, { ...p, programmeParNom: professorNames[String(p.programmeParId)] || null });
+        }
+      });
+
+      const sorted = Array.from(merged.values())
+        .sort((a, b) => new Date(b.dateExoPrevue) - new Date(a.dateExoPrevue));
+
+      setProgrammations(sorted);
     } catch {
       message.warning("Impossible de charger les programmations");
     } finally {
@@ -518,6 +573,16 @@ const ExerciseProgrammerContent = () => {
                           </span>
                           <TypeBadge type={prog.typeAssignation} />
                           <EtatBadge etat={getEffectiveEtat(prog)} />
+                          {/* Ownership banner */}
+                          {prog.isOwn ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                              <CheckCircle size={10} /> Votre programmation
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                              <Users size={10} /> Autre professeur
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
                           <span className="flex items-center gap-1">
@@ -545,22 +610,25 @@ const ExerciseProgrammerContent = () => {
                       >
                         <Eye size={15} />
                       </button>
-                      <Popconfirm
-                        title="Supprimer cette programmation ?"
-                        onConfirm={() => handleDelete(prog.id)}
-                        okText="Supprimer"
-                        cancelText="Annuler"
-                        okButtonProps={{ danger: true }}
-                      >
-                        <button
-                          className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                          disabled={deletingId === prog.id}
+                      {/* Delete only for own programmations */}
+                      {prog.isOwn && (
+                        <Popconfirm
+                          title="Supprimer cette programmation ?"
+                          onConfirm={() => handleDelete(prog.id)}
+                          okText="Supprimer"
+                          cancelText="Annuler"
+                          okButtonProps={{ danger: true }}
                         >
-                          {deletingId === prog.id
-                            ? <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                            : <Trash2 size={15} />}
-                        </button>
-                      </Popconfirm>
+                          <button
+                            className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                            disabled={deletingId === prog.id}
+                          >
+                            {deletingId === prog.id
+                              ? <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                              : <Trash2 size={15} />}
+                          </button>
+                        </Popconfirm>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -604,6 +672,16 @@ const ExerciseProgrammerContent = () => {
                 <span className="text-sm text-gray-800">{value}</span>
               </div>
             ))}
+            {/* Show professor name only for non-own programmations */}
+            {!detailProg.isOwn && (
+              <div className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide w-32 flex-shrink-0 pt-0.5">Programmé par</span>
+                <span className="text-sm text-amber-700 font-medium flex items-center gap-1">
+                  <Users size={13} className="text-amber-500" />
+                  {detailProg.programmeParNom || "Autre professeur"}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </Modal>

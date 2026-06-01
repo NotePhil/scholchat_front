@@ -352,6 +352,19 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     loadData();
   };
 
+  const handleResendActivationEmail = async (prof) => {
+    try {
+      setActionLoading(true);
+      setActionError("");
+      await scholchatService.resendActivationEmail(prof.email);
+      setActionSuccess("Email d'activation renvoyé avec succès.");
+    } catch (err) {
+      setActionError("Erreur lors du renvoi de l'email : " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleValidateProfessor = async (prof) => {
     try {
       setActionLoading(true);
@@ -472,30 +485,49 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 </div>
               </div>
               {/* Row 3: admin action buttons — centered, only for AWAITING_VALIDATION */}
-              {isAdmin && prof.etat === "AWAITING_VALIDATION" && (
+              {isAdmin && (prof.etat === "AWAITING_VALIDATION" || prof.etat === "PENDING") && (
                 <div className="flex items-center justify-center gap-3 pt-1 pb-1 flex-wrap">
-                  <button
-                    onClick={() => handleValidateProfessor(prof)}
-                    disabled={actionLoading}
-                    className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
-                    style={{ background: "#16a34a", color: "#fff", border: "2px solid #15803d" }}
-                  >
-                    {actionLoading ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <UserCheck size={15} />
-                    )}
-                    Valider le professeur
-                  </button>
-                  <button
-                    onClick={openRejectModal}
-                    disabled={actionLoading}
-                    className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
-                    style={{ background: "#dc2626", color: "#fff", border: "2px solid #b91c1c" }}
-                  >
-                    <UserX size={15} />
-                    Rejeter le professeur
-                  </button>
+                  {prof.etat === "AWAITING_VALIDATION" && (
+                    <>
+                      <button
+                        onClick={() => handleValidateProfessor(prof)}
+                        disabled={actionLoading}
+                        className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
+                        style={{ background: "#16a34a", color: "#fff", border: "2px solid #15803d" }}
+                      >
+                        {actionLoading ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <UserCheck size={15} />
+                        )}
+                        Valider le professeur
+                      </button>
+                      <button
+                        onClick={openRejectModal}
+                        disabled={actionLoading}
+                        className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
+                        style={{ background: "#dc2626", color: "#fff", border: "2px solid #b91c1c" }}
+                      >
+                        <UserX size={15} />
+                        Rejeter le professeur
+                      </button>
+                    </>
+                  )}
+                  {prof.etat === "PENDING" && (
+                    <button
+                      onClick={() => handleResendActivationEmail(prof)}
+                      disabled={actionLoading}
+                      className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
+                      style={{ background: "#2563eb", color: "#fff", border: "2px solid #1d4ed8" }}
+                    >
+                      {actionLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Mail size={15} />
+                      )}
+                      Renvoyer l'email d'activation
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1205,6 +1237,15 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
                     {isAdmin && (
                       <>
+                        {professor.etat === "PENDING" && (
+                          <button
+                            onClick={() => handleResendActivationEmail(professor)}
+                            className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                            title="Renvoyer l'email d'activation"
+                          >
+                            <Mail size={12} className="sm:w-4 sm:h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setModalMode("edit");
@@ -1420,6 +1461,15 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
 
                           {isAdmin && (
                             <>
+                              {professor.etat === "PENDING" && (
+                                <button
+                                  onClick={() => handleResendActivationEmail(professor)}
+                                  className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                                  title="Renvoyer l'email d'activation"
+                                >
+                                  <Mail size={12} className="sm:w-4 sm:h-4" />
+                                </button>
+                              )}
                               <button
                                 onClick={() => {
                                   setModalMode("edit");

@@ -92,6 +92,8 @@ const CourseDetailsView = ({ courseId, onBack }) => {
   const [exercisesLoading, setExercisesLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [docViewerFile, setDocViewerFile] = useState(null);
+  const [instructeurNom, setInstructeurNom] = useState('Professeur');
+  const [totalStudents, setTotalStudents] = useState(0);
 
   useEffect(() => {
     fetchCourseDetails();
@@ -99,6 +101,44 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       blobUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
     };
   }, [courseId]);
+
+  const fetchInstructeurEtEtudiants = async (redacteurId, coursId) => {
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+    const headers = { Authorization: `Bearer ${token}` };
+    // Fetch instructor name
+    if (redacteurId) {
+      try {
+        const res = await fetch(`${API_BASE}/professeurs/${redacteurId}`, { headers });
+        if (res.ok) {
+          const prof = await res.json();
+          setInstructeurNom(`${prof.prenom || ''} ${prof.nom || ''}`.trim() || 'Professeur');
+        }
+      } catch (e) {
+        console.warn('Could not fetch instructor:', e.message);
+      }
+    }
+    // Fetch student count via acceder
+    if (coursId) {
+      try {
+        // Get all cours_programmers for this cours to find classesIds
+        const cpRes = await fetch(`${API_BASE}/cours-programmer/by-cours/${coursId}`, { headers });
+        if (cpRes.ok) {
+          const cps = await cpRes.json();
+          const classIds = [...new Set((cps || []).flatMap(cp => cp.classesIds || []))];
+          if (classIds.length > 0) {
+            const counts = await Promise.allSettled(
+              classIds.map(id => fetch(`${API_BASE}/acceder/classes/${id}/utilisateurs`, { headers }).then(r => r.ok ? r.json() : []))
+            );
+            const allUsers = new Set();
+            counts.forEach(r => { if (r.status === 'fulfilled') (r.value || []).forEach(u => allUsers.add(u.id)); });
+            setTotalStudents(allUsers.size);
+          }
+        }
+      } catch (e) {
+        console.warn('Could not fetch student count:', e.message);
+      }
+    }
+  };
 
   const fetchProgression = async () => {
     if (!user?.id) return;
@@ -162,6 +202,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       setChapters(formattedChapters);
       setExpandedChapters(new Set());
       fetchProgression();
+      fetchInstructeurEtEtudiants(courseData.redacteurId, courseId);
 
       // Process chapter HTML to replace proxy image URLs with authenticated blob URLs
       const processed = {};
@@ -994,7 +1035,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Instructeur</span>
-                  <span className="font-medium text-gray-900">{course?.instructeur}</span>
+                  <span className="font-medium text-gray-900">{instructeurNom}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Niveau</span>
@@ -1006,7 +1047,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Étudiants</span>
-                  <span className="font-medium text-gray-900">{course?.totalStudents}</span>
+                  <span className="font-medium text-gray-900">{totalStudents}</span>
                 </div>
               </div>
             </div>

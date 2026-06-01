@@ -201,6 +201,24 @@ const RichTextEditor = ({
         imgContainer.onmouseleave = () => controls.style.opacity = "0";
 
         insertNodeAtSavedRange(imgContainer);
+      } else if (file.type.startsWith("video/")) {
+        const videoContainer = document.createElement("div");
+        videoContainer.dataset.fileId = fileId;
+        videoContainer.style.cssText = "margin: 8px 0; display: inline-block; max-width: 100%;";
+
+        const video = document.createElement("video");
+        video.src = URL.createObjectURL(file);
+        video.controls = true;
+        video.dataset.fileId = fileId;
+        video.style.cssText = "max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #e2e8f0; display: block;";
+
+        const caption = document.createElement("div");
+        caption.style.cssText = "font-size: 11px; color: #6b7280; margin-top: 4px; text-align: center;";
+        caption.textContent = file.name;
+
+        videoContainer.appendChild(video);
+        videoContainer.appendChild(caption);
+        insertNodeAtSavedRange(videoContainer);
       } else {
         const linkContainer = document.createElement("div");
         linkContainer.dataset.fileId = fileId;
@@ -524,7 +542,7 @@ const RichTextEditor = ({
         ref={fileInputRef}
         type="file"
         className="hidden"
-        accept="image/*,.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx"
+        accept="image/*,video/*,.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx"
         onChange={handleFileInputChange}
         multiple
       />

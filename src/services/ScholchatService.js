@@ -14,10 +14,7 @@ const api = axios.create({
 // Request interceptor to handle different content types and add authentication token
 api.interceptors.request.use((config) => {
   // Add authentication token to all requests
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  const token = localStorage.getItem("accessToken");
 
   if (config.data instanceof FormData) {
     // Let browser set the boundary for multipart/form-data
@@ -745,6 +742,15 @@ class ScholchatService {
       const response = await api.post(
         `/utilisateurs/professeurs/${professorId}/rejet?${params.toString()}`
       );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async resendActivationEmail(email) {
+    try {
+      const response = await api.post(`/utilisateurs/regenerate-activation?email=${encodeURIComponent(email)}`);
       return response.data;
     } catch (error) {
       this.handleError(error);

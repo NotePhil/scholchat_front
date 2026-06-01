@@ -161,31 +161,56 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
       let data = [];
 
       if (selectedRole === "PROFESSOR" || selectedRole === "TUTOR") {
-        // Own exercises
-        const ownExercises = await exerciseService.getExercisesByProfesseur(userId);
-        // Also load exercises from classes where professor has publication rights (class-access)
-        try {
-          const classesResp = await fetch(`${baseUrl}/droits-publication/utilisateurs/${userId}/classes`, { headers: authHeader });
-          const accessClasses = classesResp.ok ? await classesResp.json() : [];
-          const allMap = new Map();
-          (ownExercises || []).forEach(e => allMap.set(String(e.id), e));
-          for (const cls of (accessClasses || [])) {
+        // Fetch all classes the professor has access to (publication rights + acceder)
+        const allClasses = await classService.obtenirClassesUtilisateur(userId);
+        const classIdsToFetch = (allClasses || []).map(c => c.id);
+
+        // Fetch programmed exercises from professor's own schedule + all accessible classes in parallel
+        const [profProgrammed, ...classResults] = await Promise.allSettled([
+          exerciseProgrammerService.getExercisesProgrammesParProfesseur(userId),
+          ...classIdsToFetch.map(cId =>
+            exerciseProgrammerService.getExercisesProgrammesParClasse(cId)
+          ),
+        ]);
+
+        const profItems = profProgrammed.status === "fulfilled" ? (profProgrammed.value || []) : [];
+        const classItems = classResults
+          .filter(r => r.status === "fulfilled")
+          .flatMap(r => r.value || []);
+
+        // Merge all programmer records by ID, class items first so other professors' entries are included
+        const programmerMap = new Map();
+        [...classItems, ...profItems].forEach(p => {
+          if (p?.id) programmerMap.set(String(p.id), p);
+        });
+
+        // Resolve exercise details for each programmer record
+        const exerciseMap = new Map();
+        await Promise.allSettled(
+          Array.from(programmerMap.values()).map(async (p) => {
+            const baseExId = p.exerciseId || p.exercise?.id;
+            if (!baseExId) return;
+            const key = String(baseExId);
+            if (exerciseMap.has(key)) return; // already resolved
             try {
-              const programmers = await exerciseProgrammerService.getExercisesProgrammesParClasse(cls.id);
-              (programmers || []).forEach(p => {
-                const exId = String(p.exerciseId || p.exercise?.id || p.id);
-                if (!allMap.has(exId)) {
-                  // Normalize programmer object so ExerciseList can render it
-                  const ex = p.exercise || {};
-                  allMap.set(exId, { ...ex, id: exId, nom: ex.nom || p.nom || "Sans titre", exerciseProgrammerId: p.id, classeIds: p.classeIds || [] });
-                }
-              });
-            } catch { /* non-blocking */ }
-          }
-          data = Array.from(allMap.values());
-        } catch {
-          data = ownExercises || [];
-        }
+              let ex = p.exercise;
+              if (!ex || !ex.nom) {
+                ex = await exerciseService.getExerciseById(baseExId);
+              }
+              if (ex) {
+                exerciseMap.set(key, {
+                  ...ex,
+                  id: key,
+                  exerciseProgrammerId: p.id,
+                  classeIds: p.classeIds || p.classesIds || [],
+                  programmeurId: p.programmeParId,
+                });
+              }
+            } catch { /* ignore missing exercises */ }
+          })
+        );
+
+        data = Array.from(exerciseMap.values());
       } else if (selectedRole === "ADMIN") {
         data = await exerciseService.getExercisesAccessibles(userId);
       } else {

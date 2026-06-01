@@ -309,61 +309,57 @@ const NotificationIcon = () => {
       // Close panel after click
       closePanel();
 
+      // Determine dashboard path from current URL
+      const currentPath = window.location.pathname;
+      const dashboardMatch = currentPath.match(/\/schoolchat\/Principal\/(\w+Dashboard)\//);
+      const dashboard = dashboardMatch ? dashboardMatch[1] : "ProfessorDashboard";
+
+      const navigateToTab = (tab, data = null) => {
+        // Always dispatch so tabData is updated even when already on the same tab
+        dispatch(setActiveTabAction(data ? { tab, data } : tab));
+        navigate(`/schoolchat/Principal/${dashboard}/${tab}`);
+      };
+
       switch (type) {
         case "ACCESS_REQUEST":
         case "DEMANDE_ACCES":
-          dispatch(setActiveTabAction({
-            tab: "manage-class",
-            data: { classId: relatedEntityId, subTab: "access-requests" }
-          }));
+          navigateToTab("manage-class", { classId: relatedEntityId, subTab: "access-requests" });
           break;
         case "CLASS_VALIDATED":
         case "CLASS_REJECTED":
         case "CLASS_JOIN":
         case "CLASS_CREATED":
-          dispatch(setActiveTabAction({
-            tab: "manage-class",
-            data: { classId: relatedEntityId, subTab: "overview" }
-          }));
+          navigateToTab("manage-class", { classId: relatedEntityId, subTab: "overview" });
           break;
         case "ACTIVITY_CREATED":
         case "ASSIGNMENT_GIVEN":
         case "NEW_ACTIVITY":
-          dispatch(setActiveTabAction({
-            tab: "activities",
-            data: { activityId: relatedEntityId }
-          }));
+          navigateToTab("activities", { activityId: relatedEntityId });
           break;
         case "COURSE_SCHEDULED":
         case "NEW_COURSE":
-          dispatch(setActiveTabAction({
-            tab: "cours",
-            data: { courseId: relatedEntityId }
-          }));
+          navigateToTab("cours", { courseId: relatedEntityId });
           break;
         case "EXERCISE_CREATED":
-          dispatch(setActiveTabAction({
-            tab: "exercises",
-            data: { exerciseId: relatedEntityId }
-          }));
+          navigateToTab("exercises", { exerciseId: relatedEntityId });
           break;
         case "MESSAGE_SENT":
-          dispatch(setActiveTabAction("messages"));
+          navigateToTab("messages");
           break;
         case "PROFESSOR_CREATED":
-          dispatch(setActiveTabAction("professors"));
+          navigateToTab("professors");
           break;
         case "STUDENT_CREATED":
-          dispatch(setActiveTabAction("students"));
+          navigateToTab("students");
           break;
         case "PARENT_CREATED":
-          dispatch(setActiveTabAction("parents"));
+          navigateToTab("parents");
           break;
         default:
-          dispatch(setActiveTabAction("dashboard"));
+          navigateToTab("dashboard");
       }
     },
-    [markAsRead, closePanel, dispatch, isStudentOrParent]
+    [markAsRead, closePanel, dispatch, navigate, isStudentOrParent]
   );
 
   // Role-based header subtitle

@@ -77,7 +77,10 @@ const ComposeModal = ({
 
   useEffect(() => {
     const fetchUsersForClasses = async () => {
-      if (selectedClasses.length === 0) return;
+      if (selectedClasses.length === 0) {
+        setClassUsers({});
+        return;
+      }
       try {
         const accessToken = localStorage.getItem("accessToken");
         const users = {};
@@ -108,7 +111,22 @@ const ComposeModal = ({
 
   const toggleClassSelection = (classeId) => {
     if (selectedClasses.includes(classeId)) {
-      setSelectedClasses(selectedClasses.filter((id) => id !== classeId));
+      const newSelectedClasses = selectedClasses.filter((id) => id !== classeId);
+      setSelectedClasses(newSelectedClasses);
+
+      // Collect user IDs that still belong to at least one remaining selected class
+      const remainingUserIds = new Set(
+        newSelectedClasses.flatMap((id) => (classUsers[id] || []).map((u) => u.id))
+      );
+
+      // Remove recipients that no longer belong to any selected class
+      setNewMessage((prev) => ({
+        ...prev,
+        destinataires: prev.destinataires.filter((dest) => remainingUserIds.has(dest.id)),
+      }));
+
+      // Remove CC recipients that no longer belong to any selected class
+      setCcRecipients((prev) => prev.filter((cc) => remainingUserIds.has(cc.id)));
     } else {
       setSelectedClasses([...selectedClasses, classeId]);
     }
@@ -696,6 +714,7 @@ const ComposeModal = ({
             className={`px-4 py-2 rounded-lg text-white transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${
               loading ||
               !newMessage.contenu.trim() ||
+              selectedClasses.length === 0 ||
               (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0)
                 ? "bg-gray-400 cursor-not-allowed"
                 : "hover:shadow-lg"
@@ -704,6 +723,7 @@ const ComposeModal = ({
               backgroundColor:
                 loading ||
                 !newMessage.contenu.trim() ||
+                selectedClasses.length === 0 ||
                 (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0)
                   ? undefined
                   : themeColors.primary,
@@ -712,6 +732,7 @@ const ComposeModal = ({
             disabled={
               loading ||
               !newMessage.contenu.trim() ||
+              selectedClasses.length === 0 ||
               (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0)
             }
           >
