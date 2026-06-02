@@ -89,6 +89,7 @@ const CoursProgrammerForm = ({
   onClose,
   onSubmit,
   modalMode = "create",
+  isReprogramme = false,
   selectedScheduledCourse,
   courses = [],
   classes = [],
@@ -213,7 +214,7 @@ const CoursProgrammerForm = ({
     if (isOpen) {
       setSubmitError("");
 
-      if (modalMode === "edit" && selectedScheduledCourse) {
+      if ((modalMode === "edit" || isReprogramme) && selectedScheduledCourse) {
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
           const date = new Date(dateString);
@@ -228,21 +229,23 @@ const CoursProgrammerForm = ({
         const initialValues = {
           coursId: selectedScheduledCourse.coursId || selectedScheduledCourse.cours?.id || "",
           classeId: selectedScheduledCourse.classeId || (selectedScheduledCourse.classesIds && selectedScheduledCourse.classesIds[0]) || "",
-          dateCoursPrevue: formatDateForInput(
+          // For reprogramming, clear date fields so the user picks a new date
+          dateCoursPrevue: isReprogramme ? "" : formatDateForInput(
             selectedScheduledCourse.dateCoursPrevue
           ),
-          dateDebutEffectif: formatDateForInput(
+          dateDebutEffectif: isReprogramme ? "" : formatDateForInput(
             selectedScheduledCourse.dateDebutEffectif
           ),
-          dateFinEffectif: formatDateForInput(
+          dateFinEffectif: isReprogramme ? "" : formatDateForInput(
             selectedScheduledCourse.dateFinEffectif
           ),
           lieu: selectedScheduledCourse.lieu || "",
-          description: selectedScheduledCourse.description || "",
+          description: isReprogramme
+            ? (selectedScheduledCourse.description?.includes("Annulé:") ? "" : selectedScheduledCourse.description || "")
+            : selectedScheduledCourse.description || "",
           capaciteMax: selectedScheduledCourse.capaciteMax?.toString() || "",
           participantsIds: selectedScheduledCourse.participantsIds || [],
-          etatCoursProgramme:
-            selectedScheduledCourse.etatCoursProgramme || "PLANIFIE",
+          etatCoursProgramme: isReprogramme ? "PLANIFIE" : (selectedScheduledCourse.etatCoursProgramme || "PLANIFIE"),
         };
 
         reset(initialValues);
@@ -425,12 +428,10 @@ const CoursProgrammerForm = ({
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
               <Calendar className="mr-2 sm:mr-3 text-indigo-600" size={24} />
               <span className="hidden sm:inline">
-                {modalMode === "create"
-                  ? "Programmer un Cours"
-                  : "Modifier la Programmation"}
+                {isReprogramme ? "Reprogrammer le Cours" : modalMode === "create" ? "Programmer un Cours" : "Modifier la Programmation"}
               </span>
               <span className="sm:hidden">
-                {modalMode === "create" ? "Programmer" : "Modifier"}
+                {isReprogramme ? "Reprogrammer" : modalMode === "create" ? "Programmer" : "Modifier"}
               </span>
             </h2>
             <button
@@ -474,7 +475,7 @@ const CoursProgrammerForm = ({
                       ? "border-red-300 bg-red-50"
                       : "border-slate-200"
                   }`}
-                  disabled={modalMode === "edit"}
+                  disabled={modalMode === "edit" || isReprogramme}
                 >
                   <option value="">Sélectionnez un cours</option>
                   {courses.map((course) => (

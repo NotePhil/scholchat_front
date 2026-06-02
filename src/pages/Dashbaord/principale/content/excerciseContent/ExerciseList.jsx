@@ -476,7 +476,7 @@ const ExerciseList = ({
                     )}
                     <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
                       <span className="text-xs text-gray-500">
-                        {questionCount > 0 ? `${questionCount} question${questionCount > 1 ? "s" : ""}` : "Questions à venir"}
+                        {questionCount > 0 ? `${questionCount} question${questionCount > 1 ? "s" : ""}` : "Voir les questions"}
                       </span>
                       <Button
                         type={isSubmitted ? "default" : "primary"}

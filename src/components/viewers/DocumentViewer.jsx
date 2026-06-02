@@ -17,10 +17,13 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
   const getFileType = () => {
     const name = (fileName || "").toLowerCase();
     const type = (contentType || "").toLowerCase();
+    const urlStr = (url || "").toLowerCase();
 
     if (type.includes("pdf") || name.endsWith(".pdf")) return "pdf";
     if (type.includes("image") || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name)) return "image";
     if (type.includes("video") || /\.(mp4|webm|ogg|mov|avi)$/i.test(name)) return "video";
+    // Detect video by URL pattern for backend proxy URLs
+    if (urlStr.includes("/media/") && urlStr.endsWith("/content")) return "video";
     if (/\.(ppt|pptx)$/i.test(name) || type.includes("presentation")) return "ppt";
     if (/\.(xls|xlsx)$/i.test(name) || type.includes("spreadsheet") || type.includes("excel")) return "excel";
     if (/\.(doc|docx)$/i.test(name) || type.includes("word") || type.includes("document")) return "word";

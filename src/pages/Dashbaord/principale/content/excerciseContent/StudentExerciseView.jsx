@@ -38,7 +38,7 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
 
   useEffect(() => {
     loadExercise();
-  }, [exerciseId]);
+  }, [exerciseId, exerciseProgrammerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadExercise = async () => {
     try {
@@ -47,42 +47,63 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
 
       let exerciseData = null;
       let questionsData = [];
-      let actualExerciseId = exerciseId;
+      let actualExerciseId = exerciseId; // will be overridden to base exercise ID
 
-      // Try to load as exercise first
+      console.log(`[StudentExerciseView] loadExercise — exerciseId=${exerciseId} exerciseProgrammerId=${exerciseProgrammerId}`);
+
+      // Step 1: Resolve the base exercise ID.
+      // exerciseId may be a base exercise ID or a programmer record ID —
+      // detect by trying the exercise endpoint first, then the programmer endpoint.
       try {
         exerciseData = await exerciseService.getExerciseById(exerciseId);
-        questionsData = await questionReponseService.getQuestionsByExercise(exerciseId);
-      } catch (e) {
-        // If not found, it might be a programmer ID - try to get the source exercise
+        console.log(`[StudentExerciseView] Loaded directly as base exercise: ${exerciseId}`);
+        // success → exerciseId is already a base exercise ID
+      } catch {
+        console.warn(`[StudentExerciseView] ${exerciseId} is not a base exercise ID — trying programmer record`);
+        // Not a base exercise ID — try as a programmer record ID
+        // First check if exerciseProgrammerId is different and might be the programmer record
+        const progId = exerciseProgrammerId || exerciseId;
         try {
           const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
-          const progResp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/exercises-programmer/${exerciseId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const progResp = await fetch(
+            `${process.env.REACT_APP_API_BASE_URL}/exercises-programmer/${progId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
           if (progResp.ok) {
             const progData = await progResp.json();
-            // exerciseId field in programmer object points to base exercise
             const baseId = progData.exerciseId || progData.exercise?.id;
+            console.log(`[StudentExerciseView] Programmer record resolved: progId=${progId} baseId=${baseId}`);
             if (baseId) {
               actualExerciseId = baseId;
               try {
                 exerciseData = await exerciseService.getExerciseById(baseId);
-              } catch { exerciseData = progData.exercise || progData; }
+              } catch {
+                exerciseData = progData.exercise || { ...progData, id: baseId };
+              }
             } else {
-              exerciseData = progData;
-              actualExerciseId = progData.id;
+              // Programmer record has no exerciseId — use the embedded exercise object
+              exerciseData = progData.exercise || progData;
+              actualExerciseId = exerciseData?.id || exerciseId;
             }
-            // Always fetch questions from base exercise to get choixReponses
-            questionsData = await questionReponseService.getQuestionsByExercise(actualExerciseId);
           }
         } catch (e2) {
-          console.warn("Could not load as programmer either:", e2);
+          console.warn("[StudentExerciseView] Could not resolve exercise from programmer record:", e2);
         }
       }
 
       if (!exerciseData) {
         throw new Error("Exercice introuvable");
+      }
+
+      console.log(`[StudentExerciseView] Fetching questions for actualExerciseId=${actualExerciseId}`);
+
+      // Step 2: Fetch questions using the resolved base exercise ID
+      try {
+        questionsData = await questionReponseService.getQuestionsByExercise(actualExerciseId);
+        console.log(`[StudentExerciseView] Questions loaded: ${questionsData?.length ?? 0}`);
+      } catch (qErr) {
+        console.warn("[StudentExerciseView] Could not load questions for exerciseId:", actualExerciseId, qErr);
+        questionsData = [];
       }
 
       setExercise(exerciseData);
@@ -136,7 +157,12 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
             dateDebut: new Date().toISOString(),
           });
         } catch (e) {
-          console.warn("Could not register participation:", e);
+          // ALREADY_EXISTS is expected when the student already started this exercise
+          // (e.g. same exercise programmed in two classes) — not an error
+          const msg = e?.message || "";
+          if (!msg.includes("ALREADY_EXISTS") && !msg.includes("déjà")) {
+            console.warn("[StudentExerciseView] Could not register participation:", e);
+          }
         }
       }
     } catch (err) {

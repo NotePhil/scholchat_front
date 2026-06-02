@@ -1,4 +1,5 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -11,6 +12,8 @@ const userApi = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+applyAuthInterceptors(userApi);
 
 class UserService {
   // Error Handler

@@ -1029,11 +1029,12 @@ const CreateCourseFormModal = ({
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const uniqueFileName = `temp_${timestamp}_${cleanFileName}`;
 
-      // Upload the file
+      // Upload the file with course ID (null for create mode, will be set on edit)
       const result = await minioS3Service.uploadFile(
         new File([file], uniqueFileName, { type: file.type }),
         mediaType,
-        documentType
+        documentType,
+        null  // No coursId yet in create mode
       );
 
       // Get the current user ID to construct the expected file path

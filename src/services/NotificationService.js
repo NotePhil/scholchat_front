@@ -1,4 +1,5 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -10,19 +11,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add authentication token
-api.interceptors.request.use((config) => {
-  const token =
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("authToken") ||
-    sessionStorage.getItem("accessToken") ||
-    sessionStorage.getItem("authToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  config.headers["Content-Type"] = "application/json";
-  return config;
-});
+applyAuthInterceptors(api);
 
 class NotificationService {
   handleError(error) {

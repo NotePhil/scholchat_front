@@ -6,6 +6,8 @@ const getFileType = (url = "", contentType = "") => {
   const u = url.toLowerCase().split("?")[0];
   if (contentType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(u)) return "image";
   if (contentType.startsWith("video/") || /\.(mp4|webm|avi|mov|mkv)$/.test(u)) return "video";
+  // Detect video by backend proxy URL pattern
+  if (u.includes("/media/") && u.endsWith("/content")) return "video";
   if (contentType.includes("pdf") || u.endsWith(".pdf")) return "pdf";
   if (/\.(ppt|pptx)$/.test(u) || contentType.includes("presentation")) return "office";
   if (/\.(doc|docx)$/.test(u) || contentType.includes("word")) return "office";
@@ -138,7 +140,7 @@ const FileViewer = ({ url, contentType = "", fileName = "Fichier", onImageClick 
   );
 };
 
-// Parse contenu HTML to extract embedded images and file links
+// Parse contenu HTML to extract embedded images and file links (NOT videos — they render inline)
 const extractFromContenu = (html = "") => {
   if (!html) return [];
   const parser = new DOMParser();
@@ -147,7 +149,7 @@ const extractFromContenu = (html = "") => {
 
   doc.querySelectorAll("img").forEach(img => {
     const src = img.getAttribute("src");
-    if (src && src.startsWith("http")) {
+    if (src && src.startsWith("http") && !src.startsWith("blob:")) {
       const name = img.getAttribute("alt") || src.split("/").pop().split("?")[0] || "Image";
       items.push({ url: src, contentType: "image/", fileName: name });
     }
@@ -155,7 +157,7 @@ const extractFromContenu = (html = "") => {
 
   doc.querySelectorAll("a[href]").forEach(a => {
     const href = a.getAttribute("href");
-    if (href && href.startsWith("http")) {
+    if (href && href.startsWith("http") && !href.startsWith("blob:")) {
       const name = a.textContent.trim() || href.split("/").pop().split("?")[0] || "Fichier";
       items.push({ url: href, contentType: "", fileName: name });
     }
@@ -164,14 +166,16 @@ const extractFromContenu = (html = "") => {
   return items;
 };
 
-// Refresh presigned MinIO URLs in HTML content
-const refreshContentUrls = async (html) => {
+// Refresh presigned MinIO URLs in HTML content, and resolve blob: video URLs
+const refreshContentUrls = async (html, redacteurId) => {
   if (!html) return html;
   const parser = new DOMParser();
   const doc = parser.parseFromString(`<div id="r">${html}</div>`, "text/html");
   const root = doc.getElementById("r");
 
-  const isMinioUrl = (url) => url && url.startsWith("http") && (url.includes("/images/") || url.includes("/documents/") || url.includes("/videos/"));
+  const apiBase = process.env.REACT_APP_API_BASE_URL || "";
+  const isMinioUrl = (url) => url && url.startsWith("http") && !url.startsWith(apiBase) &&
+    (url.includes("/images/") || url.includes("/documents/") || url.includes("/videos/"));
 
   const refreshUrl = async (url) => {
     try {
@@ -195,10 +199,30 @@ const refreshContentUrls = async (html) => {
   });
 
   await Promise.all([...imgPromises, ...aPromises]);
+
+  // Resolve video elements with blob: src using caption filename + redacteurId
+  if (redacteurId) {
+    const blobVideos = Array.from(root.querySelectorAll('video[src^="blob:"]'));
+    await Promise.all(blobVideos.map(async (video) => {
+      const container = video.parentElement;
+      const caption = container?.querySelector('div');
+      const captionText = caption?.textContent?.trim() || '';
+      console.log('[ChapterPanel] Resolving blob video, caption:', captionText, 'redacteurId:', redacteurId);
+      if (!captionText) return;
+      try {
+        const media = await minioS3Service.findMediaByFileName(captionText, redacteurId);
+        console.log('[ChapterPanel] Media found:', media?.id, media?.fileName);
+        if (media?.id) {
+          video.setAttribute('src', `${apiBase}/media/${media.id}/content`);
+        }
+      } catch (e) { console.warn('[ChapterPanel] blob resolve error:', e); }
+    }));
+  }
+
   return root.innerHTML;
 };
 
-const ChapterPanel = ({ chapitres = [], currentChapitreId, progress = [], isModerator, onSelectChapter }) => {
+const ChapterPanel = ({ chapitres = [], currentChapitreId, progress = [], isModerator, onSelectChapter, redacteurId }) => {
   const [contentExpanded, setContentExpanded] = useState(true);
   const [processedContent, setProcessedContent] = useState("");
   const [mediaItems, setMediaItems] = useState([]);
@@ -217,12 +241,12 @@ const ChapterPanel = ({ chapitres = [], currentChapitreId, progress = [], isMode
     }
 
     const process = async () => {
-      const refreshed = await refreshContentUrls(currentChap.contenu || "");
+      const refreshed = await refreshContentUrls(currentChap.contenu || "", redacteurId);
       setProcessedContent(refreshed);
       setMediaItems(extractFromContenu(refreshed));
     };
     process();
-  }, [currentChap?.id, currentChap?.contenu]);
+  }, [currentChap?.id, currentChap?.contenu, redacteurId]);
 
   const handleContentClick = (e) => {
     // Click on image → popup

@@ -12,30 +12,35 @@ export const createAuthenticatedAxios = () => {
     },
   });
 
-  // Request interceptor to add auth token
-  api.interceptors.request.use(
+  applyAuthInterceptors(api);
+  return api;
+};
+
+/**
+ * Apply standard auth request + response interceptors to any existing axios instance.
+ * Call this right after creating any axios.create() instance so that 401/403 always
+ * triggers the "Session expirée" modal via handleAuthenticationError().
+ */
+export const applyAuthInterceptors = (instance) => {
+  // Request: attach token
+  instance.interceptors.request.use(
     (config) => {
       const token =
-        localStorage.getItem("authToken") ||
         localStorage.getItem("accessToken") ||
+        localStorage.getItem("authToken") ||
         localStorage.getItem("cmr.notep.business.business.token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
     },
-    (error) => {
-      return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
   );
 
-  // Response interceptor to handle authentication errors
-  api.interceptors.response.use(
-    (response) => {
-      return response;
-    },
+  // Response: surface auth errors globally
+  instance.interceptors.response.use(
+    (response) => response,
     (error) => {
-      // Handle authentication errors
       if (error.response?.status === 401 || error.response?.status === 403) {
         handleAuthenticationError();
       }
@@ -43,7 +48,7 @@ export const createAuthenticatedAxios = () => {
     }
   );
 
-  return api;
+  return instance;
 };
 
 // Centralized authentication error handling

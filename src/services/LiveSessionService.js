@@ -1,14 +1,11 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
 // Base URL already includes /scholchat from REACT_APP_API_BASE_URL
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const api = axios.create({ baseURL: BASE_URL });
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+applyAuthInterceptors(api);
 
 const liveSessionService = {
   // POST /cours/{coursId}/session/start  → 201 SessionResponseDTO

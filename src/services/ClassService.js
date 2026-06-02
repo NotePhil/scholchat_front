@@ -1,4 +1,5 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
 export const EtatClasse = {
   EN_ATTENTE_APPROBATION: "EN_ATTENTE_APPROBATION",
@@ -31,39 +32,8 @@ class ClassService {
       timeout: 30000, // 30 second timeout for slower connections
     });
 
-    // Add response interceptor for better error handling
-    this.axiosInstance.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        console.error("API Error:", error);
-        if (error.response) {
-          // Server responded with error status
-          const message = "Server error";
-          throw new Error(message);
-        } else if (error.request) {
-          // Request was made but no response received
-          throw new Error("Network error: No response from server");
-        } else {
-          // Something else happened
-          throw new Error(`Request error: ${error.message}`);
-        }
-      }
-    );
-
-    // Add request interceptor to include auth token
-    this.axiosInstance.interceptors.request.use(
-      (config) => {
-        // Get auth token from localStorage or sessionStorage
-        const token = localStorage.getItem("accessToken");
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
+    // Apply standard auth interceptors (token attachment + 401/403 → session expired modal)
+    applyAuthInterceptors(this.axiosInstance);
   }
 
   /**

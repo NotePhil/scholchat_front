@@ -1,10 +1,18 @@
 import axios from "axios";
+import { applyAuthInterceptors, handleAuthenticationError } from "../utils/axiosConfig";
 
 export const EtatDemandeAcces = {
   EN_ATTENTE: "EN_ATTENTE",
   APPROUVEE: "APPROUVEE",
   REJETEE: "REJETEE",
 };
+
+// Shared axios instance so all accederService calls go through auth interceptors
+const accederAxios = axios.create({
+  baseURL: process.env.REACT_APP_API_BASE_URL,
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
+});
+applyAuthInterceptors(accederAxios);
 
 class AccederService {
   constructor(baseUrl = null) {

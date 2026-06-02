@@ -55,6 +55,7 @@ const CoursProgrammerContent = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedScheduledCourse, setSelectedScheduledCourse] = useState(null);
   const [modalMode, setModalMode] = useState("create");
+  const [reprogrammeOfId, setReprogrammeOfId] = useState(null);
   const [professorId, setProfessorId] = useState("");
   const [showLauncher, setShowLauncher] = useState(false);
   const [launcherCourse, setLauncherCourse] = useState(null);
@@ -243,24 +244,28 @@ const CoursProgrammerContent = () => {
 
       let result;
       if (modalMode === "create") {
-        result = await coursProgrammerService.programmerCours(
-          dataWithProfessor
-        );
+        result = await coursProgrammerService.programmerCours(dataWithProfessor);
+        // If this is a reprogramme, delete the old record
+        if (reprogrammeOfId) {
+          try {
+            await coursProgrammerService.supprimerCoursProgramme(reprogrammeOfId);
+          } catch (e) {
+            console.warn("Could not delete old scheduled course:", e);
+          }
+          setReprogrammeOfId(null);
+        }
         setSuccess("Cours programmé avec succès !");
-        console.log("Cours créé:", result);
       } else {
         result = await coursProgrammerService.mettreAJourCoursProgramme(
           selectedScheduledCourse.id,
           dataWithProfessor
         );
         setSuccess("Programmation modifiée avec succès !");
-        console.log("Cours mis à jour:", result);
       }
 
       setShowScheduleModal(false);
       setSelectedScheduledCourse(null);
 
-      // Rechargement des données après succès
       await loadData(professorId);
     } catch (err) {
       console.error("Erreur dans handleFormSubmit:", err);
@@ -289,30 +294,31 @@ const CoursProgrammerContent = () => {
     }
     
     // Check if this is a reprogramming case (finished or cancelled course)
-    const isReprogramming = scheduledCourse.etatCoursProgramme === "TERMINE" || scheduledCourse.etatCoursProgramme === "ANNULE";
+    const isReprogramming = scheduledCourse.etatCoursProgramme === "TERMINE" || scheduledCourse.etatCoursProgramme === "ANNULE"
+      || (scheduledCourse.id === undefined); // Also handles reprogramData passed from view modal
+    // Check using original id before it was cleared
+    const originalId = scheduledCourse._originalId || scheduledCourse.id;
     
-    if (isReprogramming) {
-      // For reprogramming, create new course programming based on the existing one
-      setModalMode("create"); // Use create mode for new programming
+    if (isReprogramming || scheduledCourse.id === undefined) {
+      setModalMode("create");
+      setReprogrammeOfId(originalId || null);
       const reprogramData = {
         ...scheduledCourse,
-        id: undefined, // Remove ID to create new
-        etatCoursProgramme: "PLANIFIE", // Reset to planned state
-        dateCoursPrevue: null, // Clear previous date - user will set new date
-        dateDebutEffectif: null, // Clear effective dates
+        id: undefined,
+        etatCoursProgramme: "PLANIFIE",
+        dateCoursPrevue: null,
+        dateDebutEffectif: null,
         dateFinEffectif: null,
-        description: scheduledCourse.description?.includes("Annulé:") 
-          ? null // Clear cancellation reason
+        description: scheduledCourse.description?.includes("Annulé:")
+          ? null
           : scheduledCourse.description,
-        // Keep the course and class information
         coursId: scheduledCourse.coursId || scheduledCourse.cours?.id || "",
         classeId: scheduledCourse.classeId || (scheduledCourse.classesIds && scheduledCourse.classesIds[0]) || "",
       };
       setSelectedScheduledCourse(reprogramData);
     } else {
-      // Normal edit for active courses
+      setReprogrammeOfId(null);
       setModalMode("edit");
-      // Normalize classeId from classesIds array if missing
       const normalizedCourse = {
         ...scheduledCourse,
         coursId: scheduledCourse.coursId || scheduledCourse.cours?.id || "",
@@ -988,11 +994,13 @@ const CoursProgrammerContent = () => {
           onClose={() => {
             setShowScheduleModal(false);
             setSelectedScheduledCourse(null);
+            setReprogrammeOfId(null);
             setError("");
             setSuccess("");
           }}
           onSubmit={handleFormSubmit}
           modalMode={modalMode}
+          isReprogramme={!!reprogrammeOfId}
           selectedScheduledCourse={selectedScheduledCourse}
           courses={courses}
           classes={classes}

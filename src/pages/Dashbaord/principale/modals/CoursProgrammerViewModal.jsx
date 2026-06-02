@@ -435,7 +435,7 @@ const CoursProgrammerViewModal = ({
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
               }`}
             >
-              Historique
+              Historique des Sessions ({sessionHistory.length})
             </button>
           </div>
         </div>
@@ -1094,21 +1094,20 @@ const CoursProgrammerViewModal = ({
                 onClick={() => {
                   // For finished or cancelled courses, show reprogram option
                   if (scheduledCourse.etatCoursProgramme === "TERMINE" || scheduledCourse.etatCoursProgramme === "ANNULE") {
-                    // Create a new course programming based on the current one
                     const reprogramData = {
                       ...scheduledCourse,
-                      id: undefined, // Remove ID to create new
-                      etatCoursProgramme: "PLANIFIE", // Reset to planned state
-                      dateCoursPrevue: null, // Clear previous date
-                      dateDebutEffectif: null, // Clear effective dates
+                      _originalId: scheduledCourse.id,
+                      id: undefined,
+                      etatCoursProgramme: "PLANIFIE",
+                      dateCoursPrevue: null,
+                      dateDebutEffectif: null,
                       dateFinEffectif: null,
                       description: scheduledCourse.description?.includes("Annulé:") 
-                        ? null // Clear cancellation reason
+                        ? null
                         : scheduledCourse.description
                     };
                     onEdit(reprogramData);
                   } else {
-                    // Normal edit for active courses
                     onEdit(scheduledCourse);
                   }
                   onClose();

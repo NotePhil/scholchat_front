@@ -49,17 +49,37 @@ const fetchWithAuth = async (url) => {
   return res;
 };
 
+// Extract relative MinIO path from a direct storage URL
+const toRelativePath = (raw) => {
+  try {
+    const { pathname } = new URL(raw);
+    const idx = pathname.indexOf('users/');
+    if (idx >= 0) return pathname.slice(idx);
+    const parts = pathname.split('/');
+    return parts.length > 1 ? parts.slice(1).join('/') : pathname;
+  } catch { return raw; }
+};
+
+// Returns true for direct MinIO/S3 storage URLs that need proxying
+const isStorageUrl = (url) => {
+  if (!url || url.startsWith('blob:') || url.startsWith('data:')) return false;
+  if (url.startsWith(API_BASE)) return false; // already a proxy URL
+  return url.startsWith('http');
+};
+
 const processHtmlImages = async (html, blobUrls) => {
   if (!html) return html;
   const div = document.createElement('div');
   div.innerHTML = html;
+
+  // Process images that are backend proxy URLs with auth
   const imgs = div.querySelectorAll('img');
   await Promise.all(Array.from(imgs).map(async (img) => {
     const src = img.getAttribute('src') || '';
     if (!src || src.startsWith('data:') || src.startsWith('blob:')) return;
-    if (src.startsWith(API_BASE) || src.includes('/media/')) {
+    if (src.startsWith(API_BASE) && src.includes('/media/')) {
       try {
-        const res = await fetchWithAuth(src.startsWith('http') ? src : `${API_BASE}${src}`);
+        const res = await fetchWithAuth(src);
         const blob = await res.blob();
         const blobUrl = URL.createObjectURL(blob);
         blobUrls.push(blobUrl);
@@ -69,7 +89,66 @@ const processHtmlImages = async (html, blobUrls) => {
       }
     }
   }));
+
+  // Fix video/img src to absolute for any relative /media/ paths
+  div.querySelectorAll('video[src], video source[src]').forEach((el) => {
+    const src = el.getAttribute('src') || '';
+    if (src && !src.startsWith('http') && !src.startsWith('blob:')) {
+      el.setAttribute('src', `${API_BASE}${src}`);
+    }
+  });
+
   return div.innerHTML;
+};
+
+// Replace all direct storage URLs in HTML with fresh backend proxy URLs
+// Also fixes videos with blob src by finding the real media via the caption filename
+const processStorageUrls = async (html, redacteurId) => {
+  if (!html) return html;
+  const { minioS3Service } = await import('../../../../../services/minioS3');
+
+  // 1. Replace direct MinIO storage URLs with proxy URLs
+  const urlsToRefresh = new Set();
+  const regex = /(src|href)="(https?:\/\/[^"]+)"/g;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    if (isStorageUrl(match[2])) urlsToRefresh.add(match[2]);
+  }
+  let processed = html;
+  for (const original of urlsToRefresh) {
+    try {
+      const relativePath = toRelativePath(original);
+      const downloadData = await minioS3Service.generateDownloadUrlByPath(relativePath);
+      if (downloadData?.downloadUrl) {
+        processed = processed.split(original).join(downloadData.downloadUrl);
+      }
+    } catch { /* keep original */ }
+  }
+
+  // 2. Fix video elements with blob: src (saved with blob URL — look up by caption filename)
+  if (processed.includes('src="blob:') && redacteurId) {
+    try {
+      const div = document.createElement('div');
+      div.innerHTML = processed;
+      const videos = div.querySelectorAll('video[src^="blob:"]');
+      await Promise.all(Array.from(videos).map(async (video) => {
+        const container = video.parentElement;
+        const caption = container?.querySelector('div');
+        const captionText = caption?.textContent?.trim() || '';
+        if (!captionText) return;
+        // Use precise filename lookup via backend
+        const media = await minioS3Service.findMediaByFileName(captionText, redacteurId);
+        if (media?.id) {
+          video.setAttribute('src', `${API_BASE}/media/${media.id}/content`);
+        }
+      }));
+      processed = div.innerHTML;
+    } catch (e) {
+      console.warn('Could not resolve blob video URLs:', e);
+    }
+  }
+
+  return processed;
 };
 
 const CourseDetailsView = ({ courseId, onBack }) => {
@@ -204,26 +283,30 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       fetchProgression();
       fetchInstructeurEtEtudiants(courseData.redacteurId, courseId);
 
-      // Process chapter HTML to replace proxy image URLs with authenticated blob URLs
+      // Process chapter HTML: replace direct MinIO URLs with proxy URLs, then handle auth images
       const processed = {};
+      const storageUrlMap = {}; // original MinIO URL -> proxy URL, per chapter
       await Promise.all(formattedChapters.map(async (ch) => {
         if (ch.contenu) {
           try {
-            processed[ch.id] = await processHtmlImages(ch.contenu, blobUrlsRef.current);
+            const withProxyUrls = await processStorageUrls(ch.contenu, courseData.redacteurId);
+            processed[ch.id] = await processHtmlImages(withProxyUrls, blobUrlsRef.current);
           } catch (e) {
             processed[ch.id] = ch.contenu;
           }
         }
       }));
       setProcessedContents(processed);
+
+      // Extract files from PROCESSED contenu (blob URLs already resolved)
+      const chaptersWithResolved = formattedChapters.map(ch => ({
+        ...ch,
+        contenu: processed[ch.id] || ch.contenu
+      }));
+      extractFilesFromChapters(chaptersWithResolved);
       
-      // Extract embedded files from chapter HTML content
-      extractFilesFromChapters(formattedChapters);
-      
-      // Also fetch professor's uploaded files from MinIO
-      if (courseData.redacteurId) {
-        fetchMinioFiles(courseData.redacteurId);
-      }
+      // Also fetch professor's uploaded files from MinIO filtered by course
+      fetchMinioFiles(courseId);
       
       // Fetch exercises for this course
       fetchCourseExercises();
@@ -256,76 +339,75 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       
       (chaptersData || []).forEach((chapter, chapterIndex) => {
         if (chapter.contenu) {
-          // Create a temporary div to parse HTML content
+          console.log(`Chapter ${chapterIndex} contenu preview:`, chapter.contenu.substring(0, 500));
           const tempDiv = document.createElement('div');
           tempDiv.innerHTML = chapter.contenu;
           
           // Extract images
           const images = tempDiv.querySelectorAll('img');
           images.forEach((img, imgIndex) => {
-            if (img.src && img.src.startsWith('http')) {
-              extractedFiles.push({
-                id: `img_${chapterIndex}_${imgIndex}`,
-                fileName: img.alt || `Image_${chapterIndex}_${imgIndex}.jpg`,
-                filePath: img.src,
-                contentType: 'image/jpeg',
-                fileSize: 0,
-                documentType: 'chapter_image',
-                chapterTitle: chapter.titre,
-                type: 'image'
-              });
-            }
+            const src = img.getAttribute('src') || '';
+            if (!src || src.startsWith('blob:') || src.startsWith('data:')) return;
+            const absoluteSrc = src.startsWith('http') ? src : `${API_BASE}${src}`;
+            const fileName = img.getAttribute('alt') || absoluteSrc.split('/').pop().split('?')[0] || `Image_${chapterIndex}_${imgIndex}.jpg`;
+            extractedFiles.push({
+              id: `img_${chapterIndex}_${imgIndex}`,
+              fileName,
+              filePath: absoluteSrc,
+              contentType: 'image/jpeg',
+              fileSize: 0,
+              documentType: 'chapter_image',
+              chapterTitle: chapter.titre,
+              type: 'image'
+            });
           });
           
-          // Extract video elements
-          const videos = tempDiv.querySelectorAll('video source, video[src]');
+          // Extract video elements (src now resolved to backend proxy URL)
+          const videos = tempDiv.querySelectorAll('video, video source');
           videos.forEach((video, vidIndex) => {
-            const src = video.src || video.getAttribute('src');
-            if (src && src.startsWith('http')) {
+            const src = video.getAttribute('src') || '';
+            if (!src || src.startsWith('blob:')) return; // skip unresolved blobs
+            const absoluteSrc = src.startsWith('http') ? src : `${API_BASE}${src}`;
+            try {
+              const urlPath = new URL(absoluteSrc).pathname;
+              const name = urlPath.split('/').pop().split('?')[0] || `Video_${chapterIndex}_${vidIndex}.mp4`;
               extractedFiles.push({
                 id: `vid_${chapterIndex}_${vidIndex}`,
-                fileName: `Video_${chapterIndex}_${vidIndex}.mp4`,
-                filePath: src,
+                fileName: decodeURIComponent(name),
+                filePath: absoluteSrc,
                 contentType: 'video/mp4',
                 fileSize: 0,
                 documentType: 'chapter_video',
                 chapterTitle: chapter.titre,
                 type: 'video'
               });
-            }
+            } catch { }
           });
           
-          // Extract file links
+          // Extract file links (videos and docs inserted as <a> tags)
           const links = tempDiv.querySelectorAll('a[href]');
           links.forEach((link, linkIndex) => {
-            if (link.href && link.href.startsWith('http')) {
-              const fileName = link.textContent || `Document_${chapterIndex}_${linkIndex}`;
-              const extension = fileName.split('.').pop()?.toLowerCase() || 'pdf';
-              let contentType = 'application/octet-stream';
-              let type = 'document';
-              
-              if (['pdf'].includes(extension)) contentType = 'application/pdf';
-              else if (['doc', 'docx'].includes(extension)) contentType = 'application/msword';
-              else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
-                contentType = `image/${extension}`;
-                type = 'image';
-              }
-              else if (['mp4', 'avi', 'mov', 'webm'].includes(extension)) {
-                contentType = `video/${extension}`;
-                type = 'video';
-              }
-              
-              extractedFiles.push({
-                id: `link_${chapterIndex}_${linkIndex}`,
-                fileName: fileName,
-                filePath: link.href,
-                contentType: contentType,
-                fileSize: 0,
-                documentType: 'chapter_document',
-                chapterTitle: chapter.titre,
-                type: type
-              });
-            }
+            const href = link.getAttribute('href') || '';
+            if (!href || !href.startsWith('http')) return;
+            const fileName = link.textContent.trim() || href.split('/').pop().split('?')[0] || `File_${chapterIndex}_${linkIndex}`;
+            const ext = fileName.split('.').pop()?.toLowerCase() || '';
+            let contentType = 'application/octet-stream';
+            let type = 'document';
+            if (['mp4', 'avi', 'mov', 'webm', 'mkv'].includes(ext)) { contentType = `video/${ext === 'mkv' ? 'x-matroska' : ext}`; type = 'video'; }
+            else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) { contentType = `image/${ext}`; type = 'image'; }
+            else if (ext === 'pdf') { contentType = 'application/pdf'; type = 'pdf'; }
+            // Also detect video by URL pattern (/media/*/content) if extension missing
+            else if (href.includes('/media/') && href.includes('/content')) { contentType = 'video/mp4'; type = 'video'; }
+            extractedFiles.push({
+              id: `link_${chapterIndex}_${linkIndex}`,
+              fileName,
+              filePath: href,
+              contentType,
+              fileSize: 0,
+              documentType: 'chapter_document',
+              chapterTitle: chapter.titre,
+              type
+            });
           });
         }
       });
@@ -361,12 +443,12 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     }
   };
 
-  // Fetch uploaded files from MinIO for the professor
-  const fetchMinioFiles = async (professorId) => {
+  // Fetch uploaded files from MinIO for this specific course
+  const fetchMinioFiles = async (coursId) => {
     try {
       const { minioS3Service } = await import('../../../../../services/minioS3');
-      const mediaFiles = await minioS3Service.getUserMedia(professorId);
-      console.log('MinIO files for professor:', mediaFiles?.length || 0);
+      const mediaFiles = await minioS3Service.getUserMediaByCours(coursId);
+      console.log('MinIO files for course:', mediaFiles?.length || 0);
       
       if (Array.isArray(mediaFiles) && mediaFiles.length > 0) {
         const formatted = mediaFiles.map((media, index) => ({
@@ -444,39 +526,35 @@ const CourseDetailsView = ({ courseId, onBack }) => {
 
   const handleFilePreview = async (file) => {
     try {
-      const isVideo = file.contentType?.startsWith('video/') || 
-                    file.fileName?.match(/\.(mp4|avi|mov|wmv|flv|webm)$/i) ||
-                    file.type === 'video';
+      let url = file.filePath || '';
 
-      // For MinIO files, get a fresh download URL
-      let url = file.filePath;
-      if (file.source === 'minio' && file.filePath) {
+      // Make relative paths absolute
+      if (url && !url.startsWith('http') && !url.startsWith('blob:')) {
+        url = `${API_BASE}${url}`;
+      }
+
+      // If it's a direct MinIO/S3 storage URL (not the backend API), convert to proxy URL
+      if (url && isStorageUrl(url)) {
         try {
           const { minioS3Service } = await import('../../../../../services/minioS3');
-          const downloadData = await minioS3Service.generateDownloadUrlByPath(file.filePath);
-          url = downloadData?.downloadUrl || file.filePath;
+          const relativePath = toRelativePath(url);
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(relativePath);
+          if (downloadData?.downloadUrl) url = downloadData.downloadUrl;
         } catch (err) {
-          console.warn('Could not get MinIO URL, using stored path');
+          console.warn('Could not refresh storage URL:', err);
         }
       }
 
-      // Use integrated document viewer for all file types
-      let viewUrl = url;
-      if (!viewUrl && file.mediaId) {
-        viewUrl = `${process.env.REACT_APP_API_BASE_URL}/media/${file.mediaId}/content`;
+      if (!url && file.mediaId) {
+        url = `${API_BASE}/media/${file.mediaId}/content`;
       }
 
-      if (viewUrl) {
-        if (isVideo) {
-          setCurrentVideoUrl(viewUrl);
-          setCurrentVideoTitle(file.fileName || "Video");
-          setVideoModalVisible(true);
-        } else {
-          setDocViewerFile({ url: viewUrl, fileName: file.fileName, contentType: file.contentType });
-        }
-      } else {
-        showToast('Apercu non disponible', 'error');
-      }
+      console.log('Preview URL:', url, 'fileName:', file.fileName);
+
+      if (!url) { showToast('Aper\u00e7u non disponible', 'error'); return; }
+
+      // Use DocumentViewer for all file types (handles video by filename extension)
+      setDocViewerFile({ url, fileName: file.fileName, contentType: file.contentType || '' });
     } catch (error) {
       console.error('Error previewing file:', error);
       showToast(`Erreur: ${error.message}`, 'error');
@@ -902,7 +980,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                       Ressources générales du cours
                     </h4>
                     <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                      {minioFiles.length} documents
+                      {courseFiles.length} documents
                     </span>
                   </div>
                   
@@ -917,9 +995,9 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                         <span className="font-medium">Chargement des ressources générales...</span>
                       </div>
                     </div>
-                  ) : minioFiles.length > 0 ? (
+                  ) : courseFiles.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {minioFiles.map((file, index) => (
+                      {courseFiles.map((file, index) => (
                         <div
                           key={file.id || index}
                           className="group relative bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-100 hover:border-purple-200 hover:shadow-md transition-all duration-300"
@@ -946,7 +1024,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                                 )}
                               </div>
                               <p className="text-xs text-gray-500 mt-1">
-                                Ressource générale du cours
+                                {file.chapterTitle || 'Ressource du cours'}
                               </p>
                             </div>
                             
@@ -1104,33 +1182,70 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       )}
       {/* Video Player Modal */}
       <Modal
-        title={currentVideoTitle}
+        title={null}
         open={videoModalVisible}
-        onCancel={() => {
-          setVideoModalVisible(false);
-          setCurrentVideoUrl("");
-        }}
+        onCancel={() => { setVideoModalVisible(false); setCurrentVideoUrl(''); }}
         footer={null}
-        width={1000}
+        width="auto"
         centered
         destroyOnClose
-        styles={{ body: { padding: 0, backgroundColor: "#000" } }}
+        closable={false}
+        styles={{
+          content: { padding: 0, background: '#0f0f0f', borderRadius: 12, overflow: 'hidden' },
+          mask: { background: 'rgba(0,0,0,0.85)' }
+        }}
       >
-        <div className="aspect-video bg-black flex items-center justify-center">
-          {currentVideoUrl ? (
-            <video 
-              src={currentVideoUrl} 
-              controls 
-              autoPlay 
-              className="w-full h-full"
-              style={{ maxHeight: "calc(100vh - 200px)" }}
-            />
-          ) : (
-            <div className="text-white flex flex-col items-center">
-              <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin mb-2"></div>
-              <span>Chargement de la vidéo...</span>
+        <div style={{ position: 'relative', width: '90vw', maxWidth: 960 }}>
+          {/* Header bar */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 16px', background: '#1a1a1a'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Video style={{ color: '#60a5fa', width: 18, height: 18 }} />
+              <span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 14,
+                maxWidth: '70vw', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentVideoTitle}
+              </span>
             </div>
-          )}
+            <button
+              onClick={() => { setVideoModalVisible(false); setCurrentVideoUrl(''); }}
+              style={{
+                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6,
+                color: '#e2e8f0', cursor: 'pointer', padding: '6px 10px', fontSize: 18,
+                lineHeight: 1, display: 'flex', alignItems: 'center'
+              }}
+            >
+              ×
+            </button>
+          </div>
+          {/* Video */}
+          <div style={{ background: '#000', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            {currentVideoUrl ? (
+              <video
+                key={currentVideoUrl}
+                controls
+                autoPlay
+                playsInline
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  maxHeight: '75vh',
+                  background: '#000'
+                }}
+                onError={(e) => console.error('Video error:', e.target.error)}
+              >
+                <source src={currentVideoUrl} />
+                Votre navigateur ne supporte pas la lecture vidéo.
+              </video>
+            ) : (
+              <div style={{ padding: 48, color: '#9ca3af', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, border: '3px solid #374151',
+                  borderTop: '3px solid #60a5fa', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                <span>Chargement de la vidéo...</span>
+              </div>
+            )}
+          </div>
         </div>
       </Modal>
       {/* Document Viewer */}

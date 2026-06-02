@@ -83,6 +83,12 @@ const ExerciseProgrammerContent = () => {
   const [detailProg, setDetailProg] = useState(null);
   const [filterClassId, setFilterClassId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState(""); // "" | "ACTIF" | "EXPIRE" | "BROUILLON" | "INACTIF"
+  const [filterType, setFilterType] = useState(""); // "" | "EXERCICE" | "DEVOIR"
+
+  // ── Pagination ──
+  const PAGE_SIZE = 8;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [form] = Form.useForm();
   const userId = getUserId();
@@ -243,15 +249,28 @@ const ExerciseProgrammerContent = () => {
     const matchSearch = !searchTerm || (
       (prog.nom || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
-    return matchClass && matchSearch;
+    const effectiveEtat = getEffectiveEtat(prog);
+    const matchStatus = !filterStatus || effectiveEtat === filterStatus;
+    const matchType = !filterType || prog.typeAssignation === filterType;
+    return matchClass && matchSearch && matchStatus && matchType;
   });
 
-  // ── Stats ──
+  // Reset to page 1 when filters change
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleFilterChange = (setter) => (val) => {
+    setter(val);
+    setCurrentPage(1);
+  };
+
+  // ── Stats (always computed on full programmations, not filtered) ──
   const stats = {
-    total: filtered.length,
-    actif: filtered.filter(p => p.etat === "ACTIF" || p.etat === "PUBLIE").length,
-    devoirs: filtered.filter(p => p.typeAssignation === "DEVOIR").length,
-    exercices: filtered.filter(p => p.typeAssignation === "EXERCICE").length,
+    total: programmations.length,
+    actif: programmations.filter(p => getEffectiveEtat(p) === "ACTIF" || getEffectiveEtat(p) === "PUBLIE").length,
+    devoirs: programmations.filter(p => p.typeAssignation === "DEVOIR").length,
+    exercices: programmations.filter(p => p.typeAssignation === "EXERCICE").length,
   };
 
   const selectedClassName = filterClassId
@@ -468,54 +487,108 @@ const ExerciseProgrammerContent = () => {
       </div>
 
       {/* ── Filters + action bar ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3 mb-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-        {/* Search */}
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Rechercher par nom d'exercice..."
-            className="w-full pl-7 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-          />
-        </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3 mb-3 flex flex-col gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          {/* Search */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              placeholder="Rechercher par nom d'exercice..."
+              className="w-full pl-7 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+            />
+          </div>
 
-        {/* Class filter */}
-        <div className="relative min-w-[180px]">
-          <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
-          <select
-            value={filterClassId}
-            onChange={e => setFilterClassId(e.target.value)}
-            className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+          {/* Refresh */}
+          <button
+            onClick={loadProgs}
+            disabled={progsLoading}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 flex-shrink-0"
+            title="Actualiser"
           >
-            <option value="">Toutes les classes</option>
-            {classes.map(c => (
-              <option key={c.id} value={c.id}>{c.nom}</option>
-            ))}
-          </select>
-          <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+            <RefreshCw size={14} className={progsLoading ? "animate-spin" : ""} />
+          </button>
+
+          {/* New programmation button */}
+          <button
+            onClick={() => setView("form")}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 shadow-sm flex-shrink-0"
+            style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)" }}
+          >
+            <Plus size={15} />
+            Programmer un exercice
+          </button>
         </div>
 
-        {/* Refresh */}
-        <button
-          onClick={loadProgs}
-          disabled={progsLoading}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 flex-shrink-0"
-          title="Actualiser"
-        >
-          <RefreshCw size={14} className={progsLoading ? "animate-spin" : ""} />
-        </button>
+        {/* Second row: class + status + type filters */}
+        <div className="flex flex-wrap gap-2">
+          {/* Class filter */}
+          <div className="relative min-w-[160px]">
+            <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
+            <select
+              value={filterClassId}
+              onChange={e => handleFilterChange(setFilterClassId)(e.target.value)}
+              className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+            >
+              <option value="">Toutes les classes</option>
+              {classes.map(c => (
+                <option key={c.id} value={c.id}>{c.nom}</option>
+              ))}
+            </select>
+            <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+          </div>
 
-        {/* New programmation button */}
-        <button
-          onClick={() => setView("form")}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 shadow-sm flex-shrink-0"
-          style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)" }}
-        >
-          <Plus size={15} />
-          Programmer un exercice
-        </button>
+          {/* Status filter */}
+          <div className="relative min-w-[150px]">
+            <CheckCircle className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
+            <select
+              value={filterStatus}
+              onChange={e => handleFilterChange(setFilterStatus)(e.target.value)}
+              className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="ACTIF">Actif</option>
+              <option value="PUBLIE">Publié</option>
+              <option value="EXPIRE">Expiré</option>
+              <option value="BROUILLON">Brouillon</option>
+              <option value="INACTIF">Inactif</option>
+            </select>
+            <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+          </div>
+
+          {/* Type filter */}
+          <div className="relative min-w-[140px]">
+            <BookOpen className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
+            <select
+              value={filterType}
+              onChange={e => handleFilterChange(setFilterType)(e.target.value)}
+              className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+            >
+              <option value="">Tous les types</option>
+              <option value="EXERCICE">Exercice libre</option>
+              <option value="DEVOIR">Devoir</option>
+            </select>
+            <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+          </div>
+
+          {/* Active filter chips */}
+          {(filterStatus || filterType || filterClassId || searchTerm) && (
+            <button
+              onClick={() => {
+                setFilterStatus("");
+                setFilterType("");
+                setFilterClassId("");
+                setSearchTerm("");
+                setCurrentPage(1);
+              }}
+              className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors font-medium"
+            >
+              <AlertCircle size={12} /> Réinitialiser les filtres
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── List ── */}
@@ -528,10 +601,19 @@ const ExerciseProgrammerContent = () => {
               count={filtered.length}
               style={{ backgroundColor: "#dbeafe", color: "#2563eb", boxShadow: "none", fontWeight: 600 }}
             />
+            {filtered.length !== programmations.length && (
+              <span className="text-xs text-gray-400">sur {programmations.length}</span>
+            )}
             {filterClassId && selectedClassName && (
               <span className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full font-medium">
                 {selectedClassName}
               </span>
+            )}
+            {filterStatus && (
+              <EtatBadge etat={filterStatus} />
+            )}
+            {filterType && (
+              <TypeBadge type={filterType} />
             )}
           </div>
         </div>
@@ -550,7 +632,7 @@ const ExerciseProgrammerContent = () => {
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
-            {filtered.map(prog => {
+            {paged.map(prog => {
               const exo = exercises.find(e => e.id === prog.exerciseId) || {};
               const now = new Date();
               const fin = prog.dateFinExoEffectif ? new Date(prog.dateFinExoEffectif) : null;
@@ -634,6 +716,55 @@ const ExerciseProgrammerContent = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ── Pagination ── */}
+        {!progsLoading && filtered.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+            <span className="text-xs text-gray-500">
+              {filtered.length} résultat{filtered.length !== 1 ? "s" : ""} · page {safePage}/{totalPages}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                disabled={safePage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+              >
+                ‹ Préc.
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                .reduce((acc, p, i, arr) => {
+                  if (i > 0 && p - arr[i - 1] > 1) acc.push("…");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, i) =>
+                  p === "…" ? (
+                    <span key={`e${i}`} className="px-1.5 text-xs text-gray-400">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p)}
+                      className={`px-2.5 py-1.5 text-xs rounded-lg border transition-colors ${
+                        p === safePage
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "border-gray-200 hover:bg-white hover:border-indigo-300 hover:text-indigo-600"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              <button
+                disabled={safePage === totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+              >
+                Suiv. ›
+              </button>
+            </div>
           </div>
         )}
       </div>

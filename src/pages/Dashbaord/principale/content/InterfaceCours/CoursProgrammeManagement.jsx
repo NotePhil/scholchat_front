@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import CourseDetailsView from './CourseDetailsView';
 import LiveSession from '../CoursProgrammerContent/LiveSession/LiveSession';
+import StudentExerciseView from '../excerciseContent/StudentExerciseView';
 
 const Pagination = ({ total, page, totalPages, onPage }) => {
   if (totalPages <= 1) return null;
@@ -80,12 +81,11 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   const [classAllCourses, setClassAllCourses] = useState([]);
   const [classNamesMap, setClassNamesMap] = useState({}); // classeId -> nom
   const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
-  const [activeTab, setActiveTab] = useState("PROGRAMMED"); // PROGRAMMED, ALL_COURSES, EXERCISES
+  const [activeTab, setActiveTab] = useState("ALL_COURSES"); // ALL_COURSES, EXERCISES, DEVOIRS
   const [loading, setLoading] = useState(false);
 
   // Pagination
   const PAGE_SIZE = 6;
-  const [pageProgrammed, setPageProgrammed] = useState(1);
   const [pageAllCourses, setPageAllCourses] = useState(1);
   const [pageExercises, setPageExercises] = useState(1);
 
@@ -102,6 +102,7 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   const [error, setError] = useState("");
   const [liveSession, setLiveSession] = useState(null);
   const [activeSessions, setActiveSessions] = useState({}); // { coursId: sessionData }
+  const [selectedExercise, setSelectedExercise] = useState(null); // { exerciseId, exerciseProgrammerId }
 
   const parentIdCPM = localStorage.getItem("userId");
   const isParentRoleCPM = (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT");
@@ -210,130 +211,68 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
         coursProgrammerService.obtenirProgrammationParParticipant(userId),
         coursProgrammerService.obtenirProgrammationParClasse(selectedClass.id),
         coursService.getCoursAccessibles(userId).catch(() => []),
-        import("../../../../../services/exerciseProgrammerService").then(m => 
+        import("../../../../../services/exerciseProgrammerService").then(m =>
           m.exerciseProgrammerService.getExercisesProgrammesParClasse(selectedClass.id)
-        ).catch(() => []),
-        import("../../../../../services/exerciseService").then(m => 
-          m.exerciseService.getExercisesAccessibles(userId)
         ).catch(() => [])
       ]);
 
-      const participantCourses = results[0].status === 'fulfilled' ? results[0].value : [];
       const classCoursesData = results[1].status === 'fulfilled' ? results[1].value : [];
-      const generalCourses = results[2].status === 'fulfilled' ? results[2].value : [];
+      const generalCourses  = results[2].status === 'fulfilled' ? results[2].value : [];
       const exerciseProgrammerData = results[3].status === 'fulfilled' ? results[3].value : [];
-      const accessibleExercisesData = results[4].status === 'fulfilled' ? results[4].value : [];
 
-      console.log("Data loaded:", { 
-        participantCourses: participantCourses?.length || 0, 
+      console.log("Data loaded:", {
         classCoursesData: classCoursesData?.length || 0,
         generalCourses: generalCourses?.length || 0,
         exercises: exerciseProgrammerData?.length || 0
       });
 
-      // Handle Exercises - Merge and Deduplicate
-      const exercisesMap = new Map();
-      
-      // Add exercises programmed for this class
-      if (Array.isArray(exerciseProgrammerData)) {
-        exerciseProgrammerData.forEach(exo => {
-          exercisesMap.set(exo.id, { ...exo, type: 'EXERCISE', source: 'class' });
-        });
-      }
-      
-      // Add globally accessible/public exercises
-      if (Array.isArray(accessibleExercisesData)) {
-        accessibleExercisesData.forEach(exo => {
-          if (!exercisesMap.has(exo.id)) {
-            exercisesMap.set(exo.id, { ...exo, type: 'EXERCISE', source: 'public' });
-          }
-        });
-      }
-      
-      const allExercises = Array.from(exercisesMap.values());
-      setClassExercises(allExercises);
-      
-      if (allExercises.length > 0) {
-        showToast(`${allExercises.length} exercices chargés`, 'success');
-      }
+      // Exercises — only those programmed for this specific class
+      const classExercisesList = Array.isArray(exerciseProgrammerData) ? exerciseProgrammerData : [];
+      setClassExercises(classExercisesList);
 
-      // Handle General Courses - Filter by class level/section if possible to avoid unrelated courses
-      if (Array.isArray(generalCourses)) {
-        const filteredGeneral = generalCourses.filter(c => 
-          !selectedClass || 
-          c.niveau === selectedClass.niveau || 
-          (c.matiere && selectedClass.matiere && c.matiere.toLowerCase().includes(selectedClass.matiere.toLowerCase()))
-        );
-        setClassAllCourses(filteredGeneral.map(c => ({...c, type: 'COURSE'})));
-      } else {
-        setClassAllCourses([]);
-      }
-
-      // Merge and deduplicate scheduled courses — only keep courses for this specific class
-      const coursesMap = new Map();
-      // Only use class-specific courses, NOT participant-wide courses
+      // Handle General Courses — merge accessible courses + scheduled courses for this class
+      // Scheduled courses carry extra info (status, date, live session) shown in "Tous les Cours"
+      const scheduledCoursesMap = new Map();
       if (Array.isArray(classCoursesData)) {
-        classCoursesData.forEach(c => coursesMap.set(c.id, c));
+        classCoursesData.forEach(c => scheduledCoursesMap.set(c.id, c));
       }
+      const allScheduledCourses = Array.from(scheduledCoursesMap.values());
 
-      const allScheduledCourses = Array.from(coursesMap.values());
-      
-      // Enrich the scheduled courses with full course details
-      const enrichedCourses = await Promise.all(
-        allScheduledCourses.map(async (scheduledCourse) => {
+      // Enrich scheduled courses with full course details
+      const enrichedScheduled = await Promise.all(
+        allScheduledCourses.map(async (sc) => {
           try {
-            if (scheduledCourse.coursId) {
-              const fullCourseDetails = await coursService.getCoursById(
-                scheduledCourse.coursId
-              );
-              return {
-                ...scheduledCourse,
-                cours: fullCourseDetails,
-                type: 'PROGRAMMED_COURSE'
-              };
-            } else {
-              return {
-                ...scheduledCourse,
-                cours: scheduledCourse.cours || {
-                  titre: scheduledCourse.titre || "Cours sans titre",
-                  description: scheduledCourse.description || "Description non disponible",
-                },
-                type: 'PROGRAMMED_COURSE'
-              };
+            if (sc.coursId) {
+              const full = await coursService.getCoursById(sc.coursId);
+              return { ...sc, cours: full, _isScheduled: true, type: 'PROGRAMMED_COURSE' };
             }
-          } catch (courseError) {
-            console.warn(`Could not enrich course ${scheduledCourse.id}:`, courseError);
-            return {
-              ...scheduledCourse,
-              cours: {
-                id: scheduledCourse.coursId,
-                titre: scheduledCourse.titre || (scheduledCourse.coursId ? `Cours ${scheduledCourse.coursId.substring(0, 8)}` : "Cours sans titre"),
-                description: scheduledCourse.description || "Description non disponible",
-              },
-              type: 'PROGRAMMED_COURSE'
-            };
+            return { ...sc, cours: sc.cours || { titre: sc.titre || 'Cours sans titre', description: sc.description || '' }, _isScheduled: true, type: 'PROGRAMMED_COURSE' };
+          } catch {
+            return { ...sc, cours: { id: sc.coursId, titre: sc.titre || 'Cours sans titre', description: '' }, _isScheduled: true, type: 'PROGRAMMED_COURSE' };
           }
         })
       );
 
-      // Filter: only courses explicitly linked to this class
-      const finalCourses = enrichedCourses.filter(c =>
+      // Filter to this class only
+      const finalScheduled = enrichedScheduled.filter(c =>
         c.classeId === selectedClass.id ||
         (c.classesIds && c.classesIds.includes(selectedClass.id))
       );
 
-      setScheduledCourses(finalCourses);
-      resolveClassNames(finalCourses);
-      
-      // Auto-switch tab if no programmed courses but general courses exist
-      if (finalCourses.length === 0 && generalCourses?.length > 0) {
-        setActiveTab("ALL_COURSES");
-      } else if (finalCourses.length === 0 && generalCourses?.length === 0 && exerciseProgrammerData?.length > 0) {
+      setScheduledCourses(finalScheduled);
+      resolveClassNames(finalScheduled);
+
+      // "Tous les Cours" shows only scheduled courses for this class (with status, date, live info)
+      // No plain accessible courses — students should only see what was programmed for them
+      setClassAllCourses(finalScheduled);
+      setFilteredCourses(finalScheduled);
+
+      // Default tab
+      if (finalScheduled.length === 0 && classExercisesList.length > 0) {
         setActiveTab("EXERCISES");
-      }
-      
-      setFilteredCourses(finalCourses);
-      
+      } else {
+        setActiveTab("ALL_COURSES");
+      }      
     } catch (error) {
       console.error("Error fetching class courses:", error);
       setError(`Erreur lors du chargement des cours: ${error.message}`);
@@ -413,6 +352,8 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
       console.log("All enriched courses count:", enrichedCourses.length);
       setScheduledCourses(enrichedCourses);
       setFilteredCourses(enrichedCourses);
+      // Also populate classAllCourses so the ALL_COURSES tab renders them
+      setClassAllCourses(enrichedCourses.map(c => ({ ...c, _isScheduled: true })));
       resolveClassNames(enrichedCourses);
     } catch (error) {
       console.error("Error fetching all user courses:", error);
@@ -424,38 +365,9 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
     }
   };
 
-  // Filter courses based on search and status
-  useEffect(() => {
-    let filtered = scheduledCourses;
-
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (course) =>
-          course.cours?.titre
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          course.cours?.description
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          course.lieu?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statusFilter !== "TOUS") {
-      filtered = filtered.filter(
-        (course) => course.etatCoursProgramme === statusFilter
-      );
-    }
-
-    setFilteredCourses(filtered);
-    setPageProgrammed(1);
-  }, [searchTerm, statusFilter, scheduledCourses]);
-
-  // Reset other tab pages on search change
-  useEffect(() => { setPageAllCourses(1); }, [searchTerm]);
-  useEffect(() => { setPageExercises(1); }, [searchTerm]);
-  useEffect(() => { setPageProgrammed(1); setPageAllCourses(1); setPageExercises(1); }, [activeTab]);
-
+  // Reset pages on search/tab change
+  useEffect(() => { setPageAllCourses(1); setPageExercises(1); }, [searchTerm]);
+  useEffect(() => { setPageAllCourses(1); setPageExercises(1); }, [activeTab]);
   const getStatusColor = (status) => {
     switch (status) {
       case "PLANIFIE":
@@ -542,6 +454,18 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
     setSelectedCourse(null);
   };
 
+  // Show exercise view if selected
+  if (selectedExercise) {
+    return (
+      <StudentExerciseView
+        exerciseId={selectedExercise.exerciseId}
+        exerciseProgrammerId={selectedExercise.exerciseProgrammerId}
+        onBack={() => setSelectedExercise(null)}
+        onComplete={() => setSelectedExercise(null)}
+      />
+    );
+  }
+
   // Show course details if a course is selected
   if (showCourseDetail && selectedCourse) {
     return (
@@ -588,24 +512,13 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                 </div>
               </div>
               <span className="text-blue-100 text-xs flex-shrink-0 hidden sm:block">
-                {filteredCourses.length} cours
+                {classAllCourses.length} cours
               </span>
             </div>
 
             {/* Sub-tabs for Class View */}
             {selectedClass && (
               <div className="flex space-x-8 mt-2 overflow-x-auto no-scrollbar">
-                <button
-                  onClick={() => setActiveTab("PROGRAMMED")}
-                  className={`pb-4 px-2 text-sm font-medium transition-colors relative ${
-                    activeTab === "PROGRAMMED" ? "text-white" : "text-blue-200 hover:text-white"
-                  }`}
-                >
-                  <span>Plannings</span>
-                  {activeTab === "PROGRAMMED" && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-t-full"></div>
-                  )}
-                </button>
                 <button
                   onClick={() => setActiveTab("ALL_COURSES")}
                   className={`pb-4 px-2 text-sm font-medium transition-colors relative ${
@@ -623,8 +536,19 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                     activeTab === "EXERCISES" ? "text-white" : "text-blue-200 hover:text-white"
                   }`}
                 >
-                  <span>Exercices & Devoirs</span>
+                  <span>Exercices</span>
                   {activeTab === "EXERCISES" && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-t-full"></div>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab("DEVOIRS")}
+                  className={`pb-4 px-2 text-sm font-medium transition-colors relative ${
+                    activeTab === "DEVOIRS" ? "text-white" : "text-blue-200 hover:text-white"
+                  }`}
+                >
+                  <span>Devoirs</span>
+                  {activeTab === "DEVOIRS" && (
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-t-full"></div>
                   )}
                 </button>
@@ -684,26 +608,31 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
           </div>
         ) : (
           <>
-            {activeTab === "PROGRAMMED" ? (
+            {activeTab === "ALL_COURSES" ? (
               (() => {
-                const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
-                const safePage = Math.min(pageProgrammed, totalPages);
-                const paged = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-                return filteredCourses.length === 0 ? (
+                // Apply search + status filter — all entries are scheduled courses
+                const filtered = classAllCourses.filter(c => {
+                  const titre = c.cours?.titre || c.titre || '';
+                  const desc  = c.cours?.description || '';
+                  const matchSearch = !searchTerm ||
+                    titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    desc.toLowerCase().includes(searchTerm.toLowerCase());
+                  const matchStatus = statusFilter === 'TOUS' || c.etatCoursProgramme === statusFilter;
+                  return matchSearch && matchStatus;
+                });
+                const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+                const safePage = Math.min(pageAllCourses, totalPages);
+                const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+                return filtered.length === 0 ? (
                   <div className="bg-white rounded-xl shadow p-8 text-center">
-                    <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <h3 className="text-base font-medium text-gray-900 mb-1">
-                      {scheduledCourses.length === 0 ? "Aucun cours programmé" : "Aucun cours trouvé"}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {scheduledCourses.length === 0
-                        ? "Il n'y a actuellement aucun cours programmé pour cette classe."
-                        : "Aucun cours ne correspond à vos critères de recherche."}
-                    </p>
+                    <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-base font-medium text-gray-900 mb-1">Aucun cours trouvé</h3>
+                    <p className="text-sm text-gray-600">Aucun cours ne correspond à vos critères de recherche.</p>
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {paged.map((course) => {
                         const cId = course.cours?.id || course.coursId;
                         const activeSession = activeSessions[cId];
@@ -756,84 +685,155 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                                 <div className="flex items-center gap-2 py-2 px-3 bg-red-50 rounded-xl"><AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" /><span className="text-xs text-red-500 font-medium">Ce cours a été annulé</span></div>
                               ) : course.etatCoursProgramme === 'PLANIFIE' ? (
                                 <div className="flex items-center gap-2 py-2 px-3 bg-blue-50 rounded-xl"><Clock className="w-4 h-4 text-blue-400 flex-shrink-0" /><span className="text-xs text-blue-600 font-medium">En attente du démarrage par le professeur</span></div>
-                              ) : null}
+                              ) : (
+                                <button onClick={() => handleCourseClick(course)} className="w-full flex items-center justify-center gap-2 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm transition-colors">
+                                  <Eye className="w-4 h-4" />Ouvrir le cours
+                                </button>
+                              )}
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                    <Pagination total={filteredCourses.length} page={safePage} totalPages={totalPages} onPage={setPageProgrammed} />
+                    <Pagination total={filtered.length} page={safePage} totalPages={totalPages} onPage={setPageAllCourses} />
                   </>
                 );
               })()
-            ) : activeTab === "ALL_COURSES" ? (
+            ) : activeTab === "EXERCISES" ? (
               (() => {
-                const filtered = classAllCourses.filter(c =>
-                  !searchTerm ||
-                  c.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  c.description?.toLowerCase().includes(searchTerm.toLowerCase())
-                );
-                const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-                const safePage = Math.min(pageAllCourses, totalPages);
-                const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-                return filtered.length === 0 ? (
+                const exercicesOnly = classExercises.filter(e => {
+                  const titre = e.exercise?.titre || e.titre || e.nom || '';
+                  const matchSearch = !searchTerm || titre.toLowerCase().includes(searchTerm.toLowerCase());
+                  return e.typeAssignation !== 'DEVOIR' && matchSearch;
+                });
+                const totalPages = Math.max(1, Math.ceil(exercicesOnly.length / PAGE_SIZE));
+                const safePage = Math.min(pageExercises, totalPages);
+                const paged = exercicesOnly.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+                return exercicesOnly.length === 0 ? (
                   <div className="bg-white rounded-xl shadow p-8 text-center">
-                    <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <h3 className="text-base font-medium text-gray-900 mb-1">Aucun document trouvé</h3>
-                    <p className="text-sm text-gray-600">Il n'y a pas encore de cours partagés dans cette classe.</p>
+                    <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-base font-medium text-gray-900 mb-1">Aucun exercice</h3>
+                    <p className="text-sm text-gray-600">Aucun exercice n'a été programmé pour cette classe.</p>
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {paged.map((course) => (
-                        <div key={course.id} onClick={() => handleCourseClick(course)} className="bg-white rounded-xl shadow hover:shadow-md transition-all duration-200 cursor-pointer border border-gray-100 p-4 flex flex-col">
-                          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-3 text-blue-600"><BookOpen className="w-5 h-5" /></div>
-                          <h3 className="font-bold text-gray-900 mb-1 text-sm line-clamp-2">{course.titre}</h3>
-                          <p className="text-gray-500 text-xs mb-3 line-clamp-2 flex-1">{course.description || "Aucune description disponible"}</p>
-                          <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
-                            <span className="text-xs text-gray-400 flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(course.dateCreation).toLocaleDateString()}</span>
-                            <span className="text-blue-600 text-xs font-medium flex items-center">Ouvrir <ChevronRight className="w-3 h-3 ml-0.5" /></span>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {paged.map((exo) => {
+                        const titre = exo.exercise?.titre || exo.titre || exo.nom || 'Sans titre';
+                        const description = exo.exercise?.description || exo.description || exo.consigne || '';
+                        const dateStr = exo.dateExoPrevue || exo.datePrevue;
+                        const etat = exo.etat || exo.statut || 'BROUILLON';
+                        return (
+                          <div key={exo.id} className="bg-white rounded-xl shadow p-4 border-l-4 border-indigo-500 hover:shadow-md transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-gray-900 text-sm truncate pr-2">{titre}</h3>
+                                {dateStr && (
+                                  <span className="flex items-center text-xs text-gray-500 mt-0.5">
+                                    <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
+                                    Prévu le {new Date(dateStr).toLocaleDateString('fr-FR')}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`flex-shrink-0 px-2 py-0.5 rounded text-xs font-bold ml-2 ${
+                                etat === 'ACTIF' || etat === 'PUBLIE' ? 'bg-green-100 text-green-700' :
+                                etat === 'EN_COURS' ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>{etat}</span>
+                            </div>
+                            <p className="text-gray-500 text-xs mb-3 line-clamp-2">{description || 'Aucune consigne disponible.'}</p>
+                            <button
+                              onClick={() => setSelectedExercise({
+                                exerciseId: exo.exerciseId || exo.exercise?.id || exo.id,
+                                exerciseProgrammerId: exo.id
+                              })}
+                              className="w-full py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium transition-colors"
+                            >
+                              Accéder à l'exercice
+                            </button>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
-                    <Pagination total={filtered.length} page={safePage} totalPages={totalPages} onPage={setPageAllCourses} />
+                    <Pagination total={exercicesOnly.length} page={safePage} totalPages={totalPages} onPage={setPageExercises} />
                   </>
                 );
               })()
             ) : (
               (() => {
-                const filtered = classExercises.filter(e =>
-                  !searchTerm ||
-                  e.exercise?.titre?.toLowerCase().includes(searchTerm.toLowerCase())
-                );
-                const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+                // DEVOIRS tab
+                const devoirsOnly = classExercises.filter(e => {
+                  const titre = e.exercise?.titre || e.titre || e.nom || '';
+                  const matchSearch = !searchTerm || titre.toLowerCase().includes(searchTerm.toLowerCase());
+                  return e.typeAssignation === 'DEVOIR' && matchSearch;
+                });
+                const totalPages = Math.max(1, Math.ceil(devoirsOnly.length / PAGE_SIZE));
                 const safePage = Math.min(pageExercises, totalPages);
-                const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-                return filtered.length === 0 ? (
+                const paged = devoirsOnly.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+                return devoirsOnly.length === 0 ? (
                   <div className="bg-white rounded-xl shadow p-8 text-center">
                     <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <h3 className="text-base font-medium text-gray-900 mb-1">Aucun exercice</h3>
-                    <p className="text-sm text-gray-600">Aucun exercice ou devoir n'a été programmé pour cette classe.</p>
+                    <h3 className="text-base font-medium text-gray-900 mb-1">Aucun devoir</h3>
+                    <p className="text-sm text-gray-600">Aucun devoir n'a été programmé pour cette classe.</p>
                   </div>
                 ) : (
                   <>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                      {paged.map((exo) => (
-                        <div key={exo.id} className="bg-white rounded-xl shadow p-4 border-l-4 border-indigo-500 hover:shadow-md transition-all">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex-1">
-                              <h3 className="font-bold text-gray-900 text-sm">{exo.exercise?.titre || "Sans titre"}</h3>
-                              <div className="flex items-center text-xs text-gray-500 mt-0.5"><Calendar className="w-3 h-3 mr-1" /><span>Prévu le {new Date(exo.dateExoPrevue).toLocaleDateString()}</span></div>
+                      {paged.map((exo) => {
+                        const titre = exo.exercise?.titre || exo.titre || exo.nom || 'Sans titre';
+                        const description = exo.exercise?.description || exo.description || exo.consigne || '';
+                        const dateStr = exo.dateExoPrevue || exo.datePrevue;
+                        const dateFin = exo.dateFinExoEffectif;
+                        const etat = exo.etat || exo.statut || 'BROUILLON';
+                        const isOverdue = dateFin && new Date(dateFin) < new Date();
+                        return (
+                          <div key={exo.id} className="bg-white rounded-xl shadow p-4 border-l-4 border-orange-500 hover:shadow-md transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-gray-900 text-sm truncate pr-2">{titre}</h3>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                  {dateStr && (
+                                    <span className="flex items-center text-xs text-gray-500">
+                                      <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
+                                      Prévu le {new Date(dateStr).toLocaleDateString('fr-FR')}
+                                    </span>
+                                  )}
+                                  {dateFin && (
+                                    <span className={`flex items-center text-xs ${isOverdue ? 'text-red-500 font-semibold' : 'text-gray-500'}`}>
+                                      <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                                      À rendre le {new Date(dateFin).toLocaleDateString('fr-FR')}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
+                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                  etat === 'ACTIF' || etat === 'PUBLIE' ? 'bg-green-100 text-green-700' :
+                                  etat === 'EN_COURS' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>{etat}</span>
+                                {isOverdue && (
+                                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">En retard</span>
+                                )}
+                              </div>
                             </div>
-                            <div className={`px-2 py-0.5 rounded text-xs font-bold ${exo.etat === 'ACTIF' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{exo.etat}</div>
+                            <p className="text-gray-500 text-xs mb-3 line-clamp-2">{description || 'Aucune consigne disponible.'}</p>
+                            <button
+                              onClick={() => setSelectedExercise({
+                                exerciseId: exo.exerciseId || exo.exercise?.id || exo.id,
+                                exerciseProgrammerId: exo.id
+                              })}
+                              className="w-full py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-xs font-medium transition-colors"
+                            >
+                              Rendre le devoir
+                            </button>
                           </div>
-                          <p className="text-gray-500 text-xs mb-3 line-clamp-2">{exo.exercise?.description || "Consigne de l'exercice..."}</p>
-                          <button className="w-full py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium transition-colors">Accéder à l'exercice</button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
-                    <Pagination total={filtered.length} page={safePage} totalPages={totalPages} onPage={setPageExercises} />
+                    <Pagination total={devoirsOnly.length} page={safePage} totalPages={totalPages} onPage={setPageExercises} />
                   </>
                 );
               })()
@@ -842,7 +842,7 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
         )}
 
         {/* Statistics Card */}
-        {filteredCourses.length > 0 && (
+        {classAllCourses.length > 0 && (
           <div className="mt-6 bg-white rounded-xl shadow-lg p-4">
             <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
               <Activity className="w-4 h-4 mr-2 text-indigo-600" />
@@ -869,7 +869,7 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-lg">
                 <div className="text-xl font-bold text-purple-600 mb-0.5">
-                  {scheduledCourses.length}
+                  {classAllCourses.length}
                 </div>
                 <div className="text-xs text-gray-600">Total</div>
               </div>

@@ -220,7 +220,15 @@ const StudentClassList = ({ isParentView = false }) => {
       handleClearSearch();
       return true;
     } catch (e) {
-      throw e;
+      // Extract the API error message and re-throw so the modal can display it
+      const apiMessage =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "Erreur lors de la demande d'accès";
+      const enriched = new Error(apiMessage);
+      enriched.response = e?.response;
+      throw enriched;
     }
   };
 

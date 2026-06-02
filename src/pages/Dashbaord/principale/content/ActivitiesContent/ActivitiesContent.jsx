@@ -1419,30 +1419,36 @@ const ActivitiesContent = () => {
                           <p className={`text-gray-700 dark:text-gray-300 ${isMobile ? 'text-xs mb-2' : 'text-sm mb-3'} whitespace-pre-wrap line-clamp-4`}>{activity.content}</p>
                         )}
 
-                        {/* Event details badge - Location and Date on same line */}
+                        {/* Event details badge - Location left, dates right on desktop */}
                         {(activity.eventDetails?.location || activity.eventDetails?.startTime || activity.eventDetails?.endTime) && (
-                          <div className={`flex flex-col gap-1 ${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 mb-1`}>
-                            {activity.eventDetails?.location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3 flex-shrink-0" />
-                                {activity.eventDetails.location}
-                              </span>
-                            )}
-                            {activity.eventDetails?.startTime && (
-                              <span className="flex items-center gap-1">
+                          <div className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 ${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 mb-1`}>
+                            {/* Location — left */}
+                            <div className="flex flex-col gap-1 flex-shrink-0">
+                              {activity.eventDetails?.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                                  {activity.eventDetails.location}
+                                </span>
+                              )}
+                            </div>
+                            {/* Dates — right on desktop, below on mobile */}
+                            {(activity.eventDetails?.startTime || activity.eventDetails?.endTime) && (
+                              <div className="flex items-center gap-1 sm:justify-end flex-shrink-0 flex-wrap">
                                 <Calendar className="w-3 h-3 flex-shrink-0 text-blue-500" />
-                                <span className="font-medium text-gray-600 dark:text-gray-300">
-                                  {new Date(activity.eventDetails.startTime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </span>
-                            )}
-                            {activity.eventDetails?.endTime && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 flex-shrink-0 text-orange-400" />
-                                <span className="font-medium text-gray-600 dark:text-gray-300">
-                                  {new Date(activity.eventDetails.endTime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </span>
+                                {activity.eventDetails?.startTime && (
+                                  <span className="font-medium text-gray-600 dark:text-gray-300">
+                                    du {new Date(activity.eventDetails.startTime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                )}
+                                {activity.eventDetails?.endTime && (
+                                  <>
+                                    <Clock className="w-3 h-3 flex-shrink-0 text-orange-400" />
+                                    <span className="font-medium text-gray-600 dark:text-gray-300">
+                                      au {new Date(activity.eventDetails.endTime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
                         )}

@@ -86,11 +86,12 @@ class MinioS3Service {
     fileName,
     contentType,
     mediaType = "DOCUMENT",
-    documentType = "general"
+    documentType = "general",
+    coursId = null
   ) {
     try {
       console.log('=== GENERATING UPLOAD URL ===');
-      console.log('Request params:', { fileName, contentType, mediaType, documentType });
+      console.log('Request params:', { fileName, contentType, mediaType, documentType, coursId });
       
       const request = {
         fileName: fileName,
@@ -98,6 +99,7 @@ class MinioS3Service {
         mediaType: mediaType,
         ownerId: this.getValidUserId(),
         documentType: documentType,
+        ...(coursId && { coursId }),
       };
 
       console.log('Sending request to /media/presigned-url:', request);
@@ -185,16 +187,17 @@ class MinioS3Service {
     }
   }
 
-  async uploadFile(file, mediaType = "DOCUMENT", documentType = "general") {
+  async uploadFile(file, mediaType = "DOCUMENT", documentType = "general", coursId = null) {
     try {
       console.log('=== MINIO UPLOAD FILE START ===');
-      console.log('File:', file.name, 'MediaType:', mediaType, 'DocumentType:', documentType);
+      console.log('File:', file.name, 'MediaType:', mediaType, 'DocumentType:', documentType, 'CoursId:', coursId);
       
       const uploadUrlData = await this.generateUploadUrl(
         file.name,
         file.type,
         mediaType,
-        documentType
+        documentType,
+        coursId
       );
 
       console.log('Generated upload URL data:', uploadUrlData);
@@ -318,6 +321,26 @@ class MinioS3Service {
           error.message
         }`
       );
+    }
+  }
+
+  async getUserMediaByCours(coursId) {
+    try {
+      const response = await minioApi.get(`/media/cours/${coursId}`);
+      return response.data || [];
+    } catch (error) {
+      if (error.response?.status === 404) return [];
+      throw new Error(`Failed to get course media: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async findMediaByFileName(fileName, ownerId) {
+    try {
+      const response = await minioApi.get(`/media/find`, { params: { fileName, ownerId } });
+      return response.data || null;
+    } catch (error) {
+      if (error.response?.status === 404) return null;
+      return null;
     }
   }
 

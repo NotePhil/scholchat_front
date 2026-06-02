@@ -1119,7 +1119,8 @@ const EditCourseFormModal = ({
       const result = await minioS3Service.uploadFile(
         new File([file], uniqueFileName, { type: file.type }),
         mediaType,
-        documentType
+        documentType,
+        selectedCourse?.id || null
       );
 
       return result;

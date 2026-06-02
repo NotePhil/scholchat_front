@@ -1112,6 +1112,12 @@ const CreateCourseComponent = ({
       if (url) img.src = url;
     });
 
+    // Update videos: data-file-id is on the <video> itself (inside a div wrapper)
+    root.querySelectorAll("video[data-file-id]").forEach((video) => {
+      const url = fileUrlMap.get(video.dataset.fileId);
+      if (url) video.setAttribute("src", url);
+    });
+
     // Update file link containers: replace blob placeholder with real anchor
     root.querySelectorAll("div[data-file-id]").forEach((div) => {
       const url = fileUrlMap.get(div.dataset.fileId);

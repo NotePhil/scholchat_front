@@ -75,7 +75,13 @@ const ParentClassManagementModal = ({
       // Parent handles closing modals and showing success/error messages
     } catch (err) {
       console.error("Error submitting access request:", err);
-      // Parent handles closing and error display — nothing to do here
+      // Extract the most useful message from the error
+      const apiMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Une erreur est survenue lors de la demande d'accès.";
+      setError(apiMessage);
     } finally {
       setLoading(false);
     }

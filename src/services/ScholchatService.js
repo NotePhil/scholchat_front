@@ -1,4 +1,5 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -11,13 +12,12 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to handle different content types and add authentication token
-api.interceptors.request.use((config) => {
-  // Add authentication token to all requests
-  const token = localStorage.getItem("accessToken");
+// Attach auth token on every request + trigger session-expired modal on 401/403
+applyAuthInterceptors(api);
 
+// Keep existing content-type logic on top (runs before applyAuthInterceptors request interceptor)
+api.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
-    // Let browser set the boundary for multipart/form-data
     delete config.headers["Content-Type"];
   } else {
     config.headers["Content-Type"] = "application/json";

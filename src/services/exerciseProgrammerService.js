@@ -1,4 +1,5 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -10,20 +11,7 @@ const exerciseProgrammerApi = axios.create({
   },
 });
 
-exerciseProgrammerApi.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("cmr.notep.business.business.token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+applyAuthInterceptors(exerciseProgrammerApi);
 
 class ExerciseProgrammerService {
   // ============ Exercise Programming Operations ============

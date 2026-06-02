@@ -117,10 +117,16 @@ const NotificationItem = ({
   getNotificationMeta,
   language,
   disableNavigation = false,
+  buildMessage,
 }) => {
   const meta = getNotificationMeta(notification.type);
   const IconComponent = ICON_MAP[meta.icon] || Bell;
   const colors = COLOR_MAP[meta.color] || COLOR_MAP.gray;
+
+  // Clean the message: replace literal "null" with a sensible fallback
+  const safeMessage = buildMessage
+    ? buildMessage(notification)
+    : (notification.message || "").replace(/\bnull\b/gi, "cet exercice").replace(/:\s*$/, "");
 
   return (
     <div
@@ -155,7 +161,7 @@ const NotificationItem = ({
           )}
         </div>
         <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-          {notification.message}
+          {safeMessage}
         </p>
         <div className="flex items-center gap-2 mt-1.5">
           <span className="text-[10px] text-gray-400">
@@ -298,28 +304,95 @@ const NotificationIcon = () => {
         markAsRead(notification.id);
       }
 
-      // Students and parents: only mark as read, no navigation
-      if (isStudentOrParent) {
-        return;
-      }
-
-      // Navigation based on notification type and related entity
-      const { type, relatedEntityId } = notification;
-
-      // Close panel after click
+      // Close panel
       closePanel();
 
-      // Determine dashboard path from current URL
+      // Determine dashboard path robustly
       const currentPath = window.location.pathname;
-      const dashboardMatch = currentPath.match(/\/schoolchat\/Principal\/(\w+Dashboard)\//);
-      const dashboard = dashboardMatch ? dashboardMatch[1] : "ProfessorDashboard";
+      // Match dashboard name — handle paths with or without trailing slash
+      const dashboardMatch = currentPath.match(/\/schoolchat\/Principal\/([\w]+Dashboard)/);
+      let dashboard = dashboardMatch ? dashboardMatch[1] : null;
+
+      // Fallback: derive from role when URL match fails
+      if (!dashboard) {
+        if (userRole === "student") dashboard = "StudentDashboard";
+        else if (userRole === "parent") dashboard = "ParentDashboard";
+        else if (userRole === "admin") dashboard = "AdminDashboard";
+        else if (userRole === "gestionnaire") dashboard = "GestionnaireDashboard";
+        else dashboard = "ProfessorDashboard";
+      }
+
+      const { type, relatedEntityId } = notification;
 
       const navigateToTab = (tab, data = null) => {
-        // Always dispatch so tabData is updated even when already on the same tab
         dispatch(setActiveTabAction(data ? { tab, data } : tab));
         navigate(`/schoolchat/Principal/${dashboard}/${tab}`);
       };
 
+      // Helper: infer destination from notification title/message when type is ambiguous
+      const inferTabFromContent = () => {
+        const text = ((notification.title || "") + " " + (notification.message || "")).toLowerCase();
+        if (text.includes("cours") || text.includes("course")) return "cours";
+        if (text.includes("exercice") || text.includes("exercise") || text.includes("devoir")) return "manage-exercises";
+        if (text.includes("classe") || text.includes("class")) return "classes";
+        if (text.includes("message")) return "messages";
+        return null; // no hint found
+      };
+
+      if (isStudentOrParent) {
+        switch (type) {
+          case "CLASS_VALIDATED":
+          case "CLASS_REJECTED":
+          case "CLASS_JOIN":
+          case "ACCESS_REQUEST":
+          case "DEMANDE_ACCES":
+            navigateToTab("classes", { classId: relatedEntityId });
+            break;
+          case "COURSE_SCHEDULED":
+          case "NEW_COURSE":
+          case "COURS_PROGRAMME":
+          case "NOUVEAU_COURS":
+            // Navigate to the cours list — don't pass courseId since relatedEntityId
+            // is the programmer record ID, not the base course ID, which would cause
+            // CourseDetailsView to show "Cours non trouvé"
+            navigateToTab("cours");
+            break;
+          case "ACTIVITY_CREATED":
+          case "NEW_ACTIVITY":
+          case "EVENT_UPDATED": {
+            // NEW_ACTIVITY can be sent for courses too — infer from content
+            const inferred = inferTabFromContent();
+            if (inferred === "cours") {
+              navigateToTab("cours"); // no courseId — just open the list
+            } else {
+              navigateToTab(inferred || "activities", { activityId: relatedEntityId });
+            }
+            break;
+          }
+          case "ASSIGNMENT_GIVEN":
+          case "EXERCISE_CREATED":
+          case "EXERCISE_ASSIGNED":
+          case "NOUVEL_EXERCICE":
+            navigateToTab("manage-exercises", { exerciseId: relatedEntityId });
+            break;
+          case "DEVOIR_ASSIGNED":
+          case "NOUVEAU_DEVOIR":
+            navigateToTab("devoirs", { devoirId: relatedEntityId });
+            break;
+          case "MESSAGE_SENT":
+          case "NEW_MESSAGE":
+            navigateToTab("messages");
+            break;
+          default: {
+            const inferred = inferTabFromContent();
+            console.warn("[NotificationIcon] Unknown type for student/parent:", type, "→", inferred || "activities");
+            navigateToTab(inferred || "activities");
+          }
+        }
+        return;
+      }
+
+      // Professors / Admins
       switch (type) {
         case "ACCESS_REQUEST":
         case "DEMANDE_ACCES":
@@ -332,18 +405,26 @@ const NotificationIcon = () => {
           navigateToTab("manage-class", { classId: relatedEntityId, subTab: "overview" });
           break;
         case "ACTIVITY_CREATED":
-        case "ASSIGNMENT_GIVEN":
         case "NEW_ACTIVITY":
+        case "EVENT_UPDATED":
           navigateToTab("activities", { activityId: relatedEntityId });
           break;
         case "COURSE_SCHEDULED":
         case "NEW_COURSE":
-          navigateToTab("cours", { courseId: relatedEntityId });
+        case "COURS_PROGRAMME":
+        case "NOUVEAU_COURS":
+          // Navigate to the cours list — relatedEntityId is the programmer record ID,
+          // not the base course ID, so don't pass it to avoid CourseDetailsView errors
+          navigateToTab("cours");
           break;
         case "EXERCISE_CREATED":
-          navigateToTab("exercises", { exerciseId: relatedEntityId });
+        case "EXERCISE_ASSIGNED":
+        case "NOUVEL_EXERCICE":
+        case "ASSIGNMENT_GIVEN":
+          navigateToTab("manage-exercises", { exerciseId: relatedEntityId });
           break;
         case "MESSAGE_SENT":
+        case "NEW_MESSAGE":
           navigateToTab("messages");
           break;
         case "PROFESSOR_CREATED":
@@ -356,7 +437,8 @@ const NotificationIcon = () => {
           navigateToTab("parents");
           break;
         default:
-          navigateToTab("dashboard");
+          console.warn("[NotificationIcon] Unknown notification type for professor/admin:", type);
+          navigateToTab("activities");
       }
     },
     [markAsRead, closePanel, dispatch, navigate, isStudentOrParent]
@@ -376,6 +458,15 @@ const NotificationIcon = () => {
       default:
         return isFr ? "Notifications" : "Notifications";
     }
+  };
+
+  // Build a clean display message — guard against backend sending "null" as literal value
+  const buildDisplayMessage = (notification) => {
+    const raw = notification.message || "";
+    const cleaned = raw
+      .replace(/\bnull\b/gi, "cet exercice")
+      .replace(/:\s*$/, "");
+    return cleaned || notification.title || "";
   };
 
   return (
@@ -520,6 +611,7 @@ const NotificationIcon = () => {
                         getNotificationMeta={getNotificationMeta}
                         language={language}
                         disableNavigation={isStudentOrParent}
+                        buildMessage={buildDisplayMessage}
                       />
                     </div>
                   ))}

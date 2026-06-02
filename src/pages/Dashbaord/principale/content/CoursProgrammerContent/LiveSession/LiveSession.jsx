@@ -30,6 +30,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
   const [participants, setParticipants] = useState([]);
   const [messages, setMessages] = useState([]);
   const [handRaises, setHandRaises] = useState([]);
+  const [redacteurId, setRedacteurId] = useState(null);
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
@@ -147,6 +148,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
           const fullMap = Object.fromEntries((fullCours.chapitres || []).map(c => [c.id, c]));
           fullChapitres = fullChapitres.map(c => ({ ...fullMap[c.id], ...c }));
           if (fullChapitres.length === 0) fullChapitres = fullCours.chapitres || [];
+          if (fullCours.redacteurId) setRedacteurId(fullCours.redacteurId);
         } catch (e) { /* fallback to session chapitres */ }
 
         setChapitres(fullChapitres);
@@ -391,6 +393,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
               progress={progress}
               isModerator={isModerator}
               onSelectChapter={handleSelectChapter}
+              redacteurId={redacteurId}
             />
           </div>
           {/* Chat tab */}
@@ -460,6 +463,7 @@ const LiveSession = ({ scheduledCourse, cours, onClose, isModerator: isModerator
               progress={progress}
               isModerator={isModerator}
               onSelectChapter={handleSelectChapter}
+              redacteurId={redacteurId}
             />
           </div>
 
