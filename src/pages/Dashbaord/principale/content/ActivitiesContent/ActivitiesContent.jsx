@@ -42,62 +42,57 @@ import { motion } from "framer-motion";
 import { useAuth } from "../../../../../hooks/useAuth";
 
 /**
- * VideoPlayer — fetches video with auth headers (avoids CORS/MinIO issues),
- * then autoplays when 75% visible in viewport, pauses when scrolled away.
+ * VideoPlayer — resolves a presigned S3 URL first (authenticated), then lets
+ * the browser stream natively. Avoids downloading the whole file as a blob.
+ * Pauses automatically when scrolled out of view.
  */
 const VideoPlayer = ({ src, className }) => {
   const videoRef = useRef(null);
-  const [blobUrl, setBlobUrl] = useState(null);
+  const [streamUrl, setStreamUrl] = useState(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Fetch video with auth token → create blob URL
+  // src is like: {API_BASE}/media/{id}/content
+  // Strip "/content" to get the download-url endpoint: {API_BASE}/media/{id}/download-url
   useEffect(() => {
     if (!src) return;
-    let objectUrl = null;
     setError(false);
     setLoading(true);
-    setBlobUrl(null);
+    setStreamUrl(null);
 
     const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+    const downloadUrlEndpoint = src.replace(/\/content$/, '/download-url');
 
-    fetch(src, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    fetch(downloadUrlEndpoint, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.blob();
+        return res.json();
       })
-      .then((blob) => {
-        objectUrl = URL.createObjectURL(blob);
-        setBlobUrl(objectUrl);
+      .then((data) => {
+        setStreamUrl(data.url || null);
         setLoading(false);
       })
       .catch(() => {
-        setError(true);
+        // Fallback: try playing directly through the proxy endpoint
+        setStreamUrl(src);
         setLoading(false);
       });
-
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
   }, [src]);
 
-  // IntersectionObserver: pause when scrolled out of view (no forced autoplay)
+  // Pause when scrolled out of view
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !blobUrl) return;
+    if (!video || !streamUrl) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) {
-          video.pause();
-        }
-      },
+      ([entry]) => { if (!entry.isIntersecting) video.pause(); },
       { threshold: 0.25 }
     );
-
     observer.observe(video);
     return () => observer.disconnect();
-  }, [blobUrl]);
+  }, [streamUrl]);
 
   if (loading) {
     return (
@@ -108,7 +103,7 @@ const VideoPlayer = ({ src, className }) => {
     );
   }
 
-  if (error) {
+  if (error || !streamUrl) {
     return (
       <div className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}>
         <Video className="w-8 h-8 opacity-50" />
@@ -120,11 +115,12 @@ const VideoPlayer = ({ src, className }) => {
   return (
     <video
       ref={videoRef}
-      src={blobUrl}
+      src={streamUrl}
       className={`${className} max-w-full`}
       controls
       playsInline
       preload="metadata"
+      onError={() => setError(true)}
       onClick={(e) => e.stopPropagation()}
     />
   );
