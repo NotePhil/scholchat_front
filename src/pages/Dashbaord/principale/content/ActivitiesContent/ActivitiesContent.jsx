@@ -789,6 +789,10 @@ const ActivitiesContent = () => {
 
   const handleEditEvent = async () => {
     if (!editFormData.titre || !editFormData.description || !editFormData.lieu || !editFormData.heureDebut) return;
+    if (editFormData.heureFin && new Date(editFormData.heureFin) <= new Date(editFormData.heureDebut)) {
+      alert("La date de fin doit être postérieure à la date de début.");
+      return;
+    }
     setEditLoading(true);
     try {
       const uploadedMedia = [...(editFormData.existingMedias || []).map(m => ({
@@ -854,6 +858,10 @@ const ActivitiesContent = () => {
     setCreateFormError("");
     if (!formData.titre || !formData.description || !formData.lieu || !formData.heureDebut) {
       setCreateFormError(t('activities.validation.requiredFields', 'Veuillez remplir tous les champs obligatoires.'));
+      return;
+    }
+    if (formData.heureFin && new Date(formData.heureFin) <= new Date(formData.heureDebut)) {
+      setCreateFormError("La date de fin doit être postérieure à la date de début.");
       return;
     }
 
@@ -1308,9 +1316,8 @@ const ActivitiesContent = () => {
               {/* Class filter banner */}
               {classFilterId && (
                 <div className="mb-3 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-2">
-                  <span className="text-sm text-amber-700 dark:text-amber-300 font-medium flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Événements de la classe {classFilterName || classFilterId}
+                  <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">
+                    Classe filtrée
                   </span>
                   <button onClick={() => { setClassFilterId(null); setClassFilterName(""); }} className="text-amber-400 hover:text-amber-600 text-xs font-bold">✕</button>
                 </div>

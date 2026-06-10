@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Reply, Forward, Send, Trash2 } from "lucide-react";
 
 const MessageDetailPanel = ({
@@ -18,12 +18,31 @@ const MessageDetailPanel = ({
   const [isReplying, setIsReplying] = useState(false);
   const [replyError, setReplyError] = useState("");
 
+  // Auto-mark as read when message is opened
+  useEffect(() => {
+    if (
+      selectedMessage &&
+      !selectedMessage.read &&
+      selectedMessage.expediteur?.id !== currentUser?.id
+    ) {
+      handleMarkAsRead(selectedMessage.id, true);
+    }
+  }, [selectedMessage?.id]);
+
   const handleReplyClick = () => {
     setShowReplyField(true);
     const originalSubject = selectedMessage.objet || "Sans objet";
     setReplySubject(originalSubject.startsWith("Re: ") ? originalSubject : `Re: ${originalSubject}`);
     setReplyContent("");
     setReplyError("");
+  };
+
+  const buildReplyBody = () => {
+    const sender = selectedMessage?.expediteur;
+    const senderName = sender ? `${sender.prenom || ""} ${sender.nom || ""}`.trim() : "Inconnu";
+    const date = selectedMessage?.dateCreation ? new Date(selectedMessage.dateCreation).toLocaleString("fr-FR") : "";
+    const originalBody = selectedMessage?.contenu || "";
+    return `${replyContent}\n\n--- Message original ---\nDe : ${senderName}\nDate : ${date}\n\n${originalBody}`;
   };
 
   const handleDiscardReply = () => {
@@ -64,7 +83,7 @@ const MessageDetailPanel = ({
         },
         body: JSON.stringify({
           objet: replySubject,
-          contenu: replyContent,
+          contenu: buildReplyBody(),
           dateCreation: new Date().toISOString(),
           etat: "envoyé",
           expediteur: senderData,
@@ -199,6 +218,17 @@ const MessageDetailPanel = ({
               placeholder="Objet de la réponse"
             />
           </div>
+          {/* Quoted original message */}
+          <div className={`mb-3 px-3 py-2 rounded border-l-4 text-xs ${isDark ? "border-blue-500 bg-gray-700 text-gray-400" : "border-blue-400 bg-gray-50 text-gray-500"}`}>
+            <div className="font-semibold mb-1">
+              {selectedMessage?.expediteur ? `${selectedMessage.expediteur.prenom || ""} ${selectedMessage.expediteur.nom || ""}`.trim() : "Inconnu"}
+              {selectedMessage?.dateCreation && (
+                <span className="font-normal ml-2">{new Date(selectedMessage.dateCreation).toLocaleString("fr-FR")}</span>
+              )}
+            </div>
+            <div className="whitespace-pre-wrap line-clamp-4 opacity-75">{selectedMessage?.contenu}</div>
+          </div>
+
           <div className="mb-3">
             <label className={`block text-sm font-medium mb-1 ${isDark ? "text-gray-300" : "text-gray-700"}`}>
               Réponse
