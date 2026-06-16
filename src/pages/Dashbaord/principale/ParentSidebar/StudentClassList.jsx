@@ -206,14 +206,14 @@ const StudentClassList = ({ isParentView = false }) => {
     }
   };
 
-  const handleRequestAccess = async (classe, code) => {
+  const handleRequestAccess = async (classe, code, childId = null) => {
     try {
       await AccederService.demanderAcces({
         utilisateurId: isParentView ? parentId : userId,
         classeId: classe.id,
         codeActivation: code,
         estParent: isParentView,
-        eleveAssocieId: isParentView ? userId : null,
+        eleveAssocieId: isParentView ? childId : null,
       });
       message.success("Demande envoyée avec succès");
       setAccessMap(prev => ({ ...prev, [classe.id]: "PENDING" }));
@@ -616,6 +616,8 @@ const StudentClassList = ({ isParentView = false }) => {
           onRequestAccess={handleRequestAccess}
           activationCode={searchCode}
           isCodeReadOnly={true}
+          isParentView={isParentView}
+          parentId={parentId}
         />
       )}
 

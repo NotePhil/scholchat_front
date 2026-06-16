@@ -19,6 +19,10 @@ import {
   Avatar,
   Paper,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   School as SchoolIcon,
@@ -32,7 +36,9 @@ import {
   VpnKey as VpnKeyIcon,
   Info as InfoIcon,
   Lock as LockIcon,
+  ChildCare as ChildCareIcon,
 } from "@mui/icons-material";
+import parentService from "../../../../services/parentService";
 
 const ParentClassManagementModal = ({
   open,
@@ -42,19 +48,36 @@ const ParentClassManagementModal = ({
   onRequestAccess,
   isRequestMode = false,
   activationCode: initialActivationCode = "",
-  isCodeReadOnly = false, // New prop to control read-only state
+  isCodeReadOnly = false,
+  isParentView = false,
+  parentId = null,
 }) => {
   // All hooks must be called at the top level before any conditionals
   const [activationCode, setActivationCode] = useState(initialActivationCode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
+  const [children, setChildren] = useState([]);
+  const [selectedChildId, setSelectedChildId] = useState("");
+  const [childrenLoading, setChildrenLoading] = useState(false);
 
   useEffect(() => {
     if (initialActivationCode) {
       setActivationCode(initialActivationCode);
     }
   }, [initialActivationCode]);
+
+  useEffect(() => {
+    if (!open || !isParentView || !parentId) return;
+    setChildrenLoading(true);
+    parentService.getChildren(parentId)
+      .then(data => {
+        setChildren(data || []);
+        if (data && data.length === 1) setSelectedChildId(data[0].id);
+      })
+      .catch(() => setChildren([]))
+      .finally(() => setChildrenLoading(false));
+  }, [open, isParentView, parentId]);
 
   // Early return after all hooks
   if (!classe) {
@@ -66,16 +89,18 @@ const ParentClassManagementModal = ({
       setError("Veuillez entrer un code d'activation");
       return;
     }
+    if (isParentView && !selectedChildId) {
+      setError("Veuillez sélectionner l'enfant à inscrire");
+      return;
+    }
 
     setLoading(true);
     setError("");
 
     try {
-      await onRequestAccess(classe, activationCode);
-      // Parent handles closing modals and showing success/error messages
+      await onRequestAccess(classe, activationCode, isParentView ? selectedChildId : null);
     } catch (err) {
       console.error("Error submitting access request:", err);
-      // Extract the most useful message from the error
       const apiMessage =
         err?.response?.data?.message ||
         err?.response?.data?.error ||
@@ -382,6 +407,46 @@ const ParentClassManagementModal = ({
                 ? "Le code d'activation a été automatiquement rempli suite à votre recherche. Confirmez votre demande d'accès à cette classe."
                 : "Pour demander l'accès à cette classe, veuillez entrer le code d'activation fourni par l'établissement ou le modérateur."}
             </DialogContentText>
+
+            {/* Child selector — parent view only */}
+            {isParentView && (
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id="child-select-label">
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <ChildCareIcon sx={{ fontSize: 16 }} />
+                    Élève à inscrire
+                  </Box>
+                </InputLabel>
+                <Select
+                  labelId="child-select-label"
+                  value={selectedChildId}
+                  label="Élève à inscrire"
+                  onChange={e => { setSelectedChildId(e.target.value); setError(""); }}
+                  disabled={childrenLoading || hasPendingRequest}
+                  error={!!error && !selectedChildId}
+                >
+                  {childrenLoading ? (
+                    <MenuItem disabled>
+                      <CircularProgress size={16} sx={{ mr: 1 }} /> Chargement…
+                    </MenuItem>
+                  ) : children.length === 0 ? (
+                    <MenuItem disabled>Aucun enfant associé au compte</MenuItem>
+                  ) : (
+                    children.map(child => (
+                      <MenuItem key={child.id} value={child.id}>
+                        {child.prenom} {child.nom}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+                {!!error && !selectedChildId && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                    Veuillez sélectionner l'enfant à inscrire
+                  </Typography>
+                )}
+              </FormControl>
+            )}
+
             <TextField
               autoFocus={!isCodeReadOnly}
               margin="dense"
