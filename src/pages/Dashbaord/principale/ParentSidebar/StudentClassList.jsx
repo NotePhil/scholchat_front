@@ -209,9 +209,11 @@ const StudentClassList = ({ isParentView = false }) => {
   const handleRequestAccess = async (classe, code) => {
     try {
       await AccederService.demanderAcces({
-        utilisateurId: userId,
+        utilisateurId: isParentView ? parentId : userId,
         classeId: classe.id,
         codeActivation: code,
+        estParent: isParentView,
+        eleveAssocieId: isParentView ? userId : null,
       });
       message.success("Demande envoyée avec succès");
       setAccessMap(prev => ({ ...prev, [classe.id]: "PENDING" }));
@@ -242,6 +244,34 @@ const StudentClassList = ({ isParentView = false }) => {
       setPendingMsg(classe.nom);
     }
   };
+
+  // ── guard: parent with no child selected ──────────────────────────────────
+  if (isParentView && isParent && userId === parentId) {
+    return (
+      <div className="w-full px-2 py-3">
+        <div className="bg-white rounded-xl p-10 text-center" style={{ border: "1px solid #e4eaf4" }}>
+          <UsergroupAddOutlined style={{ fontSize: 48, color: "#d1d5db", marginBottom: 12 }} />
+          <p className="text-base font-semibold text-gray-700 mb-1">Aucun élève mineur trouvé</p>
+          <p className="text-sm text-gray-400 mb-4">
+            Vous n'avez pas encore d'enfant associé à votre compte. Ajoutez un enfant pour gérer ses classes.
+          </p>
+          <button
+            onClick={() => setShowAddChild(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white"
+            style={{ background: "linear-gradient(135deg,#2563eb,#4f46e5)" }}
+          >
+            <PlusOutlined />
+            Ajouter un enfant
+          </button>
+        </div>
+        <AddChildModal
+          isOpen={showAddChild}
+          onClose={() => setShowAddChild(false)}
+          onChildAdded={() => { setShowAddChild(false); message.success("Enfant ajouté avec succès"); }}
+        />
+      </div>
+    );
+  }
 
   // ── if showing courses ─────────────────────────────────────────────────────
   if (showCourses && selectedClass) {

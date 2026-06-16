@@ -126,6 +126,15 @@ const VideoPlayer = ({ src, className }) => {
   );
 };
 
+// Module-level cache — survives component unmount/remount (navigation away and back)
+const _cache = {
+  data: null,        // processed activities array
+  timestamp: 0,
+  userNames: {},     // userId -> { name, role }
+  classNames: {},    // classId -> string name
+};
+const CACHE_TTL = 3 * 60 * 1000; // 3 minutes before background refresh
+
 const ActivitiesContent = () => {
   const { t } = useTranslation();
   const language = useSelector((state) => state.language?.currentLanguage || 'fr');
@@ -141,8 +150,8 @@ const ActivitiesContent = () => {
     return `${count} ${count === 1 ? singular : plural}`;
   };
 
-  const [activities, setActivities] = useState([]);
-  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [activities, setActivities] = useState(() => _cache.data || []);
+  const [loadingActivities, setLoadingActivities] = useState(!_cache.data);
   const [staticActivities] = useState([]);
   const [likingActivities, setLikingActivities] = useState({});
   const [localLikes, setLocalLikes] = useState({});
@@ -188,6 +197,10 @@ const ActivitiesContent = () => {
     return null;
   });
   const [classFilterName, setClassFilterName] = useState("");
+
+  const PAGE_SIZE = 11;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const loadClasses = async () => {
     if (formData.visibility !== 'PRIVATE') return;
@@ -241,8 +254,16 @@ const ActivitiesContent = () => {
   };
 
   useEffect(() => {
-    loadEvents();
-    // Initial load of classes to get publication rights for permission checking
+    const now = Date.now();
+    const hasFreshCache = _cache.data && (now - _cache.timestamp) < CACHE_TTL;
+    if (hasFreshCache) {
+      // Instant display from cache — no spinner
+      setActivities(_cache.data);
+      setLoadingActivities(false);
+    } else {
+      // No cache or stale: load with spinner
+      loadEvents();
+    }
     loadPublicationRights();
   }, []);
 
@@ -326,6 +347,22 @@ const ActivitiesContent = () => {
     setFilteredActivities(filtered);
   }, [activities, activeTab, classFilterId]);
 
+  // Reset page only when the filter/tab changes, NOT when new data arrives
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [activeTab, classFilterId]);
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    // Capture current count before the background refresh resets nothing
+    const nextCount = visibleCount + PAGE_SIZE;
+    try {
+      await loadEvents({ showSpinner: false });
+    } catch (e) { /* ignore */ }
+    setVisibleCount(nextCount);
+    setLoadingMore(false);
+  };
+
   const getImageUrl = async (media) => {
     if (!media.id) return null;
     const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
@@ -348,15 +385,58 @@ const ActivitiesContent = () => {
     return `${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/content`;
   };
 
-  const loadEvents = async () => {
+  const loadEvents = async ({ showSpinner = true } = {}) => {
+    if (showSpinner) setLoadingActivities(true);
     try {
-      setLoadingActivities(true);
       const events = await activityFeedService.getActivities();
-      
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+      const currentUserId = localStorage.getItem('userId');
+
+      // Collect all unique creator IDs and class IDs up front for batched resolution
+      const unknownUserIds = new Set();
+      const unknownClassIds = new Set();
+      events.forEach(event => {
+        if (!event.createurPrenom && !event.createurNom && !event.createur && event.createurId) {
+          if (!_cache.userNames[event.createurId]) unknownUserIds.add(event.createurId);
+        }
+        (event.classesIds || event.selectedClasses || []).forEach(id => {
+          if (!_cache.classNames[id]) unknownClassIds.add(id);
+        });
+      });
+
+      // Resolve unknown users in parallel (one fetch per unique missing user)
+      await Promise.all([...unknownUserIds].map(async (uid) => {
+        try {
+          const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${uid}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const d = await res.json();
+            const name = `${d.prenom || ''} ${d.nom || ''}`.trim() || d.email || 'Utilisateur';
+            const typeMap = { professeur: 'Professeur', eleve: 'Eleve', parent: 'Parent', gestionnaire: 'Gestionnaire', repetiteur: 'Repetiteur' };
+            const role = d.admin ? 'Admin' : (typeMap[(d.type || '').toLowerCase()] || '');
+            _cache.userNames[uid] = { name, role };
+          }
+        } catch { /* ignore */ }
+      }));
+
+      // Resolve unknown class names in parallel
+      await Promise.all([...unknownClassIds].map(async (classId) => {
+        try {
+          const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes/${classId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const cls = await res.json();
+            _cache.classNames[classId] = cls.nom || cls.name || null;
+          }
+        } catch { /* ignore */ }
+      }));
+
       const activitiesWithMedias = await Promise.all(
         events.map(async (event) => {
           const medias = [];
-          
+
           if (event.medias && event.medias.length > 0) {
             const mediaItems = await Promise.all(
               event.medias
@@ -372,11 +452,9 @@ const ActivitiesContent = () => {
             );
             medias.push(...mediaItems.filter(item => item !== null));
           }
-          
-          const currentUserId = localStorage.getItem('userId');
+
           const interactions = event.interactions || [];
           const likes = interactions.filter(i => i.type === 'LIKE').length;
-          
           const comments = interactions
             .filter(i => i.type === 'COMMENT')
             .map(comment => ({
@@ -386,73 +464,28 @@ const ActivitiesContent = () => {
               creationDate: comment.creationDate,
               isCurrentUser: comment.createdById === currentUserId
             }));
-          
-          const isLiked = interactions.some(i => 
-            i.type === 'LIKE' && i.createdById === currentUserId
-          );
-          
+          const isLiked = interactions.some(i => i.type === 'LIKE' && i.createdById === currentUserId);
           const participants = event.participantsIds?.length || 0;
           const isParticipating = event.participantsIds?.includes(currentUserId) || false;
-          
-          // Resolve creator name and role from backend fields
+
+          // Creator name: use backend fields, then cache, then fallback
           let creatorName = '';
           let creatorRole = event.createurRole || '';
-
-          // Backend now sends createurNom, createurPrenom, createurRole
           if (event.createurPrenom || event.createurNom) {
             creatorName = `${event.createurPrenom || ''} ${event.createurNom || ''}`.trim();
           } else if (event.createur) {
-            const cPrenom = event.createur.prenom || '';
-            const cNom = event.createur.nom || '';
-            creatorName = `${cPrenom} ${cNom}`.trim() || event.createur.email || '';
+            creatorName = `${event.createur.prenom || ''} ${event.createur.nom || ''}`.trim() || event.createur.email || '';
+          } else if (event.createurId && _cache.userNames[event.createurId]) {
+            creatorName = _cache.userNames[event.createurId].name;
+            if (!creatorRole) creatorRole = _cache.userNames[event.createurId].role;
           }
-
-          // Fallback: fetch from API if still no name
-          if (!creatorName && event.createurId) {
-            try {
-              const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-              const userRes = await fetch(`${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${event.createurId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              if (userRes.ok) {
-                const userData = await userRes.json();
-                creatorName = `${userData.prenom || ''} ${userData.nom || ''}`.trim() || userData.email || 'Utilisateur';
-                if (userData.admin) creatorRole = 'Admin';
-                else if (userData.type) {
-                  const typeMap = { professeur: 'Professeur', eleve: 'Eleve', parent: 'Parent', gestionnaire: 'Gestionnaire', repetiteur: 'Repetiteur' };
-                  creatorRole = typeMap[userData.type.toLowerCase()] || '';
-                }
-              }
-            } catch (e) {
-              console.warn('Could not fetch creator details:', e);
-            }
-          }
-
           if (!creatorName) creatorName = 'Utilisateur';
 
-          // Resolve class names from classesIds (API field)
+          // Class names from cache
           const classIds = event.classesIds || event.selectedClasses || [];
-          let classNames = [];
-          if (classIds.length > 0) {
-            try {
-              const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-              const classResults = await Promise.all(
-                classIds.map(async (classId) => {
-                  try {
-                    const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes/${classId}`, {
-                      headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (res.ok) {
-                      const cls = await res.json();
-                      return cls.nom || cls.name || null;
-                    }
-                  } catch (e) { /* ignore */ }
-                  return null;
-                })
-              );
-              classNames = classResults.filter(Boolean);
-            } catch (e) { /* ignore */ }
-          }
+          const classNames = classIds
+            .map(id => _cache.classNames[id])
+            .filter(Boolean);
 
           return {
             id: event.id,
@@ -490,30 +523,23 @@ const ActivitiesContent = () => {
           };
         })
       );
-      
-      // Sort by creation date (most recent first); fall back to start time if unavailable
+
       activitiesWithMedias.sort((a, b) => {
         const da = a.creationDate ? new Date(a.creationDate) : new Date(a.heureDebut);
         const db = b.creationDate ? new Date(b.creationDate) : new Date(b.heureDebut);
         return db - da;
       });
 
-      // Filter based on role and visibility
-      const currentUserId = localStorage.getItem('userId');
       const selectedRole = (localStorage.getItem('userRole') || '').toUpperCase().replace('ROLE_', '');
       const isParentOrStudentRole = selectedRole === 'PARENT' || selectedRole === 'STUDENT';
-
       let visibleActivities = activitiesWithMedias;
 
       if (isParentOrStudentRole) {
-        // For parent/student: get child's classes to filter private events
         const childId = selectedRole === 'PARENT'
           ? (localStorage.getItem('selectedChildId') || currentUserId)
           : currentUserId;
-
         let userClassIds = [];
         try {
-          const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
           const classResp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${childId}/classes`, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -524,21 +550,21 @@ const ActivitiesContent = () => {
         } catch (e) { /* ignore */ }
 
         visibleActivities = activitiesWithMedias.filter(a => {
-          // Public events: always visible
           if (!a.visibility || a.visibility === 'PUBLIC') return true;
-          // Private events: only if child has access to one of the event's classes
           if (a.selectedClasses && a.selectedClasses.length > 0) {
             return a.selectedClasses.some(classId => userClassIds.includes(classId));
           }
           return false;
         });
       }
-      // Professor/Admin see all events
 
+      // Store in cache
+      _cache.data = visibleActivities;
+      _cache.timestamp = Date.now();
       setActivities(visibleActivities);
     } catch (error) {
       console.error('Error loading activities:', error);
-      setActivities([]);
+      if (!_cache.data) setActivities([]);
     } finally {
       setLoadingActivities(false);
     }
@@ -632,7 +658,7 @@ const ActivitiesContent = () => {
       setUploadedImages([]);
       setCreateFormError("");
       setShowCreateForm(false);
-      
+      _cache.data = null;
       await loadEvents();
     } catch (error) {
       console.error('Error creating event:', error);
@@ -820,6 +846,7 @@ const ActivitiesContent = () => {
       });
       setEditingActivity(null);
       setEditUploadedImages([]);
+      _cache.data = null;
       await loadEvents();
     } catch (error) {
       console.error('Error updating event:', error);
@@ -921,6 +948,7 @@ const ActivitiesContent = () => {
       
       // Small delay to let the backend fully persist media before re-fetching
       await new Promise(resolve => setTimeout(resolve, 800));
+      _cache.data = null; // invalidate so next load is fresh
       await loadEvents();
       
     } catch (error) {
@@ -1354,7 +1382,8 @@ const ActivitiesContent = () => {
                     )}
                   </div>
                 ) : (
-                  filteredActivities.map((activity) => (
+                  <>
+                  {filteredActivities.slice(0, visibleCount).map((activity) => (
                     <motion.div
                       key={activity.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -1696,7 +1725,37 @@ const ActivitiesContent = () => {
                         </div>
                       )}
                     </motion.div>
-                  ))
+                  ))}
+
+                  {/* Load More / All Caught Up */}
+                  {filteredActivities.length > visibleCount ? (
+                    <div className="flex justify-center py-4">
+                      <button
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-md transition-all disabled:opacity-60"
+                      >
+                        {loadingMore ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-blue-600" />
+                        )}
+                        {loadingMore ? "Chargement..." : "Voir plus"}
+                        {!loadingMore && (
+                          <span className="text-xs text-gray-400 font-normal">
+                            ({filteredActivities.length - visibleCount} restant{filteredActivities.length - visibleCount > 1 ? "s" : ""})
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  ) : filteredActivities.length > 0 ? (
+                    <div className="flex items-center justify-center gap-3 py-6">
+                      <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                      <span className="text-xs text-gray-400 dark:text-gray-500 font-medium whitespace-nowrap">Vous êtes à jour</span>
+                      <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                    </div>
+                  ) : null}
+                  </>
                 )}
               </div>
             </div>

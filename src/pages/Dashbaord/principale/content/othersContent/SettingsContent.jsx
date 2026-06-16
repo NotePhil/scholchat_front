@@ -154,14 +154,12 @@ const SettingsContent = ({
       setSaving(true);
       setMessage({ text: "", type: "" });
 
-      // Call the password change API
       await scholchatService.changePassword(passwordData);
 
       setMessage({ text: "Mot de passe modifié avec succès", type: "success" });
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     } catch (error) {
-      console.error("Error changing password:", error);
-      setMessage({ text: "Erreur lors du changement de mot de passe", type: "error" });
+      setMessage({ text: error.message || "Erreur lors du changement de mot de passe", type: "error" });
     } finally {
       setSaving(false);
     }
@@ -249,24 +247,8 @@ const SettingsContent = ({
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Message */}
-        {message.text && (
-          <div className={`mb-8 p-4 rounded-xl border flex items-center gap-3 backdrop-blur-sm ${
-            message.type === "success"
-              ? `bg-green-50 border-green-200 text-green-700 ${isDark ? "dark:bg-green-900/20 dark:border-green-800 dark:text-green-400" : ""}`
-              : `bg-red-50 border-red-200 text-red-700 ${isDark ? "dark:bg-red-900/20 dark:border-red-800 dark:text-red-400" : ""}`
-          }`}>
-            {message.type === "success" ? (
-              <CheckCircle className="w-5 h-5" />
-            ) : (
-              <AlertCircle className="w-5 h-5" />
-            )}
-            <span className="font-medium">{message.text}</span>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-          {/* Enhanced Sidebar */}
+          {/* Sidebar */}
           <div className="xl:col-span-1">
             <div className={`${cardBgClass} rounded-2xl shadow-lg border ${borderClass} p-6 sticky top-6`}>
               <div className="mb-6">
@@ -295,6 +277,7 @@ const SettingsContent = ({
                           ? `bg-gradient-to-r ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} text-white shadow-lg transform scale-105`
                           : `${textClass} hover:${isDark ? "bg-gray-700/50" : "bg-gray-50"} hover:transform hover:scale-105`
                       }`}
+                      onClick={() => { setActiveTab(tab.id); setMessage({ text: "", type: "" }); }}
                     >
                       <Icon className={`w-5 h-5 transition-transform duration-300 ${activeTab === tab.id ? '' : 'group-hover:scale-110'}`} />
                       <span className="font-medium">{tab.label}</span>
@@ -439,19 +422,31 @@ const SettingsContent = ({
                   </div>
 
                   {editMode && (
-                    <div className="flex justify-end mt-8">
-                      <button
-                        onClick={handleProfileUpdate}
-                        disabled={saving}
-                        className={`flex items-center gap-3 px-8 py-4 bg-gradient-to-r ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none`}
-                      >
-                        {saving ? (
-                          <Loader className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Save className="w-5 h-5" />
-                        )}
-                        {saving ? "Enregistrement en cours..." : "Enregistrer les Modifications"}
-                      </button>
+                    <div className="mt-8">
+                      <div className="flex justify-end">
+                        <button
+                          onClick={handleProfileUpdate}
+                          disabled={saving}
+                          className={`flex items-center gap-3 px-8 py-4 bg-gradient-to-r ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none`}
+                        >
+                          {saving ? (
+                            <Loader className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Save className="w-5 h-5" />
+                          )}
+                          {saving ? "Enregistrement en cours..." : "Enregistrer les Modifications"}
+                        </button>
+                      </div>
+                      {message.text && (
+                        <div className={`mt-4 p-4 rounded-xl border flex items-center gap-3 ${
+                          message.type === "success"
+                            ? "bg-green-50 border-green-200 text-green-700"
+                            : "bg-red-50 border-red-200 text-red-700"
+                        }`}>
+                          {message.type === "success" ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+                          <span className="font-medium">{message.text}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -541,13 +536,21 @@ const SettingsContent = ({
                             </div>
                             {/* Password Strength Indicator */}
                             {passwordData.newPassword && (
-                              <div className="mt-2">
-                                <div className="flex gap-1 mb-2">
-                                  <div className={`h-2 flex-1 rounded ${passwordData.newPassword.length >= 8 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-                                  <div className={`h-2 flex-1 rounded ${passwordData.newPassword.length >= 8 && /[A-Z]/.test(passwordData.newPassword) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-                                  <div className={`h-2 flex-1 rounded ${passwordData.newPassword.length >= 8 && /[0-9]/.test(passwordData.newPassword) && /[A-Z]/.test(passwordData.newPassword) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-                                </div>
-                                <p className={`text-xs ${textSecondaryClass}`}>Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre</p>
+                              <div className="mt-3 space-y-1.5">
+                                {[
+                                  { label: "8 caractères minimum", ok: passwordData.newPassword.length >= 8 },
+                                  { label: "Une lettre majuscule (A-Z)", ok: /[A-Z]/.test(passwordData.newPassword) },
+                                  { label: "Une lettre minuscule (a-z)", ok: /[a-z]/.test(passwordData.newPassword) },
+                                  { label: "Un chiffre (0-9)", ok: /[0-9]/.test(passwordData.newPassword) },
+                                  { label: "Un caractère spécial (!@#$%...)", ok: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(passwordData.newPassword) },
+                                ].map(({ label, ok }) => (
+                                  <div key={label} className="flex items-center gap-2">
+                                    <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${ok ? 'bg-green-500' : 'bg-gray-200'}`}>
+                                      {ok && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                    </div>
+                                    <span className={`text-xs ${ok ? 'text-green-600' : textSecondaryClass}`}>{label}</span>
+                                  </div>
+                                ))}
                               </div>
                             )}
                           </div>
@@ -577,7 +580,7 @@ const SettingsContent = ({
 
                           <button
                             onClick={handlePasswordChange}
-                            disabled={saving || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || passwordData.newPassword !== passwordData.confirmPassword}
+                            disabled={saving || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || passwordData.newPassword !== passwordData.confirmPassword || passwordData.newPassword.length < 8 || !/[A-Z]/.test(passwordData.newPassword) || !/[a-z]/.test(passwordData.newPassword) || !/[0-9]/.test(passwordData.newPassword) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(passwordData.newPassword)}
                             className={`w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r ${colorSchemes[currentTheme]?.gradient || "from-blue-500 to-blue-600"} text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none`}
                           >
                             {saving ? (
@@ -587,6 +590,16 @@ const SettingsContent = ({
                             )}
                             {saving ? "Modification en cours..." : "Modifier le Mot de Passe"}
                           </button>
+                          {message.text && (
+                            <div className={`mt-4 p-4 rounded-xl border flex items-center gap-3 ${
+                              message.type === "success"
+                                ? "bg-green-50 border-green-200 text-green-700"
+                                : "bg-red-50 border-red-200 text-red-700"
+                            }`}>
+                              {message.type === "success" ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+                              <span className="font-medium">{message.text}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
