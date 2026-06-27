@@ -73,7 +73,7 @@ const MobileMessagingInterface = ({
   const filteredMessages = messages.filter(
     (msg) =>
       msg.objet?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getUserDisplay(msg.expediteur).toLowerCase().includes(searchTerm.toLowerCase())
+      getUserDisplay(msg.partner || msg.expediteur).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   useEffect(() => {
@@ -81,6 +81,20 @@ const MobileMessagingInterface = ({
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [selectedThread]);
+
+  // Keep the open thread in sync with the inbox data — without this, a thread
+  // opened before a refresh (e.g. right after sending a reply) keeps showing
+  // its old message list until the user backs out and reopens it.
+  useEffect(() => {
+    if (!selectedThread) return;
+    const key = selectedThread.partner?.id || selectedThread.expediteur?.id;
+    const updated = messages.find(
+      (m) => (m.partner?.id || m.expediteur?.id) === key
+    );
+    if (updated && updated !== selectedThread) {
+      setSelectedThread(updated);
+    }
+  }, [messages]);
 
   const handleSendReply = async () => {
     if (!replyText.trim() || !selectedThread) return;
@@ -141,6 +155,18 @@ const MobileMessagingInterface = ({
         }
       );
       if (response.ok) {
+        // Show the sent message immediately instead of waiting on the refetch.
+        const optimisticMsg = {
+          id: `temp-${Date.now()}`,
+          contenu: replyText,
+          dateCreation: new Date().toISOString(),
+          expediteur: { id: userId, ...currentUser },
+          destinataires: recipientObjects,
+          read: true,
+        };
+        setSelectedThread((prev) =>
+          prev ? { ...prev, thread: [...(prev.thread || []), optimisticMsg] } : prev
+        );
         setReplyText("");
         await fetchMessages();
       }
@@ -166,11 +192,11 @@ const MobileMessagingInterface = ({
               <ArrowLeft size={24} />
             </button>
             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-500/20">
-              {getUserInitials(selectedThread.expediteur)}
+              {getUserInitials(selectedThread.partner || selectedThread.expediteur)}
             </div>
             <div>
               <h3 className="text-sm font-black dark:text-white leading-tight">
-                {getUserDisplay(selectedThread.expediteur)}
+                {getUserDisplay(selectedThread.partner || selectedThread.expediteur)}
               </h3>
               <p className="text-[10px] text-gray-400 font-bold truncate max-w-[180px]">
                 {selectedThread.objet}
@@ -181,7 +207,7 @@ const MobileMessagingInterface = ({
             <MoreVertical size={20} />
           </button>
         </header>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-4">
           {selectedThread.thread?.map((msg, idx) => {
             const isMe = msg.expediteur.id === currentUser?.id;
             return (
@@ -311,7 +337,7 @@ const MobileMessagingInterface = ({
             >
               <div className="relative">
                 <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-500 dark:text-gray-300 font-black text-base group-hover:bg-blue-600 group-hover:text-white transition-colors overflow-hidden">
-                  {getUserInitials(msg.expediteur)}
+                  {getUserInitials(msg.partner || msg.expediteur)}
                 </div>
                 {!msg.read && (
                   <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white dark:border-slate-800" />
@@ -320,7 +346,7 @@ const MobileMessagingInterface = ({
               <div className="flex-1 text-left min-w-0">
                 <div className="flex justify-between items-baseline mb-0.5">
                   <h4 className={`text-sm truncate pr-2 ${!msg.read ? "font-black dark:text-white" : "font-semibold text-gray-700 dark:text-gray-300"}`}>
-                    {getUserDisplay(msg.expediteur)}
+                    {getUserDisplay(msg.partner || msg.expediteur)}
                   </h4>
                   <span className="text-[10px] text-gray-400 font-bold flex-shrink-0">
                     {formatDate(msg.dateCreation)}
@@ -558,24 +584,43 @@ const MessagingInterface = ({
     }
   }, []);
 
+  // Groups by conversation PARTNER (the other person), not by subject — so all
+  // messages exchanged with the same person (sent + received, any subject)
+  // merge into one continuous thread, WhatsApp-style.
   const groupMessagesByConversation = (messages) => {
+    const userId = localStorage.getItem('userId');
     const conversations = {};
-    
+    const partners = {};
+
     messages.forEach(msg => {
-      const baseSubject = msg.objet?.replace(/^Re:\s*/i, '') || 'Sans objet';
-      if (!conversations[baseSubject]) {
-        conversations[baseSubject] = [];
+      const isSender = msg.expediteur.id === userId;
+      let key;
+      let partner;
+      if (isSender && msg.destinataires.length === 1) {
+        partner = msg.destinataires[0];
+        key = partner.id;
+      } else if (!isSender) {
+        partner = msg.expediteur;
+        key = partner.id;
+      } else {
+        // Sender with several recipients (broadcast/general message) — these
+        // don't have a single "other person", keep them grouped by recipient set.
+        partner = msg.expediteur;
+        key = `broadcast:${msg.destinataires.map(d => d.id).sort().join(',')}`;
       }
-      conversations[baseSubject].push(msg);
+      if (!conversations[key]) conversations[key] = [];
+      conversations[key].push(msg);
+      partners[key] = partner;
     });
-    
-    return Object.values(conversations).map(thread => {
+
+    return Object.entries(conversations).map(([key, thread]) => {
       thread.sort((a, b) => new Date(a.dateCreation) - new Date(b.dateCreation));
       const latestMessage = thread[thread.length - 1];
       return {
         ...latestMessage,
         thread,
-        isConversation: thread.length > 1
+        isConversation: thread.length > 1,
+        partner: partners[key],
       };
     });
   };

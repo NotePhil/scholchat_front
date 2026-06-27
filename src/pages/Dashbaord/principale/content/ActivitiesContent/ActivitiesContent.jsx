@@ -198,7 +198,7 @@ const ActivitiesContent = () => {
   });
   const [classFilterName, setClassFilterName] = useState("");
 
-  const PAGE_SIZE = 11;
+  const PAGE_SIZE = 5; // TEMP: lowered from 11 for testing pagination per boss's request
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -524,9 +524,11 @@ const ActivitiesContent = () => {
         })
       );
 
+      // Sort by event START date (heureDebut), not publication date — keeps
+      // upcoming events near the top instead of burying them under older posts.
       activitiesWithMedias.sort((a, b) => {
-        const da = a.creationDate ? new Date(a.creationDate) : new Date(a.heureDebut);
-        const db = b.creationDate ? new Date(b.creationDate) : new Date(b.heureDebut);
+        const da = a.heureDebut ? new Date(a.heureDebut) : new Date(a.creationDate);
+        const db = b.heureDebut ? new Date(b.heureDebut) : new Date(b.creationDate);
         return db - da;
       });
 

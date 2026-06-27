@@ -166,16 +166,16 @@ const MessageList = ({
                     isDark ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-700"
                   }`}
                 >
-                  {getUserInitials(message.expediteur)}
+                  {getUserInitials(message.partner || message.expediteur)}
                 </div>
 <div className="flex-1 min-w-0">
   <div className="flex items-center justify-between mb-1">
     <div className="flex items-center gap-2">
       <span className={`font-medium truncate ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}>
-        {getUserDisplay(message.expediteur)}
+        {getUserDisplay(message.partner || message.expediteur)}
       </span>
       <span className={`text-xs px-2 py-1 rounded-full ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}>
-        {message.expediteur?.role}
+        {(message.partner || message.expediteur)?.role}
       </span>
     </div>
     <div className="flex items-center gap-2">

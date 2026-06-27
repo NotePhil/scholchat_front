@@ -62,7 +62,7 @@ const MessageDetailPanel = ({
     try {
       const accessToken = localStorage.getItem('accessToken');
       const senderId = localStorage.getItem('userId');
-      const recipient = selectedMessage.expediteur;
+      const recipient = replyTarget;
       const senderData = {
         type: "utilisateur",
         id: currentUser?.id || senderId,
@@ -117,8 +117,10 @@ const MessageDetailPanel = ({
     }
   };
 
-  // Check if the current user is not the sender of the message
-  const isNotSender = selectedMessage?.expediteur?.id !== currentUser?.id;
+  // The conversation partner (other person) — falls back to the latest
+  // message's sender for broadcasts that have no single other party.
+  const replyTarget = selectedMessage?.partner || selectedMessage?.expediteur;
+  const isNotSender = replyTarget?.id !== currentUser?.id;
 
   return (
     <div className={`w-96 border-l flex flex-col ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}>
@@ -134,11 +136,11 @@ const MessageDetailPanel = ({
         </div>
         <div className="flex items-center gap-3 mb-4">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center font-medium ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-700"}`}>
-            {selectedMessage?.expediteur && getUserInitials(selectedMessage.expediteur)}
+            {replyTarget && getUserInitials(replyTarget)}
           </div>
           <div>
             <div className={`font-medium ${isDark ? "text-white" : "text-gray-900"}`}>
-              {selectedMessage?.expediteur && getUserDisplay(selectedMessage.expediteur)}
+              {replyTarget && getUserDisplay(replyTarget)}
             </div>
             <div className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
               {selectedMessage?.dateCreation && formatDate(selectedMessage.dateCreation)}

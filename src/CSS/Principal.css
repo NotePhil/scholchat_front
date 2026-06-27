@@ -595,6 +595,21 @@
   overflow: hidden;
 }
 
+/* On mobile there's also a fixed bottom nav (~80-96px incl. safe-area) below
+   the fixed top header. The desktop calc() above only accounts for the top
+   header, so on mobile it left no clearance for the bottom nav, pushing the
+   panel's bottom edge under it and forcing the whole page to grow/scroll —
+   which in turn dragged the inbox header at the top out from under the fixed
+   header. Switch to natural height here so the page flows normally and each
+   screen (inbox / open thread) manages its own clearance. */
+@media (max-width: 768px) {
+  .messages-content-container {
+    height: auto;
+    min-height: calc(100vh - 80px - 80px - env(safe-area-inset-bottom, 16px));
+    overflow: visible;
+  }
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;

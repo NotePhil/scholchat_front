@@ -233,12 +233,16 @@ const MobileBottomNav = ({
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setShowQuickActions(!showQuickActions)}
                   className="w-16 h-16 rounded-full flex items-center justify-center text-white shadow-2xl relative z-10"
-                  style={{ 
+                  style={{
                     background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`,
                     boxShadow: `0 10px 25px -5px ${primaryColor}77`
                   }}
                 >
-                  <Plus size={32} className={`transition-transform duration-500 ${showQuickActions ? 'rotate-45' : ''}`} />
+                  {showQuickActions ? (
+                    <X size={28} className="transition-transform duration-500" />
+                  ) : (
+                    <LayoutDashboard size={28} className="transition-transform duration-500" />
+                  )}
                 </motion.button>
               </div>
             );
