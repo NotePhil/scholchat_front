@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Sidebar from "./Sidebar";
 import MessageList from "./MessageList";
 import MessageDetailPanel from "./MessageDetailPanel";
@@ -1002,10 +1002,51 @@ const MessagingInterface = ({
 
   const isMobile = useSelector((state) => state.ui.isMobile);
 
+  // Mobile-only (for now): a conversation's content always carries its FULL
+  // merged history (sent + received), no matter which tab (Inbox/Envoyés) was
+  // used to find it — like WhatsApp, the tab only changes which conversations
+  // are listed, never what's inside them. Desktop keeps the existing behavior.
+  const mobileConversations = useMemo(() => {
+    const userId = localStorage.getItem('userId');
+
+    if (filterType === 'trash') {
+      const conversations = groupMessagesByConversation([...trashMessages]);
+      conversations.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+      return conversations;
+    }
+
+    const allConversations = groupMessagesByConversation([...allMessages]);
+
+    let filtered = allConversations;
+    if (filterType === 'all') {
+      filtered = allConversations.filter((c) =>
+        (c.thread || []).some((m) => m.destinataires.some((d) => d.id === userId))
+      );
+    } else if (filterType === 'sent') {
+      filtered = allConversations.filter((c) =>
+        (c.thread || []).some((m) => m.expediteur.id === userId)
+      );
+    } else if (filterType === 'starred') {
+      filtered = allConversations.filter((c) => (c.thread || []).some((m) => m.starred));
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter((c) =>
+        c.objet?.toLowerCase().includes(term) ||
+        c.contenu?.toLowerCase().includes(term) ||
+        getUserDisplay(c.partner || c.expediteur).toLowerCase().includes(term)
+      );
+    }
+
+    filtered.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+    return filtered;
+  }, [allMessages, trashMessages, filterType, searchTerm]);
+
   if (isMobile) {
     return (
       <MobileMessagingInterface
-        messages={messages}
+        messages={mobileConversations}
         isDark={isDark}
         currentUser={currentUser}
         formatDate={formatDate}
