@@ -82,18 +82,39 @@ const MobileMessagingInterface = ({
     }
   }, [selectedThread]);
 
-  // Keep the open thread in sync with the inbox data — without this, a thread
-  // opened before a refresh (e.g. right after sending a reply) keeps showing
-  // its old message list until the user backs out and reopens it.
+  // Keep the open thread in sync with the inbox data (new incoming messages,
+  // the poll above, etc). MERGE rather than replace — a refetch can briefly
+  // lag behind a message we just sent optimistically, and overwriting wholesale
+  // would make that message flash and disappear until the next successful fetch.
   useEffect(() => {
     if (!selectedThread) return;
     const key = selectedThread.partner?.id || selectedThread.expediteur?.id;
     const updated = messages.find(
       (m) => (m.partner?.id || m.expediteur?.id) === key
     );
-    if (updated && updated !== selectedThread) {
-      setSelectedThread(updated);
-    }
+    if (!updated || updated === selectedThread) return;
+
+    setSelectedThread((prev) => {
+      if (!prev) return prev;
+      const isSameMessage = (a, b) =>
+        a.id === b.id ||
+        (String(a.id).startsWith("temp-") &&
+          a.contenu === b.contenu &&
+          a.expediteur?.id === b.expediteur?.id);
+
+      const merged = [...(prev.thread || [])];
+      (updated.thread || []).forEach((freshMsg) => {
+        const idx = merged.findIndex((m) => isSameMessage(m, freshMsg));
+        if (idx === -1) {
+          merged.push(freshMsg);
+        } else if (String(merged[idx].id).startsWith("temp-")) {
+          merged[idx] = freshMsg; // replace the optimistic placeholder with the real, persisted message
+        }
+      });
+      merged.sort((a, b) => new Date(a.dateCreation) - new Date(b.dateCreation));
+
+      return { ...updated, thread: merged };
+    });
   }, [messages]);
 
   const handleSendReply = async () => {
@@ -186,7 +207,7 @@ const MobileMessagingInterface = ({
   if (selectedThread) {
     return (
       <div className="fixed inset-0 z-[1002] bg-white dark:bg-slate-950 flex flex-col">
-        <header className="px-4 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl sticky top-0 z-10">
+        <header className="px-4 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10 shadow-sm">
           <div className="flex items-center space-x-3">
             <button onClick={() => setSelectedThread(null)} className="p-2 -ml-2 text-gray-600 dark:text-gray-300">
               <ArrowLeft size={24} />
@@ -227,7 +248,10 @@ const MobileMessagingInterface = ({
           })}
           <div ref={chatEndRef} />
         </div>
-        <footer className="p-4 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-white/5 pb-28">
+        <footer
+          className="p-4 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-white/5"
+          style={{ paddingBottom: 'calc(28px + env(safe-area-inset-bottom, 16px))' }}
+        >
           <div className="flex items-center space-x-2 bg-gray-50 dark:bg-slate-800/50 p-2 rounded-[24px]">
             <input
               type="text"
@@ -666,6 +690,15 @@ const MessagingInterface = ({
 
   useEffect(() => {
     fetchMessages();
+  }, [fetchMessages]);
+
+  // Poll for new messages — there's no websocket/push, so without this an
+  // incoming reply only shows up after a manual refresh.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchMessages();
+    }, 10000);
+    return () => clearInterval(interval);
   }, [fetchMessages]);
 
   useEffect(() => {
