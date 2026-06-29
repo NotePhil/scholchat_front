@@ -228,7 +228,13 @@ const MobileMessagingInterface = ({
             <MoreVertical size={20} />
           </button>
         </header>
-        <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-4">
+        <div
+          className="flex-1 overflow-y-auto p-4 pt-6 space-y-4"
+          style={{
+            maskImage: 'linear-gradient(to bottom, transparent, black 20px)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 20px)',
+          }}
+        >
           {selectedThread.thread?.map((msg, idx) => {
             const isMe = msg.expediteur.id === currentUser?.id;
             return (
@@ -467,6 +473,7 @@ const MessagingInterface = ({
   const { user: currentUser } = useAuth(); // Use the useAuth hook to retrieve the current user
   const [messages, setMessages] = useState([]);
   const [allMessages, setAllMessages] = useState([]);
+  const fetchSeqRef = useRef(0);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
@@ -522,6 +529,13 @@ const MessagingInterface = ({
       ? (localStorage.getItem('selectedChildId') || parentId)
       : parentId;
     if (!userId) return;
+
+    // Background polling and an explicit refresh (e.g. right after sending)
+    // can overlap. If an older, slower request resolves AFTER a newer one,
+    // applying its result would revert the screen to stale data — wiping out
+    // a message that was already showing. Only the most recently *started*
+    // request is allowed to update state.
+    const seq = ++fetchSeqRef.current;
 
     setLoading(true);
     try {
@@ -585,6 +599,9 @@ const MessagingInterface = ({
         receivedResponse.json()
       ]);
 
+      // A newer request has already started — this one's result is stale, discard it.
+      if (seq !== fetchSeqRef.current) return;
+
       // Handle trash messages separately
       let trashData = [];
       if (trashResponse.ok) {
@@ -602,9 +619,13 @@ const MessagingInterface = ({
       fetchUnreadCount();
     } catch (err) {
       console.error("Error fetching messages:", err);
-      setError("Erreur lors du chargement des messages");
+      if (seq === fetchSeqRef.current) {
+        setError("Erreur lors du chargement des messages");
+      }
     } finally {
-      setLoading(false);
+      if (seq === fetchSeqRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
