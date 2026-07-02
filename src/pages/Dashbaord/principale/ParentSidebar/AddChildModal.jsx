@@ -64,6 +64,9 @@ const AddChildModal = ({ isOpen, onClose, onChildAdded }) => {
       setSuccess(`${formData.prenom} ${formData.nom} a ete ajoute avec succes !`);
       setFormData({ nom: "", prenom: "", niveau: "", email: "", telephone: "" });
 
+      // Notify all listeners (Principal header, StudentClassList, etc.)
+      window.dispatchEvent(new CustomEvent("childrenUpdated", { detail: newEleve }));
+
       if (onChildAdded) onChildAdded(newEleve);
       setTimeout(() => { setSuccess(""); onClose(); }, 2000);
     } catch (err) {

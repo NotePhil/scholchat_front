@@ -92,7 +92,11 @@ const StudentClassList = ({ isParentView = false }) => {
       setActiveUserId(newId);
     };
     window.addEventListener("childChanged", handler);
-    return () => window.removeEventListener("childChanged", handler);
+    window.addEventListener("childrenUpdated", handler);
+    return () => {
+      window.removeEventListener("childChanged", handler);
+      window.removeEventListener("childrenUpdated", handler);
+    };
   }, [isParent, parentId]);
 
   // ── data fetch ─────────────────────────────────────────────────────────────
