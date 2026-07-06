@@ -201,6 +201,7 @@ const ActivitiesContent = () => {
   const PAGE_SIZE = 5; // TEMP: lowered from 11 for testing pagination per boss's request
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef(null);
 
   const loadClasses = async () => {
     if (formData.visibility !== 'PRIVATE') return;
@@ -351,6 +352,21 @@ const ActivitiesContent = () => {
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [activeTab, classFilterId]);
+
+  // Infinite scroll on mobile: load more when sentinel enters viewport
+  useEffect(() => {
+    if (!isMobile || !sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !loadingMore && filteredActivities.length > visibleCount) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [isMobile, loadingMore, filteredActivities.length, visibleCount]);
 
   const handleLoadMore = async () => {
     setLoadingMore(true);
@@ -524,9 +540,11 @@ const ActivitiesContent = () => {
         })
       );
 
-      // Sort by event START date (heureDebut), not publication date — keeps
-      // upcoming events near the top instead of burying them under older posts.
+      // Sort: non-admin events first (by date desc), then admin events (by date desc)
       activitiesWithMedias.sort((a, b) => {
+        const aIsAdmin = (a.user?.role || '').toLowerCase() === 'admin';
+        const bIsAdmin = (b.user?.role || '').toLowerCase() === 'admin';
+        if (aIsAdmin !== bIsAdmin) return aIsAdmin ? 1 : -1;
         const da = a.heureDebut ? new Date(a.heureDebut) : new Date(a.creationDate);
         const db = b.heureDebut ? new Date(b.heureDebut) : new Date(b.creationDate);
         return db - da;
@@ -1731,24 +1749,28 @@ const ActivitiesContent = () => {
 
                   {/* Load More / All Caught Up */}
                   {filteredActivities.length > visibleCount ? (
-                    <div className="flex justify-center py-4">
-                      <button
-                        onClick={handleLoadMore}
-                        disabled={loadingMore}
-                        className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-md transition-all disabled:opacity-60"
-                      >
-                        {loadingMore ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-blue-600" />
-                        )}
-                        {loadingMore ? "Chargement..." : "Voir plus"}
-                        {!loadingMore && (
-                          <span className="text-xs text-gray-400 font-normal">
-                            ({filteredActivities.length - visibleCount} restant{filteredActivities.length - visibleCount > 1 ? "s" : ""})
-                          </span>
-                        )}
-                      </button>
+                    <div ref={sentinelRef} className="flex justify-center py-4">
+                      {isMobile ? (
+                        loadingMore && <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                      ) : (
+                        <button
+                          onClick={handleLoadMore}
+                          disabled={loadingMore}
+                          className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-md transition-all disabled:opacity-60"
+                        >
+                          {loadingMore ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-blue-600" />
+                          )}
+                          {loadingMore ? "Chargement..." : "Voir plus"}
+                          {!loadingMore && (
+                            <span className="text-xs text-gray-400 font-normal">
+                              ({filteredActivities.length - visibleCount} restant{filteredActivities.length - visibleCount > 1 ? "s" : ""})
+                            </span>
+                          )}
+                        </button>
+                      )}
                     </div>
                   ) : filteredActivities.length > 0 ? (
                     <div className="flex items-center justify-center gap-3 py-6">

@@ -168,8 +168,13 @@ const ExerciseProgrammerContent = () => {
         }
       });
 
+      const EXO_STATUS_ORDER = { EN_COURS: 0, PLANIFIE: 1, ANNULE: 2 };
       const sorted = Array.from(merged.values())
-        .sort((a, b) => new Date(b.dateExoPrevue) - new Date(a.dateExoPrevue));
+        .sort((a, b) => {
+          const oa = EXO_STATUS_ORDER[a.etatExoProgramme] ?? 3;
+          const ob = EXO_STATUS_ORDER[b.etatExoProgramme] ?? 3;
+          return oa !== ob ? oa - ob : new Date(b.dateExoPrevue) - new Date(a.dateExoPrevue);
+        });
 
       setProgrammations(sorted);
     } catch {

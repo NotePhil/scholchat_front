@@ -616,7 +616,6 @@ const CoursProgrammerForm = ({
                   <input
                     id="dateCoursPrevue"
                     type="datetime-local"
-                    min={getCurrentDateTime()}
                     {...register("dateCoursPrevue")}
                     className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white text-base ${
                       errors.dateCoursPrevue

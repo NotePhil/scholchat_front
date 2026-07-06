@@ -186,7 +186,13 @@ const CoursProgrammerContent = () => {
         );
       }
 
-      setScheduledCourses(Array.from(merged.values()));
+      const STATUS_ORDER = { EN_COURS: 0, PLANIFIE: 1, ANNULE: 2 };
+      const sortedScheduled = Array.from(merged.values()).sort((a, b) => {
+        const oa = STATUS_ORDER[a.etatCoursProgramme] ?? 3;
+        const ob = STATUS_ORDER[b.etatCoursProgramme] ?? 3;
+        return oa !== ob ? oa - ob : new Date(b.dateCoursPrevue) - new Date(a.dateCoursPrevue);
+      });
+      setScheduledCourses(sortedScheduled);
     } catch (err) {
       console.error("Erreur lors du chargement des données:", err);
       setError("Erreur lors du chargement des données: " + err.message);

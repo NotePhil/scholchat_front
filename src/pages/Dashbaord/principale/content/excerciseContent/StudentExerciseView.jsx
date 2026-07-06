@@ -46,124 +46,97 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
       setError("");
 
       let exerciseData = null;
-      let questionsData = [];
-      let actualExerciseId = exerciseId; // will be overridden to base exercise ID
+      let actualExerciseId = exerciseId;
 
-      console.log(`[StudentExerciseView] loadExercise — exerciseId=${exerciseId} exerciseProgrammerId=${exerciseProgrammerId}`);
-
-      // Step 1: Resolve the base exercise ID.
-      // exerciseId may be a base exercise ID or a programmer record ID —
-      // detect by trying the exercise endpoint first, then the programmer endpoint.
-      try {
-        exerciseData = await exerciseService.getExerciseById(exerciseId);
-        console.log(`[StudentExerciseView] Loaded directly as base exercise: ${exerciseId}`);
-        // success → exerciseId is already a base exercise ID
-      } catch {
-        console.warn(`[StudentExerciseView] ${exerciseId} is not a base exercise ID — trying programmer record`);
-        // Not a base exercise ID — try as a programmer record ID
-        // First check if exerciseProgrammerId is different and might be the programmer record
-        const progId = exerciseProgrammerId || exerciseId;
+      // Step 1: Resolve base exercise — try direct load only if exerciseId looks valid
+      const tryLoadDirect = exerciseId && exerciseId !== exerciseProgrammerId;
+      if (tryLoadDirect) {
         try {
-          const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
-          const progResp = await fetch(
-            `${process.env.REACT_APP_API_BASE_URL}/exercises-programmer/${progId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          if (progResp.ok) {
-            const progData = await progResp.json();
-            const baseId = progData.exerciseId || progData.exercise?.id;
-            console.log(`[StudentExerciseView] Programmer record resolved: progId=${progId} baseId=${baseId}`);
+          exerciseData = await exerciseService.getExerciseById(exerciseId);
+        } catch { /* fall through to programmer record */ }
+      }
+
+      // If direct load failed or skipped, resolve via programmer record
+      if (!exerciseData) {
+        const progId = exerciseProgrammerId || exerciseId;
+        const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+        const progResp = await fetch(
+          `${process.env.REACT_APP_API_BASE_URL}/exercises-programmer/${progId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (progResp.ok) {
+          const progData = await progResp.json();
+          // Use embedded exercise object if present (avoids an extra round-trip)
+          if (progData.exercise) {
+            exerciseData = progData.exercise;
+            actualExerciseId = exerciseData.id;
+          } else {
+            const baseId = progData.exerciseId;
             if (baseId) {
               actualExerciseId = baseId;
-              try {
-                exerciseData = await exerciseService.getExerciseById(baseId);
-              } catch {
-                exerciseData = progData.exercise || { ...progData, id: baseId };
-              }
-            } else {
-              // Programmer record has no exerciseId — use the embedded exercise object
-              exerciseData = progData.exercise || progData;
-              actualExerciseId = exerciseData?.id || exerciseId;
+              try { exerciseData = await exerciseService.getExerciseById(baseId); }
+              catch { exerciseData = { id: baseId }; }
             }
           }
-        } catch (e2) {
-          console.warn("[StudentExerciseView] Could not resolve exercise from programmer record:", e2);
         }
       }
 
-      if (!exerciseData) {
-        throw new Error("Exercice introuvable");
-      }
+      if (!exerciseData) throw new Error("Exercice introuvable");
 
-      console.log(`[StudentExerciseView] Fetching questions for actualExerciseId=${actualExerciseId}`);
+      const userId = localStorage.getItem("userId");
+      const isParentRole = (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT");
+      const effectiveUserId = isParentRole ? (localStorage.getItem("selectedChildId") || userId) : userId;
 
-      // Step 2: Fetch questions using the resolved base exercise ID
-      try {
-        questionsData = await questionReponseService.getQuestionsByExercise(actualExerciseId);
-        console.log(`[StudentExerciseView] Questions loaded: ${questionsData?.length ?? 0}`);
-      } catch (qErr) {
-        console.warn("[StudentExerciseView] Could not load questions for exerciseId:", actualExerciseId, qErr);
-        questionsData = [];
-      }
+      // Step 2: Fetch questions + previous answers in parallel
+      const [questionsData, prevAnswers] = await Promise.all([
+        questionReponseService.getQuestionsByExercise(actualExerciseId).catch(() => []),
+        repondreService.getReponsesByUtilisateur(effectiveUserId).catch(() => []),
+      ]);
 
       setExercise(exerciseData);
       setQuestions(questionsData || []);
 
       // Check if already completed
-      const userId = localStorage.getItem("userId");
-      const isParentRole = (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT");
-      const effectiveUserId = isParentRole ? (localStorage.getItem("selectedChildId") || userId) : userId;
-
-      try {
-        const prevAnswers = await repondreService.getReponsesByUtilisateur(effectiveUserId);
-        const exerciseQuestionIds = (questionsData || []).map(q => q.id);
-        const answersForThisExercise = (prevAnswers || []).filter(a => exerciseQuestionIds.includes(a.questionId));
-        if (answersForThisExercise.length > 0) {
-          setAlreadyCompleted(true);
-          setPreviousAnswers(answersForThisExercise);
-          // Build results from previous answers
-          const prevResults = (questionsData || []).map(q => {
-            const ans = answersForThisExercise.find(a => a.questionId === q.id);
-            return {
-              questionId: q.id,
-              question: q.intitule,
-              type: q.typeQuestion,
-              studentAnswer: ans?.reponseUtilisateur || "",
-              isCorrect: ans?.estCorrecte,
-              correctAnswer: q.reponse || "",
-              canAutoCorrect: q.typeQuestion === "QCM" || q.typeQuestion === "VRAI_FAUX",
-              points: ans?.estCorrecte ? (q.points || 1) : 0,
-              maxPoints: q.points || 1,
-              note: ans?.note,
-              appreciation: ans?.appreciation,
-            };
-          });
-          setResults(prevResults);
-          setTotalScore(prevResults.reduce((s, r) => s + r.points, 0));
-          setMaxScore(prevResults.reduce((s, r) => s + r.maxPoints, 0));
-          setSubmitted(true);
-          return; // Don't register new participation
-        }
-      } catch (e) {
-        console.warn("Could not check previous answers:", e);
+      const exerciseQuestionIds = (questionsData || []).map(q => q.id);
+      const answersForThisExercise = (prevAnswers || []).filter(a => exerciseQuestionIds.includes(a.questionId));
+      if (answersForThisExercise.length > 0) {
+        setAlreadyCompleted(true);
+        setPreviousAnswers(answersForThisExercise);
+        const prevResults = (questionsData || []).map(q => {
+          const ans = answersForThisExercise.find(a => a.questionId === q.id);
+          return {
+            questionId: q.id,
+            question: q.intitule,
+            type: q.typeQuestion,
+            studentAnswer: ans?.reponseUtilisateur || "",
+            isCorrect: ans?.estCorrecte,
+            correctAnswer: q.reponse || "",
+            canAutoCorrect: q.typeQuestion === "QCM" || q.typeQuestion === "VRAI_FAUX",
+            points: ans?.estCorrecte ? (q.points || 1) : 0,
+            maxPoints: q.points || 1,
+            note: ans?.note,
+            appreciation: ans?.appreciation,
+          };
+        });
+        setResults(prevResults);
+        setTotalScore(prevResults.reduce((s, r) => s + r.points, 0));
+        setMaxScore(prevResults.reduce((s, r) => s + r.maxPoints, 0));
+        setSubmitted(true);
+        return;
       }
 
-      // Register participation if not already completed
+      // Register participation (fire-and-forget — don't block UI)
       if (effectiveUserId && exerciseProgrammerId) {
-        try {
-          await participationExerciseService.participerExercise({
-            utilisateurId: effectiveUserId,
-            exerciseProgrammerId,
-            dateDebut: new Date().toISOString(),
-          });
-        } catch (e) {
-          // ALREADY_EXISTS is expected when the student already started this exercise
-          // (e.g. same exercise programmed in two classes) — not an error
+        participationExerciseService.participerExercise({
+          utilisateurId: effectiveUserId,
+          exerciseProgrammerId,
+          dateDebut: new Date().toISOString(),
+        }).catch(e => {
           const msg = e?.message || "";
           if (!msg.includes("ALREADY_EXISTS") && !msg.includes("déjà")) {
             console.warn("[StudentExerciseView] Could not register participation:", e);
           }
-        }
+        });
       }
     } catch (err) {
       setError(err.message || "Erreur lors du chargement de l'exercice");

@@ -101,6 +101,12 @@ const StudentDevoirsContent = () => {
         } catch { /* ignore */ }
       }));
 
+      const DEVOIR_STATUS_ORDER = { EN_COURS: 0, PLANIFIE: 1, ANNULE: 2 };
+      all.sort((a, b) => {
+        const oa = DEVOIR_STATUS_ORDER[a.etatExoProgramme] ?? 3;
+        const ob = DEVOIR_STATUS_ORDER[b.etatExoProgramme] ?? 3;
+        return oa !== ob ? oa - ob : new Date(b.dateExoPrevue) - new Date(a.dateExoPrevue);
+      });
       setDevoirs(all);
 
       // 3. Load participations
@@ -226,7 +232,7 @@ const StudentDevoirsContent = () => {
       ) : (
         <div className="space-y-3">
           {filtered.map(({ ep, p, etat, isSubmitted, isGraded, isPending, overdue }) => {
-            const exerciseId = ep.exerciseId || ep.sourceExerciseId || ep.id;
+            const exerciseId = ep.exerciseId || ep.sourceExerciseId || ep.exercise?.id || null;
             return (
               <div key={ep.id}
                 className="bg-white rounded-xl overflow-hidden transition-shadow hover:shadow-md"
