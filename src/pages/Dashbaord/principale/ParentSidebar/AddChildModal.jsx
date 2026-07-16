@@ -52,17 +52,21 @@ const AddChildModal = ({ isOpen, onClose, onChildAdded }) => {
       const newEleve = await eleveResponse.json();
 
       // 2. Link parent to child via parent_eleve
-      try {
-        await fetch(`${process.env.REACT_APP_API_BASE_URL}/parents/${parentId}/enfants/${newEleve.id}`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch (linkErr) {
-        console.warn("Could not auto-link parent-child, may need manual linking:", linkErr);
+      const linkResponse = await fetch(`${process.env.REACT_APP_API_BASE_URL}/parents/${parentId}/enfants/${newEleve.id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!linkResponse.ok) {
+        const linkErr = await linkResponse.json().catch(() => ({}));
+        throw new Error(linkErr.message || "Erreur lors de l'association de l'enfant");
       }
 
       setSuccess(`${formData.prenom} ${formData.nom} a ete ajoute avec succes !`);
       setFormData({ nom: "", prenom: "", niveau: "", email: "", telephone: "" });
+
+      // Notify all listeners (Principal header, StudentClassList, etc.)
+      window.dispatchEvent(new CustomEvent("childrenUpdated", { detail: newEleve }));
 
       if (onChildAdded) onChildAdded(newEleve);
       setTimeout(() => { setSuccess(""); onClose(); }, 2000);

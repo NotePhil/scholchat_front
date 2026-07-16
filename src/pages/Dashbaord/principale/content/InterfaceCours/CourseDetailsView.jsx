@@ -768,26 +768,6 @@ const CourseDetailsView = ({ courseId, onBack }) => {
               >
                 Contenu du cours
               </button>
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`px-6 py-4 font-medium transition-colors ${
-                  activeTab === 'overview'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Aperçu
-              </button>
-              <button
-                onClick={() => setActiveTab('discussions')}
-                className={`px-6 py-4 font-medium transition-colors ${
-                  activeTab === 'discussions'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Discussions
-              </button>
             </div>
           </div>
         </div>

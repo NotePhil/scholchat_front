@@ -191,35 +191,40 @@ const Principal = () => {
   const [childAuthLoading, setChildAuthLoading] = useState(false);
 
   // Fetch children for parent role
-  useEffect(() => {
-    if (isParent) {
-      const fetchChildren = async () => {
-        try {
-          const pid = localStorage.getItem("userId");
-          const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
-          if (!pid || !token) return;
-          const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/parents/${pid}/enfants`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (resp.ok) {
-            const kids = await resp.json();
-            setParentChildren(kids || []);
-            // Auto-select stored child or first
-            const storedId = localStorage.getItem("selectedChildId");
-            const found = kids.find(k => k.id === storedId);
-            setSelectedChild(found || (kids.length > 0 ? kids[0] : null));
-            if (!found && kids.length > 0) {
-              localStorage.setItem("selectedChildId", kids[0].id);
-              localStorage.setItem("selectedChildName", `${kids[0].prenom || ''} ${kids[0].nom || ''}`);
-            }
-          }
-        } catch (e) {
-          console.warn("Could not fetch parent children:", e);
+  const fetchParentChildren = useCallback(async () => {
+    if (!isParent) return;
+    try {
+      const pid = localStorage.getItem("userId");
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      if (!pid || !token) return;
+      const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/parents/${pid}/enfants`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (resp.ok) {
+        const kids = await resp.json();
+        setParentChildren(kids || []);
+        const storedId = localStorage.getItem("selectedChildId");
+        const found = kids.find(k => k.id === storedId);
+        const autoSelect = found || (kids.length > 0 ? kids[0] : null);
+        setSelectedChild(autoSelect);
+        if (!found && autoSelect) {
+          localStorage.setItem("selectedChildId", autoSelect.id);
+          localStorage.setItem("selectedChildName", `${autoSelect.prenom || ''} ${autoSelect.nom || ''}`);
+          window.dispatchEvent(new Event("childChanged"));
         }
-      };
-      fetchChildren();
+      }
+    } catch (e) {
+      console.warn("Could not fetch parent children:", e);
     }
   }, [isParent]);
+
+  useEffect(() => { fetchParentChildren(); }, [fetchParentChildren]);
+
+  // Re-fetch when a child is added from anywhere in the app
+  useEffect(() => {
+    window.addEventListener("childrenUpdated", fetchParentChildren);
+    return () => window.removeEventListener("childrenUpdated", fetchParentChildren);
+  }, [fetchParentChildren]);
 
   const handleChildSwitch = (child) => {
     // If switching to a different child, require password verification

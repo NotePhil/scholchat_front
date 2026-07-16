@@ -259,13 +259,20 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
         (c.classesIds && c.classesIds.includes(selectedClass.id))
       );
 
-      setScheduledCourses(finalScheduled);
+      const COURS_STATUS_ORDER = { EN_COURS: 0, PLANIFIE: 1, ANNULE: 2 };
+      const sortByCourseStatus = (arr) => [...arr].sort((a, b) => {
+        const oa = COURS_STATUS_ORDER[a.etatCoursProgramme] ?? 3;
+        const ob = COURS_STATUS_ORDER[b.etatCoursProgramme] ?? 3;
+        return oa !== ob ? oa - ob : new Date(b.dateCoursPrevue) - new Date(a.dateCoursPrevue);
+      });
+
+      setScheduledCourses(sortByCourseStatus(finalScheduled));
       resolveClassNames(finalScheduled);
 
       // "Tous les Cours" shows only scheduled courses for this class (with status, date, live info)
       // No plain accessible courses — students should only see what was programmed for them
-      setClassAllCourses(finalScheduled);
-      setFilteredCourses(finalScheduled);
+      setClassAllCourses(sortByCourseStatus(finalScheduled));
+      setFilteredCourses(sortByCourseStatus(finalScheduled));
 
       // Default tab
       if (finalScheduled.length === 0 && classExercisesList.length > 0) {
@@ -350,11 +357,17 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
       );
 
       console.log("All enriched courses count:", enrichedCourses.length);
-      setScheduledCourses(enrichedCourses);
-      setFilteredCourses(enrichedCourses);
+      const sortedEnriched = [...enrichedCourses].sort((a, b) => {
+        const CORDER = { EN_COURS: 0, PLANIFIE: 1, ANNULE: 2 };
+        const oa = CORDER[a.etatCoursProgramme] ?? 3;
+        const ob = CORDER[b.etatCoursProgramme] ?? 3;
+        return oa !== ob ? oa - ob : new Date(b.dateCoursPrevue) - new Date(a.dateCoursPrevue);
+      });
+      setScheduledCourses(sortedEnriched);
+      setFilteredCourses(sortedEnriched);
       // Also populate classAllCourses so the ALL_COURSES tab renders them
-      setClassAllCourses(enrichedCourses.map(c => ({ ...c, _isScheduled: true })));
-      resolveClassNames(enrichedCourses);
+      setClassAllCourses(sortedEnriched.map(c => ({ ...c, _isScheduled: true })));
+      resolveClassNames(sortedEnriched);
     } catch (error) {
       console.error("Error fetching all user courses:", error);
       setError(`Erreur lors du chargement des cours: ${error.message}`);

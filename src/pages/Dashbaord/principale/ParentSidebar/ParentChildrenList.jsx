@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { UserPlus, Users, GraduationCap, Loader2, RefreshCw, Trash2, AlertCircle } from "lucide-react";
+import { UserPlus, Users, GraduationCap, Loader2, RefreshCw, Trash2, AlertCircle, X } from "lucide-react";
 import AddChildModal from "./AddChildModal";
 
 const ParentChildrenList = () => {
@@ -38,18 +38,26 @@ const ParentChildrenList = () => {
     }
   };
 
-  const handleRemoveChild = async (childId) => {
-    if (!window.confirm("Retirer cet enfant de votre compte ?")) return;
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleRemoveChild = async () => {
+    if (!confirmDeleteId) return;
     try {
+      setDeleteLoading(true);
       const parentId = localStorage.getItem("userId");
       const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
-      await fetch(`${process.env.REACT_APP_API_BASE_URL}/parents/${parentId}/enfants/${childId}`, {
+      await fetch(`${process.env.REACT_APP_API_BASE_URL}/parents/${parentId}/enfants/${confirmDeleteId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+      setConfirmDeleteId(null);
+      window.dispatchEvent(new CustomEvent("childrenUpdated"));
       loadChildren();
     } catch (err) {
       setError("Erreur lors de la suppression");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -126,7 +134,7 @@ const ParentChildrenList = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleRemoveChild(child.id)}
+                  onClick={() => setConfirmDeleteId(child.id)}
                   className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
                   title="Retirer"
                 >
@@ -150,6 +158,39 @@ const ParentChildrenList = () => {
         onClose={() => setShowAddModal(false)}
         onChildAdded={() => { setShowAddModal(false); loadChildren(); }}
       />
+
+      {/* Confirm delete modal */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <h2 className="text-base font-bold text-gray-900">Retirer cet enfant ?</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Cet enfant sera retiré de votre compte. Cette action ne supprime pas son profil.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 py-2.5 text-gray-600 border border-gray-300 rounded-lg font-medium text-sm hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleRemoveChild}
+                disabled={deleteLoading}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Retirer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

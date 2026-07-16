@@ -353,7 +353,7 @@ const ParentClassManagement = () => {
       ).then((results) => results.flat());
 
       const userRequests = accessRequests.filter(
-        (request) => request.utilisateurId === userId
+        (request) => request.utilisateurId === userId || request.userId === userId
       );
 
       // Create access status map
@@ -365,7 +365,12 @@ const ParentClassManagement = () => {
 
       userRequests.forEach((request) => {
         if (!accessStatusMap[request.classeId]) {
-          accessStatusMap[request.classeId] = request.statut;
+          // Backend returns etat: "EN_ATTENTE" | "APPROUVEE" | "REJETEE"
+          const etat = request.etat || request.statut || "";
+          if (etat === "EN_ATTENTE") accessStatusMap[request.classeId] = "PENDING";
+          else if (etat === "APPROUVEE") accessStatusMap[request.classeId] = "APPROVED";
+          else if (etat === "REJETEE") accessStatusMap[request.classeId] = "REJECTED";
+          else accessStatusMap[request.classeId] = etat;
         }
       });
 
