@@ -1,6 +1,44 @@
 // services/EstablishmentService.js
 import axios from "axios";
 
+// Fixes UTF-8 bytes that were decoded as Windows-1252 (common mojibake for French text)
+const CP1252_TO_BYTE = {
+  8364: 0x80, 8218: 0x82, 402: 0x83, 8222: 0x84, 8230: 0x85,
+  8224: 0x86, 8225: 0x87, 710: 0x88, 8240: 0x89, 352: 0x8A,
+  8249: 0x8B, 338: 0x8C, 381: 0x8E, 8216: 0x91, 8217: 0x92,
+  8220: 0x93, 8221: 0x94, 8226: 0x95, 8211: 0x96, 8212: 0x97,
+  732: 0x98, 8482: 0x99, 353: 0x9A, 8250: 0x9B, 339: 0x9C,
+  382: 0x9E, 376: 0x9F,
+};
+
+function fixMojibake(str) {
+  if (!str || typeof str !== "string") return str;
+  try {
+    const bytes = [];
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i);
+      if (code < 0x80) { bytes.push(code); continue; }
+      if (code >= 0xA0 && code <= 0xFF) { bytes.push(code); continue; }
+      if (CP1252_TO_BYTE[code] != null) { bytes.push(CP1252_TO_BYTE[code]); continue; }
+      return str; // non-Latin char outside our map → already valid Unicode, leave it
+    }
+    const decoded = new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(bytes));
+    return decoded.includes("�") ? str : decoded;
+  } catch {
+    return str;
+  }
+}
+
+function fixEstablishment(e) {
+  if (!e || typeof e !== "object") return e;
+  return {
+    ...e,
+    nom: fixMojibake(e.nom),
+    localisation: fixMojibake(e.localisation),
+    pays: fixMojibake(e.pays),
+  };
+}
+
 const API_BASE_URL = `${process.env.REACT_APP_API_BASE_URL}/etablissements`;
 const USER_API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -127,7 +165,7 @@ class EstablishmentService {
   async getAllEstablishments() {
     try {
       const response = await api.get("");
-      return response.data;
+      return Array.isArray(response.data) ? response.data.map(fixEstablishment) : response.data;
     } catch (error) {
       console.error("Error fetching establishments:", error);
       this.handleError(error, "Failed to fetch establishments");
@@ -143,7 +181,7 @@ class EstablishmentService {
   async getEstablishmentById(establishmentId) {
     try {
       const response = await api.get(`/${establishmentId}`);
-      return response.data;
+      return fixEstablishment(response.data);
     } catch (error) {
       console.error(`Error fetching establishment ${establishmentId}:`, error);
       this.handleError(error, "Failed to fetch establishment");
@@ -159,12 +197,12 @@ class EstablishmentService {
   async getEstablishmentsByGestionnaire(gestionnaireId) {
     try {
       const response = await api.get(`/gestionnaire/${gestionnaireId}`);
-      return response.data || [];
+      return Array.isArray(response.data) ? response.data.map(fixEstablishment) : (response.data || []);
     } catch (error) {
       console.error(`Error fetching establishments for gestionnaire ${gestionnaireId}:`, error);
       // Fallback: fetch all and filter client-side
       try {
-        const allEstablishments = await this.getAllEstablishments();
+        const allEstablishments = await this.getAllEstablishments(); // already fixed by getAllEstablishments
         return (allEstablishments || []).filter(e =>
           e.gestionnaire?.id?.toString() === gestionnaireId?.toString()
         );

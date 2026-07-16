@@ -489,6 +489,15 @@ const SignUp = ({ theme }) => {
               Se connecter
             </button>
           </p>
+          <p className="text-gray-500 dark:text-gray-500 text-sm mt-1">
+            Votre offre a expiré ?{" "}
+            <button
+              onClick={() => navigate("/schoolchat/renouveler-offre")}
+              className="text-amber-600 dark:text-amber-400 font-semibold hover:underline"
+            >
+              Renouveler mon compte
+            </button>
+          </p>
         </motion.div>
 
         {/* Progress Bar */}

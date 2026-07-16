@@ -88,6 +88,7 @@ import { activityFeedService } from "../../../../services/ActivityFeedService";
 // Import separated components
 import UserTables from "./components/UserTables";
 import StatisticsCards from "./components/StatisticsCards";
+import OffreInfoPanel from "../shared/OffreInfoPanel";
 
 import "./ManageClassDetailsView.css";
 
@@ -2009,6 +2010,19 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                         <span className="text-sm text-slate-800 font-medium text-right">{row.value}</span>
                       </div>
                     ))}
+                    {/* ID de la classe */}
+                    {classDetails.id && (
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs text-slate-400 font-medium flex-shrink-0">ID</span>
+                        <div className="flex items-center gap-1.5">
+                          <code className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded break-all text-right">{classDetails.id}</code>
+                          <button onClick={() => { navigator.clipboard.writeText(classDetails.id); message.success("ID copié !"); }}
+                            className="p-1 rounded hover:bg-slate-100 transition-colors text-slate-400 hover:text-indigo-600 flex-shrink-0">
+                            <Copy size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {/* Code d'activation */}
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-xs text-slate-400 font-medium flex-shrink-0">Code d'activation</span>
@@ -2023,7 +2037,9 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                     {/* Statut */}
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-xs text-slate-400 font-medium flex-shrink-0">Statut</span>
-                      {getStatusTag(classDetails.etat)}
+                      {classDetails.expireParOffre
+                        ? <Tag color="red">Offre expirée</Tag>
+                        : getStatusTag(classDetails.etat)}
                     </div>
                     {/* Droits de publication */}
                     <div className="flex items-start justify-between gap-2">
@@ -2046,6 +2062,11 @@ const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCours
                       )}
                     </div>
                   </div>
+                </div>
+
+                {/* Offre / Forfait */}
+                <div className="mt-4">
+                  <OffreInfoPanel type="CLASSE" entityId={classId} isDark={false} />
                 </div>
               </div>
 

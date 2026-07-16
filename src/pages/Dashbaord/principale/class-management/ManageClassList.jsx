@@ -52,10 +52,16 @@ const ClassCard = ({ cls, role, onSelectClass, onEdit, canEdit }) => {
           {cls.niveau && <p className="text-xs text-slate-500 mt-0.5">{cls.niveau}</p>}
         </div>
         <Tag
-          color={cls.etat === "ACTIVE" || cls.etat === "ACTIF" ? "green" : cls.etat === "ARCHIVEE" ? "orange" : "default"}
+          color={
+            cls.expireParOffre ? "red"
+              : cls.etat === "ACTIVE" || cls.etat === "ACTIF" ? "green"
+              : cls.etat === "ARCHIVEE" ? "orange" : "default"
+          }
           style={{ fontSize: 11, borderRadius: 6, flexShrink: 0 }}
         >
-          {cls.etat === "ACTIVE" || cls.etat === "ACTIF" ? "Actif" : cls.etat === "ARCHIVEE" ? "Archivé" : "Inactif"}
+          {cls.expireParOffre
+            ? "Offre expirée"
+            : cls.etat === "ACTIVE" || cls.etat === "ACTIF" ? "Actif" : cls.etat === "ARCHIVEE" ? "Archivé" : "Inactif"}
         </Tag>
       </div>
 

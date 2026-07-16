@@ -50,6 +50,7 @@ import EstablishmentService from "../../../../services/EstablishmentService";
 import gestionnaireService from "../../../../services/GestionnaireService";
 import { classService } from "../../../../services/ClassService";
 import { scholchatService } from "../../../../services/ScholchatService";
+import OffreInfoPanel from "../shared/OffreInfoPanel";
 import UserViewModal from "../modals/UserViewModal";
 
 const { Title, Text } = Typography;
@@ -863,6 +864,11 @@ const ManageEstablishmentDetailsView = ({
           </>
         )}
       </Card>
+
+      {/* Offre / Forfait */}
+      <div className="mb-6">
+        <OffreInfoPanel type="ETABLISSEMENT" entityId={establishmentId} isDark={false} />
+      </div>
 
       {/* Configuration Options */}
       {editing ? (

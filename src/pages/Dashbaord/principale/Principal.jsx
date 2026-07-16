@@ -46,6 +46,7 @@ import OthersContent from "./content/othersContent/OthersContent";
 import CreateClassContent from "./content/AllClassesContent/CreateClassContent";
 import ManageClassContent from "./content/AllClassesContent/ManageClassContent";
 import CreateEstablishmentContent from "./content/EstablishmentContent/CreateEstablishmentContent";
+import OfferAdminContent from "./content/OfferAdminContent/OfferAdminContent";
 import ActivitiesContent from "./content/ActivitiesContent/ActivitiesContent";
 import StudentParentStats from "./shared/StudentParentStats";
 import ParentClassManagement from "./ParentSidebar/ParentClassManagement";
@@ -615,6 +616,8 @@ const Principal = () => {
         );
       case "manage-establishment":
         return <ManageEstablishmentContent {...contentProps} />;
+      case "manage-offers":
+        return <OfferAdminContent {...contentProps} />;
       case "my-children":
         return <ParentChildrenList />;
       case "gestionnaires":

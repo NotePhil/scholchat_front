@@ -457,11 +457,18 @@ const ManageEstablishmentList = ({
                   key={establishment.id}
                   className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  <div className="flex items-start justify-between mb-3 sm:mb-4">
+                  <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-xl font-bold text-slate-900 mb-1 sm:mb-2 truncate">
-                        {establishment.nom || "N/A"}
-                      </h3>
+                      <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                        <h3 className="text-base sm:text-xl font-bold text-slate-900 truncate">
+                          {establishment.nom || "N/A"}
+                        </h3>
+                        {establishment.expireParOffre && (
+                          <span className="flex-shrink-0 text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">
+                            Offre expirée
+                          </span>
+                        )}
+                      </div>
                       <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-slate-600">
                         {establishment.localisation && (
                           <div className="flex items-center gap-1 sm:gap-2">

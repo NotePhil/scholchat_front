@@ -53,6 +53,9 @@ export const Login = ({ theme }) => {
   const [availableRoles, setAvailableRoles] = useState([]);
   const [availableChildren, setAvailableChildren] = useState([]);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState("");
+  // true uniquement quand TOUTES les classes/établissements de l'utilisateur ont une offre expirée
+  // (plus aucun accès actif) — voir AuthBusiness.loginUser. Sinon la connexion se fait normalement.
+  const [offreExpireeBlocked, setOffreExpireeBlocked] = useState(false);
 
   useEffect(() => {
     // Check for session expiry message — stored in sessionStorage so localStorage cleanup can't erase it
@@ -83,6 +86,7 @@ export const Login = ({ theme }) => {
 
     setLoading(true);
     setError("");
+    setOffreExpireeBlocked(false);
 
     let loginSucceeded = false;
 
@@ -103,6 +107,9 @@ export const Login = ({ theme }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.code === "ABONNEMENT_EXPIRE") {
+          setOffreExpireeBlocked(true);
+        }
         throw new Error(
           errorData.message || t("auth.errors.authenticationFailed")
         );
@@ -152,6 +159,11 @@ export const Login = ({ theme }) => {
   };
 
   const completeLogin = (authData, selectedRole = null) => {
+    // Si l'utilisateur a encore au moins une classe/établissement actif, le backend laisse toujours
+    // passer la connexion (voir AuthBusiness.loginUser) — on ne l'interrompt donc jamais ici.
+    // authData.expiredEntities (si présent) liste uniquement les entités concrètement expirées ;
+    // on le garde en mémoire pour afficher un avertissement ciblé quand l'utilisateur ouvre
+    // spécifiquement cette classe/cet établissement (voir OffreInfoPanel), pas au login.
     const accessToken = authData.accessToken;
     const decodedToken = decodeJWT(accessToken);
     if (!decodedToken) return;
@@ -204,6 +216,11 @@ export const Login = ({ theme }) => {
     }
     if (authData.children) {
       localStorage.setItem("children", JSON.stringify(authData.children));
+    }
+    if (Array.isArray(authData.expiredEntities) && authData.expiredEntities.length > 0) {
+      localStorage.setItem("expiredOfferEntities", JSON.stringify(authData.expiredEntities));
+    } else {
+      localStorage.removeItem("expiredOfferEntities");
     }
 
     dispatch(setCredentials({ token: accessToken, user, userRole: primaryRole, userRoles }));
@@ -369,12 +386,21 @@ export const Login = ({ theme }) => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className={`border px-4 py-3 rounded-xl text-sm ${
-                  sessionExpiredMessage 
+                  sessionExpiredMessage
                     ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-400'
                     : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
                 }`}
               >
-                {sessionExpiredMessage || error}
+                <p>{sessionExpiredMessage || error}</p>
+                {offreExpireeBlocked && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/schoolchat/renouveler-offre")}
+                    className="mt-2 w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+                  >
+                    Renouveler mon compte
+                  </button>
+                )}
               </motion.div>
             )}
 

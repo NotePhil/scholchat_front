@@ -133,6 +133,11 @@ const Sidebar = ({
           ],
         },
         {
+          name: t('sidebar.offers', 'Offres / Forfaits'),
+          icon: ClipboardList,
+          tab: "manage-offers",
+        },
+        {
           name: t('sidebar.messaging'),
           icon: Mail,
           tab: "messages",

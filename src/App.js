@@ -21,6 +21,7 @@ import HighSchool from "./pages/EducationLevels/HighSchool";
 import University from "./pages/EducationLevels/University";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import RenewalPage from "./pages/RenewalPage";
 import AccountActivation from "./pages/AccountActivation";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -219,6 +220,16 @@ function AnimatedRoutes({ theme, setTheme }) {
                 <Layout theme={theme} setTheme={setTheme}>
                   <PageTransition>
                     <SignUp theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/renouveler-offre"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <RenewalPage theme={theme} />
                   </PageTransition>
                 </Layout>
               }
