@@ -257,7 +257,7 @@ const OffreInfoPanel = ({ type, entityId, isDark }) => {
       {/* Popup contextuel d'offre expirée, affiché à l'ouverture de cette classe/cet établissement */}
       {showExpiredPopup && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
-          <div className={`w-full sm:max-w-sm ${modalBg} rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 text-center`}>
+          <div className={`w-full sm:max-w-sm max-h-[85vh] overflow-y-auto ${modalBg} rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 text-center`}>
             <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
               <AlertCircle className="w-7 h-7 text-red-600" />
             </div>

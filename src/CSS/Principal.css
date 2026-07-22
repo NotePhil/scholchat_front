@@ -14,7 +14,8 @@
 
 .principal-container {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; /* dynamic viewport height: accounts for mobile browser toolbars */
   position: relative;
   overflow: hidden;
 }
@@ -262,7 +263,8 @@
   margin-left: 0;
   transition: all 0.3s ease;
   position: relative;
-  min-height: 100vh;
+  min-height: 0; /* let this flex child shrink so .content-body can actually scroll instead of pushing the page taller than the viewport */
+  height: 100%;
   width: 100%;
 }
 
@@ -560,7 +562,9 @@
 .content-body {
   padding: 30px;
   flex: 1;
+  min-height: 0; /* required alongside flex:1 for overflow-y:auto to actually engage */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   max-width: 100%;
   padding-top: 110px;
 }

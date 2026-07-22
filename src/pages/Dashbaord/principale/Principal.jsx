@@ -1207,7 +1207,12 @@ const Principal = () => {
           className={`content-body ${
             isDark ? "bg-gray-900 text-white" : "bg-gray-50"
           }`}
-          style={{ paddingTop: isMobile ? "80px" : "100px" }}
+          style={{
+            paddingTop: isMobile ? "80px" : "100px",
+            // Reserve space for the fixed mobile bottom nav (~80px + safe-area inset) so the
+            // last elements of any page (e.g. a submit button) are never hidden behind it.
+            paddingBottom: isMobile ? "calc(88px + env(safe-area-inset-bottom, 16px))" : undefined,
+          }}
         >
           {renderContent()}
         </div>
