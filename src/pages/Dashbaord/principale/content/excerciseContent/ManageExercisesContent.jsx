@@ -43,6 +43,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const [participationMap, setParticipationMap] = useState({});
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
   const [selectedExerciseProgrammerId, setSelectedExerciseProgrammerId] = useState(null);
+  const [selectedExerciseData, setSelectedExerciseData] = useState(null);
   const [editingExerciseId, setEditingExerciseId] = useState(null);
   const [currentView, setCurrentView] = useState("list"); // list, create, details, edit, take-exercise
   const [loading, setLoading] = useState(true);
@@ -366,8 +367,14 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     setSelectedExerciseProgrammerId(exerciseProgrammerId || null);
     // Students/parents go directly to take-exercise view
     if (!canCreateExercise) {
+      // Carry the already-loaded exercise data to avoid a re-fetch that may fail for students
+      const found = allExercises.find(
+        (e) => String(e.id) === String(exerciseId) || String(e.exerciseProgrammerId) === String(exerciseProgrammerId)
+      );
+      setSelectedExerciseData(found || null);
       setCurrentView("take-exercise");
     } else {
+      setSelectedExerciseData(null);
       setCurrentView("details");
     }
     setError("");
@@ -377,6 +384,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const handleBackToList = () => {
     setSelectedExerciseId(null);
     setSelectedExerciseProgrammerId(null);
+    setSelectedExerciseData(null);
     setEditingExerciseId(null);
     setCurrentView("list");
     setError("");
@@ -742,6 +750,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
             key={selectedExerciseProgrammerId || selectedExerciseId}
             exerciseId={selectedExerciseId}
             exerciseProgrammerId={selectedExerciseProgrammerId}
+            initialExerciseData={selectedExerciseData}
             onBack={handleBackToList}
             onComplete={() => {
               setSuccessMessage("Exercice soumis avec succès !");

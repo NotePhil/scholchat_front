@@ -20,7 +20,7 @@ import {
   participationExerciseService,
 } from "../../../../../services/exerciseService";
 
-const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onComplete }) => {
+const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, initialExerciseData, onBack, onComplete }) => {
   const [exercise, setExercise] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +38,7 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
 
   useEffect(() => {
     loadExercise();
-  }, [exerciseId, exerciseProgrammerId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [exerciseId, exerciseProgrammerId, initialExerciseData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadExercise = async () => {
     try {
@@ -48,15 +48,24 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
       let exerciseData = null;
       let actualExerciseId = exerciseId;
 
-      // Step 1: Resolve base exercise — try direct load only if exerciseId looks valid
-      const tryLoadDirect = exerciseId && exerciseId !== exerciseProgrammerId;
-      if (tryLoadDirect) {
-        try {
-          exerciseData = await exerciseService.getExerciseById(exerciseId);
-        } catch { /* fall through to programmer record */ }
+      // Step 1: Use pre-loaded exercise data if available (avoids re-fetching for students
+      // who may not have permission to call /exercises/{id} directly)
+      if (initialExerciseData && initialExerciseData.id) {
+        exerciseData = initialExerciseData;
+        actualExerciseId = initialExerciseData.exerciseId || initialExerciseData.id;
       }
 
-      // If direct load failed or skipped, resolve via programmer record
+      // Step 2: Try direct load only if we still don't have data and the IDs look valid
+      if (!exerciseData) {
+        const tryLoadDirect = exerciseId && exerciseId !== exerciseProgrammerId;
+        if (tryLoadDirect) {
+          try {
+            exerciseData = await exerciseService.getExerciseById(exerciseId);
+          } catch { /* fall through to programmer record */ }
+        }
+      }
+
+      // Step 3: If direct load failed or skipped, resolve via programmer record
       if (!exerciseData) {
         const progId = exerciseProgrammerId || exerciseId;
         const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
@@ -309,11 +318,32 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
 
     return (
       <div className="w-full px-2 py-3">
-        <div className="flex items-center gap-2 mb-3">
-          <button onClick={onBack} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
-            <ArrowLeft className="w-4 h-4 text-gray-600" />
+        {/* ── Back header ── */}
+        <div
+          className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-xl"
+          style={{ background: "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)" }}
+        >
+          <button
+            onClick={onBack}
+            className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors flex-shrink-0"
+            style={{ background: "rgba(255,255,255,0.15)" }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.25)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+          >
+            <ArrowLeft className="w-4 h-4 text-white" />
           </button>
-          <span className="text-sm text-gray-600 font-medium">Retour aux exercices</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-semibold text-sm leading-tight truncate">
+              {exercise?.nom || "Résultats"}
+            </p>
+            <p className="text-blue-100 text-xs opacity-80">Retour aux exercices</p>
+          </div>
+          <div
+            className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold"
+            style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+          >
+            {totalScore}/{maxScore} pt{maxScore > 1 ? "s" : ""}
+          </div>
         </div>
 
         {/* Already completed badge */}
@@ -447,22 +477,40 @@ const StudentExerciseView = ({ exerciseId, exerciseProgrammerId, onBack, onCompl
   // Exercise taking view
   return (
     <div className="w-full px-2 py-3">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
-        <button onClick={onBack} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
-          <ArrowLeft className="w-4 h-4 text-gray-600" />
+      {/* ── Header ── */}
+      <div
+        className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-xl"
+        style={{ background: "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)" }}
+      >
+        <button
+          onClick={onBack}
+          className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors flex-shrink-0"
+          style={{ background: "rgba(255,255,255,0.15)" }}
+          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.25)"}
+          onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+        >
+          <ArrowLeft className="w-4 h-4 text-white" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-base font-bold text-gray-900 truncate">{exercise?.nom}</h1>
-          {exercise?.description && <p className="text-xs text-gray-500 truncate">{exercise.description}</p>}
+          <h1 className="text-white font-bold text-sm leading-tight truncate">{exercise?.nom}</h1>
+          {exercise?.description
+            ? <p className="text-blue-100 text-xs opacity-80 truncate">{exercise.description}</p>
+            : <p className="text-blue-100 text-xs opacity-80">Retour aux exercices</p>
+          }
+        </div>
+        <div
+          className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold"
+          style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+        >
+          {answeredCount}/{questions.length} rép.
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between text-xs text-gray-600 mb-1.5">
+      <div className="mb-4 px-1">
+        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
           <span>{answeredCount}/{questions.length} répondu(s)</span>
-          <span>{Math.round(progress)}%</span>
+          <span className="font-medium text-indigo-600">{Math.round(progress)}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div className="bg-indigo-600 h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
