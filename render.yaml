@@ -2,6 +2,7 @@ services:
   - type: web
     name: scholchat-front
     env: node
+    buildCommand: npm run build
     startCommand: node server.js
     healthCheckPath: /healthz
     envVars:
