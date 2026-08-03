@@ -74,12 +74,14 @@ const LightboxImage = ({ mediaId, onClick }) => {
  * LazyMedia — resolves the presigned URL only when the element enters the viewport.
  * Images show a skeleton placeholder until visible; videos use VideoPlayer.
  */
-const LazyMedia = ({ mediaId, mediaType, className, onClick, overlay }) => {
+const LazyMedia = ({ mediaId, mediaType, presignedUrl, className, onClick, overlay }) => {
   const containerRef = React.useRef(null);
-  const [url, setUrl] = React.useState(null);
+  const [url, setUrl] = React.useState(presignedUrl || null);
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
+    // If presignedUrl was already provided by the events API, skip the fetch entirely
+    if (presignedUrl) { setUrl(presignedUrl); return; }
     const el = containerRef.current;
     if (!el || !mediaId) return;
 
@@ -91,7 +93,6 @@ const LazyMedia = ({ mediaId, mediaType, className, onClick, overlay }) => {
           const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
           const isVideo = (mediaType || '').toUpperCase() === 'VIDEO';
           if (isVideo) {
-            // Videos stream through the proxy — no extra fetch needed
             setUrl(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`);
             setLoading(false);
           } else {
@@ -109,7 +110,7 @@ const LazyMedia = ({ mediaId, mediaType, className, onClick, overlay }) => {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [mediaId, mediaType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mediaId, mediaType, presignedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isVideo = (mediaType || '').toUpperCase() === 'VIDEO';
 
@@ -580,6 +581,7 @@ const ActivitiesContent = () => {
             .map(m => ({
               id: m.id,
               type: (m.mediaType || '').toUpperCase() === 'VIDEO' ? 'VIDEO' : 'IMAGE',
+              presignedUrl: m.presignedUrl || null,
             }));
 
           const interactions = event.interactions || [];
@@ -1642,11 +1644,11 @@ const ActivitiesContent = () => {
                           <LazyMedia
                             mediaId={media.id}
                             mediaType={media.type}
+                            presignedUrl={media.presignedUrl || null}
                             className={`cursor-pointer group ${className}`}
                             overlay={overlay}
                             onClick={() => {
                               if (media.type === 'IMAGE') {
-                                // Collect already-resolved URLs for the lightbox
                                 openImagePreview(imageIds, imageIds.indexOf(media.id));
                               }
                             }}
