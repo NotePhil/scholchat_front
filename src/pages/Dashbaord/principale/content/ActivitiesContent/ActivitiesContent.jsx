@@ -1302,7 +1302,7 @@ const ActivitiesContent = () => {
                             {loadingClasses ? (
                               <div className="flex items-center space-x-2 py-3">
                                 <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                                <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Recherche des classes...</span>
+                                <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Recherche des classes ...</span>
                               </div>
                             ) : classes.length === 0 ? (
                               <p className="text-xs text-gray-400 py-2">Aucune classe disponible</p>
