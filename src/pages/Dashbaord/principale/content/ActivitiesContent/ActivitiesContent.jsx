@@ -42,25 +42,127 @@ import { motion } from "framer-motion";
 import { useAuth } from "../../../../../hooks/useAuth";
 
 /**
- * VideoPlayer — resolves a presigned S3 URL first (authenticated), then lets
- * the browser stream natively. Avoids downloading the whole file as a blob.
- * Pauses automatically when scrolled out of view.
+ * LightboxImage — resolves a presigned URL once when the lightbox opens.
+ */
+const LightboxImage = ({ mediaId, onClick }) => {
+  const [url, setUrl] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!mediaId) return;
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+    fetch(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/download-url`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((d) => setUrl(d.url || `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`))
+      .catch(() => setUrl(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`));
+  }, [mediaId]);
+
+  if (!url) return <Loader2 className="w-10 h-10 text-white animate-spin" />;
+  return (
+    <img
+      src={url}
+      alt="preview"
+      className="object-contain rounded-xl shadow-2xl"
+      style={{ maxWidth: 'calc(100% - 96px)', maxHeight: 'calc(100% - 80px)' }}
+      onClick={onClick}
+    />
+  );
+};
+
+/**
+ * LazyMedia — resolves the presigned URL only when the element enters the viewport.
+ * Images show a skeleton placeholder until visible; videos use VideoPlayer.
+ */
+const LazyMedia = ({ mediaId, mediaType, className, onClick, overlay }) => {
+  const containerRef = React.useRef(null);
+  const [url, setUrl] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !mediaId) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !url && !loading) {
+          observer.disconnect();
+          setLoading(true);
+          const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+          const isVideo = (mediaType || '').toUpperCase() === 'VIDEO';
+          if (isVideo) {
+            // Videos stream through the proxy — no extra fetch needed
+            setUrl(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`);
+            setLoading(false);
+          } else {
+            fetch(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/download-url`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+              .then((r) => r.ok ? r.json() : Promise.reject())
+              .then((d) => setUrl(d.url || `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`))
+              .catch(() => setUrl(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`))
+              .finally(() => setLoading(false));
+          }
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [mediaId, mediaType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isVideo = (mediaType || '').toUpperCase() === 'VIDEO';
+
+  return (
+    <div ref={containerRef} className={`relative overflow-hidden ${className}`} onClick={onClick}>
+      {!url ? (
+        // Skeleton placeholder — zero network cost
+        <div className="w-full h-full bg-gray-200 dark:bg-gray-700 animate-pulse flex items-center justify-center">
+          {loading && <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />}
+        </div>
+      ) : isVideo ? (
+        <VideoPlayer src={url} className="w-full h-full object-cover" />
+      ) : (
+        <img src={url} alt="media" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+      )}
+      {overlay && (
+        <div className="absolute inset-0 bg-black/55 flex items-center justify-center pointer-events-none">
+          <span className="text-white text-2xl font-bold">{overlay}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * VideoPlayer — lazy preview mode.
+ *
+ * Phase 1 (preview): Shows a dark placeholder with a play button overlay.
+ *   No network request is made until the user explicitly clicks play.
+ *
+ * Phase 2 (active): On click, fetches the presigned S3 URL once, then lets
+ *   the browser stream natively. Uses preload="metadata" so only the first
+ *   few KB are fetched up-front instead of the whole file.
+ *
+ * Also pauses automatically when scrolled out of view.
  */
 const VideoPlayer = ({ src, className }) => {
   const videoRef = useRef(null);
+  const containerRef = useRef(null);
   const [streamUrl, setStreamUrl] = useState(null);
   const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [resolving, setResolving] = useState(false); // fetching presigned URL
+  const [active, setActive] = useState(false); // user has clicked play
 
-  // src is like: {API_BASE}/media/{id}/content
-  // Strip "/content" to get the download-url endpoint: {API_BASE}/media/{id}/download-url
-  useEffect(() => {
-    if (!src) return;
-    setError(false);
-    setLoading(true);
-    setStreamUrl(null);
+  const activate = (e) => {
+    e.stopPropagation();
+    if (active || resolving) return;
+    setResolving(true);
+    setActive(true);
 
     const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+    // src is like: {API_BASE}/media/{id}/content
+    // Strip "/content" → {API_BASE}/media/{id}/download-url
     const downloadUrlEndpoint = src.replace(/\/content$/, '/download-url');
 
     fetch(downloadUrlEndpoint, {
@@ -71,15 +173,22 @@ const VideoPlayer = ({ src, className }) => {
         return res.json();
       })
       .then((data) => {
-        setStreamUrl(data.url || null);
-        setLoading(false);
+        setStreamUrl(data.url || src);
+        setResolving(false);
       })
       .catch(() => {
-        // Fallback: try playing directly through the proxy endpoint
+        // Fallback: stream directly through the authenticated proxy endpoint
         setStreamUrl(src);
-        setLoading(false);
+        setResolving(false);
       });
-  }, [src]);
+  };
+
+  // Auto-play once the URL is resolved
+  useEffect(() => {
+    if (streamUrl && videoRef.current) {
+      videoRef.current.play().catch(() => {/* autoplay blocked – user can press play manually */});
+    }
+  }, [streamUrl]);
 
   // Pause when scrolled out of view
   useEffect(() => {
@@ -94,35 +203,68 @@ const VideoPlayer = ({ src, className }) => {
     return () => observer.disconnect();
   }, [streamUrl]);
 
-  if (loading) {
+  // ── Phase 2: video element (shown after user clicks) ──────────────────────
+  if (active) {
+    if (error) {
+      return (
+        <div className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}>
+          <Video className="w-8 h-8 opacity-50" />
+          <span className="text-xs">Vidéo indisponible</span>
+        </div>
+      );
+    }
+
+    if (resolving || !streamUrl) {
+      return (
+        <div className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}>
+          <Loader2 className="w-8 h-8 animate-spin opacity-60" />
+          <span className="text-xs">Préparation...</span>
+        </div>
+      );
+    }
+
     return (
-      <div className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}>
-        <Loader2 className="w-8 h-8 animate-spin opacity-60" />
-        <span className="text-xs">Chargement...</span>
-      </div>
+      <video
+        ref={videoRef}
+        src={streamUrl}
+        className={`${className} max-w-full`}
+        controls
+        playsInline
+        preload="metadata"
+        onError={() => setError(true)}
+        onClick={(e) => e.stopPropagation()}
+      />
     );
   }
 
-  if (error || !streamUrl) {
-    return (
-      <div className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}>
-        <Video className="w-8 h-8 opacity-50" />
-        <span className="text-xs">Vidéo indisponible</span>
-      </div>
-    );
-  }
-
+  // ── Phase 1: preview thumbnail (default, no network cost) ─────────────────
   return (
-    <video
-      ref={videoRef}
-      src={streamUrl}
-      className={`${className} max-w-full`}
-      controls
-      playsInline
-      preload="metadata"
-      onError={() => setError(true)}
-      onClick={(e) => e.stopPropagation()}
-    />
+    <div
+      ref={containerRef}
+      className={`${className} relative flex items-center justify-center bg-gray-900 cursor-pointer group`}
+      onClick={activate}
+      title="Lire la vidéo"
+    >
+      {/* Subtle video-strip texture */}
+      <div className="absolute inset-0 opacity-10"
+        style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 30px,rgba(255,255,255,.05) 30px,rgba(255,255,255,.05) 31px)' }}
+      />
+      {/* Play button */}
+      <div className="relative z-10 flex flex-col items-center gap-2">
+        <div className="w-16 h-16 rounded-full bg-white/20 group-hover:bg-white/30 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center transition-all duration-200 group-hover:scale-110 shadow-2xl">
+          {/* Triangle play icon */}
+          <svg viewBox="0 0 24 24" className="w-7 h-7 text-white fill-current ml-1" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+        <span className="text-white/70 text-xs font-medium tracking-wide select-none">Lire la vidéo</span>
+      </div>
+      {/* Video badge */}
+      <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+        <Video className="w-3 h-3" />
+        <span>Vidéo</span>
+      </div>
+    </div>
   );
 };
 
@@ -379,28 +521,6 @@ const ActivitiesContent = () => {
     setLoadingMore(false);
   };
 
-  const getImageUrl = async (media) => {
-    if (!media.id) return null;
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-
-    // For videos: always use the backend proxy URL (avoids MinIO CORS issues).
-    // The VideoPlayer component will fetch it with auth headers and create a blob URL.
-    if ((media.mediaType || '').toUpperCase() === 'VIDEO') {
-      return `${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/content`;
-    }
-
-    try {
-      const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/download-url`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        return data.url || null;
-      }
-    } catch (e) { /* ignore */ }
-    return `${process.env.REACT_APP_API_BASE_URL}/media/${media.id}/content`;
-  };
-
   const loadEvents = async ({ showSpinner = true } = {}) => {
     if (showSpinner) setLoadingActivities(true);
     try {
@@ -451,23 +571,16 @@ const ActivitiesContent = () => {
 
       const activitiesWithMedias = await Promise.all(
         events.map(async (event) => {
-          const medias = [];
-
-          if (event.medias && event.medias.length > 0) {
-            const mediaItems = await Promise.all(
-              event.medias
-                .filter(media => {
-                  const mt = (media.mediaType || '').toUpperCase();
-                  return (mt === 'IMAGE' || mt === 'PHOTO' || mt === 'VIDEO') && media.id;
-                })
-                .map(async (media) => {
-                  const url = await getImageUrl(media);
-                  const normalizedType = (media.mediaType || '').toUpperCase() === 'VIDEO' ? 'VIDEO' : 'IMAGE';
-                  return url ? { type: normalizedType, url } : null;
-                })
-            );
-            medias.push(...mediaItems.filter(item => item !== null));
-          }
+          // Store only metadata — URLs are resolved lazily by LazyMedia when visible
+          const medias = (event.medias || [])
+            .filter(m => {
+              const mt = (m.mediaType || '').toUpperCase();
+              return (mt === 'IMAGE' || mt === 'PHOTO' || mt === 'VIDEO') && m.id;
+            })
+            .map(m => ({
+              id: m.id,
+              type: (m.mediaType || '').toUpperCase() === 'VIDEO' ? 'VIDEO' : 'IMAGE',
+            }));
 
           const interactions = event.interactions || [];
           const likes = interactions.filter(i => i.type === 'LIKE').length;
@@ -1125,7 +1238,8 @@ const ActivitiesContent = () => {
                             type="text"
                             value={formData.titre}
                             onChange={(e) => handleInputChange("titre", e.target.value)}
-                            className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                            className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                            style={{ color: '#111111' }}
                             placeholder={t('activities.form.titlePlaceholder', 'Ex: Réunion parents-professeurs')}
                           />
                         </div>
@@ -1138,7 +1252,8 @@ const ActivitiesContent = () => {
                             value={formData.description}
                             onChange={(e) => handleInputChange("description", e.target.value)}
                             rows={4}
-                            className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all font-medium"
+                            className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all font-medium"
+                            style={{ color: '#111111' }}
                             placeholder={t('activities.form.descriptionPlaceholder', 'Décrivez votre événement...')}
                           />
                         </div>
@@ -1232,7 +1347,8 @@ const ActivitiesContent = () => {
                               type="text"
                               value={formData.lieu}
                               onChange={(e) => handleInputChange("lieu", e.target.value)}
-                              className="w-full pl-12 pr-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                              className="w-full pl-12 pr-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                              style={{ color: '#111111' }}
                               placeholder={t('activities.form.locationPlaceholder', 'Ex: Salle 101')}
                             />
                           </div>
@@ -1247,7 +1363,7 @@ const ActivitiesContent = () => {
                               type="datetime-local"
                               value={formData.heureDebut}
                               onChange={(e) => handleInputChange("heureDebut", e.target.value)}
-                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
+                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
                             />
                           </div>
                           <div>
@@ -1258,7 +1374,7 @@ const ActivitiesContent = () => {
                               type="datetime-local"
                               value={formData.heureFin}
                               onChange={(e) => handleInputChange("heureFin", e.target.value)}
-                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
+                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
                             />
                           </div>
                         </div>
@@ -1515,49 +1631,37 @@ const ActivitiesContent = () => {
                         )}
                       </div>
 
-                      {/* Media Gallery - Facebook-style grid */}
+                      {/* Media Gallery - Facebook-style grid, lazy-loaded */}
                       {activity.medias && activity.medias.length > 0 && (
                         <div className="w-full overflow-hidden">
                         {(() => {
                         const medias = activity.medias;
-                        const allImageUrls = medias.filter(m => m.type === 'IMAGE').map(m => m.url);
+                        const imageIds = medias.filter(m => m.type === 'IMAGE').map(m => m.id);
+
                         const MediaItem = ({ media, index, className, overlay }) => (
-                          <div
-                            className={`relative overflow-hidden cursor-pointer group ${className}`}
+                          <LazyMedia
+                            mediaId={media.id}
+                            mediaType={media.type}
+                            className={`cursor-pointer group ${className}`}
+                            overlay={overlay}
                             onClick={() => {
                               if (media.type === 'IMAGE') {
-                                const idx = allImageUrls.indexOf(media.url);
-                                openImagePreview(allImageUrls, idx !== -1 ? idx : 0);
+                                // Collect already-resolved URLs for the lightbox
+                                openImagePreview(imageIds, imageIds.indexOf(media.id));
                               }
                             }}
-                          >
-                            {media.type === 'VIDEO' ? (
-                              <VideoPlayer src={media.url} className="w-full h-full object-cover" />
-                            ) : (
-                              <img src={media.url} alt={`media-${index}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            )}
-                            {overlay && (
-                              <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
-                                <span className="text-white text-2xl font-bold">{overlay}</span>
-                              </div>
-                            )}
-                          </div>
+                          />
                         );
 
-                        // 1 media
                         if (medias.length === 1) return (
                           <MediaItem media={medias[0]} index={0} className="w-full h-72 sm:h-96" />
                         );
-
-                        // 2 medias
                         if (medias.length === 2) return (
                           <div className="flex gap-0.5 h-64 sm:h-80">
                             <MediaItem media={medias[0]} index={0} className="flex-1" />
                             <MediaItem media={medias[1]} index={1} className="flex-1" />
                           </div>
                         );
-
-                        // 3 medias
                         if (medias.length === 3) return (
                           <div className="flex gap-0.5 h-64 sm:h-80">
                             <MediaItem media={medias[0]} index={0} className="flex-[2]" />
@@ -1567,8 +1671,6 @@ const ActivitiesContent = () => {
                             </div>
                           </div>
                         );
-
-                        // 4+ medias: show max 4, last one has +N overlay
                         const shown = medias.slice(0, 4);
                         const remaining = medias.length - 4;
                         return (
@@ -1579,12 +1681,7 @@ const ActivitiesContent = () => {
                             </div>
                             <div className="flex gap-0.5 h-48 sm:h-56">
                               <MediaItem media={shown[2]} index={2} className="flex-1" />
-                              <MediaItem
-                                media={shown[3]}
-                                index={3}
-                                className="flex-1"
-                                overlay={remaining > 0 ? `+${remaining}` : null}
-                              />
+                              <MediaItem media={shown[3]} index={3} className="flex-1" overlay={remaining > 0 ? `+${remaining}` : null} />
                             </div>
                           </div>
                         );
@@ -1787,50 +1884,34 @@ const ActivitiesContent = () => {
         </div>
       </div>
 
-      {/* Image Preview Modal */}
+      {/* Image Preview Modal — resolves full URL on demand */}
       {imagePreview.isOpen && (
         <div
           className="fixed bg-black/75 backdrop-blur-sm z-[500] flex items-center justify-center"
-          style={{
-            top: '70px',
-            bottom: 0,
-            left: isMobile ? 0 : '280px',
-            right: 0,
-          }}
+          style={{ top: '70px', bottom: 0, left: isMobile ? 0 : '280px', right: 0 }}
           onClick={closeImagePreview}
         >
           {imagePreview.images.length > 1 && (
             <>
-              <button
-                onClick={(e) => { e.stopPropagation(); navigateImage("prev"); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10"
-              >
+              <button onClick={(e) => { e.stopPropagation(); navigateImage("prev"); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10">
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); navigateImage("next"); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10"
-              >
+              <button onClick={(e) => { e.stopPropagation(); navigateImage("next"); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </>
           )}
-
-          <button
-            onClick={closeImagePreview}
-            className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10"
-          >
+          <button onClick={closeImagePreview}
+            className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10">
             <X className="w-5 h-5" />
           </button>
-
-          <img
-            src={imagePreview.images[imagePreview.currentIndex]}
-            alt={`Preview ${imagePreview.currentIndex + 1}`}
-            className="object-contain rounded-xl shadow-2xl"
-            style={{ maxWidth: 'calc(100% - 96px)', maxHeight: 'calc(100% - 80px)' }}
+          {/* Resolve full URL for the lightbox image */}
+          <LightboxImage
+            mediaId={imagePreview.images[imagePreview.currentIndex]}
             onClick={(e) => e.stopPropagation()}
           />
-
           {imagePreview.images.length > 1 && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-1.5 rounded-full text-sm font-medium">
               {imagePreview.currentIndex + 1} / {imagePreview.images.length}
