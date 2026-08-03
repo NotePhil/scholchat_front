@@ -888,7 +888,6 @@ const MessagingInterface = ({
       setError("Veuillez remplir tous les champs obligatoires");
       return;
     }
-    setLoading(true);
     try {
       setNewMessage({
         destinataires: [],
@@ -901,12 +900,10 @@ const MessagingInterface = ({
       setCcRecipients([]);
       setShowCompose(false);
       setError(null);
-
-      await fetchMessages();
+      // WebSocket push handles the update; background refresh as safety net
+      fetchMessages(true);
     } catch (err) {
       setError("Erreur lors de l'envoi du message");
-    } finally {
-      setLoading(false);
     }
   };
 
