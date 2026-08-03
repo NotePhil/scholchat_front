@@ -1,5 +1,5 @@
 /node_modules
-/build
+# /build is intentionally tracked so Render skips the build step on deploy
 
 # Robot Framework
 tests/robot/venv/
