@@ -190,7 +190,9 @@ const MobileMessagingInterface = ({
           prev ? { ...prev, thread: [...(prev.thread || []), optimisticMsg] } : prev
         );
         setReplyText("");
-        await fetchMessages();
+        // The WebSocket push will update allMessages — no need for a full refetch.
+        // Background refresh to sync any edge cases after a short delay.
+        fetchMessages(true);
       }
     } catch (err) {
       console.error("Error sending reply:", err);
@@ -453,7 +455,7 @@ const MobileMessagingInterface = ({
           ccRecipients={ccRecipients}
           setCcRecipients={setCcRecipients}
           setShowRecipientSelector={setShowRecipientSelector}
-          onMessageSent={fetchMessages}
+          onMessageSent={() => fetchMessages(true)}
           setError={setError}
           setLoading={setLoading}
           fetchMessages={fetchMessages}
