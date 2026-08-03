@@ -7,6 +7,7 @@ import RecipientSelectorModal from "./RecipientSelectorModal";
 import { useAuth } from "../../../../context/AuthContext";
 import { useSelector } from "react-redux";
 import { messageService } from "../../../../services/MessageService";
+import { useMessageSocket } from "../../../../hooks/useMessageSocket";
 import {
   ArrowLeft,
   Search,
@@ -244,7 +245,21 @@ const MobileMessagingInterface = ({
                     ? "bg-blue-600 text-white rounded-tr-none shadow-blue-500/10"
                     : "bg-gray-100 dark:bg-slate-800 dark:text-white rounded-tl-none"
                 }`}>
-                  <p className="text-sm leading-relaxed">{msg.contenu}</p>
+                  {(() => {
+                    const sep = msg.contenu?.indexOf("--- Message original ---");
+                    const newPart = sep > -1 ? msg.contenu.slice(0, sep).trim() : msg.contenu;
+                    const quotedPart = sep > -1 ? msg.contenu.slice(sep).trim() : null;
+                    return (
+                      <>
+                        <p className="text-sm leading-relaxed">{newPart}</p>
+                        {quotedPart && (
+                          <p className={`text-xs mt-2 pt-2 border-t opacity-60 whitespace-pre-wrap ${
+                            isMe ? "border-blue-400" : "border-gray-300"
+                          }`}>{quotedPart}</p>
+                        )}
+                      </>
+                    );
+                  })()}
                   <p className={`text-[10px] mt-1 opacity-60 text-right ${isMe ? "text-blue-100" : "text-gray-500"}`}>
                     {formatDate(msg.dateCreation)}
                   </p>
@@ -383,7 +398,9 @@ const MobileMessagingInterface = ({
                   </span>
                 </div>
                 <h5 className="text-[11px] font-bold text-blue-600 truncate">{msg.objet}</h5>
-                <p className="text-xs text-gray-500 truncate mt-0.5">{msg.contenu}</p>
+                <p className="text-xs text-gray-500 truncate mt-0.5">
+                  {(msg.contenu || "").split("--- Message original ---")[0].trim()}
+                </p>
               </div>
               {msg.isConversation && (
                 <div className="flex items-center space-x-1 text-gray-300">
@@ -474,10 +491,16 @@ const MessagingInterface = ({
   const [messages, setMessages] = useState([]);
   const [allMessages, setAllMessages] = useState([]);
   const fetchSeqRef = useRef(0);
+  // Persistent set of message IDs the current user has already read this session.
+  // Lives outside allMessages so it survives every fetchMessages refetch.
+  const readIdsRef = useRef(new Set());
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Tracks background polling refreshes — does NOT trigger the list spinner
+  // so the UI doesn't blink every 10 seconds.
+  const isBackgroundFetchRef = useRef(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [trashMessages, setTrashMessages] = useState([]);
@@ -520,24 +543,22 @@ const MessagingInterface = ({
     }
   }, []);
 
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (background = false) => {
     const parentId = localStorage.getItem('userId');
     const selectedRole = (localStorage.getItem('userRole') || '').toUpperCase();
     const isParentRole = selectedRole.includes('PARENT');
-    // For parents: use selected child's ID so they see child's messages, not professor messages
     const userId = isParentRole
       ? (localStorage.getItem('selectedChildId') || parentId)
       : parentId;
     if (!userId) return;
 
-    // Background polling and an explicit refresh (e.g. right after sending)
-    // can overlap. If an older, slower request resolves AFTER a newer one,
-    // applying its result would revert the screen to stale data — wiping out
-    // a message that was already showing. Only the most recently *started*
-    // request is allowed to update state.
     const seq = ++fetchSeqRef.current;
 
-    setLoading(true);
+    // Only show the full-screen spinner on the very first load (no data yet).
+    // Background polls and manual refreshes update silently.
+    if (!background && allMessages.length === 0) {
+      setLoading(true);
+    }
     try {
       const accessToken = localStorage.getItem('accessToken');
       
@@ -614,7 +635,15 @@ const MessagingInterface = ({
         ...receivedData.map(transformMessage)
       ];
 
-      setAllMessages(allMessages);
+      // Preserve read-state for messages the user has already opened this session.
+      // readIdsRef is a stable ref that survives every refetch, so even if the
+      // backend hasn't persisted the status yet (race condition) the badge won't
+      // flash back. When the backend finally confirms, it will return lu=true and
+      // the ref check becomes a no-op.
+      setAllMessages(allMessages.map(m => ({
+        ...m,
+        read: readIdsRef.current.has(m.id) ? true : m.read,
+      })));
       setError(null);
       fetchUnreadCount();
     } catch (err) {
@@ -627,7 +656,7 @@ const MessagingInterface = ({
         setLoading(false);
       }
     }
-  }, []);
+  }, [allMessages.length]);
 
   // Groups by conversation PARTNER (the other person), not by subject — so all
   // messages exchanged with the same person (sent + received, any subject)
@@ -713,14 +742,54 @@ const MessagingInterface = ({
     fetchMessages();
   }, [fetchMessages]);
 
-  // Poll for new messages — there's no websocket/push, so without this an
-  // incoming reply only shows up after a manual refresh.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchMessages();
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [fetchMessages]);
+  // ── Real-time WebSocket updates ──────────────────────────────────────────
+  // Instead of polling every 10 s, we subscribe to /topic/messages/{userId}
+  // and merge incoming messages directly into state — no blinking, instant.
+  const socketUserId = localStorage.getItem('userId');
+  const handleSocketEvent = useCallback((event) => {
+    if (event?.type !== 'NEW_MESSAGE' || !event.message) return;
+    const msg = event.message;
+
+    // Transform the incoming MessageDto into the same shape as transformMessage
+    const transformed = {
+      id: msg.id,
+      objet: msg.objet || 'Sans objet',
+      contenu: msg.contenu,
+      dateCreation: msg.dateCreation,
+      dateModification: msg.dateModification,
+      etat: msg.etat,
+      expediteur: {
+        id: msg.expediteur?.id,
+        nom: msg.expediteur?.nom,
+        prenom: msg.expediteur?.prenom,
+        email: msg.expediteur?.email,
+        role: msg.expediteur?.admin ? 'ADMIN' : 'USER',
+        type: msg.expediteur?.type,
+      },
+      destinataires: (msg.destinataires || []).map(d => ({
+        id: d.id,
+        nom: d.nom,
+        prenom: d.prenom,
+        email: d.email,
+        role: d.admin ? 'ADMIN' : 'USER',
+        type: d.type,
+      })),
+      read: readIdsRef.current.has(msg.id) ? true : (msg.lu ?? false),
+      starred: msg.favori || false,
+      classes: [],
+      isGeneral: false,
+    };
+
+    setAllMessages(prev => {
+      // Deduplicate: if the message already exists update it, else prepend
+      const exists = prev.some(m => m.id === transformed.id);
+      return exists
+        ? prev.map(m => m.id === transformed.id ? { ...m, ...transformed } : m)
+        : [transformed, ...prev];
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useMessageSocket(socketUserId, handleSocketEvent);
 
   useEffect(() => {
     fetchUnreadCount();
@@ -732,7 +801,8 @@ const MessagingInterface = ({
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchMessages().finally(() => {
+    // Always use background=true so the list never replaces with a spinner
+    fetchMessages(true).finally(() => {
       setRefreshing(false);
     });
   };
@@ -840,22 +910,35 @@ const MessagingInterface = ({
 
   const handleMarkAsRead = async (messageId, newRead) => {
     const userId = localStorage.getItem('userId');
+    // Track in persistent ref so future refetches honour this choice
+    if (newRead) {
+      readIdsRef.current.add(messageId);
+    } else {
+      readIdsRef.current.delete(messageId);
+    }
     // Optimistically update the message read state
     setAllMessages(prev => prev.map(msg =>
       msg.id === messageId ? { ...msg, read: newRead } : msg
     ));
-    messageService.setStatutLu(messageId, userId, newRead)
-      .catch(e => {
-        console.warn('Could not update read status:', e.message);
-        // Revert on failure
-        setAllMessages(prev => prev.map(msg =>
-          msg.id === messageId ? { ...msg, read: !newRead } : msg
-        ));
-      });
+    try {
+      await messageService.setStatutLu(messageId, userId, newRead);
+    } catch (e) {
+      console.warn('Could not update read status:', e.message);
+      // Revert both the ref and the state on failure
+      if (newRead) {
+        readIdsRef.current.delete(messageId);
+      } else {
+        readIdsRef.current.add(messageId);
+      }
+      setAllMessages(prev => prev.map(msg =>
+        msg.id === messageId ? { ...msg, read: !newRead } : msg
+      ));
+    }
   };
 
   // Mark as read locally only (no API call) — used for sent messages viewed by sender
   const markReadLocally = (messageId) => {
+    readIdsRef.current.add(messageId);
     setAllMessages(prev => prev.map(msg =>
       msg.id === messageId ? { ...msg, read: true } : msg
     ));
@@ -878,7 +961,7 @@ const MessagingInterface = ({
         }
         
         // Refresh to update trash
-        fetchMessages();
+        fetchMessages(true);
       }
     } catch (error) {
       console.error('Error deleting message:', error);
@@ -903,7 +986,7 @@ const MessagingInterface = ({
       setSelectedMessages(new Set());
       
       // Refresh to update trash
-      fetchMessages();
+      fetchMessages(true);
     } catch (error) {
       console.error('Error bulk deleting messages:', error);
       setError('Erreur lors de la suppression des messages');
@@ -943,7 +1026,7 @@ const MessagingInterface = ({
         if (filterType === 'trash') {
           setMessages(prev => prev.filter(msg => msg.id !== messageId));
         }
-        fetchMessages();
+        fetchMessages(true);
       }
     } catch (error) {
       console.error('Error restoring message:', error);
@@ -1088,57 +1171,69 @@ const MessagingInterface = ({
   }
 
   return (
-    <div className={`flex h-full ${isDark ? "bg-gray-900" : "bg-white"}`}>
-      <Sidebar
-        isDark={isDark}
-        themeColors={themeColors}
-        setShowCompose={setShowCompose}
-        filterType={filterType}
-        setFilterType={setFilterType}
-        messageCounts={messageCounts}
-        currentUser={currentUser}
-        handleEmptyTrash={handleEmptyTrash}
-      />
-      <MessageList
-        isDark={isDark}
-        messages={messages}
-        selectedMessage={selectedMessage}
-        setSelectedMessage={setSelectedMessage}
-        selectedMessages={selectedMessages}
-        setSelectedMessages={setSelectedMessages}
-        toggleMessageSelection={toggleMessageSelection}
-        toggleStarMessage={toggleStarMessage}
-        handleMarkAsRead={handleMarkAsRead}
-        markReadLocally={markReadLocally}
-        handleDeleteMessage={handleDeleteMessage}
-        handleBulkDelete={handleBulkDelete}
-        handleEmptyTrash={handleEmptyTrash}
-        handleRestoreMessage={handleRestoreMessage}
-        filterType={filterType}
-        loading={loading}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        handleRefresh={handleRefresh}
-        refreshing={refreshing}
-        error={error}
-        setError={setError}
-        getUserInitials={getUserInitials}
-        getUserDisplay={getUserDisplay}
-        formatDate={formatDate}
-        currentUser={currentUser}
-      />
-      {selectedMessage && (
-        <MessageDetailPanel
+    <div className={`flex h-full overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}>
+      {/* Sidebar — fixed width, never shrinks */}
+      <div className="flex-shrink-0">
+        <Sidebar
           isDark={isDark}
+          themeColors={themeColors}
+          setShowCompose={setShowCompose}
+          filterType={filterType}
+          setFilterType={setFilterType}
+          messageCounts={messageCounts}
+          currentUser={currentUser}
+          handleEmptyTrash={handleEmptyTrash}
+        />
+      </div>
+
+      {/* Message list — takes remaining space, never overflows */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <MessageList
+          isDark={isDark}
+          messages={messages}
           selectedMessage={selectedMessage}
           setSelectedMessage={setSelectedMessage}
-          formatDate={formatDate}
+          selectedMessages={selectedMessages}
+          setSelectedMessages={setSelectedMessages}
+          toggleMessageSelection={toggleMessageSelection}
+          toggleStarMessage={toggleStarMessage}
+          handleMarkAsRead={handleMarkAsRead}
+          markReadLocally={markReadLocally}
+          handleDeleteMessage={handleDeleteMessage}
+          handleBulkDelete={handleBulkDelete}
+          handleEmptyTrash={handleEmptyTrash}
+          handleRestoreMessage={handleRestoreMessage}
+          filterType={filterType}
+          loading={loading}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          handleRefresh={handleRefresh}
+          refreshing={refreshing}
+          error={error}
+          setError={setError}
           getUserInitials={getUserInitials}
           getUserDisplay={getUserDisplay}
+          formatDate={formatDate}
           currentUser={currentUser}
-          onRefreshMessages={handleRefresh}
-          handleMarkAsRead={handleMarkAsRead}
         />
+      </div>
+
+      {/* Detail panel — fixed width, slides in without pushing the list */}
+      {selectedMessage && (
+        <div className="flex-shrink-0 w-96 border-l overflow-hidden"
+          style={{ borderColor: isDark ? "#374151" : "#e5e7eb" }}>
+          <MessageDetailPanel
+            isDark={isDark}
+            selectedMessage={selectedMessage}
+            setSelectedMessage={setSelectedMessage}
+            formatDate={formatDate}
+            getUserInitials={getUserInitials}
+            getUserDisplay={getUserDisplay}
+            currentUser={currentUser}
+            onRefreshMessages={handleRefresh}
+            handleMarkAsRead={handleMarkAsRead}
+          />
+        </div>
       )}
      {showCompose && (
   <ComposeModal
@@ -1161,7 +1256,7 @@ const MessagingInterface = ({
     ccRecipients={ccRecipients}
     setCcRecipients={setCcRecipients}
     setShowRecipientSelector={setShowRecipientSelector}
-    onMessageSent={fetchMessages}
+    onMessageSent={() => fetchMessages(true)}
     setError={setError}
     setLoading={setLoading}
     fetchMessages={fetchMessages}

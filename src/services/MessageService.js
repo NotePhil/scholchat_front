@@ -424,7 +424,9 @@ class MessageService {
   async setStatutLu(messageId, utilisateurId, lu) {
     try {
       const response = await messageApi.post(
-        `/messages/${messageId}/statut/${utilisateurId}/lu?lu=${lu}`
+        `/messages/${messageId}/statut/${utilisateurId}/lu`,
+        null,
+        { params: { lu } }
       );
       return response.data;
     } catch (error) {
@@ -435,7 +437,9 @@ class MessageService {
   async setStatutFavori(messageId, utilisateurId, favori) {
     try {
       const response = await messageApi.post(
-        `/messages/${messageId}/statut/${utilisateurId}/favori?favori=${favori}`
+        `/messages/${messageId}/statut/${utilisateurId}/favori`,
+        null,
+        { params: { favori } }
       );
       return response.data;
     } catch (error) {

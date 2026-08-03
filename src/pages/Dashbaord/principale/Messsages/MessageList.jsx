@@ -31,7 +31,7 @@ const MessageList = ({
 }) => {
   const userId = localStorage.getItem('userId');
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
       <div className={`px-6 py-3 border-b flex items-center gap-4 ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}>
         <div className="flex items-center gap-2">
           {selectedMessages.size > 0 && (
@@ -86,7 +86,8 @@ const MessageList = ({
       )}
 
       <div className={`flex-1 overflow-y-auto ${isDark ? "bg-gray-900" : "bg-white"}`}>
-        {loading ? (
+        {/* Only show full-screen spinner on true first load (no data yet) */}
+        {loading && messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <RefreshCw className="animate-spin text-blue-600" size={32} />
           </div>
@@ -199,7 +200,7 @@ const MessageList = ({
     )}
   </div>
   <p className={`text-sm truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-    {message.contenu}
+    {(message.contenu || "").split("--- Message original ---")[0].trim()}
   </p>
   {message.destinataires && message.destinataires.length > 0 && (
     <div className="flex items-center gap-1 mt-1">

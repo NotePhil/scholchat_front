@@ -1,6 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { X, Reply, Forward, Send, Trash2 } from "lucide-react";
 
+const QUOTE_SEPARATOR = "--- Message original ---";
+
+const MessageContent = ({ contenu, isDark }) => {
+  if (!contenu) return null;
+  const sepIndex = contenu.indexOf(QUOTE_SEPARATOR);
+  if (sepIndex === -1) return <div className="whitespace-pre-wrap">{contenu}</div>;
+
+  const newPart = contenu.slice(0, sepIndex).trim();
+  const quotedPart = contenu.slice(sepIndex).trim();
+
+  return (
+    <div>
+      <div className="whitespace-pre-wrap">{newPart}</div>
+      <div className={`mt-3 pl-3 border-l-4 text-sm whitespace-pre-wrap ${
+        isDark ? "border-gray-500 text-gray-400" : "border-gray-300 text-gray-500"
+      }`}>
+        {quotedPart}
+      </div>
+    </div>
+  );
+};
+
 const MessageDetailPanel = ({
   isDark,
   selectedMessage,
@@ -106,9 +128,8 @@ const MessageDetailPanel = ({
       }
       console.log('Reply sent successfully');
       handleDiscardReply();
-      if (onRefreshMessages) {
-        onRefreshMessages();
-      }
+      // No need to call onRefreshMessages — the WebSocket push will
+      // deliver the new message to allMessages automatically.
     } catch (error) {
       console.error('Error sending reply:', error);
       setReplyError("Erreur lors de l'envoi de la réponse");
@@ -123,7 +144,7 @@ const MessageDetailPanel = ({
   const isNotSender = replyTarget?.id !== currentUser?.id;
 
   return (
-    <div className={`w-96 border-l flex flex-col ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}>
+    <div className={`flex flex-col h-full ${isDark ? "bg-gray-800" : "bg-white"}`}>
       <div className={`p-6 border-b ${isDark ? "border-gray-700" : "border-gray-200"}`}>
         <div className="flex items-center justify-between mb-4">
 
@@ -178,7 +199,7 @@ const MessageDetailPanel = ({
         
         {selectedMessage?.thread && selectedMessage.thread.length > 1 ? (
           <div className="space-y-4">
-            {selectedMessage.thread.map((msg, index) => (
+            {selectedMessage.thread.map((msg) => (
               <div key={msg.id} className={`border rounded-lg p-4 ${isDark ? "border-gray-600 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${isDark ? "bg-gray-600 text-gray-300" : "bg-gray-200 text-gray-700"}`}>
@@ -193,12 +214,12 @@ const MessageDetailPanel = ({
                     </div>
                   </div>
                 </div>
-                <div className="whitespace-pre-wrap text-sm">{msg.contenu}</div>
+                <MessageContent contenu={msg.contenu} isDark={isDark} />
               </div>
             ))}
           </div>
         ) : (
-          <div className="whitespace-pre-wrap">{selectedMessage?.contenu}</div>
+          <MessageContent contenu={selectedMessage?.contenu} isDark={isDark} />
         )}
       </div>
       {showReplyField && (
