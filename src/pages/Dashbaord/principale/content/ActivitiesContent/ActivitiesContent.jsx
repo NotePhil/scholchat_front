@@ -20,11 +20,7 @@ import {
   Pencil,
   Loader2,
   Home,
-  Users,
   Video,
-  Store,
-  Bell,
-  BookOpen,
   Lock,
   Globe
 } from "lucide-react";
@@ -42,10 +38,79 @@ import { motion } from "framer-motion";
 import { useAuth } from "../../../../../hooks/useAuth";
 
 /**
+ * BrokenImagePlaceholder — shown when an image fails to load.
+ * Uses a subtle SVG icon, no text.
+ */
+const BrokenImagePlaceholder = ({ className = '' }) => (
+  <div className={`w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 ${className}`}>
+    <svg
+      viewBox="0 0 64 64"
+      className="w-12 h-12 opacity-30"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Frame */}
+      <rect x="6" y="10" width="52" height="44" rx="4" stroke="currentColor" strokeWidth="3" className="text-gray-500 dark:text-gray-400" />
+      {/* Mountain / landscape */}
+      <path d="M6 40 L20 24 L32 34 L42 22 L58 40" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" className="text-gray-500 dark:text-gray-400" />
+      {/* Sun circle */}
+      <circle cx="46" cy="22" r="5" stroke="currentColor" strokeWidth="3" className="text-gray-500 dark:text-gray-400" />
+      {/* Diagonal slash indicating broken */}
+      <line x1="10" y1="10" x2="54" y2="54" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-gray-400 dark:text-gray-500" />
+    </svg>
+  </div>
+);
+
+/**
+ * SafeImg — <img> wrapper that swaps in BrokenImagePlaceholder on load error.
+ */
+const SafeImg = ({ src, className, onClick, style }) => {
+  const [broken, setBroken] = React.useState(false);
+  if (broken) return <BrokenImagePlaceholder className={className} />;
+  return (
+    <img
+      src={src}
+      alt=""
+      className={className}
+      style={style}
+      onClick={onClick}
+      onError={() => setBroken(true)}
+    />
+  );
+};
+
+/**
+ * ExistingMediaThumb — fetches a presigned URL for an existing media by ID.
+ */
+const ExistingMediaThumb = ({ mediaId }) => {
+  const [url, setUrl] = React.useState(null);
+  const [broken, setBroken] = React.useState(false);
+  React.useEffect(() => {
+    if (!mediaId) return;
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+    fetch(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/download-url`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((d) => {
+        const resolved = d.url && !isDirectMinioUrl(d.url)
+          ? d.url
+          : `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`;
+        setUrl(resolved);
+      })
+      .catch(() => setUrl(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`));
+  }, [mediaId]);
+  if (!url) return <div className="w-full h-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-xl" />;
+  if (broken) return <BrokenImagePlaceholder className="rounded-xl" />;
+  return <img src={url} alt="" className="w-full h-full object-cover rounded-xl shadow-md" onError={() => setBroken(true)} />;
+};
+
+/**
  * LightboxImage — resolves a presigned URL once when the lightbox opens.
  */
 const LightboxImage = ({ mediaId, onClick }) => {
   const [url, setUrl] = React.useState(null);
+  const [broken, setBroken] = React.useState(false);
 
   React.useEffect(() => {
     if (!mediaId) return;
@@ -54,34 +119,71 @@ const LightboxImage = ({ mediaId, onClick }) => {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.ok ? r.json() : Promise.reject())
-      .then((d) => setUrl(d.url || `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`))
+      .then((d) => {
+        const resolved = d.url && !isDirectMinioUrl(d.url)
+          ? d.url
+          : `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`;
+        setUrl(resolved);
+      })
       .catch(() => setUrl(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`));
   }, [mediaId]);
 
   if (!url) return <Loader2 className="w-10 h-10 text-white animate-spin" />;
+  if (broken) return (
+    <div className="w-64 h-48 rounded-xl overflow-hidden">
+      <BrokenImagePlaceholder />
+    </div>
+  );
   return (
     <img
       src={url}
-      alt="preview"
+      alt=""
       className="object-contain rounded-xl shadow-2xl"
       style={{ maxWidth: 'calc(100% - 96px)', maxHeight: 'calc(100% - 80px)' }}
       onClick={onClick}
+      onError={() => setBroken(true)}
     />
   );
 };
 
 /**
+/**
+ * Context that signals LazyMedia components to pause URL resolution
+ * while a modal (create/edit) is open — prevents background requests
+ * during user input.
+ */
+const MediaSuspendedContext = React.createContext(false);
+
+/**
  * LazyMedia — resolves the presigned URL only when the element enters the viewport.
  * Images show a skeleton placeholder until visible; videos use VideoPlayer.
  */
-const LazyMedia = ({ mediaId, mediaType, presignedUrl, className, onClick, overlay }) => {
+// Returns true if the URL is a direct MinIO/S3 URL that should be proxied instead
+const isDirectMinioUrl = (url) => {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    // Direct MinIO: different host/port than the API, or contains S3 query params
+    const apiHost = new URL(process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080').hostname;
+    return u.hostname !== apiHost || u.searchParams.has('X-Amz-Algorithm');
+  } catch (e) { return false; }
+};
+
+const LazyMedia = React.memo(({ mediaId, mediaType, presignedUrl, className, onClick, overlay }) => {
   const containerRef = React.useRef(null);
-  const [url, setUrl] = React.useState(presignedUrl || null);
+  // Only use presignedUrl if it's a safe proxied URL (not a direct MinIO URL)
+  const safeInitial = (presignedUrl && !isDirectMinioUrl(presignedUrl)) ? presignedUrl : null;
+  const [url, setUrl] = React.useState(safeInitial);
   const [loading, setLoading] = React.useState(false);
+  const [imgBroken, setImgBroken] = React.useState(false);
+  // Pause URL resolution while any modal is open
+  const suspended = React.useContext(MediaSuspendedContext);
 
   React.useEffect(() => {
-    // If presignedUrl was already provided by the events API, skip the fetch entirely
-    if (presignedUrl) { setUrl(presignedUrl); return; }
+    // If we already have a safe proxied URL, use it directly
+    if (safeInitial) { setUrl(safeInitial); return; }
+    // Don't start fetching if a modal is open — avoid noisy background requests
+    if (suspended) return;
     const el = containerRef.current;
     if (!el || !mediaId) return;
 
@@ -100,7 +202,13 @@ const LazyMedia = ({ mediaId, mediaType, presignedUrl, className, onClick, overl
               headers: { Authorization: `Bearer ${token}` },
             })
               .then((r) => r.ok ? r.json() : Promise.reject())
-              .then((d) => setUrl(d.url || `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`))
+              .then((d) => {
+                // Always use the proxied content URL, never the direct MinIO URL
+                const resolved = d.url && !isDirectMinioUrl(d.url)
+                  ? d.url
+                  : `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`;
+                setUrl(resolved);
+              })
               .catch(() => setUrl(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`))
               .finally(() => setLoading(false));
           }
@@ -110,7 +218,7 @@ const LazyMedia = ({ mediaId, mediaType, presignedUrl, className, onClick, overl
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [mediaId, mediaType, presignedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mediaId, mediaType, safeInitial, suspended]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isVideo = (mediaType || '').toUpperCase() === 'VIDEO';
 
@@ -123,8 +231,10 @@ const LazyMedia = ({ mediaId, mediaType, presignedUrl, className, onClick, overl
         </div>
       ) : isVideo ? (
         <VideoPlayer src={url} className="w-full h-full object-cover" />
+      ) : imgBroken ? (
+        <BrokenImagePlaceholder />
       ) : (
-        <img src={url} alt="media" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={() => setImgBroken(true)} />
       )}
       {overlay && (
         <div className="absolute inset-0 bg-black/55 flex items-center justify-center pointer-events-none">
@@ -133,27 +243,75 @@ const LazyMedia = ({ mediaId, mediaType, presignedUrl, className, onClick, overl
       )}
     </div>
   );
-};
+});
 
 /**
- * VideoPlayer — lazy preview mode.
+ * VideoPlayer — shows a real first-frame thumbnail in preview mode.
  *
- * Phase 1 (preview): Shows a dark placeholder with a play button overlay.
- *   No network request is made until the user explicitly clicks play.
+ * Phase 1 (preview): Loads video metadata + seeks to 0.5 s to paint a
+ *   thumbnail onto a canvas. Only a few KB are fetched (metadata range).
+ *   The canvas image is shown as the poster with a play-button overlay.
  *
- * Phase 2 (active): On click, fetches the presigned S3 URL once, then lets
- *   the browser stream natively. Uses preload="metadata" so only the first
- *   few KB are fetched up-front instead of the whole file.
+ * Phase 2 (active): On click, fetches the presigned S3 URL and streams
+ *   the video natively with controls. Uses preload="metadata".
  *
- * Also pauses automatically when scrolled out of view.
+ * Auto-pauses when scrolled out of view.
  */
 const VideoPlayer = ({ src, className }) => {
   const videoRef = useRef(null);
+  const thumbVideoRef = useRef(null);
+  const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [streamUrl, setStreamUrl] = useState(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState(null);
+  const [thumbError, setThumbError] = useState(false);
   const [error, setError] = useState(false);
-  const [resolving, setResolving] = useState(false); // fetching presigned URL
-  const [active, setActive] = useState(false); // user has clicked play
+  const [resolving, setResolving] = useState(false);
+  const [active, setActive] = useState(false);
+  // Pause thumbnail generation while a modal is open
+  const suspended = React.useContext(MediaSuspendedContext);
+
+  // ── Generate thumbnail from the first frame ────────────────────────────────
+  useEffect(() => {
+    if (!src || suspended) return;
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+
+    const cleanup = () => {
+      video.removeAttribute('src');
+      video.load();
+    };
+
+    video.onloadedmetadata = () => {
+      // Seek to 10% of duration (or 0.5 s, whichever is smaller) for a representative frame
+      video.currentTime = Math.min(0.5, video.duration * 0.1 || 0.5);
+    };
+
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 360;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        setThumbnailUrl(canvas.toDataURL('image/jpeg', 0.8));
+      } catch (e) {
+        // CORS or tainted canvas — fall back to styled preview
+        setThumbError(true);
+      }
+      cleanup();
+    };
+
+    video.onerror = () => {
+      setThumbError(true);
+      cleanup();
+    };
+
+    video.src = src;
+  }, [src, suspended]);
 
   const activate = (e) => {
     e.stopPropagation();
@@ -162,8 +320,6 @@ const VideoPlayer = ({ src, className }) => {
     setActive(true);
 
     const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-    // src is like: {API_BASE}/media/{id}/content
-    // Strip "/content" → {API_BASE}/media/{id}/download-url
     const downloadUrlEndpoint = src.replace(/\/content$/, '/download-url');
 
     fetch(downloadUrlEndpoint, {
@@ -178,16 +334,15 @@ const VideoPlayer = ({ src, className }) => {
         setResolving(false);
       })
       .catch(() => {
-        // Fallback: stream directly through the authenticated proxy endpoint
         setStreamUrl(src);
         setResolving(false);
       });
   };
 
-  // Auto-play once the URL is resolved
+  // Auto-play once the stream URL is resolved
   useEffect(() => {
     if (streamUrl && videoRef.current) {
-      videoRef.current.play().catch(() => {/* autoplay blocked – user can press play manually */});
+      videoRef.current.play().catch(() => {});
     }
   }, [streamUrl]);
 
@@ -195,7 +350,6 @@ const VideoPlayer = ({ src, className }) => {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !streamUrl) return;
-
     const observer = new IntersectionObserver(
       ([entry]) => { if (!entry.isIntersecting) video.pause(); },
       { threshold: 0.25 }
@@ -204,7 +358,7 @@ const VideoPlayer = ({ src, className }) => {
     return () => observer.disconnect();
   }, [streamUrl]);
 
-  // ── Phase 2: video element (shown after user clicks) ──────────────────────
+  // ── Phase 2: active player ─────────────────────────────────────────────────
   if (active) {
     if (error) {
       return (
@@ -214,7 +368,6 @@ const VideoPlayer = ({ src, className }) => {
         </div>
       );
     }
-
     if (resolving || !streamUrl) {
       return (
         <div className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}>
@@ -223,7 +376,6 @@ const VideoPlayer = ({ src, className }) => {
         </div>
       );
     }
-
     return (
       <video
         ref={videoRef}
@@ -238,30 +390,57 @@ const VideoPlayer = ({ src, className }) => {
     );
   }
 
-  // ── Phase 1: preview thumbnail (default, no network cost) ─────────────────
+  // ── Phase 1: thumbnail preview ─────────────────────────────────────────────
+  const hasThumbnail = thumbnailUrl && !thumbError;
+
   return (
     <div
       ref={containerRef}
-      className={`${className} relative flex items-center justify-center bg-gray-900 cursor-pointer group`}
+      className={`${className} relative flex items-center justify-center cursor-pointer group overflow-hidden`}
+      style={hasThumbnail ? {} : { backgroundColor: '#1a1a2e' }}
       onClick={activate}
       title="Lire la vidéo"
     >
-      {/* Subtle video-strip texture */}
-      <div className="absolute inset-0 opacity-10"
-        style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 30px,rgba(255,255,255,.05) 30px,rgba(255,255,255,.05) 31px)' }}
-      />
+      {/* Real first-frame thumbnail */}
+      {hasThumbnail ? (
+        <img
+          src={thumbnailUrl}
+          alt="aperçu vidéo"
+          className="absolute inset-0 w-full h-full object-cover"
+          draggable={false}
+        />
+      ) : (
+        /* Fallback: film-strip pattern when thumbnail not yet ready or CORS blocked */
+        <>
+          <div
+            className="absolute inset-0 opacity-15"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(255,255,255,.06) 28px,rgba(255,255,255,.06) 29px)',
+            }}
+          />
+          {!thumbError && (
+            /* Subtle pulsing skeleton while thumbnail is being captured */
+            <div className="absolute inset-0 bg-gray-800 animate-pulse" />
+          )}
+        </>
+      )}
+
+      {/* Dark gradient overlay so the play button is always readable */}
+      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors duration-200" />
+
       {/* Play button */}
       <div className="relative z-10 flex flex-col items-center gap-2">
-        <div className="w-16 h-16 rounded-full bg-white/20 group-hover:bg-white/30 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center transition-all duration-200 group-hover:scale-110 shadow-2xl">
-          {/* Triangle play icon */}
+        <div className="w-16 h-16 rounded-full bg-white/25 group-hover:bg-white/40 backdrop-blur-sm border-2 border-white/50 flex items-center justify-center transition-all duration-200 group-hover:scale-110 shadow-2xl">
           <svg viewBox="0 0 24 24" className="w-7 h-7 text-white fill-current ml-1" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 5v14l11-7z" />
           </svg>
         </div>
-        <span className="text-white/70 text-xs font-medium tracking-wide select-none">Lire la vidéo</span>
+        <span className="text-white/80 text-xs font-medium tracking-wide select-none drop-shadow">Lire la vidéo</span>
       </div>
+
       {/* Video badge */}
-      <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+      <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
         <Video className="w-3 h-3" />
         <span>Vidéo</span>
       </div>
@@ -271,12 +450,15 @@ const VideoPlayer = ({ src, className }) => {
 
 // Module-level cache — survives component unmount/remount (navigation away and back)
 const _cache = {
-  data: null,        // processed activities array
+  pages: {},       // pageIndex -> processed activities array
+  totalElements: 0,
+  totalPages: null,  // null = unknown
   timestamp: 0,
-  userNames: {},     // userId -> { name, role }
-  classNames: {},    // classId -> string name
+  userNames: {},   // userId -> { name, role }
+  classNames: {},  // classId -> string name
 };
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes before background refresh
+const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+const PAGE_SIZE = 10;
 
 const ActivitiesContent = () => {
   const { t } = useTranslation();
@@ -289,19 +471,61 @@ const ActivitiesContent = () => {
   const canCreateEvent = isAdmin || isProfessor || isTutor || isGestionnaire ||
     userRole.includes('ADMIN') || userRole.includes('PROFESSOR') || userRole.includes('TUTOR') || userRole.includes('GESTIONNAIRE');
 
+  // Build the tab list once based on role.
+  // Creators (professor/admin/tutor/gestionnaire) get "Mes publications" since they author events.
+  // Viewers (student/parent) never create events so that tab is replaced with "Récents" (past events).
+  const sidebarTabs = React.useMemo(() => {
+    const base = [
+      { key: 'all',          label: 'Fil d\'actualité', labelMobile: 'Tout',           icon: Home,     color: 'text-gray-600',   bg: 'bg-gray-100 dark:bg-gray-700' },
+      { key: 'upcoming',     label: 'À venir',          labelMobile: 'À venir',        icon: Calendar, color: 'text-green-600',  bg: 'bg-green-50 dark:bg-green-900/30' },
+      { key: 'withMedia',    label: 'Avec médias',      labelMobile: 'Médias',         icon: Image,    color: 'text-pink-600',   bg: 'bg-pink-50 dark:bg-pink-900/30' },
+      { key: 'participating',label: 'Participations',   labelMobile: 'Participations', icon: UserPlus, color: 'text-blue-600',   bg: 'bg-blue-50 dark:bg-blue-900/30' },
+    ];
+    if (canCreateEvent) {
+      // Insert "Mes publications" right after "Fil d'actualité"
+      base.splice(1, 0, {
+        key: 'mine', label: 'Mes publications', labelMobile: 'Mes posts',
+        icon: Pencil, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/30',
+      });
+    } else {
+      // Students/parents: add "Passés" — events that have already happened
+      base.push({
+        key: 'past', label: 'Passés', labelMobile: 'Passés',
+        icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/30',
+      });
+    }
+    return base;
+  }, [canCreateEvent]);
+
   const pluralize = (count, singular, plural) => {
     return `${count} ${count === 1 ? singular : plural}`;
   };
 
-  const [activities, setActivities] = useState(() => _cache.data || []);
-  const [loadingActivities, setLoadingActivities] = useState(!_cache.data);
-  const [staticActivities] = useState([]);
+  const [activities, setActivities] = useState(() => {
+    // Restore from cache: flatten all pages in order
+    const pages = _cache.pages;
+    const keys = Object.keys(pages).map(Number).sort((a, b) => a - b);
+    return keys.length > 0 ? keys.flatMap(k => pages[k]) : [];
+  });
+  const [loadingActivities, setLoadingActivities] = useState(() => {
+    const keys = Object.keys(_cache.pages);
+    return keys.length === 0;
+  });
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(() => {
+    const keys = Object.keys(_cache.pages).map(Number);
+    return keys.length > 0 ? Math.max(...keys) : 0;
+  });
+  const [hasMore, setHasMore] = useState(_cache.totalPages === null || _cache.totalPages > 1);
+  const [totalElements, setTotalElements] = useState(_cache.totalElements || 0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef(null);
   const [likingActivities, setLikingActivities] = useState({});
   const [localLikes, setLocalLikes] = useState({});
   const [localComments, setLocalComments] = useState({});
   const [likedByUsers, setLikedByUsers] = useState({});
-  const [activeTab, setActiveTab] = useState('all'); // New state for active tab
-  const [filteredActivities, setFilteredActivities] = useState([]); // Filtered activities
+  const [activeTab, setActiveTab] = useState('all');
+  const [filteredActivities, setFilteredActivities] = useState([]);
   const [newComment, setNewComment] = useState({});
   const [imagePreview, setImagePreview] = useState({
     isOpen: false,
@@ -341,55 +565,70 @@ const ActivitiesContent = () => {
   });
   const [classFilterName, setClassFilterName] = useState("");
 
-  const PAGE_SIZE = 5; // TEMP: lowered from 11 for testing pagination per boss's request
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef(null);
+  // Module-level cache for classes — shared between publication rights and the create/edit forms.
+  // Avoids fetching /classes twice on mount (once for publication rights, once for the form).
+  const _classesCache = useRef({ data: null, timestamp: 0, role: null });
+  const CLASS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  const loadClasses = async () => {
-    if (formData.visibility !== 'PRIVATE') return;
+  /**
+   * Fetch classes for the current user once and cache the result.
+   * - Sets `userPublicationClassIds` (used by permission checks) on every call.
+   * - Sets `classes` (used by the create/edit dropdowns) only when `forForm` is true.
+   */
+  const loadClasses = async ({ forForm = false } = {}) => {
+    const userRoleLocal = localStorage.getItem('userRole') || '';
+    const userId = localStorage.getItem('userId');
+    const isAdminRole = userRoleLocal.toUpperCase().includes('ADMIN');
+    const isProfessorRole = userRoleLocal.toUpperCase().includes('PROFESSOR') || userRoleLocal.toUpperCase().includes('TUTOR');
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
 
-    setLoadingClasses(true);
+    // Use cache if still fresh for the same role
+    const now = Date.now();
+    const cacheKey = `${userId}-${userRoleLocal}`;
+    if (
+      _classesCache.current.data &&
+      _classesCache.current.role === cacheKey &&
+      now - _classesCache.current.timestamp < CLASS_CACHE_TTL
+    ) {
+      const cached = _classesCache.current.data;
+      setUserPublicationClassIds(cached.map(c => c.id));
+      if (forForm) setClasses(cached);
+      return;
+    }
+
+    if (forForm) setLoadingClasses(true);
     try {
-      const userRole = localStorage.getItem('userRole') || '';
-      const userId = localStorage.getItem('userId');
-      const isAdmin = userRole.toUpperCase().includes('ADMIN');
-
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-      const isProfessor = userRole.toUpperCase().includes('PROFESSOR') || userRole.toUpperCase().includes('TUTOR');
-
       let classesData = [];
-
-      if (isAdmin) {
-        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      if (isAdminRole) {
+        const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes`, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
-        if (response.ok) classesData = await response.json();
-      } else if (isProfessor) {
-        const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        if (res.ok) classesData = await res.json();
+      } else if (isProfessorRole) {
+        const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
-        if (resp.ok) classesData = await resp.json();
+        if (res.ok) classesData = await res.json();
       } else {
-        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        // Student / parent — for form selection only
+        const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
-        if (response.ok) classesData = await response.json();
+        if (res.ok) classesData = await res.json();
       }
 
-      // Filter active classes only
-      const activeClasses = classesData.filter(c => c.etat === 'ACTIF' || !c.etat);
-      setClasses(activeClasses);
-      
-      // Store IDs for permission checking
-      if (isAdmin || isProfessor) {
-        setUserPublicationClassIds(activeClasses.map(c => c.id));
-      }
-    } catch (error) {
-      console.error('Error loading classes:', error);
-      setClasses([]);
+      const active = classesData.filter(c => c.etat === 'ACTIF' || !c.etat);
+      // Store in cache
+      _classesCache.current = { data: active, role: cacheKey, timestamp: now };
+      // Always update publication IDs
+      setUserPublicationClassIds(active.map(c => c.id));
+      // Only update the dropdown list when called from a form
+      if (forForm) setClasses(active);
+    } catch (err) {
+      console.error('Error loading classes:', err);
+      if (forForm) setClasses([]);
     } finally {
-      setLoadingClasses(false);
+      if (forForm) setLoadingClasses(false);
     }
   };
 
@@ -399,88 +638,61 @@ const ActivitiesContent = () => {
 
   useEffect(() => {
     const now = Date.now();
-    const hasFreshCache = _cache.data && (now - _cache.timestamp) < CACHE_TTL;
+    const hasFreshCache =
+      Object.keys(_cache.pages).length > 0 && (now - _cache.timestamp) < CACHE_TTL;
     if (hasFreshCache) {
-      // Instant display from cache — no spinner
-      setActivities(_cache.data);
+      const keys = Object.keys(_cache.pages).map(Number).sort((a, b) => a - b);
+      setActivities(keys.flatMap(k => _cache.pages[k]));
+      setHasMore(!_cache.isLast);
+      setTotalElements(_cache.totalElements || 0);
       setLoadingActivities(false);
     } else {
-      // No cache or stale: load with spinner
-      loadEvents();
+      loadEvents(0, true);
     }
-    loadPublicationRights();
+    // Load publication rights once on mount (no form update — just IDs for permission checks)
+    loadClasses({ forForm: false });
   }, []);
 
-  const loadPublicationRights = async () => {
-    const userRole = localStorage.getItem('userRole') || '';
-    const userId = localStorage.getItem('userId');
-    const isAdmin = userRole.toUpperCase().includes('ADMIN');
-    const isProfessor = userRole.toUpperCase().includes('PROFESSOR') || userRole.toUpperCase().includes('TUTOR');
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-
-    try {
-      let classesData = [];
-      if (isAdmin) {
-        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-        });
-        if (response.ok) classesData = await response.json();
-      } else if (isProfessor) {
-        const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/droits-publication/utilisateurs/${userId}/classes`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-        });
-        if (resp.ok) classesData = await resp.json();
-      }
-
-      const activeIds = classesData.filter(c => c.etat === 'ACTIF' || !c.etat).map(c => c.id);
-      setUserPublicationClassIds(activeIds);
-    } catch (e) {
-      console.error('Error loading publication rights:', e);
-    }
-  };
-
   useEffect(() => {
-    loadClasses();
+    if (formData.visibility === 'PRIVATE') loadClasses({ forForm: true });
   }, [formData.visibility]);
 
   useEffect(() => {
-    if (editingActivity && editFormData.visibility === 'PRIVATE') loadClasses();
+    if (editingActivity && editFormData.visibility === 'PRIVATE') loadClasses({ forForm: true });
   }, [editFormData.visibility, editingActivity]);
 
   // Filter activities based on active tab
   useEffect(() => {
     const currentUserId = localStorage.getItem('userId');
+    const now = new Date();
     let filtered = [];
-    
+
     switch (activeTab) {
-      case 'user':
-        // Show only user's own events
-        filtered = activities.filter(activity => 
-          activity.eventDetails && activity.eventDetails.createurId === currentUserId
-        );
+      case 'mine':
+        // Events created by the current user (creators only)
+        filtered = activities.filter(a => a.createurId === currentUserId);
         break;
-      case 'groups':
-        // Show only private/group events
-        filtered = activities.filter(activity => 
-          activity.visibility === 'PRIVATE'
-        );
+      case 'upcoming':
+        // Events whose start time is in the future
+        filtered = activities.filter(a => a.heureDebut && new Date(a.heureDebut) > now);
         break;
-      case 'events':
-        // Show only upcoming events
-        filtered = activities.filter(activity => 
-          activity.eventDetails && new Date(activity.eventDetails.startTime) > new Date()
-        );
+      case 'withMedia':
+        // Events that have at least one image or video
+        filtered = activities.filter(a => a.medias && a.medias.length > 0);
         break;
-      case 'saved':
-        // Show only liked/participated events
-        filtered = activities.filter(activity => 
-          activity.isLiked || activity.isParticipating
-        );
+      case 'participating':
+        // Events the current user has joined
+        filtered = activities.filter(a => a.isParticipating);
+        break;
+      case 'past':
+        // Events whose start time has already passed (viewers only)
+        filtered = activities.filter(a => a.heureDebut && new Date(a.heureDebut) <= now);
         break;
       default:
+        // 'all' — show everything
         filtered = activities;
     }
-    
+
     // Apply class filter if active (navigated from class management)
     if (classFilterId) {
       filtered = filtered.filter(a =>
@@ -491,17 +703,17 @@ const ActivitiesContent = () => {
     setFilteredActivities(filtered);
   }, [activities, activeTab, classFilterId]);
 
-  // Reset page only when the filter/tab changes, NOT when new data arrives
+  // When the filter tab changes, reset to show only what's already loaded
   useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
+    // no-op: filteredActivities is derived; no page reset needed for server pagination
   }, [activeTab, classFilterId]);
 
-  // Infinite scroll on mobile: load more when sentinel enters viewport
+  // Infinite scroll on mobile: load next page when sentinel enters viewport
   useEffect(() => {
     if (!isMobile || !sentinelRef.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !loadingMore && filteredActivities.length > visibleCount) {
+        if (entry.isIntersecting && !loadingMore && hasMore) {
           handleLoadMore();
         }
       },
@@ -509,197 +721,180 @@ const ActivitiesContent = () => {
     );
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
-  }, [isMobile, loadingMore, filteredActivities.length, visibleCount]);
+  }, [isMobile, loadingMore, hasMore]);
 
+  /** Fetch the next page and append its items to the list. */
   const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
     setLoadingMore(true);
-    // Capture current count before the background refresh resets nothing
-    const nextCount = visibleCount + PAGE_SIZE;
+    const nextPage = currentPage + 1;
     try {
-      await loadEvents({ showSpinner: false });
+      await loadEvents(nextPage, false);
     } catch (e) { /* ignore */ }
-    setVisibleCount(nextCount);
     setLoadingMore(false);
   };
 
-  const loadEvents = async ({ showSpinner = true } = {}) => {
+  /**
+   * Core paginated loader.
+   * @param {number}  page         0-based page index to fetch
+   * @param {boolean} showSpinner  show full-screen spinner (true on initial load)
+   * @param {boolean} reset        discard existing pages and start fresh (after create/edit/delete)
+   */
+  const loadEvents = async (page = 0, showSpinner = true, reset = false) => {
     if (showSpinner) setLoadingActivities(true);
     try {
-      const events = await activityFeedService.getActivities();
+      const pagedResult = await activityFeedService.getActivitiesPaged(page, PAGE_SIZE);
+      const events = pagedResult.content || [];
       const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
       const currentUserId = localStorage.getItem('userId');
 
-      // Collect all unique creator IDs and class IDs up front for batched resolution
+      // Resolve unknown creator names and class names in parallel (batched, cached)
       const unknownUserIds = new Set();
       const unknownClassIds = new Set();
       events.forEach(event => {
-        if (!event.createurPrenom && !event.createurNom && !event.createur && event.createurId) {
+        if (!event.createurPrenom && !event.createurNom && event.createurId) {
           if (!_cache.userNames[event.createurId]) unknownUserIds.add(event.createurId);
         }
-        (event.classesIds || event.selectedClasses || []).forEach(id => {
+        (event.classesIds || []).forEach(id => {
           if (!_cache.classNames[id]) unknownClassIds.add(id);
         });
       });
 
-      // Resolve unknown users in parallel (one fetch per unique missing user)
-      await Promise.all([...unknownUserIds].map(async (uid) => {
-        try {
-          const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${uid}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const d = await res.json();
-            const name = `${d.prenom || ''} ${d.nom || ''}`.trim() || d.email || 'Utilisateur';
-            const typeMap = { professeur: 'Professeur', eleve: 'Eleve', parent: 'Parent', gestionnaire: 'Gestionnaire', repetiteur: 'Repetiteur' };
-            const role = d.admin ? 'Admin' : (typeMap[(d.type || '').toLowerCase()] || '');
-            _cache.userNames[uid] = { name, role };
-          }
-        } catch { /* ignore */ }
-      }));
+      await Promise.all([
+        ...[...unknownUserIds].map(async (uid) => {
+          try {
+            const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${uid}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const d = await res.json();
+              const name = `${d.prenom || ''} ${d.nom || ''}`.trim() || d.email || 'Utilisateur';
+              const typeMap = { professeur: 'Professeur', eleve: 'Eleve', parent: 'Parent', gestionnaire: 'Gestionnaire', repetiteur: 'Repetiteur' };
+              const role = d.admin ? 'Admin' : (typeMap[(d.type || '').toLowerCase()] || '');
+              _cache.userNames[uid] = { name, role };
+            }
+          } catch { /* ignore */ }
+        }),
+        ...[...unknownClassIds].map(async (classId) => {
+          try {
+            const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes/${classId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const cls = await res.json();
+              _cache.classNames[classId] = cls.nom || cls.name || null;
+            }
+          } catch { /* ignore */ }
+        }),
+      ]);
 
-      // Resolve unknown class names in parallel
-      await Promise.all([...unknownClassIds].map(async (classId) => {
-        try {
-          const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes/${classId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const cls = await res.json();
-            _cache.classNames[classId] = cls.nom || cls.name || null;
-          }
-        } catch { /* ignore */ }
-      }));
+      // Map raw events to the shape the UI expects
+      const mapped = events.map(event => {
+        const medias = (event.medias || [])
+          .filter(m => {
+            const mt = (m.mediaType || '').toUpperCase();
+            return (mt === 'IMAGE' || mt === 'PHOTO' || mt === 'VIDEO') && m.id;
+          })
+          .map(m => ({
+            id: m.id,
+            type: (m.mediaType || '').toUpperCase() === 'VIDEO' ? 'VIDEO' : 'IMAGE',
+            presignedUrl: m.presignedUrl || null,
+            fileName: m.fileName,
+            filePath: m.filePath,
+            fileType: m.fileType,
+            contentType: m.contentType,
+            fileSize: m.fileSize,
+            mediaType: m.mediaType,
+            bucketName: m.bucketName || 'scholchat',
+          }));
 
-      const activitiesWithMedias = await Promise.all(
-        events.map(async (event) => {
-          // Store only metadata — URLs are resolved lazily by LazyMedia when visible
-          const medias = (event.medias || [])
-            .filter(m => {
-              const mt = (m.mediaType || '').toUpperCase();
-              return (mt === 'IMAGE' || mt === 'PHOTO' || mt === 'VIDEO') && m.id;
-            })
-            .map(m => ({
-              id: m.id,
-              type: (m.mediaType || '').toUpperCase() === 'VIDEO' ? 'VIDEO' : 'IMAGE',
-              presignedUrl: m.presignedUrl || null,
-            }));
+        const interactions = event.interactions || [];
+        const likes = interactions.filter(i => i.type === 'LIKE').length;
+        const comments = interactions
+          .filter(i => i.type === 'COMMENT')
+          .map(c => ({
+            id: c.id,
+            content: c.content,
+            createdById: c.createdById,
+            creationDate: c.creationDate,
+            isCurrentUser: c.createdById === currentUserId,
+          }));
+        const isLiked = interactions.some(i => i.type === 'LIKE' && i.createdById === currentUserId);
+        const participants = event.participantsIds?.length || 0;
+        const isParticipating = event.participantsIds?.includes(currentUserId) || false;
 
-          const interactions = event.interactions || [];
-          const likes = interactions.filter(i => i.type === 'LIKE').length;
-          const comments = interactions
-            .filter(i => i.type === 'COMMENT')
-            .map(comment => ({
-              id: comment.id,
-              content: comment.content,
-              createdById: comment.createdById,
-              creationDate: comment.creationDate,
-              isCurrentUser: comment.createdById === currentUserId
-            }));
-          const isLiked = interactions.some(i => i.type === 'LIKE' && i.createdById === currentUserId);
-          const participants = event.participantsIds?.length || 0;
-          const isParticipating = event.participantsIds?.includes(currentUserId) || false;
+        let creatorName = '';
+        let creatorRole = event.createurRole || '';
+        if (event.createurPrenom || event.createurNom) {
+          creatorName = `${event.createurPrenom || ''} ${event.createurNom || ''}`.trim();
+        } else if (event.createurId && _cache.userNames[event.createurId]) {
+          creatorName = _cache.userNames[event.createurId].name;
+          if (!creatorRole) creatorRole = _cache.userNames[event.createurId].role;
+        }
+        if (!creatorName) creatorName = 'Utilisateur';
 
-          // Creator name: use backend fields, then cache, then fallback
-          let creatorName = '';
-          let creatorRole = event.createurRole || '';
-          if (event.createurPrenom || event.createurNom) {
-            creatorName = `${event.createurPrenom || ''} ${event.createurNom || ''}`.trim();
-          } else if (event.createur) {
-            creatorName = `${event.createur.prenom || ''} ${event.createur.nom || ''}`.trim() || event.createur.email || '';
-          } else if (event.createurId && _cache.userNames[event.createurId]) {
-            creatorName = _cache.userNames[event.createurId].name;
-            if (!creatorRole) creatorRole = _cache.userNames[event.createurId].role;
-          }
-          if (!creatorName) creatorName = 'Utilisateur';
+        const classIds = event.classesIds || [];
+        const classNames = classIds.map(id => _cache.classNames[id]).filter(Boolean);
 
-          // Class names from cache
-          const classIds = event.classesIds || event.selectedClasses || [];
-          const classNames = classIds
-            .map(id => _cache.classNames[id])
-            .filter(Boolean);
-
-          return {
-            id: event.id,
-            type: 'event',
-            medias,
-            likes,
-            comments,
-            isLiked,
-            participants,
-            isParticipating,
-            showComments: false,
-            classNames,
-            user: { name: creatorName, role: creatorRole },
-            titre: event.titre,
+        return {
+          id: event.id,
+          type: 'event',
+          medias,
+          likes,
+          comments,
+          isLiked,
+          participants,
+          isParticipating,
+          showComments: false,
+          classNames,
+          user: { name: creatorName, role: creatorRole },
+          titre: event.titre,
+          description: event.description,
+          content: event.description,
+          timestamp: event.creationDate
+            ? new Date(event.creationDate).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : event.heureDebut
+              ? new Date(event.heureDebut).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+              : '',
+          eventDetails: {
+            title: event.titre,
             description: event.description,
-            content: event.description,
-            timestamp: event.creationDate
-              ? new Date(event.creationDate).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-              : new Date(event.heureDebut).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            eventDetails: {
-              title: event.titre,
-              description: event.description,
-              location: event.lieu,
-              status: event.etat,
-              startTime: event.heureDebut,
-              endTime: event.heureFin,
-              participantsCount: participants,
-            },
-            participantsIds: event.participantsIds || [],
-            heureDebut: event.heureDebut,
-            creationDate: event.creationDate,
-            visibility: event.visibility || 'PUBLIC',
-            selectedClasses: classIds,
-            createurId: event.createurId,
-          };
-        })
-      );
-
-      // Sort: non-admin events first (by date desc), then admin events (by date desc)
-      activitiesWithMedias.sort((a, b) => {
-        const aIsAdmin = (a.user?.role || '').toLowerCase() === 'admin';
-        const bIsAdmin = (b.user?.role || '').toLowerCase() === 'admin';
-        if (aIsAdmin !== bIsAdmin) return aIsAdmin ? 1 : -1;
-        const da = a.heureDebut ? new Date(a.heureDebut) : new Date(a.creationDate);
-        const db = b.heureDebut ? new Date(b.heureDebut) : new Date(b.creationDate);
-        return db - da;
+            location: event.lieu,
+            status: event.etat,
+            startTime: event.heureDebut,
+            endTime: event.heureFin,
+            participantsCount: participants,
+          },
+          participantsIds: event.participantsIds || [],
+          heureDebut: event.heureDebut,
+          creationDate: event.creationDate,
+          visibility: event.visibility || 'PUBLIC',
+          selectedClasses: classIds,
+          createurId: event.createurId,
+        };
       });
 
-      const selectedRole = (localStorage.getItem('userRole') || '').toUpperCase().replace('ROLE_', '');
-      const isParentOrStudentRole = selectedRole === 'PARENT' || selectedRole === 'STUDENT';
-      let visibleActivities = activitiesWithMedias;
-
-      if (isParentOrStudentRole) {
-        const childId = selectedRole === 'PARENT'
-          ? (localStorage.getItem('selectedChildId') || currentUserId)
-          : currentUserId;
-        let userClassIds = [];
-        try {
-          const classResp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${childId}/classes`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (classResp.ok) {
-            const userClasses = await classResp.json();
-            userClassIds = userClasses.map(c => c.id);
-          }
-        } catch (e) { /* ignore */ }
-
-        visibleActivities = activitiesWithMedias.filter(a => {
-          if (!a.visibility || a.visibility === 'PUBLIC') return true;
-          if (a.selectedClasses && a.selectedClasses.length > 0) {
-            return a.selectedClasses.some(classId => userClassIds.includes(classId));
-          }
-          return false;
-        });
+      // Update cache
+      if (reset) {
+        _cache.pages = {};
       }
-
-      // Store in cache
-      _cache.data = visibleActivities;
+      _cache.pages[page] = mapped;
+      _cache.totalElements = pagedResult.totalElements;
+      _cache.totalPages = pagedResult.totalPages;
+      _cache.isLast = pagedResult.last;
       _cache.timestamp = Date.now();
-      setActivities(visibleActivities);
+
+      // Rebuild the activities list from all cached pages in order
+      const allKeys = Object.keys(_cache.pages).map(Number).sort((a, b) => a - b);
+      const allActivities = allKeys.flatMap(k => _cache.pages[k]);
+
+      setActivities(allActivities);
+      setCurrentPage(page);
+      setHasMore(!pagedResult.last);
+      setTotalElements(pagedResult.totalElements);
     } catch (error) {
-      console.error('Error loading activities:', error);
-      if (!_cache.data) setActivities([]);
+      console.error('Error loading activities (page', page, '):', error);
+      if (Object.keys(_cache.pages).length === 0) setActivities([]);
     } finally {
       setLoadingActivities(false);
     }
@@ -793,8 +988,8 @@ const ActivitiesContent = () => {
       setUploadedImages([]);
       setCreateFormError("");
       setShowCreateForm(false);
-      _cache.data = null;
-      await loadEvents();
+      _cache.pages = {};
+      await loadEvents(0, true, true);
     } catch (error) {
       console.error('Error creating event:', error);
       const msg = error?.response?.data?.message || error?.response?.data || error?.message || t('activities.errors.createEventFailed', 'Échec de la création de l\'événement');
@@ -953,6 +1148,7 @@ const ActivitiesContent = () => {
     setEditLoading(true);
     try {
       const uploadedMedia = [...(editFormData.existingMedias || []).map(m => ({
+        id: m.id,                              // keep ID so backend treats this as "preserve, not new"
         fileName: m.fileName || m.name,
         filePath: m.filePath || m.url,
         fileType: m.fileType || m.type || 'IMAGE',
@@ -981,8 +1177,8 @@ const ActivitiesContent = () => {
       });
       setEditingActivity(null);
       setEditUploadedImages([]);
-      _cache.data = null;
-      await loadEvents();
+      _cache.pages = {};
+      await loadEvents(0, true, true);
     } catch (error) {
       console.error('Error updating event:', error);
       alert(`Échec de la mise à jour: ${error.message}`);
@@ -1000,6 +1196,10 @@ const ActivitiesContent = () => {
     try {
       await activityFeedService.deleteEvent(activityId);
       setActivities(prev => prev.filter(a => a.id !== activityId));
+      // Evict from page cache so the deleted item doesn't reappear on next load
+      Object.keys(_cache.pages).forEach(k => {
+        _cache.pages[k] = _cache.pages[k].filter(a => a.id !== activityId);
+      });
     } catch (error) {
       console.error('Error deleting event:', error);
       alert(`Échec de la suppression: ${error.message}`);
@@ -1083,8 +1283,8 @@ const ActivitiesContent = () => {
       
       // Small delay to let the backend fully persist media before re-fetching
       await new Promise(resolve => setTimeout(resolve, 800));
-      _cache.data = null; // invalidate so next load is fresh
-      await loadEvents();
+      _cache.pages = {};
+      await loadEvents(0, true, true);
       
     } catch (error) {
       console.error('Error creating event:', error);
@@ -1096,7 +1296,10 @@ const ActivitiesContent = () => {
     }
   };
 
+  const modalOpen = showCreateForm || !!editingActivity;
+
   return (
+    <MediaSuspendedContext.Provider value={modalOpen}>
     <div className="relative -mx-[30px] -mt-4">
       {/* Facebook-like Layout: Sidebar + Main Content */}
       <div className={`w-full px-4 lg:px-6 ${isMobile ? 'pb-32' : ''}`}>
@@ -1104,15 +1307,22 @@ const ActivitiesContent = () => {
           {/* Left Sidebar - Hidden on mobile, visible on desktop */}
           <aside className="hidden lg:block lg:w-80 xl:w-96 lg:flex-shrink-0">
             <div className="sticky top-20 space-y-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-              {[
-                { key: 'all', label: 'Fil d\'actualite', icon: Home, color: 'text-gray-700', bg: '' },
-                { key: 'user', label: 'Mes publications', icon: Store, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
-                { key: 'groups', label: 'Groupes prives', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/30' },
-                { key: 'events', label: 'A venir', icon: Calendar, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/30' },
-                { key: 'saved', label: 'Favoris', icon: BookOpen, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/30' },
-              ].map((item) => {
+              {sidebarTabs.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.key;
+                // Count badge for each filter
+                const currentUserId = localStorage.getItem('userId');
+                const now = new Date();
+                const counts = {
+                  // 'all' uses the server total so it reflects unloaded pages too
+                  all: totalElements || activities.length,
+                  mine: activities.filter(a => a.createurId === currentUserId).length,
+                  upcoming: activities.filter(a => a.heureDebut && new Date(a.heureDebut) > now).length,
+                  withMedia: activities.filter(a => a.medias && a.medias.length > 0).length,
+                  participating: activities.filter(a => a.isParticipating).length,
+                  past: activities.filter(a => a.heureDebut && new Date(a.heureDebut) <= now).length,
+                };
+                const count = counts[item.key] ?? 0;
                 return (
                   <button
                     key={item.key}
@@ -1123,10 +1333,19 @@ const ActivitiesContent = () => {
                         : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300'
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isActive ? 'bg-blue-100 dark:bg-blue-800' : item.bg || 'bg-gray-100 dark:bg-gray-700'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-blue-100 dark:bg-blue-800' : item.bg}`}>
                       <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : item.color}`} />
                     </div>
-                    <span className="text-sm">{item.label}</span>
+                    <span className="text-sm flex-1 truncate">{item.label}</span>
+                    {count > 0 && (
+                      <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ${
+                        isActive
+                          ? 'bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-100'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {count}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1166,13 +1385,7 @@ const ActivitiesContent = () => {
                 
                 {/* Tab Navigation - Soft pill style */}
                 <div className="flex overflow-x-auto scrollbar-hide gap-1.5 px-3 pb-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  {[
-                    { key: 'all', label: 'Tout' },
-                    { key: 'user', label: 'Mes posts' },
-                    { key: 'groups', label: 'Groupes' },
-                    { key: 'events', label: 'A venir' },
-                    { key: 'saved', label: 'Favoris' }
-                  ].map((tab) => (
+                  {sidebarTabs.map((tab) => (
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
@@ -1182,7 +1395,7 @@ const ActivitiesContent = () => {
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
                       }`}
                     >
-                      {tab.label}
+                      {tab.labelMobile}
                     </button>
                   ))}
                 </div>
@@ -1496,12 +1709,10 @@ const ActivitiesContent = () => {
                       <Calendar className="w-8 h-8 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      {activeTab === 'all' ? t('activities.noActivities.title', 'Aucune activité') : `Aucun contenu dans "${[
-                        { key: 'user', label: 'Mes posts' },
-                        { key: 'groups', label: 'Groupes' },
-                        { key: 'events', label: 'Événements' },
-                        { key: 'saved', label: 'Enregistrés' }
-                      ].find(tab => tab.key === activeTab)?.label}"`}
+                      {activeTab === 'all'
+                        ? t('activities.noActivities.title', 'Aucune activité')
+                        : `Aucun contenu dans "${sidebarTabs.find(t => t.key === activeTab)?.label ?? activeTab}"`
+                      }
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
                       {activeTab === 'all' 
@@ -1521,7 +1732,7 @@ const ActivitiesContent = () => {
                   </div>
                 ) : (
                   <>
-                  {filteredActivities.slice(0, visibleCount).map((activity) => (
+                  {filteredActivities.map((activity) => (
                     <motion.div
                       key={activity.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -1847,7 +2058,7 @@ const ActivitiesContent = () => {
                   ))}
 
                   {/* Load More / All Caught Up */}
-                  {filteredActivities.length > visibleCount ? (
+                  {hasMore ? (
                     <div ref={sentinelRef} className="flex justify-center py-4">
                       {isMobile ? (
                         loadingMore && <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
@@ -1863,9 +2074,9 @@ const ActivitiesContent = () => {
                             <ChevronDown className="w-4 h-4 text-blue-600" />
                           )}
                           {loadingMore ? "Chargement..." : "Voir plus"}
-                          {!loadingMore && (
+                          {!loadingMore && totalElements > activities.length && (
                             <span className="text-xs text-gray-400 font-normal">
-                              ({filteredActivities.length - visibleCount} restant{filteredActivities.length - visibleCount > 1 ? "s" : ""})
+                              ({totalElements - activities.length} restant{totalElements - activities.length > 1 ? "s" : ""})
                             </span>
                           )}
                         </button>
@@ -2067,9 +2278,11 @@ const ActivitiesContent = () => {
                     {editFormData.existingMedias.map((media, i) => (
                       <div key={i} className="relative group aspect-square">
                         {media.type === 'VIDEO' ? (
-                          <video src={media.url} className="w-full h-full object-cover rounded-xl shadow-md" />
+                          <video src={media.presignedUrl || media.url} className="w-full h-full object-cover rounded-xl shadow-md" />
+                        ) : media.presignedUrl || media.url ? (
+                          <SafeImg src={media.presignedUrl || media.url} className="w-full h-full object-cover rounded-xl shadow-md" />
                         ) : (
-                          <img src={media.url} alt={`media-${i}`} className="w-full h-full object-cover rounded-xl shadow-md" />
+                          <ExistingMediaThumb mediaId={media.id} />
                         )}
                         <button
                           onClick={() => setEditFormData(p => ({ ...p, existingMedias: p.existingMedias.filter((_, idx) => idx !== i) }))}
@@ -2126,6 +2339,7 @@ const ActivitiesContent = () => {
         </motion.div>
       )}
     </div>
+    </MediaSuspendedContext.Provider>
   );
 };
 

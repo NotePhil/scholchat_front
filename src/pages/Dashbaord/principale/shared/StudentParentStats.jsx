@@ -41,6 +41,9 @@ const StudentParentStats = ({
   setActiveTab,
 }) => {
   const isMobile = useSelector((state) => state.ui.isMobile);
+  // Notifications come from Redux (populated once on mount + WebSocket pushes).
+  // No extra HTTP fetch needed here.
+  const reduxNotifications = useSelector((state) => state.notifications?.notifications || []);
   const userId = localStorage.getItem("userId");
 
   // Real data states
@@ -54,7 +57,6 @@ const StudentParentStats = ({
   // Child-specific data
   const [childClasses, setChildClasses] = useState([]);
   const [childCourses, setChildCourses] = useState([]);
-  const [childNotifications, setChildNotifications] = useState([]);
 
   // For student role - fetch own data
   const [ownClasses, setOwnClasses] = useState([]);
@@ -113,24 +115,15 @@ const StudentParentStats = ({
       const coursesResp = await fetch(`${baseUrl}/cours-programmes/by-participant/${child.id}`, { headers });
       const childCoursesResult = coursesResp.ok ? await coursesResp.json() : [];
 
-      // Fetch notifications
-      let childNotifs = [];
-      try {
-        const notifsResp = await fetch(`${baseUrl}/notifications`, { headers });
-        childNotifs = notifsResp.ok ? await notifsResp.json() : [];
-      } catch (e) { /* ignore */ }
-
       console.log("=== CHILD CLASSES ===", child.prenom, ":", childClassesResult.length);
       console.log("=== CHILD COURSES ===", child.prenom, ":", childCoursesResult.length);
 
       setChildClasses(childClassesResult);
       setChildCourses(childCoursesResult);
-      setChildNotifications(childNotifs);
     } catch (err) {
       console.error("Error loading child data:", err);
       setChildClasses([]);
       setChildCourses([]);
-      setChildNotifications([]);
     }
   }, []);
 
@@ -148,7 +141,6 @@ const StudentParentStats = ({
           // Clear ALL previous child data immediately
           setChildClasses([]);
           setChildCourses([]);
-          setChildNotifications([]);
           // Create new object reference to force re-render
           const newChild = { ...found };
           setSelectedChild(newChild);
@@ -181,7 +173,9 @@ const StudentParentStats = ({
   // Compute stats based on role
   const currentClasses = userRole === "parent" ? childClasses : ownClasses;
   const currentCourses = userRole === "parent" ? childCourses : ownCourses;
-  const currentNotifications = childNotifications;
+  // Use Redux notifications — no child-specific filtering needed since the backend
+  // already returns only notifications for the authenticated user.
+  const currentNotifications = reduxNotifications;
 
   const upcomingCourses = currentCourses.filter((c) => {
     const courseDate = new Date(c.dateCoursPrevue);

@@ -66,14 +66,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     }
   }, [error]);
 
-  // Re-filter when class filter changes via dropdown
+  // Re-filter when class filter changes via dropdown — now pure client-side, no API call
   useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      if (!cancelled) await applyClassFilter(allExercises, filterClassId);
-    };
-    run();
-    return () => { cancelled = true; };
+    applyClassFilter(allExercises, filterClassId);
   }, [filterClassId, allExercises]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch when parent switches child (childChanged event)
@@ -91,7 +86,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   useEffect(() => {
     if (initClassId) localStorage.removeItem("selectedClassId");
     fetchExercises();
-    loadProfessorClasses();
   }, []);
 
   const loadProfessorClasses = async () => {
@@ -110,25 +104,20 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     } catch { /* non-blocking */ }
   };
 
-  const applyClassFilter = async (data, classId) => {
+  // Client-side class filter — no extra API call needed.
+  const applyClassFilter = (data, classId) => {
     if (!classId) {
       setExercises(data);
       return;
     }
-    try {
-      // Load exercise-programmer records for this class — they carry exerciseId
-      const programmers = await exerciseProgrammerService.getExercisesProgrammesParClasse(classId);
-      const ids = new Set(
-        (programmers || [])
-          .map(p => p.exerciseId || p.exercise?.id)
-          .filter(Boolean)
-          .map(String)
-      );
-      // ids.size === 0 means no exercises programmed for this class yet
-      setExercises(ids.size > 0 ? data.filter(e => ids.has(String(e.id))) : []);
-    } catch {
-      setExercises(data); // fallback: show all when API unreachable
-    }
+    const filtered = data.filter(e => {
+      const ids = [
+        ...(e.classesDiffusees || []).map(c => String(c.id || c)),
+        ...(e.classeIds || e.classesIds || []).map(String),
+      ];
+      return ids.includes(String(classId));
+    });
+    setExercises(filtered.length > 0 ? filtered : data);
   };
 
   const handleClassFilterChange = (classId) => {
@@ -162,166 +151,125 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
       let data = [];
 
       if (selectedRole === "PROFESSOR" || selectedRole === "TUTOR") {
-        // 1. Fetch exercises created directly by the professor
-        const ownExercisesResult = await exerciseService.getExercisesByProfesseur(userId).catch(() => []);
-        const ownExercises = Array.isArray(ownExercisesResult) ? ownExercisesResult : [];
-
-        // 2. Also gather exercises from programmer records (to include exercises programmed
-        //    by other professors in the same classes, and to attach exerciseProgrammerId)
-        const allClasses = await classService.obtenirClassesUtilisateur(userId).catch(() => []);
-        const classIdsToFetch = (allClasses || []).map(c => c.id);
-
-        const [profProgrammed, ...classResults] = await Promise.allSettled([
-          exerciseProgrammerService.getExercisesProgrammesParProfesseur(userId),
-          ...classIdsToFetch.map(cId =>
-            exerciseProgrammerService.getExercisesProgrammesParClasse(cId)
-          ),
+        // Fetch in parallel — 3 requests total:
+        //   1. GET /exercises/professeur/{id}              → professor's own exercises (full details)
+        //   2. GET /exercises-programmer/professeur/{id}   → programmer records (exerciseProgrammerId)
+        //   3. GET /classes/utilisateur/{id}               → professor's classes (for filter dropdown)
+        // No per-class calls, no per-exercise enrichment calls.
+        const [ownExercisesRes, progRecordsRes, classesRes] = await Promise.allSettled([
+          exerciseService.getExercisesByProfesseur(userId).catch(() => []),
+          exerciseProgrammerService.getExercisesProgrammesParProfesseur(userId).catch(() => []),
+          classService.obtenirClassesUtilisateur(userId).catch(() => []),
         ]);
 
-        const profItems = profProgrammed.status === "fulfilled" ? (profProgrammed.value || []) : [];
-        const classItems = classResults
-          .filter(r => r.status === "fulfilled")
-          .flatMap(r => r.value || []);
+        const ownExercises  = ownExercisesRes.status  === "fulfilled" ? (ownExercisesRes.value  || []) : [];
+        const progRecords   = progRecordsRes.status   === "fulfilled" ? (progRecordsRes.value   || []) : [];
+        const classesData   = classesRes.status       === "fulfilled" ? (classesRes.value       || []) : [];
 
-        // Build a map: exerciseId → exerciseProgrammerId (latest programmer record wins)
+        // Populate class filter dropdown (replaces the separate loadProfessorClasses call)
+        setProfessorClasses(classesData);
+        if (initClassId && classesData.length > 0) {
+          const cls = classesData.find(c => String(c.id) === String(initClassId));
+          if (cls) setFilterClassName(cls.nom || cls.name || cls.titre || `Classe ${cls.id}`);
+        }
+
+        // Build exerciseId → latest exerciseProgrammerId map from programmer records.
+        // ExerciseProgrammerResponseDTO now has `exerciseId` field (added to backend).
         const programmerByExId = new Map();
-        [...classItems, ...profItems].forEach(p => {
+        progRecords.forEach(p => {
           const exId = p.exerciseId || p.exercise?.id;
           if (exId) programmerByExId.set(String(exId), p.id);
         });
 
-        // Start with own exercises as the base set
-        const exerciseMap = new Map();
-        ownExercises.forEach(ex => {
-          if (ex?.id) {
-            exerciseMap.set(String(ex.id), {
-              ...ex,
-              id: String(ex.id),
-              exerciseProgrammerId: programmerByExId.get(String(ex.id)) || null,
-            });
-          }
-        });
-
-        // Also resolve any programmer records pointing to exercises NOT in ownExercises
-        // (exercises programmed by other professors in the same classes)
-        const allProgrammerRecords = new Map();
-        [...classItems, ...profItems].forEach(p => {
-          if (p?.id) allProgrammerRecords.set(String(p.id), p);
-        });
-
-        await Promise.allSettled(
-          Array.from(allProgrammerRecords.values()).map(async (p) => {
-            const baseExId = p.exerciseId || p.exercise?.id;
-            if (!baseExId) return;
-            const key = String(baseExId);
-            if (exerciseMap.has(key)) {
-              // Already have it from ownExercises — just ensure programmerId is set
-              const existing = exerciseMap.get(key);
-              if (!existing.exerciseProgrammerId) {
-                exerciseMap.set(key, { ...existing, exerciseProgrammerId: p.id });
-              }
-              return;
-            }
-            try {
-              let ex = p.exercise && p.exercise.nom ? p.exercise : await exerciseService.getExerciseById(baseExId);
-              if (ex) {
-                exerciseMap.set(key, {
-                  ...ex,
-                  id: key,
-                  exerciseProgrammerId: p.id,
-                  classeIds: p.classeIds || p.classesIds || [],
-                  programmeurId: p.programmeParId,
-                });
-              }
-            } catch { /* ignore missing exercises */ }
-          })
-        );
-
-        data = Array.from(exerciseMap.values());
+        data = ownExercises
+          .filter(ex => ex?.id)
+          .map(ex => ({
+            ...ex,
+            id: String(ex.id),
+            exerciseProgrammerId: programmerByExId.get(String(ex.id)) || null,
+          }));
       } else if (selectedRole === "ADMIN") {
         data = await exerciseService.getExercisesAccessibles(userId);
       } else {
-        // Students and parents: ONLY show exercises from their enrolled classes (not globally accessible ones)
+        // ── Students / Parents ────────────────────────────────────────────────
+        // Fetch only exercises from the student's enrolled classes.
+        // Each ExerciseProgrammerResponseDTO already has: id, nom, description,
+        // niveau, etat, matieres, questions (stubs), classesDiffusees, participations.
+        // We do NOT fetch /exercises/{id} here — questions with choixReponses are
+        // loaded on-demand inside StudentExerciseView via /questions/exercise/{exerciseId}.
         try {
-          const classesResp = await fetch(`${baseUrl}/acceder/utilisateurs/${userId}/classes`, { headers: authHeader });
+          const classesResp = await fetch(
+            `${baseUrl}/acceder/utilisateurs/${userId}/classes`,
+            { headers: authHeader }
+          );
           if (!classesResp.ok) {
-            data = []; // no classes → no exercises
+            data = [];
           } else {
             const classes = await classesResp.json();
             if (!classes || classes.length === 0) {
-              data = []; // no classes → no exercises
+              data = [];
             } else {
-              // Build a classId→name map for display
               const classNameMap = {};
-              classes.forEach(c => { classNameMap[String(c.id)] = c.nom || c.name || `Classe ${c.id}`; });
-              const allMap = new Map();
+              classes.forEach(c => {
+                classNameMap[String(c.id)] = c.nom || c.name || `Classe ${c.id}`;
+              });
+
+              const allMap = new Map(); // keyed by programmer record ID
               for (const cls of classes) {
                 try {
-                  const exoResp = await fetch(`${baseUrl}/exercises-programmer/classe/${cls.id}`, { headers: authHeader });
-                  if (exoResp.ok) {
-                    const exos = await exoResp.json();
-                    for (const e of exos) {
-                      if (allMap.has(e.id)) continue;
+                  const exoResp = await fetch(
+                    `${baseUrl}/exercises-programmer/classe/${cls.id}`,
+                    { headers: authHeader }
+                  );
+                  if (!exoResp.ok) continue;
+                  const programmerRecords = await exoResp.json();
 
-                      const classIds = e.classeIds || e.classesIds || [];
-                      const classeNom = classIds.map(id => classNameMap[String(id)]).filter(Boolean).join(", ") || cls.nom || cls.name || "";
+                  for (const prog of programmerRecords) {
+                    if (allMap.has(prog.id)) continue; // already seen from another class
 
-                      // Resolve the base exercise ID from the programmer record
-                      let baseExerciseId = e.exerciseId || e.exercise?.id;
-                      let exerciseName = e.nom || e.exercise?.nom;
-                      let exerciseObj = e.exercise || null;
+                    // ExerciseProgrammerResponseDTO fields we need:
+                    // prog.id           = programmer record ID (for participations)
+                    // prog.exerciseId   = base exercise ID (for /questions/exercise/{id})
+                    const exerciseId = prog.exerciseId || prog.id; // fallback: demo data has id === exerciseId
+                    const classeNom = cls.nom || cls.name || classNameMap[String(cls.id)] || "";
 
-                      // If we don't have the base exercise ID yet, fetch the programmer record detail
-                      if (!baseExerciseId) {
-                        try {
-                          const detailResp = await fetch(`${baseUrl}/exercises-programmer/${e.id}`, { headers: authHeader });
-                          if (detailResp.ok) {
-                            const detail = await detailResp.json();
-                            baseExerciseId = detail.exerciseId || detail.exercise?.id;
-                            exerciseName = exerciseName || detail.nom || detail.exercise?.nom;
-                            exerciseObj = exerciseObj || detail.exercise;
-                          }
-                        } catch { /* ignore */ }
-                      }
+                    // participations embedded in the programmer record
+                    // (participations: [{ utilisateurId, exerciseProgrammerId, etatSoumission, ... }])
+                    const myParticipation = (prog.participations || []).find(
+                      p => p.utilisateurId === userId
+                    );
 
-                      // If we now have a base exercise ID, fetch full exercise details for nom/description
-                      if (baseExerciseId && !exerciseName) {
-                        try {
-                          const exDetails = await exerciseService.getExerciseById(baseExerciseId);
-                          if (exDetails) {
-                            exerciseName = exDetails.nom;
-                            exerciseObj = exDetails;
-                          }
-                        } catch { /* ignore */ }
-                      }
-
-                      console.log(`[Student fetchExercises] programmerRecord=${e.id} baseExerciseId=${baseExerciseId} nom=${exerciseName}`);
-
-                      allMap.set(e.id, {
-                        ...(exerciseObj || e),
-                        // Ensure these critical fields are always set correctly:
-                        id: baseExerciseId || e.id, // prefer base exercise ID as the card's id
-                        exerciseId: baseExerciseId || e.id, // explicit base exercise ID
-                        exerciseProgrammerId: e.id, // always the programmer record ID
-                        nom: exerciseName || "Sans titre",
-                        description: exerciseObj?.description || e.description || "",
-                        niveau: exerciseObj?.niveau || e.niveau,
-                        etat: e.etat || exerciseObj?.etat,
-                        restriction: exerciseObj?.restriction || e.restriction,
-                        dateExoPrevue: e.dateExoPrevue,
-                        dateDebutExoEffectif: e.dateDebutExoEffectif,
-                        dateFinExoEffectif: e.dateFinExoEffectif,
-                        classeNom,
-                        typeAssignation: e.typeAssignation,
-                        matieres: exerciseObj?.matieres || e.matieres || [],
-                        questions: exerciseObj?.questions,
-                        nombreQuestions: exerciseObj?.nombreQuestions || exerciseObj?.questions?.length || e.nombreQuestions,
-                      });
-                    }
+                    allMap.set(prog.id, {
+                      // The programmer record ID is used as the card key
+                      exerciseProgrammerId: prog.id,
+                      // The base exercise ID is what /questions/exercise/{id} needs
+                      exerciseId,
+                      nom: prog.nom || "Sans titre",
+                      description: prog.description || "",
+                      niveau: prog.niveau,
+                      etat: prog.etat,
+                      restriction: prog.restriction,
+                      matieres: prog.matieres || [],
+                      nombreQuestions: (prog.questions || []).length,
+                      classeNom,
+                      typeAssignation: prog.typeAssignation,
+                      dateExoPrevue: prog.dateExoPrevue,
+                      dateDebutExoEffectif: prog.dateDebutExoEffectif,
+                      dateFinExoEffectif: prog.dateFinExoEffectif,
+                      // participation state for this student
+                      myParticipation: myParticipation || null,
+                      etatSoumission: myParticipation?.etatSoumission || null,
+                    });
                   }
-                } catch { /* ignore */ }
+                } catch { /* ignore per-class errors */ }
               }
-              data = Array.from(allMap.values()).filter(e => e.etat !== "BROUILLON");
+
+              // Filter out BROUILLON exercises and ones the student already opened
+              // (EN_COURS means they started but didn't submit — keep them out of the list
+              //  so only "À faire" and completed ones are shown; EN_COURS is re-enterable)
+              data = Array.from(allMap.values()).filter(
+                e => e.etat !== "BROUILLON"
+              );
             }
           }
         } catch {
@@ -332,16 +280,16 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
       const safeData = data || [];
       setAllExercises(safeData);
       await applyClassFilter(safeData, filterClassId);
-      console.log(`[ManageExercises] Fetched ${safeData.length} exercises for role=${selectedRole}`, safeData);
 
-      // For students: load participations to compute accurate header stats
+      // Build participationMap from embedded participation data for students
       if (selectedRole !== "PROFESSOR" && selectedRole !== "ADMIN" && selectedRole !== "TUTOR") {
-        try {
-          const participations = await participationExerciseService.getParticipationsByUtilisateur(userId);
-          const map = {};
-          (participations || []).forEach(p => { map[p.exerciseProgrammerId] = p; });
-          setParticipationMap(map);
-        } catch { /* non-blocking */ }
+        const map = {};
+        safeData.forEach(e => {
+          if (e.exerciseProgrammerId && e.myParticipation) {
+            map[e.exerciseProgrammerId] = e.myParticipation;
+          }
+        });
+        setParticipationMap(map);
       }
     } catch (error) {
       console.error("Error fetching exercises:", error);
@@ -365,11 +313,11 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const handleSelectExercise = (exerciseId, exerciseProgrammerId) => {
     setSelectedExerciseId(exerciseId);
     setSelectedExerciseProgrammerId(exerciseProgrammerId || null);
-    // Students/parents go directly to take-exercise view
     if (!canCreateExercise) {
-      // Carry the already-loaded exercise data to avoid a re-fetch that may fail for students
       const found = allExercises.find(
-        (e) => String(e.id) === String(exerciseId) || String(e.exerciseProgrammerId) === String(exerciseProgrammerId)
+        (e) =>
+          String(e.exerciseId) === String(exerciseId) ||
+          String(e.exerciseProgrammerId) === String(exerciseProgrammerId)
       );
       setSelectedExerciseData(found || null);
       setCurrentView("take-exercise");
@@ -466,22 +414,22 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const selectedRoleForPerms = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
   const canCreateExercise = selectedRoleForPerms === "PROFESSOR" || selectedRoleForPerms === "ADMIN" || selectedRoleForPerms === "TUTOR";
 
-  // Student header stats derived from participationMap
+  // Student header stats — use embedded participation state
   const getStudentParticipation = (e) => {
+    if (e.myParticipation) return e.myParticipation;
     if (e.exerciseProgrammerId && participationMap[e.exerciseProgrammerId])
       return participationMap[e.exerciseProgrammerId];
-    if (participationMap[e.id])
-      return participationMap[e.id];
     return null;
   };
   const studentTotal = exercises.length;
   const studentDone = exercises.filter(e => {
     const p = getStudentParticipation(e);
-    return p && (p.etatSoumission === "CORRIGE" || p.etatSoumission === "VALIDE" || p.etatSoumission === "SOUMIS" || p.etatSoumission === "EN_ATTENTE_CORRECTION");
+    const s = p?.etatSoumission;
+    return s === "SOUMIS" || s === "EN_ATTENTE_CORRECTION" || s === "CORRIGE" || s === "VALIDE";
   }).length;
   const studentCorrected = exercises.filter(e => {
     const p = getStudentParticipation(e);
-    return p && (p.etatSoumission === "CORRIGE" || p.etatSoumission === "VALIDE");
+    return p?.etatSoumission === "CORRIGE" || p?.etatSoumission === "VALIDE";
   }).length;
   const studentTodo = studentTotal - studentDone;
 
@@ -745,14 +693,17 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         )}
 
         {/* Student Take Exercise View */}
-        {currentView === "take-exercise" && selectedExerciseId && (
+        {currentView === "take-exercise" && selectedExerciseData?.exerciseId && (
           <StudentExerciseView
-            key={selectedExerciseProgrammerId || selectedExerciseId}
-            exerciseId={selectedExerciseId}
-            exerciseProgrammerId={selectedExerciseProgrammerId}
-            initialExerciseData={selectedExerciseData}
+            key={selectedExerciseData.exerciseProgrammerId || selectedExerciseData.exerciseId}
+            exerciseId={selectedExerciseData.exerciseId}
+            exerciseProgrammerId={selectedExerciseData.exerciseProgrammerId}
+            exerciseName={selectedExerciseData.nom}
+            exerciseDescription={selectedExerciseData.description}
+            existingParticipation={selectedExerciseData.myParticipation || null}
             onBack={handleBackToList}
             onComplete={() => {
+              fetchExercises();
               setSuccessMessage("Exercice soumis avec succès !");
               handleBackToList();
             }}

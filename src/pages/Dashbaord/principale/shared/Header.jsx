@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Bell, User, ChevronDown } from "lucide-react";
+import { useSelector, useDispatch } from "react-redux";
+import { markNotificationAsRead } from "../../../../store/slices/notificationsSlice";
 
 const Header = ({
   isDark,
@@ -13,8 +15,12 @@ const Header = ({
   const [userName, setUserName] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const dispatch = useDispatch();
+
+  // Read notifications from the shared Redux store — populated by useNotifications hook
+  // which already fires on mount + listens via WebSocket. No extra HTTP calls needed here.
+  const notifications = useSelector((state) => state.notifications?.notifications || []);
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const userDropdownRef = useRef(null);
   const notificationsRef = useRef(null);
@@ -60,23 +66,11 @@ const Header = ({
   }, []);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const { NotificationService } = await import("../../../../services/NotificationService");
-        const service = new NotificationService();
-        const data = await service.getUserNotifications();
-        setNotifications(data || []);
-        const unread = await service.getUnreadCount();
-        setUnreadCount(unread?.count || 0);
-      } catch (error) {
-        console.error("Error fetching notifications:", error);
-      }
-    };
-
-    fetchNotifications();
-    // Refresh notifications every 60 seconds
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
+    const storedUserName =
+      localStorage.getItem("userName") ||
+      localStorage.getItem("username") ||
+      "User";
+    setUserName(storedUserName);
   }, []);
 
   const getRoleDisplayName = (role) => {
@@ -100,41 +94,11 @@ const Header = ({
     return getRoleDisplayName(userRole);
   };
 
-  const handleNotificationClick = async (notification) => {
-    try {
-      const { NotificationService } = await import("../../../../services/NotificationService");
-      const service = new NotificationService();
-      await service.markAsRead(notification.id);
-      
-      // Update local state
-      setNotifications(prev => 
-        prev.map(n => n.id === notification.id ? { ...n, lu: true } : n)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-
-      // Navigation logic based on notification type
-      // Types could be: ACCESS_REQUEST, CLASS_JOIN, NEW_ACTIVITY, etc.
-      if (notification.type === "ACCESS_REQUEST") {
-        // Rediriger vers la gestion de la classe (onglet spécifique si possible)
-        // Note: Principal.jsx handles tab changes, we might need a prop for that
-        if (typeof onNavigate === 'function') {
-          onNavigate('manage-class', { classId: notification.targetId, subTab: 'requests' });
-        }
-      } else if (notification.type === "CLASS_JOIN") {
-        if (typeof onNavigate === 'function') {
-          onNavigate('classes', { classId: notification.targetId });
-        }
-      } else {
-        // Default navigation
-        if (typeof onNavigate === 'function') {
-          onNavigate('dashboard');
-        }
-      }
-      
-      setShowNotifications(false);
-    } catch (error) {
-      console.error("Error handling notification click:", error);
+  const handleNotificationClick = (notification) => {
+    if (!notification.read) {
+      dispatch(markNotificationAsRead(notification.id));
     }
+    setShowNotifications(false);
   };
 
   return (

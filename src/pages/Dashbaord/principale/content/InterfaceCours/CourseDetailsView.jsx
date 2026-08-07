@@ -1,44 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Spin, Empty, Typography, Progress, Card, Tabs, Badge, Avatar, Timeline, List } from 'antd';
+import { Modal } from 'antd';
 import {
   ArrowLeft,
   BookOpen,
   FileText,
   Video,
   Download,
-  Play,
   Clock,
-  Users,
   Calendar,
   CheckCircle,
   Circle,
-  Star,
-  MessageSquare,
-  Share2,
   Eye,
-  Lock,
-  Unlock,
   ChevronDown,
   ChevronRight,
-  Activity,
-  ExternalLink,
-  Target,
   Award,
   AlertTriangle,
   Image,
   File,
-  Send,
-  MoreVertical,
-  Bookmark,
   TrendingUp
 } from 'lucide-react';
 import DocumentViewer from '../../../../../components/viewers/DocumentViewer';
-import { motion, AnimatePresence } from 'framer-motion';
-import { exerciseService } from '../../../../../services/exerciseService';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../../../../context/AuthContext';
-
-const { Text, Title, Paragraph } = Typography;
-const { TabPane } = Tabs;
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
 
@@ -167,12 +150,10 @@ const CourseDetailsView = ({ courseId, onBack }) => {
   const [videoModalVisible, setVideoModalVisible] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState("");
   const [currentVideoTitle, setCurrentVideoTitle] = useState("");
-  const [exercises, setExercises] = useState([]);
-  const [exercisesLoading, setExercisesLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [docViewerFile, setDocViewerFile] = useState(null);
-  const [instructeurNom, setInstructeurNom] = useState('Professeur');
-  const [totalStudents, setTotalStudents] = useState(0);
+  const [instructeurNom] = useState('Professeur');
+  const [totalStudents] = useState(0);
 
   useEffect(() => {
     fetchCourseDetails();
@@ -180,44 +161,6 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       blobUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
     };
   }, [courseId]);
-
-  const fetchInstructeurEtEtudiants = async (redacteurId, coursId) => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-    const headers = { Authorization: `Bearer ${token}` };
-    // Fetch instructor name
-    if (redacteurId) {
-      try {
-        const res = await fetch(`${API_BASE}/professeurs/${redacteurId}`, { headers });
-        if (res.ok) {
-          const prof = await res.json();
-          setInstructeurNom(`${prof.prenom || ''} ${prof.nom || ''}`.trim() || 'Professeur');
-        }
-      } catch (e) {
-        console.warn('Could not fetch instructor:', e.message);
-      }
-    }
-    // Fetch student count via acceder
-    if (coursId) {
-      try {
-        // Get all cours_programmers for this cours to find classesIds
-        const cpRes = await fetch(`${API_BASE}/cours-programmer/by-cours/${coursId}`, { headers });
-        if (cpRes.ok) {
-          const cps = await cpRes.json();
-          const classIds = [...new Set((cps || []).flatMap(cp => cp.classesIds || []))];
-          if (classIds.length > 0) {
-            const counts = await Promise.allSettled(
-              classIds.map(id => fetch(`${API_BASE}/acceder/classes/${id}/utilisateurs`, { headers }).then(r => r.ok ? r.json() : []))
-            );
-            const allUsers = new Set();
-            counts.forEach(r => { if (r.status === 'fulfilled') (r.value || []).forEach(u => allUsers.add(u.id)); });
-            setTotalStudents(allUsers.size);
-          }
-        }
-      } catch (e) {
-        console.warn('Could not fetch student count:', e.message);
-      }
-    }
-  };
 
   const fetchProgression = async () => {
     if (!user?.id) return;
@@ -281,7 +224,6 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       setChapters(formattedChapters);
       setExpandedChapters(new Set());
       fetchProgression();
-      fetchInstructeurEtEtudiants(courseData.redacteurId, courseId);
 
       // Process chapter HTML: replace direct MinIO URLs with proxy URLs, then handle auth images
       const processed = {};
@@ -305,11 +247,8 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       }));
       extractFilesFromChapters(chaptersWithResolved);
       
-      // Also fetch professor's uploaded files from MinIO filtered by course
+      // Fetch uploaded files from MinIO filtered by course
       fetchMinioFiles(courseId);
-      
-      // Fetch exercises for this course
-      fetchCourseExercises();
     } catch (error) {
       console.error('Erreur lors du chargement du cours:', error);
       setCourse({
@@ -419,27 +358,6 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       setCourseFiles([]);
     } finally {
       setFilesLoading(false);
-    }
-  };
-
-  // Fetch exercises for this course
-  const fetchCourseExercises = async () => {
-    try {
-      setExercisesLoading(true);
-      const courseExercises = await exerciseService.getExercisesByCours(courseId);
-      console.log('Exercises for course:', courseExercises);
-      if (Array.isArray(courseExercises)) {
-        setExercises(courseExercises.map(exo => ({
-          ...exo,
-          type: 'exercise',
-          titre: exo.nom || 'Exercice sans nom'
-        })));
-      }
-    } catch (error) {
-      console.warn('Could not fetch course exercises:', error.message);
-      setExercises([]);
-    } finally {
-      setExercisesLoading(false);
     }
   };
 
@@ -721,7 +639,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10">
                       <FileText className="w-4 h-4 text-emerald-300" />
-                      <span className="font-semibold">{courseFiles.length} fichiers ressources</span>
+                      <span className="font-semibold">{courseFiles.length + minioFiles.length} fichiers ressources</span>
                     </div>
                   </div>
                 </div>
@@ -952,7 +870,8 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                   </div>
                 ))}
                 
-                {/* General Resources Section */}
+                {/* General Resources Section — only MinIO-uploaded files (not chapter-embedded ones) */}
+                {minioFiles.length > 0 && (
                 <div className="bg-white rounded-xl shadow-lg p-6 border border-purple-100">
                   <div className="flex items-center justify-between mb-6">
                     <h4 className="font-bold text-gray-900 flex items-center text-xl">
@@ -960,82 +879,65 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                       Ressources générales du cours
                     </h4>
                     <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                      {courseFiles.length} documents
+                      {minioFiles.length} fichier{minioFiles.length !== 1 ? 's' : ''}
                     </span>
                   </div>
                   
                   <p className="text-gray-600 text-sm mb-4 italic">
-                    Documents et fichiers supplémentaires fournis par le professeur pour l'ensemble du cours
+                    Fichiers supplémentaires fournis par le professeur pour l'ensemble du cours
                   </p>
                   
-                  {filesLoading ? (
-                    <div className="text-center py-12">
-                      <div className="inline-flex items-center space-x-3 text-purple-600">
-                        <div className="w-6 h-6 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-                        <span className="font-medium">Chargement des ressources générales...</span>
-                      </div>
-                    </div>
-                  ) : courseFiles.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {courseFiles.map((file, index) => (
-                        <div
-                          key={file.id || index}
-                          className="group relative bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-100 hover:border-purple-200 hover:shadow-md transition-all duration-300"
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div className={`p-3 rounded-xl ${getFileTypeColor(file.fileName, file.contentType)} group-hover:scale-110 transition-transform`}>
-                              {getFileIcon(file.fileName, file.contentType)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h5 className="font-semibold text-gray-900 text-sm truncate pr-16" title={file.fileName}>
-                                {file.fileName || 'Fichier sans nom'}
-                              </h5>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <span className="text-xs font-medium text-purple-600 uppercase bg-purple-100 px-2 py-0.5 rounded">
-                                  {file.type === 'image' ? 'Image' : 
-                                   file.type === 'video' ? 'Vidéo' : 
-                                   file.type === 'pdf' ? 'PDF' : 'Document'}
-                                </span>
-                                {file.fileSize > 0 && (
-                                  <>
-                                    <span className="text-gray-300">•</span>
-                                    <span className="text-xs text-gray-400">{formatFileSize(file.fileSize)}</span>
-                                  </>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {file.chapterTitle || 'Ressource du cours'}
-                              </p>
-                            </div>
-                            
-                            <div className="absolute top-4 right-4 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => handleFilePreview(file)}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors bg-white shadow-sm border border-blue-100"
-                                title="Prévisualiser"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleFileDownload(file)}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors bg-white shadow-sm border border-green-100"
-                                title="Télécharger"
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {minioFiles.map((file, index) => (
+                      <div
+                        key={file.id || index}
+                        className="group relative bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-100 hover:border-purple-200 hover:shadow-md transition-all duration-300"
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className={`p-3 rounded-xl ${getFileTypeColor(file.fileName, file.contentType)} group-hover:scale-110 transition-transform`}>
+                            {getFileIcon(file.fileName, file.contentType)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h5 className="font-semibold text-gray-900 text-sm truncate pr-16" title={file.fileName}>
+                              {file.fileName || 'Fichier sans nom'}
+                            </h5>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <span className="text-xs font-medium text-purple-600 uppercase bg-purple-100 px-2 py-0.5 rounded">
+                                {file.type === 'image' ? 'Image' : 
+                                 file.type === 'video' ? 'Vidéo' : 
+                                 file.type === 'pdf' ? 'PDF' : 'Document'}
+                              </span>
+                              {file.fileSize > 0 && (
+                                <>
+                                  <span className="text-gray-300">•</span>
+                                  <span className="text-xs text-gray-400">{formatFileSize(file.fileSize)}</span>
+                                </>
+                              )}
                             </div>
                           </div>
+                          
+                          <div className="absolute top-4 right-4 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleFilePreview(file)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors bg-white shadow-sm border border-blue-100"
+                              title="Prévisualiser"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleFileDownload(file)}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors bg-white shadow-sm border border-green-100"
+                              title="Télécharger"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 bg-gradient-to-r from-gray-50 to-purple-50 rounded-xl border-2 border-dashed border-purple-200">
-                      <FileText className="w-12 h-12 text-purple-300 mx-auto mb-3" />
-                      <p className="text-gray-500 font-medium">Aucune ressource générale disponible</p>
-                      <p className="text-sm text-gray-400 mt-1">Le professeur n'a pas encore ajouté de documents généraux pour ce cours.</p>
-                    </div>
-                  )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
+                )}
               </div>
             )}
 

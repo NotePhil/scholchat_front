@@ -1227,7 +1227,7 @@
           "desc": "La création d'une classe sans établissement nécessite un paiement unique de 5000 FCFA pour l'activation immédiate."
         },
         "actions": {
-          "proceed": "Procéder au paiement (5000.000 FCFA)",
+          "proceed": "Procéder au paiement",
           "create": "Créer la classe"
         }
       }

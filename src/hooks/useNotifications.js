@@ -28,11 +28,11 @@ export const useNotifications = () => {
   const { isAuthenticated, normalizedUserRole } = useAuth();
   const userId = localStorage.getItem("userId");
 
-  // Fetch notifications once on mount
+  // Fetch notifications once on mount — unreadCount is derived from the list in the reducer,
+  // so no separate /count request is needed.
   useEffect(() => {
     if (!isAuthenticated) return;
     dispatch(fetchNotifications());
-    dispatch(fetchUnreadCount());
   }, [dispatch, isAuthenticated]);
 
   // Real-time push via WebSocket
@@ -66,9 +66,11 @@ export const useNotifications = () => {
 
   const handleTogglePanel = useCallback(() => {
     dispatch(toggleNotificationPanel());
-    // Refresh notifications when opening the panel
-    dispatch(fetchNotifications());
-  }, [dispatch]);
+    // Only fetch from server on first open — WebSocket keeps data current after that
+    if (!notifications.length) {
+      dispatch(fetchNotifications());
+    }
+  }, [dispatch, notifications.length]);
 
   const handleClosePanel = useCallback(() => {
     dispatch(setNotificationPanelOpen(false));

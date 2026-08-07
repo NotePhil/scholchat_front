@@ -295,15 +295,28 @@ const ExerciseList = ({
   if (!canCreate) {
     const PAGE_SIZE = 6;
 
-    // Categorise each exercise by submission status
-    const categorised = exercises.map(e => {
-      const p = getParticipation(e);
-      const s = p?.etatSoumission;
-      const isGraded = s === "CORRIGE" || s === "VALIDE";
-      const isSubmitted = !!s;
-      return { exercise: e, participation: p, submissionEtat: s, isGraded, isSubmitted,
-        isPending: s === "EN_ATTENTE_CORRECTION" };
-    });
+    // Categorise each exercise by submission status.
+    // EN_COURS = student opened but did NOT submit → hide from list (they must re-enter via the card).
+    // We keep EN_COURS visible as "À faire" so students can continue; only SOUMIS/CORRIGE are filtered.
+    const categorised = exercises
+      .filter(e => e.etat !== "BROUILLON")
+      .map(e => {
+        // Use embedded participation when available (from programmer record), else fall back to participationMap
+        const p = e.myParticipation || getParticipation(e);
+        const s = p?.etatSoumission;
+        const isGraded = s === "CORRIGE" || s === "VALIDE";
+        // EN_COURS counts as not-submitted so the student can still do the exercise
+        const isSubmitted = s === "SOUMIS" || s === "EN_ATTENTE_CORRECTION" || isGraded;
+        return {
+          exercise: e,
+          participation: p,
+          submissionEtat: s,
+          isGraded,
+          isSubmitted,
+          isPending: s === "EN_ATTENTE_CORRECTION",
+          isEnCours: s === "EN_COURS",
+        };
+      });
 
     const STATUS_TABS = [
       { key: "all",      label: "Tous",     count: categorised.length },
@@ -391,11 +404,13 @@ const ExerciseList = ({
           <Empty description="Aucun exercice dans cette catégorie" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
           <Row gutter={[16, 16]}>
-            {paginated.map(({ exercise, participation, submissionEtat, isGraded, isSubmitted, isPending }) => {
-              const questionCount = exercise.questions?.length ?? exercise.nombreQuestions ?? 0;
+            {paginated.map(({ exercise, participation, submissionEtat, isGraded, isSubmitted, isPending, isEnCours }) => {
+              const questionCount = exercise.nombreQuestions ?? 0;
               const isActive = exercise.etat === "ACTIF";
+              // Use exerciseProgrammerId as the card key (unique per programmer record)
+              const cardKey = exercise.exerciseProgrammerId || exercise.exerciseId;
               return (
-                <Col xs={24} sm={12} lg={8} key={exercise.id}>
+                <Col xs={24} sm={12} lg={8} key={cardKey}>
                   <Card
                     hoverable
                     style={{
@@ -409,24 +424,26 @@ const ExerciseList = ({
                       <Tag color="cyan" className="text-xs m-0">{exercise.niveau || "N/A"}</Tag>
                       {isSubmitted
                         ? <SubmissionBadge etat={submissionEtat} />
+                        : isEnCours
+                        ? <SubmissionBadge etat="EN_COURS" />
                         : <span className="text-xs text-gray-400 flex items-center gap-1">
                             <CalendarOutlined />
-                            {exercise.dateCreation ? new Date(exercise.dateCreation).toLocaleDateString("fr-FR") : "—"}
+                            {exercise.dateExoPrevue
+                              ? new Date(exercise.dateExoPrevue).toLocaleDateString("fr-FR")
+                              : "—"}
                           </span>
                       }
                     </div>
                     <Text strong className="text-sm sm:text-base block mb-1" style={{ lineHeight: 1.4 }}>
-                      {exercise.nom || exercise.exercise?.nom || "Sans titre"}
+                      {exercise.nom || "Sans titre"}
                     </Text>
-                    {/* Class name */}
                     {exercise.classeNom && (
                       <div className="flex items-center gap-1 mb-1">
                         <BookOutlined style={{ fontSize: 11, color: "#6366f1" }} />
                         <span className="text-xs text-indigo-600 font-semibold truncate">{exercise.classeNom}</span>
                       </div>
                     )}
-                    {/* Start / end time */}
-                    {(exercise.dateExoPrevue || exercise.dateDebutExoEffectif) && (
+                    {(exercise.dateExoPrevue || exercise.dateFinExoEffectif) && (
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         {exercise.dateExoPrevue && (
                           <span className="text-[11px] text-gray-500 flex items-center gap-1">
@@ -476,17 +493,25 @@ const ExerciseList = ({
                     )}
                     <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
                       <span className="text-xs text-gray-500">
-                        {questionCount > 0 ? `${questionCount} question${questionCount > 1 ? "s" : ""}` : "Voir les questions"}
+                        {questionCount > 0 ? `${questionCount} question${questionCount > 1 ? "s" : ""}` : "Questions"}
                       </span>
-                      <Button
-                        type={isSubmitted ? "default" : "primary"}
-                        size="small"
-                        icon={isSubmitted ? <EyeOutlined /> : <PlayCircleOutlined />}
-                        onClick={() => onSelectExercise(exercise.exerciseId || exercise.id, exercise.exerciseProgrammerId || exercise.id)}
-                        style={{ borderRadius: 8 }}
-                      >
-                        {isGraded ? "Voir correction" : isPending ? "Voir réponses" : isSubmitted ? "Voir" : "Commencer"}
-                      </Button>
+                      {/* Only show action button for non-submitted exercises */}
+                      {!isSubmitted && (
+                        <Button
+                          type="primary"
+                          size="small"
+                          icon={<PlayCircleOutlined />}
+                          onClick={() =>
+                            onSelectExercise(
+                              exercise.exerciseId,
+                              exercise.exerciseProgrammerId
+                            )
+                          }
+                          style={{ borderRadius: 8 }}
+                        >
+                          {isEnCours ? "Continuer" : "Commencer"}
+                        </Button>
+                      )}
                     </div>
                   </Card>
                 </Col>

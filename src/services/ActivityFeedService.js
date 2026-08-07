@@ -92,6 +92,23 @@ class ActivityFeedService {
     }
   }
 
+  /**
+   * Paginated fetch. Returns { content, page, size, totalElements, totalPages, last }.
+   * @param {number} page  0-based page index
+   * @param {number} size  number of events per page (default 10)
+   */
+  async getActivitiesPaged(page = 0, size = 10) {
+    try {
+      const response = await activityFeedApi.get("/evenements/pagines", {
+        params: { page, size },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch paged events:", error);
+      throw error;
+    }
+  }
+
   async likeEvent(eventId) {
     try {
       await activityFeedApi.post(`/evenements/${eventId}/like`);
@@ -142,13 +159,14 @@ class ActivityFeedService {
       let cleanedMedias = [];
       if (eventData.medias && eventData.medias.length > 0) {
         cleanedMedias = eventData.medias.map(media => ({
+          ...(media.id ? { id: media.id } : {}),  // preserve id so backend keeps existing media rows
           fileName: media.fileName,
           filePath: media.filePath,
           fileType: media.fileType || media.mediaType || "IMAGE",
           contentType: media.contentType,
           fileSize: media.fileSize,
           mediaType: media.mediaType || "IMAGE",
-          bucketName: media.bucketName || "ressources"
+          bucketName: media.bucketName || "scholchat"
         }));
       }
 

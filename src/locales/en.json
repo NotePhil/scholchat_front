@@ -1265,7 +1265,7 @@
           "desc": "Creating a class without an establishment requires a one-time payment of 5000 FCFA for immediate activation."
         },
         "actions": {
-          "proceed": "Proceed to payment (5000.000 FCFA)",
+          "proceed": "Proceed to payment",
           "create": "Create Class"
         }
       },

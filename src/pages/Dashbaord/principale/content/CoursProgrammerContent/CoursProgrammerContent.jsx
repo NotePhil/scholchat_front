@@ -79,7 +79,7 @@ const CoursProgrammerContent = () => {
     }
     if (userId) {
       setProfessorId(userId);
-      loadData(userId, preselectedClassId || null);
+      loadData(userId);
     } else {
       setError("ID du professeur non trouvé. Veuillez vous reconnecter.");
       setLoading(false);
@@ -90,8 +90,8 @@ const CoursProgrammerContent = () => {
   // Reload when user manually changes the class filter dropdown
   useEffect(() => {
     if (!didMountRef.current || !professorId) return;
-    loadData(professorId, filterClassId || null);
-  }, [filterClassId]);
+    loadData(professorId);
+  }, [filterClassId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle classId passed via URL query param (e.g. navigating from class details while already on this tab)
   useEffect(() => {
@@ -118,81 +118,68 @@ const CoursProgrammerContent = () => {
     filterScheduledCourses();
   }, [scheduledCourses, searchTerm, filterStatus, filterClassId]);
 
-  const loadData = async (professorId, classIdFilter = null) => {
+  const loadData = async (profId, classIdFilter = null) => {
     try {
       setLoading(true);
       setError("");
 
-      const [coursesData, classesData] = await Promise.all([
-        coursService.getCoursByProfesseur(professorId),
-        classService.obtenirClassesUtilisateur(professorId),
+      // 3 parallel requests — no per-class or per-course sequential calls:
+      //   1. GET /cours/professeur/{id}            → professor's own courses (for form dropdown)
+      //   2. GET /acceder/utilisateurs/{id}/classes → professor's classes (for filter dropdown)
+      //   3. GET /cours-programmes/accessible/{id}  → ALL scheduled courses visible to this user
+      //      (own + other professors in same classes) — replaces N per-class calls
+      const [coursesRes, classesRes, scheduledRes] = await Promise.allSettled([
+        coursService.getCoursByProfesseur(profId),
+        classService.obtenirClassesUtilisateur(profId),
+        coursProgrammerService.obtenirProgrammationAccessible(profId),
       ]);
 
-      setCourses(coursesData || []);
-      setClasses(classesData || []);
+      const coursesData  = coursesRes.status  === "fulfilled" ? (coursesRes.value  || []) : [];
+      const classesData  = classesRes.status  === "fulfilled" ? (classesRes.value  || []) : [];
+      const scheduledRaw = scheduledRes.status === "fulfilled" ? (scheduledRes.value || []) : [];
 
-      const coursesMap = new Map((coursesData || []).map(c => [String(c.id), c]));
+      setCourses(coursesData);
+      setClasses(classesData);
 
-      // Fetch professor's own schedule + class-based schedules in parallel
-      // When a specific class is selected, fetch that class only
-      // When no filter, fetch ALL accessible classes so we see courses from other professors too
-      const classIdsToFetch = classIdFilter
-        ? [classIdFilter]
-        : (classesData || []).map(c => c.id);
+      // Build a course lookup map from the professor's own courses
+      const coursesMap = new Map(coursesData.map(c => [String(c.id), c]));
 
-      const [profScheduled, ...classScheduledResults] = await Promise.allSettled([
-        coursProgrammerService.obtenirProgrammationParProfesseur(professorId),
-        ...classIdsToFetch.map(cId =>
-          coursProgrammerService.obtenirProgrammationParClasse(cId)
-        ),
-      ]);
+      // Identify scheduled courses whose cours title we don't have yet
+      // (courses from other professors not in coursesData)
+      const missingIds = [...new Set(
+        scheduledRaw
+          .filter(sc => sc.coursId && !coursesMap.has(String(sc.coursId)))
+          .map(sc => String(sc.coursId))
+      )];
 
-      const profItems = profScheduled.status === "fulfilled" ? (profScheduled.value || []) : [];
-      const classItems = classScheduledResults
-        .filter(r => r.status === "fulfilled")
-        .flatMap(r => r.value || []);
-
-      // Merge: class items first (includes other professors), then own items
-      const merged = new Map();
-      [...classItems, ...profItems].forEach(sc => {
-        if (sc?.id) merged.set(String(sc.id), {
-          ...sc,
-          cours: sc.cours || coursesMap.get(String(sc.coursId)) || null,
-        });
-      });
-
-      // For scheduled courses whose course object is still missing (from other professors),
-      // fetch them individually so they display with the correct title
-      const missingCourseIds = Array.from(merged.values())
-        .filter(sc => !sc.cours && sc.coursId)
-        .map(sc => String(sc.coursId));
-
-      if (missingCourseIds.length > 0) {
-        const uniqueIds = [...new Set(missingCourseIds)];
-        await Promise.allSettled(
-          uniqueIds.map(async (courseId) => {
-            try {
-              const c = await coursService.getCoursById(courseId);
-              if (c) {
-                coursesMap.set(String(c.id), c);
-                merged.forEach((sc, key) => {
-                  if (String(sc.coursId) === String(c.id) && !sc.cours) {
-                    merged.set(key, { ...sc, cours: c });
-                  }
-                });
-              }
-            } catch { /* ignore */ }
-          })
-        );
+      // Fetch all missing course details in ONE batch call instead of N individual calls
+      if (missingIds.length > 0) {
+        try {
+          const accessible = await coursService.getCoursAccessibles(profId);
+          (accessible || []).forEach(c => {
+            if (c?.id) coursesMap.set(String(c.id), c);
+          });
+        } catch { /* non-blocking — titles will fall back to coursId substring */ }
       }
 
+      // Enrich scheduled courses with their course title/description
+      const enriched = scheduledRaw.map(sc => ({
+        ...sc,
+        cours: sc.cours || coursesMap.get(String(sc.coursId)) || {
+          id: sc.coursId,
+          titre: sc.description || (sc.coursId ? `Cours ${sc.coursId.substring(0, 8)}` : "Cours sans titre"),
+          description: "",
+        },
+      }));
+
       const STATUS_ORDER = { EN_COURS: 0, PLANIFIE: 1, ANNULE: 2 };
-      const sortedScheduled = Array.from(merged.values()).sort((a, b) => {
+      const sorted = [...enriched].sort((a, b) => {
         const oa = STATUS_ORDER[a.etatCoursProgramme] ?? 3;
         const ob = STATUS_ORDER[b.etatCoursProgramme] ?? 3;
         return oa !== ob ? oa - ob : new Date(b.dateCoursPrevue) - new Date(a.dateCoursPrevue);
       });
-      setScheduledCourses(sortedScheduled);
+
+      setScheduledCourses(sorted);
     } catch (err) {
       console.error("Erreur lors du chargement des données:", err);
       setError("Erreur lors du chargement des données: " + err.message);

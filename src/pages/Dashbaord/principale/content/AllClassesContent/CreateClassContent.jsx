@@ -588,14 +588,9 @@ const CreateClassContent = ({
                               {loadingOffres ? "Chargement des offres..." : "Choisir une offre..."}
                             </option>
                             {offres.map((offre) => {
-                              const prix = offre.prixMensuel != null
-                                ? `${Number(offre.prixMensuel).toLocaleString("fr-FR")} FCFA/mois`
-                                : offre.prixAnnuel != null
-                                ? `${Number(offre.prixAnnuel).toLocaleString("fr-FR")} FCFA/an`
-                                : "";
                               return (
                                 <option key={offre.id} value={offre.id}>
-                                  {offre.nom}{offre.estTest ? " (TEST)" : ""}{prix ? ` — ${prix}` : ""}
+                                  {offre.nom}{offre.estTest ? " (TEST)" : ""}
                                 </option>
                               );
                             })}
@@ -622,7 +617,7 @@ const CreateClassContent = ({
                                     : "border-gray-300 text-gray-700 hover:bg-gray-50"
                                 }`}
                               >
-                                Mensuel{selectedOffre.prixMensuel != null ? ` - ${Number(selectedOffre.prixMensuel).toLocaleString("fr-FR")} FCFA` : ""}
+                                Mensuel
                               </button>
                               <button
                                 type="button"
@@ -634,7 +629,7 @@ const CreateClassContent = ({
                                     : "border-gray-300 text-gray-700 hover:bg-gray-50"
                                 }`}
                               >
-                                Annuel{selectedOffre.prixAnnuel != null ? ` - ${Number(selectedOffre.prixAnnuel).toLocaleString("fr-FR")} FCFA` : ""}
+                                Annuel
                               </button>
                             </div>
                             {periodicite === PeriodiciteContrat.ANNUEL && offreReduction != null && offreReduction > 0 && (
@@ -681,7 +676,7 @@ const CreateClassContent = ({
                       {loading || isProcessingPayment
                         ? t('classes.create.form.loading.processing', "Traitement en cours...")
                         : !formData.etablissement
-                        ? `${t('classes.create.form.actions.proceed', "Procéder au paiement")} (${montantSelectionne.toLocaleString("fr-FR")} FCFA)`
+                        ? t('classes.create.form.actions.proceed', "Procéder au paiement")
                         : t('classes.create.form.actions.create', "Créer la classe")}
                     </button>
                   </div>
