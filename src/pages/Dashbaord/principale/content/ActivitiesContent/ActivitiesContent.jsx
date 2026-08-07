@@ -158,31 +158,31 @@ const MediaSuspendedContext = React.createContext(false);
  * LazyMedia — resolves the presigned URL only when the element enters the viewport.
  * Images show a skeleton placeholder until visible; videos use VideoPlayer.
  */
-// Returns true if the URL is a direct MinIO/S3 URL that should be proxied instead
+// Returns true if the URL is a direct internal MinIO URL that the browser cannot reach.
+// AWS S3 presigned URLs (amazonaws.com) are publicly reachable — do NOT proxy them.
 const isDirectMinioUrl = (url) => {
   if (!url) return false;
   try {
     const u = new URL(url);
-    // Direct MinIO: different host/port than the API, or contains S3 query params
+    // AWS S3 presigned URLs are always safe to use directly
+    if (u.hostname.endsWith('amazonaws.com') || u.hostname.endsWith('r2.cloudflarestorage.com')) return false;
+    // A presigned URL from any other host that has X-Amz-Algorithm is also safe (e.g. MinIO with public endpoint)
+    if (u.searchParams.has('X-Amz-Algorithm')) return false;
+    // Internal MinIO: same host as API but different port, or a private hostname
     const apiHost = new URL(process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080').hostname;
-    return u.hostname !== apiHost || u.searchParams.has('X-Amz-Algorithm');
+    return u.hostname !== apiHost;
   } catch (e) { return false; }
 };
 
 const LazyMedia = React.memo(({ mediaId, mediaType, presignedUrl, className, onClick, overlay }) => {
   const containerRef = React.useRef(null);
-  // Only use presignedUrl if it's a safe proxied URL (not a direct MinIO URL)
-  const safeInitial = (presignedUrl && !isDirectMinioUrl(presignedUrl)) ? presignedUrl : null;
-  const [url, setUrl] = React.useState(safeInitial);
+  // Always start null — the URL is set only when the element enters the viewport
+  const [url, setUrl] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [imgBroken, setImgBroken] = React.useState(false);
-  // Pause URL resolution while any modal is open
   const suspended = React.useContext(MediaSuspendedContext);
 
   React.useEffect(() => {
-    // If we already have a safe proxied URL, use it directly
-    if (safeInitial) { setUrl(safeInitial); return; }
-    // Don't start fetching if a modal is open — avoid noisy background requests
     if (suspended) return;
     const el = containerRef.current;
     if (!el || !mediaId) return;
@@ -191,6 +191,11 @@ const LazyMedia = React.memo(({ mediaId, mediaType, presignedUrl, className, onC
       ([entry]) => {
         if (entry.isIntersecting && !url && !loading) {
           observer.disconnect();
+          // Use the presigned URL embedded in the event data — zero extra fetch
+          if (presignedUrl) {
+            setUrl(presignedUrl);
+            return;
+          }
           setLoading(true);
           const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
           const isVideo = (mediaType || '').toUpperCase() === 'VIDEO';
@@ -202,13 +207,7 @@ const LazyMedia = React.memo(({ mediaId, mediaType, presignedUrl, className, onC
               headers: { Authorization: `Bearer ${token}` },
             })
               .then((r) => r.ok ? r.json() : Promise.reject())
-              .then((d) => {
-                // Always use the proxied content URL, never the direct MinIO URL
-                const resolved = d.url && !isDirectMinioUrl(d.url)
-                  ? d.url
-                  : `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`;
-                setUrl(resolved);
-              })
+              .then((d) => setUrl(d.url || `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`))
               .catch(() => setUrl(`${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`))
               .finally(() => setLoading(false));
           }
@@ -218,7 +217,7 @@ const LazyMedia = React.memo(({ mediaId, mediaType, presignedUrl, className, onC
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [mediaId, mediaType, safeInitial, suspended]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mediaId, mediaType, presignedUrl, suspended]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isVideo = (mediaType || '').toUpperCase() === 'VIDEO';
 
