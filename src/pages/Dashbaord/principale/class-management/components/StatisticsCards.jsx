@@ -63,7 +63,7 @@ const StatisticsCards = ({ statistics, loading }) => {
     <div style={{ marginBottom: "24px" }}>
       <Row gutter={[16, 16]}>
         {statsConfig.map((stat) => (
-          <Col xs={24} sm={12} md={8} lg={6} xl={4} key={stat.key}>
+          <Col xs={24} sm={12} md={8} lg={5} xl={4} key={stat.key}>
             <Card
               style={{
                 background: "rgba(255, 255, 255, 0.95)",
@@ -72,17 +72,16 @@ const StatisticsCards = ({ statistics, loading }) => {
                 boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
                 transition: "all 0.3s ease",
                 cursor: "pointer",
-                height: "140px",
+                height: "90px",
                 position: "relative",
                 overflow: "hidden",
               }}
               bodyStyle={{
-                padding: "20px",
+                padding: "16px 20px",
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
-                alignItems: "center",
                 position: "relative",
                 zIndex: 2,
               }}
@@ -102,69 +101,53 @@ const StatisticsCards = ({ statistics, loading }) => {
                 }}
               />
 
-              {/* Icon with gradient background */}
-              <div
-                style={{
-                  width: "50px",
-                  height: "50px",
-                  borderRadius: "12px",
-                  background: stat.gradient,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: "12px",
-                  boxShadow: `0 4px 12px ${stat.color}30`,
-                  zIndex: 2,
-                }}
-              >
-                <span style={{ color: "white", fontSize: "24px" }}>
-                  {stat.icon}
-                </span>
-              </div>
-
-              {/* Value */}
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "800",
-                  color: "#2d3748",
-                  marginBottom: "8px",
-                  textAlign: "center",
-                  zIndex: 2,
-                  lineHeight: 1,
-                }}
-              >
-                {loading ? (
+              {/* Icon + (Value / Title) */}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", zIndex: 2 }}>
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "10px",
+                    background: stat.gradient,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: `0 4px 12px ${stat.color}30`,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ color: "white", fontSize: "18px" }}>{stat.icon}</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ fontSize: "28px", fontWeight: "800", color: "#2d3748", lineHeight: 1 }}>
+                    {loading ? (
+                      <div
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          border: "3px solid #f3f3f3",
+                          borderTop: "3px solid " + stat.color,
+                          borderRadius: "50%",
+                          animation: "spin 1s linear infinite",
+                        }}
+                      />
+                    ) : (
+                      stat.value
+                    )}
+                  </div>
                   <div
                     style={{
-                      width: "40px",
-                      height: "40px",
-                      border: "3px solid #f3f3f3",
-                      borderTop: "3px solid " + stat.color,
-                      borderRadius: "50%",
-                      animation: "spin 1s linear infinite",
-                      margin: "0 auto",
+                      fontSize: "11px",
+                      fontWeight: "600",
+                      color: "#718096",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      lineHeight: 1.2,
                     }}
-                  />
-                ) : (
-                  stat.value
-                )}
-              </div>
-
-              {/* Title */}
-              <div
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  color: "#718096",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                  textAlign: "center",
-                  zIndex: 2,
-                  lineHeight: 1.2,
-                }}
-              >
-                {stat.title}
+                  >
+                    {stat.title}
+                  </div>
+                </div>
               </div>
             </Card>
           </Col>

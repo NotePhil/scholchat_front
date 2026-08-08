@@ -1,11 +1,9 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
 class PublicationRightsService {
   constructor(baseUrl = null) {
-    this.baseUrl =
-      baseUrl ||
-      process.env.REACT_APP_API_BASE_URL ||
-      "http://localhost:8486/scholchat";
+    this.baseUrl = baseUrl || process.env.REACT_APP_API_BASE_URL;
 
     this.axiosInstance = axios.create({
       baseURL: this.baseUrl,
@@ -16,29 +14,13 @@ class PublicationRightsService {
       timeout: 30000,
     });
 
-    // Add request interceptor to include auth token
-    this.axiosInstance.interceptors.request.use(
-      (config) => {
-        const token =
-          localStorage.getItem("accessToken") ||
-          sessionStorage.getItem("accessToken");
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
+    // Apply standard auth interceptors (token + 401/403 → session expired modal)
+    applyAuthInterceptors(this.axiosInstance);
 
-    // Add response interceptor for better error handling
+    // Add domain-specific error handling on top
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       (error) => {
-        console.error("Publication Rights API Error:", error);
-
-        // Handle different types of errors
         if (error.response) {
           const status = error.response.status;
           const message =
@@ -46,12 +28,9 @@ class PublicationRightsService {
             error.response.statusText ||
             `HTTP Error: ${status}`;
 
-          // Handle specific error cases
           switch (status) {
             case 404:
               throw new Error("User or class not found");
-            case 403:
-              throw new Error("Access denied - insufficient permissions");
             case 409:
               throw new Error(
                 "User already has publication rights for this class"

@@ -1,6 +1,7 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Create axios instance with common configuration
 const api = axios.create({
@@ -11,16 +12,12 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to handle different content types and add authentication token
-api.interceptors.request.use((config) => {
-  // Add authentication token to all requests
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+// Attach auth token on every request + trigger session-expired modal on 401/403
+applyAuthInterceptors(api);
 
+// Keep existing content-type logic on top (runs before applyAuthInterceptors request interceptor)
+api.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
-    // Let browser set the boundary for multipart/form-data
     delete config.headers["Content-Type"];
   } else {
     config.headers["Content-Type"] = "application/json";
@@ -293,7 +290,7 @@ class ScholchatService {
   // ============ Parent Management ============
   async getAllParents() {
     try {
-      const response = await api.get("/parents");
+      const response = await api.get("/parents/summary");
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -730,7 +727,7 @@ class ScholchatService {
   async validateProfessor(professorId) {
     try {
       const response = await api.post(
-        `/utilisateurs/professeurs/${professorId}/validate`
+        `/utilisateurs/professors/${professorId}/validate`
       );
       return response.data;
     } catch (error) {
@@ -738,13 +735,22 @@ class ScholchatService {
     }
   }
 
-  async rejectProfessor(professorId, rejectionData) {
+  async rejectProfessor(professorId, codeErreur, motifSupplementaire) {
     try {
-      const formData = this.createFormDataFromObject(rejectionData);
+      const params = new URLSearchParams({ codeErreur });
+      if (motifSupplementaire) params.append("motifSupplementaire", motifSupplementaire);
       const response = await api.post(
-        `/utilisateurs/professeurs/${professorId}/rejet`,
-        formData
+        `/utilisateurs/professeurs/${professorId}/rejet?${params.toString()}`
       );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async resendActivationEmail(email) {
+    try {
+      const response = await api.post(`/utilisateurs/regenerate-activation?email=${encodeURIComponent(email)}`);
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -754,7 +760,17 @@ class ScholchatService {
   // ============ Pending Professors ============
   async getPendingProfessors() {
     try {
-      const response = await api.get("/utilisateurs/professeurs/pending");
+      const response = await api.get("/utilisateurs/professors/pending");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Gestionnaire Management ============
+  async getAllGestionnaires() {
+    try {
+      const response = await api.get("/gestionnaires");
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -799,6 +815,28 @@ class ScholchatService {
 
   getToken() {
     return localStorage.getItem("authToken");
+  }
+
+  // ============ Password Management ============
+  async changePassword(passwordData) {
+    try {
+      const response = await api.post("/auth/change-password", {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getCurrentUser() {
+    try {
+      const response = await api.get("/auth/me");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
   }
   async patchUser(id, partialUpdate) {
     try {

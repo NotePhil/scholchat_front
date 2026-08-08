@@ -116,7 +116,12 @@ const CoursProgrammerList = ({
     setCurrentPage(1);
   }, [scheduledCourses, searchTerm, filterStatus, pageSize]);
 
-  const getClassName = (classeId) => {
+  const getClassName = (classeIdOrScheduled) => {
+    // Handle both direct classeId and classesIds array
+    let classeId = classeIdOrScheduled;
+    if (typeof classeIdOrScheduled === 'object' && classeIdOrScheduled !== null) {
+      classeId = classeIdOrScheduled.classeId || (classeIdOrScheduled.classesIds && classeIdOrScheduled.classesIds[0]);
+    }
     if (!classeId || !classes.length) return "Classe non définie";
     const classe = classes.find((c) => c.id === classeId);
     return classe ? classe.nom : "Classe non définie";
@@ -298,10 +303,10 @@ const CoursProgrammerList = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-slate-900 text-xs sm:text-sm leading-tight break-words">
-                      {scheduledCourse.cours?.titre}
+                      {scheduledCourse.cours?.titre || scheduledCourse.coursNom || "Cours sans titre"}
                     </h3>
                     <p className="text-xs text-slate-600 truncate mt-1">
-                      {getClassName(scheduledCourse.classeId)}
+                      {getClassName(scheduledCourse)}
                     </p>
                   </div>
                 </div>
@@ -364,7 +369,7 @@ const CoursProgrammerList = ({
               </div>
 
               <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-slate-100">
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-1 flex-wrap gap-1">
                   <ActionButtons scheduledCourse={scheduledCourse} />
                 </div>
               </div>
@@ -420,7 +425,7 @@ const CoursProgrammerList = ({
                       </div>
                       <div className="ml-2 sm:ml-4 flex-1 min-w-0">
                         <div className="text-xs sm:text-sm font-semibold text-slate-900 break-words leading-tight">
-                          {scheduledCourse.cours?.titre}
+                          {scheduledCourse.cours?.titre || scheduledCourse.coursNom || "Cours sans titre"}
                         </div>
                         <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                           {scheduledCourse.description || "Aucune description"}
@@ -430,7 +435,7 @@ const CoursProgrammerList = ({
                   </td>
                   <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <div className="text-xs sm:text-sm text-slate-900">
-                      {getClassName(scheduledCourse.classeId)}
+                      {getClassName(scheduledCourse)}
                     </div>
                   </td>
                   <td className="px-4 sm:px-6 py-3 sm:py-4">

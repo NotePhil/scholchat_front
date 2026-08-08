@@ -14,7 +14,6 @@ import { rejectionServiceClass } from "../../../../services/RejectionServiceClas
 import { themes, colorSchemes } from "../../theme";
 
 const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
-  const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState("prof"); // "prof" or "classe"
   const [motifs, setMotifs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,13 +30,6 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   // Theme variables
   const theme = isDark ? themes.dark : themes.light;
   const colors = colorSchemes[currentTheme];
-
-  useEffect(() => {
-    const userRole = localStorage.getItem("userRole");
-    if (userRole !== "admin") {
-      navigate("/schoolchat/admin/dashboard");
-    }
-  }, [navigate]);
 
   // Fetch motifs from API using the appropriate service
   const fetchMotifs = async () => {
@@ -113,13 +105,6 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   };
 
   useEffect(() => {
-    // Verify token validity on component mount
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
     fetchMotifs();
   }, [selectedType]); // Re-fetch when type changes
 

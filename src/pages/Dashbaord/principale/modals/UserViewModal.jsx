@@ -21,6 +21,64 @@ import {
 } from "lucide-react";
 import { rejectionService } from "../../../../services/RejectionService";
 import { minioS3Service } from "../../../../services/minioS3";
+import { useTranslation } from "../../../../hooks/useTranslation";
+
+// Extracts the relative storage path from a full Wasabi/MinIO URL.
+// Direct Wasabi URLs require presigned access; we must go through the proxy.
+const toRelativePath = (raw) => {
+  if (!raw || !raw.startsWith("http")) return raw;
+  try {
+    const pathname = new URL(raw).pathname.replace(/^\//, "");
+    // Path contains 'users/' — that's always the start of our storage key
+    const idx = pathname.indexOf("users/");
+    if (idx >= 0) return pathname.slice(idx);
+    // Fallback: strip first segment (bucket name) for path-style URLs
+    const parts = pathname.split("/");
+    return parts.length > 1 ? parts.slice(1).join("/") : pathname;
+  } catch {
+    return raw;
+  }
+};
+
+// Resolves ANY path (relative or full Wasabi URL) into a proxied presigned URL
+const resolveMediaUrl = async (path) => {
+  if (!path) return null;
+  try {
+    return await minioS3Service.getMediaUrlByPath(toRelativePath(path));
+  } catch {
+    return null;
+  }
+};
+
+const ProfilePhotoAvatar = ({ user }) => {
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const path = user?.selfieUrl;
+  useEffect(() => {
+    if (!path) return;
+    let cancelled = false;
+    (async () => {
+      const url = await resolveMediaUrl(path);
+      if (!cancelled && url) setPhotoUrl(url);
+    })();
+    return () => { cancelled = true; };
+  }, [path]);
+
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={`${user?.prenom} ${user?.nom}`}
+        className="h-16 w-16 rounded-full object-cover shadow-lg"
+        onError={() => setPhotoUrl(null)}
+      />
+    );
+  }
+  return (
+    <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
+      {user?.nom?.charAt(0)}{user?.prenom?.charAt(0)}
+    </div>
+  );
+};
 
 // Image Modal Component for zooming - Updated with better z-index
 const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
@@ -204,6 +262,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
 };
 
 const UserViewModal = ({ user, onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [showRejectionOptions, setShowRejectionOptions] = useState(false);
   const [rejectionMotifs, setRejectionMotifs] = useState([]);
   const [selectedMotifs, setSelectedMotifs] = useState([]);
@@ -254,13 +313,11 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
   const getDocumentUrl = async (document) => {
     try {
-      const downloadData = await minioS3Service.generateDownloadUrl(
-        document.id
-      );
+      const downloadData = await minioS3Service.generateDownloadUrl(document.id);
       return downloadData.downloadUrl;
     } catch (error) {
       console.error("Failed to get document URL:", error);
-      return "https://via.placeholder.com/300x300?text=Document+Non+Trouvé";
+      return null;
     }
   };
 
@@ -275,23 +332,45 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
         return;
       }
 
-      const documents = await minioS3Service.getUserMedia(userId);
+      // Only include direct image URLs that the user actually registered (cniUrlRecto, cniUrlVerso, selfieUrl)
+      const directImages = [];
+      
+      const processDirectPath = async (path, title, idPrefix) => {
+        if (!path) return null;
+        // Always go through proxy — never expose raw Wasabi URLs (AccessDenied)
+        const signedUrl = await resolveMediaUrl(path);
+        if (!signedUrl) return null;
+        return { id: `${idPrefix}-${userId}`, title, url: signedUrl, type: "image/jpeg", size: null, uploadDate: null, fileType: "IMAGE", mediaType: "IMAGE" };
+      };
 
-      // Get URLs for all documents using Promise.all
-      const documentsWithUrls = await Promise.all(
-        documents.map(async (doc) => ({
-          id: doc.id,
-          title: doc.fileName || "Document sans nom",
-          url: await getDocumentUrl(doc),
-          type: doc.contentType,
-          size: doc.fileSize,
-          uploadDate: doc.uploadedDate,
-          fileType: doc.fileType,
-          mediaType: doc.mediaType,
-        }))
-      );
+      const [cniRecto, cniVerso, selfie] = await Promise.all([
+        processDirectPath(user?.cniUrlRecto, "CNI Recto", "cni-recto"),
+        processDirectPath(user?.cniUrlVerso, "CNI Verso", "cni-verso"),
+        processDirectPath(user?.selfieUrl, "Selfie", "selfie")
+      ]);
 
-      setUserDocuments(documentsWithUrls);
+      if (cniRecto) directImages.push(cniRecto);
+      if (cniVerso) directImages.push(cniVerso);
+      if (selfie) directImages.push(selfie);
+
+      // Also fetch MinIO media documents uploaded by the user
+      let minioDocuments = [];
+      try {
+        const documents = await minioS3Service.getUserMedia(userId);
+        const documentsWithUrls = (await Promise.all(
+          documents.map(async (doc) => {
+            const url = await getDocumentUrl(doc);
+            if (!url) return null;
+            return { id: doc.id, title: doc.fileName || "Document sans nom", url, type: doc.contentType, size: doc.fileSize, uploadDate: doc.uploadedDate, fileType: doc.fileType, mediaType: doc.mediaType };
+          })
+        )).filter(Boolean);
+        const existingUrls = new Set(directImages.map(d => d.url));
+        minioDocuments = documentsWithUrls.filter(d => !existingUrls.has(d.url));
+      } catch (minioErr) {
+        console.warn("Could not load MinIO documents:", minioErr);
+      }
+
+      setUserDocuments([...directImages, ...minioDocuments]);
     } catch (err) {
       console.error("Échec du chargement des documents:", err);
       setError("Échec du chargement des documents de l'utilisateur");
@@ -555,14 +634,14 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
               <Check className="h-6 w-6 text-green-600" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Succès</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.messages.success')}</h3>
             <div className="text-sm text-gray-500 mb-4">{successMessage}</div>
             <button
               type="button"
               className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
               onClick={handleSuccess}
             >
-              Fermer
+              {t('common.actions.close')}
             </button>
           </div>
         </div>
@@ -585,9 +664,9 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
                 <User className="mr-2 sm:mr-3 text-indigo-600" size={24} />
                 <span className="hidden sm:inline">
-                  Détails de l'utilisateur
+                  {t('users.management.userDetails')}
                 </span>
-                <span className="sm:hidden">Utilisateur</span>
+                <span className="sm:hidden">{t('users.management.user')}</span>
               </h2>
               <div className="flex items-center space-x-3 sm:space-x-4">
                 {getVerificationStatusBadge()}
@@ -630,15 +709,12 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                 <div className="bg-slate-50 rounded-xl p-4 sm:p-6 mb-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
                     <Shield size={18} className="mr-2 text-indigo-600" />
-                    Informations personnelles
+                    {t('users.management.personalInfo')}
                   </h3>
 
                   {/* User Avatar and Name */}
                   <div className="flex items-center mb-6">
-                    <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
-                      {user?.nom?.charAt(0)}
-                      {user?.prenom?.charAt(0)}
-                    </div>
+                    <ProfilePhotoAvatar user={user} />
                     <div className="ml-4">
                       <div className="text-xl font-bold text-slate-900">
                         {user?.nom} {user?.prenom}
@@ -655,7 +731,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
                         <Mail size={14} className="mr-1" />
-                        Email
+                        {t('admin.form.email')}
                       </p>
                       <p className="font-medium text-slate-900 break-all">
                         {user?.email}
@@ -664,23 +740,23 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
                         <Phone size={14} className="mr-1" />
-                        Téléphone
+                        {t('admin.form.phone')}
                       </p>
                       <p className="font-medium text-slate-900">
-                        {user?.telephone || "Non fourni"}
+                        {user?.telephone || t('users.management.notProvided')}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
                         <Shield size={14} className="mr-1" />
-                        Statut
+                        {t('admin.table.status')}
                       </p>
                       <div>{getVerificationStatusBadge()}</div>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
                         <Calendar size={14} className="mr-1" />
-                        Date d'inscription
+                        {t('users.management.registrationDate')}
                       </p>
                       <p className="font-medium text-slate-900">
                         {user?.dateCreation
@@ -692,13 +768,13 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                 day: "numeric",
                               }
                             )
-                          : "Non disponible"}
+                          : t('users.management.notAvailable')}
                       </p>
                     </div>
                     {user?.motif && (
                       <div className="col-span-2 space-y-1">
                         <p className="text-sm font-medium text-slate-500">
-                          Motif de rejet
+                          {t('users.management.rejectionReason')}
                         </p>
                         <p className="font-medium text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
                           {user.motif}
@@ -712,22 +788,22 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                 <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
                     <FileText size={18} className="mr-2 text-indigo-600" />
-                    Documents de l'utilisateur ({userDocuments.length})
+                    {t('users.management.userDocuments')} ({userDocuments.length})
                   </h3>
 
                   {isLoadingDocuments ? (
                     <div className="flex justify-center items-center p-8 text-slate-500">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                      <span className="ml-3">Chargement des documents...</span>
+                      <span className="ml-3">{t('users.management.loadingDocuments')}</span>
                     </div>
                   ) : userDocuments.length === 0 ? (
                     <div className="bg-white p-8 rounded-lg text-center text-slate-500 border-2 border-dashed border-slate-300">
                       <FileText className="mx-auto h-12 w-12 text-slate-400 mb-3" />
                       <p className="text-lg font-medium mb-1">
-                        Aucun document trouvé
+                        {t('users.management.noDocumentsFound')}
                       </p>
                       <p className="text-sm">
-                        Cet utilisateur n'a téléchargé aucun document
+                        {t('users.management.noDocumentsUploaded')}
                       </p>
                     </div>
                   ) : (
@@ -740,12 +816,13 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                               size={16}
                               className="mr-2 text-indigo-600"
                             />
-                            Images ({images.length})
+                            {t('users.management.images')} ({images.length})
                           </h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {images.map((doc, index) => (
                               <div
                                 key={doc.id}
+                                data-doc-card
                                 className="bg-white p-3 rounded-lg border-2 border-slate-200 group cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300"
                                 onClick={() => handleImageClick(doc)}
                               >
@@ -757,8 +834,8 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                       className="w-full h-32 sm:h-40 object-cover rounded-lg bg-slate-100 border group-hover:scale-105 transition-transform duration-300 shadow-sm"
                                       onError={(e) => {
                                         e.target.onerror = null;
-                                        e.target.src =
-                                          "https://via.placeholder.com/300x200?text=Image+Non+Trouvée";
+                                        const card = e.target.closest('[data-doc-card]');
+                                        if (card) card.style.display = 'none';
                                       }}
                                     />
                                   </div>

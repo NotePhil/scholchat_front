@@ -1,5 +1,5 @@
 // ManageClassDetailsView.jsx - UPDATED VERSION WITH SELF-APPROVAL FEATURE
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Form,
   message,
@@ -17,7 +17,37 @@ import {
   Tabs,
   List,
   Checkbox,
+  Table,
 } from "antd";
+import { useSelector } from "react-redux";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ArrowLeft,
+  Users,
+  Settings,
+  Shield,
+  History,
+  CheckCircle,
+  XCircle,
+  GraduationCap,
+  Calendar,
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  UserPlus,
+  RefreshCw,
+  Check,
+  X as XIcon,
+  User,
+  FileText,
+  School,
+  Activity,
+  Copy,
+  Crown,
+  Trash2,
+  Clock,
+  Eye,
+} from "lucide-react";
 import {
   ArrowLeftOutlined,
   ReloadOutlined,
@@ -35,7 +65,9 @@ import {
   UserOutlined,
   SearchOutlined,
   CrownOutlined,
-  CopyOutlined, // Add this line
+  CopyOutlined,
+  FileTextOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { Row, Col, Descriptions } from "antd";
 import { classService } from "../../../../services/ClassService";
@@ -49,10 +81,14 @@ import PublicationRightsService from "../../../../services/PublicationRightsServ
 import AccederService, {
   EtatDemandeAcces,
 } from "../../../../services/accederService";
+import { coursProgrammerService } from "../../../../services/coursProgrammerService";
+import { exerciseProgrammerService } from "../../../../services/exerciseProgrammerService";
+import { activityFeedService } from "../../../../services/ActivityFeedService";
 
 // Import separated components
 import UserTables from "./components/UserTables";
 import StatisticsCards from "./components/StatisticsCards";
+import OffreInfoPanel from "../shared/OffreInfoPanel";
 
 import "./ManageClassDetailsView.css";
 
@@ -107,13 +143,84 @@ const RenderUserModal = ({ user, visible, onClose }) => {
   }
 };
 
-const ManageClassDetailsView = ({ classId, onBack }) => {
+
+/* ── Scrollable tab bar with arrow buttons ─────────────────────────────── */
+const TabScrollBar = ({ activeTab, onTabChange, tabs }) => {
+  const ref = React.useRef(null);
+  const [canLeft, setCanLeft] = React.useState(false);
+  const [canRight, setCanRight] = React.useState(false);
+
+  const check = () => {
+    const el = ref.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 4);
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    check();
+    el.addEventListener("scroll", check);
+    window.addEventListener("resize", check);
+    return () => { el.removeEventListener("scroll", check); window.removeEventListener("resize", check); };
+  }, [tabs]);
+
+  const scroll = (dir) => ref.current?.scrollBy({ left: dir === "left" ? -120 : 120, behavior: "smooth" });
+
+  return (
+    <div className="bg-white border-b border-slate-200 relative">
+      {canLeft && (
+        <button onClick={() => scroll("left")}
+          className="absolute left-0 top-0 bottom-0 z-10 flex items-center px-1.5 bg-gradient-to-r from-white via-white to-transparent">
+          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-all">
+            <ChevronLeft size={14} />
+          </span>
+        </button>
+      )}
+      {canRight && (
+        <button onClick={() => scroll("right")}
+          className="absolute right-0 top-0 bottom-0 z-10 flex items-center px-1.5 bg-gradient-to-l from-white via-white to-transparent">
+          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-all">
+            <ChevronRight size={14} />
+          </span>
+        </button>
+      )}
+      <div ref={ref} className="flex overflow-x-auto px-3 sm:px-6" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        {tabs.map(tab => (
+          <button key={tab.key} onClick={() => onTabChange(tab.key)}
+            className={`flex-shrink-0 flex items-center gap-1.5 py-3 px-4 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+              activeTab === tab.key
+                ? "border-indigo-600 text-indigo-700"
+                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+            }`}>
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ManageClassDetailsView = ({ classId, onBack, initialTab, onNavigateToCourseCreation, onNavigateToExerciseManagement, onNavigateToCoursManagement, onNavigateToEvents }) => {
   const [classDetails, setClassDetails] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(initialTab || "overview");
   const [actionLoading, setActionLoading] = useState(null);
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
+
+  // When initialTab changes (e.g. from notification click while already viewing this class),
+  // switch to the requested tab and reload its data
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      setActiveTab(initialTab);
+      if (initialTab === "access-requests") {
+        loadAccessRequests();
+      }
+    }
+  }, [initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Users data from new approach - UPDATED to include utilisateurs
   const [users, setUsers] = useState({
@@ -144,12 +251,25 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
   const [publicationRightsModalVisible, setPublicationRightsModalVisible] =
     useState(false);
 
+  // Admin class approval/rejection modal state
+  const [classRejectModalVisible, setClassRejectModalVisible] = useState(false);
+  const [classRejectMotifs, setClassRejectMotifs] = useState([]);
+  const [classRejectSelectedCode, setClassRejectSelectedCode] = useState("");
+  const [classRejectMotifSupp, setClassRejectMotifSupp] = useState("");
+  const [classRejectMotifsLoading, setClassRejectMotifsLoading] = useState(false);
+
   // Form and data states
   const [form] = Form.useForm();
   const [history, setHistory] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [rejectionMotifs, setRejectionMotifs] = useState([]);
   const [selectedPublicationRight, setSelectedPublicationRight] = useState("");
+  
+  // NEW: Additional module states
+  const [courses, setCourses] = useState([]);
+  const [exercises, setExercises] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [moduleLoading, setModuleLoading] = useState(false);
 
   // Publication rights states
   const [searchEmail, setSearchEmail] = useState("");
@@ -205,15 +325,31 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
       classDetails.etablissement.id === "";
 
     // Check if current user is the creator of the class
+    // If no creator is set and user is a professor, assume they can manage independent classes
     const isCreator =
       classDetails.createurId === currentUserId ||
-      classDetails.utilisateurId === currentUserId;
+      classDetails.utilisateurId === currentUserId ||
+      classDetails.createur_id === currentUserId ||
+      classDetails.cree_par === currentUserId ||
+      (!classDetails.createurId && !classDetails.etablissement && userRole === "ROLE_PROFESSOR");
+      
+    console.log("Creator check details:", {
+      createurId: classDetails.createurId,
+      utilisateurId: classDetails.utilisateurId,
+      createur_id: classDetails.createur_id,
+      cree_par: classDetails.cree_par,
+      currentUserId,
+      userRole,
+      hasNoEstablishment: !classDetails.etablissement,
+      isCreator
+    });
 
-    // Check if payment is OK (you might need to adjust this based on your payment status field)
+    // Check if payment is OK - for independent classes, payment is not required
     const paymentOk =
       classDetails.paymentStatus === "SUCCESS" ||
       classDetails.paiementEffectue === true ||
-      classDetails.etat === "ACTIF"; // Assuming active status means payment is OK
+      classDetails.etat === "ACTIF" ||
+      !classDetails.paymentRequired; // If payment not required, consider it OK
 
     console.log("Self-approval check:", {
       hasNoEstablishment,
@@ -239,17 +375,36 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
       setLoading(true);
       const details = await classService.obtenirClasseParId(classId);
       console.log("Class details loaded:", details);
-      setClassDetails(details);
+      console.log("All class detail fields:", Object.keys(details));
+      console.log("Complete class details object:", JSON.stringify(details, null, 2));
+      
+      // Handle missing fields from backend - map database field names
+      const enrichedDetails = {
+        ...details,
+        // Map database field names to frontend expected names
+        dateCreation: details.dateCreation || details.date_creation || null,
+        createurId: details.createurId || details.createur_id || details.cree_par || details.utilisateur_id || currentUserId,
+        droitPublication: details.droitPublication || details.droit_publication || "PROFESSEURS_SEULEMENT",
+        etablissement: details.etablissement || (details.etablissement_id ? { id: details.etablissement_id } : null),
+        moderatorId: details.moderatorId || details.moderator_id || null
+      };
+      
+      console.log("Enriched class details:", enrichedDetails);
+      setClassDetails(enrichedDetails);
       setSelectedPublicationRight(
         details.droitPublication || "PROFESSEURS_SEULEMENT"
       );
 
-      // Load all user data in parallel
+      // Load all user data in sequence to avoid race conditions
+      const accessResult = await loadUsersWithAccess();
+      await loadAccessRequests();
+      await loadModeratorsAndRights();
+      
+      // Load additional modules
       await Promise.all([
-        loadUsersWithAccess(),
-        loadAccessRequests(),
-        loadModeratorsAndRights(),
-        loadStudentsAlternative(), // Alternative method to ensure students are loaded
+        loadCourses(),
+        loadExercises(),
+        loadEvents()
       ]);
     } catch (error) {
       message.error("Erreur lors du chargement des détails de la classe");
@@ -260,10 +415,10 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
   };
 
   // Alternative method to load students if main method fails
-  const loadStudentsAlternative = async () => {
+  const loadStudentsAlternative = async (elevesAlreadyLoaded = 0) => {
     try {
       // Only run if no students were loaded via the main method
-      if (users.eleves.length === 0) {
+      if (elevesAlreadyLoaded === 0) {
         console.log("Trying alternative method to load students...");
 
         // Récupérer tous les étudiants du système
@@ -311,16 +466,79 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
       const rightsResult =
         await PublicationRightsService.getUsersWithRightsForClass(classId);
       if (rightsResult.success) {
-        setUsersWithPublicationRights(rightsResult.data || []);
-        console.log("Users with publication rights:", rightsResult.data);
-      }
+        const rightsUsers = rightsResult.data || [];
+        setUsersWithPublicationRights(rightsUsers);
+        console.log("Users with publication rights:", rightsUsers);
 
-      // Get moderators (users with moderation rights)
-      const moderators = (rightsResult.data || []).filter(
-        (user) => user.peutModerer
-      );
-      setModeratorsWithRights(moderators);
-      console.log("Moderators with rights:", moderators);
+        // Get moderators (users with moderation rights)
+        const moderators = rightsUsers.filter((user) => user.peutModerer);
+        setModeratorsWithRights(moderators);
+        console.log("Moderators with rights:", moderators);
+
+        // IMPORTANT: Merge publication rights users into the main users state
+        // This ensures professors with publication rights are displayed in the table
+        if (rightsUsers.length > 0) {
+          setUsers((prevUsers) => {
+            // Get existing IDs to avoid duplicates
+            const existingIds = new Set([
+              ...prevUsers.professeurs.map(u => u.id),
+              ...prevUsers.eleves.map(u => u.id),
+              ...prevUsers.parents.map(u => u.id),
+              ...prevUsers.utilisateurs.map(u => u.id)
+            ]);
+            
+            console.log("Existing user IDs before merge:", Array.from(existingIds));
+            
+            const categorized = { professeurs: [], eleves: [], parents: [], utilisateurs: [] };
+            
+            rightsUsers.forEach((user) => {
+              // Only add if not already in the list
+              if (!existingIds.has(user.id)) {
+                const userType = (user.typeUtilisateur || user.type || "").toUpperCase();
+                
+                if (userType === "PROFESSEUR" || userType === "PROFESSOR") {
+                  categorized.professeurs.push({ ...user, typeUtilisateur: "PROFESSEUR" });
+                } else if (userType === "ELEVE" || userType === "ÉLÈVE" || userType === "STUDENT") {
+                  categorized.eleves.push({ ...user, typeUtilisateur: "ELEVE" });
+                } else if (userType === "PARENT") {
+                  categorized.parents.push({ ...user, typeUtilisateur: "PARENT" });
+                } else {
+                  categorized.utilisateurs.push({ ...user, typeUtilisateur: "UTILISATEUR" });
+                }
+              } else {
+                console.log(`Skipping user ${user.id} - already exists`);
+              }
+            });
+
+            console.log("Merging publication rights users:", categorized);
+            
+            // Only update if we have new users to add
+            if (categorized.professeurs.length > 0 || categorized.eleves.length > 0 || 
+                categorized.parents.length > 0 || categorized.utilisateurs.length > 0) {
+              
+              const newState = {
+                professeurs: [...prevUsers.professeurs, ...categorized.professeurs],
+                eleves: [...prevUsers.eleves, ...categorized.eleves],
+                parents: [...prevUsers.parents, ...categorized.parents],
+                utilisateurs: [...prevUsers.utilisateurs, ...categorized.utilisateurs],
+                accessRequests: prevUsers.accessRequests
+              };
+              
+              console.log("New users state after merge:", {
+                professeurs: newState.professeurs.length,
+                eleves: newState.eleves.length,
+                parents: newState.parents.length,
+                utilisateurs: newState.utilisateurs.length
+              });
+              
+              return newState;
+            } else {
+              console.log("No new users to merge - keeping existing state");
+              return prevUsers;
+            }
+          });
+        }
+      }
     } catch (error) {
       console.error("Error loading moderator and rights info:", error);
     }
@@ -334,6 +552,14 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
         classId
       );
       console.log("Raw users with access:", usersWithAccess);
+      
+      // If no users have access yet, don't reset - just log and continue
+      // This allows publication rights data to be loaded next
+      if (!usersWithAccess || usersWithAccess.length === 0) {
+        console.log("No users with access found for this class - will check publication rights");
+        // Don't reset the users state - just return and let other methods populate it
+        return;
+      }
 
       // Enhanced categorization with detailed logging and forced categorization
       const categorizedUsers = {
@@ -343,180 +569,52 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
         utilisateurs: [],
       };
 
-      // Get all user data in parallel for better categorization
+      for (const user of usersWithAccess) {
+        const userType = (user.typeUtilisateur || user.type || user.role || "").toUpperCase();
+        if (userType === "PROFESSEUR" || userType === "PROFESSOR") {
+          categorizedUsers.professeurs.push({ ...user, typeUtilisateur: "PROFESSEUR" });
+        } else if (userType === "ELEVE" || userType === "ÉLÈVE" || userType === "STUDENT") {
+          categorizedUsers.eleves.push({ ...user, typeUtilisateur: "ELEVE" });
+        } else if (userType === "PARENT") {
+          categorizedUsers.parents.push({ ...user, typeUtilisateur: "PARENT" });
+        } else {
+          categorizedUsers.utilisateurs.push({ ...user, typeUtilisateur: "UTILISATEUR" });
+        }
+      }
+
+      // Enrich with full profile data (telephone, adresse, niveau, creationDate, etc.)
       const [allProfessors, allStudents, allParents] = await Promise.all([
         scholchatService.getAllProfessors().catch(() => []),
         scholchatService.getAllStudents().catch(() => []),
         scholchatService.getAllParents().catch(() => []),
       ]);
 
-      console.log("Reference data loaded:", {
-        professorsCount: allProfessors.length,
-        studentsCount: allStudents.length,
-        parentsCount: allParents.length,
-      });
+      const enrich = (users, pool) => {
+        const safePool = Array.isArray(pool) ? pool : [];
+        return users.map(u => ({ ...(safePool.find(p => p.id === u.id) || {}), ...u }));
+      };
 
-      // Process each user with access
-      for (const user of usersWithAccess) {
-        let categorized = false;
+      categorizedUsers.professeurs = enrich(categorizedUsers.professeurs, allProfessors);
+      categorizedUsers.eleves = enrich(categorizedUsers.eleves, allStudents);
+      categorizedUsers.parents = enrich(categorizedUsers.parents, allParents);
 
-        // First, try to categorize by explicit type markers
-        const userType = (
-          user.type ||
-          user.role ||
-          user.typeUtilisateur ||
-          ""
-        ).toUpperCase();
-
-        console.log(
-          `Processing user ${user.id}: ${user.prenom} ${user.nom}, type: ${userType}`
-        );
-
-        // Try exact type matching first
-        switch (userType) {
-          case "PROFESSEUR":
-          case "PROFESSOR":
-            const professorData =
-              allProfessors.find((p) => p.id === user.id) || user;
-            categorizedUsers.professeurs.push({
-              ...professorData,
-              type: "PROFESSEUR",
-              typeUtilisateur: "PROFESSEUR",
-            });
-            categorized = true;
-            console.log("Categorized as professor:", professorData);
-            break;
-
-          case "ELEVE":
-          case "ÉLÈVE":
-          case "STUDENT":
-            const studentData =
-              allStudents.find((s) => s.id === user.id) || user;
-            categorizedUsers.eleves.push({
-              ...studentData,
-              type: "ELEVE",
-              typeUtilisateur: "ELEVE",
-            });
-            categorized = true;
-            console.log("Categorized as student:", studentData);
-            break;
-
-          case "PARENT":
-            const parentData = allParents.find((p) => p.id === user.id) || user;
-            categorizedUsers.parents.push({
-              ...parentData,
-              type: "PARENT",
-              typeUtilisateur: "PARENT",
-            });
-            categorized = true;
-            console.log("Categorized as parent:", parentData);
-            break;
-        }
-
-        // If not categorized by type, try to find them in the reference data
-        if (!categorized) {
-          // Check if they exist in professors
-          const foundProfessor = allProfessors.find((p) => p.id === user.id);
-          if (foundProfessor) {
-            categorizedUsers.professeurs.push({
-              ...foundProfessor,
-              type: "PROFESSEUR",
-              typeUtilisateur: "PROFESSEUR",
-            });
-            categorized = true;
-            console.log("Found and categorized as professor:", foundProfessor);
-          }
-
-          // Check if they exist in students
-          if (!categorized) {
-            const foundStudent = allStudents.find((s) => s.id === user.id);
-            if (foundStudent) {
-              categorizedUsers.eleves.push({
-                ...foundStudent,
-                type: "ELEVE",
-                typeUtilisateur: "ELEVE",
-              });
-              categorized = true;
-              console.log("Found and categorized as student:", foundStudent);
-            }
-          }
-
-          // Check if they exist in parents
-          if (!categorized) {
-            const foundParent = allParents.find((p) => p.id === user.id);
-            if (foundParent) {
-              categorizedUsers.parents.push({
-                ...foundParent,
-                type: "PARENT",
-                typeUtilisateur: "PARENT",
-              });
-              categorized = true;
-              console.log("Found and categorized as parent:", foundParent);
-            }
-          }
-        }
-
-        // If still not categorized, check by data structure characteristics
-        if (!categorized) {
-          if (user.nomEtablissement || user.matriculeProfesseur) {
-            categorizedUsers.professeurs.push({
-              ...user,
-              type: "PROFESSEUR",
-              typeUtilisateur: "PROFESSEUR",
-            });
-            categorized = true;
-            console.log("Categorized as professor by data structure:", user);
-          } else if (user.niveau) {
-            categorizedUsers.eleves.push({
-              ...user,
-              type: "ELEVE",
-              typeUtilisateur: "ELEVE",
-            });
-            categorized = true;
-            console.log("Categorized as student by data structure:", user);
-          } else if (user.adresse && !user.niveau && !user.nomEtablissement) {
-            categorizedUsers.parents.push({
-              ...user,
-              type: "PARENT",
-              typeUtilisateur: "PARENT",
-            });
-            categorized = true;
-            console.log("Categorized as parent by data structure:", user);
-          }
-        }
-
-        // If still not categorized, put in utilisateurs
-        if (!categorized) {
-          categorizedUsers.utilisateurs.push({
-            ...user,
-            type: "utilisateur",
-            typeUtilisateur: "UTILISATEUR",
-          });
-          console.log("Categorized as general user:", user);
-        }
-      }
-
-      console.log("Final categorized users:", {
-        professeurs: categorizedUsers.professeurs.length,
-        eleves: categorizedUsers.eleves.length,
-        parents: categorizedUsers.parents.length,
-        utilisateurs: categorizedUsers.utilisateurs.length,
-        details: categorizedUsers,
-      });
-
-      setUsers((prev) => ({
+      setUsers(prev => ({
         ...prev,
-        ...categorizedUsers,
+        professeurs: categorizedUsers.professeurs,
+        eleves: categorizedUsers.eleves,
+        parents: categorizedUsers.parents,
+        utilisateurs: categorizedUsers.utilisateurs,
       }));
 
-      // Update statistics
-      setStatistics((prevStats) => ({
-        ...prevStats,
+      setStatistics(prev => ({
+        ...prev,
         professeurs: categorizedUsers.professeurs.length,
         eleves: categorizedUsers.eleves.length,
         parents: categorizedUsers.parents.length,
         utilisateurs: categorizedUsers.utilisateurs.length,
       }));
+
+      return categorizedUsers;
     } catch (error) {
       console.error("Error loading users with access:", error);
       message.error("Erreur lors du chargement des utilisateurs");
@@ -663,6 +761,76 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
     }
   };
 
+  const loadCourses = async () => {
+    try {
+      const data = await coursProgrammerService.obtenirProgrammationParClasse(classId);
+      // Sort by status: EN_COURS (0), PLANIFIE (1), ANNULE (2), TERMINE (3)
+      const sorted = (data || []).sort((a, b) => {
+        const order = { "EN_COURS": 0, "PLANIFIE": 1, "ANNULE": 2, "TERMINE": 3 };
+        return (order[a.etatCoursProgramme] ?? 99) - (order[b.etatCoursProgramme] ?? 99);
+      });
+      setCourses(sorted);
+    } catch (error) {
+      console.error("Error loading courses:", error);
+    }
+  };
+
+  const loadExercises = async () => {
+    try {
+      const data = await exerciseProgrammerService.getExercisesProgrammesParClasse(classId);
+      // Sort by status: ACTIF/PUBLIE (0), BROUILLON (1), EN_ATTENTE_CORRECTION (2), CORRIGE (3), ANNULE (4)
+      const sorted = (data || []).sort((a, b) => {
+        const order = { 
+          "ACTIF": 0, "PUBLIE": 0, 
+          "BROUILLON": 1, 
+          "EN_ATTENTE_CORRECTION": 2, 
+          "CORRIGE": 3, 
+          "ANNULE": 4 
+        };
+        return (order[a.etat] ?? order[a.etatExercise] ?? 99) - (order[b.etat] ?? order[b.etatExercise] ?? 99);
+      });
+      setExercises(sorted);
+    } catch (error) {
+      console.error("Error loading exercises:", error);
+    }
+  };
+
+  const loadEvents = async () => {
+    try {
+      const allEvents = await activityFeedService.getActivities();
+      // Filter by classId
+      const classEvents = allEvents.filter(event => 
+        event.classesIds && event.classesIds.includes(classId)
+      );
+      // Sort by status: EN_COURS (0), PLANIFIE/A_VENIR (1), PASSE (2), ANNULE (3)
+      const sorted = classEvents.sort((a, b) => {
+        const order = { "EN_COURS": 0, "PLANIFIE": 1, "A_VENIR": 1, "PASSE": 2, "ANNULE": 3 };
+        return (order[a.etat] ?? 99) - (order[b.etat] ?? 99);
+      });
+      setEvents(sorted);
+    } catch (error) {
+      console.error("Error loading events:", error);
+    }
+  };
+
+  const isUserModerator = () => {
+    // Students and parents are never moderators
+    const role = (userRole || "").toUpperCase();
+    if (role.includes("ELEVE") || role.includes("STUDENT") || role.includes("PARENT")) return false;
+
+    if (role === "ADMIN" || role === "ROLE_ADMIN" || role === "ADMINISTRATEUR") return true;
+
+    if (!currentUserId) return false;
+
+    // Check if user is assigned moderator (check both object and flat field)
+    if (classDetails?.moderatorId === currentUserId) return true;
+    if (classDetails?.moderator?.id === currentUserId) return true;
+    if (classDetails?.createurId === currentUserId) return true;
+
+    // Check if user is in moderatorsWithRights (professors only)
+    return moderatorsWithRights.some(m => m.id === currentUserId);
+  };
+
   const fetchProfessors = async () => {
     try {
       const data = await classService.obtenirProfesseurs();
@@ -694,6 +862,28 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
       message.error("Erreur lors du chargement de l'historique");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Map { professorId: boolean } of publication rights for professors in this class
+  const publicationRightsMap = Object.fromEntries(
+    (usersWithPublicationRights || []).map((u) => [u.id, true])
+  );
+
+  const handleTogglePublicationRights = async (professor, grant) => {
+    try {
+      if (grant) {
+        await PublicationRightsService.assignPublicationRights(professor.id, classId, true, false);
+        message.success(`Droit de publication accordé à ${professor.prenom} ${professor.nom}`);
+      } else {
+        await PublicationRightsService.removePublicationRights(professor.id, classId);
+        message.success(`Droit de publication retiré à ${professor.prenom} ${professor.nom}`);
+      }
+      // Refresh publication rights list
+      const rightsResult = await PublicationRightsService.getUsersWithRightsForClass(classId);
+      if (rightsResult.success) setUsersWithPublicationRights(rightsResult.data || []);
+    } catch (err) {
+      message.error(err.message || "Erreur lors de la mise à jour des droits de publication");
     }
   };
 
@@ -809,73 +999,18 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
             break;
         }
 
-        // If we found the user, add them to the appropriate category immediately
-        if (approvedUser && userCategory) {
-          console.log(
-            "Adding approved user to category:",
-            userCategory,
-            approvedUser
-          );
-
-          // Force update the users state immediately
-          setUsers((prevUsers) => {
-            const updatedUsers = { ...prevUsers };
-
-            // Remove from access requests
-            updatedUsers.accessRequests = updatedUsers.accessRequests.filter(
-              (req) => req.id !== request.id
-            );
-
-            // Add to the appropriate category (avoid duplicates)
-            const existsInCategory = updatedUsers[userCategory].some(
-              (user) => user.id === approvedUser.id
-            );
-
-            if (!existsInCategory) {
-              updatedUsers[userCategory] = [
-                ...updatedUsers[userCategory],
-                {
-                  ...approvedUser,
-                  // Ensure proper type marking for the table
-                  type: userType?.toLowerCase() || "utilisateur",
-                  typeUtilisateur: userType,
-                  etat: "ACTIF",
-                },
-              ];
-            }
-
-            console.log("Updated users state:", updatedUsers);
-            return updatedUsers;
-          });
-
-          // Update statistics immediately
-          setStatistics((prevStats) => {
-            const updatedStats = { ...prevStats };
-            updatedStats.accessRequests = Math.max(
-              0,
-              updatedStats.accessRequests - 1
-            );
-            updatedStats[userCategory] = updatedStats[userCategory] + 1;
-            return updatedStats;
-          });
-
-          message.success(
-            `Demande approuvée avec succès. ${approvedUser.prenom} ${approvedUser.nom} a été ajouté(e) aux ${userCategory}.`
-          );
-        } else {
-          console.warn("Could not find full user data for approved request");
-          message.success("Demande approuvée avec succès");
-          // Still refresh to get updated data
-          setRefreshKey((prev) => prev + 1);
-        }
-      } catch (userFetchError) {
-        console.error(
-          "Error fetching user details after approval:",
-          userFetchError
+        message.success(
+          approvedUser
+            ? `Demande approuvée. ${approvedUser.prenom || ""} ${approvedUser.nom || ""} a été ajouté(e).`
+            : "Demande approuvée avec succès"
         );
+      } catch (userFetchError) {
+        console.warn("Could not fetch user details after approval:", userFetchError);
         message.success("Demande approuvée avec succès");
-        setRefreshKey((prev) => prev + 1);
       }
+      // Always reload class data to reflect the approval
+      await loadAccessRequests();
+      await loadClassDetails();
     } catch (error) {
       message.error("Erreur lors de l'approbation de la demande");
       console.error("Error approving request:", error);
@@ -899,10 +1034,43 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
       setRejectModalVisible(false);
       setRejectReason("");
       setRejectingUser(null);
-      setRefreshKey((prev) => prev + 1);
+      await loadAccessRequests();
     } catch (error) {
       message.error("Erreur lors du rejet de la demande");
       console.error("Error rejecting request:", error);
+    }
+  };
+
+  // Admin: open class rejection modal and load motifs
+  const openClassRejectModal = async () => {
+    setClassRejectModalVisible(true);
+    setClassRejectSelectedCode("");
+    setClassRejectMotifSupp("");
+    setClassRejectMotifsLoading(true);
+    try {
+      const motifs = await rejectionServiceClass.getAllClassRejectionMotifs();
+      setClassRejectMotifs(Array.isArray(motifs) ? motifs : []);
+    } catch {
+      setClassRejectMotifs([]);
+    } finally {
+      setClassRejectMotifsLoading(false);
+    }
+  };
+
+  // Admin: confirm class rejection from modal
+  const confirmClassReject = async () => {
+    if (!classRejectSelectedCode) return;
+    try {
+      setActionLoading("admin-reject");
+      await classService.rejeterClasse(classId, classRejectSelectedCode);
+      message.success("Classe rejetée avec succès");
+      setClassRejectModalVisible(false);
+      await loadClassDetails();
+    } catch (error) {
+      console.error("Error rejecting class:", error);
+      message.error("Erreur lors du rejet de la classe");
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -917,6 +1085,34 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
     } catch (error) {
       console.error("Error approving class:", error);
       message.error("Erreur lors de l'approbation de la classe");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApproveByEstablishment = async (classeId, etablissementId) => {
+    try {
+      setActionLoading("approve");
+      await classService.approuverClasseParEtablissement(classeId, etablissementId);
+      message.success("Classe validée avec succès");
+      await loadClassDetails();
+    } catch (error) {
+      console.error("Error approving class by establishment:", error);
+      message.error("Erreur lors de la validation de la classe");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectByEstablishment = async (classeId, etablissementId) => {
+    try {
+      setActionLoading("reject");
+      await classService.rejeterClasseParEtablissement(classeId, etablissementId);
+      message.success("Classe rejetée avec succès");
+      await loadClassDetails();
+    } catch (error) {
+      console.error("Error rejecting class by establishment:", error);
+      message.error("Erreur lors du rejet de la classe");
     } finally {
       setActionLoading(null);
     }
@@ -967,7 +1163,7 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
       if (error.errorFields) {
         message.error("Veuillez sélectionner au moins un motif de rejet");
       } else {
-        message.error("Erreur lors du rejet de la classe");
+        message.error(error.message || "Erreur lors du rejet de la classe");
       }
     } finally {
       setActionLoading(null);
@@ -1085,6 +1281,15 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
 
   const handleDelete = async () => {
     if (!classId) return;
+
+    // Protection: Professor cannot delete class if they are the sole moderator
+    const isProfessor = userRole === "ROLE_PROFESSOR" || userRole === "PROFESSOR" || userRole?.includes("PROFESSOR");
+    const isAdmin = userRole === "ROLE_ADMIN" || userRole === "ADMIN";
+    
+    if (isProfessor && !isAdmin && moderatorsWithRights.length === 1 && moderatorsWithRights[0].id === currentUserId) {
+      message.error("En tant que seul modérateur, vous ne pouvez pas supprimer cette classe. Veuillez d'abord assigner un autre modérateur ou contacter l'administration.");
+      return;
+    }
 
     try {
       setActionLoading("delete");
@@ -1296,6 +1501,10 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
 
   const handleTabChange = (key) => {
     setActiveTab(key);
+    // Reload access requests fresh each time the tab is opened
+    if (key === "access-requests") {
+      loadAccessRequests();
+    }
   };
 
   const getStatusTag = (etat) => {
@@ -1327,15 +1536,27 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
   const renderActionButtons = () => {
     if (!classDetails) return null;
 
-    const isAdmin = userRole === "ADMIN";
+    const isAdmin = userRole === "ROLE_ADMIN" || userRole === "ADMIN";
     const canSelfManage = canSelfApproveReject() && isClassPendingApproval();
+    const isPending = classDetails.etat === "EN_ATTENTE_APPROBATION" || 
+                     classDetails.etat === "EN_ATTENTE" || 
+                     classDetails.etat === "PENDING";
+    
+    const isProfessor = userRole === "ROLE_PROFESSOR" || userRole === "PROFESSOR" || userRole?.includes("PROFESSOR");
+    const establishmentEnforcesValidation = classDetails.etablissement?.optionEnvoiMailNewClasse === true;
+    
+    // Hide buttons if professor and establishment requires validation
+    const shouldShowApprovalButtons = isPending && !canSelfManage && (isAdmin || (isProfessor && !establishmentEnforcesValidation));
 
-    console.log("Action buttons state:", {
-      isAdmin,
-      canSelfManage,
-      classState: classDetails.etat,
-      canSelfApproveReject: canSelfApproveReject(),
-    });
+    console.log("=== ACTION BUTTONS DEBUG ===");
+    console.log("Class Details:", classDetails);
+    console.log("Class Status (etat):", classDetails.etat);
+    console.log("User Role:", userRole);
+    console.log("Is Admin:", isAdmin);
+    console.log("Is Pending:", isPending);
+    console.log("Can Self Manage:", canSelfManage);
+    console.log("Should Show Admin Buttons:", isAdmin && isPending && !canSelfManage);
+    console.log("==============================");
 
     return (
       <Card
@@ -1388,35 +1609,33 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
             </>
           )}
 
-          {/* Admin approval/rejection buttons */}
-          {isAdmin &&
-            classDetails.etat === "EN_ATTENTE_APPROBATION" &&
-            !canSelfManage && (
-              <>
-                <Button
-                  type="primary"
-                  icon={<CheckOutlined />}
-                  onClick={handleApprove}
-                  loading={actionLoading === "approve"}
-                  style={{
-                    borderRadius: "8px",
-                    background: "#52c41a",
-                    borderColor: "#52c41a",
-                  }}
-                >
-                  Approuver
-                </Button>
-                <Button
-                  danger
-                  icon={<CloseOutlined />}
-                  onClick={showRejectConfirm}
-                  loading={actionLoading === "reject"}
-                  style={{ borderRadius: "8px" }}
-                >
-                  Rejeter
-                </Button>
-              </>
-            )}
+          {/* Boutons Approuver/Rejeter pour classes en attente */}
+          {shouldShowApprovalButtons && (
+            <>
+              <Button
+                type="primary"
+                icon={<CheckOutlined />}
+                onClick={handleApprove}
+                loading={actionLoading === "approve"}
+                style={{
+                  borderRadius: "8px",
+                  background: "#52c41a",
+                  borderColor: "#52c41a",
+                }}
+              >
+                Approuver
+              </Button>
+              <Button
+                danger
+                icon={<CloseOutlined />}
+                onClick={showRejectConfirm}
+                loading={actionLoading === "reject"}
+                style={{ borderRadius: "8px" }}
+              >
+                Rejeter
+              </Button>
+            </>
+          )}
 
           <Button
             icon={<UserAddOutlined />}
@@ -1513,13 +1732,12 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
         </Space>
       );
     }
-
     return <Text type="secondary">Aucun modérateur assigné</Text>;
   };
 
-  if (loading && !classDetails) {
+  if (loading) {
     return (
-      <div className="manage-class-details-view loading-container">
+      <div className="loading-container">
         <Spin size="large" />
       </div>
     );
@@ -1544,273 +1762,575 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
   }
 
   return (
-    <div style={{ padding: "24px" }}>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "24px",
-          paddingBottom: "16px",
-          borderBottom: "2px solid #f0f2f5",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={onBack}
-            style={{
-              marginRight: "16px",
-              borderRadius: "8px",
-              background: "#f8f9fa",
-              borderColor: "#e1e4e8",
-            }}
-          />
-          <div>
-            <Title level={3} style={{ margin: 0, color: "#2c3e50" }}>
-              <BookOutlined style={{ marginRight: "8px", color: "#4a6da7" }} />
-              Gestion de la classe
-            </Title>
-            <Text strong style={{ fontSize: "18px", color: "#4a6da7" }}>
-              {classDetails?.nom}
-            </Text>
-          </div>
-        </div>
+    <>
+    <div className="w-full">
 
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {classDetails?.etat && getStatusTag(classDetails.etat)}
-          {canSelfApproveReject() && isClassPendingApproval() && (
-            <Tag icon={<CrownOutlined />} color="gold">
-              En attente de votre approbation
-            </Tag>
-          )}
-          <div
-            style={{
-              padding: "8px 16px",
-              background: "linear-gradient(135deg, #4a6da7 0%, #3a5069 100%)",
-              borderRadius: "20px",
-              color: "white",
-              fontWeight: 600,
-              fontSize: "12px",
-            }}
-          >
-            <TeamOutlined style={{ marginRight: "6px" }} />
-            {classDetails?.nombreEtudiants || statistics.eleves} étudiants
-          </div>
-        </div>
-      </div>
+        {/* ── Hero header ── */}
+        <div className="relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)" }}>
+          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 pointer-events-none" style={{ background: "#fff" }} />
+          <div className="relative px-3 sm:px-6 py-3 sm:py-4">
 
-      {/* Statistics Cards */}
-      <StatisticsCards statistics={statistics} loading={loading} />
-
-      {/* Action Buttons */}
-      {renderActionButtons()}
-
-      {/* Class Information Card */}
-      <Card
-        style={{
-          marginBottom: 20,
-          borderRadius: "12px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        }}
-      ></Card>
-
-      {/* Main Content Tabs */}
-      <Card className="tabs-container">
-        <Tabs activeKey={activeTab} onChange={handleTabChange}>
-          <TabPane
-            tab={
-              <span>
-                <BookOutlined />
-                Aperçu
-              </span>
-            }
-            key="overview"
-          >
-            <div className="overview-content">
-              <Row gutter={[16, 16]}>
-                <Col xs={24} md={12}>
-                  <Card title="Informations de la classe" size="small">
-                    <Descriptions column={1} bordered size="small">
-                      <Descriptions.Item label="Nom">
-                        {classDetails.nom}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Niveau">
-                        {classDetails.niveau}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Code d'activation">
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                          }}
-                        >
-                          <Text
-                            code
-                            style={{ fontSize: "14px", fontWeight: "bold" }}
-                          >
-                            {classDetails.codeActivation}
-                          </Text>
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<CopyOutlined />}
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                classDetails.codeActivation
-                              );
-                              message.success("Code d'activation copié!");
-                            }}
-                            title="Copier le code d'activation"
-                          />
-                        </div>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Date de création">
-                        {new Date(
-                          classDetails.dateCreation
-                        ).toLocaleDateString()}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Statut">
-                        {getStatusTag(classDetails.etat)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Droits de publication">
-                        {getPublicationRightsTag(classDetails.droitPublication)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Établissement">
-                        {classDetails.etablissement?.nom || "Non assigné"}
-                        {!classDetails.etablissement?.nom && (
-                          <Tag color="orange" style={{ marginLeft: 8 }}>
-                            Classe indépendante
-                          </Tag>
-                        )}
-                      </Descriptions.Item>
-                      {classDetails.createurId && (
-                        <Descriptions.Item label="Créateur">
-                          {classDetails.createurId === currentUserId ? (
-                            <Tag icon={<CrownOutlined />} color="gold">
-                              Vous
-                            </Tag>
-                          ) : (
-                            "Utilisateur ID: " + classDetails.createurId
-                          )}
-                        </Descriptions.Item>
-                      )}
-                    </Descriptions>
-                  </Card>
-                </Col>
-
-                <Col xs={24} md={12}>
-                  <Card title="Modérateur" size="small">
-                    {renderModeratorInfo()}
-                  </Card>
-                </Col>
-              </Row>
+            {/* Row 1: back + delete */}
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <button onClick={onBack}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-semibold transition-all hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}>
+                <ArrowLeft size={14} />
+                Retour
+              </button>
+              {(userRole === "ROLE_ADMIN" || userRole === "ADMIN") && (
+                <button onClick={showDeleteConfirm}
+                  disabled={actionLoading === "delete"}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
+                  style={{ background: "#dc2626", color: "#fff", border: "2px solid #b91c1c" }}>
+                  {actionLoading === "delete" ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 size={13} />
+                  )}
+                  Supprimer
+                </button>
+              )}
             </div>
-          </TabPane>
 
-          <TabPane
-            tab={
-              <span>
-                <UserOutlined />
-                Professeurs ({statistics.professeurs})
-              </span>
-            }
-            key="professeurs"
-          >
-            <UserTables
-              users={users.professeurs}
-              loading={loading}
+            {/* Row 2: class identity */}
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.35)" }}>
+                <GraduationCap size={20} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h1 className="text-white font-bold text-base sm:text-xl leading-tight m-0">{classDetails?.nom}</h1>
+                  {classDetails?.etat && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+                      style={{
+                        background: classDetails.etat === "ACTIF" ? "#f0fdf4" : classDetails.etat === "EN_ATTENTE_APPROBATION" ? "#fffbeb" : "#fef2f2",
+                        color: classDetails.etat === "ACTIF" ? "#16a34a" : classDetails.etat === "EN_ATTENTE_APPROBATION" ? "#d97706" : "#dc2626",
+                        border: `1px solid ${classDetails.etat === "ACTIF" ? "#bbf7d0" : classDetails.etat === "EN_ATTENTE_APPROBATION" ? "#fde68a" : "#fecaca"}`,
+                      }}>
+                      {classDetails.etat === "ACTIF" ? "Actif" : classDetails.etat === "EN_ATTENTE_APPROBATION" ? "En attente" : "Inactif"}
+                    </span>
+                  )}
+                  {/* Role badge */}
+                  {(() => {
+                    const isCreator = classDetails?.creatorId === currentUserId || classDetails?.creator_id === currentUserId;
+                    const isMod = classDetails?.moderator?.id === currentUserId || classDetails?.moderatorId === currentUserId;
+                    const hasPubRight = usersWithPublicationRights?.some(u => u.id === currentUserId);
+                    let label, bg, color;
+                    if (isCreator)         { label = "Créateur";             bg = "#eef2ff"; color = "#4f46e5"; }
+                    else if (isMod)        { label = "Modérateur";           bg = "#ecfeff"; color = "#0891b2"; }
+                    else if (hasPubRight)  { label = "Droit de publication"; bg = "#f5f3ff"; color = "#7c3aed"; }
+                    else                   { label = "Membre";               bg = "#f8fafc"; color = "#64748b"; }
+                    return (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+                        style={{ background: bg, color, border: `1px solid ${color}33` }}>
+                        {label}
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  {classDetails?.niveau && <span className="text-blue-100 text-xs">{classDetails.niveau}</span>}
+                  {classDetails?.etablissement?.nom && <span className="text-blue-100 text-xs">🏫 {classDetails.etablissement.nom}</span>}
+                  <span className="text-blue-100 text-xs">
+                    <TeamOutlined style={{ marginRight: 4 }} />
+                    {statistics.eleves || 0} participants
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: management action buttons — centered group */}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <button onClick={() => setRefreshKey(prev => prev + 1)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                Actualiser
+              </button>
+              {(userRole === "ROLE_ADMIN" || userRole === "ADMIN" ||
+                classDetails?.createurId === currentUserId ||
+                classDetails?.moderatorId === currentUserId) && (
+                <button onClick={() => setModeratorModalVisible(true)}
+                  disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20 disabled:opacity-40"
+                  style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                  <UserPlus size={12} />
+                  Modérateur
+                </button>
+              )}
+              {(userRole === "ROLE_ADMIN" || userRole === "ADMIN" || isUserModerator()) && (
+                <button onClick={() => setPublicationRightsModalVisible(true)}
+                  disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20 disabled:opacity-40"
+                  style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                  <Shield size={12} />
+                  Droits
+                </button>
+              )}
+              <button onClick={fetchActivationHistory}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                <History size={12} />
+                Historique
+              </button>
+              {/* Admin approve/reject for pending classes */}
+              {(userRole === "ROLE_ADMIN" || userRole === "ADMIN") &&
+               (classDetails?.etat === "EN_ATTENTE_APPROBATION" || classDetails?.etat === "PENDING") && (
+                <>
+                  <button onClick={handleApprove}
+                    disabled={actionLoading === "approve"}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-60 shadow-md"
+                    style={{ background: "#16a34a", border: "2px solid #15803d" }}>
+                    {actionLoading === "approve" ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Check size={13} />
+                    )}
+                    Approuver
+                  </button>
+                  <button onClick={openClassRejectModal}
+                    disabled={actionLoading === "admin-reject"}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-60 shadow-md"
+                    style={{ background: "#dc2626", border: "2px solid #b91c1c" }}>
+                    <XIcon size={13} />
+                    Rejeter
+                  </button>
+                </>
+              )}
+              {(canSelfApproveReject() && isClassPendingApproval()) && (
+                <>
+                  <button onClick={handleSelfApprove}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg,#16a34a,#15803d)" }}>
+                    <Check size={12} /> Approuver
+                  </button>
+                  <button onClick={showRejectConfirm}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-red-500/30"
+                    style={{ background: "rgba(239,68,68,0.2)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.35)" }}>
+                    <XIcon size={12} /> Rejeter
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Stats cards — hidden on mobile ── */}
+        <div className="hidden sm:block px-3 sm:px-6 pt-4">
+          <StatisticsCards statistics={statistics} loading={loading} />
+        </div>
+
+        {/* ── Quick actions CTA card — below stats ── */}
+        {(onNavigateToCourseCreation || onNavigateToExerciseManagement || onNavigateToCoursManagement) && (
+          <div className="px-3 sm:px-6 pt-3">
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4 flex items-center gap-3 flex-wrap">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Actions rapides</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {onNavigateToCoursManagement && (
+                  <button onClick={() => onNavigateToCoursManagement(classId)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
+                    style={{ background: "linear-gradient(135deg,#0ea5e9,#4f46e5)" }}>
+                    <BookOutlined style={{ fontSize: 14 }} />
+                    Gestion des Cours
+                  </button>
+                )}
+                {onNavigateToCourseCreation && (
+                  <button onClick={() => onNavigateToCourseCreation(classId)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
+                    style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+                    <PlusOutlined style={{ fontSize: 14 }} />
+                    Créer un cours
+                  </button>
+                )}
+                {onNavigateToExerciseManagement && (
+                  <button onClick={() => onNavigateToExerciseManagement(classId)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
+                    style={{ background: "linear-gradient(135deg,#f093fb,#f5576c)" }}>
+                    <FileTextOutlined style={{ fontSize: 14 }} />
+                    Exercices Programmer
+                  </button>
+                )}
+                {onNavigateToEvents && (
+                  <button onClick={() => onNavigateToEvents(classId)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
+                    style={{ background: "linear-gradient(135deg,#f6a623,#e07b00)" }}>
+                    <Calendar size={14} />
+                    Événements
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Scrollable tab bar with arrow buttons ── */}
+        <TabScrollBar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          tabs={[
+            { key: "overview",        label: "Aperçu",                    icon: <BookOutlined /> },
+            { key: "professeurs",     label: `Professeurs (${users.professeurs.length})`, icon: <UserOutlined /> },
+            { key: "eleves",          label: `Élèves (${users.eleves.length})`,           icon: <TeamOutlined /> },
+            { key: "parents",         label: `Parents (${users.parents.length})`,         icon: <TeamOutlined /> },
+            { key: "utilisateurs",    label: `Utilisateurs (${users.utilisateurs.length})`, icon: <UserOutlined /> },
+            { key: "access-requests", label: `Demandes (${users.accessRequests.length})`, icon: <ClockCircleOutlined /> },
+            ...(!["ROLE_ADMIN","ADMIN","ADMINISTRATEUR"].includes((userRole||"").toUpperCase()) ? [
+              { key: "courses",   label: `Cours (${courses.length})`,     icon: <BookOutlined /> },
+              { key: "exercises", label: `Exercices (${exercises.length})`, icon: <FileTextOutlined /> },
+            ] : []),
+            { key: "events",          label: `Événements (${events.length})`,             icon: <Calendar /> },
+          ]}
+        />
+
+        {/* ── Tab content ── */}
+        <div className="px-3 sm:px-6 py-4 sm:py-6">
+
+          {/* Aperçu */}
+          {activeTab === "overview" && (
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+              {/* Left: class info */}
+              <div className="lg:w-80 flex-shrink-0">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2" style={{ background: "#f8faff" }}>
+                    <BookOutlined style={{ color: "#4f46e5", fontSize: 13 }} />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Informations de la classe</span>
+                  </div>
+                  <div className="px-4 py-3 space-y-3">
+                    {[
+                      { label: "Nom", value: classDetails.nom },
+                      { label: "Niveau", value: classDetails.niveau },
+                      { label: "Date de création", value: classDetails.dateCreation ? new Date(classDetails.dateCreation).toLocaleDateString("fr-FR") : "—" },
+                      { label: "Établissement", value: classDetails.etablissement?.nom || "Classe indépendante" },
+                    ].map((row, i) => (
+                      <div key={i} className="flex items-start justify-between gap-2">
+                        <span className="text-xs text-slate-400 font-medium flex-shrink-0">{row.label}</span>
+                        <span className="text-sm text-slate-800 font-medium text-right">{row.value}</span>
+                      </div>
+                    ))}
+                    {/* ID de la classe */}
+                    {classDetails.id && (
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs text-slate-400 font-medium flex-shrink-0">ID</span>
+                        <div className="flex items-center gap-1.5">
+                          <code className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded break-all text-right">{classDetails.id}</code>
+                          <button onClick={() => { navigator.clipboard.writeText(classDetails.id); message.success("ID copié !"); }}
+                            className="p-1 rounded hover:bg-slate-100 transition-colors text-slate-400 hover:text-indigo-600 flex-shrink-0">
+                            <Copy size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {/* Code d'activation */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs text-slate-400 font-medium flex-shrink-0">Code d'activation</span>
+                      <div className="flex items-center gap-1.5">
+                        <code className="text-sm font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{classDetails.codeActivation}</code>
+                        <button onClick={() => { navigator.clipboard.writeText(classDetails.codeActivation); message.success("Code copié !"); }}
+                          className="p-1 rounded hover:bg-slate-100 transition-colors text-slate-400 hover:text-indigo-600">
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    {/* Statut */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs text-slate-400 font-medium flex-shrink-0">Statut</span>
+                      {classDetails.expireParOffre
+                        ? <Tag color="red">Offre expirée</Tag>
+                        : getStatusTag(classDetails.etat)}
+                    </div>
+                    {/* Droits de publication */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs text-slate-400 font-medium flex-shrink-0">Droits de publication</span>
+                      {getPublicationRightsTag(classDetails.droitPublication)}
+                    </div>
+                    {/* Accès majeur */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs text-slate-400 font-medium flex-shrink-0">Accès majeur</span>
+                      {classDetails.accesMajeur ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                          style={{ background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe" }}>
+                          <SafetyCertificateOutlined style={{ fontSize: 10 }} /> Classe Majeure — email
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                          style={{ background: "#f1f5f9", color: "#94a3b8", border: "1px solid #e2e8f0" }}>
+                          Accès standard
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Offre / Forfait */}
+                <div className="mt-4">
+                  <OffreInfoPanel type="CLASSE" entityId={classId} isDark={false} />
+                </div>
+              </div>
+
+              {/* Right: moderator */}
+              <div className="flex-1 min-w-0">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2" style={{ background: "#f8faff" }}>
+                    <CrownOutlined style={{ color: "#4f46e5", fontSize: 13 }} />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Modérateur</span>
+                  </div>
+                  <div className="px-4 py-4">
+                    {renderModeratorInfo()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Professeurs */}
+          {activeTab === "professeurs" && (
+            <UserTables 
+              users={users.professeurs} 
+              loading={loading} 
               userType="professeurs"
-              onViewUser={handleViewUser}
-              onRemoveAccess={handleRemoveAccess}
+              onViewUser={handleViewUser} 
+              onRemoveAccess={handleRemoveAccess} 
+              onTogglePublicationRights={isUserModerator() ? handleTogglePublicationRights : undefined}
+              publicationRightsMap={publicationRightsMap}
               currentTab={activeTab}
+              userRole={userRole}
+              isModerator={isUserModerator()}
+              currentUserId={currentUserId}
+              classCreatorId={classDetails?.createurId}
             />
-          </TabPane>
+          )}
 
-          <TabPane
-            tab={
-              <span>
-                <TeamOutlined />
-                Élèves ({statistics.eleves})
-              </span>
-            }
-            key="eleves"
-          >
-            <UserTables
-              users={users.eleves}
-              loading={loading}
-              userType="eleves"
-              onViewUser={handleViewUser}
-              onRemoveAccess={handleRemoveAccess}
-              currentTab={activeTab}
-            />
-          </TabPane>
+          {/* Élèves */}
+          {activeTab === "eleves" && (
+            <div>
+              {classDetails?.accesMajeur && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <p className="text-sm font-semibold text-blue-700 mb-2">🔑 Classe Majeure — Ajouter un élève par email</p>
+                  <div className="flex gap-2">
+                    <Input placeholder="Email de l'élève..." value={searchEmail}
+                      onChange={e => setSearchEmail(e.target.value)} onPressEnter={handleSearchUserByEmail}
+                      prefix={<SearchOutlined />} style={{ borderRadius: 8 }} />
+                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearchUserByEmail}
+                      loading={searchLoading} style={{ borderRadius: 8 }}>Rechercher</Button>
+                  </div>
+                  {searchResults.length > 0 && (
+                    <List style={{ marginTop: 8 }} size="small" dataSource={searchResults}
+                      renderItem={u => (
+                        <List.Item actions={[
+                          <Button type="primary" size="small" loading={actionLoading === `add-${u.id}`}
+                            onClick={async () => {
+                              try {
+                                setActionLoading(`add-${u.id}`);
+                                const request = await AccederService.demanderAcces({ utilisateurId: u.id, classeId: classId, codeActivation: classDetails.codeActivation });
+                                if (request?.id) { await AccederService.validerDemandeAcces(request.id); }
+                                else {
+                                  const reqs = await AccederService.obtenirDemandesAccesPourClasse(classId);
+                                  const r = reqs.find(r => r.utilisateurId === u.id && r.etat === "EN_ATTENTE");
+                                  if (r) await AccederService.validerDemandeAcces(r.id);
+                                }
+                                message.success(`${u.prenom} ${u.nom} ajouté(e)`);
+                                setSearchEmail(""); setSearchResults([]); setRefreshKey(p => p + 1);
+                              } catch (err) { message.error(err.message || "Erreur"); }
+                              finally { setActionLoading(null); }
+                            }}>Ajouter</Button>
+                        ]}>
+                          <List.Item.Meta title={`${u.prenom} ${u.nom}`} description={u.email} />
+                        </List.Item>
+                      )} />
+                  )}
+                </div>
+              )}
+              <UserTables 
+                users={users.eleves} 
+                loading={loading} 
+                userType="eleves"
+                onViewUser={handleViewUser} 
+                onRemoveAccess={handleRemoveAccess} 
+                currentTab={activeTab} 
+                userRole={userRole}
+                isModerator={isUserModerator()}
+                currentUserId={currentUserId}
+              />
+            </div>
+          )}
 
-          <TabPane
-            tab={
-              <span>
-                <TeamOutlined />
-                Parents ({statistics.parents})
-              </span>
-            }
-            key="parents"
-          >
-            <UserTables
-              users={users.parents}
-              loading={loading}
+          {/* Parents */}
+          {activeTab === "parents" && (
+            <UserTables 
+              users={users.parents} 
+              loading={loading} 
               userType="parents"
-              onViewUser={handleViewUser}
-              onRemoveAccess={handleRemoveAccess}
-              currentTab={activeTab}
+              onViewUser={handleViewUser} 
+              onRemoveAccess={handleRemoveAccess} 
+              currentTab={activeTab} 
+              userRole={userRole}
+              isModerator={isUserModerator()}
+              currentUserId={currentUserId}
             />
-          </TabPane>
+          )}
 
-          {/* NEW: Utilisateurs Tab */}
-          <TabPane
-            tab={
-              <span>
-                <UserOutlined />
-                Utilisateurs ({statistics.utilisateurs})
-              </span>
-            }
-            key="utilisateurs"
-          >
-            <UserTables
-              users={users.utilisateurs}
-              loading={loading}
+          {/* Utilisateurs */}
+          {activeTab === "utilisateurs" && (
+            <UserTables 
+              users={users.utilisateurs} 
+              loading={loading} 
               userType="utilisateurs"
-              onViewUser={handleViewUser}
+              onViewUser={handleViewUser} 
               onRemoveAccess={handleRemoveAccess}
-              onDeleteUser={handleDeleteUser}
-              currentTab={activeTab}
+              onDeleteUser={handleDeleteUser} 
+              currentTab={activeTab} 
+              userRole={userRole}
+              isModerator={isUserModerator()}
+              currentUserId={currentUserId}
             />
-          </TabPane>
+          )}
 
-          <TabPane
-            tab={
-              <span>
-                <ClockCircleOutlined />
-                Demandes d'accès ({statistics.accessRequests})
-              </span>
-            }
-            key="access-requests"
-          >
-            <UserTables
-              users={users.accessRequests}
-              loading={loading}
+          {/* Demandes d'accès */}
+          {activeTab === "access-requests" && (
+            <UserTables 
+              users={users.accessRequests} 
+              loading={loading} 
               userType="access-requests"
-              onViewUser={handleViewUser}
+              onViewUser={handleViewUser} 
               onApproveRequest={handleApproveRequest}
-              onRejectRequest={handleRejectRequest}
-              currentTab={activeTab}
+              onRejectRequest={handleRejectRequest} 
+              currentTab={activeTab} 
+              userRole={userRole}
+              isModerator={isUserModerator()}
             />
-          </TabPane>
-        </Tabs>
-      </Card>
+          )}
 
-      {/* User View Modal - Dynamic based on user type */}
+          {/* Cours */}
+          {activeTab === "courses" && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-bold text-slate-800">Cours programmés</h3>
+                  <Text type="secondary" className="text-xs">Cours de la classe (visibles par tous les membres)</Text>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Tag color="blue">{courses.length} cours</Tag>
+                  {onNavigateToCoursManagement && (
+                    <Button
+                      size="small"
+                      icon={<BookOutlined />}
+                      onClick={() => onNavigateToCoursManagement(classId)}
+                    >
+                      Voir tout
+                    </Button>
+                  )}
+                  {isUserModerator() && onNavigateToCourseCreation && (
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => onNavigateToCourseCreation(classId)}
+                    >
+                      Programmer
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Table
+                dataSource={courses}
+                rowKey="id"
+                columns={[
+                  { title: 'Cours', dataIndex: ['cours', 'titre'], key: 'titre', render: (v, r) => v || r.description || '—' },
+                  { title: 'Date prévue', dataIndex: 'dateCoursPrevue', key: 'date', render: d => d ? new Date(d).toLocaleString('fr-FR') : '—' },
+                  { title: 'Lieu', dataIndex: 'lieu', key: 'lieu', render: v => v || '—' },
+                  { title: 'Statut', dataIndex: 'etatCoursProgramme', key: 'etat', render: e => {
+                    const colorMap = { "EN_COURS": "green", "PLANIFIE": "blue", "ANNULE": "red", "TERMINE": "default" };
+                    const labelMap = { "EN_COURS": "En cours", "PLANIFIE": "Planifié", "ANNULE": "Annulé", "TERMINE": "Terminé" };
+                    return <Tag color={colorMap[e] || "default"}>{labelMap[e] || e}</Tag>;
+                  }},
+                ]}
+                pagination={{ pageSize: 10 }}
+                locale={{ emptyText: "Aucun cours programmé pour cette classe" }}
+              />
+            </div>
+          )}
+
+          {/* Exercices */}
+          {activeTab === "exercises" && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-bold text-slate-800">Exercices programmés</h3>
+                  <Text type="secondary" className="text-xs">Liste des exercices pour cette classe</Text>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tag color="purple">{exercises.length} exercices</Tag>
+                  {isUserModerator() && onNavigateToExerciseManagement && (
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => onNavigateToExerciseManagement(classId)}
+                      style={{ backgroundColor: '#9333ea', borderColor: '#9333ea' }}
+                    >
+                      Programmer
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Table 
+                dataSource={exercises}
+                rowKey="id"
+                columns={[
+                  { title: 'Exercice', key: 'nom', render: (_, record) => (
+                    <span className="font-medium text-slate-800">
+                      {record.nom || record.exercise?.nom || record.exerciseNom || '—'}
+                    </span>
+                  )},
+                  { title: 'Date Prévue', dataIndex: 'dateExoPrevue', key: 'date', render: d => d ? new Date(d).toLocaleString('fr-FR') : '—' },
+                  { title: 'Statut', dataIndex: 'etat', key: 'etat', render: e => {
+                    const colorMap = { "ACTIF": "green", "PUBLIE": "green", "BROUILLON": "orange", "EN_ATTENTE_CORRECTION": "blue", "CORRIGE": "cyan", "ANNULE": "red" };
+                    return <Tag color={colorMap[e] || "default"}>{e}</Tag>
+                  }},
+                  { title: 'Actions', key: 'actions', render: (_, record) => (
+                    <Button type="link" size="small" onClick={() => onNavigateToExerciseManagement?.(classId)}>Détails</Button>
+                  )}
+                ]}
+                pagination={{ pageSize: 10 }}
+                locale={{ emptyText: "Aucun exercice programmé pour cette classe" }}
+              />
+            </div>
+          )}
+
+          {/* Événements */}
+          {activeTab === "events" && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-bold text-slate-800">Événements de la classe</h3>
+                  <Text type="secondary" className="text-xs">Actualités et événements à venir</Text>
+                </div>
+                <Tag color="orange">{events.length} événements</Tag>
+              </div>
+              <Table 
+                dataSource={events}
+                rowKey="id"
+                columns={[
+                  { title: 'Titre', dataIndex: 'titre', key: 'titre' },
+                  { title: 'Lieu', dataIndex: 'lieu', key: 'lieu' },
+                  { title: 'Début', dataIndex: 'heureDebut', key: 'debut', render: d => new Date(d).toLocaleString('fr-FR') },
+                  { title: 'Statut', dataIndex: 'etat', key: 'etat', render: e => {
+                    const colorMap = { "EN_COURS": "green", "PLANIFIE": "blue", "A_VENIR": "blue", "PASSE": "default", "ANNULE": "red" };
+                    return <Tag color={colorMap[e] || "default"}>{e}</Tag>
+                  }}
+                ]}
+                pagination={{ pageSize: 10 }}
+                locale={{ emptyText: "Aucun événement pour cette classe" }}
+              />
+            </div>
+          )}
+
+        </div>{/* end tab content */}
+      </div>{/* end w-full */}
+
       {userViewModalVisible && selectedUser && (
         <RenderUserModal
           user={selectedUser}
@@ -2164,7 +2684,101 @@ const ManageClassDetailsView = ({ classId, onBack }) => {
           </div>
         )}
       </Modal>
-    </div>
+
+      {/* ── Admin Class Rejection Modal ── */}
+      {classRejectModalVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between"
+              style={{ background: "linear-gradient(135deg, #fef2f2 0%, #fff 100%)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">
+                  <XIcon size={16} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Rejeter la classe</h3>
+                  <p className="text-xs text-slate-500">{classDetails?.nom}</p>
+                </div>
+              </div>
+              <button onClick={() => setClassRejectModalVisible(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400">
+                <XIcon size={16} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Motif de rejet <span className="text-red-500">*</span>
+                </label>
+                {classRejectMotifsLoading ? (
+                  <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
+                    <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                    Chargement des motifs...
+                  </div>
+                ) : classRejectMotifs.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">Aucun motif disponible.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {classRejectMotifs.map((m) => (
+                      <label key={m.id}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          classRejectSelectedCode === m.code
+                            ? "border-red-400 bg-red-50"
+                            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                        }`}>
+                        <input
+                          type="radio"
+                          name="classMotif"
+                          value={m.code}
+                          checked={classRejectSelectedCode === m.code}
+                          onChange={() => setClassRejectSelectedCode(m.code)}
+                          className="mt-0.5 accent-red-600 flex-shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-700">{m.code}</p>
+                          {m.descriptif && <p className="text-xs text-slate-500 mt-0.5">{m.descriptif}</p>}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Commentaire supplémentaire <span className="text-slate-400 font-normal">(optionnel)</span>
+                </label>
+                <textarea
+                  value={classRejectMotifSupp}
+                  onChange={(e) => setClassRejectMotifSupp(e.target.value)}
+                  placeholder="Précisez si nécessaire..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none transition-all"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50/50">
+              <button
+                onClick={() => setClassRejectModalVisible(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+                Annuler
+              </button>
+              <button
+                onClick={confirmClassReject}
+                disabled={!classRejectSelectedCode || actionLoading === "admin-reject"}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "#dc2626" }}>
+                {actionLoading === "admin-reject" ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <XIcon size={14} />
+                )}
+                Confirmer le rejet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

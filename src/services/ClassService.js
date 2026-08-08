@@ -1,4 +1,5 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
 export const EtatClasse = {
   EN_ATTENTE_APPROBATION: "EN_ATTENTE_APPROBATION",
@@ -7,9 +8,9 @@ export const EtatClasse = {
 };
 
 export const DroitPublication = {
-  TOUS: "TOUS",
+  PROFESSEUR_UNIQUE: "PROFESSEUR_UNIQUE",
+  TOUS_LES_PROFESSEURS: "TOUS_LES_PROFESSEURS",
   MODERATEUR_SEULEMENT: "MODERATEUR_SEULEMENT",
-  PARENTS_ET_MODERATEUR: "PARENTS_ET_MODERATEUR",
 };
 
 /**
@@ -18,10 +19,7 @@ export const DroitPublication = {
 class ClassService {
   constructor(baseUrl = null) {
     // Default to your backend URL, but allow override
-    this.baseUrl =
-      baseUrl ||
-      process.env.REACT_APP_API_BASE_URL ||
-      "http://localhost:8486/scholchat";
+    this.baseUrl = baseUrl || process.env.REACT_APP_API_BASE_URL;
     this.apiUrl = `${this.baseUrl}/classes`;
 
     // Configure axios defaults
@@ -34,44 +32,8 @@ class ClassService {
       timeout: 30000, // 30 second timeout for slower connections
     });
 
-    // Add response interceptor for better error handling
-    this.axiosInstance.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        console.error("API Error:", error);
-        if (error.response) {
-          // Server responded with error status
-          const message =
-            error.response.data?.message ||
-            error.response.statusText ||
-            `HTTP Error: ${error.response.status}`;
-          throw new Error(message);
-        } else if (error.request) {
-          // Request was made but no response received
-          throw new Error("Network error: No response from server");
-        } else {
-          // Something else happened
-          throw new Error(`Request error: ${error.message}`);
-        }
-      }
-    );
-
-    // Add request interceptor to include auth token
-    this.axiosInstance.interceptors.request.use(
-      (config) => {
-        // Get auth token from localStorage or sessionStorage
-        const token =
-          localStorage.getItem("accessToken") ||
-          sessionStorage.getItem("accessToken");
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
+    // Apply standard auth interceptors (token attachment + 401/403 → session expired modal)
+    applyAuthInterceptors(this.axiosInstance);
   }
 
   /**
@@ -99,8 +61,8 @@ class ClassService {
         try {
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
+            await response.json();
+            errorMessage = "Server error";
           } else {
             // If not JSON, get text content for debugging
             const textResponse = await response.text();
@@ -157,19 +119,44 @@ class ClassService {
   }
 
   /**
-   * Gets classes that the user has access to
+   * Gets classes that the user has access to (from publication rights + access requests)
    * @param {string} userId - The user's UUID
    * @returns {Promise<Array>} List of classes the user has access to
    */
   async obtenirClassesUtilisateur(userId) {
     try {
       console.log("Fetching classes for user:", userId);
-      return await this.axiosRequest(
-        `/droits-publication/utilisateurs/${userId}/classes`,
-        {
-          method: "get",
-        }
-      );
+      
+      // Fetch from multiple sources in parallel
+      const [publicationClasses, accessClasses] = await Promise.allSettled([
+        this.axiosRequest(
+          `/droits-publication/utilisateurs/${userId}/classes`,
+          { method: "get" }
+        ),
+        this.axiosRequest(
+          `/acceder/utilisateurs/${userId}/classes`,
+          { method: "get" }
+        ),
+      ]);
+
+      // Merge results, deduplicate by class ID
+      const classesMap = new Map();
+
+      if (publicationClasses.status === "fulfilled" && Array.isArray(publicationClasses.value)) {
+        publicationClasses.value.forEach(c => classesMap.set(c.id, c));
+      }
+
+      if (accessClasses.status === "fulfilled" && Array.isArray(accessClasses.value)) {
+        accessClasses.value.forEach(c => {
+          if (!classesMap.has(c.id)) {
+            classesMap.set(c.id, c);
+          }
+        });
+      }
+
+      const mergedClasses = Array.from(classesMap.values());
+      console.log("Merged classes count:", mergedClasses.length);
+      return mergedClasses;
     } catch (error) {
       console.error("Error getting user classes:", error);
       throw error;
@@ -183,25 +170,17 @@ class ClassService {
    */
   async creerClasse(classe) {
     try {
-      // Prepare moderator data - send only ID if exists
-      const classData = {
-        ...classe,
-        moderator: classe.moderator ? classe.moderator.id : null,
-        etablissement: classe.etablissement
-          ? { id: classe.etablissement.id }
-          : null,
-        parents: classe.parents
-          ? classe.parents.map((p) => ({ id: p.id }))
-          : [],
-        eleves: classe.eleves ? classe.eleves.map((e) => ({ id: e.id })) : [],
-      };
-
-      return await this.axiosRequest("/classes", {
+      console.log('Creating class with data:', classe);
+      const response = await this.axiosRequest("/classes/nouvelle", {
         method: "post",
-        data: classData,
+        data: classe,
       });
+      console.log('Class created successfully:', response);
+      return response;
     } catch (error) {
       console.error("Error creating class:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
       throw error;
     }
   }
@@ -336,6 +315,22 @@ class ClassService {
   }
 
   /**
+   * Gets a class by its activation code
+   * @param {string} code - The activation code
+   * @returns {Promise<Object>} The class data
+   */
+  async obtenirClasseParCode(code) {
+    try {
+      return await this.axiosRequest(`/classes/by-code/${code}`, {
+        method: "get",
+      });
+    } catch (error) {
+      console.error("Error getting class by code:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Updates publication rights for a class
    * @param {string} idClasse - The class ID
    * @param {string} droitPublication - The new publication rights
@@ -450,12 +445,12 @@ class ClassService {
    */
   getDroitPublicationDisplayName(droit) {
     switch (droit) {
-      case DroitPublication.TOUS:
-        return "Tous";
+      case DroitPublication.PROFESSEUR_UNIQUE:
+        return "Professeur unique";
+      case DroitPublication.TOUS_LES_PROFESSEURS:
+        return "Tous les professeurs";
       case DroitPublication.MODERATEUR_SEULEMENT:
         return "Modérateur seulement";
-      case DroitPublication.PARENTS_ET_MODERATEUR:
-        return "Parents et modérateur";
       default:
         return "Non défini";
     }
@@ -557,6 +552,54 @@ class ClassService {
       );
     } catch (error) {
       console.error("Error searching classes:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets all professors
+   * @returns {Promise<Array>} List of all professors
+   */
+  async obtenirProfesseurs() {
+    try {
+      return await this.axiosRequest("/professeurs", {
+        method: "get",
+      });
+    } catch (error) {
+      console.error("Error getting professors:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Assigns a moderator to a class
+   * @param {string} classId - The class ID
+   * @param {string} moderatorId - The moderator ID
+   * @returns {Promise<Object>} The updated class
+   */
+  async assignerModerateur(classId, moderatorId) {
+    try {
+      return await this.axiosRequest(`/classes/${classId}/moderator/${moderatorId}`, {
+        method: "patch",
+      });
+    } catch (error) {
+      console.error("Error assigning moderator:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Removes moderator from a class
+   * @param {string} classId - The class ID
+   * @returns {Promise<Object>} The updated class
+   */
+  async retirerModerateur(classId) {
+    try {
+      return await this.axiosRequest(`/classes/${classId}/moderator`, {
+        method: "delete",
+      });
+    } catch (error) {
+      console.error("Error removing moderator:", error);
       throw error;
     }
   }

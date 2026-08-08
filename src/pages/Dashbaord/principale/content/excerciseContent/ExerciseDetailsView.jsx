@@ -1,101 +1,69 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Form, Spin, Popconfirm, message, Tag } from "antd";
 import {
-  Card,
-  Button,
-  Descriptions,
-  Tag,
-  Space,
-  Spin,
-  Alert,
-  Form,
-  Input,
-  Modal,
-  Typography,
-  Divider,
-  Row,
-  Col,
-  Tabs,
-  Table,
-  Empty,
-  Popconfirm,
-  Tooltip,
-  message,
-  Select,
-  DatePicker,
-} from "antd";
-import {
-  ArrowLeftOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  SaveOutlined,
-  CloseOutlined,
-  BookOutlined,
-  UserOutlined,
-  CalendarOutlined,
-  ExclamationCircleOutlined,
-  ReloadOutlined,
-  PlusOutlined,
-  QuestionCircleOutlined,
-  EyeOutlined,
+  ArrowLeftOutlined, EditOutlined, DeleteOutlined,
+  SaveOutlined, CloseOutlined, CalendarOutlined,
+  ReloadOutlined, SendOutlined, BookOutlined,
+  GlobalOutlined, LockOutlined, FileTextOutlined,
+  TagOutlined, ClockCircleOutlined, QuestionCircleOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import {
   exerciseService,
-  questionReponseService,
   exerciseProgrammerService,
 } from "../../../../../services/exerciseService";
 import { classService } from "../../../../../services/ClassService";
+import { getUserId } from "./exerciseDetails/helpers";
+import ExerciseInfoPanel from "./exerciseDetails/ExerciseInfoPanel";
+import ProgramModal from "./exerciseDetails/ProgramModal";
 
-const { Title, Text } = Typography;
-const { confirm } = Modal;
-const { Option } = Select;
-const { TextArea } = Input;
+/* ── Question type label map ─────────────────────────────────────────────── */
+const TYPE_MAP = {
+  REPONSE_COURTE:   { label: "Réponse courte",   color: "#4f46e5", bg: "#eef2ff" },
+  CHOIX_MULTIPLE:   { label: "Choix multiple",   color: "#0891b2", bg: "#ecfeff" },
+  VRAI_FAUX:        { label: "Vrai / Faux",       color: "#16a34a", bg: "#f0fdf4" },
+  REPONSE_LONGUE:   { label: "Réponse longue",   color: "#d97706", bg: "#fffbeb" },
+  CORRESPONDANCE:   { label: "Correspondance",   color: "#7c3aed", bg: "#f5f3ff" },
+};
 
+const QuestionTypeBadge = ({ type }) => {
+  const cfg = TYPE_MAP[type] || { label: type, color: "#6b7280", bg: "#f3f4f6" };
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+      style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30` }}>
+      {cfg.label}
+    </span>
+  );
+};
+
+/* ── Main component ──────────────────────────────────────────────────────── */
 const ExerciseDetailsView = ({
   exerciseId,
   onBack,
-  onRefresh,
-  onError,
-  onSuccess,
   onUpdate,
   onDelete,
+  onEdit,
+  onTakeExercise,
 }) => {
   const [exercise, setExercise] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
-  const [form] = Form.useForm();
-
-  const [questions, setQuestions] = useState([]);
-  const [questionsLoading, setQuestionsLoading] = useState(false);
-  const [showQuestionForm, setShowQuestionForm] = useState(false);
-  const [questionForm] = Form.useForm();
-
-  const [showProgramForm, setShowProgramForm] = useState(false);
-  const [programForm] = Form.useForm();
   const [classes, setClasses] = useState([]);
+
+  const [loading, setLoading] = useState(true);
   const [classesLoading, setClassesLoading] = useState(false);
-  const [programmations, setProgrammations] = useState([]);
-  const [programmationsLoading, setProgrammationsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [programLoading, setProgramLoading] = useState(false);
 
-  useEffect(() => {
-    if (exerciseId) {
-      fetchExerciseDetails();
-      fetchExerciseQuestions();
-      fetchUserAccessibleClasses();
-      fetchExerciseProgrammations();
-    }
-  }, [exerciseId]);
+  const [editing, setEditing] = useState(false);
+  const [showProgramModal, setShowProgramModal] = useState(false);
 
-  const fetchExerciseDetails = async () => {
+  const [form] = Form.useForm();
+  const [programForm] = Form.useForm();
+
+  /* ── fetch ── */
+  const fetchExercise = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
       const data = await exerciseService.getExerciseById(exerciseId);
-      console.log("Exercise details loaded:", data);
       setExercise(data);
       form.setFieldsValue({
         nom: data.nom || "",
@@ -104,1137 +72,428 @@ const ExerciseDetailsView = ({
         restriction: data.restriction || "PRIVE",
         etat: data.etat || "BROUILLON",
       });
-    } catch (error) {
-      console.error("Error fetching exercise details:", error);
-      setError("Erreur lors du chargement des détails de l'exercice");
-      onError?.("Erreur lors du chargement des détails de l'exercice");
+    } catch {
+      message.error("Impossible de charger l'exercice");
     } finally {
       setLoading(false);
     }
-  };
+  }, [exerciseId, form]);
 
-  const fetchExerciseQuestions = async () => {
+  const fetchClasses = useCallback(async () => {
+    const userId = getUserId();
+    if (!userId) return;
+    setClassesLoading(true);
     try {
-      setQuestionsLoading(true);
-      const data = await questionReponseService.getQuestionsByExercise(
-        exerciseId
-      );
-      console.log("Questions loaded:", data);
-      setQuestions(data || []);
-    } catch (error) {
-      console.error("Error fetching exercise questions:", error);
-      message.error("Erreur lors du chargement des questions");
-    } finally {
-      setQuestionsLoading(false);
-    }
-  };
-
-  const fetchUserAccessibleClasses = async () => {
-    try {
-      setClassesLoading(true);
-      const userId =
-        sessionStorage.getItem("userId") || localStorage.getItem("userId");
-
-      if (!userId) {
-        console.warn("No user ID found");
-        message.warning(
-          "Impossible de charger les classes: utilisateur non connecté"
-        );
-        return;
-      }
-
-      console.log("Fetching accessible classes for user:", userId);
-
-      // Use the ClassService method to get classes the user has access to
       const data = await classService.obtenirClassesUtilisateur(userId);
-      console.log("User accessible classes loaded:", data);
       setClasses(data || []);
-    } catch (error) {
-      console.error("Error fetching user accessible classes:", error);
-      message.warning("Impossible de charger les classes accessibles");
-    } finally {
-      setClassesLoading(false);
-    }
-  };
+    } catch { /* non-blocking */ }
+    finally { setClassesLoading(false); }
+  }, []);
 
-  const fetchExerciseProgrammations = async () => {
+  useEffect(() => {
+    if (!exerciseId) return;
+    fetchExercise();
+    fetchClasses();
+  }, [exerciseId]);
+
+  /* ── actions ── */
+  const handleSave = async () => {
     try {
-      setProgrammationsLoading(true);
-      const userId =
-        sessionStorage.getItem("userId") || localStorage.getItem("userId");
-      console.log("Fetching programmations for user:", userId);
-
-      if (!userId) {
-        console.warn("No user ID found");
-        return;
-      }
-
-      const allProgrammations =
-        await exerciseProgrammerService.getExercisesProgrammesParProfesseur(
-          userId
-        );
-      console.log("All programmations:", allProgrammations);
-
-      // CORRECTION: Filtrer par exerciseId, pas par id
-      const filteredProgrammations = (allProgrammations || []).filter(
-        (prog) => {
-          // Vérifier plusieurs possibilités de structure
-          const progExerciseId =
-            prog.exerciseId || prog.exercise?.id || prog.exercise;
-          console.log(
-            `Comparing prog exercise ID: ${progExerciseId} with current exercise: ${exerciseId}`
-          );
-          return progExerciseId === exerciseId;
-        }
-      );
-
-      console.log(
-        "Filtered programmations for exercise",
-        exerciseId,
-        ":",
-        filteredProgrammations
-      );
-
-      setProgrammations(filteredProgrammations);
-    } catch (error) {
-      console.error("Error fetching exercise programmations:", error);
-      message.warning("Impossible de charger les programmations");
+      setSaving(true);
+      const values = await form.validateFields();
+      await onUpdate(exerciseId, values);
+      setExercise(prev => ({ ...prev, ...values }));
+      setEditing(false);
+      message.success("Exercice mis à jour");
+    } catch {
+      message.error("Erreur lors de la sauvegarde");
     } finally {
-      setProgrammationsLoading(false);
+      setSaving(false);
     }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([
-      fetchExerciseDetails(),
-      fetchExerciseQuestions(),
-      fetchUserAccessibleClasses(),
-      fetchExerciseProgrammations(),
-    ]);
-    setRefreshing(false);
-    setSuccessMessage("Données actualisées avec succès");
-    onSuccess?.("Données actualisées avec succès");
-    setTimeout(() => setSuccessMessage(null), 3000);
-  };
-
-  const handleEdit = () => {
-    setEditing(true);
-    setError(null);
-    setSuccessMessage(null);
   };
 
   const handleCancelEdit = () => {
     setEditing(false);
-    setError(null);
     form.setFieldsValue({
-      nom: exercise.nom || "",
-      description: exercise.description || "",
-      niveau: exercise.niveau || "",
-      restriction: exercise.restriction || "PRIVE",
-      etat: exercise.etat || "BROUILLON",
+      nom: exercise.nom, description: exercise.description,
+      niveau: exercise.niveau, restriction: exercise.restriction, etat: exercise.etat,
     });
   };
 
-  const handleSave = async () => {
+  const handleDelete = async () => {
     try {
-      setSaving(true);
-      setActionLoading("save");
-      setError(null);
-      const values = await form.validateFields();
-      await onUpdate(exerciseId, values);
-      setExercise({ ...exercise, ...values });
-      setEditing(false);
-      setSuccessMessage("Exercice mis à jour avec succès");
-      onSuccess?.("Exercice mis à jour avec succès");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (error) {
-      console.error("Error saving exercise:", error);
-      setError("Erreur lors de la sauvegarde");
-      onError?.("Erreur lors de la sauvegarde");
-    } finally {
-      setSaving(false);
-      setActionLoading(null);
+      await onDelete(exerciseId);
+      message.success("Exercice supprimé");
+      onBack();
+    } catch {
+      message.error("Erreur lors de la suppression");
     }
   };
 
-  const handleDelete = () => {
-    confirm({
-      title: "Supprimer l'exercice",
-      icon: <ExclamationCircleOutlined />,
-      content: `Êtes-vous sûr de vouloir supprimer l'exercice "${exercise?.nom}" ? Cette action est irréversible.`,
-      okText: "Supprimer",
-      okType: "danger",
-      cancelText: "Annuler",
-      onOk: async () => {
-        try {
-          setActionLoading("delete");
-          await onDelete(exerciseId);
-          message.success("Exercice supprimé avec succès");
-          onBack();
-        } catch (error) {
-          console.error("Error deleting exercise:", error);
-          setError("Erreur lors de la suppression");
-          onError?.("Erreur lors de la suppression");
-        } finally {
-          setActionLoading(null);
-        }
-      },
-    });
-  };
-
-  const handleAddQuestion = async (values) => {
+  const handleProgram = async (values) => {
+    const userId = getUserId();
+    if (!userId) { message.error("Utilisateur non connecté"); return; }
+    setProgramLoading(true);
     try {
-      setActionLoading("add-question");
-      console.log("Creating question:", values);
-
-      await questionReponseService.createQuestion(exerciseId, values);
-
-      setSuccessMessage("Question ajoutée avec succès");
-      message.success("Question ajoutée avec succès");
-      setShowQuestionForm(false);
-      questionForm.resetFields();
-
-      await fetchExerciseQuestions();
-    } catch (error) {
-      console.error("Error adding question:", error);
-      setError("Erreur lors de l'ajout de la question");
-      message.error("Erreur lors de l'ajout de la question");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleDeleteQuestion = async (questionId) => {
-    confirm({
-      title: "Supprimer la question",
-      content: "Êtes-vous sûr de vouloir supprimer cette question ?",
-      okText: "Supprimer",
-      okType: "danger",
-      cancelText: "Annuler",
-      onOk: async () => {
-        try {
-          setActionLoading(`delete-question-${questionId}`);
-          await questionReponseService.deleteQuestion(questionId);
-          setSuccessMessage("Question supprimée avec succès");
-          message.success("Question supprimée avec succès");
-          await fetchExerciseQuestions();
-        } catch (error) {
-          console.error("Error deleting question:", error);
-          message.error("Erreur lors de la suppression de la question");
-        } finally {
-          setActionLoading(null);
-        }
-      },
-    });
-  };
-
-  const handleProgramExercise = async (values) => {
-    try {
-      setActionLoading("program");
-      console.log("Starting programming with values:", values);
-
-      const userId =
-        sessionStorage.getItem("userId") || localStorage.getItem("userId");
-      if (!userId) {
-        throw new Error("Utilisateur non connecté");
-      }
-
-      if (
-        !values.dateExoPrevue ||
-        !values.dateDebutExoEffectif ||
-        !values.dateFinExoEffectif
-      ) {
-        message.error("Les trois dates sont obligatoires");
-        return;
-      }
-
-      const programmingData = {
-        exerciseId: exerciseId,
+      const payload = {
+        exerciseId,
         programmeParId: userId,
+        typeAssignation: values.typeAssignation,
         dateExoPrevue: values.dateExoPrevue.toISOString(),
         dateDebutExoEffectif: values.dateDebutExoEffectif.toISOString(),
         dateFinExoEffectif: values.dateFinExoEffectif.toISOString(),
         classeIds: values.classeIds || [],
-        etat: values.diffuseImmediately ? "ACTIF" : "BROUILLON",
+        etat: "ACTIF",
       };
-
-      console.log(
-        "Programming data being sent:",
-        JSON.stringify(programmingData, null, 2)
-      );
-
-      let response;
-      if (values.diffuseImmediately) {
-        response = await exerciseProgrammerService.programmerEtDiffuserExercise(
-          programmingData
-        );
-        message.success("Exercice programmé et diffusé avec succès");
+      if (values.diffuseImmediately !== false) {
+        await exerciseProgrammerService.programmerEtDiffuserExercise(payload);
+        message.success("Exercice programmé et diffusé !");
       } else {
-        response = await exerciseProgrammerService.programmerExercise(
-          programmingData
-        );
-        message.success("Exercice programmé avec succès");
+        await exerciseProgrammerService.programmerExercise(payload);
+        message.success("Exercice programmé");
       }
-
-      console.log("Programming response:", response);
-
-      setSuccessMessage(
-        values.diffuseImmediately
-          ? "Exercice programmé et diffusé avec succès"
-          : "Exercice programmé avec succès"
-      );
-      setShowProgramForm(false);
+      setShowProgramModal(false);
       programForm.resetFields();
-
-      await fetchExerciseProgrammations();
-    } catch (error) {
-      console.error("Error programming exercise:", error);
-      setError(
-        error.message || "Erreur lors de la programmation de l'exercice"
-      );
-      message.error(
-        error.message || "Erreur lors de la programmation de l'exercice"
-      );
+    } catch (e) {
+      message.error(e.message || "Erreur lors de la programmation");
     } finally {
-      setActionLoading(null);
+      setProgramLoading(false);
     }
   };
 
-  const handleDeleteProgrammation = async (programmationId) => {
-    confirm({
-      title: "Supprimer la programmation",
-      content: "Êtes-vous sûr de vouloir supprimer cette programmation ?",
-      okText: "Supprimer",
-      okType: "danger",
-      cancelText: "Annuler",
-      onOk: async () => {
-        try {
-          setActionLoading(`delete-prog-${programmationId}`);
-          await exerciseProgrammerService.supprimerExerciseProgramme(
-            programmationId
-          );
-          message.success("Programmation supprimée avec succès");
-          await fetchExerciseProgrammations();
-        } catch (error) {
-          console.error("Error deleting programmation:", error);
-          message.error("Erreur lors de la suppression de la programmation");
-        } finally {
-          setActionLoading(null);
-        }
-      },
-    });
-  };
-
-  const getStatusTag = (status) => {
-    switch (status) {
-      case "ACTIF":
-        return <Tag color="green">Actif</Tag>;
-      case "BROUILLON":
-        return <Tag color="orange">Brouillon</Tag>;
-      case "INACTIF":
-        return <Tag color="red">Inactif</Tag>;
-      default:
-        return <Tag color="default">{status}</Tag>;
-    }
-  };
-
-  const getRestrictionTag = (restriction) => {
-    switch (restriction) {
-      case "PUBLIC":
-        return <Tag color="blue">Public</Tag>;
-      case "PRIVE":
-        return <Tag color="purple">Privé</Tag>;
-      default:
-        return <Tag color="default">{restriction}</Tag>;
-    }
-  };
-
-  const questionColumns = [
-    {
-      title: "Intitulé",
-      dataIndex: "intitule",
-      key: "intitule",
-      ellipsis: true,
-      render: (text) => (
-        <Tooltip title={text}>
-          <Text strong className="text-xs sm:text-sm">
-            {text}
-          </Text>
-        </Tooltip>
-      ),
-    },
-    {
-      title: "Type",
-      dataIndex: "typeQuestion",
-      key: "typeQuestion",
-      width: 120,
-      responsive: ["md"],
-      render: (type) => (
-        <Tag color="blue" className="text-xs">
-          {type}
-        </Tag>
-      ),
-    },
-    {
-      title: "Réponse",
-      dataIndex: "reponse",
-      key: "reponse",
-      ellipsis: true,
-      responsive: ["lg"],
-      render: (text) => (
-        <Tooltip title={text}>
-          <Text code className="text-xs">
-            {text || "N/A"}
-          </Text>
-        </Tooltip>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 100,
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Supprimer">
-            <Popconfirm
-              title="Supprimer la question"
-              description="Êtes-vous sûr ?"
-              onConfirm={() => handleDeleteQuestion(record.id)}
-              okText="Oui"
-              cancelText="Non"
-            >
-              <Button
-                type="text"
-                size="small"
-                icon={<DeleteOutlined />}
-                loading={actionLoading === `delete-question-${record.id}`}
-                danger
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
-
-  const programmationColumns = [
-    {
-      title: "Date Prévue",
-      dataIndex: "dateExoPrevue",
-      key: "dateExoPrevue",
-      render: (date) => (
-        <Text className="text-xs sm:text-sm">
-          {date ? new Date(date).toLocaleString("fr-FR") : "N/A"}
-        </Text>
-      ),
-    },
-    {
-      title: "Début",
-      dataIndex: "dateDebutExoEffectif",
-      key: "dateDebutExoEffectif",
-      responsive: ["md"],
-      render: (date) => (
-        <Text className="text-xs sm:text-sm">
-          {date ? new Date(date).toLocaleString("fr-FR") : "N/A"}
-        </Text>
-      ),
-    },
-    {
-      title: "Fin",
-      dataIndex: "dateFinExoEffectif",
-      key: "dateFinExoEffectif",
-      responsive: ["md"],
-      render: (date) => (
-        <Text className="text-xs sm:text-sm">
-          {date ? new Date(date).toLocaleString("fr-FR") : "N/A"}
-        </Text>
-      ),
-    },
-    {
-      title: "Statut",
-      dataIndex: "etat",
-      key: "etat",
-      width: 120,
-      render: (etat) => getStatusTag(etat),
-    },
-    {
-      title: "Classes",
-      dataIndex: "classesDiffusees",
-      key: "classesDiffusees",
-      responsive: ["lg"],
-      render: (classes) => (
-        <Space size="small" wrap>
-          {classes && classes.length > 0 ? (
-            classes.map((classe) => (
-              <Tag key={classe.id} color="cyan" className="text-xs">
-                {classe.nom}
-              </Tag>
-            ))
-          ) : (
-            <Text type="secondary" className="text-xs">
-              Aucune
-            </Text>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 100,
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Supprimer">
-            <Popconfirm
-              title="Supprimer"
-              description="Êtes-vous sûr ?"
-              onConfirm={() => handleDeleteProgrammation(record.id)}
-              okText="Oui"
-              cancelText="Non"
-            >
-              <Button
-                type="text"
-                size="small"
-                icon={<DeleteOutlined />}
-                loading={actionLoading === `delete-prog-${record.id}`}
-                danger
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
-
+  /* ── loading / error states ── */
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-96 p-4">
-        <Spin size="large" />
-        <Text className="mt-3 text-sm sm:text-base">
-          Chargement des détails de l'exercice...
-        </Text>
+      <div className="full-bleed-page">
+        <div className="w-full px-4 py-12 flex flex-col items-center justify-center">
+          <Spin size="large" />
+          <p className="mt-4 text-slate-500 text-sm">Chargement...</p>
+        </div>
       </div>
     );
   }
 
   if (!exercise) {
     return (
-      <div className="p-4 sm:p-6">
-        <Alert
-          message="Impossible de charger les détails de l'exercice"
-          description={error || "Une erreur est survenue lors du chargement"}
-          type="error"
-          showIcon
-          action={
-            <Space direction="vertical" className="w-full sm:w-auto">
-              <Button size="small" onClick={handleRefresh} block>
-                Réessayer
-              </Button>
-              <Button size="small" type="primary" onClick={onBack} block>
-                Retour à la liste
-              </Button>
-            </Space>
-          }
-        />
+      <div className="full-bleed-page">
+        <div className="w-full px-4 py-6">
+          <button onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white mb-4"
+            style={{ background: "#1e3a5f" }}>
+            <ArrowLeftOutlined /> Retour
+          </button>
+          <p className="text-red-500">Impossible de charger l'exercice.</p>
+        </div>
       </div>
     );
   }
 
+  const isProfessor = !onTakeExercise;
+  const questions = exercise.questions || [];
+
+  /* etat badge config */
+  const etatCfg = {
+    ACTIF:     { label: "Actif",     bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+    PUBLIE:    { label: "Publié",    bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
+    BROUILLON: { label: "Brouillon", bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+    INACTIF:   { label: "Inactif",   bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+  };
+  const etat = etatCfg[exercise.etat] || { label: exercise.etat, bg: "#f3f4f6", color: "#6b7280", border: "#e5e7eb" };
+
   return (
-    <div className="p-2 sm:p-4 lg:p-6 max-w-7xl mx-auto">
-      <div className="mb-4 sm:mb-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-2 sm:gap-3">
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={onBack}
-              type="text"
-              size="middle"
-            />
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-2xl font-bold m-0 truncate">
-                Gestion de l'exercice
-              </h2>
-              <p className="text-gray-500 m-0 text-sm sm:text-base truncate">
-                {exercise.nom}
-              </p>
+    <div className="full-bleed-page">
+      <div className="w-full">
+
+        {/* ── Compact hero banner ── */}
+        <div className="relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)" }}>
+          {/* subtle decorative circle */}
+          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 pointer-events-none"
+            style={{ background: "#fff" }} />
+
+          <div className="relative px-3 sm:px-6 py-3 sm:py-4">
+            {/* Row 1: back + refresh */}
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-semibold transition-all hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+              >
+                <ArrowLeftOutlined style={{ fontSize: 13 }} />
+                Retour
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={fetchExercise}
+                className="p-1.5 rounded-lg text-white transition-all hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)" }}
+                title="Actualiser"
+              >
+                <ReloadOutlined style={{ fontSize: 13 }} />
+              </button>
+            </div>
+
+            {/* Row 2: title + meta */}
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h1 className="text-white font-bold text-base sm:text-xl leading-tight m-0 truncate">
+                    {exercise.nom}
+                  </h1>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+                    style={{ background: etat.bg, color: etat.color, border: `1px solid ${etat.border}` }}>
+                    {etat.label}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  {exercise.niveau && (
+                    <span className="flex items-center gap-1 text-blue-100 text-xs">
+                      <BookOutlined style={{ fontSize: 10 }} />{exercise.niveau}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1 text-blue-100 text-xs">
+                    {exercise.restriction === "PUBLIC"
+                      ? <><GlobalOutlined style={{ fontSize: 10 }} />Public</>
+                      : <><LockOutlined style={{ fontSize: 10 }} />Privé</>}
+                  </span>
+                  {exercise.dateCreation && (
+                    <span className="flex items-center gap-1 text-blue-100 text-xs">
+                      <ClockCircleOutlined style={{ fontSize: 10 }} />
+                      {new Date(exercise.dateCreation).toLocaleDateString("fr-FR")}
+                    </span>
+                  )}
+                  {exercise.matieres?.length > 0 && (
+                    <span className="flex items-center gap-1 text-blue-100 text-xs">
+                      <TagOutlined style={{ fontSize: 10 }} />
+                      {exercise.matieres.map(m => m.nom).join(", ")}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: action buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {isProfessor && !editing && (
+                <>
+                  <button
+                    onClick={() => setShowProgramModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
+                  >
+                    <SendOutlined style={{ fontSize: 12 }} />Programmer
+                  </button>
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all hover:bg-white/25"
+                    style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)" }}
+                  >
+                    <EditOutlined style={{ fontSize: 12 }} />Modifier
+                  </button>
+                  <Popconfirm
+                    title="Supprimer cet exercice ?"
+                    description="Cette action est irréversible."
+                    onConfirm={handleDelete}
+                    okText="Supprimer" cancelText="Annuler"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <button
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:bg-red-500/30"
+                      style={{ background: "rgba(239,68,68,0.2)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.35)" }}
+                    >
+                      <DeleteOutlined style={{ fontSize: 12 }} />
+                      <span className="hidden sm:inline">Supprimer</span>
+                    </button>
+                  </Popconfirm>
+                </>
+              )}
+              {editing && (
+                <>
+                  <button onClick={handleCancelEdit}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all hover:bg-white/20"
+                    style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                    <CloseOutlined style={{ fontSize: 12 }} />Annuler
+                  </button>
+                  <button onClick={handleSave} disabled={saving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
+                    style={{ background: "linear-gradient(135deg, #16a34a, #15803d)" }}>
+                    <SaveOutlined style={{ fontSize: 12 }} />
+                    {saving ? "Sauvegarde..." : "Sauvegarder"}
+                  </button>
+                </>
+              )}
+              {!isProfessor && questions.length > 0 && (
+                <button
+                  onClick={() => onTakeExercise(exerciseId)}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}>
+                  ▶ Passer l'exercice
+                </button>
+              )}
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={handleRefresh}
-              loading={refreshing}
-              type="default"
-              size="middle"
-            >
-              <span className="hidden sm:inline">Actualiser</span>
-            </Button>
+        {/* ── Body ── */}
+        <div className="px-3 sm:px-6 py-4 sm:py-6">
+          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
 
-            {editing ? (
-              <>
-                <Button
-                  icon={<CloseOutlined />}
-                  onClick={handleCancelEdit}
-                  disabled={saving}
-                  size="middle"
-                >
-                  <span className="hidden sm:inline">Annuler</span>
-                </Button>
-                <Button
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  onClick={handleSave}
-                  loading={saving}
-                  size="middle"
-                >
-                  <span className="hidden sm:inline">Sauvegarder</span>
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  icon={<EditOutlined />}
-                  onClick={handleEdit}
-                  type="primary"
-                  size="middle"
-                >
-                  <span className="hidden sm:inline">Modifier</span>
-                </Button>
-                <Button
-                  icon={<CalendarOutlined />}
-                  onClick={() => setShowProgramForm(true)}
-                  type="dashed"
-                  size="middle"
-                >
-                  <span className="hidden sm:inline">Programmer</span>
-                </Button>
-                <Popconfirm
-                  title="Êtes-vous sûr de vouloir supprimer cet exercice ?"
-                  description="Cette action est irréversible."
-                  onConfirm={handleDelete}
-                  okText="Oui"
-                  cancelText="Non"
-                  okButtonProps={{ danger: true }}
-                >
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    loading={actionLoading === "delete"}
-                    size="middle"
-                  >
-                    <span className="hidden sm:inline">Supprimer</span>
-                  </Button>
-                </Popconfirm>
-              </>
-            )}
+            {/* ── Left: Info card ── */}
+            <div className="lg:w-72 xl:w-80 flex-shrink-0 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2"
+                  style={{ background: "#f8faff" }}>
+                  <FileTextOutlined style={{ color: "#4f46e5", fontSize: 13 }} />
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Informations
+                  </span>
+                </div>
+                <div className="px-4 py-3">
+                  <ExerciseInfoPanel exercise={exercise} editing={editing} form={form} />
+                </div>
+              </div>
+
+              {/* Cours liés */}
+              {exercise.coursLies?.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2"
+                    style={{ background: "#f8faff" }}>
+                    <BookOutlined style={{ color: "#0891b2", fontSize: 13 }} />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      Cours liés
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 space-y-2">
+                    {exercise.coursLies.map(c => (
+                      <div key={c.id} className="p-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                        <p className="text-sm font-semibold text-slate-800 leading-tight">{c.titre || c.nom}</p>
+                        {c.description && (
+                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{c.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Right: Questions ── */}
+            <div className="flex-1 min-w-0">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                {/* Questions header */}
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between"
+                  style={{ background: "#f8faff" }}>
+                  <div className="flex items-center gap-2">
+                    <QuestionCircleOutlined style={{ color: "#4f46e5", fontSize: 14 }} />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      Questions
+                    </span>
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold"
+                      style={{ background: "#e0e7ff", color: "#4f46e5" }}>
+                      {questions.length}
+                    </span>
+                  </div>
+                  {isProfessor && (
+                    <button
+                      onClick={() => onEdit && onEdit(exerciseId)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:bg-indigo-50"
+                      style={{ color: "#4f46e5", border: "1px solid #e0e7ff" }}
+                    >
+                      <EditOutlined style={{ fontSize: 11 }} />
+                      Gérer
+                    </button>
+                  )}
+                </div>
+
+                {/* Questions list */}
+                {questions.length === 0 ? (
+                  <div className="px-4 py-10 text-center">
+                    <QuestionCircleOutlined style={{ fontSize: 32, color: "#cbd5e1" }} />
+                    <p className="text-slate-400 text-sm mt-3">Aucune question pour cet exercice</p>
+                    {isProfessor && (
+                      <button
+                        onClick={() => onEdit && onEdit(exerciseId)}
+                        className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                        style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
+                      >
+                        Ajouter des questions
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-50">
+                    {questions.map((q, idx) => (
+                      <div key={q.id} className="px-4 py-3.5 flex items-start gap-3 hover:bg-slate-50/60 transition-colors">
+                        {/* Number bubble */}
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5"
+                          style={{ background: "#e0e7ff", color: "#4f46e5" }}>
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-800 leading-snug mb-1.5">
+                            {q.intitule}
+                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <QuestionTypeBadge type={q.typeQuestion} />
+                            {q.points !== undefined && q.points !== null && (
+                              <span className="text-xs text-slate-400 font-medium">
+                                {q.points} pt{q.points !== 1 ? "s" : ""}
+                              </span>
+                            )}
+                          </div>
+                          {/* Choices preview for MCQ */}
+                          {q.typeQuestion === "CHOIX_MULTIPLE" && q.reponses?.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {q.reponses.map((r, ri) => (
+                                <div key={ri} className="flex items-center gap-2 text-xs text-slate-600">
+                                  <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${r.estCorrecte ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"}`}>
+                                    {r.estCorrecte ? <CheckCircleOutlined style={{ fontSize: 10 }} /> : "○"}
+                                  </span>
+                                  {r.contenu}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Footer count */}
+                {questions.length > 0 && (
+                  <div className="px-4 py-2.5 border-t border-slate-50 flex items-center justify-between"
+                    style={{ background: "#fafbff" }}>
+                    <span className="text-xs text-slate-400">
+                      {questions.length} question{questions.length !== 1 ? "s" : ""}
+                    </span>
+                    {isProfessor && (
+                      <button
+                        onClick={() => onEdit && onEdit(exerciseId)}
+                        className="text-xs font-semibold transition-all hover:underline"
+                        style={{ color: "#4f46e5" }}
+                      >
+                        + Ajouter / modifier
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {successMessage && (
-        <Alert
-          message={successMessage}
-          type="success"
-          showIcon
-          closable
-          className="mb-4"
-        />
-      )}
-      {error && (
-        <Alert
-          message={error}
-          type="error"
-          showIcon
-          closable
-          onClose={() => setError(null)}
-          className="mb-4"
-        />
-      )}
-
-      <Card title="Informations de l'exercice" className="mb-4 sm:mb-6">
-        {editing ? (
-          <Form form={form} layout="vertical">
-            <Row gutter={[16, 16]}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="nom"
-                  label="Nom de l'exercice"
-                  rules={[{ required: true, message: "Le nom est requis" }]}
-                >
-                  <Input prefix={<BookOutlined />} />
-                </Form.Item>
-                <Form.Item
-                  name="niveau"
-                  label="Niveau"
-                  rules={[{ required: true, message: "Le niveau est requis" }]}
-                >
-                  <Select>
-                    <Option value="6ème">6ème</Option>
-                    <Option value="5ème">5ème</Option>
-                    <Option value="4ème">4ème</Option>
-                    <Option value="3ème">3ème</Option>
-                    <Option value="2nde">2nde</Option>
-                    <Option value="1ère">1ère</Option>
-                    <Option value="Terminale">Terminale</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="restriction"
-                  label="Visibilité"
-                  rules={[
-                    { required: true, message: "La visibilité est requise" },
-                  ]}
-                >
-                  <Select>
-                    <Option value="PUBLIC">Public</Option>
-                    <Option value="PRIVE">Privé</Option>
-                  </Select>
-                </Form.Item>
-                <Form.Item name="etat" label="Statut">
-                  <Select>
-                    <Option value="BROUILLON">Brouillon</Option>
-                    <Option value="ACTIF">Actif</Option>
-                    <Option value="INACTIF">Inactif</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24}>
-                <Form.Item
-                  name="description"
-                  label="Description"
-                  rules={[
-                    { required: true, message: "La description est requise" },
-                  ]}
-                >
-                  <TextArea rows={4} />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        ) : (
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={12}>
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Nom">
-                  <Text className="text-xs sm:text-sm">
-                    {exercise.nom || "N/A"}
-                  </Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Niveau">
-                  <Space>
-                    <UserOutlined style={{ color: "#1890ff" }} />
-                    <Text className="text-xs sm:text-sm">
-                      {exercise.niveau || "N/A"}
-                    </Text>
-                  </Space>
-                </Descriptions.Item>
-                <Descriptions.Item label="Statut">
-                  {getStatusTag(exercise.etat)}
-                </Descriptions.Item>
-              </Descriptions>
-            </Col>
-            <Col xs={24} md={12}>
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Visibilité">
-                  {getRestrictionTag(exercise.restriction)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Date de création">
-                  <Text className="text-xs sm:text-sm">
-                    {exercise.dateCreation
-                      ? new Date(exercise.dateCreation).toLocaleDateString(
-                          "fr-FR"
-                        )
-                      : "N/A"}
-                  </Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="ID">
-                  <Text code className="text-xs">
-                    {exercise.id}
-                  </Text>
-                </Descriptions.Item>
-              </Descriptions>
-            </Col>
-            <Col xs={24}>
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Description">
-                  <Text className="text-xs sm:text-sm">
-                    {exercise.description || "Aucune description"}
-                  </Text>
-                </Descriptions.Item>
-              </Descriptions>
-            </Col>
-          </Row>
-        )}
-      </Card>
-
-      {!editing && (
-        <Card>
-          <Tabs defaultActiveKey="questions" type="card">
-            <Tabs.TabPane
-              tab={
-                <span className="text-xs sm:text-sm">
-                  <QuestionCircleOutlined />
-                  <span className="ml-1">Questions ({questions.length})</span>
-                </span>
-              }
-              key="questions"
-            >
-              <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <Title level={5} className="m-0 text-sm sm:text-base">
-                  Questions de l'exercice
-                </Title>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => setShowQuestionForm(true)}
-                  size="middle"
-                >
-                  <span className="hidden sm:inline">Ajouter une Question</span>
-                  <span className="sm:hidden">Ajouter</span>
-                </Button>
-              </div>
-
-              <Table
-                columns={questionColumns}
-                dataSource={questions}
-                rowKey="id"
-                loading={questionsLoading}
-                pagination={{
-                  pageSize: 10,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                  showTotal: (total, range) =>
-                    `${range[0]}-${range[1]} sur ${total} questions`,
-                  responsive: true,
-                }}
-                scroll={{ x: 600 }}
-                locale={{
-                  emptyText: (
-                    <Empty
-                      description="Aucune question dans cet exercice"
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    >
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => setShowQuestionForm(true)}
-                      >
-                        Ajouter une Question
-                      </Button>
-                    </Empty>
-                  ),
-                }}
-              />
-            </Tabs.TabPane>
-
-            <Tabs.TabPane
-              tab={
-                <span className="text-xs sm:text-sm">
-                  <CalendarOutlined />
-                  <span className="ml-1">
-                    Programmations ({programmations.length})
-                  </span>
-                </span>
-              }
-              key="programmations"
-            >
-              <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <Title level={5} className="m-0 text-sm sm:text-base">
-                  Programmations de l'exercice
-                </Title>
-                <Button
-                  type="primary"
-                  icon={<CalendarOutlined />}
-                  onClick={() => setShowProgramForm(true)}
-                  size="middle"
-                >
-                  <span className="hidden sm:inline">Programmer</span>
-                  <span className="sm:hidden">+</span>
-                </Button>
-              </div>
-
-              <Table
-                columns={programmationColumns}
-                dataSource={programmations}
-                rowKey="id"
-                loading={programmationsLoading}
-                pagination={{
-                  pageSize: 10,
-                  showSizeChanger: true,
-                  showTotal: (total, range) =>
-                    `${range[0]}-${range[1]} sur ${total} programmations`,
-                  responsive: true,
-                }}
-                scroll={{ x: 800 }}
-                locale={{
-                  emptyText: (
-                    <Empty
-                      description="Aucune programmation pour cet exercice"
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    >
-                      <Button
-                        type="primary"
-                        icon={<CalendarOutlined />}
-                        onClick={() => setShowProgramForm(true)}
-                      >
-                        Programmer l'Exercice
-                      </Button>
-                    </Empty>
-                  ),
-                }}
-              />
-            </Tabs.TabPane>
-          </Tabs>
-        </Card>
-      )}
-
-      {/* Add Question Modal */}
-      <Modal
-        title="Ajouter une Question"
-        open={showQuestionForm}
-        onCancel={() => {
-          setShowQuestionForm(false);
-          questionForm.resetFields();
-        }}
-        footer={null}
-        width="90%"
-        style={{ maxWidth: 600 }}
-      >
-        <Form
-          form={questionForm}
-          layout="vertical"
-          onFinish={handleAddQuestion}
-        >
-          <Form.Item
-            name="intitule"
-            label="Intitulé de la question"
-            rules={[{ required: true, message: "L'intitulé est requis" }]}
-          >
-            <TextArea rows={3} placeholder="Posez votre question ici..." />
-          </Form.Item>
-
-          <Form.Item
-            name="typeQuestion"
-            label="Type de question"
-            rules={[{ required: true, message: "Le type est requis" }]}
-            initialValue="QCM"
-          >
-            <Select>
-              <Option value="QCM">Question à Choix Multiple (QCM)</Option>
-              <Option value="VRAI_FAUX">Vrai ou Faux</Option>
-              <Option value="REPONSE_COURTE">Réponse Courte</Option>
-              <Option value="REPONSE_LONGUE">Réponse Longue</Option>
-              <Option value="ASSOCIATION">Association</Option>
-              <Option value="CLASSEMENT">Classement</Option>
-              <Option value="TROU">Texte à Trous</Option>
-              <Option value="DEVELOPPEMENT">Développement</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="reponse"
-            label="Réponse attendue"
-            rules={[{ required: true, message: "La réponse est requise" }]}
-          >
-            <Input placeholder="Réponse correcte..." />
-          </Form.Item>
-
-          <div className="flex flex-col sm:flex-row justify-end gap-2">
-            <Button
-              onClick={() => {
-                setShowQuestionForm(false);
-                questionForm.resetFields();
-              }}
-              block
-              className="sm:w-auto"
-            >
-              Annuler
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={actionLoading === "add-question"}
-              block
-              className="sm:w-auto"
-            >
-              Ajouter la Question
-            </Button>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Program Exercise Modal */}
-      <Modal
-        title="Programmer l'Exercice"
-        open={showProgramForm}
-        onCancel={() => {
-          setShowProgramForm(false);
-          programForm.resetFields();
-        }}
-        footer={null}
-        width="90%"
-        style={{ maxWidth: 700 }}
-      >
-        <Form
-          form={programForm}
-          layout="vertical"
-          onFinish={handleProgramExercise}
-        >
-          <Alert
-            message="Dates obligatoires"
-            description="Les trois dates (prévue, début et fin) sont obligatoires pour programmer un exercice"
-            type="info"
-            showIcon
-            className="mb-4"
-          />
-
-          <Form.Item
-            name="dateExoPrevue"
-            label="Date prévue pour l'exercice"
-            rules={[
-              { required: true, message: "La date prévue est obligatoire" },
-            ]}
-            tooltip="Date à laquelle l'exercice devrait être réalisé"
-          >
-            <DatePicker
-              style={{ width: "100%" }}
-              showTime
-              format="DD/MM/YYYY HH:mm"
-              placeholder="Sélectionnez la date prévue"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="dateDebutExoEffectif"
-            label="Date de début effective"
-            rules={[
-              { required: true, message: "La date de début est obligatoire" },
-            ]}
-            tooltip="Date à partir de laquelle les étudiants peuvent commencer l'exercice"
-          >
-            <DatePicker
-              style={{ width: "100%" }}
-              showTime
-              format="DD/MM/YYYY HH:mm"
-              placeholder="Sélectionnez la date de début"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="dateFinExoEffectif"
-            label="Date de fin effective"
-            rules={[
-              { required: true, message: "La date de fin est obligatoire" },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  const startDate = getFieldValue("dateDebutExoEffectif");
-                  if (!value || !startDate || value.isAfter(startDate)) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(
-                    new Error("La date de fin doit être après la date de début")
-                  );
-                },
-              }),
-            ]}
-            tooltip="Date limite pour soumettre l'exercice"
-          >
-            <DatePicker
-              style={{ width: "100%" }}
-              showTime
-              format="DD/MM/YYYY HH:mm"
-              placeholder="Sélectionnez la date de fin"
-            />
-          </Form.Item>
-
-          <Divider />
-
-          <Form.Item
-            name="classeIds"
-            label="Classes concernées"
-            rules={[
-              { required: true, message: "Sélectionnez au moins une classe" },
-            ]}
-            extra={
-              classesLoading
-                ? "Chargement des classes..."
-                : `${classes.length} classe(s) disponible(s)`
-            }
-          >
-            <Select
-              mode="multiple"
-              placeholder="Sélectionnez les classes"
-              loading={classesLoading}
-              optionFilterProp="children"
-              notFoundContent={
-                classesLoading ? (
-                  <div className="text-center py-4">
-                    <Spin size="small" />
-                    <div className="mt-2 text-xs">Chargement...</div>
-                  </div>
-                ) : (
-                  <Empty
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description="Aucune classe accessible"
-                  />
-                )
-              }
-            >
-              {classes.map((classe) => (
-                <Option key={classe.id} value={classe.id}>
-                  {classe.nom} - {classe.niveau}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="diffuseImmediately"
-            valuePropName="checked"
-            initialValue={false}
-          >
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-              <div className="flex-1">
-                <Text strong className="text-xs sm:text-sm">
-                  Diffuser immédiatement
-                </Text>
-                <br />
-                <Text type="secondary" className="text-xs">
-                  L'exercice sera disponible immédiatement pour les étudiants
-                </Text>
-              </div>
-              <input type="checkbox" className="ml-2" />
-            </div>
-          </Form.Item>
-
-          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-4">
-            <Button
-              onClick={() => {
-                setShowProgramForm(false);
-                programForm.resetFields();
-              }}
-              block
-              className="sm:w-auto"
-            >
-              Annuler
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={actionLoading === "program"}
-              block
-              className="sm:w-auto"
-            >
-              Programmer
-            </Button>
-          </div>
-        </Form>
-      </Modal>
+      {/* ── Program Modal ── */}
+      <ProgramModal
+        open={showProgramModal}
+        onCancel={() => { setShowProgramModal(false); programForm.resetFields(); }}
+        onFinish={handleProgram}
+        loading={programLoading}
+        classes={classes}
+        classesLoading={classesLoading}
+        form={programForm}
+      />
     </div>
   );
 };

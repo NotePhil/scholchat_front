@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, RefreshCw, X, Mail, AlertCircle, Star, StarOff, CheckCircle, Circle, Trash2, Users } from "lucide-react";
+import { Search, RefreshCw, X, Mail, AlertCircle, Star, StarOff, CheckCircle, Circle, Trash2, Users, Undo2 } from "lucide-react";
 
 const MessageList = ({
   isDark,
@@ -11,8 +11,12 @@ const MessageList = ({
   toggleMessageSelection,
   toggleStarMessage,
   handleMarkAsRead,
+  markReadLocally,
   handleDeleteMessage,
   handleBulkDelete,
+  handleEmptyTrash,
+  handleRestoreMessage,
+  filterType,
   loading,
   searchTerm,
   setSearchTerm,
@@ -23,9 +27,11 @@ const MessageList = ({
   getUserInitials,
   getUserDisplay,
   formatDate,
+  currentUser,
 }) => {
+  const userId = localStorage.getItem('userId');
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
       <div className={`px-6 py-3 border-b flex items-center gap-4 ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}>
         <div className="flex items-center gap-2">
           {selectedMessages.size > 0 && (
@@ -39,7 +45,7 @@ const MessageList = ({
               <span className="text-sm text-gray-600">{selectedMessages.size} sélectionné(s)</span>
               <button
                 className={`p-2 rounded-full text-red-600 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
-                onClick={handleBulkDelete}
+                onClick={filterType === 'trash' ? handleEmptyTrash : handleBulkDelete}
               >
                 <Trash2 size={16} />
               </button>
@@ -80,7 +86,8 @@ const MessageList = ({
       )}
 
       <div className={`flex-1 overflow-y-auto ${isDark ? "bg-gray-900" : "bg-white"}`}>
-        {loading ? (
+        {/* Only show full-screen spinner on true first load (no data yet) */}
+        {loading && messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <RefreshCw className="animate-spin text-blue-600" size={32} />
           </div>
@@ -107,8 +114,29 @@ const MessageList = ({
                     : isDark
                     ? "hover:bg-gray-800"
                     : "hover:bg-gray-50"
-                } ${!message.read ? "border-l-4 border-blue-500" : ""}`}
-                onClick={() => setSelectedMessage(message)}
+                } ${
+                  // Only show unread indicator when current user is a recipient (not sender)
+                  !message.read && message.expediteur?.id !== userId
+                    ? "border-l-4 border-blue-500"
+                    : ""
+                }`}
+                onClick={() => {
+                  setSelectedMessage(message);
+                  // Get all unread messages in this thread
+                  const threadMsgs = message.thread
+                    ? message.thread.filter(m => !m.read)
+                    : (!message.read ? [message] : []);
+
+                  threadMsgs.forEach(m => {
+                    if (m.expediteur?.id !== userId) {
+                      // Received — call API to mark as read
+                      handleMarkAsRead(m.id, true);
+                    } else {
+                      // Sent — update local state only (sender viewing their own sent msg)
+                      markReadLocally(m.id);
+                    }
+                  });
+                }}
               >
                 <input
                   type="checkbox"
@@ -139,29 +167,40 @@ const MessageList = ({
                     isDark ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-700"
                   }`}
                 >
-                  {getUserInitials(message.expediteur)}
+                  {getUserInitials(message.partner || message.expediteur)}
                 </div>
 <div className="flex-1 min-w-0">
   <div className="flex items-center justify-between mb-1">
     <div className="flex items-center gap-2">
-      <span className={`font-medium truncate ${!message.read ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}>
-        {getUserDisplay(message.expediteur)}
+      <span className={`font-medium truncate ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}>
+        {getUserDisplay(message.partner || message.expediteur)}
       </span>
       <span className={`text-xs px-2 py-1 rounded-full ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}>
-        {message.expediteur?.role}
+        {(message.partner || message.expediteur)?.role}
       </span>
     </div>
-    <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-      {formatDate(message.dateCreation)}
-    </span>
+    <div className="flex items-center gap-2">
+      {/* Blue dot for sent messages not yet read by recipient — disappears when selected */}
+      {message.expediteur?.id === userId && !message.read && selectedMessage?.id !== message.id && (
+        <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" title="Non lu par le destinataire" />
+      )}
+      <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+        {formatDate(message.dateCreation)}
+      </span>
+    </div>
   </div>
-  <div className="flex items-center gap-2 mb-1">
-    <span className={`font-medium text-sm ${!message.read ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+  <div className="flex items-center justify-between mb-1">
+    <span className={`font-medium text-sm ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"} truncate`}>
       {message.objet || "Sans objet"}
     </span>
+    {message.isConversation && (
+      <span className={`text-xs px-2 py-1 rounded-full ml-2 ${isDark ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-800"}`}>
+        {message.thread.length}
+      </span>
+    )}
   </div>
   <p className={`text-sm truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-    {message.contenu}
+    {(message.contenu || "").split("--- Message original ---")[0].trim()}
   </p>
   {message.destinataires && message.destinataires.length > 0 && (
     <div className="flex items-center gap-1 mt-1">
@@ -174,25 +213,38 @@ const MessageList = ({
 </div>
 
 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className={`flex items-center gap-1 ${filterType === 'trash' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
                   <button
                     className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleMarkAsRead(message.id, message.read);
+                      handleMarkAsRead(message.id, !message.read);
                     }}
                   >
                     {message.read ? <Circle size={14} /> : <CheckCircle size={14} />}
                   </button>
-                  <button
-                    className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteMessage(message.id);
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {filterType === 'trash' ? (
+                    <button
+                      className={`p-2 rounded-full text-green-600 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRestoreMessage(message.id);
+                      }}
+                      title="Restaurer le message"
+                    >
+                      <Undo2 size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteMessage(message.id);
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

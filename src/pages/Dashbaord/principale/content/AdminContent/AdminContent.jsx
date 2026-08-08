@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Search,
   Plus,
@@ -12,8 +13,22 @@ import {
   Shield,
   ChevronDown,
   Activity,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
-import { userService } from "../../../../../services/userService";
+import {
+  fetchAdmins,
+  createAdmin,
+  updateAdmin,
+  deleteAdmin,
+  setSearchTerm,
+  setFilterStatus,
+  setViewMode,
+  clearError,
+  clearSuccess,
+} from "../../../../../store/slices/adminSlice";
+import { useTranslation } from "../../../../../hooks/useTranslation";
+import { useSelector as useReduxSelector } from "react-redux";
 
 const AdminModal = ({
   showModal,
@@ -22,7 +37,10 @@ const AdminModal = ({
   selectedAdmin,
   onSuccess,
   onError,
+  loading,
 }) => {
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     nom: "",
     prenom: "",
@@ -32,7 +50,6 @@ const AdminModal = ({
     etat: "ACTIVE",
     admin: true,
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (modalMode === "edit" && selectedAdmin) {
@@ -64,24 +81,19 @@ const AdminModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
     try {
       if (modalMode === "create") {
-        await userService.createUser(formData);
+        await dispatch(createAdmin(formData)).unwrap();
       } else {
-        await userService.updateUser(selectedAdmin.id, formData);
+        await dispatch(
+          updateAdmin({ id: selectedAdmin.id, data: formData })
+        ).unwrap();
       }
       onSuccess();
       setShowModal(false);
     } catch (err) {
-      onError(
-        `Erreur lors de ${
-          modalMode === "create" ? "la création" : "la modification"
-        }: ${err.message}`
-      );
-    } finally {
-      setIsSubmitting(false);
+      onError(err.message);
     }
   };
 
@@ -99,20 +111,20 @@ const AdminModal = ({
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
                   {modalMode === "create"
-                    ? "Nouvel Administrateur"
-                    : "Modifier l'Administrateur"}
+                    ? t('admin.modals.create')
+                    : t('admin.modals.edit')}
                 </h2>
                 <p className="text-slate-600">
                   {modalMode === "create"
-                    ? "Ajouter un nouvel administrateur au système"
-                    : "Modifier les informations de l'administrateur"}
+                    ? t('admin.modals.createDesc')
+                    : t('admin.modals.editDesc')}
                 </p>
               </div>
             </div>
             <button
               onClick={() => setShowModal(false)}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              disabled={isSubmitting}
+              disabled={loading}
             >
               <X size={20} />
             </button>
@@ -123,7 +135,7 @@ const AdminModal = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Nom *
+                {t('admin.form.lastName')} *
               </label>
               <input
                 type="text"
@@ -131,14 +143,14 @@ const AdminModal = ({
                 value={formData.nom}
                 onChange={(e) => handleInputChange("nom", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
-                placeholder="Entrez le nom"
-                disabled={isSubmitting}
+                placeholder={t('admin.form.lastNamePlaceholder')}
+                disabled={loading}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Prénom *
+                {t('admin.form.firstName')} *
               </label>
               <input
                 type="text"
@@ -146,8 +158,8 @@ const AdminModal = ({
                 value={formData.prenom}
                 onChange={(e) => handleInputChange("prenom", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
-                placeholder="Entrez le prénom"
-                disabled={isSubmitting}
+                placeholder={t('admin.form.firstNamePlaceholder')}
+                disabled={loading}
               />
             </div>
           </div>
@@ -155,7 +167,7 @@ const AdminModal = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Email *
+                {t('admin.form.email')} *
               </label>
               <input
                 type="email"
@@ -164,13 +176,13 @@ const AdminModal = ({
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                 placeholder="admin@example.com"
-                disabled={isSubmitting}
+                disabled={loading}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Téléphone
+                {t('admin.form.phone')}
               </label>
               <input
                 type="tel"
@@ -178,7 +190,7 @@ const AdminModal = ({
                 onChange={(e) => handleInputChange("telephone", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                 placeholder="0123456789"
-                disabled={isSubmitting}
+                disabled={loading}
               />
             </div>
           </div>
@@ -186,7 +198,7 @@ const AdminModal = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Adresse
+                {t('admin.form.address')}
               </label>
               <textarea
                 value={formData.adresse}
@@ -194,23 +206,23 @@ const AdminModal = ({
                 rows={3}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 resize-none"
                 placeholder="Entrez l'adresse complète"
-                disabled={isSubmitting}
+                disabled={loading}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Statut
+                {t('admin.form.status')}
               </label>
               <select
                 value={formData.etat}
                 onChange={(e) => handleInputChange("etat", e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
-                disabled={isSubmitting}
+                disabled={loading}
               >
-                <option value="ACTIVE">Actif</option>
-                <option value="INACTIVE">Inactif</option>
-                <option value="PENDING">En attente</option>
+                <option value="ACTIVE">{t('admin.status.active')}</option>
+                <option value="INACTIVE">{t('admin.status.inactive')}</option>
+                <option value="PENDING">{t('admin.status.pending')}</option>
               </select>
             </div>
           </div>
@@ -220,19 +232,17 @@ const AdminModal = ({
               type="button"
               onClick={() => setShowModal(false)}
               className="px-6 py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium"
-              disabled={isSubmitting}
+              disabled={loading}
             >
-              Annuler
+              {t('admin.actions.cancel')}
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={loading}
               className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {isSubmitting && (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              )}
-              <span>{modalMode === "create" ? "Créer" : "Modifier"}</span>
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>{modalMode === "create" ? t('admin.actions.create') : t('admin.actions.edit')}</span>
             </button>
           </div>
         </form>
@@ -241,7 +251,6 @@ const AdminModal = ({
   );
 };
 
-// components/DeleteConfirmationModal.jsx
 const DeleteConfirmationModal = ({
   showDeleteConfirm,
   setShowDeleteConfirm,
@@ -249,6 +258,7 @@ const DeleteConfirmationModal = ({
   onConfirm,
   loading,
 }) => {
+  const { t } = useTranslation();
   if (!showDeleteConfirm) return null;
 
   return (
@@ -261,24 +271,24 @@ const DeleteConfirmationModal = ({
             </div>
             <div>
               <h3 className="text-xl font-semibold text-slate-900">
-                Confirmer la suppression
+                {t('admin.modal.confirmDelete')}
               </h3>
               <p className="text-slate-600 mt-1">
-                Cette action est irréversible
+                {t('admin.modal.irreversible')}
               </p>
             </div>
           </div>
 
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
             <p className="text-red-800">
-              Êtes-vous sûr de vouloir supprimer l'administrateur{" "}
+              {t('admin.modal.deleteConfirmText')} {" "}
               <span className="font-semibold">
                 {selectedAdmin?.prenom} {selectedAdmin?.nom}
               </span>{" "}
               ?
             </p>
             <p className="text-red-700 text-sm mt-2">
-              Toutes les données associées seront définitivement perdues.
+              {t('admin.modal.dataLossWarning')}
             </p>
           </div>
 
@@ -288,17 +298,15 @@ const DeleteConfirmationModal = ({
               disabled={loading}
               className="px-6 py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-medium disabled:opacity-50"
             >
-              Annuler
+              {t('admin.actions.cancel')}
             </button>
             <button
               onClick={onConfirm}
               disabled={loading}
               className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center space-x-2"
             >
-              {loading && (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              )}
-              <span>Supprimer</span>
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>{t('admin.actions.delete')}</span>
             </button>
           </div>
         </div>
@@ -307,8 +315,8 @@ const DeleteConfirmationModal = ({
   );
 };
 
-// components/AdminViewModal.jsx
 const AdminViewModal = ({ admin, onClose }) => {
+  const { t } = useTranslation();
   if (!admin) return null;
 
   const getStatusBadge = (status) => {
@@ -321,12 +329,7 @@ const AdminViewModal = ({ admin, onClose }) => {
   };
 
   const getStatusText = (status) => {
-    const texts = {
-      ACTIVE: "Actif",
-      INACTIVE: "Inactif",
-      PENDING: "En attente",
-    };
-    return texts[status] || status;
+    return t(`admin.status.${status?.toLowerCase()}`) || status;
   };
 
   const getInitials = (firstName, lastName) => {
@@ -338,7 +341,6 @@ const AdminViewModal = ({ admin, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -366,7 +368,7 @@ const AdminViewModal = ({ admin, onClose }) => {
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-50 text-purple-700 border border-purple-200">
                     <Shield className="w-3 h-3 mr-1" />
-                    Administrateur
+                    {t('admin.role.administrator')}
                   </span>
                 </div>
               </div>
@@ -380,24 +382,22 @@ const AdminViewModal = ({ admin, onClose }) => {
           </div>
         </div>
 
-        {/* Content sections remain the same */}
         <div className="p-6 space-y-6">
-          {/* Contact Information */}
           <div className="bg-slate-50 rounded-2xl p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              Informations de Contact
+              {t('admin.modal.contactInfo')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">
-                  Email
+                  {t('admin.form.email')}
                 </label>
                 <div className="text-slate-900">{admin.email}</div>
               </div>
               {admin.telephone && (
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">
-                    Téléphone
+                    {t('admin.form.phone')}
                   </label>
                   <div className="text-slate-900">{admin.telephone}</div>
                 </div>
@@ -406,30 +406,21 @@ const AdminViewModal = ({ admin, onClose }) => {
             {admin.adresse && (
               <div className="mt-4">
                 <label className="block text-sm font-medium text-slate-600 mb-1">
-                  Adresse
+                  {t('admin.form.address')}
                 </label>
                 <div className="text-slate-900">{admin.adresse}</div>
               </div>
             )}
           </div>
 
-          {/* Account Information */}
           <div className="bg-slate-50 rounded-2xl p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              Informations du Compte
+              {t('admin.modal.accountInfo')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">
-                  ID Utilisateur
-                </label>
-                <div className="text-slate-900 font-mono text-sm">
-                  {admin.id}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
-                  Date de Création
+                  {t('admin.form.creationDate')}
                 </label>
                 <div className="text-slate-900">
                   {new Date(admin.creationDate).toLocaleDateString("fr-FR", {
@@ -450,7 +441,7 @@ const AdminViewModal = ({ admin, onClose }) => {
             onClick={onClose}
             className="w-full bg-slate-600 hover:bg-slate-700 text-white py-3 rounded-xl font-medium transition-colors"
           >
-            Fermer
+            {t('admin.actions.close')}
           </button>
         </div>
       </div>
@@ -458,7 +449,6 @@ const AdminViewModal = ({ admin, onClose }) => {
   );
 };
 
-// components/StatsCard.jsx
 const StatsCard = ({ title, value, icon: Icon, gradient, subtext, color }) => (
   <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
     <div className="flex items-center justify-between">
@@ -477,8 +467,8 @@ const StatsCard = ({ title, value, icon: Icon, gradient, subtext, color }) => (
   </div>
 );
 
-// components/AdminCard.jsx
 const AdminCard = ({ admin, onView, onEdit, onDelete }) => {
+  const { t } = useTranslation();
   const getInitials = (firstName, lastName) => {
     return `${firstName?.charAt(0) || ""}${
       lastName?.charAt(0) || ""
@@ -495,12 +485,7 @@ const AdminCard = ({ admin, onView, onEdit, onDelete }) => {
   };
 
   const getStatusText = (status) => {
-    const texts = {
-      ACTIVE: "Actif",
-      INACTIVE: "Inactif",
-      PENDING: "En attente",
-    };
-    return texts[status] || status;
+    return t(`admin.status.${status?.toLowerCase()}`) || status;
   };
 
   return (
@@ -536,21 +521,21 @@ const AdminCard = ({ admin, onView, onEdit, onDelete }) => {
         <button
           onClick={() => onView(admin)}
           className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
-          title="Voir"
+          title={t('admin.actions.view')}
         >
           <Eye size={16} />
         </button>
         <button
           onClick={() => onEdit(admin)}
           className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-          title="Modifier"
+          title={t('admin.actions.edit')}
         >
           <Edit2 size={16} />
         </button>
         <button
           onClick={() => onDelete(admin)}
           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-          title="Supprimer"
+          title={t('admin.actions.delete')}
         >
           <Trash2 size={16} />
         </button>
@@ -559,81 +544,167 @@ const AdminCard = ({ admin, onView, onEdit, onDelete }) => {
   );
 };
 
-// Main Component
-const AdminContent = () => {
-  const [admins, setAdmins] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+export const useAdmins = () => {
+  const dispatch = useDispatch();
+  const adminState = useSelector((state) => state.admin);
+  const { user, userRole, userRoles } = useSelector((state) => state.auth);
+
+  const loadAdmins = useCallback(() => {
+    dispatch(fetchAdmins());
+  }, [dispatch]);
+
+  const handleCreateAdmin = useCallback(
+    (adminData) => {
+      return dispatch(createAdmin(adminData)).unwrap();
+    },
+    [dispatch]
+  );
+
+  const handleUpdateAdmin = useCallback(
+    ({ id, data }) => {
+      return dispatch(updateAdmin({ id, data })).unwrap();
+    },
+    [dispatch]
+  );
+
+  const handleDeleteAdmin = useCallback(
+    (adminId) => {
+      return dispatch(deleteAdmin(adminId)).unwrap();
+    },
+    [dispatch]
+  );
+
+  const handleSearchChange = useCallback(
+    (searchTerm) => {
+      dispatch(setSearchTerm(searchTerm));
+    },
+    [dispatch]
+  );
+
+  const handleFilterChange = useCallback(
+    (filterStatus) => {
+      dispatch(setFilterStatus(filterStatus));
+    },
+    [dispatch]
+  );
+
+  const handleViewModeChange = useCallback(
+    (viewMode) => {
+      dispatch(setViewMode(viewMode));
+    },
+    [dispatch]
+  );
+
+  const handleClearError = useCallback(() => {
+    dispatch(clearError());
+  }, [dispatch]);
+
+  const handleClearSuccess = useCallback(() => {
+    dispatch(clearSuccess());
+  }, [dispatch]);
+
+  const canManageAdmins = useMemo(() => {
+    const allowedRoles = [
+      "ROLE_ADMIN",
+      "ROLE_SUPER_ADMIN",
+      "admin",
+      "super_admin",
+    ];
+
+    if (userRole && allowedRoles.includes(userRole.toLowerCase())) {
+      return true;
+    }
+
+    if (userRoles && userRoles.length > 0) {
+      return userRoles.some((role) =>
+        allowedRoles.includes(role.toLowerCase())
+      );
+    }
+
+    return false;
+  }, [userRole, userRoles]);
+
+  return {
+    ...adminState,
+    loadAdmins,
+    handleCreateAdmin,
+    handleUpdateAdmin,
+    handleDeleteAdmin,
+    handleSearchChange,
+    handleFilterChange,
+    handleViewModeChange,
+    handleClearError,
+    handleClearSuccess,
+    canManageAdmins,
+    currentUser: user,
+  };
+};
+
+const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
+  const { t } = useTranslation();
+  const language = useReduxSelector((state) => state.ui?.currentLanguage || 'fr');
+  const isMobile = useSelector((state) => state.ui.isMobile);
+  const {
+    admins,
+    filteredAdmins,
+    loading,
+    error,
+    success,
+    searchTerm,
+    filterStatus,
+    viewMode,
+    loadAdmins,
+    handleCreateAdmin,
+    handleUpdateAdmin,
+    handleDeleteAdmin,
+    handleSearchChange,
+    handleFilterChange,
+    handleViewModeChange,
+    handleClearError,
+    handleClearSuccess,
+    canManageAdmins,
+    currentUser,
+  } = useAdmins();
+
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState("create");
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState(null);
-  const [viewMode, setViewMode] = useState("grid");
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadAdmins();
+  }, [loadAdmins]);
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const usersData = await userService.getAllUsers();
-      const adminUsers = usersData?.filter((user) => user.admin === true) || [];
-      setAdmins(adminUsers);
-      setError("");
-    } catch (err) {
-      setError("Erreur lors du chargement des données: " + err.message);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => handleClearError(), 5000);
+      return () => clearTimeout(timer);
     }
-  }, []);
+  }, [error, handleClearError]);
 
-  const filteredAdmins = useMemo(() => {
-    let filtered = admins;
-
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (admin) =>
-          admin.nom?.toLowerCase().includes(search) ||
-          admin.prenom?.toLowerCase().includes(search) ||
-          admin.email?.toLowerCase().includes(search)
-      );
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => handleClearSuccess(), 3000);
+      return () => clearTimeout(timer);
     }
+  }, [success, handleClearSuccess]);
 
-    if (filterStatus !== "all") {
-      filtered = filtered.filter((admin) => admin.etat === filterStatus);
-    }
-
-    return filtered;
-  }, [admins, searchTerm, filterStatus]);
-
+  // FIX: Add safe access for admins array
   const stats = useMemo(
     () => ({
-      total: admins.length,
-      active: admins.filter((a) => a.etat === "ACTIVE").length,
-      pending: admins.filter((a) => a.etat === "PENDING").length,
+      total: admins?.length || 0,
+      active: (admins || []).filter((a) => a.etat === "ACTIVE").length,
+      pending: (admins || []).filter((a) => a.etat === "PENDING").length,
     }),
     [admins]
   );
 
-  const handleDelete = useCallback(async () => {
-    try {
-      setLoading(true);
-      await userService.deleteUser(selectedAdmin.id);
-      await loadData();
-      setShowDeleteConfirm(false);
-      setSelectedAdmin(null);
-    } catch (err) {
-      setError("Erreur lors de la suppression: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedAdmin, loadData]);
+  // FIX: Add safe access for filteredAdmins
+  const safeFilteredAdmins = useMemo(() => {
+    return filteredAdmins || admins || [];
+  }, [filteredAdmins, admins]);
 
   const handleViewAdmin = useCallback((admin) => {
     setCurrentAdmin(admin);
@@ -646,30 +717,43 @@ const AdminContent = () => {
     setShowModal(true);
   }, []);
 
-  const handleDeleteAdmin = useCallback((admin) => {
+  const handleDeleteClick = useCallback((admin) => {
     setSelectedAdmin(admin);
     setShowDeleteConfirm(true);
   }, []);
 
-  const handleCreateAdmin = useCallback(() => {
+  const handleDeleteConfirm = useCallback(async () => {
+    try {
+      await handleDeleteAdmin(selectedAdmin.id);
+      setShowDeleteConfirm(false);
+      setSelectedAdmin(null);
+    } catch (err) {
+      console.error("Erreur lors de la suppression:", err);
+    }
+  }, [selectedAdmin, handleDeleteAdmin]);
+
+  const handleCreateClick = useCallback(() => {
     setModalMode("create");
     setSelectedAdmin(null);
     setShowModal(true);
   }, []);
 
-  if (loading && admins.length === 0) {
+  const handleModalSuccess = useCallback(() => {
+    loadAdmins();
+  }, [loadAdmins]);
+
+  const handleModalError = useCallback((errorMessage) => {
+    console.error("Modal error:", errorMessage);
+  }, []);
+
+  // FIX: Update loading condition to handle undefined admins
+  if (loading && (!admins || admins.length === 0)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-purple-200 rounded-full animate-spin"></div>
-            <div
-              className="w-16 h-16 border-4 border-purple-600 rounded-full animate-spin absolute top-0 left-0"
-              style={{ clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)" }}
-            ></div>
-          </div>
+          <Loader2 className="animate-spin text-purple-600" size={48} />
           <p className="text-slate-600 font-medium">
-            Chargement des données...
+            {t('admin.loading')}
           </p>
         </div>
       </div>
@@ -677,110 +761,98 @@ const AdminContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+    <div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {error && (
+          <div className="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
+            <AlertCircle size={20} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
+            <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+            </div>
+            <span>{success}</span>
+          </div>
+        )}
+
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-lg">
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                Gestion des Administrateurs
+              <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent'}`}>
+                {t('admin.title')}
               </h1>
               <p className="text-slate-600 mt-1">
-                Gérez efficacement les comptes administrateurs du système
+                {t('admin.subtitle')}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                  <X className="w-3 h-3 text-white" />
-                </div>
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-red-800 font-medium">Erreur</p>
-                <p className="text-red-700 text-sm mt-1">{error}</p>
-              </div>
-              <button
-                onClick={() => setError("")}
-                className="flex-shrink-0 ml-4 text-red-400 hover:text-red-600 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className={`${isMobile ? 'hidden' : 'grid'} grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8`}>
           <StatsCard
-            title="Total Admins"
+            title={t('admin.stats.total')}
             value={stats.total}
             icon={Shield}
             gradient="from-purple-500 to-purple-600"
             color="text-slate-900"
-            subtext="Administrateurs système"
+            subtext={t('admin.stats.systemAdmins')}
           />
           <StatsCard
-            title="Actifs"
+            title={t('admin.stats.active')}
             value={stats.active}
             icon={UserCheck}
             gradient="from-emerald-500 to-emerald-600"
             color="text-emerald-600"
-            subtext="Comptes validés"
+            subtext={t('admin.stats.validatedAccounts')}
           />
           <StatsCard
-            title="En attente"
+            title={t('admin.stats.pending')}
             value={stats.pending}
             icon={Users}
             gradient="from-amber-500 to-amber-600"
             color="text-amber-600"
-            subtext="Validation requise"
+            subtext={t('admin.stats.validationRequired')}
           />
         </div>
 
-        {/* Controls */}
-        <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-lg mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
+        <div className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl ${isMobile ? 'p-3' : 'p-6'} shadow-lg mb-8`}>
+          <div className={`flex ${isMobile ? 'flex-col gap-3' : 'flex-col lg:flex-row lg:items-center lg:justify-between gap-6'}`}>
+            <div className={`relative flex-1 ${isMobile ? 'max-w-full' : 'max-w-md'}`}>
               <Search
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                size={20}
+                size={isMobile ? 16 : 20}
               />
               <input
                 type="text"
-                placeholder="Rechercher par nom, email..."
+                placeholder={t('admin.search.placeholder')}
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm"
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className={`w-full ${isMobile ? 'pl-10 pr-3 py-2 text-sm' : 'pl-12 pr-4 py-3'} bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm`}
               />
             </div>
 
-            <div className="flex items-center gap-4">
-              {/* Filter */}
-              <div className="relative">
+            <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-4'}`}>
+              <div className={`relative ${isMobile ? 'w-full' : ''}`}>
                 <Filter
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
+                  className={`absolute ${isMobile ? 'left-3' : 'left-4'} top-1/2 transform -translate-y-1/2 text-slate-400`}
                   size={16}
                 />
                 <select
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="pl-12 pr-8 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
+                  onChange={(e) => handleFilterChange(e.target.value)}
+                  className={`${isMobile ? 'w-full pl-9 pr-6 py-2 text-xs' : 'pl-12 pr-8 py-3'} bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer`}
                 >
-                  <option value="all">Tous les statuts</option>
-                  <option value="ACTIVE">Actifs</option>
-                  <option value="INACTIVE">Inactifs</option>
-                  <option value="PENDING">En attente</option>
+                  <option value="all">{t('admin.search.allStatuses')}</option>
+                  <option value="ACTIVE">{t('admin.status.active')}</option>
+                  <option value="INACTIVE">{t('admin.status.inactive')}</option>
+                  <option value="PENDING">{t('admin.status.pending')}</option>
                 </select>
                 <ChevronDown
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
@@ -788,52 +860,53 @@ const AdminContent = () => {
                 />
               </div>
 
-              {/* View Toggle */}
-              <div className="flex bg-slate-100 rounded-xl p-1">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    viewMode === "grid"
-                      ? "bg-white text-purple-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Grille
-                </button>
-                <button
-                  onClick={() => setViewMode("table")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    viewMode === "table"
-                      ? "bg-white text-purple-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Table
-                </button>
-              </div>
+              <div className={`flex ${isMobile ? 'justify-between' : ''} items-center gap-2`}>
+                <div className="flex bg-slate-100 rounded-xl p-1">
+                  <button
+                    onClick={() => handleViewModeChange("grid")}
+                    className={`${isMobile ? 'px-3 py-1 text-xs' : 'px-4 py-2 text-sm'} rounded-lg font-medium transition-all duration-200 ${
+                      viewMode === "grid"
+                        ? "bg-white text-purple-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {t('admin.search.grid')}
+                  </button>
+                  <button
+                    onClick={() => handleViewModeChange("table")}
+                    className={`${isMobile ? 'px-3 py-1 text-xs' : 'px-4 py-2 text-sm'} rounded-lg font-medium transition-all duration-200 ${
+                      viewMode === "table"
+                        ? "bg-white text-purple-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {t('admin.search.table')}
+                  </button>
+                </div>
 
-              {/* Add Button */}
-              <button
-                onClick={handleCreateAdmin}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
-              >
-                <Plus size={20} />
-                Nouvel Admin
-              </button>
+                {canManageAdmins && (
+                  <button
+                    onClick={handleCreateClick}
+                    className={`bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white ${isMobile ? 'px-3 py-2 text-xs' : 'px-6 py-3'} rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium`}
+                  >
+                    <Plus size={isMobile ? 16 : 20} />
+                    {!isMobile && t('admin.search.newAdmin')}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Content Area */}
         {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAdmins.map((admin) => (
+          <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}`}>
+            {safeFilteredAdmins.map((admin) => (
               <AdminCard
                 key={admin.id}
                 admin={admin}
                 onView={handleViewAdmin}
                 onEdit={handleEditAdmin}
-                onDelete={handleDeleteAdmin}
+                onDelete={handleDeleteClick}
               />
             ))}
           </div>
@@ -843,58 +916,55 @@ const AdminContent = () => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50/50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Administrateur
+                    <th className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} text-left text-xs font-semibold text-slate-600 uppercase tracking-wider`}>
+                      {t('admin.table.administrator')}
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Contact
+                    <th className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} text-left text-xs font-semibold text-slate-600 uppercase tracking-wider`}>
+                      {t('admin.table.contact')}
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Statut
+                    <th className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} text-left text-xs font-semibold text-slate-600 uppercase tracking-wider`}>
+                      {t('admin.table.status')}
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Actions
+                    <th className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} text-right text-xs font-semibold text-slate-600 uppercase tracking-wider`}>
+                      {t('admin.table.actions')}
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white/30 divide-y divide-slate-100">
-                  {filteredAdmins.map((admin) => (
+                  {safeFilteredAdmins.map((admin) => (
                     <tr
                       key={admin.id}
                       className="hover:bg-white/50 transition-colors duration-200"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
                         <div className="flex items-center">
-                          <div className="h-10 w-10 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
-                            <span className="text-white font-medium text-sm">
+                          <div className={`${isMobile ? 'h-8 w-8' : 'h-10 w-10'} bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md`}>
+                            <span className={`text-white font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
                               {`${admin.prenom?.charAt(0) || ""}${
                                 admin.nom?.charAt(0) || ""
                               }`.toUpperCase()}
                             </span>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-semibold text-slate-900">
+                          <div className={`${isMobile ? 'ml-2' : 'ml-4'}`}>
+                            <div className={`${isMobile ? 'text-xs' : 'text-sm'} font-semibold text-slate-900`}>
                               {admin.prenom} {admin.nom}
-                            </div>
-                            <div className="text-sm text-slate-500">
-                              ID: {admin.id}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
                         <div className="space-y-1">
-                          <div className="text-sm text-slate-900">
+                          <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-slate-900`}>
                             {admin.email}
                           </div>
                           {admin.telephone && (
-                            <div className="text-sm text-slate-500">
+                            <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-slate-500`}>
                               {admin.telephone}
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
                         <span
                           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
                             admin.etat === "ACTIVE"
@@ -904,36 +974,36 @@ const AdminContent = () => {
                               : "bg-amber-50 text-amber-700 border-amber-200"
                           }`}
                         >
-                          {admin.etat === "ACTIVE"
-                            ? "Actif"
-                            : admin.etat === "INACTIVE"
-                            ? "Inactif"
-                            : "En attente"}
+                          {t(`admin.status.${admin.etat?.toLowerCase()}`) || admin.etat}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <td className={`${isMobile ? 'px-3 py-2' : 'px-6 py-4'} whitespace-nowrap text-right text-sm`}>
                         <div className="flex items-center justify-end space-x-1">
                           <button
                             onClick={() => handleViewAdmin(admin)}
-                            className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
-                            title="Voir"
+                            className={`${isMobile ? 'p-1.5' : 'p-2'} text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200`}
+                            title={t('admin.actions.view')}
                           >
-                            <Eye size={16} />
+                            <Eye size={isMobile ? 14 : 16} />
                           </button>
-                          <button
-                            onClick={() => handleEditAdmin(admin)}
-                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
-                            title="Modifier"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAdmin(admin)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          {canManageAdmins && (
+                            <>
+                              <button
+                                onClick={() => handleEditAdmin(admin)}
+                                className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
+                                title={t('admin.actions.edit')}
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteClick(admin)}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                                title={t('admin.actions.delete')}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -944,8 +1014,7 @@ const AdminContent = () => {
           </div>
         )}
 
-        {/* Empty State */}
-        {filteredAdmins.length === 0 && (
+        {safeFilteredAdmins.length === 0 && (
           <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg p-12">
             <div className="text-center">
               <div className="mx-auto w-24 h-24 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-6">
@@ -953,43 +1022,34 @@ const AdminContent = () => {
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-2">
                 {searchTerm || filterStatus !== "all"
-                  ? "Aucun résultat trouvé"
-                  : "Aucun administrateur enregistré"}
+                  ? t('admin.empty.noResults')
+                  : t('admin.empty.noAdmins')}
               </h3>
               <p className="text-slate-600 mb-6 max-w-md mx-auto">
                 {searchTerm || filterStatus !== "all"
-                  ? "Essayez de modifier vos critères de recherche ou de filtrage pour voir plus de résultats."
-                  : "Commencez par ajouter votre premier administrateur au système."}
+                  ? t('admin.empty.noResultsDesc')
+                  : t('admin.empty.noAdminsDesc')}
               </p>
-              {!searchTerm && filterStatus === "all" && (
+              {!searchTerm && filterStatus === "all" && canManageAdmins && (
                 <button
-                  onClick={handleCreateAdmin}
+                  onClick={handleCreateClick}
                   className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto"
                 >
                   <Plus size={20} />
-                  Ajouter un administrateur
+                  {t('admin.empty.addAdmin')}
                 </button>
               )}
             </div>
           </div>
         )}
 
-        {/* Loading Overlay */}
-        {loading && admins.length > 0 && (
+        {loading && admins && admins.length > 0 && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-6 shadow-2xl">
               <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <div className="w-8 h-8 border-4 border-purple-200 rounded-full animate-spin"></div>
-                  <div
-                    className="w-8 h-8 border-4 border-purple-600 rounded-full animate-spin absolute top-0 left-0"
-                    style={{
-                      clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)",
-                    }}
-                  ></div>
-                </div>
+                <Loader2 className="animate-spin text-purple-600" size={24} />
                 <p className="text-slate-700 font-medium">
-                  Traitement en cours...
+                  {t('admin.processing')}
                 </p>
               </div>
             </div>
@@ -997,21 +1057,21 @@ const AdminContent = () => {
         )}
       </div>
 
-      {/* Modals */}
       <AdminModal
         showModal={showModal}
         setShowModal={setShowModal}
         modalMode={modalMode}
         selectedAdmin={selectedAdmin}
-        onSuccess={loadData}
-        onError={setError}
+        onSuccess={handleModalSuccess}
+        onError={handleModalError}
+        loading={loading}
       />
 
       <DeleteConfirmationModal
         showDeleteConfirm={showDeleteConfirm}
         setShowDeleteConfirm={setShowDeleteConfirm}
         selectedAdmin={selectedAdmin}
-        onConfirm={handleDelete}
+        onConfirm={handleDeleteConfirm}
         loading={loading}
       />
 

@@ -20,59 +20,52 @@ import AccederService from "../../../../../../services/accederService";
 
 const schedulingSchema = yup.object().shape({
   coursId: yup.string().required("Le cours est obligatoire"),
-  classeId: yup.string().nullable(),
+  classeId: yup.string().required("La classe est obligatoire"),
   dateCoursPrevue: yup
     .string()
-    .required("La date prévue est obligatoire")
-    .test(
-      "future-date",
-      "La date ne peut pas être dans le passé",
-      function (value) {
-        if (!value) return false;
-        const selectedDate = new Date(value);
-        const now = new Date();
-        return selectedDate > now;
-      }
-    ),
+    .required("La date prevue est obligatoire"),
+    // Note: Date validation will be handled in the form submit logic
   dateDebutEffectif: yup
     .string()
     .nullable()
+    .optional()
     .test(
-      "required-for-status",
-      "La date de début effective est requise",
+      "both-or-neither",
+      "Si vous fournissez une date de début, vous devez aussi fournir une date de fin",
       function (value) {
-        const { etatCoursProgramme } = this.parent;
-        return etatCoursProgramme !== "PLANIFIE" ? !!value : true;
+        const { dateFinEffectif } = this.parent;
+        if (value && !dateFinEffectif) return false;
+        return true;
       }
     )
     .test(
       "after-planned",
       "La date de début ne peut pas être avant la date prévue",
       function (value) {
-        const { dateCoursPrevue, etatCoursProgramme } = this.parent;
-        if (!value || !dateCoursPrevue || etatCoursProgramme === "PLANIFIE")
-          return true;
+        const { dateCoursPrevue } = this.parent;
+        if (!value || !dateCoursPrevue) return true;
         return new Date(value) >= new Date(dateCoursPrevue);
       }
     ),
   dateFinEffectif: yup
     .string()
     .nullable()
+    .optional()
     .test(
-      "required-for-status",
-      "La date de fin effective est requise",
+      "both-or-neither",
+      "Si vous fournissez une date de fin, vous devez aussi fournir une date de début",
       function (value) {
-        const { etatCoursProgramme } = this.parent;
-        return etatCoursProgramme !== "PLANIFIE" ? !!value : true;
+        const { dateDebutEffectif } = this.parent;
+        if (value && !dateDebutEffectif) return false;
+        return true;
       }
     )
     .test(
       "after-start",
       "La date de fin ne peut pas être avant la date de début",
       function (value) {
-        const { dateDebutEffectif, etatCoursProgramme } = this.parent;
-        if (!value || !dateDebutEffectif || etatCoursProgramme === "PLANIFIE")
-          return true;
+        const { dateDebutEffectif } = this.parent;
+        if (!value || !dateDebutEffectif) return true;
         return new Date(value) >= new Date(dateDebutEffectif);
       }
     ),
@@ -86,7 +79,8 @@ const schedulingSchema = yup.object().shape({
     })
     .positive("La capacité doit être positive")
     .integer("La capacité doit être un nombre entier"),
-  participantsIds: yup.array().of(yup.string()).nullable(),
+  // Allow empty participants array - participants are optional
+  participantsIds: yup.array().of(yup.string()).nullable().optional(),
   etatCoursProgramme: yup.string().required("L'état est obligatoire"),
 });
 
@@ -95,6 +89,7 @@ const CoursProgrammerForm = ({
   onClose,
   onSubmit,
   modalMode = "create",
+  isReprogramme = false,
   selectedScheduledCourse,
   courses = [],
   classes = [],
@@ -159,35 +154,28 @@ const CoursProgrammerForm = ({
 
         console.log("Raw participants data:", participants);
 
-        // Filter only approved users and format them properly
+        // Format users properly for the dropdown - EXCLUDE parents
         const approvedUsers = participants
           .filter((user) => {
-            // Check different possible status field names
-            const status = user.etat || user.status || user.statut;
-            return (
-              status === "APPROUVEE" ||
-              status === "ACTIVE" ||
-              status === "ACTIF"
-            );
+            // Exclude parents from participant list
+            const userType = (user.type || "").toUpperCase();
+            const userRole = (user.role || "").toUpperCase();
+            return !userType.includes("PARENT") && !userRole.includes("PARENT");
           })
           .map((user) => {
             // Get the full name in a professional format
             const firstName = user.prenom || "";
-            const lastName = user.nom || user.utilisateurNom || "";
+            const lastName = user.nom || "";
             const fullName = `${firstName} ${lastName}`.trim();
 
             // Fallback to email or ID if no name is available
-            const displayName =
-              fullName ||
-              user.nomComplet ||
-              user.email ||
-              `User ${user.utilisateurId || user.id}`;
+            const displayName = fullName || user.email || `User ${user.id}`;
 
             return {
-              id: user.utilisateurId || user.id,
+              id: user.id,
               name: displayName,
-              email: user.email || user.utilisateurEmail || "",
-              type: user.type || user.role || user.typeUtilisateur || "MEMBER",
+              email: user.email || "",
+              type: user.type || "MEMBER",
               // Keep original data for reference
               originalData: user,
             };
@@ -226,7 +214,7 @@ const CoursProgrammerForm = ({
     if (isOpen) {
       setSubmitError("");
 
-      if (modalMode === "edit" && selectedScheduledCourse) {
+      if ((modalMode === "edit" || isReprogramme) && selectedScheduledCourse) {
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
           const date = new Date(dateString);
@@ -239,23 +227,25 @@ const CoursProgrammerForm = ({
         };
 
         const initialValues = {
-          coursId: selectedScheduledCourse.coursId || "",
-          classeId: selectedScheduledCourse.classeId || "",
-          dateCoursPrevue: formatDateForInput(
+          coursId: selectedScheduledCourse.coursId || selectedScheduledCourse.cours?.id || "",
+          classeId: selectedScheduledCourse.classeId || (selectedScheduledCourse.classesIds && selectedScheduledCourse.classesIds[0]) || "",
+          // For reprogramming, clear date fields so the user picks a new date
+          dateCoursPrevue: isReprogramme ? "" : formatDateForInput(
             selectedScheduledCourse.dateCoursPrevue
           ),
-          dateDebutEffectif: formatDateForInput(
+          dateDebutEffectif: isReprogramme ? "" : formatDateForInput(
             selectedScheduledCourse.dateDebutEffectif
           ),
-          dateFinEffectif: formatDateForInput(
+          dateFinEffectif: isReprogramme ? "" : formatDateForInput(
             selectedScheduledCourse.dateFinEffectif
           ),
           lieu: selectedScheduledCourse.lieu || "",
-          description: selectedScheduledCourse.description || "",
+          description: isReprogramme
+            ? (selectedScheduledCourse.description?.includes("Annulé:") ? "" : selectedScheduledCourse.description || "")
+            : selectedScheduledCourse.description || "",
           capaciteMax: selectedScheduledCourse.capaciteMax?.toString() || "",
           participantsIds: selectedScheduledCourse.participantsIds || [],
-          etatCoursProgramme:
-            selectedScheduledCourse.etatCoursProgramme || "PLANIFIE",
+          etatCoursProgramme: isReprogramme ? "PLANIFIE" : (selectedScheduledCourse.etatCoursProgramme || "PLANIFIE"),
         };
 
         reset(initialValues);
@@ -294,7 +284,11 @@ const CoursProgrammerForm = ({
 
   // FIXED: Handle participant change properly
   const handleParticipantChange = (newSelectedIds) => {
-    console.log("Participant selection changed:", newSelectedIds);
+    console.log("Participant selection changed:", {
+      previous: selectedParticipants,
+      new: newSelectedIds,
+      classParticipants: classParticipants.length
+    });
     setSelectedParticipants(newSelectedIds);
     setValue("participantsIds", newSelectedIds, { shouldValidate: true });
   };
@@ -327,6 +321,35 @@ const CoursProgrammerForm = ({
     try {
       setSubmitError("");
 
+      // Validate required fields
+      if (!data.coursId) {
+        setSubmitError("Veuillez sélectionner un cours");
+        return;
+      }
+      if (!data.classeId) {
+        setSubmitError("Veuillez sélectionner une classe");
+        return;
+      }
+      if (!data.dateCoursPrevue) {
+        setSubmitError("Veuillez définir une date prévue");
+        return;
+      }
+      if (!data.lieu?.trim()) {
+        setSubmitError("Veuillez définir un lieu");
+        return;
+      }
+
+      // Validate date is not in the past for new courses
+      if (modalMode === "create") {
+        const selectedDate = new Date(data.dateCoursPrevue);
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - 5); // 5 min buffer
+        if (selectedDate <= now) {
+          setSubmitError("La date ne peut pas être dans le passé");
+          return;
+        }
+      }
+
       const formatDate = (dateString) => {
         if (!dateString) return null;
         return new Date(dateString).toISOString();
@@ -343,22 +366,29 @@ const CoursProgrammerForm = ({
 
       const scheduleData = {
         coursId: data.coursId,
-        classeId: data.classeId || null,
+        professeurId: localStorage.getItem("userId") || "",
         dateCoursPrevue: formatDate(data.dateCoursPrevue),
         dateDebutEffectif: isPlanifie
-          ? formatDate(data.dateCoursPrevue)
-          : formatDate(data.dateDebutEffectif),
+          ? null
+          : formatDate(data.dateDebutEffectif) || null,
         dateFinEffectif: isPlanifie
-          ? calculateEndDate(data.dateCoursPrevue, 2)
-          : formatDate(data.dateFinEffectif),
-        etatCoursProgramme: data.etatCoursProgramme,
+          ? null
+          : formatDate(data.dateFinEffectif) || null,
         lieu: data.lieu.trim(),
         description: data.description?.trim() || null,
-        capaciteMax: data.capaciteMax ? parseInt(data.capaciteMax) : null,
-        participantsIds: selectedParticipants.filter((id) => id),
+        etatCoursProgramme: data.etatCoursProgramme,
+        classesIds: data.classeId ? [data.classeId] : [],
+        // Filter and validate participant IDs
+        participantsIds: selectedParticipants
+          .filter((id) => id && typeof id === 'string' && id.trim())
+          .map(id => id.trim()),
       };
 
-      console.log("Submitting schedule data:", scheduleData);
+      console.log("Submitting schedule data:", {
+        ...scheduleData,
+        participantCount: scheduleData.participantsIds.length,
+        participantIds: scheduleData.participantsIds
+      });
       await onSubmit(scheduleData);
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -398,12 +428,10 @@ const CoursProgrammerForm = ({
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
               <Calendar className="mr-2 sm:mr-3 text-indigo-600" size={24} />
               <span className="hidden sm:inline">
-                {modalMode === "create"
-                  ? "Programmer un Cours"
-                  : "Modifier la Programmation"}
+                {isReprogramme ? "Reprogrammer le Cours" : modalMode === "create" ? "Programmer un Cours" : "Modifier la Programmation"}
               </span>
               <span className="sm:hidden">
-                {modalMode === "create" ? "Programmer" : "Modifier"}
+                {isReprogramme ? "Reprogrammer" : modalMode === "create" ? "Programmer" : "Modifier"}
               </span>
             </h2>
             <button
@@ -447,7 +475,7 @@ const CoursProgrammerForm = ({
                       ? "border-red-300 bg-red-50"
                       : "border-slate-200"
                   }`}
-                  disabled={modalMode === "edit"}
+                  disabled={modalMode === "edit" || isReprogramme}
                 >
                   <option value="">Sélectionnez un cours</option>
                   {courses.map((course) => (
@@ -513,7 +541,7 @@ const CoursProgrammerForm = ({
                   className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
                 >
                   <Users2 size={16} className="mr-2 text-indigo-600" />
-                  Classe
+                  Classe *
                 </label>
                 <select
                   id="classeId"
@@ -524,7 +552,7 @@ const CoursProgrammerForm = ({
                       : "border-slate-200"
                   }`}
                 >
-                  <option value="">Sélectionnez une classe (optionnel)</option>
+                  <option value="">Sélectionnez une classe</option>
                   {classes.map((classe) => (
                     <option key={classe.id} value={classe.id}>
                       {classe.nom}
@@ -588,7 +616,6 @@ const CoursProgrammerForm = ({
                   <input
                     id="dateCoursPrevue"
                     type="datetime-local"
-                    min={getCurrentDateTime()}
                     {...register("dateCoursPrevue")}
                     className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white text-base ${
                       errors.dateCoursPrevue
@@ -608,7 +635,8 @@ const CoursProgrammerForm = ({
                   )}
                 </div>
 
-                {/* Effective Dates */}
+                {/* Effective Dates - Only show when NOT planifié */}
+                {watchedEtat !== "PLANIFIE" && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label
@@ -616,7 +644,7 @@ const CoursProgrammerForm = ({
                       className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                     >
                       <Activity size={16} className="mr-2 text-green-600" />
-                      Date début effectif *
+                      Date début effectif
                     </label>
                     <input
                       id="dateDebutEffectif"
@@ -647,7 +675,7 @@ const CoursProgrammerForm = ({
                       className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                     >
                       <BookOpen size={16} className="mr-2 text-gray-600" />
-                      Date fin effectif *
+                      Date fin effectif
                     </label>
                     <input
                       id="dateFinEffectif"
@@ -672,6 +700,7 @@ const CoursProgrammerForm = ({
                     )}
                   </div>
                 </div>
+                )}
               </div>
             </div>
 
@@ -728,10 +757,15 @@ const CoursProgrammerForm = ({
                       <Users2 size={16} className="mr-2 text-indigo-600" />
                       Participants (optionnel)
                     </div>
-                    {!watchedClassId && (
+                    {!watchedClassId ? (
                       <span className="block text-xs text-amber-600 font-medium mt-1 flex items-center">
                         <AlertCircle size={12} className="mr-1" />
                         Sélectionnez d'abord une classe
+                      </span>
+                    ) : (
+                      <span className="block text-xs text-slate-500 mt-1">
+                        <strong>Aucune sélection :</strong> Tous les étudiants de la classe peuvent participer<br/>
+                        <strong>Sélection spécifique :</strong> Seuls les participants sélectionnés peuvent participer
                       </span>
                     )}
                   </label>
@@ -817,6 +851,39 @@ const CoursProgrammerForm = ({
                     </div>
                   </div>
                 )}
+
+              {/* Show info about participant selection */}
+              {watchedClassId && classParticipants.length > 0 && (
+                <div className="mt-4">
+                  {selectedParticipants.length === 0 ? (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start">
+                        <Users2 className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
+                        <div className="text-sm text-blue-700">
+                          <div className="font-medium mb-1">Cours ouvert à tous les étudiants de la classe</div>
+                          <div className="text-xs text-blue-600">
+                            Tous les {classParticipants.length} étudiants de la classe pourront rejoindre ce cours.
+                            Leur présence sera suivie automatiquement.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start">
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 mr-2 flex-shrink-0" />
+                        <div className="text-sm text-amber-700">
+                          <div className="font-medium mb-1">Cours réservé aux participants sélectionnés</div>
+                          <div className="text-xs text-amber-600">
+                            Seuls les {selectedParticipants.length} participants sélectionnés pourront rejoindre ce cours.
+                            Les autres étudiants de la classe n'y auront pas accès.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {errors.participantsIds && (
                 <p className="mt-1 text-sm text-red-600 flex items-center">

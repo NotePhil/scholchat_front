@@ -17,7 +17,10 @@ import {
   X,
   FileText,
   ClipboardList,
+  GraduationCap,
 } from "lucide-react";
+import { useAuth } from "../../../hooks/useAuth";
+import { useTranslation } from "../../../hooks/useTranslation";
 
 const Sidebar = ({
   showSidebar,
@@ -27,12 +30,11 @@ const Sidebar = ({
   currentTheme,
   themes,
   colorSchemes,
-  userRole,
-  userRoles,
   onShowMessaging,
   toggleSidebar,
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [openDropdown, setOpenDropdown] = useState({
     users: false,
@@ -42,12 +44,25 @@ const Sidebar = ({
     exercises: false,
   });
 
+  // Use the useAuth hook for clean role handling
+  const {
+    displayRole,
+    normalizedUserRole,
+    isAdmin,
+    isProfessor,
+    isParent,
+    isStudent,
+    isParentOrStudent,
+    isTutor,
+    isGestionnaire,
+  } = useAuth();
+
   useEffect(() => {
-    const coursesTabs = ["create-course", "schedule-course"];
-    const usersTabs = ["admin", "professors", "parents", "students", "others"];
+    const coursesTabs = ["courses", "create-course", "schedule-course"];
+    const usersTabs = ["admin", "professors", "parents", "students", "others", "gestionnaires"];
     const classesTabs = ["create-class", "manage-class"];
     const establishmentsTabs = ["create-establishment", "manage-establishment"];
-    const exercisesTabs = ["manage-exercises"];
+    const exercisesTabs = ["manage-exercises", "schedule-exercise", "corrections-exercise", "devoirs"];
 
     setOpenDropdown((prev) => ({
       ...prev,
@@ -66,143 +81,179 @@ const Sidebar = ({
     });
   };
 
-  const isAdmin = () => {
-    return userRoles.includes("ROLE_ADMIN") || userRole === "admin";
-  };
-
-  const isProfessor = () => {
-    return (
-      userRoles.includes("ROLE_PROFESSOR") ||
-      userRole === "professor" ||
-      userRole === "repetiteur"
-    );
-  };
-
-  const isParentOrStudent = () => {
-    return (
-      userRoles.includes("ROLE_PARENT") ||
-      userRoles.includes("ROLE_STUDENT") ||
-      userRole === "parent" ||
-      userRole === "student"
-    );
-  };
-
   const getMenuItems = () => {
     const baseItems = [
-      { name: "Tableau de Bord", icon: Menu, tab: "dashboard" },
-      { name: "Activités", icon: Activity, tab: "activities" },
+      { name: t('sidebar.dashboard'), icon: Menu, tab: "dashboard" },
+      { name: t('sidebar.activities'), icon: Activity, tab: "activities" },
     ];
 
     let roleItems = [];
 
-    if (isAdmin()) {
+    if (isAdmin) {
       roleItems = [
         {
-          name: "Gérer Utilisateur",
+          name: t('sidebar.manageUsers'),
           icon: Users,
           dropdown: "users",
           items: [
-            { name: "Admin", tab: "admin" },
-            { name: "Professeurs", tab: "professors" },
-            { name: "Parents", tab: "parents" },
-            { name: "Élèves", tab: "students" },
-            { name: "Autres", tab: "others" },
+            { name: t('sidebar.admin'), tab: "admin" },
+            { name: t('sidebar.professors'), tab: "professors" },
+            { name: t('sidebar.parents'), tab: "parents" },
+            { name: t('sidebar.students'), tab: "students" },
+            { name: t('sidebar.others'), tab: "others" },
+            { name: t('sidebar.gestionnaires'), tab: "gestionnaires" },
           ],
         },
         {
-          name: "Motifs de Rejet",
+          name: t('sidebar.subjects'),
+          icon: GraduationCap,
+          tab: "matieres",
+        },
+        {
+          name: t('sidebar.rejectionReasons'),
           icon: BookOpen,
           tab: "motifs-de-rejet",
         },
         {
-          name: "Classes",
+          name: t('sidebar.classes'),
           icon: Building2,
           dropdown: "classes",
           items: [
-            { name: "Créer une Classe", tab: "create-class" },
-            { name: "Gérer une Classe", tab: "manage-class" },
+            { name: t('sidebar.createClass'), tab: "create-class" },
+            { name: t('sidebar.manageClass'), tab: "manage-class" },
           ],
         },
         {
-          name: "Établissements",
+          name: t('sidebar.establishments'),
           icon: School,
           dropdown: "establishments",
           items: [
-            { name: "Créer un Établissement", tab: "create-establishment" },
-            { name: "Gérer un Établissement", tab: "manage-establishment" },
+            { name: t('sidebar.createEstablishment'), tab: "create-establishment" },
+            { name: t('sidebar.manageEstablishment'), tab: "manage-establishment" },
           ],
         },
         {
-          name: "Messagerie",
+          name: t('sidebar.offers', 'Offres / Forfaits'),
+          icon: ClipboardList,
+          tab: "manage-offers",
+        },
+        {
+          name: t('sidebar.messaging'),
           icon: Mail,
           tab: "messages",
         },
       ];
-    } else if (isProfessor()) {
+    } else if (isProfessor || isTutor) {
       roleItems = [
         {
-          name: "Gérer les Cours",
+          name: t('sidebar.manageCourses'),
           icon: Book,
           dropdown: "courses",
           items: [
-            { name: "Cours", tab: "create-course" },
-            { name: "Programmer le Cours", tab: "schedule-course" },
+            { name: t('sidebar.courses'), tab: "courses" },
+            { name: t('sidebar.scheduleCourse'), tab: "schedule-course" },
           ],
         },
         {
-          name: "Exercices",
-          icon: ClipboardList,
-          tab: "manage-exercises",
+          name: t('sidebar.subjects'),
+          icon: GraduationCap,
+          tab: "matieres",
         },
         {
-          name: "Gérer Utilisateur",
+          name: t('sidebar.exercises'),
+          icon: ClipboardList,
+          dropdown: "exercises",
+          items: [
+            { name: "Mes exercices", tab: "manage-exercises" },
+            { name: "Programmer", tab: "schedule-exercise" },
+            { name: "Corrections", tab: "corrections-exercise" },
+          ],
+        },
+        {
+          name: t('sidebar.manageUsers'),
           icon: Users,
           dropdown: "users",
           items: [
-            { name: "Professeurs", tab: "professors" },
-            { name: "Parents", tab: "parents" },
-            { name: "Élèves", tab: "students" },
+            { name: t('sidebar.professors'), tab: "professors" },
+            { name: t('sidebar.parents'), tab: "parents" },
+            { name: t('sidebar.students'), tab: "students" },
           ],
         },
         {
-          name: "Classes",
+          name: t('sidebar.classes'),
           icon: Building2,
           dropdown: "classes",
           items: [
-            { name: "Créer une Classe", tab: "create-class" },
-            { name: "Gérer une Classe", tab: "manage-class" },
+            { name: t('sidebar.createClass'), tab: "create-class" },
+            { name: t('sidebar.manageClass'), tab: "manage-class" },
           ],
         },
         {
-          name: "Messagerie",
+          name: t('sidebar.messaging'),
           icon: Mail,
           tab: "messages",
         },
       ];
-    } else if (isParentOrStudent()) {
+    } else if (isParentOrStudent) {
       roleItems = [
         {
-          name: "Exercices",
+          name: t('sidebar.exercises'),
           icon: ClipboardList,
           tab: "manage-exercises",
         },
-        { name: "Classes", icon: Building2, tab: "classes" },
         {
-          name: "Messagerie",
+          name: "Mes Devoirs",
+          icon: FileText,
+          tab: "devoirs",
+        },
+        { name: t('sidebar.classes'), icon: Building2, tab: "classes" },
+        { name: t('sidebar.courses'), icon: Book, tab: "cours" },
+      ];
+      // Add "Mes enfants" only for parents
+      if (isParent) {
+        roleItems.push({ name: "Mes enfants", icon: Users, tab: "my-children" });
+      }
+      roleItems.push({
+        name: t('sidebar.messaging'),
+        icon: Mail,
+        tab: "messages",
+      });
+    } else if (isGestionnaire) {
+      roleItems = [
+        {
+          name: t('sidebar.establishments'),
+          icon: School,
+          dropdown: "establishments",
+          items: [
+            { name: t('sidebar.createEstablishment'), tab: "create-establishment" },
+            { name: t('sidebar.manageEstablishment'), tab: "manage-establishment" },
+          ],
+        },
+        {
+          name: t('sidebar.classes'),
+          icon: Building2,
+          dropdown: "classes",
+          items: [
+            { name: t('sidebar.createClass'), tab: "create-class" },
+            { name: t('sidebar.manageClass'), tab: "manage-class" },
+          ],
+        },
+        {
+          name: t('sidebar.messaging'),
           icon: Mail,
           tab: "messages",
         },
       ];
     } else {
       roleItems = [
-        { name: "Classes", icon: Building2, tab: "classes" },
+        { name: t('sidebar.classes'), icon: Building2, tab: "classes" },
         {
-          name: "Motifs de Rejet",
+          name: t('sidebar.rejectionReasons'),
           icon: BookOpen,
           tab: "motifs-de-rejet",
         },
         {
-          name: "Messagerie",
+          name: t('sidebar.messaging'),
           icon: Mail,
           tab: "messages",
         },
@@ -210,7 +261,7 @@ const Sidebar = ({
     }
 
     const bottomItems = [
-      { name: "Paramètres", icon: Settings, tab: "settings" },
+      { name: t('sidebar.settings'), icon: Settings, tab: "settings" },
     ];
 
     return [...baseItems, ...roleItems, ...bottomItems];
@@ -219,20 +270,7 @@ const Sidebar = ({
   const menuItems = getMenuItems();
 
   const handleTabChange = (tab) => {
-    console.log(
-      "Sidebar: Changing tab to:",
-      tab,
-      "User role:",
-      userRole,
-      "User roles:",
-      userRoles
-    );
-
     setActiveTab(tab);
-
-    if (tab === "messages" && onShowMessaging) {
-      onShowMessaging();
-    }
   };
 
   const openLogoutModal = () => {
@@ -244,17 +282,16 @@ const Sidebar = ({
   };
 
   const confirmLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("username");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userRoles");
-    localStorage.removeItem("decodedToken");
-    localStorage.removeItem("authResponse");
+    // Save current page before logout
+    const currentPath = window.location.pathname;
+    localStorage.setItem("returnToPage", currentPath);
+
+    // Clear ALL auth and user data
+    const keysToKeep = ["language", "pwaInstallDismissed"];
+    const savedValues = {};
+    keysToKeep.forEach(k => { savedValues[k] = localStorage.getItem(k); });
+    localStorage.clear();
+    keysToKeep.forEach(k => { if (savedValues[k]) localStorage.setItem(k, savedValues[k]); });
 
     navigate("/schoolchat/login");
   };
@@ -288,9 +325,7 @@ const Sidebar = ({
               >
                 ScholChat
               </h2>
-              <p className="user-role text-sm">
-                {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-              </p>
+              <p className="user-role text-sm">{displayRole || "User"}</p>
             </div>
             <button
               className="sidebar-close-btn"
@@ -383,7 +418,7 @@ const Sidebar = ({
             <span className="icon">
               <LogOut size={18} />
             </span>
-            <span className="menu-text">Déconnexion</span>
+            <span className="menu-text">{t('sidebar.logout')}</span>
           </button>
         </div>
       </aside>
@@ -395,14 +430,14 @@ const Sidebar = ({
               isDark ? "bg-gray-800 text-white" : "bg-white text-gray-800"
             }`}
           >
-            <h3 className="text-xl font-semibold mb-4">Confirmation</h3>
-            <p className="mb-6">Êtes-vous sûr de vouloir vous déconnecter?</p>
+            <h3 className="text-xl font-semibold mb-4">{t('sidebar.logoutConfirmation.title')}</h3>
+            <p className="mb-6">{t('sidebar.logoutConfirmation.message')}</p>
             <div className="flex justify-end space-x-4">
               <button
                 onClick={cancelLogout}
                 className="px-4 py-2 rounded-md bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors"
               >
-                Annuler
+                {t('sidebar.logoutConfirmation.cancel')}
               </button>
               <button
                 onClick={confirmLogout}
@@ -411,7 +446,7 @@ const Sidebar = ({
                   backgroundColor: colorSchemes?.[currentTheme]?.primary,
                 }}
               >
-                Confirmer
+                {t('sidebar.logoutConfirmation.confirm')}
               </button>
             </div>
           </div>

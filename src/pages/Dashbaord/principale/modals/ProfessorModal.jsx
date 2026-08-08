@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   X,
   Save,
   Camera,
-  Upload,
   Check,
   XCircle,
   User,
@@ -12,11 +11,11 @@ import {
   MapPin,
   IdCard,
   FileImage,
-  AlertCircle,
   Shield,
 } from "lucide-react";
 import { scholchatService } from "../../../../services/ScholchatService";
 import axios from "axios";
+import { message } from "antd";
 
 const ProfessorModal = ({
   showModal,
@@ -56,6 +55,45 @@ const ProfessorModal = ({
     cniVerso: null,
     selfie: null,
   });
+
+  const loadExistingImages = useCallback(async (professor) => {
+    try {
+      const imageTypes = [
+        { field: "cniRecto", urlField: "cniUrlRecto", docType: "CNI_RECTO" },
+        { field: "cniVerso", urlField: "cniUrlVerso", docType: "CNI_VERSO" },
+        { field: "selfie", urlField: "selfieUrl", docType: "PROFILE_PHOTO" },
+      ];
+      const urls = {};
+
+      for (const { field, urlField, docType } of imageTypes) {
+        if (professor[urlField]) {
+          try {
+            const filePath = professor[urlField];
+            const fileName = filePath.split("/").pop();
+            const downloadResponse = await axios.get(
+              `${process.env.REACT_APP_API_BASE_URL}/media/download-by-path`,
+              { params: { filePath: fileName } }
+            );
+            urls[field] = downloadResponse.data?.url || getDefaultImage(docType);
+          } catch (error) {
+            console.warn(`Failed to load ${field}:`, error);
+            urls[field] = getDefaultImage(docType);
+          }
+        } else {
+          urls[field] = getDefaultImage(docType);
+        }
+      }
+
+      setImageUrls(urls);
+    } catch (error) {
+      console.error("Error loading existing images:", error);
+      setImageUrls({
+        cniRecto: getDefaultImage("CNI_RECTO"),
+        cniVerso: getDefaultImage("CNI_VERSO"),
+        selfie: getDefaultImage("PROFILE_PHOTO"),
+      });
+    }
+  }, []);
 
   // Initialize form data when modal opens or selectedProfessor changes
   useEffect(() => {
@@ -119,7 +157,7 @@ const ProfessorModal = ({
         loadExistingImages(selectedProfessor);
       }
     }
-  }, [showModal, modalMode, selectedProfessor]);
+  }, [showModal, modalMode, selectedProfessor, loadExistingImages]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -358,6 +396,11 @@ const ProfessorModal = ({
       }
 
       await loadData();
+      message.success(
+        modalMode === "create"
+          ? "Professeur créé avec succès"
+          : "Professeur mis à jour avec succès"
+      );
       setShowModal(false);
     } catch (err) {
       console.error("Error details:", err);
@@ -380,7 +423,7 @@ const ProfessorModal = ({
 
       // Step 1: Get presigned URL from backend
       const presignedResponse = await axios.post(
-        "http://localhost:8486/scholchat/media/presigned-url",
+        `${process.env.REACT_APP_API_BASE_URL}/media/presigned-url`,
         {
           fileName: fileName,
           contentType: file.type,
@@ -424,53 +467,6 @@ const ProfessorModal = ({
     } catch (error) {
       console.error("Upload error:", error);
       throw new Error(`Failed to upload ${documentType}: ${error.message}`);
-    }
-  };
-
-  const loadExistingImages = async (professor) => {
-    try {
-      const imageTypes = [
-        { field: "cniRecto", urlField: "cniUrlRecto", docType: "CNI_RECTO" },
-        { field: "cniVerso", urlField: "cniUrlVerso", docType: "CNI_VERSO" },
-        { field: "selfie", urlField: "selfieUrl", docType: "PROFILE_PHOTO" },
-      ];
-      const urls = {};
-
-      for (const { field, urlField, docType } of imageTypes) {
-        if (professor[urlField]) {
-          try {
-            // Extract the file name from the URL
-            const filePath = professor[urlField];
-            const fileName = filePath.split("/").pop();
-
-            // Get the download URL
-            const downloadResponse = await axios.get(
-              `http://localhost:8486/scholchat/media/download-by-path`,
-              { params: { filePath: fileName } }
-            );
-
-            if (downloadResponse.data && downloadResponse.data.url) {
-              urls[field] = downloadResponse.data.url;
-            } else {
-              urls[field] = getDefaultImage(docType);
-            }
-          } catch (error) {
-            console.warn(`Failed to load ${field}:`, error);
-            urls[field] = getDefaultImage(docType);
-          }
-        } else {
-          urls[field] = getDefaultImage(docType);
-        }
-      }
-
-      setImageUrls(urls);
-    } catch (error) {
-      console.error("Error loading existing images:", error);
-      setImageUrls({
-        cniRecto: getDefaultImage("CNI_RECTO"),
-        cniVerso: getDefaultImage("CNI_VERSO"),
-        selfie: getDefaultImage("PROFILE_PHOTO"),
-      });
     }
   };
 

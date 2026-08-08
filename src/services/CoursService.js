@@ -1,6 +1,7 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const coursApi = axios.create({
   baseURL: BASE_URL,
@@ -10,20 +11,7 @@ const coursApi = axios.create({
   },
 });
 
-coursApi.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("cmr.notep.business.business.token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+applyAuthInterceptors(coursApi);
 
 class CoursService {
   async createCours(coursData) {
@@ -61,17 +49,14 @@ class CoursService {
         chapitres: coursData.chapitres.map((chapitre) => ({
           titre: chapitre.titre,
           description: chapitre.description || "",
-          ordre: chapitre.ordre,
+          ordre: parseInt(chapitre.ordre),
           contenu: chapitre.contenu,
         })),
       };
 
-      console.log("Sending to API:", JSON.stringify(formattedData, null, 2));
-
       const response = await coursApi.post("/cours", formattedData);
       return response.data;
     } catch (error) {
-      console.error("Create course error:", error);
       this.handleError(error);
     }
   }
@@ -184,15 +169,10 @@ class CoursService {
   }
 
   async getCoursByClasse(classeId) {
-    try {
-      if (!classeId) {
-        throw new Error("Class ID is required");
-      }
-      const response = await coursApi.get(`/cours/classe/${classeId}`);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
+    // NOTE: The backend does NOT have a /cours/classe/{classeId} endpoint.
+    // Use coursProgrammerService.obtenirProgrammationParClasse() instead.
+    console.warn("getCoursByClasse: This endpoint does not exist in the backend. Returning empty array.");
+    return [];
   }
 
   async getCoursByProfesseurAndClasse(professeurId, classeId) {
@@ -233,6 +213,23 @@ class CoursService {
     }
   }
 
+  async getProgression(coursId, utilisateurId) {
+    try {
+      const response = await coursApi.get(`/cours/${coursId}/progression/${utilisateurId}`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async marquerChapitreComplete(coursId, chapitreId, utilisateurId) {
+    try {
+      await coursApi.post(`/cours/${coursId}/chapitres/${chapitreId}/complete/${utilisateurId}`);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   async getCoursByRestriction(restriction) {
     try {
       if (!restriction) {
@@ -246,27 +243,32 @@ class CoursService {
   }
 
   handleError(error) {
+    console.error("CoursService - handleError called with:", error);
+    
     if (error.response) {
       const errorMessage =
         error.response.data?.message ||
         error.response.data?.error ||
+        error.response.data?.details ||
         `HTTP ${error.response.status}: ${error.response.statusText}`;
 
-      console.error("API Error Response:", {
+      console.error("CoursService - API Error Response:", {
         status: error.response.status,
         statusText: error.response.statusText,
         data: error.response.data,
         headers: error.response.headers,
+        url: error.config?.url,
+        method: error.config?.method
       });
 
       throw new Error(errorMessage);
     } else if (error.request) {
-      console.error("Network Error:", error.request);
+      console.error("CoursService - Network Error:", error.request);
       throw new Error(
         "Network error. Please check your connection and server status."
       );
     } else {
-      console.error("Request Setup Error:", error.message);
+      console.error("CoursService - Request Setup Error:", error.message);
       throw new Error("Request setup error: " + error.message);
     }
   }

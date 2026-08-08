@@ -94,7 +94,7 @@ const RichTextEditor = ({
     // Validate files
     for (const file of files) {
       if (!file.name || file.name.trim() === "") {
-        alert("Un des fichiers sélectionnés n'a pas de nom valide.");
+        alert("Un des fichiers sélectionnés n'a pas de nom valide. Ou na pas été retrouvé");
         return;
       }
     }
@@ -1119,7 +1119,8 @@ const EditCourseFormModal = ({
       const result = await minioS3Service.uploadFile(
         new File([file], uniqueFileName, { type: file.type }),
         mediaType,
-        documentType
+        documentType,
+        selectedCourse?.id || null
       );
 
       return result;

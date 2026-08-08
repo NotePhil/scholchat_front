@@ -39,10 +39,6 @@ const courseSchema = yup.object().shape({
     .min(1, "Au moins une matière est requise"),
   references: yup.string(),
   restriction: yup.string().required("La restriction est requise"),
-  chapitres: yup
-    .array()
-    .of(chapterSchema)
-    .min(1, "Au moins un chapitre est requis"),
 });
 
 const RichTextEditor = ({
@@ -54,6 +50,7 @@ const RichTextEditor = ({
 }) => {
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+  const savedRangeRef = useRef(null);
   const [pendingFiles, setPendingFiles] = useState([]);
 
   const execCommand = (command, value = null) => {
@@ -65,6 +62,22 @@ const RichTextEditor = ({
     if (editorRef.current) {
       const htmlContent = editorRef.current.innerHTML;
       onChange(htmlContent);
+    }
+  };
+
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+    }
+  };
+
+  const restoreSelection = () => {
+    editorRef.current.focus();
+    if (savedRangeRef.current) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(savedRangeRef.current);
     }
   };
 
@@ -83,51 +96,133 @@ const RichTextEditor = ({
     }
   };
 
+  const insertNodeAtSavedRange = (node) => {
+    restoreSelection();
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      // Ensure the range is inside the editor
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        range.insertNode(node);
+        range.setStartAfter(node);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        savedRangeRef.current = range.cloneRange();
+        return;
+      }
+    }
+    editorRef.current.appendChild(node);
+  };
+
   const handleFileInputChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-
-    const selection = window.getSelection();
-    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
 
     for (const file of files) {
       const timestamp = Date.now() + Math.random();
       const fileId = `file_${timestamp}`;
 
       if (file.type.startsWith("image/")) {
+        const imgContainer = document.createElement("div");
+        imgContainer.dataset.fileId = fileId;
+        imgContainer.style.position = "relative";
+        imgContainer.style.display = "inline-block";
+        imgContainer.style.margin = "8px";
+        
         const img = document.createElement("img");
         img.src = URL.createObjectURL(file);
         img.alt = file.name;
         img.dataset.fileId = fileId;
-        img.style.maxWidth = "300px";
+        img.style.maxWidth = "250px";
         img.style.maxHeight = "200px";
         img.style.width = "auto";
         img.style.height = "auto";
         img.style.objectFit = "contain";
         img.style.borderRadius = "8px";
-        img.style.margin = "8px 0";
-        img.style.display = "block";
         img.style.border = "1px solid #e2e8f0";
         img.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.1)";
+        img.style.display = "block";
+        
+        const controls = document.createElement("div");
+        controls.style.position = "absolute";
+        controls.style.top = "4px";
+        controls.style.right = "4px";
+        controls.style.display = "flex";
+        controls.style.gap = "2px";
+        controls.style.opacity = "0";
+        controls.style.transition = "opacity 0.2s";
+        controls.style.zIndex = "10";
+        
+        const floatLeft = document.createElement("button");
+        floatLeft.innerHTML = "⬅️";
+        floatLeft.style.cssText = "background: rgba(0,0,0,0.7); color: white; border: none; padding: 2px 4px; border-radius: 3px; font-size: 10px; cursor: pointer;";
+        floatLeft.title = "Texte à droite";
+        floatLeft.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          imgContainer.style.float = "left";
+          imgContainer.style.marginRight = "12px";
+          imgContainer.style.marginBottom = "8px";
+        };
+        
+        const floatRight = document.createElement("button");
+        floatRight.innerHTML = "➡️";
+        floatRight.style.cssText = "background: rgba(0,0,0,0.7); color: white; border: none; padding: 2px 4px; border-radius: 3px; font-size: 10px; cursor: pointer;";
+        floatRight.title = "Texte à gauche";
+        floatRight.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          imgContainer.style.float = "right";
+          imgContainer.style.marginLeft = "12px";
+          imgContainer.style.marginBottom = "8px";
+        };
+        
+        const noFloat = document.createElement("button");
+        noFloat.innerHTML = "⬆️";
+        noFloat.style.cssText = "background: rgba(0,0,0,0.7); color: white; border: none; padding: 2px 4px; border-radius: 3px; font-size: 10px; cursor: pointer;";
+        noFloat.title = "Centrer (pas de texte autour)";
+        noFloat.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          imgContainer.style.float = "none";
+          imgContainer.style.display = "block";
+          imgContainer.style.margin = "8px auto";
+        };
+        
+        controls.appendChild(floatLeft);
+        controls.appendChild(noFloat);
+        controls.appendChild(floatRight);
+        
+        imgContainer.appendChild(img);
+        imgContainer.appendChild(controls);
+        
+        imgContainer.onmouseenter = () => controls.style.opacity = "1";
+        imgContainer.onmouseleave = () => controls.style.opacity = "0";
 
-        if (range) {
-          range.insertNode(img);
-          range.setStartAfter(img);
-          range.collapse(false);
-        } else {
-          editorRef.current.appendChild(img);
-        }
+        insertNodeAtSavedRange(imgContainer);
+      } else if (file.type.startsWith("video/")) {
+        const videoContainer = document.createElement("div");
+        videoContainer.dataset.fileId = fileId;
+        videoContainer.style.cssText = "margin: 8px 0; display: inline-block; max-width: 100%;";
+
+        const video = document.createElement("video");
+        video.src = URL.createObjectURL(file);
+        video.controls = true;
+        video.dataset.fileId = fileId;
+        video.style.cssText = "max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #e2e8f0; display: block;";
+
+        const caption = document.createElement("div");
+        caption.style.cssText = "font-size: 11px; color: #6b7280; margin-top: 4px; text-align: center;";
+        caption.textContent = file.name;
+
+        videoContainer.appendChild(video);
+        videoContainer.appendChild(caption);
+        insertNodeAtSavedRange(videoContainer);
       } else {
         const linkContainer = document.createElement("div");
         linkContainer.dataset.fileId = fileId;
-        linkContainer.style.margin = "8px 0";
-        linkContainer.style.padding = "8px 12px";
-        linkContainer.style.backgroundColor = "#f8fafc";
-        linkContainer.style.border = "1px solid #e2e8f0";
-        linkContainer.style.borderRadius = "6px";
-        linkContainer.style.display = "flex";
-        linkContainer.style.alignItems = "center";
-        linkContainer.style.gap = "8px";
+        linkContainer.style.cssText = "margin: 8px 0; padding: 8px 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; gap: 8px;";
 
         const icon = document.createElement("span");
         icon.innerHTML = "📄";
@@ -141,13 +236,7 @@ const RichTextEditor = ({
         linkContainer.appendChild(icon);
         linkContainer.appendChild(link);
 
-        if (range) {
-          range.insertNode(linkContainer);
-          range.setStartAfter(linkContainer);
-          range.collapse(false);
-        } else {
-          editorRef.current.appendChild(linkContainer);
-        }
+        insertNodeAtSavedRange(linkContainer);
       }
 
       setPendingFiles((prev) => [
@@ -241,6 +330,26 @@ const RichTextEditor = ({
 
   const handleInput = (e) => {
     handleContentChange();
+  };
+
+  const handleDoubleClick = (e) => {
+    e.stopPropagation();
+    
+    // Get click position
+    const rect = editorRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Create a range at the click position
+    const range = document.caretRangeFromPoint(x + rect.left, y + rect.top);
+    if (range) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      // Focus the editor
+      editorRef.current.focus();
+    }
   };
 
   return (
@@ -343,7 +452,51 @@ const RichTextEditor = ({
         <button
           type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
+            execCommand("justifyLeft");
+          }}
+          className="p-2 hover:bg-slate-200 rounded text-slate-600"
+          title="Aligner à gauche"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v2H3V3zm0 4h12v2H3V7zm0 4h18v2H3v-2zm0 4h12v2H3v-2zm0 4h18v2H3v-2z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            execCommand("justifyCenter");
+          }}
+          className="p-2 hover:bg-slate-200 rounded text-slate-600"
+          title="Centrer"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v2H3V3zm4 4h10v2H7V7zm-4 4h18v2H3v-2zm4 4h10v2H7v-2zm-4 4h18v2H3v-2z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            execCommand("justifyRight");
+          }}
+          className="p-2 hover:bg-slate-200 rounded text-slate-600"
+          title="Aligner à droite"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v2H3V3zm6 4h12v2H9V7zm-6 4h18v2H3v-2zm6 4h12v2H9v-2zm-6 4h18v2H3v-2z" />
+          </svg>
+        </button>
+        <div className="w-px bg-slate-300 mx-1"></div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            saveSelection();
             fileInputRef.current?.click();
           }}
           className="p-2 hover:bg-slate-200 rounded text-slate-600 flex items-center gap-1"
@@ -371,7 +524,9 @@ const RichTextEditor = ({
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); saveSelection(); }}
+        onKeyUp={saveSelection}
+        onDoubleClick={handleDoubleClick}
         className="w-full min-h-[150px] p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-inset"
         style={{
           minHeight: "150px",
@@ -387,12 +542,12 @@ const RichTextEditor = ({
         ref={fileInputRef}
         type="file"
         className="hidden"
-        accept="image/*,.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx"
+        accept="image/*,video/*,.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx"
         onChange={handleFileInputChange}
         multiple
       />
 
-      <style jsx>{`
+      <style>{`
         [contenteditable]:empty:before {
           content: attr(data-placeholder);
           color: #9ca3af;
@@ -413,16 +568,33 @@ const RichTextEditor = ({
           margin: 0.25em 0;
         }
         [contenteditable] img {
-          max-width: 300px;
+          max-width: 250px;
           max-height: 200px;
           width: auto;
           height: auto;
           object-fit: contain;
           border-radius: 8px;
-          margin: 8px 0;
-          display: block;
           border: 1px solid #e2e8f0;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          display: block;
+        }
+        [contenteditable] div[data-file-id] {
+          position: relative;
+          display: inline-block;
+          margin: 8px;
+        }
+        [contenteditable] div[data-file-id]:hover button {
+          opacity: 1 !important;
+        }
+        [contenteditable] div[data-file-id][style*="float: left"] {
+          float: left;
+          margin-right: 12px;
+          margin-bottom: 8px;
+        }
+        [contenteditable] div[data-file-id][style*="float: right"] {
+          float: right;
+          margin-left: 12px;
+          margin-bottom: 8px;
         }
         [contenteditable] br {
           display: block;
@@ -450,6 +622,7 @@ const ChapterCard = ({
   onMoveDown,
   canMoveUp,
   canMoveDown,
+  loading = false,
 }) => {
   const truncateText = (text, length) => {
     if (text.length <= length) return text;
@@ -463,7 +636,12 @@ const ChapterCard = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow relative group">
+    <div className={`bg-white border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow relative group ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg z-10">
+          <Loader className="animate-spin text-indigo-600" size={20} />
+        </div>
+      )}
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
@@ -486,7 +664,9 @@ const ChapterCard = ({
         <div className="flex items-center gap-1 ml-2 flex-shrink-0">
           {canMoveUp && (
             <button
+              type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onMoveUp();
               }}
@@ -498,7 +678,9 @@ const ChapterCard = ({
           )}
           {canMoveDown && (
             <button
+              type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onMoveDown();
               }}
@@ -509,7 +691,9 @@ const ChapterCard = ({
             </button>
           )}
           <button
+            type="button"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onEdit();
             }}
@@ -519,9 +703,13 @@ const ChapterCard = ({
             <Edit3 size={14} />
           </button>
           <button
+            type="button"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
-              onDelete();
+              if (window.confirm('Êtes-vous sûr de vouloir supprimer ce chapitre ?')) {
+                onDelete();
+              }
             }}
             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             title="Supprimer"
@@ -540,7 +728,7 @@ const ChapterEditor = ({
   totalChapters,
   onSave,
   onCancel,
-  onFileUpload,
+  onFileAdd,
 }) => {
   const [formData, setFormData] = useState({
     titre: "",
@@ -611,7 +799,9 @@ const ChapterEditor = ({
           </span>
         </h4>
         <button
+          type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onCancel();
           }}
@@ -674,7 +864,7 @@ const ChapterEditor = ({
             }
             placeholder="Contenu détaillé du chapitre..."
             chapterIndex={chapterNumber - 1}
-            onFileUpload={onFileUpload}
+            onFileAdd={onFileAdd}
           />
           {errors.contenu && (
             <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -689,6 +879,7 @@ const ChapterEditor = ({
         <button
           type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onCancel();
           }}
@@ -699,6 +890,7 @@ const ChapterEditor = ({
         <button
           type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             handleSave();
           }}
@@ -740,6 +932,8 @@ const CreateCourseComponent = ({
   setError,
   loadCourses,
   setLoading,
+  editMode = false,
+  courseToEdit = null,
 }) => {
   const [selectedMatiereIds, setSelectedMatiereIds] = useState([]);
   const [savedChapters, setSavedChapters] = useState([]);
@@ -772,6 +966,88 @@ const CreateCourseComponent = ({
   useEffect(() => {
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
+
+  // Extracts relative storage key from a full Wasabi/MinIO URL (never use raw URLs)
+  const toRelativePath = (raw) => {
+    if (!raw || !raw.startsWith("http")) return raw;
+    try {
+      const pathname = new URL(raw).pathname.replace(/^\//, "");
+      const idx = pathname.indexOf("users/");
+      if (idx >= 0) return pathname.slice(idx);
+      const parts = pathname.split("/");
+      return parts.length > 1 ? parts.slice(1).join("/") : pathname;
+    } catch { return raw; }
+  };
+
+  // Returns true for any URL that points to stored media (not backend proxy, not blob)
+  const isStorageUrl = (url) => {
+    if (!url) return false;
+    if (url.startsWith("blob:")) return false; // local blob — handled by upload flow
+    const apiBase = process.env.REACT_APP_API_BASE_URL || "";
+    if (apiBase && url.startsWith(apiBase)) return false; // already a backend proxy URL
+    return url.startsWith("http");
+  };
+
+  // Refresh presigned MinIO URLs inside HTML chapter content
+  const refreshChapterContentUrls = async (html) => {
+    if (!html) return html;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div id="root">${html}</div>`, "text/html");
+    const root = doc.getElementById("root");
+
+    const refreshUrl = async (url) => {
+      try {
+        const data = await minioS3Service.generateDownloadUrlByPath(toRelativePath(url));
+        return data?.downloadUrl || url;
+      } catch { return url; }
+    };
+
+    const tasks = [
+      ...Array.from(root.querySelectorAll("img")).map(async img => {
+        const src = img.getAttribute("src");
+        if (isStorageUrl(src)) img.setAttribute("src", await refreshUrl(src));
+      }),
+      ...Array.from(root.querySelectorAll("video")).map(async video => {
+        const src = video.getAttribute("src");
+        if (isStorageUrl(src)) video.setAttribute("src", await refreshUrl(src));
+        video.querySelectorAll("source").forEach(async s => {
+          const ssrc = s.getAttribute("src");
+          if (isStorageUrl(ssrc)) s.setAttribute("src", await refreshUrl(ssrc));
+        });
+      }),
+      ...Array.from(root.querySelectorAll("a[href]")).map(async a => {
+        const href = a.getAttribute("href");
+        if (isStorageUrl(href)) a.setAttribute("href", await refreshUrl(href));
+      }),
+    ];
+    await Promise.all(tasks);
+    return root.innerHTML;
+  };
+
+  // Initialize form with existing course data in edit mode
+  useEffect(() => {
+    if (editMode && courseToEdit) {
+      setValue("titre", courseToEdit.titre || "");
+      setValue("description", courseToEdit.description || "");
+      setValue("restriction", courseToEdit.restriction || "PRIVE");
+      setValue("references", courseToEdit.references || "");
+
+      const matiereIds = courseToEdit.matieres?.map(m => String(m.id)) || [];
+      setSelectedMatiereIds(matiereIds);
+      setValue("matieres", matiereIds);
+
+      if (courseToEdit.chapitres && courseToEdit.chapitres.length > 0) {
+        const sortedChapters = [...courseToEdit.chapitres].sort((a, b) => a.ordre - b.ordre);
+        // Refresh presigned URLs in chapter content before displaying
+        Promise.all(
+          sortedChapters.map(async (ch) => ({
+            ...ch,
+            contenu: await refreshChapterContentUrls(ch.contenu),
+          }))
+        ).then(setSavedChapters);
+      }
+    }
+  }, [editMode, courseToEdit, setValue]);
 
   const handleFileAdd = (fileId, file) => {
     setPendingFiles((prev) => new Map(prev.set(fileId, file)));
@@ -826,33 +1102,38 @@ const CreateCourseComponent = ({
   };
 
   const updateContentWithUploadedFiles = (content, fileUrlMap) => {
-    let updatedContent = content;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div id="root">${content}</div>`, "text/html");
+    const root = doc.getElementById("root");
 
-    // Update images
-    const imgRegex = /<img[^>]*data-file-id="([^"]*)"[^>]*>/g;
-    updatedContent = updatedContent.replace(imgRegex, (match, fileId) => {
-      const url = fileUrlMap.get(fileId);
-      if (url) {
-        return match.replace(/src="[^"]*"/, `src="${url}"`);
-      }
-      return match;
+    // Update images: data-file-id is on the <img> itself
+    root.querySelectorAll("img[data-file-id]").forEach((img) => {
+      const url = fileUrlMap.get(img.dataset.fileId);
+      if (url) img.src = url;
     });
 
-    // Update file links
-    const divRegex = /<div[^>]*data-file-id="([^"]*)"[^>]*>.*?<\/div>/g;
-    updatedContent = updatedContent.replace(divRegex, (match, fileId) => {
-      const url = fileUrlMap.get(fileId);
-      if (url) {
-        const fileName = pendingFiles.get(fileId)?.name || "File";
-        return match.replace(
-          /<span[^>]*>([^<]*)<\/span>/,
-          `<a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: underline; font-weight: 500;">$1</a>`
-        );
-      }
-      return match;
+    // Update videos: data-file-id is on the <video> itself (inside a div wrapper)
+    root.querySelectorAll("video[data-file-id]").forEach((video) => {
+      const url = fileUrlMap.get(video.dataset.fileId);
+      if (url) video.setAttribute("src", url);
     });
 
-    return updatedContent;
+    // Update file link containers: replace blob placeholder with real anchor
+    root.querySelectorAll("div[data-file-id]").forEach((div) => {
+      const url = fileUrlMap.get(div.dataset.fileId);
+      if (url) {
+        const nameSpan = div.querySelector("span:last-child");
+        const fileName = nameSpan?.textContent || pendingFiles.get(div.dataset.fileId)?.name || "File";
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.target = "_blank";
+        anchor.style.cssText = "color: #3b82f6; text-decoration: underline; font-weight: 500;";
+        anchor.textContent = fileName;
+        if (nameSpan) nameSpan.replaceWith(anchor);
+      }
+    });
+
+    return root.innerHTML;
   };
 
   const handleSaveChapter = (chapterData) => {
@@ -916,6 +1197,7 @@ const CreateCourseComponent = ({
 
   const onSubmit = async (data) => {
     try {
+      console.log("ONSUBMIT CALLED with data:", data);
       setIsSubmitting(true);
       setLoading(true);
       setError("");
@@ -923,6 +1205,10 @@ const CreateCourseComponent = ({
 
       if (savedChapters.length === 0) {
         throw new Error("Au moins un chapitre est requis");
+      }
+
+      if (selectedMatiereIds.length === 0) {
+        throw new Error("Au moins une matière est requise");
       }
 
       const professorId = localStorage.getItem("userId");
@@ -955,26 +1241,30 @@ const CreateCourseComponent = ({
         };
       });
 
-      const matieresData = selectedMatiereIds.map((id) => ({ id }));
+      const matieresData = selectedMatiereIds.map((id) => ({ id: String(id) }));
 
       const courseData = {
         titre: data.titre,
         description: data.description,
-        redacteurId: professorId,
-        etat: "BROUILLON",
+        redacteurId: String(professorId),
+        etat: editMode ? courseToEdit.etat : "BROUILLON",
         references: data.references || "",
         restriction: data.restriction || "PRIVE",
         matieres: matieresData,
         chapitres: chapitresData,
       };
 
-      await coursService.createCours(courseData);
+      if (editMode && courseToEdit) {
+        courseData.id = courseToEdit.id;
+        await coursService.updateCours(courseToEdit.id, courseData);
+      } else {
+        await coursService.createCours(courseData);
+      }
 
       setShowSuccessModal(true);
       loadCourses();
       setTimeout(() => onBack(), 2000);
     } catch (err) {
-      console.error("Error in onSubmit:", err);
       const errorMessage = err.message || "Erreur lors de l'enregistrement";
       setError(errorMessage);
       setSubmitError(errorMessage);
@@ -990,23 +1280,24 @@ const CreateCourseComponent = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div>
+      <div className="w-full px-0 py-2">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
             <button
               onClick={onBack}
-              className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 transition-all shadow-sm flex-shrink-0"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={16} />
+              Retour
             </button>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                Créer un nouveau cours
+                {editMode ? "Modifier le cours" : "Créer un nouveau cours"}
               </h1>
               <p className="text-slate-600 mt-1">
-                Créez et organisez votre contenu pédagogique
+                {editMode ? "Modifiez et organisez votre contenu pédagogique" : "Créez et organisez votre contenu pédagogique"}
               </p>
             </div>
           </div>
@@ -1169,6 +1460,7 @@ const CreateCourseComponent = ({
                     onMoveDown={() => moveChapter(index, "down")}
                     canMoveUp={index > 0}
                     canMoveDown={index < savedChapters.length - 1}
+                    loading={isSubmitting}
                   />
                 </div>
               ))}
@@ -1191,11 +1483,11 @@ const CreateCourseComponent = ({
         </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-center gap-6 pt-6">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 pt-6 pb-12 px-2 sm:px-0">
             <button
               type="button"
               onClick={onBack}
-              className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors rounded-lg hover:bg-slate-100 flex items-center justify-center gap-2 border border-slate-300"
+              className="w-full sm:w-auto px-6 py-3 text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 font-semibold transition-all rounded-xl flex items-center justify-center gap-2 shadow-sm"
             >
               <ArrowLeft size={16} />
               Annuler
@@ -1203,17 +1495,17 @@ const CreateCourseComponent = ({
             <button
               type="submit"
               disabled={savedChapters.length === 0 || isSubmitting}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <>
                   <Loader size={16} className="animate-spin" />
-                  Création en cours...
+                  Traitement...
                 </>
               ) : (
                 <>
                   <Save size={16} />
-                  Créer le cours
+                  {editMode ? "Modifier le cours" : "Créer le cours"}
                 </>
               )}
             </button>
@@ -1223,7 +1515,7 @@ const CreateCourseComponent = ({
 
       <SuccessModal
         show={showSuccessModal}
-        message="Cours créé avec succès !"
+        message={editMode ? "Cours modifié avec succès !" : "Cours créé avec succès !"}
         onClose={() => setShowSuccessModal(false)}
       />
     </div>

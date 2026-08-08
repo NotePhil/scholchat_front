@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
       const tokenPayload = JSON.parse(atob(token.split(".")[1]));
       const currentTime = Date.now() / 1000;
 
-      return tokenPayload.exp && tokenPayload.exp > currentTime + 300;
+      return tokenPayload.exp && tokenPayload.exp > currentTime;
     } catch (error) {
       return false;
     }
@@ -88,7 +88,9 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === "isAuthenticated" || e.key === "accessToken") {
+      // Handle both real StorageEvents (from other tabs) and
+      // custom events dispatched from same tab (e.key will be undefined)
+      if (!e.key || e.key === "isAuthenticated" || e.key === "accessToken") {
         loadUserFromStorage();
       }
     };

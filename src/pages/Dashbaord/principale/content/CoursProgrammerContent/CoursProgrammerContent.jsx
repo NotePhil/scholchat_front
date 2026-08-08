@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -17,6 +18,12 @@ import {
   Users,
   Eye,
   Edit2,
+  MapPin,
+  PlayCircle,
+  PauseCircle,
+  XCircle,
+  Trash2,
+  UserCheck,
 } from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { classService } from "../../../../../services/ClassService";
@@ -25,10 +32,14 @@ import CoursProgrammerForm from "./CoursProgrammerForm/CoursProgrammerForm";
 import CoursProgrammerList from "./CoursProgrammerList";
 import CoursProgrammerStats from "./CoursProgrammerStats";
 import CoursProgrammerViewModal from "../../modals/CoursProgrammerViewModal";
+import SessionLauncher from "./LiveSession/SessionLauncher";
+import LiveSession from "./LiveSession/LiveSession";
+import liveSessionService from "../../../../../services/LiveSessionService";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 15, 20, 25, 50, 100];
 
 const CoursProgrammerContent = () => {
+  const location = useLocation();
   const [scheduledCourses, setScheduledCourses] = useState([]);
   const [filteredScheduledCourses, setFilteredScheduledCourses] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -44,10 +55,28 @@ const CoursProgrammerContent = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedScheduledCourse, setSelectedScheduledCourse] = useState(null);
   const [modalMode, setModalMode] = useState("create");
+  const [reprogrammeOfId, setReprogrammeOfId] = useState(null);
   const [professorId, setProfessorId] = useState("");
+  const [showLauncher, setShowLauncher] = useState(false);
+  const [launcherCourse, setLauncherCourse] = useState(null);
+  const [launchLoading, setLaunchLoading] = useState(false);
+  const [liveSession, setLiveSession] = useState(null); // { scheduledCourse, cours, isModerator }
+  const [filterClassId, setFilterClassId] = useState(""); // class filter
+  const didMountRef = React.useRef(false);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
+    // Support classId from URL query params (e.g. navigating from class details)
+    const searchParams = new URLSearchParams(location.search);
+    const queryClassId = searchParams.get("classId");
+    // Also support legacy localStorage approach as fallback
+    const preselectedClassId = queryClassId || localStorage.getItem("selectedClassId");
+    if (!queryClassId && localStorage.getItem("selectedClassId")) {
+      localStorage.removeItem("selectedClassId");
+    }
+    if (preselectedClassId) {
+      setFilterClassId(preselectedClassId);
+    }
     if (userId) {
       setProfessorId(userId);
       loadData(userId);
@@ -55,66 +84,102 @@ const CoursProgrammerContent = () => {
       setError("ID du professeur non trouvé. Veuillez vous reconnecter.");
       setLoading(false);
     }
+    didMountRef.current = true;
   }, []);
+
+  // Reload when user manually changes the class filter dropdown
+  useEffect(() => {
+    if (!didMountRef.current || !professorId) return;
+    loadData(professorId);
+  }, [filterClassId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle classId passed via URL query param (e.g. navigating from class details while already on this tab)
+  useEffect(() => {
+    if (!didMountRef.current) return;
+    const searchParams = new URLSearchParams(location.search);
+    const queryClassId = searchParams.get("classId");
+    if (queryClassId && queryClassId !== filterClassId) {
+      setFilterClassId(queryClassId);
+    }
+  }, [location.search]);
+
+  // Handle auto-open if course is passed in state
+  useEffect(() => {
+    if (location.state?.course && courses.length > 0) {
+      setModalMode("create");
+      setSelectedScheduledCourse({ cours: location.state.course, coursId: location.state.course.id });
+      setShowScheduleModal(true);
+      // Clear state after reading to prevent re-opening on manual refreshes
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, courses]);
 
   useEffect(() => {
     filterScheduledCourses();
-  }, [scheduledCourses, searchTerm, filterStatus]);
+  }, [scheduledCourses, searchTerm, filterStatus, filterClassId]);
 
-  const loadData = async (professorId) => {
+  const loadData = async (profId, classIdFilter = null) => {
     try {
       setLoading(true);
       setError("");
 
-      console.log("Chargement des données pour le professeur:", professorId);
-
-      const [coursesData, classesData] = await Promise.all([
-        coursService.getCoursByProfesseur(professorId),
-        classService.obtenirClassesUtilisateur(professorId),
+      // 3 parallel requests — no per-class or per-course sequential calls:
+      //   1. GET /cours/professeur/{id}            → professor's own courses (for form dropdown)
+      //   2. GET /acceder/utilisateurs/{id}/classes → professor's classes (for filter dropdown)
+      //   3. GET /cours-programmes/accessible/{id}  → ALL scheduled courses visible to this user
+      //      (own + other professors in same classes) — replaces N per-class calls
+      const [coursesRes, classesRes, scheduledRes] = await Promise.allSettled([
+        coursService.getCoursByProfesseur(profId),
+        classService.obtenirClassesUtilisateur(profId),
+        coursProgrammerService.obtenirProgrammationAccessible(profId),
       ]);
 
-      console.log("Cours récupérés:", coursesData);
-      console.log("Classes récupérées:", classesData);
+      const coursesData  = coursesRes.status  === "fulfilled" ? (coursesRes.value  || []) : [];
+      const classesData  = classesRes.status  === "fulfilled" ? (classesRes.value  || []) : [];
+      const scheduledRaw = scheduledRes.status === "fulfilled" ? (scheduledRes.value || []) : [];
 
-      setCourses(coursesData || []);
-      setClasses(classesData || []);
+      setCourses(coursesData);
+      setClasses(classesData);
 
-      // Chargement de la programmation pour chaque cours
-      const scheduledPromises = (coursesData || []).map(async (course) => {
+      // Build a course lookup map from the professor's own courses
+      const coursesMap = new Map(coursesData.map(c => [String(c.id), c]));
+
+      // Identify scheduled courses whose cours title we don't have yet
+      // (courses from other professors not in coursesData)
+      const missingIds = [...new Set(
+        scheduledRaw
+          .filter(sc => sc.coursId && !coursesMap.has(String(sc.coursId)))
+          .map(sc => String(sc.coursId))
+      )];
+
+      // Fetch all missing course details in ONE batch call instead of N individual calls
+      if (missingIds.length > 0) {
         try {
-          const programmation =
-            await coursProgrammerService.obtenirProgrammationParCours(
-              course.id
-            );
-          return { course, programmation };
-        } catch (error) {
-          console.warn(
-            `Erreur lors du chargement de la programmation pour le cours ${course.id}:`,
-            error
-          );
-          return { course, programmation: [] };
-        }
+          const accessible = await coursService.getCoursAccessibles(profId);
+          (accessible || []).forEach(c => {
+            if (c?.id) coursesMap.set(String(c.id), c);
+          });
+        } catch { /* non-blocking — titles will fall back to coursId substring */ }
+      }
+
+      // Enrich scheduled courses with their course title/description
+      const enriched = scheduledRaw.map(sc => ({
+        ...sc,
+        cours: sc.cours || coursesMap.get(String(sc.coursId)) || {
+          id: sc.coursId,
+          titre: sc.description || (sc.coursId ? `Cours ${sc.coursId.substring(0, 8)}` : "Cours sans titre"),
+          description: "",
+        },
+      }));
+
+      const STATUS_ORDER = { EN_COURS: 0, PLANIFIE: 1, ANNULE: 2 };
+      const sorted = [...enriched].sort((a, b) => {
+        const oa = STATUS_ORDER[a.etatCoursProgramme] ?? 3;
+        const ob = STATUS_ORDER[b.etatCoursProgramme] ?? 3;
+        return oa !== ob ? oa - ob : new Date(b.dateCoursPrevue) - new Date(a.dateCoursPrevue);
       });
 
-      const scheduledResults = await Promise.allSettled(scheduledPromises);
-
-      const allScheduledCourses = [];
-      scheduledResults.forEach((result) => {
-        if (result.status === "fulfilled" && result.value.programmation) {
-          const { course, programmation } = result.value;
-          if (Array.isArray(programmation)) {
-            programmation.forEach((scheduled) => {
-              allScheduledCourses.push({
-                ...scheduled,
-                cours: course,
-              });
-            });
-          }
-        }
-      });
-
-      console.log("Cours programmés chargés:", allScheduledCourses);
-      setScheduledCourses(allScheduledCourses);
+      setScheduledCourses(sorted);
     } catch (err) {
       console.error("Erreur lors du chargement des données:", err);
       setError("Erreur lors du chargement des données: " + err.message);
@@ -126,24 +191,25 @@ const CoursProgrammerContent = () => {
   const filterScheduledCourses = () => {
     let filtered = scheduledCourses;
 
+    // Class filter: keep only sessions that include this class in classesIds
+    if (filterClassId) {
+      filtered = filtered.filter(sc =>
+        Array.isArray(sc.classesIds) &&
+        sc.classesIds.some(id => String(id) === String(filterClassId))
+      );
+    }
+
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (scheduled) =>
-          scheduled.cours?.titre?.toLowerCase().includes(searchLower) ||
-          scheduled.lieu?.toLowerCase().includes(searchLower) ||
-          scheduled.description?.toLowerCase().includes(searchLower) ||
-          classes
-            .find((c) => scheduled.classesIds?.includes(c.id))
-            ?.nom?.toLowerCase()
-            .includes(searchLower)
+      filtered = filtered.filter(sc =>
+        sc.cours?.titre?.toLowerCase().includes(searchLower) ||
+        sc.lieu?.toLowerCase().includes(searchLower) ||
+        sc.description?.toLowerCase().includes(searchLower)
       );
     }
 
     if (filterStatus !== "all") {
-      filtered = filtered.filter(
-        (scheduled) => scheduled.etatCoursProgramme === filterStatus
-      );
+      filtered = filtered.filter(sc => sc.etatCoursProgramme === filterStatus);
     }
 
     setFilteredScheduledCourses(filtered);
@@ -171,24 +237,28 @@ const CoursProgrammerContent = () => {
 
       let result;
       if (modalMode === "create") {
-        result = await coursProgrammerService.programmerCours(
-          dataWithProfessor
-        );
+        result = await coursProgrammerService.programmerCours(dataWithProfessor);
+        // If this is a reprogramme, delete the old record
+        if (reprogrammeOfId) {
+          try {
+            await coursProgrammerService.supprimerCoursProgramme(reprogrammeOfId);
+          } catch (e) {
+            console.warn("Could not delete old scheduled course:", e);
+          }
+          setReprogrammeOfId(null);
+        }
         setSuccess("Cours programmé avec succès !");
-        console.log("Cours créé:", result);
       } else {
         result = await coursProgrammerService.mettreAJourCoursProgramme(
           selectedScheduledCourse.id,
           dataWithProfessor
         );
         setSuccess("Programmation modifiée avec succès !");
-        console.log("Cours mis à jour:", result);
       }
 
       setShowScheduleModal(false);
       setSelectedScheduledCourse(null);
 
-      // Rechargement des données après succès
       await loadData(professorId);
     } catch (err) {
       console.error("Erreur dans handleFormSubmit:", err);
@@ -215,8 +285,41 @@ const CoursProgrammerContent = () => {
       setError("ID du professeur non disponible. Veuillez vous reconnecter.");
       return;
     }
-    setModalMode("edit");
-    setSelectedScheduledCourse(scheduledCourse);
+    
+    // Check if this is a reprogramming case (finished or cancelled course)
+    const isReprogramming = scheduledCourse.etatCoursProgramme === "TERMINE" || scheduledCourse.etatCoursProgramme === "ANNULE"
+      || (scheduledCourse.id === undefined); // Also handles reprogramData passed from view modal
+    // Check using original id before it was cleared
+    const originalId = scheduledCourse._originalId || scheduledCourse.id;
+    
+    if (isReprogramming || scheduledCourse.id === undefined) {
+      setModalMode("create");
+      setReprogrammeOfId(originalId || null);
+      const reprogramData = {
+        ...scheduledCourse,
+        id: undefined,
+        etatCoursProgramme: "PLANIFIE",
+        dateCoursPrevue: null,
+        dateDebutEffectif: null,
+        dateFinEffectif: null,
+        description: scheduledCourse.description?.includes("Annulé:")
+          ? null
+          : scheduledCourse.description,
+        coursId: scheduledCourse.coursId || scheduledCourse.cours?.id || "",
+        classeId: scheduledCourse.classeId || (scheduledCourse.classesIds && scheduledCourse.classesIds[0]) || "",
+      };
+      setSelectedScheduledCourse(reprogramData);
+    } else {
+      setReprogrammeOfId(null);
+      setModalMode("edit");
+      const normalizedCourse = {
+        ...scheduledCourse,
+        coursId: scheduledCourse.coursId || scheduledCourse.cours?.id || "",
+        classeId: scheduledCourse.classeId || (scheduledCourse.classesIds && scheduledCourse.classesIds[0]) || "",
+      };
+      setSelectedScheduledCourse(normalizedCourse);
+    }
+    
     setError("");
     setSuccess("");
     setShowScheduleModal(true);
@@ -228,23 +331,37 @@ const CoursProgrammerContent = () => {
   };
 
   const handleStartCourse = async (scheduledId) => {
+    // Find the scheduled course to get the cours object
+    const scheduled = scheduledCourses.find(s => s.id === scheduledId);
+    if (!scheduled) return;
+    // Show launcher modal for professor to pick mode
+    setLauncherCourse(scheduled);
+    setShowLauncher(true);
+  };
+
+  const handleLaunchSession = async (mode) => {
+    if (!launcherCourse) return;
+    setLaunchLoading(true);
     try {
-      setLoading(true);
-      setError("");
-
-      console.log("Démarrage du cours:", scheduledId);
-
-      await coursProgrammerService.demarrerCours(scheduledId);
-      setSuccess("Cours démarré avec succès !");
-
-      // Rechargement des données
+      const coursId = launcherCourse.cours?.id || launcherCourse.coursId;
+      // 1. Mark course as EN_COURS
+      await coursProgrammerService.demarrerCours(launcherCourse.id);
+      // 2. Start live session → returns SessionResponseDTO with jitsiJwt
+      await liveSessionService.startSession(coursId, mode);
+      setShowLauncher(false);
+      setLauncherCourse(null);
+      // 3. Open live session as moderator
+      setLiveSession({ scheduledCourse: launcherCourse, cours: launcherCourse.cours, isModerator: true });
       await loadData(professorId);
     } catch (err) {
-      console.error("Erreur lors du démarrage:", err);
-      setError("Erreur lors du démarrage: " + err.message);
+      setError("Erreur lors du démarrage: " + (err.response?.data?.message || err.message));
     } finally {
-      setLoading(false);
+      setLaunchLoading(false);
     }
+  };
+
+  const handleJoinSession = (scheduledCourse) => {
+    setLiveSession({ scheduledCourse, cours: scheduledCourse.cours, isModerator: false });
   };
 
   const handleEndCourse = async (scheduledId) => {
@@ -262,6 +379,25 @@ const CoursProgrammerContent = () => {
     } catch (err) {
       console.error("Erreur lors de la fin:", err);
       setError("Erreur lors de la fin: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [confirmCancelId, setConfirmCancelId] = useState(null);
+
+  const handleDeleteCourse = async (scheduledId) => {
+    try {
+      setLoading(true);
+      setError("");
+      await coursProgrammerService.supprimerCoursProgramme(scheduledId);
+      setSuccess("Cours supprimé avec succès !");
+      setConfirmDeleteId(null);
+      await loadData(professorId);
+    } catch (err) {
+      console.error("Erreur lors de la suppression:", err);
+      setError("Erreur lors de la suppression: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -331,7 +467,7 @@ const CoursProgrammerContent = () => {
 
   if (loading && scheduledCourses.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
             <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
@@ -349,211 +485,183 @@ const CoursProgrammerContent = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {/* Header Section */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
-            <div className="p-2 sm:p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg sm:rounded-xl shadow-lg flex-shrink-0">
-              <CalendarPlus className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+    <div className="full-bleed-page">
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-4">
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div className="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-md flex-shrink-0">
+              <CalendarPlus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent break-words hyphens-auto">
+              <h1 className="text-lg sm:text-2xl font-bold text-slate-900 leading-tight">
                 Programmation des Cours
               </h1>
-              <p className="text-slate-600 mt-1 text-xs sm:text-sm break-words">
+              <p className="text-slate-500 text-xs sm:text-sm">
                 Planifiez et gérez les sessions de vos cours
               </p>
             </div>
           </div>
         </div>
 
+        {/* Class context banner */}
+        {filterClassId && (
+          <div className="mb-3 bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-indigo-700 text-xs sm:text-sm font-medium">
+              <Users size={14} className="flex-shrink-0" />
+              Cours publics de la classe : <strong>{classes.find(c => c.id === filterClassId)?.nom || filterClassId}</strong>
+            </div>
+            <button onClick={() => { setFilterClassId(""); loadData(professorId); }}
+              className="text-indigo-400 hover:text-indigo-600 flex-shrink-0">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Messages d'alerte */}
         {success && (
-          <div className="mb-4 sm:mb-6 bg-green-50 border border-green-200 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start min-w-0 flex-1">
-                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div className="ml-3 min-w-0 flex-1">
-                  <p className="text-green-800 font-medium text-sm">Succès</p>
-                  <p className="text-green-700 text-xs sm:text-sm mt-1 break-words hyphens-auto overflow-wrap-break-word">
-                    {success}
-                  </p>
-                </div>
+          <div className="mb-3 sm:mb-4 bg-green-50 border border-green-200 rounded-xl p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0 flex-1">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <p className="text-green-700 text-xs sm:text-sm break-words">{success}</p>
               </div>
-              <button
-                onClick={() => setSuccess("")}
-                className="text-green-400 hover:text-green-600 flex-shrink-0"
-              >
-                <X className="w-3 h-3 sm:w-4 sm:h-4" />
+              <button onClick={() => setSuccess("")} className="text-green-400 hover:text-green-600 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="mb-4 sm:mb-6 bg-red-50 border border-red-200 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start min-w-0 flex-1">
-                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 mt-0.5 flex-shrink-0" />
-                <div className="ml-3 min-w-0 flex-1">
-                  <p className="text-red-800 font-medium text-sm">Erreur</p>
-                  <p className="text-red-700 text-xs sm:text-sm mt-1 break-words hyphens-auto overflow-wrap-break-word">
-                    {error}
-                  </p>
-                </div>
+          <div className="mb-3 sm:mb-4 bg-red-50 border border-red-200 rounded-xl p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0 flex-1">
+                <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-red-700 text-xs sm:text-sm break-words">{error}</p>
               </div>
-              <button
-                onClick={() => setError("")}
-                className="text-red-400 hover:text-red-600 flex-shrink-0"
-              >
-                <X className="w-3 h-3 sm:w-4 sm:h-4" />
+              <button onClick={() => setError("")} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
 
         {/* Statistiques */}
-        <CoursProgrammerStats scheduledCourses={scheduledCourses} />
+        <CoursProgrammerStats 
+          scheduledCourses={scheduledCourses} 
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+        />
 
         {/* Barre de contrôle */}
-        <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg mb-6 sm:mb-8">
-          <div className="flex flex-col space-y-3 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between lg:space-x-6">
-            <div className="relative flex-1 max-w-full lg:max-w-md">
-              <Search
-                className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400 flex-shrink-0"
-                size={16}
-              />
+        <div className="bg-white border border-slate-100 rounded-xl p-3 sm:p-4 shadow-sm mb-4 sm:mb-8">
+          {/* Row 1: Search + Add button */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input
                 type="text"
                 placeholder="Rechercher par cours, lieu, classe..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm"
+                className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all"
               />
             </div>
-
-            <div className="flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4">
-              <div className="relative flex-1 min-[480px]:flex-none min-w-0">
-                <Filter
-                  className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400 flex-shrink-0"
-                  size={14}
-                />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full pl-8 sm:pl-12 pr-6 sm:pr-8 py-2 sm:py-3 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
-                >
-                  <option value="all">Tous les statuts</option>
-                  <option value="PLANIFIE">Planifié</option>
-                  <option value="EN_COURS">En cours</option>
-                  <option value="TERMINE">Terminé</option>
-                  <option value="ANNULE">Annulé</option>
-                </select>
-                <ChevronDown
-                  className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-slate-400 flex-shrink-0"
-                  size={14}
-                />
-              </div>
-
-              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg sm:rounded-xl px-3 py-2 sm:py-3 shadow-sm min-w-0 self-center min-[480px]:self-auto">
-                <Hash className="text-slate-400 flex-shrink-0" size={14} />
-                <select
-                  value={pageSize}
-                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="text-xs sm:text-sm bg-transparent border-none focus:ring-0 cursor-pointer min-w-0"
-                >
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-slate-600 text-xs hidden sm:inline whitespace-nowrap">
-                  par page
-                </span>
-              </div>
-
-              <div className="flex bg-slate-100 rounded-lg sm:rounded-xl p-1 self-center min-[480px]:self-auto">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "grid"
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <Grid size={14} className="sm:w-4 sm:h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode("table")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "table"
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <List size={14} className="sm:w-4 sm:h-4" />
-                </button>
-              </div>
-
-              <button
-                onClick={handleRefresh}
-                disabled={loading}
-                className="p-2 sm:p-3 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg sm:rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 self-center min-[480px]:self-auto"
-                title="Actualiser les données"
-              >
-                <RefreshCw
-                  size={16}
-                  className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`}
-                />
-              </button>
-
-              <button
-                onClick={handleScheduleCourse}
-                disabled={loading}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                <Plus size={16} className="sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="hidden sm:inline">Programmer un Cours</span>
-                <span className="sm:hidden">Programmer</span>
-              </button>
-            </div>
+            <button
+              onClick={handleScheduleCourse}
+              disabled={loading}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-3 sm:px-5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-md font-medium text-sm disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+            >
+              <Plus size={15} className="flex-shrink-0" />
+              <span className="hidden sm:inline">Programmer un Cours</span>
+              <span className="sm:hidden">Programmer</span>
+            </button>
           </div>
 
-          {/* Résultats de recherche */}
+          {/* Row 2: Filters + controls */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Class filter */}
+            <div className="relative flex-1 min-w-[150px]">
+              <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+              <select
+                value={filterClassId}
+                onChange={(e) => setFilterClassId(e.target.value)}
+                className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+              >
+                <option value="">Toutes les classes</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nom}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+            </div>
+
+            {/* Status filter */}
+            <div className="relative flex-1 min-w-[130px]">
+              <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full pl-7 pr-6 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+              >
+                <option value="all">Tous les statuts</option>
+                <option value="PLANIFIE">Planifié</option>
+                <option value="EN_COURS">En cours</option>
+                <option value="TERMINE">Terminé</option>
+                <option value="ANNULE">Annulé</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+            </div>
+
+            {/* Page size */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 flex-shrink-0">
+              <Hash className="text-slate-400" size={13} />
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="text-xs bg-transparent border-none focus:ring-0 cursor-pointer"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <span className="text-slate-500 text-xs hidden sm:inline">/ page</span>
+            </div>
+
+            {/* View toggle */}
+            <div className="flex bg-slate-100 rounded-lg p-0.5 flex-shrink-0">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <Grid size={15} />
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <List size={15} />
+              </button>
+            </div>
+
+            {/* Refresh */}
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+              title="Actualiser"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
+
+          {/* Results count */}
           {filteredScheduledCourses.length > 0 && (
-            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-200">
-              <p className="text-xs sm:text-sm text-slate-600 break-words hyphens-auto overflow-wrap-break-word">
-                <span className="font-medium text-slate-800">
-                  {filteredScheduledCourses.length}
-                </span>{" "}
-                {filteredScheduledCourses.length === 1
-                  ? "cours trouvé"
-                  : "cours trouvés"}
-                {searchTerm && (
-                  <span>
-                    {" "}
-                    pour "
-                    <span className="font-medium break-words hyphens-auto overflow-wrap-break-word">
-                      {searchTerm}
-                    </span>
-                    "
-                  </span>
-                )}
-                {filterStatus !== "all" && (
-                  <span>
-                    {" "}
-                    avec le statut "
-                    <span className="font-medium">
-                      {filterStatus === "PLANIFIE" && "Planifié"}
-                      {filterStatus === "EN_COURS" && "En cours"}
-                      {filterStatus === "TERMINE" && "Terminé"}
-                      {filterStatus === "ANNULE" && "Annulé"}
-                    </span>
-                    "
-                  </span>
-                )}
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <p className="text-xs text-slate-500">
+                <span className="font-semibold text-slate-700">{filteredScheduledCourses.length}</span>{" "}
+                {filteredScheduledCourses.length === 1 ? "cours trouvé" : "cours trouvés"}
+                {searchTerm && <span> pour "<span className="font-medium text-slate-700">{searchTerm}</span>"</span>}
               </p>
             </div>
           )}
@@ -561,15 +669,30 @@ const CoursProgrammerContent = () => {
 
         {/* Liste des cours programmés - Updated for single column on small screens */}
         {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
             {filteredScheduledCourses
               .slice(0, pageSize)
-              .map((scheduledCourse) => (
+              .map((scheduledCourse) => {
+                const classeId = scheduledCourse.classeId || (scheduledCourse.classesIds && scheduledCourse.classesIds[0]);
+                const classeName = classeId ? (classes.find(c => c.id === classeId)?.nom || "Classe") : "";
+                return (
                 <div
                   key={scheduledCourse.id}
                   className="w-full min-w-0 overflow-hidden"
                 >
                   <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col">
+                    {/* Ownership banner */}
+                    {String(scheduledCourse.professeurId) === String(professorId) ? (
+                      <div className="flex items-center gap-1.5 mb-3 px-2 py-1 bg-indigo-50 border border-indigo-100 rounded-lg w-fit text-xs font-medium text-indigo-700">
+                        <UserCheck className="w-3 h-3 flex-shrink-0" />
+                        Votre cours
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 mb-3 px-2 py-1 bg-amber-50 border border-amber-100 rounded-lg w-fit text-xs font-medium text-amber-700">
+                        <Users className="w-3 h-3 flex-shrink-0" />
+                        Cours d'un autre professeur
+                      </div>
+                    )}
                     {/* Course Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-start space-x-3 min-w-0 flex-1">
@@ -583,11 +706,17 @@ const CoursProgrammerContent = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight break-words hyphens-auto overflow-wrap-break-word">
-                            {scheduledCourse.cours?.titre}
+                            {scheduledCourse.cours?.titre || scheduledCourse.titre || "Cours sans titre"}
                           </h3>
+                          {classeName && (
+                            <p className="text-xs text-slate-500 mt-0.5 break-words">
+                              {classeName}
+                            </p>
+                          )}
                           {scheduledCourse.lieu && (
-                            <p className="text-xs sm:text-sm text-slate-600 mt-1 break-words">
-                              📍 {scheduledCourse.lieu}
+                            <p className="text-xs sm:text-sm text-slate-600 mt-1 break-words flex items-center">
+                              <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                              {scheduledCourse.lieu}
                             </p>
                           )}
                         </div>
@@ -616,31 +745,37 @@ const CoursProgrammerContent = () => {
 
                     {/* Course Details */}
                     <div className="space-y-2 mb-4 flex-1">
-                      {scheduledCourse.dateDebut && (
+                      {/* Always show planned date */}
+                      {scheduledCourse.dateCoursPrevue && (
                         <div className="flex items-center text-xs text-slate-500">
                           <Calendar className="w-3 h-3 mr-2 flex-shrink-0" />
                           <span className="break-words">
-                            {new Date(
-                              scheduledCourse.dateDebut
-                            ).toLocaleDateString("fr-FR")}{" "}
+                            Prévu: {new Date(scheduledCourse.dateCoursPrevue).toLocaleDateString("fr-FR")}{" "}
                             à{" "}
-                            {new Date(
-                              scheduledCourse.dateDebut
-                            ).toLocaleTimeString("fr-FR", {
+                            {new Date(scheduledCourse.dateCoursPrevue).toLocaleTimeString("fr-FR", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                           </span>
                         </div>
                       )}
-                      {scheduledCourse.dateFin && (
-                        <div className="flex items-center text-xs text-slate-500">
+                      {/* Show effective dates only for EN_COURS or TERMINE */}
+                      {scheduledCourse.etatCoursProgramme !== "PLANIFIE" && scheduledCourse.dateDebutEffectif && (
+                        <div className="flex items-center text-xs text-green-600">
                           <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
                           <span className="break-words">
-                            Jusqu'à{" "}
-                            {new Date(
-                              scheduledCourse.dateFin
-                            ).toLocaleTimeString("fr-FR", {
+                            Début: {new Date(scheduledCourse.dateDebutEffectif).toLocaleTimeString("fr-FR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      {scheduledCourse.etatCoursProgramme === "TERMINE" && scheduledCourse.dateFinEffectif && (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
+                          <span className="break-words">
+                            Fin: {new Date(scheduledCourse.dateFinEffectif).toLocaleTimeString("fr-FR", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
@@ -653,9 +788,9 @@ const CoursProgrammerContent = () => {
                             <Users className="w-3 h-3 mr-2 flex-shrink-0" />
                             <span className="break-words hyphens-auto overflow-wrap-break-word">
                               {scheduledCourse.classesIds
-                                .map((classId) => {
+                                .map((cId) => {
                                   const classe = classes.find(
-                                    (c) => c.id === classId
+                                    (c) => c.id === cId
                                   );
                                   return classe?.nom;
                                 })
@@ -672,25 +807,84 @@ const CoursProgrammerContent = () => {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 mt-auto">
+                    <div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-slate-100">
+                      {/* Start/Cancel/Edit available to all professors with access */}
+                      {scheduledCourse.etatCoursProgramme === "PLANIFIE" && (
+                        <button
+                          onClick={() => handleStartCourse(scheduledCourse.id)}
+                          className="flex-1 min-w-[80px] bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <PlayCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>Démarrer</span>
+                        </button>
+                      )}
+                      {scheduledCourse.etatCoursProgramme === "EN_COURS" && (
+                        <>
+                          <button
+                            onClick={() => handleEndCourse(scheduledCourse.id)}
+                            className="flex-1 min-w-[80px] bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <PauseCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Terminer</span>
+                          </button>
+                          <button
+                            onClick={() => handleJoinSession(scheduledCourse)}
+                            className="flex-1 min-w-[80px] bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <PlayCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Rejoindre</span>
+                          </button>
+                        </>
+                      )}
+                      {(scheduledCourse.etatCoursProgramme === "PLANIFIE" || scheduledCourse.etatCoursProgramme === "EN_COURS") && (
+                        <button
+                          onClick={() => setConfirmCancelId(scheduledCourse.id)}
+                          className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="hidden sm:inline">Annuler</span>
+                        </button>
+                      )}
+                      {/* View available to all */}
                       <button
                         onClick={() => handleViewSchedule(scheduledCourse)}
-                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                       >
-                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="truncate">Voir</span>
+                        <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>Voir</span>
                       </button>
+                      {/* Edit/Reprogrammer available to all */}
                       <button
                         onClick={() => handleEditSchedule(scheduledCourse)}
-                        className="flex-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                       >
-                        <Edit2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="truncate">Modifier</span>
+                        {scheduledCourse.etatCoursProgramme === "TERMINE" || scheduledCourse.etatCoursProgramme === "ANNULE" ? (
+                          <>
+                            <CalendarPlus className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Reprogrammer</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit2 className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Modifier</span>
+                          </>
+                        )}
                       </button>
+                      {/* Delete restricted to creator only */}
+                      {String(scheduledCourse.professeurId) === String(professorId) && (
+                        <button
+                          onClick={() => setConfirmDeleteId(scheduledCourse.id)}
+                          className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>Supprimer</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
           </div>
         ) : (
           <CoursProgrammerList
@@ -767,17 +961,39 @@ const CoursProgrammerContent = () => {
           </div>
         )}
 
+        {/* Session Launcher Modal */}
+        {showLauncher && launcherCourse && (
+          <SessionLauncher
+            cours={launcherCourse.cours}
+            loading={launchLoading}
+            onStart={handleLaunchSession}
+            onClose={() => { setShowLauncher(false); setLauncherCourse(null); }}
+          />
+        )}
+
+        {/* Live Session Full-screen */}
+        {liveSession && (
+          <LiveSession
+            scheduledCourse={liveSession.scheduledCourse}
+            cours={liveSession.cours}
+            isModerator={liveSession.isModerator}
+            onClose={() => { setLiveSession(null); loadData(professorId); }}
+          />
+        )}
+
         {/* Modals */}
         <CoursProgrammerForm
           isOpen={showScheduleModal}
           onClose={() => {
             setShowScheduleModal(false);
             setSelectedScheduledCourse(null);
+            setReprogrammeOfId(null);
             setError("");
             setSuccess("");
           }}
           onSubmit={handleFormSubmit}
           modalMode={modalMode}
+          isReprogramme={!!reprogrammeOfId}
           selectedScheduledCourse={selectedScheduledCourse}
           courses={courses}
           classes={classes}
@@ -796,9 +1012,76 @@ const CoursProgrammerContent = () => {
             onEnd={handleEndCourse}
             onCancel={handleCancelCourse}
             classes={classes}
+            currentUserId={professorId}
           />
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Supprimer le cours programmé</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              Cette action est irréversible. Le cours programmé sera définitivement supprimé.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 py-3 text-gray-600 font-semibold text-sm bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => handleDeleteCourse(confirmDeleteId)}
+                disabled={loading}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Suppression...</span></> : <span>Supprimer</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {confirmCancelId && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Annuler le cours programmé</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              Êtes-vous sûr de vouloir annuler ce cours ? Cette action est irréversible.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmCancelId(null)}
+                className="flex-1 py-3 text-gray-600 font-semibold text-sm bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+              >
+                Retour
+              </button>
+              <button
+                onClick={() => {
+                  handleCancelCourse(confirmCancelId, "Annulé par le professeur");
+                  setConfirmCancelId(null);
+                }}
+                disabled={loading}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading
+                  ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Annulation...</span></>
+                  : <span>Confirmer</span>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

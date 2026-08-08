@@ -97,19 +97,23 @@ const EstablishmentModal = ({
 
           <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
             <div className="bg-white px-6 py-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <Building2 className="mr-3 w-5 h-5" />
+            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <Building2 className="w-6 h-6" />
+                  </div>
                   Détails de l'Établissement
                 </h3>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
                 >
                   <X size={24} />
                 </button>
               </div>
+            </div>
 
               <div className="space-y-6">
                 {/* Name Section */}
@@ -177,6 +181,38 @@ const EstablishmentModal = ({
                         </p>
                         <p className="text-gray-900 font-medium">
                           {formData.telephone}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEstablishment?.tokenGeneral && (
+                    <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
+                        <Settings className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-500">
+                          Token Général
+                        </p>
+                        <p className="text-gray-900 font-medium font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                          {selectedEstablishment.tokenGeneral}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEstablishment?.codeUniqueValue && (
+                    <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                        <Settings className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-500">
+                          Code Unique
+                        </p>
+                        <p className="text-gray-900 font-medium font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                          {selectedEstablishment.codeUniqueValue}
                         </p>
                       </div>
                     </div>
@@ -270,9 +306,12 @@ const EstablishmentModal = ({
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
           <form onSubmit={handleSubmit}>
             <div className="bg-white px-6 py-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <Building2 className="mr-3 w-5 h-5" />
+            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 px-6 py-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg">
+                    <Building2 className="w-5 h-5" />
+                  </div>
                   {modalMode === "create"
                     ? "Nouvel Établissement"
                     : "Modifier l'Établissement"}
@@ -280,11 +319,12 @@ const EstablishmentModal = ({
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-white/60 hover:text-white p-2 hover:bg-white/10 rounded-full transition-all"
                 >
                   <X size={24} />
                 </button>
               </div>
+            </div>
 
               <div className="flex flex-col md:flex-row gap-8">
                 {/* Left Column */}

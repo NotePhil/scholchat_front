@@ -1,6 +1,7 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const exerciseProgrammerApi = axios.create({
   baseURL: BASE_URL,
@@ -10,20 +11,7 @@ const exerciseProgrammerApi = axios.create({
   },
 });
 
-exerciseProgrammerApi.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("cmr.notep.business.business.token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+applyAuthInterceptors(exerciseProgrammerApi);
 
 class ExerciseProgrammerService {
   // ============ Exercise Programming Operations ============
@@ -147,6 +135,20 @@ class ExerciseProgrammerService {
       }
       const response = await exerciseProgrammerApi.get(
         `/exercises-programmer/classe/${classeId}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getExercisesProgrammesParExercise(exerciseId) {
+    try {
+      if (!exerciseId) {
+        throw new Error("Exercise ID is required");
+      }
+      const response = await exerciseProgrammerApi.get(
+        `/exercises-programmer/exercise/${exerciseId}`
       );
       return response.data;
     } catch (error) {

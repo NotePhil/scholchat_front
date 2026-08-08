@@ -1,457 +1,206 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useTranslation } from "../../../hooks/useTranslation";
+import { useSelector } from "react-redux";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  Area,
-  AreaChart,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
 import {
-  BookOpen,
-  Users,
-  GraduationCap,
-  School,
-  TrendingUp,
-  Award,
-  FileText,
-  Clock,
-  Target,
-  Activity,
-  Plus,
-  CheckCircle,
-  AlertCircle,
-  Calendar,
-  BarChart3,
-  UserCheck,
-  UserX,
-  Mail,
-  Phone,
+  BookOpen, Users, GraduationCap, TrendingUp, Award, FileText,
+  Target, Activity, CheckCircle, Calendar, BarChart3,
+  RefreshCw, School, Layers, Clock,
 } from "lucide-react";
 import { scholchatService } from "../../../services/ScholchatService";
-import ClassService from "../../../services/ClassService";
-import establishmentService from "../../../services/EstablishmentService";
-import { coursService } from "../../../services/CoursService";
-
-// MatiereService (inline since you provided it)
 import axios from "axios";
 
-const BASE_URL = "http://localhost:8486/scholchat";
-
+// ─── Inline MatiereService ────────────────────────────────────────────────────
 const matiereApi = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
+  baseURL: process.env.REACT_APP_API_BASE_URL,
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
 });
-
-matiereApi.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("cmr.notep.business.business.token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+matiereApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem("authToken") || localStorage.getItem("accessToken");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+const matiereService = {
+  async getAllMatieres() {
+    try { return (await matiereApi.get("/matieres")).data; } catch { return []; }
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+};
+
+// ─── Colour palette for charts ────────────────────────────────────────────────
+const CHART_COLORS = [
+  "#3B82F6","#6366F1","#10B981","#F59E0B","#EF4444",
+  "#8B5CF6","#EC4899","#14B8A6","#F97316","#06B6D4",
+];
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+const StatCard = ({ title, value, icon: Icon, gradient, trend, subtitle, isDark }) => (
+  <motion.div
+    whileHover={{ y: -4, scale: 1.01 }}
+    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+    className={`relative overflow-hidden rounded-2xl p-5 shadow-lg border ${
+      isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+    }`}
+  >
+    {/* gradient blob */}
+    <div
+      className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-10 blur-2xl pointer-events-none"
+      style={{ background: gradient }}
+    />
+    <div className="relative z-10 flex items-start justify-between">
+      <div>
+        <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+          {title}
+        </p>
+        <p className={`text-3xl font-black leading-none ${isDark ? "text-white" : "text-slate-900"}`}>
+          {typeof value === "number" ? value.toLocaleString() : value}
+        </p>
+        {subtitle && (
+          <p className={`text-xs mt-1.5 flex items-center gap-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
+            {subtitle}
+          </p>
+        )}
+      </div>
+      <div className="p-3 rounded-xl shadow-md flex-shrink-0" style={{ background: gradient }}>
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+    </div>
+    {trend && (
+      <div className={`mt-4 pt-3 border-t flex items-center gap-2 ${isDark ? "border-slate-700" : "border-slate-100"}`}>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+          <TrendingUp className="w-3 h-3" /> {trend}
+        </span>
+        <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>ce mois</span>
+      </div>
+    )}
+  </motion.div>
 );
 
-class MatiereService {
-  async getAllMatieres() {
-    try {
-      const response = await matiereApi.get("/matieres");
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async createMatiere(matiereData) {
-    try {
-      if (!matiereData.nom) {
-        throw new Error("Subject name is required");
-      }
-      const response = await matiereApi.post("/matieres", matiereData);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async getMatiereByName(nom) {
-    try {
-      if (!nom) {
-        throw new Error("Subject name is required");
-      }
-      const response = await matiereApi.get(`/matieres/${nom}`);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  handleError(error) {
-    if (error.response) {
-      const errorMessage =
-        error.response.data?.message ||
-        error.response.data?.error ||
-        "An error occurred";
-      throw new Error(errorMessage);
-    } else if (error.request) {
-      throw new Error("Network error. Please check your connection.");
-    } else {
-      throw new Error("Request setup error: " + error.message);
-    }
-  }
-}
-
-const matiereService = new MatiereService();
-
-const DashboardContent = () => {
-  const [dashboardData, setDashboardData] = useState({
-    users: [],
-    professors: [],
-    parents: [],
-    students: [],
-    classes: [],
-    establishments: [],
-    courses: [],
-    matieres: [],
-    loading: true,
-    error: null,
-  });
-
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalProfessors: 0,
-    totalParents: 0,
-    totalStudents: 0,
-    totalClasses: 0,
-    totalEstablishments: 0,
-    totalCourses: 0,
-    totalMatieres: 0,
-    totalExercises: 0,
-    pendingProfessors: 0,
-    activeProfessors: 0,
-    activeClasses: 0,
-    pendingClasses: 0,
-    averageProgress: 68.2,
-    completionRate: 78.5,
-  });
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      setDashboardData((prev) => ({ ...prev, loading: true, error: null }));
-
-      // Fetch all data in parallel
-      const [
-        users,
-        professors,
-        parents,
-        students,
-        classes,
-        establishments,
-        pendingProfessors,
-        matieres,
-      ] = await Promise.allSettled([
-        scholchatService.getAllUsers(),
-        scholchatService.getAllProfessors(),
-        scholchatService.getAllParents(),
-        scholchatService.getAllStudents(),
-        scholchatService.getAllClasses(),
-        scholchatService.getAllEstablishments(),
-        scholchatService.getPendingProfessors(),
-        matiereService.getAllMatieres(),
-      ]);
-
-      // Extract successful results
-      const successfulResults = {
-        users: users.status === "fulfilled" ? users.value || [] : [],
-        professors:
-          professors.status === "fulfilled" ? professors.value || [] : [],
-        parents: parents.status === "fulfilled" ? parents.value || [] : [],
-        students: students.status === "fulfilled" ? students.value || [] : [],
-        classes: classes.status === "fulfilled" ? classes.value || [] : [],
-        establishments:
-          establishments.status === "fulfilled"
-            ? establishments.value || []
-            : [],
-        pendingProfessors:
-          pendingProfessors.status === "fulfilled"
-            ? pendingProfessors.value || []
-            : [],
-        matieres: matieres.status === "fulfilled" ? matieres.value || [] : [],
-        courses: [], // Mock data for now
-      };
-
-      // Calculate statistics
-      const calculatedStats = {
-        totalUsers: successfulResults.users.length,
-        totalProfessors: successfulResults.professors.length,
-        totalParents: successfulResults.parents.length,
-        totalStudents: successfulResults.students.length,
-        totalClasses: successfulResults.classes.length,
-        totalEstablishments: successfulResults.establishments.length,
-        totalMatieres: successfulResults.matieres.length,
-        totalCourses: Math.floor(successfulResults.matieres.length * 16.3), // Estimated
-        totalExercises: Math.floor(successfulResults.matieres.length * 121.3), // Estimated
-        pendingProfessors: successfulResults.pendingProfessors.length,
-        activeProfessors: successfulResults.professors.filter(
-          (p) => p.etat === "ACTIVE"
-        ).length,
-        activeClasses: successfulResults.classes.filter(
-          (c) => c.etat === "ACTIF"
-        ).length,
-        pendingClasses: successfulResults.classes.filter(
-          (c) => c.etat === "EN_ATTENTE_APPROBATION"
-        ).length,
-        averageProgress: 68.2,
-        completionRate: 78.5,
-      };
-
-      setDashboardData({
-        ...successfulResults,
-        loading: false,
-        error: null,
-      });
-
-      setStats(calculatedStats);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setDashboardData((prev) => ({
-        ...prev,
-        loading: false,
-        error: "Failed to load dashboard data",
-      }));
-    }
-  };
-
-  // Prepare chart data
-  const courseDistributionData = dashboardData.matieres.map(
-    (matiere, index) => ({
-      name: matiere.nom || `Matière ${index + 1}`,
-      courses: Math.floor(Math.random() * 50) + 10,
-      color: [
-        "#3B82F6",
-        "#10B981",
-        "#F59E0B",
-        "#EF4444",
-        "#8B5CF6",
-        "#EC4899",
-        "#14B8A6",
-        "#F97316",
-      ][index % 8],
-    })
-  );
-
-  const studentProgressData = dashboardData.classes
-    .slice(0, 8)
-    .map((classe) => ({
-      class: classe.nom || "Classe",
-      progress: Math.floor(Math.random() * 30) + 70,
-      students: Math.floor(Math.random() * 15) + 20,
-    }));
-
-  const monthlyTrendsData = [
-    {
-      month: "Jan",
-      courses: Math.floor(stats.totalCourses * 0.1),
-      exercises: Math.floor(stats.totalExercises * 0.08),
-      completions: Math.floor(stats.totalStudents * 2.3),
-    },
-    {
-      month: "Fév",
-      courses: Math.floor(stats.totalCourses * 0.15),
-      exercises: Math.floor(stats.totalExercises * 0.12),
-      completions: Math.floor(stats.totalStudents * 3.1),
-    },
-    {
-      month: "Mar",
-      courses: Math.floor(stats.totalCourses * 0.2),
-      exercises: Math.floor(stats.totalExercises * 0.18),
-      completions: Math.floor(stats.totalStudents * 2.8),
-    },
-    {
-      month: "Avr",
-      courses: Math.floor(stats.totalCourses * 0.25),
-      exercises: Math.floor(stats.totalExercises * 0.22),
-      completions: Math.floor(stats.totalStudents * 3.5),
-    },
-    {
-      month: "Mai",
-      courses: Math.floor(stats.totalCourses * 0.3),
-      exercises: Math.floor(stats.totalExercises * 0.28),
-      completions: Math.floor(stats.totalStudents * 4.2),
-    },
-    {
-      month: "Juin",
-      courses: stats.totalCourses,
-      exercises: stats.totalExercises,
-      completions: Math.floor(stats.totalStudents * 4.8),
-    },
-  ];
-
-  const exerciseCompletionData = [
-    { name: "Terminés", value: 78.5, color: "#10B981" },
-    { name: "En Cours", value: 15.3, color: "#F59E0B" },
-    { name: "Non Commencés", value: 6.2, color: "#EF4444" },
-  ];
-
-  const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 lg:p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0 pr-2">
-          <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">
-            {title}
-          </p>
-          <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
-            {typeof value === "number" ? value.toLocaleString() : value}
-          </p>
-          {subtitle && (
-            <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">
-              {subtitle}
-            </p>
-          )}
-        </div>
-        <div className={`p-2 sm:p-3 rounded-full ${color} flex-shrink-0`}>
-          <Icon className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
-        </div>
-      </div>
-      {trend && (
-        <div className="flex items-center mt-3 sm:mt-4 text-xs sm:text-sm">
-          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 mr-1 flex-shrink-0" />
-          <span className="text-green-600 font-medium">{trend}</span>
-          <span className="text-gray-500 ml-1">ce mois</span>
-        </div>
-      )}
+// ─── Chart card wrapper ───────────────────────────────────────────────────────
+const ChartCard = ({ title, icon: Icon, children, isDark, className = "" }) => (
+  <div className={`rounded-2xl border shadow-sm p-5 ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"} ${className}`}>
+    <div className="flex items-center justify-between mb-4">
+      <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{title}</h3>
+      <Icon className="w-4 h-4 text-slate-400" />
     </div>
-  );
+    {children}
+  </div>
+);
 
-  const RecentActivity = () => {
-    const recentActivities = [
-      {
-        id: 1,
-        type: "course_created",
-        title: "Nouveau cours: Algèbre Linéaire",
-        user: dashboardData.professors[0]?.nom || "Prof. Martin",
-        time: "Il y a 2h",
-        icon: BookOpen,
-        color: "text-blue-600",
-      },
-      {
-        id: 2,
-        type: "exercise_completed",
-        title: `Exercice complété par ${Math.floor(
-          Math.random() * 30 + 15
-        )} élèves`,
-        user: dashboardData.classes[0]?.nom || "Classe 3ème A",
-        time: "Il y a 3h",
-        icon: CheckCircle,
-        color: "text-green-600",
-      },
-      {
-        id: 3,
-        type: "class_created",
-        title: "Nouvelle classe créée",
-        user: "Admin",
-        time: "Il y a 5h",
-        icon: Users,
-        color: "text-purple-600",
-      },
-      {
-        id: 4,
-        type: "progress_milestone",
-        title: "Progression atteint 80%",
-        user: "Système",
-        time: "Il y a 1j",
-        icon: Award,
-        color: "text-yellow-600",
-      },
-      {
-        id: 5,
-        type: "subject_updated",
-        title: "Matière mise à jour",
-        user: dashboardData.professors[1]?.nom || "Prof. Dubois",
-        time: "Il y a 2j",
-        icon: FileText,
-        color: "text-indigo-600",
-      },
-    ];
+// ─── Main component ───────────────────────────────────────────────────────────
+const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
+  const { t, changeLanguage } = useTranslation();
+  const currentLanguage = useSelector((state) => state.ui.currentLanguage);
 
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-            Activités Récentes
-          </h3>
-          <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-        </div>
-        <div className="space-y-3 sm:space-y-4">
-          {recentActivities.map((activity) => (
-            <div key={activity.id} className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-gray-50 rounded-full flex items-center justify-center">
-                <activity.icon
-                  className={`h-3 w-3 sm:h-4 sm:w-4 ${activity.color}`}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-900 leading-tight">
-                  {activity.title}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">{activity.user}</p>
-              </div>
-              <div className="flex-shrink-0 text-xs text-gray-400">
-                {activity.time}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+  useEffect(() => { if (currentLanguage) changeLanguage(currentLanguage); }, [currentLanguage]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    totalCourses: 0, totalExercises: 0, activeClasses: 0,
+    averageProgress: 0, totalMatieres: 0, totalStudents: 0,
+    totalProfessors: 0, pendingProfessors: 0, completionRate: 0,
+  });
+  const [matieres, setMatieres] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [professors, setProfessors] = useState([]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [profRes, classRes, matRes, pendRes] = await Promise.allSettled([
+        scholchatService.getAllProfessors(),
+        scholchatService.getAllClasses(),
+        matiereService.getAllMatieres(),
+        scholchatService.getPendingProfessors(),
+      ]);
+      const profs   = profRes.status   === "fulfilled" ? profRes.value   || [] : [];
+      const cls     = classRes.status  === "fulfilled" ? classRes.value  || [] : [];
+      const mats    = matRes.status    === "fulfilled" ? matRes.value    || [] : [];
+      const pending = pendRes.status   === "fulfilled" ? pendRes.value   || [] : [];
+
+      setProfessors(profs);
+      setClasses(cls);
+      setMatieres(mats);
+      setStats({
+        totalCourses: 0,
+        totalExercises: 0,
+        activeClasses: cls.filter((c) => c.etat === "ACTIF").length,
+        averageProgress: 0,
+        totalMatieres: mats.length,
+        totalStudents: 0,
+        totalProfessors: profs.length,
+        pendingProfessors: pending.length,
+        completionRate: 0,
+      });
+    } catch (e) {
+      setError("Erreur lors du chargement des données.");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => { fetchData(); }, []);
 
+  // ── Chart data ──────────────────────────────────────────────────────────────
+  const pieData = matieres.slice(0, 10).map((m, i) => ({
+    name: m.nom || `Matière ${i + 1}`,
+    value: Math.floor(Math.random() * 40) + 10,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
 
-  if (dashboardData.loading) {
+  const barData = classes.slice(0, 8).map((c) => ({
+    name: c.nom ? (c.nom.length > 10 ? c.nom.slice(0, 10) + "…" : c.nom) : "Classe",
+    progression: Math.floor(Math.random() * 35) + 60,
+  }));
+
+  const areaData = [
+    { mois: "Jan", cours: 4, exercices: 8 },
+    { mois: "Fév", cours: 7, exercices: 14 },
+    { mois: "Mar", cours: 5, exercices: 11 },
+    { mois: "Avr", cours: 9, exercices: 18 },
+    { mois: "Mai", cours: 12, exercices: 22 },
+    { mois: "Jun", cours: stats.totalCourses || 10, exercices: stats.totalExercises || 20 },
+  ];
+
+  const statusData = [
+    { name: "Terminés",    value: stats.completionRate || 0,  color: "#10B981" },
+    { name: "En cours",    value: 15,                          color: "#6366F1" },
+    { name: "Non démarrés",value: 6,                           color: "#F43F5E" },
+  ];
+
+  // ── Recent activity (static placeholders enriched with real data) ───────────
+  const recentItems = [
+    { icon: BookOpen,   color: "text-blue-600",   bg: "bg-blue-50",   label: "Nouveau cours publié",          sub: professors[0] ? `${professors[0].prenom} ${professors[0].nom}` : "Professeur",  time: "Il y a 2h" },
+    { icon: CheckCircle,color: "text-emerald-600", bg: "bg-emerald-50",label: "Exercices complétés",           sub: classes[0]?.nom || "Classe 3ème A",                                             time: "Il y a 3h" },
+    { icon: Users,      color: "text-purple-600",  bg: "bg-purple-50", label: "Nouvelle classe créée",         sub: "Admin",                                                                        time: "Il y a 5h" },
+    { icon: Award,      color: "text-amber-600",   bg: "bg-amber-50",  label: "Jalon de progression atteint",  sub: "Système",                                                                      time: "Hier" },
+    { icon: FileText,   color: "text-indigo-600",  bg: "bg-indigo-50", label: "Matière mise à jour",           sub: professors[1] ? `${professors[1].prenom} ${professors[1].nom}` : "Professeur",  time: "Il y a 2j" },
+  ];
+
+  // ── Loading / error states ──────────────────────────────────────────────────
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-sm sm:text-base text-gray-600">
-            Chargement du tableau de bord...
-          </p>
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-slate-50"}`}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin" />
+          <p className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}>Chargement du tableau de bord…</p>
         </div>
       </div>
     );
   }
 
-  if (dashboardData.error) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">⚠️</div>
-          <p className="text-gray-600 mb-4">{dashboardData.error}</p>
-          <button
-            onClick={fetchDashboardData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
-          >
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-slate-50"}`}>
+        <div className="text-center space-y-4">
+          <p className={`${isDark ? "text-slate-300" : "text-slate-600"}`}>{error}</p>
+          <button onClick={fetchData} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
             Réessayer
           </button>
         </div>
@@ -460,219 +209,294 @@ const DashboardContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
+    <div className={`min-h-screen ${isDark ? "bg-slate-900" : "bg-slate-50"}`}>
+      {/* ── Page Header ─────────────────────────────────────────────────── */}
+      <div className={`sticky top-0 z-30 border-b backdrop-blur-xl ${isDark ? "bg-slate-900/90 border-slate-700" : "bg-white/90 border-slate-200"}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6">
-            <div className="mb-3 sm:mb-0">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                Tableau de Bord Éducatif
-              </h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">
-                Gestion des cours, exercices et progression des élèves
-              </p>
+          <div className="flex items-center justify-between py-4 sm:py-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className={`text-xl sm:text-2xl font-black tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
+                  Tableau de Bord
+                </h1>
+                <p className={`text-xs flex items-center gap-1.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <Calendar className="w-3 h-3" />
+                  {new Date().toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                </p>
+              </div>
             </div>
             <button
-              onClick={fetchDashboardData}
-              className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm sm:text-base self-start sm:self-auto"
+              onClick={fetchData}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-0.5 transition-all duration-200"
             >
-              <span>Actualiser</span>
+              <RefreshCw className="w-4 h-4" />
+              <span className="hidden sm:inline">Actualiser</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+
+        {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           <StatCard
-            title="Cours Disponibles"
+            title="Cours disponibles"
             value={stats.totalCourses}
             icon={BookOpen}
-            color="bg-blue-500"
+            gradient="linear-gradient(135deg,#3b82f6,#6366f1)"
             trend="+12%"
             subtitle={`${stats.totalMatieres} matières`}
+            isDark={isDark}
           />
           <StatCard
             title="Exercices"
             value={stats.totalExercises}
             icon={Target}
-            color="bg-green-500"
+            gradient="linear-gradient(135deg,#10b981,#059669)"
             trend="+18%"
-            subtitle={`${stats.completionRate}% terminés`}
+            subtitle={`${stats.completionRate}% complété`}
+            isDark={isDark}
           />
           <StatCard
-            title="Classes Actives"
+            title="Classes actives"
             value={stats.activeClasses}
             icon={Users}
-            color="bg-purple-500"
+            gradient="linear-gradient(135deg,#8b5cf6,#7c3aed)"
             trend="+8%"
             subtitle={`${stats.totalStudents} élèves`}
+            isDark={isDark}
           />
           <StatCard
-            title="Progression Moy."
+            title="Progression moyenne"
             value={`${stats.averageProgress}%`}
             icon={BarChart3}
-            color="bg-orange-500"
+            gradient="linear-gradient(135deg,#f59e0b,#d97706)"
             trend="+5%"
-            subtitle="Toutes classes"
+            subtitle="Toutes les classes"
+            isDark={isDark}
           />
         </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {/* Course Distribution */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">
-                Répartition des Cours par Matière
-              </h3>
-              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+        {/* ── Secondary KPIs ─────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5">
+          {[
+            { label: "Professeurs",       value: stats.totalProfessors,  icon: GraduationCap, color: "#3b82f6" },
+            { label: "En attente valid.", value: stats.pendingProfessors, icon: Clock,         color: "#f59e0b" },
+            { label: "Matières",          value: stats.totalMatieres,    icon: Layers,        color: "#8b5cf6" },
+            { label: "Établissements",    value: 0,                      icon: School,        color: "#10b981" },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className={`rounded-2xl border p-4 flex items-center gap-3 ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"} shadow-sm`}
+            >
+              <div className="p-2.5 rounded-xl flex-shrink-0" style={{ background: item.color + "20" }}>
+                <item.icon className="w-4 h-4" style={{ color: item.color }} />
+              </div>
+              <div className="min-w-0">
+                <p className={`text-[10px] font-semibold uppercase tracking-wider truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>{item.label}</p>
+                <p className={`text-xl font-black ${isDark ? "text-white" : "text-slate-900"}`}>{item.value}</p>
+              </div>
             </div>
-            <div className="h-64 sm:h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={courseDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius="70%"
-                    fill="#8884d8"
-                    dataKey="courses"
-                    label={({ name, percent }) =>
-                      `${name.substring(0, 8)}... ${(percent * 100).toFixed(
-                        0
-                      )}%`
-                    }
-                  >
-                    {courseDistributionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Student Progress by Class */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">
-                Progression des Élèves par Classe
-              </h3>
-              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-            </div>
-            <div className="h-64 sm:h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={studentProgressData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="class"
-                    tick={{ fontSize: 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar
-                    dataKey="progress"
-                    fill="#3B82F6"
-                    radius={[4, 4, 0, 0]}
-                    name="Progression (%)"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Monthly Activity Trends */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">
-              Activité Éducative Mensuelle
-            </h3>
-            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-          </div>
-          <div className="h-64 sm:h-80">
+        {/* ── Charts row ─────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Distribution des cours (pie) */}
+          <ChartCard title="Distribution des Cours" icon={BarChart3} isDark={isDark}>
+            {pieData.length === 0 ? (
+              <div className={`h-64 flex items-center justify-center text-sm ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                Aucune matière disponible
+              </div>
+            ) : (
+              <>
+                <div className="h-56 sm:h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius="40%"
+                        outerRadius="70%"
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {pieData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: "12px",
+                          border: "none",
+                          boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                          fontSize: "12px",
+                        }}
+                        formatter={(v, n) => [v, n]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Legend */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2">
+                  {pieData.slice(0, 6).map((d, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                      <span className={`text-[11px] truncate max-w-[80px] ${isDark ? "text-slate-400" : "text-slate-600"}`}>{d.name}</span>
+                    </div>
+                  ))}
+                  {pieData.length > 6 && (
+                    <span className={`text-[11px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>+{pieData.length - 6} autres</span>
+                  )}
+                </div>
+              </>
+            )}
+          </ChartCard>
+
+          {/* Progression des élèves (bar) */}
+          <ChartCard title="Progression des Élèves" icon={TrendingUp} isDark={isDark}>
+            {barData.length === 0 ? (
+              <div className={`h-64 flex items-center justify-center text-sm ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                Aucune classe disponible
+              </div>
+            ) : (
+              <div className="h-64 sm:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} barSize={20}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#f1f5f9"} />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fill: isDark ? "#94a3b8" : "#64748b" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: isDark ? "#94a3b8" : "#64748b" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={32}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                        fontSize: "12px",
+                        background: isDark ? "#1e293b" : "#fff",
+                        color: isDark ? "#f1f5f9" : "#0f172a",
+                      }}
+                      cursor={{ fill: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }}
+                    />
+                    <Bar
+                      dataKey="progression"
+                      name="Progression %"
+                      radius={[6, 6, 0, 0]}
+                      fill="url(#barGrad)"
+                    />
+                    <defs>
+                      <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#3b82f6" />
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </ChartCard>
+        </div>
+
+        {/* ── Area chart (monthly trends) ────────────────────────────────────── */}
+        <ChartCard title="Tendances Mensuelles" icon={Activity} isDark={isDark}>
+          <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyTrendsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="courses"
-                  stackId="1"
-                  stroke="#3B82F6"
-                  fill="#3B82F6"
-                  fillOpacity={0.6}
-                  name="Cours créés"
+              <AreaChart data={areaData}>
+                <defs>
+                  <linearGradient id="gradCours" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradExo" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#f1f5f9"} />
+                <XAxis dataKey="mois" tick={{ fontSize: 11, fill: isDark ? "#94a3b8" : "#64748b" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: isDark ? "#94a3b8" : "#64748b" }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "12px", border: "none",
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.15)", fontSize: "12px",
+                    background: isDark ? "#1e293b" : "#fff",
+                    color: isDark ? "#f1f5f9" : "#0f172a",
+                  }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="exercises"
-                  stackId="1"
-                  stroke="#10B981"
-                  fill="#10B981"
-                  fillOpacity={0.6}
-                  name="Exercices ajoutés"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="completions"
-                  stackId="1"
-                  stroke="#F59E0B"
-                  fill="#F59E0B"
-                  fillOpacity={0.6}
-                  name="Completions"
-                />
+                <Area type="monotone" dataKey="cours"     name="Cours"     stroke="#3b82f6" strokeWidth={2.5} fill="url(#gradCours)" />
+                <Area type="monotone" dataKey="exercices" name="Exercices" stroke="#10b981" strokeWidth={2.5} fill="url(#gradExo)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </ChartCard>
 
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Exercise Completion Status */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">
-                État des Exercices
-              </h3>
-              <Target className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-            </div>
-            <div className="h-48 sm:h-64">
+        {/* ── Bottom row: status pie + recent activity ───────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Exercise status donut */}
+          <ChartCard title="Statut des Exercices" icon={Target} isDark={isDark}>
+            <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={exerciseCompletionData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius="80%"
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, value }) => `${name} ${value}%`}
-                  >
-                    {exerciseCompletionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                  <Pie data={statusData} cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={3} dataKey="value">
+                    {statusData.map((e, i) => <Cell key={i} fill={e.color} />)}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 40px rgba(0,0,0,0.15)", fontSize: "12px" }}
+                    formatter={(v) => [`${v}%`]}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </div>
+            <div className="space-y-2 mt-1">
+              {statusData.map((d) => (
+                <div key={d.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
+                    <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-600"}`}>{d.name}</span>
+                  </div>
+                  <span className={`text-xs font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{d.value}%</span>
+                </div>
+              ))}
+            </div>
+          </ChartCard>
 
-          {/* Recent Activities */}
-          <RecentActivity />
+          {/* Recent activity — spans 2 cols */}
+          <div className={`lg:col-span-2 rounded-2xl border shadow-sm p-5 ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>Activités Récentes</h3>
+              <Activity className="w-4 h-4 text-slate-400" />
+            </div>
+            <div className="space-y-3">
+              {recentItems.map((item, i) => (
+                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${isDark ? "hover:bg-slate-700/50" : "hover:bg-slate-50"}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${item.bg}`}>
+                    <item.icon className={`w-4 h-4 ${item.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-slate-800"}`}>{item.label}</p>
+                    <p className={`text-xs truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>{item.sub}</p>
+                  </div>
+                  <span className={`text-xs flex-shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{item.time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Footer Stats */}
       </div>
     </div>
   );

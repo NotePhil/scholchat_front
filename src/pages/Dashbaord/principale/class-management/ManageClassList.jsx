@@ -1,671 +1,348 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
+import { Spin, Button, Tag, Select } from "antd";
 import {
-  GraduationCap,
-  Search,
-  Edit,
-  Trash2,
-  Plus,
-  Users,
-  School,
-  Clock,
-  PowerOff,
-  Check,
-  Calendar,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Loader,
-  Eye,
-  Key,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  RefreshCw,
-  Settings,
-  UserCheck,
-  UserX,
-  X,
-  Sparkles,
-  ArrowLeft,
-  Trophy,
-  MoreHorizontal,
-  SortAsc,
-  CalendarDays,
-  UserPlus,
-  Bell,
-  Zap,
-} from "lucide-react";
-import AccederService, {
-  EtatDemandeAcces,
-} from "../../../../services/accederService";
-import "./ManageClassList.css";
+  ReloadOutlined,
+  PlusCircleOutlined,
+  ArrowLeftOutlined,
+  EditOutlined,
+  BookOutlined,
+  CrownOutlined,
+  TeamOutlined,
+  UserOutlined,
+  SafetyCertificateOutlined,
+} from "@ant-design/icons";
+import { Edit } from "lucide-react";
+import { classService } from "../../../../services/ClassService";
+import { message, Modal, Input, Form } from "antd";
 
+const { Option } = Select;
+
+// Role config
+const ROLES = {
+  created:    { label: "Créée par moi",       color: "#4f46e5", bg: "#eef2ff", icon: <CrownOutlined /> },
+  moderator:  { label: "Modérateur assigné",  color: "#0891b2", bg: "#ecfeff", icon: <UserOutlined /> },
+  publication:{ label: "Droit de publication",color: "#7c3aed", bg: "#f5f3ff", icon: <EditOutlined /> },
+  member:     { label: "Membre",              color: "#64748b", bg: "#f8fafc", icon: <TeamOutlined /> },
+};
+
+const RoleBadge = ({ role }) => {
+  const cfg = ROLES[role] || ROLES.member;
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}22` }}
+    >
+      {cfg.icon}
+      {cfg.label}
+    </span>
+  );
+};
+
+const ClassCard = ({ cls, role, onSelectClass, onEdit, canEdit }) => {
+  const grantedBy = (role === "publication" || role === "moderator") && cls.moderator
+    ? `${cls.moderator.prenom || ""} ${cls.moderator.nom || ""}`.trim()
+    : null;
+
+  return (
+    <div className="bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold text-slate-800 truncate">{cls.nom}</h3>
+          {cls.niveau && <p className="text-xs text-slate-500 mt-0.5">{cls.niveau}</p>}
+        </div>
+        <Tag
+          color={
+            cls.expireParOffre ? "red"
+              : cls.etat === "ACTIVE" || cls.etat === "ACTIF" ? "green"
+              : cls.etat === "ARCHIVEE" ? "orange" : "default"
+          }
+          style={{ fontSize: 11, borderRadius: 6, flexShrink: 0 }}
+        >
+          {cls.expireParOffre
+            ? "Offre expirée"
+            : cls.etat === "ACTIVE" || cls.etat === "ACTIF" ? "Actif" : cls.etat === "ARCHIVEE" ? "Archivé" : "Inactif"}
+        </Tag>
+      </div>
+
+      {/* Role badge */}
+      <RoleBadge role={role} />
+
+      {/* accesMajeur indicator */}
+      <div className="flex items-center gap-1.5">
+        {cls.accesMajeur ? (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe" }}>
+            <SafetyCertificateOutlined style={{ fontSize: 10 }} /> Classe Majeure
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+            style={{ background: "#f1f5f9", color: "#94a3b8", border: "1px solid #e2e8f0" }}>
+            Accès standard
+          </span>
+        )}
+      </div>
+
+      {/* Meta */}
+      <div className="space-y-0.5">
+        {grantedBy && (
+          <p className="text-xs text-slate-400 truncate">Par : {grantedBy}</p>
+        )}
+        {cls.etablissement?.nom && (
+          <p className="text-xs text-slate-400 truncate">{cls.etablissement.nom}</p>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 mt-auto pt-1 border-t border-slate-50">
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => onSelectClass(cls.id)}
+          style={{ borderRadius: 6, flex: 1, background: "#4f46e5", borderColor: "#4f46e5" }}
+        >
+          Gérer
+        </Button>
+        {canEdit && (
+          <Button
+            size="small"
+            icon={<Edit size={13} />}
+            onClick={() => onEdit(cls)}
+            style={{ borderRadius: 6 }}
+          >
+            Modifier
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
 const ManageClassList = ({
   classes = [],
+  publicationClasses = [],
+  assignedModeratorClasses = [],
+  moderatedClasses = [],
   loading = false,
-  error,
-  successMessage,
   refreshing = false,
-  onSelectClass = () => {},
-  onRefresh = () => {},
+  onSelectClass,
+  onRefresh,
   onBack,
   onNavigateToCreate,
-  userRole = "professeur",
+  currentUserId = "",
+  currentUserRole = "",
+  externalSearch = "",
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [niveauFilter, setNiveauFilter] = useState("all");
-  const [dateRange, setDateRange] = useState(null);
-  const [sortBy, setSortBy] = useState("dateCreation");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [pendingRequests, setPendingRequests] = useState({});
-  const [selectedClass, setSelectedClass] = useState(null);
+  const [roleFilter, setRoleFilter] = useState("all");
+
   const [editingClass, setEditingClass] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(null);
-  const [showApprovalModal, setShowApprovalModal] = useState(null);
-  const [showDeactivationModal, setShowDeactivationModal] = useState(null);
-  const [showAccessRequestModal, setShowAccessRequestModal] = useState(false);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [accessToken, setAccessToken] = useState("");
-  const [deactivationReason, setDeactivationReason] = useState("");
-  const [deactivationComment, setDeactivationComment] = useState("");
-  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editForm] = Form.useForm();
 
-  const EtatClasse = {
-    ACTIF: "ACTIF",
-    EN_ATTENTE_APPROBATION: "EN_ATTENTE_APPROBATION",
-    INACTIF: "INACTIF",
+  const activeSearch = externalSearch || searchTerm;
+
+  const isCreatorOrAdmin = (cls) => {
+    const role = (currentUserRole || "").toUpperCase();
+    if (role.includes("ADMIN")) return true;
+    if (!currentUserId) return false;
+    return cls.createurId === currentUserId || cls.creatorId === currentUserId || cls.createur_id === currentUserId;
   };
 
-  const getStatusColor = (etat) => {
-    switch (etat) {
-      case EtatClasse.ACTIF:
-        return "status-active";
-      case EtatClasse.EN_ATTENTE_APPROBATION:
-        return "status-pending";
-      case EtatClasse.INACTIF:
-        return "status-inactive";
-      default:
-        return "status-default";
-    }
-  };
+  // Merge all into flat list with role tag
+  const allClasses = useMemo(() => [
+    ...moderatedClasses.map(c => ({ ...c, _role: "created" })),
+    ...assignedModeratorClasses.map(c => ({ ...c, _role: "moderator" })),
+    ...publicationClasses.map(c => ({ ...c, _role: "publication" })),
+    ...classes.map(c => ({ ...c, _role: "member" })),
+  ], [moderatedClasses, assignedModeratorClasses, publicationClasses, classes]);
 
-  const getStatusText = (etat) => {
-    switch (etat) {
-      case EtatClasse.ACTIF:
-        return "Actif";
-      case EtatClasse.EN_ATTENTE_APPROBATION:
-        return "En attente";
-      case EtatClasse.INACTIF:
-        return "Inactif";
-      default:
-        return "Inconnu";
-    }
-  };
+  const niveaux = useMemo(() => {
+    const set = new Set(allClasses.map(c => c.niveau).filter(Boolean));
+    return Array.from(set).sort();
+  }, [allClasses]);
 
-  const getStatusIcon = (etat) => {
-    switch (etat) {
-      case EtatClasse.ACTIF:
-        return <CheckCircle className="status-icon" />;
-      case EtatClasse.EN_ATTENTE_APPROBATION:
-        return <Clock className="status-icon" />;
-      case EtatClasse.INACTIF:
-        return <XCircle className="status-icon" />;
-      default:
-        return <AlertCircle className="status-icon" />;
-    }
-  };
-
-  // Load pending requests for all classes
-  const loadPendingRequestsForAllClasses = async () => {
-    if (!classes || classes.length === 0) return;
-
-    try {
-      setLoadingRequests(true);
-      console.log("Loading pending requests for", classes.length, "classes");
-
-      const requestsPromises = classes.map(async (classe) => {
-        try {
-          const requests = await AccederService.obtenirDemandesAccesPourClasse(
-            classe.id
-          );
-          const pendingCount = requests.filter(
-            (req) =>
-              req.etat === EtatDemandeAcces.EN_ATTENTE ||
-              req.etat === "EN_ATTENTE"
-          ).length;
-
-          console.log(
-            `Class ${classe.nom} (${classe.id}): ${pendingCount} pending requests`
-          );
-          return { classId: classe.id, count: pendingCount };
-        } catch (error) {
-          console.error(
-            `Error loading requests for class ${classe.id}:`,
-            error
-          );
-          return { classId: classe.id, count: 0 };
-        }
-      });
-
-      const requestsResults = await Promise.all(requestsPromises);
-      const requestsMap = {};
-
-      requestsResults.forEach(({ classId, count }) => {
-        requestsMap[classId] = count;
-      });
-
-      console.log("Final requests map:", requestsMap);
-      setPendingRequests(requestsMap);
-    } catch (error) {
-      console.error("Error loading pending requests:", error);
-    } finally {
-      setLoadingRequests(false);
-    }
-  };
-
-  // Load pending requests when classes change
-  useEffect(() => {
-    if (classes && classes.length > 0) {
-      loadPendingRequestsForAllClasses();
-    }
-  }, [classes]);
-
-  // Refresh pending requests when refreshing
-  useEffect(() => {
-    if (refreshing) {
-      loadPendingRequestsForAllClasses();
-    }
-  }, [refreshing]);
-
-  const sortedAndFilteredClasses = useMemo(() => {
-    let filtered = classes.filter((classe) => {
-      const matchesSearch =
-        classe.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        classe.niveau.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "all" || classe.etat === statusFilter;
-      const matchesNiveau =
-        niveauFilter === "all" || classe.niveau === niveauFilter;
-
-      const matchesDate =
-        !dateRange ||
-        !dateRange[0] ||
-        !dateRange[1] ||
-        (new Date(classe.dateCreation) >= new Date(dateRange[0]) &&
-          new Date(classe.dateCreation) <= new Date(dateRange[1]));
-
-      return matchesSearch && matchesStatus && matchesNiveau && matchesDate;
+  const filtered = useMemo(() => {
+    const q = activeSearch.toLowerCase();
+    return allClasses.filter(cls => {
+      const matchSearch = !q || cls.nom?.toLowerCase().includes(q) || cls.niveau?.toLowerCase().includes(q);
+      const matchStatus = statusFilter === "all" || cls.etat === statusFilter;
+      const matchNiveau = niveauFilter === "all" || cls.niveau === niveauFilter;
+      const matchRole = roleFilter === "all" || cls._role === roleFilter;
+      return matchSearch && matchStatus && matchNiveau && matchRole;
     });
+  }, [allClasses, activeSearch, statusFilter, niveauFilter, roleFilter]);
 
-    filtered.sort((a, b) => {
-      let aValue = a[sortBy];
-      let bValue = b[sortBy];
-
-      if (sortBy === "dateCreation") {
-        aValue = new Date(aValue);
-        bValue = new Date(bValue);
-      } else if (sortBy === "eleveCount") {
-        aValue = a.eleves?.length || 0;
-        bValue = b.eleves?.length || 0;
-      }
-
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-
-    return filtered;
-  }, [
-    classes,
-    searchTerm,
-    statusFilter,
-    niveauFilter,
-    dateRange,
-    sortBy,
-    sortOrder,
-  ]);
-
-  const paginatedClasses = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return sortedAndFilteredClasses.slice(startIndex, startIndex + pageSize);
-  }, [sortedAndFilteredClasses, currentPage, pageSize]);
-
-  const totalClasses = classes.length;
-  const activeClasses = classes.filter(
-    (c) => c.etat === EtatClasse.ACTIF
-  ).length;
-  const pendingClasses = classes.filter(
-    (c) => c.etat === EtatClasse.EN_ATTENTE_APPROBATION
-  ).length;
-  const totalStudents = classes.reduce(
-    (sum, c) => sum + (c.eleves?.length || 0),
-    0
-  );
-  const totalParents = classes.reduce(
-    (sum, c) => sum + (c.parents?.length || 0),
-    0
-  );
-
-  // Calculate total pending requests across all classes
-  const totalPendingRequests = Object.values(pendingRequests).reduce(
-    (sum, count) => sum + count,
-    0
-  );
+  const hasActiveFilter = statusFilter !== "all" || niveauFilter !== "all" || roleFilter !== "all" || searchTerm;
 
   const clearFilters = () => {
     setSearchTerm("");
     setStatusFilter("all");
     setNiveauFilter("all");
-    setDateRange(null);
-    setSortBy("dateCreation");
-    setSortOrder("desc");
-    setCurrentPage(1);
+    setRoleFilter("all");
   };
 
-  const uniqueNiveaux = [...new Set(classes.map((c) => c.niveau))];
-
-  const handleManageClass = (classe) => {
-    if (onSelectClass) {
-      onSelectClass(classe.id);
+  const handleEditSubmit = async () => {
+    try {
+      const values = await editForm.validateFields();
+      setEditLoading(true);
+      await classService.modifierClasse(editingClass.id, values);
+      message.success("Classe modifiée avec succès");
+      setEditingClass(null);
+      editForm.resetFields();
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      if (err?.errorFields) return;
+      message.error(err?.message || "Erreur lors de la modification");
+    } finally {
+      setEditLoading(false);
     }
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
+  const handleEdit = (cls) => {
+    setEditingClass(cls);
+    editForm.setFieldsValue({ nom: cls.nom, niveau: cls.niveau, description: cls.description, codeActivation: cls.codeActivation });
   };
 
-  const handleRefreshWithRequests = async () => {
-    if (onRefresh) {
-      await onRefresh();
-    }
-    // Reload pending requests after refresh
-    await loadPendingRequestsForAllClasses();
-  };
-
-  if (loading && classes.length === 0) {
-    return (
-      <div className="loading-container">
-        <div className="loading-content">
-          <Loader className="loading-spinner" />
-          <p className="loading-text">Chargement des classes...</p>
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <div className="flex justify-center items-center py-16"><Spin size="large" /></div>;
   }
 
   return (
-    <div className="manage-container">
-      <div className="manage-wrapper">
-        <div className="header-card">
-          <div className="header-content">
-            <div className="header-left">
-              {onBack && (
-                <button onClick={onBack} className="back-btn">
-                  <ArrowLeft className="back-icon" />
-                </button>
-              )}
-              <div className="header-info">
-                <div className="header-icon">
-                  <GraduationCap className="icon" />
-                </div>
-                <div className="header-text">
-                  <h1 className="header-title">Gestion des Classes</h1>
-                  <p className="header-subtitle">
-                    Gérez et supervisez toutes les classes de votre
-                    établissement
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="header-actions">
-              <button
-                onClick={handleRefreshWithRequests}
-                disabled={refreshing || loadingRequests}
-                className="btn btn-secondary"
-              >
-                <RefreshCw
-                  className={`btn-icon ${
-                    refreshing || loadingRequests ? "spinning" : ""
-                  }`}
-                />
-                <span className="btn-text">
-                  {refreshing || loadingRequests
-                    ? "Actualisation..."
-                    : "Actualiser"}
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {error && (
-          <div className="alert alert-error">
-            <AlertCircle className="alert-icon" />
-            <p className="alert-text">{error}</p>
-            <button onClick={() => {}} className="alert-close">
-              <X className="close-icon" />
-            </button>
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="alert alert-success">
-            <CheckCircle className="alert-icon" />
-            <p className="alert-text">{successMessage}</p>
-            <button onClick={() => {}} className="alert-close">
-              <X className="close-icon" />
-            </button>
-          </div>
-        )}
-
-        <div className="stats-grid">
-          <div className="stat-card stat-primary">
-            <div className="stat-header">
-              <div className="stat-icon">
-                <GraduationCap className="icon" />
-              </div>
-              <div className="stat-value">{totalClasses}</div>
-            </div>
-            <div className="stat-label">Total Classes</div>
-          </div>
-          <div className="stat-card stat-success">
-            <div className="stat-header">
-              <div className="stat-icon">
-                <Trophy className="icon" />
-              </div>
-              <div className="stat-value">{activeClasses}</div>
-            </div>
-            <div className="stat-label">Classes Actives</div>
-          </div>
-          <div className="stat-card stat-info">
-            <div className="stat-header">
-              <div className="stat-icon">
-                <Bell className="icon" />
-              </div>
-              <div className="stat-value">
-                {loadingRequests ? (
-                  <Loader className="loading-mini" />
-                ) : (
-                  totalPendingRequests
-                )}
-              </div>
-            </div>
-            <div className="stat-label">Demandes en Attente</div>
-          </div>
-        </div>
-
-        {/* ALL FILTERS ON ONE LINE */}
-        <div className="filters-card">
-          <div className="filters-row-all">
-            <div className="search-wrapper-inline">
-              <Search className="search-icon" />
-              <input
-                type="text"
-                placeholder="Rechercher une classe..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-            </div>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value={EtatClasse.ACTIF}>Actif</option>
-              <option value={EtatClasse.EN_ATTENTE_APPROBATION}>
-                En attente
-              </option>
-              <option value={EtatClasse.INACTIF}>Inactif</option>
-            </select>
-
-            <select
-              value={niveauFilter}
-              onChange={(e) => setNiveauFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">Tous les niveaux</option>
-              {uniqueNiveaux.map((niveau) => (
-                <option key={niveau} value={niveau}>
-                  {niveau}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="filter-select"
-            >
-              <option value={12}>12 par page</option>
-              <option value={18}>18 par page</option>
-              <option value={24}>24 par page</option>
-            </select>
-
-            <button onClick={clearFilters} className="btn btn-outline">
-              <X className="btn-icon" />
-              <span className="btn-text">Effacer</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="classes-card">
-          {loadingRequests && (
-            <div className="loading-requests-notice">
-              <Loader className="loading-spinner-small" />
-              <span>Chargement des demandes d'accès...</span>
-            </div>
+    <div className="manage-class-list">
+      {/* ── Toolbar ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          {onBack && (
+            <Button icon={<ArrowLeftOutlined />} onClick={onBack} size="small" style={{ borderRadius: 8 }}>
+              Retour
+            </Button>
           )}
-
-          {sortedAndFilteredClasses.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-content">
-                <GraduationCap className="empty-icon" />
-                <h3 className="empty-title">Aucune classe trouvée</h3>
-                <p className="empty-description">
-                  Aucune classe ne correspond à vos critères de recherche
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="classes-grid">
-                {paginatedClasses.map((classe) => {
-                  const pendingCount = pendingRequests[classe.id] || 0;
-
-                  return (
-                    <div key={classe.id} className="class-card">
-                      {classe.isNew && (
-                        <div className="new-badge">
-                          <Sparkles className="new-icon" />
-                          <span>NOUVEAU</span>
-                        </div>
-                      )}
-
-                      {pendingCount > 0 && (
-                        <div
-                          className={`pending-badge ${
-                            pendingCount > 9 ? "large-count" : ""
-                          }`}
-                        >
-                          <span>
-                            {pendingCount > 99 ? "99+" : pendingCount}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="card-content">
-                        <div className="card-header">
-                          <div className="card-title-section">
-                            <div className="class-info">
-                              <div className="class-icon">
-                                <GraduationCap className="icon" />
-                              </div>
-                              <div className="class-details">
-                                <h3 className="class-name">{classe.nom}</h3>
-                                <p className="class-level">{classe.niveau}</p>
-                              </div>
-                            </div>
-                            <div
-                              className={`status-badge ${getStatusColor(
-                                classe.etat
-                              )}`}
-                            >
-                              {getStatusIcon(classe.etat)}
-                              <span>{getStatusText(classe.etat)}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="stats-section">
-                          <div className="stat-item">
-                            <div className="stat-icon-wrapper stat-requests">
-                              <Bell className="stat-icon" />
-                            </div>
-                            <div className="stat-info">
-                              <div className="stat-number">
-                                {loadingRequests ? (
-                                  <Loader className="loading-mini-stat" />
-                                ) : (
-                                  pendingCount
-                                )}
-                              </div>
-                              <div className="stat-text">Demandes</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="date-section">
-                          <Calendar className="date-icon" />
-                          <span className="date-text">
-                            Créée le{" "}
-                            {new Date(classe.dateCreation).toLocaleDateString(
-                              "fr-FR",
-                              {
-                                day: "numeric",
-                                month: "long",
-                                year: "numeric",
-                              }
-                            )}
-                          </span>
-                        </div>
-
-                        {pendingCount > 0 && (
-                          <div className="pending-requests-info">
-                            <Zap className="pending-icon" />
-                            <span className="pending-text">
-                              {pendingCount} nouvelle
-                              {pendingCount > 1 ? "s" : ""} demande
-                              {pendingCount > 1 ? "s" : ""} d'accès
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="card-actions">
-                          <button
-                            onClick={() => handleManageClass(classe)}
-                            className="action-btn action-secondary"
-                          >
-                            <Settings className="action-icon" />
-                            <span>Gérer</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {Math.ceil(sortedAndFilteredClasses.length / pageSize) > 1 && (
-                <div className="pagination-container">
-                  <div className="pagination-info">
-                    Affichage de {(currentPage - 1) * pageSize + 1} à{" "}
-                    {Math.min(
-                      currentPage * pageSize,
-                      sortedAndFilteredClasses.length
-                    )}{" "}
-                    sur {sortedAndFilteredClasses.length} classes
-                  </div>
-                  <div className="pagination-controls">
-                    <button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="pagination-btn"
-                    >
-                      <ChevronLeft className="pagination-icon" />
-                    </button>
-                    {Array.from(
-                      {
-                        length: Math.ceil(
-                          sortedAndFilteredClasses.length / pageSize
-                        ),
-                      },
-                      (_, i) => {
-                        const page = i + 1;
-                        const isCurrentPage = page === currentPage;
-                        const totalPages = Math.ceil(
-                          sortedAndFilteredClasses.length / pageSize
-                        );
-                        const shouldShow =
-                          page === 1 ||
-                          page === totalPages ||
-                          (page >= currentPage - 1 && page <= currentPage + 1);
-
-                        if (!shouldShow) {
-                          if (
-                            page === currentPage - 2 ||
-                            page === currentPage + 2
-                          ) {
-                            return (
-                              <span key={page} className="pagination-ellipsis">
-                                ...
-                              </span>
-                            );
-                          }
-                          return null;
-                        }
-
-                        return (
-                          <button
-                            key={page}
-                            onClick={() => handlePageChange(page)}
-                            className={`pagination-btn ${
-                              isCurrentPage ? "active" : ""
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        );
-                      }
-                    )}
-                    <button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={
-                        currentPage ===
-                        Math.ceil(sortedAndFilteredClasses.length / pageSize)
-                      }
-                      className="pagination-btn"
-                    >
-                      <ChevronRight className="pagination-icon" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+          <h2 className="text-base font-semibold text-slate-800 m-0">
+            Mes classes
+            {filtered.length !== allClasses.length && (
+              <span className="ml-2 text-sm font-normal text-slate-500">({filtered.length} / {allClasses.length})</span>
+            )}
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button icon={<ReloadOutlined spin={refreshing} />} onClick={onRefresh} size="small" loading={refreshing} style={{ borderRadius: 8 }}>
+            Actualiser
+          </Button>
+          {onNavigateToCreate && (
+            <Button type="primary" icon={<PlusCircleOutlined />} onClick={onNavigateToCreate} size="small"
+              style={{ borderRadius: 8, background: "#4f46e5", borderColor: "#4f46e5" }}>
+              Créer une classe
+            </Button>
           )}
         </div>
       </div>
+
+      {/* ── Filters ── */}
+      {!externalSearch && (
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <input
+            type="text"
+            placeholder="Filtrer par nom ou niveau..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 min-w-[180px] px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          />
+          <Select size="small" value={roleFilter} onChange={setRoleFilter} style={{ minWidth: 160 }}>
+            <Option value="all">Tous les rôles</Option>
+            <Option value="created">Créée par moi</Option>
+            <Option value="moderator">Modérateur assigné</Option>
+            <Option value="publication">Droit de publication</Option>
+            <Option value="member">Membre</Option>
+          </Select>
+          <Select size="small" value={statusFilter} onChange={setStatusFilter} style={{ minWidth: 130 }}>
+            <Option value="all">Tous les statuts</Option>
+            <Option value="ACTIF">Actif</Option>
+            <Option value="INACTIF">Inactif</Option>
+            <Option value="ARCHIVEE">Archivé</Option>
+          </Select>
+          {niveaux.length > 0 && (
+            <Select size="small" value={niveauFilter} onChange={setNiveauFilter} style={{ minWidth: 120 }}>
+              <Option value="all">Tous les niveaux</Option>
+              {niveaux.map(n => <Option key={n} value={n}>{n}</Option>)}
+            </Select>
+          )}
+          {hasActiveFilter && (
+            <button onClick={clearFilters} className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded border border-slate-200 bg-white">
+              Effacer
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Grid ── */}
+      {allClasses.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <BookOutlined style={{ fontSize: 48, color: "#cbd5e1", marginBottom: 16 }} />
+          <p className="text-slate-500 text-base font-medium mb-1">Vous n'avez pas encore de classe</p>
+          <p className="text-slate-400 text-sm mb-4">Créez votre première classe ou rejoignez-en une via le bouton ci-dessus.</p>
+          {onNavigateToCreate && (
+            <Button type="primary" icon={<PlusCircleOutlined />} onClick={onNavigateToCreate}
+              style={{ borderRadius: 8, background: "#4f46e5", borderColor: "#4f46e5" }}>
+              Créer une classe
+            </Button>
+          )}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <BookOutlined style={{ fontSize: 48, color: "#cbd5e1", marginBottom: 16 }} />
+          <p className="text-slate-500 text-base font-medium mb-1">Aucune classe trouvée</p>
+          {hasActiveFilter && (
+            <button onClick={clearFilters} className="text-sm text-indigo-600 hover:underline mt-2">Réinitialiser les filtres</button>
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map(cls => (
+            <ClassCard
+              key={cls.id}
+              cls={cls}
+              role={cls._role}
+              onSelectClass={onSelectClass}
+              onEdit={handleEdit}
+              canEdit={isCreatorOrAdmin(cls)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Edit modal ── */}
+      <Modal
+        title={<div style={{ display: "flex", alignItems: "center", gap: 8 }}><EditOutlined style={{ color: "#4f46e5" }} /><span>Modifier — {editingClass?.nom}</span></div>}
+        open={!!editingClass}
+        onCancel={() => { setEditingClass(null); editForm.resetFields(); }}
+        onOk={handleEditSubmit}
+        okText="Enregistrer"
+        cancelText="Annuler"
+        confirmLoading={editLoading}
+        okButtonProps={{ style: { background: "#4f46e5", borderColor: "#4f46e5", borderRadius: 8 } }}
+        cancelButtonProps={{ style: { borderRadius: 8 } }}
+        width={480}
+        centered
+      >
+        <Form form={editForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="nom" label="Nom de la classe" rules={[{ required: true, message: "Le nom est obligatoire" }]}>
+            <Input placeholder="Nom de la classe" style={{ borderRadius: 8 }} />
+          </Form.Item>
+          <Form.Item name="niveau" label="Niveau">
+            <Input placeholder="Ex: 3ème, Terminale..." style={{ borderRadius: 8 }} />
+          </Form.Item>
+          <Form.Item name="description" label="Description">
+            <Input.TextArea placeholder="Description de la classe..." rows={3} style={{ borderRadius: 8 }} />
+          </Form.Item>
+          <Form.Item name="codeActivation" label="Code d'activation">
+            <Input placeholder="Code d'activation" style={{ borderRadius: 8 }} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

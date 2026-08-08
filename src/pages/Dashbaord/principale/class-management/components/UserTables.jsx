@@ -1,12 +1,12 @@
-// components/UserTables.jsx - UPDATED WITH DATE DE CRÉATION FOR ALL USER TYPES
 import React, { useState, useEffect } from "react";
-import { Table, Tag, Button, Space, Popconfirm, Tooltip, message } from "antd";
+import { Table, Tag, Button, Space, Popconfirm, Tooltip, Switch, message } from "antd";
 import {
   EyeOutlined,
   UserDeleteOutlined,
   CheckOutlined,
   CloseOutlined,
   DeleteOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { scholchatService } from "../../../../../services/ScholchatService";
 
@@ -16,11 +16,17 @@ const UserTables = ({
   userType,
   onViewUser,
   onRemoveAccess,
-  onDeleteUser, // Handler for deleting users from system
+  onDeleteUser,
   onApproveRequest,
   onRejectRequest,
+  onTogglePublicationRights,
+  publicationRightsMap,
   currentTab,
   classId,
+  userRole,
+  isModerator,
+  currentUserId,
+  classCreatorId,
 }) => {
   useEffect(() => {
     console.log(`UserTables - ${userType}:`, users);
@@ -123,6 +129,38 @@ const UserTables = ({
           title: "Matricule",
           dataIndex: "matriculeProfesseur",
           key: "matriculeProfesseur",
+        },
+        {
+          title: "Droit de publication",
+          key: "droitPublication",
+          render: (_, record) => {
+            if (!isModerator) return null;
+            // A professor cannot toggle their own publication rights
+            const isSelf = currentUserId && record.id === currentUserId;
+            const hasRight = publicationRightsMap?.[record.id] ?? false;
+            if (isSelf) {
+              return (
+                <Tooltip title="Vous ne pouvez pas modifier vos propres droits de publication">
+                  <Switch
+                    size="small"
+                    checked={hasRight}
+                    checkedChildren="Oui"
+                    unCheckedChildren="Non"
+                    disabled
+                  />
+                </Tooltip>
+              );
+            }
+            return (
+              <Switch
+                size="small"
+                checked={hasRight}
+                checkedChildren="Oui"
+                unCheckedChildren="Non"
+                onChange={(checked) => onTogglePublicationRights?.(record, checked)}
+              />
+            );
+          },
         },
         {
           title: "Date de création",
@@ -337,55 +375,68 @@ const UserTables = ({
 
           {type === "access-requests" ? (
             <>
-              <Tooltip title="Approuver la demande">
-                <Button
-                  icon={<CheckOutlined />}
-                  size="small"
-                  type="primary"
-                  onClick={() => onApproveRequest(record)}
-                />
-              </Tooltip>
-              <Tooltip title="Rejeter la demande">
-                <Button
-                  icon={<CloseOutlined />}
-                  size="small"
-                  danger
-                  onClick={() => onRejectRequest(record)}
-                />
-              </Tooltip>
+              {isModerator && (
+                <>
+                  <Tooltip title="Approuver la demande">
+                    <Button
+                      icon={<CheckOutlined />}
+                      size="small"
+                      type="primary"
+                      onClick={() => onApproveRequest(record)}
+                    />
+                  </Tooltip>
+                  <Tooltip title="Rejeter la demande">
+                    <Button
+                      icon={<CloseOutlined />}
+                      size="small"
+                      danger
+                      onClick={() => onRejectRequest(record)}
+                    />
+                  </Tooltip>
+                </>
+              )}
             </>
           ) : (
             <>
-              <Popconfirm
-                title={`Retirer l'accès de cet utilisateur ?`}
-                description="Cette action retirera l'accès de l'utilisateur à cette classe."
-                onConfirm={() => onRemoveAccess(record)}
-                okText="Oui"
-                cancelText="Non"
-              >
-                <Tooltip title="Retirer l'accès à la classe">
-                  <Button icon={<UserDeleteOutlined />} size="small" danger />
-                </Tooltip>
-              </Popconfirm>
+              {isModerator && (
+                <>
+                  {/* Hide remove button for the connected user's own row */}
+                  {!(currentUserId && record.id === currentUserId) && (
+                    <Popconfirm
+                      title={`Retirer l'accès de cet utilisateur ?`}
+                      description="Cette action retirera l'accès de l'utilisateur à cette classe."
+                      onConfirm={() => onRemoveAccess(record)}
+                      okText="Oui"
+                      cancelText="Non"
+                    >
+                      <Tooltip title="Retirer l'accès à la classe">
+                        <Button icon={<UserDeleteOutlined />} size="small" danger />
+                      </Tooltip>
+                    </Popconfirm>
+                  )}
+                </>
+              )}
 
-              {/* Show delete button for all user types including utilisateurs */}
-              <Popconfirm
-                title={`Supprimer définitivement cet utilisateur ?`}
-                description="Cette action supprimera complètement l'utilisateur du système. Cette action est irréversible."
-                onConfirm={() => handleDeleteUser(record.id, type)}
-                okText="Supprimer"
-                cancelText="Annuler"
-                okType="danger"
-              >
-                <Tooltip title="Supprimer l'utilisateur du système">
-                  <Button
-                    icon={<DeleteOutlined />}
-                    size="small"
-                    danger
-                    type="primary"
-                  />
-                </Tooltip>
-              </Popconfirm>
+              {/* Show delete button only for administrators */}
+              {(userRole === "ADMIN" || userRole === "ROLE_ADMIN" || userRole === "administrateur") && (
+                <Popconfirm
+                  title={`Supprimer définitivement cet utilisateur ?`}
+                  description="Cette action supprimera complètement l'utilisateur du système. Cette action est irréversible."
+                  onConfirm={() => handleDeleteUser(record.id, type)}
+                  okText="Supprimer"
+                  cancelText="Annuler"
+                  okType="danger"
+                >
+                  <Tooltip title="Supprimer l'utilisateur du système">
+                    <Button
+                      icon={<DeleteOutlined />}
+                      size="small"
+                      danger
+                      type="primary"
+                    />
+                  </Tooltip>
+                </Popconfirm>
+              )}
             </>
           )}
         </Space>

@@ -1,6 +1,21 @@
+/* Ensure Ant Design modals appear above mobile bottom nav */
+.ant-modal-root,
+.ant-modal-wrap,
+.ant-modal-mask {
+  z-index: 10000 !important;
+}
+
+/* Safe area padding for mobile devices with gesture bars */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 .principal-container {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; /* dynamic viewport height: accounts for mobile browser toolbars */
   position: relative;
   overflow: hidden;
 }
@@ -248,7 +263,8 @@
   margin-left: 0;
   transition: all 0.3s ease;
   position: relative;
-  min-height: 100vh;
+  min-height: 0; /* let this flex child shrink so .content-body can actually scroll instead of pushing the page taller than the viewport */
+  height: 100%;
   width: 100%;
 }
 
@@ -546,9 +562,20 @@
 .content-body {
   padding: 30px;
   flex: 1;
+  min-height: 0; /* required alongside flex:1 for overflow-y:auto to actually engage */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   max-width: 100%;
   padding-top: 110px;
+}
+
+/* Full-bleed pages manage their own internal padding.
+   Negative margins cancel out the parent content-body padding at every breakpoint. */
+.full-bleed-page {
+  margin: -30px;
+  margin-top: 0;
+  /* Ensure content never touches the screen edges */
+  min-width: 0;
 }
 
 .messaging-sidebar {
@@ -570,6 +597,21 @@
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+}
+
+/* On mobile there's also a fixed bottom nav (~80-96px incl. safe-area) below
+   the fixed top header. The desktop calc() above only accounts for the top
+   header, so on mobile it left no clearance for the bottom nav, pushing the
+   panel's bottom edge under it and forcing the whole page to grow/scroll —
+   which in turn dragged the inbox header at the top out from under the fixed
+   header. Switch to natural height here so the page flows normally and each
+   screen (inbox / open thread) manages its own clearance. */
+@media (max-width: 768px) {
+  .messages-content-container {
+    height: auto;
+    min-height: calc(100vh - 80px - 80px - env(safe-area-inset-bottom, 16px));
+    overflow: visible;
+  }
 }
 
 .modal-overlay {
@@ -663,6 +705,139 @@
 
 .dark-mode .logout-button:hover {
   background-color: #5a79b3;
+}
+
+/* Session Expired Modal Styles */
+.session-expired-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.session-expired-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 0;
+  max-width: 420px;
+  width: 90%;
+  outline: none;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.session-expired-content {
+  padding: 32px;
+  text-align: center;
+}
+
+.session-expired-content.dark-mode {
+  background: #2d3748;
+  color: white;
+  border-radius: 16px;
+}
+
+.session-expired-icon {
+  margin: 0 auto 24px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.session-expired-title {
+  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.session-expired-content.dark-mode .session-expired-title {
+  color: white;
+}
+
+.session-expired-message {
+  margin: 0 0 32px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #6c757d;
+}
+
+.session-expired-content.dark-mode .session-expired-message {
+  color: #cbd5e0;
+}
+
+.session-expired-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.reconnect-button {
+  background: linear-gradient(135deg, #4a6da7, #3a5d97);
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(74, 109, 167, 0.3);
+  min-width: 160px;
+}
+
+.reconnect-button:hover {
+  background: linear-gradient(135deg, #3a5d97, #2a4d87);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(74, 109, 167, 0.4);
+}
+
+.reconnect-button:active {
+  transform: translateY(0);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .session-expired-modal {
+    margin: 20px;
+    max-width: calc(100vw - 40px);
+  }
+  
+  .session-expired-content {
+    padding: 24px;
+  }
+  
+  .session-expired-title {
+    font-size: 20px;
+  }
+  
+  .session-expired-message {
+    font-size: 14px;
+  }
+  
+  .reconnect-button {
+    padding: 12px 24px;
+    font-size: 14px;
+    min-width: 140px;
+  }
 }
 
 .notification-dropdown {
@@ -812,6 +987,11 @@
     padding: 25px;
     padding-top: 105px;
   }
+
+  .full-bleed-page {
+    margin: -25px;
+    margin-top: 0;
+  }
 }
 
 @media (max-width: 992px) {
@@ -871,6 +1051,7 @@
   .main-content {
     margin-left: 0;
     width: 100%;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 16px));
   }
 
   .content-header {
@@ -878,12 +1059,17 @@
   }
 
   .content-header h1 {
-    font-size: 1.4rem;
+    display: none;
   }
 
   .content-body {
-    padding: 20px 15px;
-    padding-top: 95px;
+    padding: 20px 12px;
+    padding-top: 90px;
+  }
+
+  .full-bleed-page {
+    margin: -20px -12px;
+    margin-top: 0;
   }
 
   .menu-toggle-btn {
@@ -933,16 +1119,17 @@
   }
 
   .content-header h1 {
-    font-size: 1.2rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 150px;
+    display: none;
   }
 
   .content-body {
     padding: 15px 12px;
-    padding-top: 90px;
+    padding-top: 85px;
+  }
+
+  .full-bleed-page {
+    margin: -15px -12px;
+    margin-top: 0;
   }
 
   .sidebar-header {
@@ -991,8 +1178,7 @@
 
 @media (max-width: 320px) {
   .content-header h1 {
-    font-size: 1.1rem;
-    max-width: 120px;
+    display: none;
   }
 
   .sidebar-header h2 {
@@ -1002,5 +1188,380 @@
   .content-body {
     padding: 12px 10px;
     padding-top: 85px;
+  }
+
+  .full-bleed-page {
+    margin: -12px -10px;
+    margin-top: 0;
+  }
+}
+
+/* ========================================
+   MOBILE BOTTOM NAVIGATION & LAYOUT
+   Only active when .mobile-layout is present
+   ======================================== */
+
+/* Mobile Layout - hide sidebar completely */
+.mobile-layout .sidebar {
+  display: none !important;
+}
+
+.mobile-layout .sidebar-overlay {
+  display: none !important;
+}
+
+/* Mobile compact header */
+.mobile-header {
+  padding: 0 12px !important;
+  min-height: 56px !important;
+  height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px;
+  left: 0 !important;
+  width: 100% !important;
+  border-bottom: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.mobile-header-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobile-header-title {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mobile-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 0.2s;
+  font-size: 18px;
+}
+
+.mobile-icon-btn:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.mobile-avatar-btn {
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.dark-mode .mobile-icon-btn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile content body adjustments */
+.mobile-layout .content-body {
+  padding: 8px 12px !important;
+  padding-top: 64px !important;
+  padding-bottom: 80px !important;
+}
+
+.mobile-layout .full-bleed-page {
+  margin: -8px -12px;
+  margin-top: 0;
+}
+
+/* ========================================
+   BOTTOM NAVIGATION BAR
+   ======================================== */
+
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  height: 64px;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.dark-mode .mobile-bottom-nav {
+  background: #1f2937;
+  border-top-color: #374151;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  padding: 6px 2px;
+  color: #9ca3af;
+  transition: color 0.2s;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.92);
+}
+
+.mobile-nav-item.active {
+  color: var(--nav-primary, #3b82f6);
+}
+
+.mobile-nav-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 28px;
+}
+
+.mobile-nav-indicator {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+}
+
+.mobile-nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 64px;
+}
+
+.dark-mode .mobile-nav-item {
+  color: #6b7280;
+}
+
+.dark-mode .mobile-nav-item.active {
+  color: var(--nav-primary, #3b82f6);
+}
+
+/* ========================================
+   BOTTOM SHEET (More Menu)
+   ======================================== */
+
+.mobile-sheet-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1099;
+  animation: fadeIn 0.2s ease;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.mobile-bottom-sheet {
+  position: fixed;
+  bottom: 64px;
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  background: white;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.15);
+  max-height: 65vh;
+  overflow-y: auto;
+  animation: sheetSlideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobile-bottom-sheet.dark {
+  background: #1f2937;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes sheetSlideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mobile-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 4px;
+  margin: 10px auto 6px;
+}
+
+.mobile-bottom-sheet.dark .mobile-sheet-handle {
+  background: #4b5563;
+}
+
+.mobile-sheet-content {
+  padding: 8px 16px 16px;
+}
+
+.mobile-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.mobile-sheet-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: 12px;
+  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-sheet-item:active {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.mobile-bottom-sheet.dark .mobile-sheet-item:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mobile-sheet-item.active {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.mobile-sheet-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.mobile-sheet-item:active .mobile-sheet-icon {
+  transform: scale(0.9);
+}
+
+.mobile-sheet-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #374151;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-bottom-sheet.dark .mobile-sheet-label {
+  color: #d1d5db;
+}
+
+.mobile-sheet-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  border: none;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.2s;
+}
+
+.mobile-sheet-logout:active {
+  background: #fee2e2;
+}
+
+.mobile-bottom-sheet.dark .mobile-sheet-logout {
+  background: rgba(220, 38, 38, 0.15);
+  color: #f87171;
+}
+
+/* ========================================
+   MOBILE-SPECIFIC CONTENT OVERRIDES
+   ======================================== */
+
+/* Hide the internal header sections on mobile (DashboardContent etc have their own) */
+.mobile-layout .messages-content-container {
+  height: calc(100vh - 64px - 64px);
+}
+
+/* Ensure modals work well on mobile layout */
+.mobile-layout .modal-overlay-custom {
+  padding: 12px;
+}
+
+.mobile-layout .modal-custom {
+  max-width: 100%;
+  margin: 0;
+  border-radius: 16px;
+}
+
+/* Mobile stat cards - compact */
+@media (max-width: 768px) {
+  .mobile-layout .grid {
+    gap: 8px !important;
   }
 }

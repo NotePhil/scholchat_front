@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8486/scholchat";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 class ForgotPasswordService {
   // Request password reset (sends email with token)
@@ -25,7 +25,7 @@ class ForgotPasswordService {
   // Reset password with token
   async resetPassword({ token, password, confirmPassword }) {
     try {
-      const response = await axios.post(
+      await axios.post(
         `${API_BASE_URL}/auth/reset-password`,
         {
           token,
@@ -51,4 +51,6 @@ class ForgotPasswordService {
   }
 }
 
-export default new ForgotPasswordService();
+const forgotPasswordService = new ForgotPasswordService();
+
+export default forgotPasswordService;

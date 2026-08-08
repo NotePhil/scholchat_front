@@ -22,14 +22,153 @@ import {
   Edit3,
   AlertTriangle,
   Clock,
+  RefreshCw,
+  FileText,
 } from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
-import { classService } from "../../../../../services/ClassService";
+import { minioS3Service } from "../../../../../services/minioS3";
 import ProfessorModal from "../../modals/ProfessorModal";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import UserViewModal from "../../modals/UserViewModal";
+import DocumentViewer from "../../../../../components/viewers/DocumentViewer";
+import { getDarkModeClasses } from "../../../../../utils/darkModeUtils";
+import { useTranslation } from "../../../../../hooks/useTranslation";
+import { useSelector } from "react-redux";
 
-const ProfessorsContent = () => {
+// Extracts relative storage key from full Wasabi/MinIO URL — never use raw URLs directly
+const toRelativePath = (raw) => {
+  if (!raw || !raw.startsWith("http")) return raw;
+  try {
+    const pathname = new URL(raw).pathname.replace(/^\//, "");
+    const idx = pathname.indexOf("users/");
+    if (idx >= 0) return pathname.slice(idx);
+    const parts = pathname.split("/");
+    return parts.length > 1 ? parts.slice(1).join("/") : pathname;
+  } catch { return raw; }
+};
+
+// Resolves a MinIO path or raw URL into a presigned URL, with unmount safety
+const ProfileAvatar = ({ path, initials, size = "w-12 h-12", textSize = "text-base" }) => {
+  const [photoUrl, setPhotoUrl] = React.useState(null);
+  React.useEffect(() => {
+    if (!path) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const url = await minioS3Service.getMediaUrlByPath(toRelativePath(path));
+        if (!cancelled && url) setPhotoUrl(url);
+      } catch { /* ignore */ }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [path]);
+
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={initials}
+        className={`${size} rounded-2xl object-cover flex-shrink-0`}
+        style={{ border: "2px solid rgba(255,255,255,0.35)" }}
+        onError={() => setPhotoUrl(null)}
+      />
+    );
+  }
+  return (
+    <div className={`${size} rounded-2xl flex items-center justify-center text-white font-black ${textSize} flex-shrink-0`}
+      style={{ background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.35)" }}>
+      {initials}
+    </div>
+  );
+};
+
+// Resolves a MinIO path for a document and renders a clickable card
+const DocumentCard = ({ path, label, icon, onView }) => {
+  const [resolvedUrl, setResolvedUrl] = React.useState(null);
+  const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(path);
+  const isPdf = /\.pdf(\?|$)/i.test(path);
+
+  React.useEffect(() => {
+    if (!path) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const url = await minioS3Service.getMediaUrlByPath(toRelativePath(path));
+        if (!cancelled && url) setResolvedUrl(url);
+      } catch { /* ignore */ }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [path]);
+
+  const contentType = isImage ? "image" : isPdf ? "application/pdf" : "";
+
+  return (
+    <div className="group flex flex-col rounded-xl border border-slate-100 overflow-hidden hover:border-indigo-300 hover:shadow-md transition-all">
+      <button
+        onClick={() => resolvedUrl && onView({ url: resolvedUrl, fileName: label, contentType })}
+        className="relative bg-slate-50 flex items-center justify-center w-full focus:outline-none"
+        style={{ height: 120 }}
+        title={`Voir ${label}`}
+      >
+        {isImage && resolvedUrl ? (
+          <img
+            src={resolvedUrl}
+            alt={label}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            {isPdf ? (
+              <>
+                <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
+                  <span className="text-red-600 font-black text-sm">PDF</span>
+                </div>
+                <span className="text-xs text-slate-400 font-medium">Document PDF</span>
+              </>
+            ) : resolvedUrl === null && path ? (
+              <div className="w-6 h-6 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-2xl">
+                  {icon}
+                </div>
+                <span className="text-xs text-slate-400 font-medium">Cliquer pour voir</span>
+              </>
+            )}
+          </div>
+        )}
+        <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/10 transition-colors flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2 shadow-lg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-600"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+        </div>
+      </button>
+      <div className="px-3 py-2 flex items-center justify-between bg-white">
+        <span className="text-xs font-semibold text-slate-700">{label}</span>
+        {resolvedUrl && (
+          <a
+            href={resolvedUrl}
+            download={label}
+            onClick={(e) => e.stopPropagation()}
+            className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
+            title="Télécharger"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-slate-500">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+          </a>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
+  const { t } = useTranslation();
+  const language = useSelector((state) => state.language?.currentLanguage || 'fr');
+  const isMobile = useSelector((state) => state.ui.isMobile);
   const [professors, setProfessors] = useState([]);
   const [classes, setClasses] = useState([]);
   const [filteredProfessors, setFilteredProfessors] = useState([]);
@@ -51,7 +190,6 @@ const ProfessorsContent = () => {
     if (role) {
       setUserRole(role.toUpperCase());
     }
-
     loadData();
   }, []);
 
@@ -62,12 +200,30 @@ const ProfessorsContent = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [professorsData, classesData] = await Promise.all([
-        scholchatService.getAllProfessors(),
-        classService.obtenirToutesLesClasses(),
-      ]);
-      setProfessors(professorsData || []);
-      setClasses(classesData || []);
+      const rawRole = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
+      const currentUserId = localStorage.getItem("userId");
+
+      let allProfessors;
+      if (rawRole === "ADMIN" || rawRole === "ADMINISTRATEUR" || rawRole === "GESTIONNAIRE") {
+        // Admin/gestionnaire: see all professors
+        allProfessors = await scholchatService.getAllProfessors();
+      } else if (rawRole === "PROFESSOR" || rawRole === "PROFESSEUR") {
+        // Professor: see only collaborators (professors with pub rights on their classes), excluding self
+        try {
+          const response = await fetch(
+            `${process.env.REACT_APP_API_BASE_URL}/professeurs/moderateur/${currentUserId}/collaborateurs`,
+            { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
+          );
+          allProfessors = response.ok ? await response.json() : [];
+        } catch { allProfessors = []; }
+      } else {
+        allProfessors = [];
+      }
+
+      // Always exclude self
+      const filtered = (Array.isArray(allProfessors) ? allProfessors : [])
+        .filter(p => p.id !== currentUserId);
+      setProfessors(filtered);
     } catch (err) {
       setError("Erreur lors du chargement des données: " + err.message);
     } finally {
@@ -174,14 +330,89 @@ const ProfessorsContent = () => {
     }
   };
 
+  const [viewingProfessor, setViewingProfessor] = useState(null);
+  const [viewerConfig, setViewerConfig] = useState({ isOpen: false, url: "", fileName: "", contentType: "" });
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [motifs, setMotifs] = useState([]);
+  const [selectedMotifCode, setSelectedMotifCode] = useState("");
+  const [motifSupplementaire, setMotifSupplementaire] = useState("");
+  const [motifsLoading, setMotifsLoading] = useState(false);
+
   const handleViewUser = (professor) => {
-    setCurrentUser(professor);
-    setIsViewModalOpen(true);
+    setViewingProfessor(professor);
+    setActionError("");
+    setActionSuccess("");
   };
 
   const handleSuccess = () => {
     setIsViewModalOpen(false);
     loadData();
+  };
+
+  const handleResendActivationEmail = async (prof) => {
+    try {
+      setActionLoading(true);
+      setActionError("");
+      await scholchatService.resendActivationEmail(prof.email);
+      setActionSuccess("Email d'activation renvoyé avec succès.");
+    } catch (err) {
+      setActionError("Erreur lors du renvoi de l'email : " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleValidateProfessor = async (prof) => {
+    try {
+      setActionLoading(true);
+      setActionError("");
+      await scholchatService.validateProfessor(prof.id);
+      setActionSuccess("Professeur validé avec succès.");
+      // Refresh the professor data
+      const updated = await scholchatService.getProfessorById(prof.id);
+      setViewingProfessor(updated);
+      await loadData();
+    } catch (err) {
+      setActionError("Erreur lors de la validation : " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openRejectModal = async () => {
+    setShowRejectModal(true);
+    setSelectedMotifCode("");
+    setMotifSupplementaire("");
+    setMotifsLoading(true);
+    try {
+      const data = await scholchatService.getAllMotifs();
+      setMotifs(Array.isArray(data) ? data : []);
+    } catch {
+      setMotifs([]);
+    } finally {
+      setMotifsLoading(false);
+    }
+  };
+
+  const handleRejectProfessor = async () => {
+    if (!selectedMotifCode) return;
+    try {
+      setActionLoading(true);
+      setActionError("");
+      await scholchatService.rejectProfessor(viewingProfessor.id, selectedMotifCode, motifSupplementaire || undefined);
+      setShowRejectModal(false);
+      setActionSuccess("Professeur rejeté.");
+      const updated = await scholchatService.getProfessorById(viewingProfessor.id);
+      setViewingProfessor(updated);
+      await loadData();
+    } catch (err) {
+      setActionError("Erreur lors du rejet : " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const getInitials = (firstName, lastName) => {
@@ -190,11 +421,417 @@ const ProfessorsContent = () => {
     }`.toUpperCase();
   };
 
-  const isAdmin = userRole === "ADMIN";
+  const isAdmin = userRole === "ADMIN" || userRole === "ROLE_ADMIN";
+  const darkClasses = getDarkModeClasses(isDark);
+
+  // ── Professor detail view ──────────────────────────────────────────────────
+  if (viewingProfessor) {
+    const prof = viewingProfessor;
+    const statusCfg = {
+      ACTIVE:              { label: "Actif",       bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+      INACTIVE:            { label: "Inactif",     bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+      AWAITING_VALIDATION: { label: "En attente",  bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+      PENDING:             { label: "En cours",    bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
+      SUSPECT:             { label: "Suspect",     bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" },
+      SIGNALE:             { label: "Signalé",     bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+      REJECTED:            { label: "Rejeté",      bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+    };
+    const sc = statusCfg[prof.etat] || { label: prof.etat, bg: "#f3f4f6", color: "#6b7280", border: "#e5e7eb" };
+
+    return (
+      <>
+      <div className="full-bleed-page">
+        <div className="w-full">
+          {/* Hero banner */}
+          <div className="relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)" }}>
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 pointer-events-none" style={{ background: "#fff" }} />
+            <div className="relative px-3 sm:px-6 py-3 sm:py-4">
+              {/* Row 1: back button */}
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  onClick={() => setViewingProfessor(null)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-semibold transition-all hover:bg-white/20"
+                  style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                  Retour
+                </button>
+              </div>
+              {/* Row 2: identity */}
+              <div className="flex items-start gap-3 mb-3">
+                <ProfileAvatar
+                  path={prof.selfieUrl}
+                  initials={getInitials(prof.prenom, prof.nom)}
+                  size="w-12 h-12 sm:w-14 sm:h-14"
+                  textSize="text-base sm:text-lg"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h1 className="text-white font-bold text-base sm:text-xl leading-tight m-0">
+                      {prof.prenom} {prof.nom}
+                    </h1>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+                      style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
+                      {sc.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {prof.email && <span className="text-blue-100 text-xs">{prof.email}</span>}
+                    {prof.matriculeProfesseur && (
+                      <span className="text-blue-100 text-xs">#{prof.matriculeProfesseur}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Row 3: admin action buttons — centered, only for AWAITING_VALIDATION */}
+              {isAdmin && (prof.etat === "AWAITING_VALIDATION" || prof.etat === "PENDING") && (
+                <div className="flex items-center justify-center gap-3 pt-1 pb-1 flex-wrap">
+                  {prof.etat === "AWAITING_VALIDATION" && (
+                    <>
+                      <button
+                        onClick={() => handleValidateProfessor(prof)}
+                        disabled={actionLoading}
+                        className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
+                        style={{ background: "#16a34a", color: "#fff", border: "2px solid #15803d" }}
+                      >
+                        {actionLoading ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <UserCheck size={15} />
+                        )}
+                        Valider le professeur
+                      </button>
+                      <button
+                        onClick={openRejectModal}
+                        disabled={actionLoading}
+                        className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
+                        style={{ background: "#dc2626", color: "#fff", border: "2px solid #b91c1c" }}
+                      >
+                        <UserX size={15} />
+                        Rejeter le professeur
+                      </button>
+                    </>
+                  )}
+                  {prof.etat === "PENDING" && (
+                    <button
+                      onClick={() => handleResendActivationEmail(prof)}
+                      disabled={actionLoading}
+                      className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 shadow-lg hover:shadow-xl hover:scale-105"
+                      style={{ background: "#2563eb", color: "#fff", border: "2px solid #1d4ed8" }}
+                    >
+                      {actionLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Mail size={15} />
+                      )}
+                      Renvoyer l'email d'activation
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="px-3 sm:px-6 py-4 sm:py-6">
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+
+              {/* Left: personal info */}
+              <div className="lg:w-72 xl:w-80 flex-shrink-0 space-y-4">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2" style={{ background: "#f8faff" }}>
+                    <GraduationCap size={13} className="text-indigo-600" />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Informations</span>
+                  </div>
+                  <div className="px-4 py-3 space-y-3">
+                    {[
+                      { icon: <Mail size={13} />, label: "Email", value: prof.email },
+                      { icon: <Phone size={13} />, label: "Téléphone", value: prof.telephone },
+                      { icon: <MapPin size={13} />, label: "Adresse", value: prof.adresse },
+                      { icon: <Hash size={13} />, label: "Matricule", value: prof.matriculeProfesseur },
+                      { icon: <Calendar size={13} />, label: "Créé le", value: prof.creationDate ? new Date(prof.creationDate).toLocaleDateString("fr-FR") : null },
+                    ].filter(r => r.value).map((row, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-slate-400 mt-0.5 flex-shrink-0">{row.icon}</span>
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-400 font-medium">{row.label}</p>
+                          <p className="text-sm text-slate-800 break-words">{row.value}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {prof.hasUploaded && (
+                      <div className="pt-2 border-t border-slate-100">
+                        <p className="text-xs text-slate-400 font-medium mb-1.5">Documents uploadés</p>
+                        <div className="flex items-center gap-1.5">
+                          {prof.cniUrlRecto && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-100">
+                              <FileText size={10} /> CNI ✓
+                            </span>
+                          )}
+                          {prof.selfieUrl && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-600 border border-green-100">
+                              <Eye size={10} /> Selfie ✓
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Établissements */}
+                {prof.etablissementsGeres?.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2" style={{ background: "#f8faff" }}>
+                      <Shield size={13} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Établissements</span>
+                    </div>
+                    <div className="px-4 py-3 space-y-2">
+                      {prof.etablissementsGeres.map((etab, i) => (
+                        <div key={i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <p className="text-sm font-semibold text-slate-800">{etab.nom}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{etab.localisation}, {etab.pays}</p>
+                          {etab.codeUnique && <p className="text-xs text-indigo-600 mt-0.5 font-mono">{etab.codeUnique}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: moderated classes */}
+              <div className="flex-1 min-w-0">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between" style={{ background: "#f8faff" }}>
+                    <div className="flex items-center gap-2">
+                      <Users size={13} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Classes Modérées</span>
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold"
+                        style={{ background: "#e0e7ff", color: "#4f46e5" }}>
+                        {prof.moderatedClasses?.length || 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  {!prof.moderatedClasses?.length ? (
+                    <div className="px-4 py-10 text-center">
+                      <Users size={32} className="text-slate-200 mx-auto mb-3" />
+                      <p className="text-slate-400 text-sm">Aucune classe modérée</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-50">
+                      {prof.moderatedClasses.map((cls, i) => (
+                        <div key={cls.id || i} className="px-4 py-3.5 hover:bg-slate-50/60 transition-colors">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <p className="text-sm font-semibold text-slate-800">{cls.nom}</p>
+                                {cls.niveau && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-medium"
+                                    style={{ background: "#e0f7fa", color: "#00838f", border: "1px solid #b2ebf2" }}>
+                                    {cls.niveau}
+                                  </span>
+                                )}
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  cls.etat === "ACTIF" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                }`}>
+                                  {cls.etat}
+                                </span>
+                              </div>
+                              {cls.etablissement && (
+                                <p className="text-xs text-slate-500">
+                                  {cls.etablissement.nom} — {cls.etablissement.localisation}
+                                </p>
+                              )}
+                              {cls.codeActivation && (
+                                <p className="text-xs text-slate-400 mt-0.5 font-mono">Code: {cls.codeActivation}</p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              {cls.accesMajeur && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">Accès majeur</span>
+                              )}
+                              {cls.paymentRequired && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Payant</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Documents card — below Classes Modérées */}
+                {prof.hasUploaded && (prof.cniUrlRecto || prof.cniUrlVerso || prof.selfieUrl) && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-4 sm:mt-6">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2" style={{ background: "#f8faff" }}>
+                      <FileText size={13} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Documents d'identité</span>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {[
+                          { url: prof.cniUrlRecto, label: "CNI Recto", icon: "🪪" },
+                          { url: prof.cniUrlVerso, label: "CNI Verso", icon: "🪪" },
+                          { url: prof.selfieUrl,   label: "Selfie",    icon: "🤳" },
+                        ].filter(d => d.url).map((doc, i) => (
+                          <DocumentCard
+                            key={i}
+                            path={doc.url}
+                            label={doc.label}
+                            icon={doc.icon}
+                            onView={({ url, fileName, contentType }) =>
+                              setViewerConfig({ isOpen: true, url, fileName, contentType })
+                            }
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <DocumentViewer
+        isOpen={viewerConfig.isOpen}
+        url={viewerConfig.url}
+        fileName={viewerConfig.fileName}
+        contentType={viewerConfig.contentType}
+        onClose={() => setViewerConfig({ isOpen: false, url: "", fileName: "", contentType: "" })}
+      />
+
+      {/* Action feedback banners */}
+      {(actionSuccess || actionError) && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm">
+          {actionSuccess && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium"
+              style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
+              <UserCheck size={16} />
+              {actionSuccess}
+              <button onClick={() => setActionSuccess("")} className="ml-auto text-green-400 hover:text-green-600">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+          {actionError && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium"
+              style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+              <AlertTriangle size={16} />
+              {actionError}
+              <button onClick={() => setActionError("")} className="ml-auto text-red-400 hover:text-red-600">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Rejection modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between"
+              style={{ background: "linear-gradient(135deg, #fef2f2 0%, #fff 100%)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">
+                  <UserX size={16} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Rejeter le professeur</h3>
+                  <p className="text-xs text-slate-500">{prof.prenom} {prof.nom}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowRejectModal(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Motif de rejet <span className="text-red-500">*</span>
+                </label>
+                {motifsLoading ? (
+                  <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
+                    <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                    Chargement des motifs...
+                  </div>
+                ) : motifs.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">Aucun motif disponible.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {motifs.map((m) => (
+                      <label key={m.id}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          selectedMotifCode === m.code
+                            ? "border-red-400 bg-red-50"
+                            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                        }`}>
+                        <input
+                          type="radio"
+                          name="motif"
+                          value={m.code}
+                          checked={selectedMotifCode === m.code}
+                          onChange={() => setSelectedMotifCode(m.code)}
+                          className="mt-0.5 accent-red-600 flex-shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-700">{m.code}</p>
+                          {m.descriptif && <p className="text-xs text-slate-500 mt-0.5">{m.descriptif}</p>}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Motif supplémentaire <span className="text-slate-400 font-normal">(optionnel)</span>
+                </label>
+                <textarea
+                  value={motifSupplementaire}
+                  onChange={(e) => setMotifSupplementaire(e.target.value)}
+                  placeholder="Précisez si nécessaire..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none transition-all"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50/50">
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+                Annuler
+              </button>
+              <button
+                onClick={handleRejectProfessor}
+                disabled={!selectedMotifCode || actionLoading}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "#dc2626" }}>
+                {actionLoading ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <UserX size={14} />
+                )}
+                Confirmer le rejet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+    );
+  }
+
+  // ── Main list ──────────────────────────────────────────────────────────────
 
   if (loading && professors.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
             <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
@@ -203,7 +840,7 @@ const ProfessorsContent = () => {
               style={{ clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)" }}
             ></div>
           </div>
-          <p className="text-slate-600 font-medium text-sm sm:text-base">
+          <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} font-medium text-sm sm:text-base`}>
             Chargement des données...
           </p>
         </div>
@@ -212,19 +849,19 @@ const ProfessorsContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+    <div className="full-bleed-page">
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-6">
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
             <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg sm:rounded-xl shadow-lg">
               <GraduationCap className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                Gestion des Professeurs
+              <h1 className={`text-xl sm:text-3xl font-bold ${isDark ? 'text-white' : 'bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent'}`}>
+                {t('professors.title')}
               </h1>
-              <p className="text-slate-600 mt-1 text-xs sm:text-sm">
-                Gérez efficacement vos professeurs
+              <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} mt-1 text-xs sm:text-sm`}>
+                {t('professors.subtitle')}
               </p>
             </div>
           </div>
@@ -232,7 +869,7 @@ const ProfessorsContent = () => {
 
         {error && (
           <div className="mb-4 sm:mb-6 relative">
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 sm:p-4 shadow-sm">
+            <div className={`${isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'} rounded-xl p-3 sm:p-4 shadow-sm`}>
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   <div className="w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center">
@@ -240,8 +877,8 @@ const ProfessorsContent = () => {
                   </div>
                 </div>
                 <div className="ml-3 flex-1">
-                  <p className="text-red-800 font-medium text-sm">Erreur</p>
-                  <p className="text-red-700 text-xs sm:text-sm mt-1">
+                  <p className={`${isDark ? 'text-red-400' : 'text-red-800'} font-medium text-sm`}>Erreur</p>
+                  <p className={`${isDark ? 'text-red-300' : 'text-red-700'} text-xs sm:text-sm mt-1`}>
                     {error}
                   </p>
                 </div>
@@ -256,14 +893,19 @@ const ProfessorsContent = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+        <div className="hidden md:grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <div 
+            onClick={() => setFilterStatus("all")}
+            className={`${isDark ? 'bg-gray-800/70 border-gray-700/50' : 'bg-white/70 border-white/50'} backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'all' ? 'ring-2 ring-blue-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-600 text-xs sm:text-sm font-medium">
+                <p className={`${isDark ? 'text-gray-300' : 'text-slate-600'} text-xs sm:text-sm font-medium`}>
                   Total
                 </p>
-                <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1">
+                <p className={`text-lg sm:text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'} mt-1`}>
                   {professors.length}
                 </p>
               </div>
@@ -273,13 +915,18 @@ const ProfessorsContent = () => {
             </div>
             <div className="mt-2 sm:mt-4 flex items-center">
               <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2" />
-              <span className="text-slate-500 text-xs sm:text-sm">
+              <span className={`${isDark ? 'text-gray-400' : 'text-slate-500'} text-xs sm:text-sm`}>
                 Professeurs
               </span>
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("ACTIVE")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'ACTIVE' ? 'ring-2 ring-emerald-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -299,7 +946,12 @@ const ProfessorsContent = () => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("AWAITING_VALIDATION")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'AWAITING_VALIDATION' ? 'ring-2 ring-amber-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -324,7 +976,12 @@ const ProfessorsContent = () => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div 
+            onClick={() => setFilterStatus("INACTIVE")}
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              filterStatus === 'INACTIVE' ? 'ring-2 ring-red-500' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -351,24 +1008,24 @@ const ProfessorsContent = () => {
           </div>
         </div>
 
-        <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg mb-6 sm:mb-8">
-          <div className="flex flex-col space-y-3 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between lg:space-x-6">
-            <div className="relative flex-1 max-w-full lg:max-w-md">
+        <div className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl ${isMobile ? 'p-2' : 'p-3 sm:p-6'} shadow-lg mb-6 sm:mb-8`}>
+          <div className={`flex flex-col ${isMobile ? 'gap-2' : 'space-y-3 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between lg:space-x-6'}`}>
+            <div className={`relative flex-1 ${isMobile ? 'max-w-full' : 'max-w-full lg:max-w-md'}`}>
               <Search
                 className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                size={16}
+                size={isMobile ? 14 : 16}
               />
               <input
                 type="text"
                 placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                className={`w-full ${isMobile ? 'pl-8 pr-2 py-1.5 text-xs' : 'pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base'} bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm`}
               />
             </div>
 
-            <div className="flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4">
-              <div className="relative flex-1 min-[480px]:flex-none min-w-0">
+            <div className={`flex ${isMobile ? 'flex-col gap-2' : 'flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4'}`}>
+              <div className={`relative ${isMobile ? 'w-full' : 'flex-1 min-[480px]:flex-none min-w-0'}`}>
                 <Filter
                   className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
                   size={14}
@@ -376,7 +1033,7 @@ const ProfessorsContent = () => {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full pl-8 sm:pl-12 pr-6 sm:pr-8 py-2 sm:py-3 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer"
+                  className={`w-full ${isMobile ? 'pl-8 pr-5 py-1.5 text-xs' : 'pl-8 sm:pl-12 pr-6 sm:pr-8 py-2 sm:py-3 text-xs sm:text-sm'} bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm appearance-none cursor-pointer`}
                 >
                   <option value="all">Tous</option>
                   <option value="ACTIVE">Actifs</option>
@@ -393,34 +1050,59 @@ const ProfessorsContent = () => {
                 />
               </div>
 
-              <div className="flex bg-slate-100 rounded-lg sm:rounded-xl p-1 self-center min-[480px]:self-auto">
+              <div className={`flex items-center ${isMobile ? 'justify-between gap-1' : 'gap-2 sm:gap-3'}`}>
                 <button
-                  onClick={() => setViewMode("grid")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "grid"
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
+                  onClick={loadData}
+                  disabled={loading}
+                  className={`${isMobile ? 'p-1.5' : 'p-2 sm:p-2.5'} text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title="Actualiser"
                 >
-                  Grille
+                  <RefreshCw size={isMobile ? 12 : 14} className={`sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
-                <button
-                  onClick={() => setViewMode("table")}
-                  className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                    viewMode === "table"
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Table
-                </button>
+
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setModalMode("create");
+                      setSelectedProfessor(null);
+                      setShowModal(true);
+                    }}
+                    className={`${isMobile ? 'px-2 py-1.5' : 'px-3 sm:px-4 py-2 sm:py-3'} bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1 sm:gap-2`}
+                  >
+                    <Users size={isMobile ? 12 : 14} className="sm:w-4 sm:h-4" />
+                    {!isMobile && 'Ajouter'}
+                  </button>
+                )}
+
+                <div className="flex bg-slate-100 rounded-lg sm:rounded-xl p-1">
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={`${isMobile ? 'px-2 py-0.5 text-[10px]' : 'px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm'} rounded-md sm:rounded-lg font-medium transition-all duration-200 ${
+                      viewMode === "grid"
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Grille
+                  </button>
+                  <button
+                    onClick={() => setViewMode("table")}
+                    className={`${isMobile ? 'px-2 py-0.5 text-[10px]' : 'px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm'} rounded-md sm:rounded-lg font-medium transition-all duration-200 ${
+                      viewMode === "table"
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Table
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+          <div className={`grid ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6'}`}>
             {filteredProfessors.map((professor) => (
               <div
                 key={professor.id}
@@ -555,6 +1237,15 @@ const ProfessorsContent = () => {
 
                     {isAdmin && (
                       <>
+                        {professor.etat === "PENDING" && (
+                          <button
+                            onClick={() => handleResendActivationEmail(professor)}
+                            className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                            title="Renvoyer l'email d'activation"
+                          >
+                            <Mail size={12} className="sm:w-4 sm:h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setModalMode("edit");
@@ -589,25 +1280,25 @@ const ProfessorsContent = () => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50/50">
                   <tr>
-                    <th className="px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Professeur
                     </th>
-                    <th className="px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Contact
                     </th>
-                    <th className="hidden md:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`hidden md:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Matricule
                     </th>
-                    <th className="hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Classes
                     </th>
-                    <th className="px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Statut
                     </th>
-                    <th className="hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Droits
                     </th>
-                    <th className="px-3 sm:px-6 py-2 sm:py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className={`px-3 sm:px-6 py-2 sm:py-4 text-right text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'} uppercase tracking-wider`}>
                       Actions
                     </th>
                   </tr>
@@ -770,6 +1461,15 @@ const ProfessorsContent = () => {
 
                           {isAdmin && (
                             <>
+                              {professor.etat === "PENDING" && (
+                                <button
+                                  onClick={() => handleResendActivationEmail(professor)}
+                                  className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                                  title="Renvoyer l'email d'activation"
+                                >
+                                  <Mail size={12} className="sm:w-4 sm:h-4" />
+                                </button>
+                              )}
                               <button
                                 onClick={() => {
                                   setModalMode("edit");
@@ -868,7 +1568,7 @@ const ProfessorsContent = () => {
         </>
       )}
 
-      {isViewModalOpen && (
+      {isViewModalOpen && currentUser && (
         <UserViewModal
           user={currentUser}
           onClose={() => setIsViewModalOpen(false)}

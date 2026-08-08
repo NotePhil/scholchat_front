@@ -1,6 +1,7 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // ============================================
 // NIVEAU MAPPING
@@ -40,32 +41,7 @@ const createApiInstance = () => {
     },
   });
 
-  instance.interceptors.request.use(
-    (config) => {
-      const token =
-        localStorage.getItem("accessToken") ||
-        localStorage.getItem("authToken") ||
-        sessionStorage.getItem("accessToken") ||
-        sessionStorage.getItem("authToken");
-
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
-
-  instance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        console.error("Authentication error - Token may be expired");
-      }
-      return Promise.reject(error);
-    }
-  );
-
+  applyAuthInterceptors(instance);
   return instance;
 };
 
@@ -428,6 +404,18 @@ class ExerciseProgrammerService {
     }
   }
 
+  async getExercisesProgrammesParExercise(exerciseId) {
+    try {
+      if (!exerciseId) throw new Error("L'ID de l'exercice est requis");
+      const response = await this.api.get(
+        `/exercises-programmer/exercise/${exerciseId}`
+      );
+      return response.data;
+    } catch (error) {
+      handleError(error, "getExercisesProgrammesParExercise");
+    }
+  }
+
   async mettreAJourEtatExerciseProgramme(exerciseProgrammerId, nouvelEtat) {
     try {
       if (!exerciseProgrammerId || !nouvelEtat) {
@@ -502,16 +490,10 @@ class QuestionReponseService {
         throw new Error("L'intitulé et le type de question sont requis");
       }
 
-      const formattedData = {
-        intitule: questionData.intitule,
-        reponse: questionData.reponse || "",
-        typeQuestion: questionData.typeQuestion,
-      };
-
-      console.log("Creating question:", JSON.stringify(formattedData, null, 2));
+      console.log("Creating question:", JSON.stringify(questionData, null, 2));
       const response = await this.api.post(
         `/questions/exercise/${exerciseId}`,
-        formattedData
+        questionData
       );
       return response.data;
     } catch (error) {
@@ -740,6 +722,7 @@ class ParticipationExerciseService {
         dateFin: participationData.dateFin,
         note: participationData.note,
         appreciation: participationData.appreciation,
+        etatSoumission: participationData.etatSoumission,
       };
 
       console.log(
@@ -840,7 +823,7 @@ export const utils = {
   mapNiveauToEnum,
 };
 
-export default {
+const exerciseServiceExport = {
   exercise: exerciseService,
   exerciseProgrammer: exerciseProgrammerService,
   questionReponse: questionReponseService,
@@ -848,3 +831,5 @@ export default {
   participationExercise: participationExerciseService,
   utils,
 };
+
+export default exerciseServiceExport;
