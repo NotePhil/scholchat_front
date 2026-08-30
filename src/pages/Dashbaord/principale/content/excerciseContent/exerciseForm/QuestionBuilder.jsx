@@ -1,13 +1,16 @@
-import React from "react";
-import { Input, InputNumber, Select, Button, Typography } from "antd";
+import React, { useState } from "react";
+import { Input, InputNumber, Select, Button, Typography, message } from "antd";
 import {
   PlusOutlined, DeleteOutlined,
   ArrowUpOutlined, ArrowDownOutlined, SaveOutlined,
+  PaperClipOutlined, FilePdfOutlined, LoadingOutlined,
 } from "@ant-design/icons";
 import {
   QUESTION_TYPES, TYPES_WITH_CHOICES, TYPES_OPEN,
   getDefaultChoix, emptyQuestion, validateQuestion, buildQuestionPayload,
+  QUESTION_MEDIA_ACCEPT, isAllowedQuestionMediaFile,
 } from "./constants";
+import { minioS3Service } from "../../../../../../services/minioS3";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -144,6 +147,106 @@ const AnswerBuilder = ({ question, onChange }) => {
   return null;
 };
 
+// ── Media attachments (image / PDF) ───────────────────────────────────────────
+// Uploads straight to S3 via the presigned-URL flow (same path as event media),
+// then stores the resulting {fileName, filePath, contentType, fileSize, mediaType,
+// bucketName} object directly — the backend embeds a presigned download URL in
+// every question response, so no extra round trip is needed to display it.
+// Same dropzone + thumbnail-grid pattern as the event creation form, so pickers
+// look and behave consistently across the app; supports adding several files.
+const QuestionMediaAttachments = ({ medias, onChange }) => {
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef(null);
+  const list = medias || [];
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ""; // allow re-selecting the same file(s)
+    if (files.length === 0) return;
+
+    const valid = files.filter(isAllowedQuestionMediaFile);
+    if (valid.length < files.length) {
+      message.warning("Seules les images et les fichiers PDF sont acceptés");
+    }
+    if (valid.length === 0) return;
+
+    setUploading(true);
+    try {
+      for (const file of valid) {
+        const isImage = file.type.startsWith("image/");
+        try {
+          const result = await minioS3Service.uploadFile(file, isImage ? "IMAGE" : "DOCUMENT", "question_attachments");
+          onChange([...list, { ...result, previewUrl: isImage ? URL.createObjectURL(file) : null }]);
+        } catch (err) {
+          message.error(`${file.name}: ${err.message || "échec de l'envoi"}`);
+        }
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeMedia = (index) => onChange(list.filter((_, i) => i !== index));
+
+  return (
+    <div>
+      <label className="text-xs font-medium text-gray-600 block mb-1">Pièces jointes (images ou PDF)</label>
+
+      <div
+        onClick={() => !uploading && fileInputRef.current?.click()}
+        className={`rounded-xl border-2 border-dashed p-4 text-center transition-all ${
+          uploading ? "border-gray-200 cursor-wait" : "border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/40 cursor-pointer"
+        }`}
+      >
+        <div className="flex flex-col items-center gap-1.5">
+          {uploading ? (
+            <LoadingOutlined style={{ fontSize: 20 }} className="text-indigo-500" />
+          ) : (
+            <PaperClipOutlined style={{ fontSize: 20 }} className="text-indigo-500" />
+          )}
+          <span className="text-xs font-medium text-gray-600">
+            {uploading ? "Envoi en cours…" : "Cliquez pour joindre une image ou un PDF"}
+          </span>
+          <span className="text-[10px] text-gray-400">Vous pouvez ajouter plusieurs fichiers</span>
+        </div>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={QUESTION_MEDIA_ACCEPT}
+        onChange={handleFiles}
+        style={{ display: "none" }}
+      />
+
+      {list.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
+          {list.map((m, i) => {
+            const isImage = m.mediaType === "IMAGE" || (m.contentType || "").startsWith("image/");
+            const src = m.previewUrl || m.presignedUrl;
+            return (
+              <div key={i} className="relative group aspect-square">
+                {isImage && src ? (
+                  <img src={src} alt="" className="w-full h-full object-cover rounded-lg border border-gray-200" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+                    <FilePdfOutlined className="text-red-500" style={{ fontSize: 18 }} />
+                    <span className="text-[9px] text-gray-500 text-center leading-tight line-clamp-2 break-all">{m.fileName}</span>
+                  </div>
+                )}
+                <button type="button" onClick={() => removeMedia(i)}
+                  className="absolute -top-1.5 -right-1.5 bg-red-500 text-white p-1 rounded-full shadow-md hover:scale-110 transition-transform">
+                  <DeleteOutlined style={{ fontSize: 9 }} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Full question builder panel ───────────────────────────────────────────────
 const QuestionBuilder = ({ questions, currentQuestion, editingIndex, onChange, onAdd, onEdit, onRemove, onCancelEdit }) => {
   const typeInfo = QUESTION_TYPES.find(t => t.value === currentQuestion.typeQuestion);
@@ -236,6 +339,14 @@ const QuestionBuilder = ({ questions, currentQuestion, editingIndex, onChange, o
         {/* Answer builder */}
         <div className="mb-4">
           <AnswerBuilder question={currentQuestion} onChange={onChange} />
+        </div>
+
+        {/* Media attachment */}
+        <div className="mb-4">
+          <QuestionMediaAttachments
+            medias={currentQuestion.medias}
+            onChange={(medias) => onChange({ ...currentQuestion, medias })}
+          />
         </div>
 
         {/* Actions */}

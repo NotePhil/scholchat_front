@@ -20,10 +20,11 @@ import ProgramModal from "./exerciseDetails/ProgramModal";
 /* ── Question type label map ─────────────────────────────────────────────── */
 const TYPE_MAP = {
   REPONSE_COURTE:   { label: "Réponse courte",   color: "#4f46e5", bg: "#eef2ff" },
-  CHOIX_MULTIPLE:   { label: "Choix multiple",   color: "#0891b2", bg: "#ecfeff" },
+  QCM:              { label: "Choix multiple",   color: "#0891b2", bg: "#ecfeff" },
   VRAI_FAUX:        { label: "Vrai / Faux",       color: "#16a34a", bg: "#f0fdf4" },
   REPONSE_LONGUE:   { label: "Réponse longue",   color: "#d97706", bg: "#fffbeb" },
-  CORRESPONDANCE:   { label: "Correspondance",   color: "#7c3aed", bg: "#f5f3ff" },
+  DEVELOPPEMENT:    { label: "Développement",    color: "#d97706", bg: "#fffbeb" },
+  TROU:             { label: "Texte à trous",    color: "#7c3aed", bg: "#f5f3ff" },
 };
 
 const QuestionTypeBadge = ({ type }) => {
@@ -442,14 +443,14 @@ const ExerciseDetailsView = ({
                             )}
                           </div>
                           {/* Choices preview for MCQ */}
-                          {q.typeQuestion === "CHOIX_MULTIPLE" && q.reponses?.length > 0 && (
+                          {q.typeQuestion === "QCM" && q.choixReponses?.length > 0 && (
                             <div className="mt-2 space-y-1">
-                              {q.reponses.map((r, ri) => (
+                              {q.choixReponses.map((r, ri) => (
                                 <div key={ri} className="flex items-center gap-2 text-xs text-slate-600">
-                                  <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${r.estCorrecte ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"}`}>
-                                    {r.estCorrecte ? <CheckCircleOutlined style={{ fontSize: 10 }} /> : "○"}
+                                  <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${r.estCorrect ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"}`}>
+                                    {r.estCorrect ? <CheckCircleOutlined style={{ fontSize: 10 }} /> : "○"}
                                   </span>
-                                  {r.contenu}
+                                  {r.texte}
                                 </div>
                               ))}
                             </div>

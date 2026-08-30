@@ -230,7 +230,11 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                     // ExerciseProgrammerResponseDTO fields we need:
                     // prog.id           = programmer record ID (for participations)
                     // prog.exerciseId   = base exercise ID (for /questions/exercise/{id})
-                    const exerciseId = prog.exerciseId || prog.id; // fallback: demo data has id === exerciseId
+                    if (!prog.exerciseId) {
+                      console.error("[ManageExercisesContent] programmer record missing exerciseId — skipping card, questions could not be resolved:", prog);
+                      continue;
+                    }
+                    const exerciseId = prog.exerciseId;
                     const classeNom = cls.nom || cls.name || classNameMap[String(cls.id)] || "";
 
                     // participations embedded in the programmer record

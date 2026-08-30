@@ -82,17 +82,30 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
         etat: "BROUILLON",
       });
 
+      let failedQuestions = 0;
       if (created?.id) {
         for (const mId of (values.matiereIds || []))
           try { await exerciseService.lierExerciseAMatiere(created.id, mId); } catch {}
-        for (const q of questions)
-          try { await questionReponseService.createQuestion(created.id, buildQuestionPayload(q)); } catch {}
+        for (const q of questions) {
+          try {
+            await questionReponseService.createQuestion(created.id, buildQuestionPayload(q));
+          } catch (qErr) {
+            failedQuestions += 1;
+            console.error("[CreateExerciseForm] failed to save question:", q, qErr);
+          }
+        }
       }
 
       form.resetFields();
       setQuestions([]);
       setCurrentQuestion(emptyQuestion());
-      onSuccess?.("Exercice créé avec succès");
+      if (failedQuestions > 0) {
+        onError?.(
+          `Exercice créé, mais ${failedQuestions} question${failedQuestions > 1 ? "s n'ont" : " n'a"} pas pu être enregistrée${failedQuestions > 1 ? "s" : ""}. Modifiez l'exercice pour les ajouter à nouveau.`
+        );
+      } else {
+        onSuccess?.("Exercice créé avec succès");
+      }
     } catch (err) {
       const msg = err.message || "Erreur lors de la création";
       setError(msg);

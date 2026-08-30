@@ -145,7 +145,7 @@ const MobileBottomNav = ({
     { icon: LayoutDashboard, label: "Home", tab: "dashboard" },
     { icon: MessageSquare, label: "Messages", tab: "messages", hasIndicator: true },
     { icon: Plus, label: "Actions", isCenter: true },
-    { icon: Bell, label: "Alerts", tab: "activities" },
+    { icon: Bell, label: "Alerts", tab: "activities", neverActive: true },
     { icon: User, label: "Profile", tab: "settings" },
   ];
 
@@ -248,7 +248,7 @@ const MobileBottomNav = ({
             );
           }
 
-          const active = activeTab === item.tab;
+          const active = !item.neverActive && activeTab === item.tab;
           
           return (
             <button

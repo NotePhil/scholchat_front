@@ -532,6 +532,7 @@ const ActivitiesContent = () => {
     currentIndex: 0,
   });
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [loading, setLoading] = useState(false);
   const [createFormError, setCreateFormError] = useState("");
   const [formData, setFormData] = useState({
@@ -1299,7 +1300,7 @@ const ActivitiesContent = () => {
 
   return (
     <MediaSuspendedContext.Provider value={modalOpen}>
-    <div className="relative -mx-[30px] -mt-4">
+    <div className="relative full-bleed-page overflow-x-hidden">
       {/* Facebook-like Layout: Sidebar + Main Content */}
       <div className={`w-full px-4 lg:px-6 ${isMobile ? 'pb-32' : ''}`}>
         <div className="flex gap-0 lg:gap-6">
@@ -1366,51 +1367,90 @@ const ActivitiesContent = () => {
           {/* Main Content Area */}
           <main className="flex-1 min-w-0">
             <div className={`w-full ${isMobile ? 'px-0 py-2' : 'px-0 sm:px-4 py-4 sm:py-6'}`}>
-              {/* Mobile Header with Tabs - Sticky for better accessibility */}
+              {/* Mobile Header - Sticky, compact (filters moved to a popup) */}
               <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 rounded-none shadow-md mb-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between p-4">
-                  <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-gray-900 dark:text-white`}>
+                <div className="flex items-center justify-between gap-2 p-3">
+                  <h1 className={`${isMobile ? 'text-base' : 'text-xl'} font-bold text-gray-900 dark:text-white truncate`}>
                     {t('activities.title', 'Fil d\'actualité')}
                   </h1>
-                  {canCreateEvent && (
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <button
-                      onClick={() => setShowCreateForm(true)}
-                      className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all"
+                      onClick={() => setShowFilterPopup(true)}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-semibold transition-all"
                     >
-                      <Plus className="w-5 h-5" />
+                      {(() => {
+                        const current = sidebarTabs.find(t => t.key === activeTab) || sidebarTabs[0];
+                        const CurrentIcon = current.icon;
+                        return (
+                          <>
+                            <CurrentIcon className="w-3.5 h-3.5" />
+                            <span className="max-w-[80px] truncate">{current.labelMobile}</span>
+                          </>
+                        );
+                      })()}
+                      <ChevronDown className="w-3.5 h-3.5" />
                     </button>
-                  )}
-                </div>
-                
-                {/* Tab Navigation - Soft pill style */}
-                <div className="flex overflow-x-auto scrollbar-hide gap-1.5 px-3 pb-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  {sidebarTabs.map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`px-3.5 py-1.5 text-xs font-medium whitespace-nowrap rounded-full transition-all ${
-                        activeTab === tab.key
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-                      }`}
-                    >
-                      {tab.labelMobile}
-                    </button>
-                  ))}
+                    {canCreateEvent && (
+                      <button
+                        onClick={() => setShowCreateForm(true)}
+                        className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all flex-shrink-0"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Floating Action Button for Mobile */}
-              {canCreateEvent && isMobile && !showCreateForm && (
-                <motion.button
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setShowCreateForm(true)}
-                  className="fixed bottom-32 right-6 z-[100] w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center border-4 border-white dark:border-gray-900"
+              {/* Filters Popup */}
+              {showFilterPopup && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="lg:hidden fixed inset-0 z-[1090] flex items-end bg-black/60 backdrop-blur-sm"
+                  onClick={(e) => { if (e.target === e.currentTarget) setShowFilterPopup(false); }}
                 >
-                  <Plus className="w-8 h-8" />
-                </motion.button>
+                  <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    className="bg-white dark:bg-gray-800 w-full rounded-t-[28px] p-5 pb-8 shadow-2xl"
+                    style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 20px)' }}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white">Filtrer le fil</h3>
+                      <button
+                        onClick={() => setShowFilterPopup(false)}
+                        className="p-2 bg-gray-100 dark:bg-gray-700 rounded-xl"
+                      >
+                        <X className="w-4 h-4 text-gray-500 dark:text-gray-300" />
+                      </button>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      {sidebarTabs.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.key;
+                        return (
+                          <button
+                            key={tab.key}
+                            onClick={() => { setActiveTab(tab.key); setShowFilterPopup(false); }}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${
+                              isActive
+                                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-blue-100 dark:bg-blue-800' : tab.bg}`}>
+                              <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : tab.color}`} />
+                            </div>
+                            <span className="text-sm flex-1">{tab.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                </motion.div>
               )}
 
               {/* Create Event Form Modal/Card */}
@@ -1445,7 +1485,7 @@ const ActivitiesContent = () => {
                       {/* Form fields */}
                       <div className="space-y-4">
                         <div className="group">
-                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 group-focus-within:text-blue-500 transition-colors">
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2 group-focus-within:text-blue-500 transition-colors">
                             {t('activities.form.title', 'Titre de l\'événement')} *
                           </label>
                           <input
@@ -1459,7 +1499,7 @@ const ActivitiesContent = () => {
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
                             {t('activities.form.description', 'Description')} *
                           </label>
                           <textarea
@@ -1474,7 +1514,7 @@ const ActivitiesContent = () => {
 
                         {/* Visibility toggle — full width */}
                         <div>
-                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
                             {t('activities.form.status', 'Visibilité')}
                           </label>
                           <div className="grid grid-cols-2 gap-2">
@@ -1508,7 +1548,7 @@ const ActivitiesContent = () => {
                         {/* Classes — directly below Privé, scrollable for many classes */}
                         {formData.visibility === "PRIVATE" && (
                           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
                               {t('activities.form.selectClasses', 'Classes Concernées')} *
                             </label>
                             {loadingClasses ? (
@@ -1552,7 +1592,7 @@ const ActivitiesContent = () => {
 
                         {/* Lieu — below classes */}
                         <div>
-                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
                             {t('activities.form.location', 'Lieu')} *
                           </label>
                           <div className="relative">
@@ -1568,33 +1608,33 @@ const ActivitiesContent = () => {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                        <div className="grid grid-cols-2 gap-4 min-w-0">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
                               {t('activities.form.startTime', 'Date & Heure Début')} *
                             </label>
                             <input
                               type="datetime-local"
                               value={formData.heureDebut}
                               onChange={(e) => handleInputChange("heureDebut", e.target.value)}
-                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
+                              className="w-full min-w-0 px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
                             />
                           </div>
-                          <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">
                               {t('activities.form.endTime', 'Heure Fin (Optionnel)')}
                             </label>
                             <input
                               type="datetime-local"
                               value={formData.heureFin}
                               onChange={(e) => handleInputChange("heureFin", e.target.value)}
-                              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
+                              className="w-full min-w-0 px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-xs"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-3">
                             {t('activities.form.images', 'Photos & Vidéos')}
                           </label>
                           <div 
@@ -2189,18 +2229,18 @@ const ActivitiesContent = () => {
             </div>
             <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-4 no-scrollbar pb-40">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Titre *</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Titre *</label>
                 <input type="text" value={editFormData.titre} onChange={(e) => setEditFormData(p => ({ ...p, titre: e.target.value }))}
                   className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Description *</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Description *</label>
                 <textarea rows={4} value={editFormData.description} onChange={(e) => setEditFormData(p => ({ ...p, description: e.target.value }))}
                   className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none font-medium" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Lieu *</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Lieu *</label>
                   <div className="relative">
                     <MapPin className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
                     <input type="text" value={editFormData.lieu} onChange={(e) => setEditFormData(p => ({ ...p, lieu: e.target.value }))}
@@ -2208,7 +2248,7 @@ const ActivitiesContent = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Visibilité</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Visibilité</label>
                   <div className="relative">
                     <select value={editFormData.visibility} onChange={(e) => setEditFormData(p => ({ ...p, visibility: e.target.value }))}
                       className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none font-bold">
@@ -2219,23 +2259,23 @@ const ActivitiesContent = () => {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Début *</label>
+              <div className="grid grid-cols-2 gap-4 min-w-0">
+                <div className="min-w-0">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Début *</label>
                   <input type="datetime-local" value={editFormData.heureDebut} onChange={(e) => setEditFormData(p => ({ ...p, heureDebut: e.target.value }))}
-                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs" />
+                    className="w-full min-w-0 px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs" />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Fin</label>
+                <div className="min-w-0">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Fin</label>
                   <input type="datetime-local" value={editFormData.heureFin} onChange={(e) => setEditFormData(p => ({ ...p, heureFin: e.target.value }))}
-                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs" />
+                    className="w-full min-w-0 px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs" />
                 </div>
               </div>
 
               {/* Classes selector */}
               {editFormData.visibility === 'PRIVATE' && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Classes concernées *</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Classes concernées *</label>
                   {loadingClasses ? (
                     <div className="flex items-center gap-2 py-4">
                       <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
@@ -2272,7 +2312,7 @@ const ActivitiesContent = () => {
               {/* Existing media */}
               {editFormData.existingMedias && editFormData.existingMedias.length > 0 && (
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Médias actuels</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Médias actuels</label>
                   <div className="grid grid-cols-3 gap-3">
                     {editFormData.existingMedias.map((media, i) => (
                       <div key={i} className="relative group aspect-square">
@@ -2296,7 +2336,7 @@ const ActivitiesContent = () => {
 
               {/* New media upload */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Ajouter des médias</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Ajouter des médias</label>
                 <div onClick={() => editFileInputRef.current?.click()}
                   className="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/10 transition-all cursor-pointer">
                   {editUploading

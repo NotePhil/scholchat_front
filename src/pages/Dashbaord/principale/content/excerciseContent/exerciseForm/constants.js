@@ -62,11 +62,22 @@ export const emptyQuestion = (type = "QCM") => ({
   points: 1,
   choixReponses: getDefaultChoix(type),
   reponse: "",
+  medias: [],
 });
+
+// A question attachment is either an image or a PDF — same restriction the backend enforces.
+export const QUESTION_MEDIA_ACCEPT = "image/*,application/pdf";
+export const isAllowedQuestionMediaFile = (file) =>
+  !!file && (file.type.startsWith("image/") || file.type === "application/pdf");
 
 // ── Build API payload for a question ──────────────────────────────────────────
 export const buildQuestionPayload = (q) => {
-  const base = { intitule: q.intitule, typeQuestion: q.typeQuestion, points: q.points || 1 };
+  const base = {
+    intitule: q.intitule,
+    typeQuestion: q.typeQuestion,
+    points: q.points || 1,
+    medias: q.medias || [],
+  };
   if (TYPES_WITH_CHOICES.includes(q.typeQuestion))
     return { ...base, choixReponses: q.choixReponses };
   return { ...base, reponse: q.reponse };

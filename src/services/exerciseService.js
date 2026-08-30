@@ -519,9 +519,10 @@ class QuestionReponseService {
         intitule: questionData.intitule,
         reponse: questionData.reponse,
         typeQuestion: questionData.typeQuestion,
+        points: questionData.points,
+        choixReponses: questionData.choixReponses,
       };
 
-      console.log("Updating question:", JSON.stringify(formattedData, null, 2));
       const response = await this.api.put(
         `/questions/${questionId}`,
         formattedData

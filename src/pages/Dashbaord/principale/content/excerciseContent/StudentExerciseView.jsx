@@ -6,9 +6,105 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  FileText,
+  ExternalLink,
+  X,
 } from "lucide-react";
 import axios from "axios";
 import { applyAuthInterceptors } from "../../../../../utils/axiosConfig";
+
+/**
+ * ImageLightbox — fullscreen popup for a question image, opened on click
+ * instead of navigating to a new tab.
+ */
+const ImageLightbox = ({ url, onClose }) => {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/80 p-6"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+      >
+        <X className="w-6 h-6" />
+      </button>
+      <img
+        src={url}
+        alt=""
+        className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+};
+
+/**
+ * QuestionMediaPreview — renders a question's attached image/PDF.
+ * The presigned S3 URL is already embedded in the question by the backend
+ * (no /media/{id}/download-url round trip needed). Images are only decoded
+ * once they scroll into view via IntersectionObserver, same discipline as
+ * the activity feed's LazyMedia component. Clicking an image opens it in an
+ * in-page lightbox rather than a new browser tab; PDFs still open in a new
+ * tab since there is nothing to preview inline.
+ */
+const QuestionMediaPreview = ({ medias }) => {
+  const containerRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  if (!medias || medias.length === 0) return null;
+
+  return (
+    <div ref={containerRef} className="ml-9 mb-3 flex flex-wrap gap-2">
+      {medias.map((media) => {
+        const isImage = media.mediaType === "IMAGE" || (media.contentType || "").startsWith("image/");
+        if (isImage) {
+          return (
+            <button
+              key={media.id}
+              type="button"
+              onClick={() => media.presignedUrl && setLightboxUrl(media.presignedUrl)}
+              className="block w-28 h-28 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 cursor-zoom-in"
+            >
+              {visible && media.presignedUrl ? (
+                <img src={media.presignedUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <div className="w-full h-full animate-pulse bg-gray-200" />
+              )}
+            </button>
+          );
+        }
+        return (
+          <a key={media.id} href={media.presignedUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs text-gray-700">
+            <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
+            <span className="max-w-[140px] truncate">{media.fileName}</span>
+            <ExternalLink className="w-3 h-3 text-gray-400 flex-shrink-0" />
+          </a>
+        );
+      })}
+      {lightboxUrl && <ImageLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
+    </div>
+  );
+};
 
 // ─── Minimal API client ───────────────────────────────────────────────────────
 const createApi = () => {
@@ -285,6 +381,8 @@ const StudentExerciseView = ({
                   </div>
                 </div>
               </div>
+
+              <QuestionMediaPreview medias={question.medias} />
 
               {/* ── QCM ── */}
               {question.typeQuestion === "QCM" && (

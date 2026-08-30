@@ -137,16 +137,23 @@ const EditExerciseForm = ({ exerciseId, onSubmit, onCancel, onError, onSuccess, 
       await Promise.allSettled(removedIds.map(id => questionReponseService.deleteQuestion(id)));
 
       // 4. Update existing questions / create new ones
-      await Promise.allSettled(
+      const questionResults = await Promise.allSettled(
         questions.map(q =>
           q.id
             ? questionReponseService.updateQuestion(q.id, buildQuestionPayload(q))
             : questionReponseService.createQuestion(exerciseId, buildQuestionPayload(q))
         )
       );
-
-      message.success("Exercice mis à jour avec succès");
-      onSuccess?.("Exercice mis à jour avec succès");
+      const failedQuestions = questionResults.filter(r => r.status === "rejected");
+      if (failedQuestions.length > 0) {
+        failedQuestions.forEach(r => console.error("[EditExerciseForm] failed to save question:", r.reason));
+        const failMsg = `Exercice mis à jour, mais ${failedQuestions.length} question${failedQuestions.length > 1 ? "s n'ont" : " n'a"} pas pu être enregistrée${failedQuestions.length > 1 ? "s" : ""}.`;
+        message.warning(failMsg);
+        onError?.(failMsg);
+      } else {
+        message.success("Exercice mis à jour avec succès");
+        onSuccess?.("Exercice mis à jour avec succès");
+      }
       if (onBackToDetails) onBackToDetails(exerciseId);
       else onCancel();
     } catch (err) {

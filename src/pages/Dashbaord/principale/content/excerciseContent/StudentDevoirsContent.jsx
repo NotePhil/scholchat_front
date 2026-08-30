@@ -140,6 +140,11 @@ const StudentDevoirsContent = () => {
               if (prog.typeAssignation !== "DEVOIR") continue;
               seen.add(prog.id);
 
+              if (!prog.exerciseId) {
+                console.error("[StudentDevoirsContent] programmer record missing exerciseId — skipping devoir, questions could not be resolved:", prog);
+                continue;
+              }
+
               // Pick this student's participation from the embedded list
               const myParticipation =
                 (prog.participations || []).find((p) => p.utilisateurId === userId) || null;
@@ -147,8 +152,10 @@ const StudentDevoirsContent = () => {
               all.push({
                 ...prog,
                 myParticipation,
-                // Ensure exerciseId is always present (backend now returns it)
-                exerciseId: prog.exerciseId || prog.id,
+                exerciseId: prog.exerciseId,
+                // prog.id is the programmer record ID — StudentExerciseView needs it
+                // under this name to register/update participation.
+                exerciseProgrammerId: prog.id,
               });
             }
           } catch {
