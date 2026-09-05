@@ -238,14 +238,31 @@ const SignUp = ({ theme }) => {
         fileToUpload = file;
       }
 
-      const uploadResponse = await fetch(url, {
-        method: "PUT",
-        body: fileToUpload,
-        headers: { "Content-Type": file.type },
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed with status ${uploadResponse.status}`);
+      // Try uploading straight to MinIO/S3 with the presigned URL first; if
+      // that's blocked (e.g. no CORS policy on the storage endpoint for this
+      // origin — the browser fails the request before it even reaches the
+      // server, no response to read), fall back to the backend proxy, which
+      // performs the same PUT server-side instead.
+      try {
+        const uploadResponse = await fetch(url, {
+          method: "PUT",
+          body: fileToUpload,
+          headers: { "Content-Type": file.type },
+        });
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed with status ${uploadResponse.status}`);
+        }
+      } catch (directError) {
+        console.warn("Direct upload failed (likely CORS), falling back to backend proxy:", directError);
+        const formDataUpload = new FormData();
+        formDataUpload.append("file", fileToUpload, fileName);
+        formDataUpload.append("presignedUrl", url);
+        formDataUpload.append("contentType", file.type);
+        await axios.post(
+          `${process.env.REACT_APP_API_BASE_URL}/media/proxy-upload`,
+          formDataUpload,
+          { headers: { "Content-Type": "multipart/form-data" } }
+        );
       }
 
       return url.split("?")[0];
@@ -319,7 +336,25 @@ const SignUp = ({ theme }) => {
 
       let userId = isUpdateMode ? formData.id : createdUserId;
 
-      if (!isUpdateMode && !createdUserId) {
+      // A user record created earlier in this same signup attempt (step 1)
+      // may no longer exist server-side by the time step 3 runs (e.g. this
+      // browser tab was left open across a database reset) — the id is
+      // still sitting in state/localStorage from before, but is now stale.
+      // Verify it's still real before trying to attach uploads to it;
+      // otherwise silently recreate the user instead of failing with a
+      // confusing "User not found" error from the upload endpoint.
+      if (!isUpdateMode && userId) {
+        try {
+          await axios.get(`${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${userId}`);
+        } catch (checkError) {
+          console.warn("Previously created user no longer exists, recreating:", checkError);
+          userId = null;
+          setCreatedUserId(null);
+          localStorage.removeItem("createdUserId");
+        }
+      }
+
+      if (!isUpdateMode && !userId) {
         const payloadData = {
           type: formData.type,
           nom: formData.nom.trim(),
