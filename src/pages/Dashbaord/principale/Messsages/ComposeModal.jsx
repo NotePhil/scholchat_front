@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { X, Send, RefreshCw, Check, Plus } from "lucide-react";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faCheck,
+  faPaperPlane,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const ComposeModal = ({
   isDark,
   themeColors,
@@ -31,40 +36,48 @@ const ComposeModal = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [showCcField, setShowCcField] = useState(false);
   const [ccSearch, setCcSearch] = useState("");
-
-
   useEffect(() => {
     const fetchClasses = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
         const parentId = localStorage.getItem("userId");
-        const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase();
+        const selectedRole = (
+          localStorage.getItem("userRole") || ""
+        ).toUpperCase();
         const isParentRole = selectedRole.includes("PARENT");
         const isAdmin = selectedRole.includes("ADMIN");
         const userId = isParentRole
-          ? (localStorage.getItem("selectedChildId") || parentId)
+          ? localStorage.getItem("selectedChildId") || parentId
           : parentId;
         if (!userId || !accessToken) return;
-
         let allClasses = [];
         try {
           if (isAdmin) {
             // Admin sees ALL classes
-            const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/classes`, {
-              headers: { Authorization: `Bearer ${accessToken}` }
-            });
+            const resp = await fetch(
+              `${process.env.REACT_APP_API_BASE_URL}/classes`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              },
+            );
             if (resp.ok) allClasses = await resp.json();
           } else {
             // Others see classes they have access to
-            const resp = await fetch(`${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`, {
-              headers: { Authorization: `Bearer ${accessToken}` }
-            });
+            const resp = await fetch(
+              `${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              },
+            );
             if (resp.ok) allClasses = await resp.json();
           }
         } catch (e) {
           console.warn("Error fetching classes:", e);
         }
-
         setClassesList(allClasses);
       } catch (error) {
         console.error("Error fetching classes:", error);
@@ -72,9 +85,6 @@ const ComposeModal = ({
     };
     fetchClasses();
   }, [currentUser]);
-
-
-
   useEffect(() => {
     const fetchUsersForClasses = async () => {
       if (selectedClasses.length === 0) {
@@ -84,7 +94,6 @@ const ComposeModal = ({
       try {
         const accessToken = localStorage.getItem("accessToken");
         const users = {};
-
         for (const classeId of selectedClasses) {
           const response = await fetch(
             `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/${classeId}/utilisateurs`,
@@ -92,7 +101,7 @@ const ComposeModal = ({
               headers: {
                 Authorization: `Bearer ${accessToken}`,
               },
-            }
+            },
           );
           if (!response.ok) {
             throw new Error("Failed to fetch users for class");
@@ -100,7 +109,6 @@ const ComposeModal = ({
           const data = await response.json();
           users[classeId] = data;
         }
-
         setClassUsers(users);
       } catch (error) {
         console.error("Error fetching users for classes:", error);
@@ -108,30 +116,36 @@ const ComposeModal = ({
     };
     fetchUsersForClasses();
   }, [selectedClasses]);
-
   const toggleClassSelection = (classeId) => {
     if (selectedClasses.includes(classeId)) {
-      const newSelectedClasses = selectedClasses.filter((id) => id !== classeId);
+      const newSelectedClasses = selectedClasses.filter(
+        (id) => id !== classeId,
+      );
       setSelectedClasses(newSelectedClasses);
 
       // Collect user IDs that still belong to at least one remaining selected class
       const remainingUserIds = new Set(
-        newSelectedClasses.flatMap((id) => (classUsers[id] || []).map((u) => u.id))
+        newSelectedClasses.flatMap((id) =>
+          (classUsers[id] || []).map((u) => u.id),
+        ),
       );
 
       // Remove recipients that no longer belong to any selected class
       setNewMessage((prev) => ({
         ...prev,
-        destinataires: prev.destinataires.filter((dest) => remainingUserIds.has(dest.id)),
+        destinataires: prev.destinataires.filter((dest) =>
+          remainingUserIds.has(dest.id),
+        ),
       }));
 
       // Remove CC recipients that no longer belong to any selected class
-      setCcRecipients((prev) => prev.filter((cc) => remainingUserIds.has(cc.id)));
+      setCcRecipients((prev) =>
+        prev.filter((cc) => remainingUserIds.has(cc.id)),
+      );
     } else {
       setSelectedClasses([...selectedClasses, classeId]);
     }
   };
-
   const toggleGeneralMessage = () => {
     setIsGeneralMessage(!isGeneralMessage);
     if (!isGeneralMessage) {
@@ -141,7 +155,6 @@ const ComposeModal = ({
       }));
     }
   };
-
   const handleSendMessage = async () => {
     setErrorMessage("");
     setLoading(true);
@@ -162,7 +175,6 @@ const ComposeModal = ({
         if (ccRecipients.length > 0) {
           requestBody.ccRecipients = ccRecipients.map((cc) => cc.id);
         }
-
         const response = await fetch(
           `${process.env.REACT_APP_API_BASE_URL}/messages/group`,
           {
@@ -172,7 +184,7 @@ const ComposeModal = ({
               Authorization: `Bearer ${accessToken}`,
             },
             body: JSON.stringify(requestBody),
-          }
+          },
         );
         if (!response.ok) {
           throw new Error("Failed to send message");
@@ -195,7 +207,6 @@ const ComposeModal = ({
             });
           }
         });
-
         const response = await fetch(
           `${process.env.REACT_APP_API_BASE_URL}/messages`,
           {
@@ -212,9 +223,14 @@ const ComposeModal = ({
               expediteur: {
                 type: "utilisateur",
                 id: senderId,
-                nom: currentUser?.nom || localStorage.getItem("userName") || currentUser?.username || "",
+                nom:
+                  currentUser?.nom ||
+                  localStorage.getItem("userName") ||
+                  currentUser?.username ||
+                  "",
                 prenom: currentUser?.prenom || "",
-                email: currentUser?.email || localStorage.getItem("userEmail") || "",
+                email:
+                  currentUser?.email || localStorage.getItem("userEmail") || "",
                 telephone: currentUser?.telephone || "",
                 adresse: currentUser?.adresse || "",
                 etat: "ACTIVE",
@@ -235,7 +251,7 @@ const ComposeModal = ({
                 isCC: dest.isCC || false,
               })),
             }),
-          }
+          },
         );
         if (!response.ok) {
           throw new Error("Failed to send message");
@@ -255,7 +271,6 @@ const ComposeModal = ({
       setShowCcField(false);
       setCcSearch("");
       setShowCompose(false);
-
       if (onMessageSent) {
         onMessageSent();
       }
@@ -266,23 +281,23 @@ const ComposeModal = ({
       setLoading(false);
     }
   };
-
   const filteredUsers = Object.values(classUsers)
     .flat()
-    .filter((user, index, self) => self.findIndex(u => u.id === user.id) === index) // deduplicate
     .filter(
-      (user) => {
-        if (user.id === localStorage.getItem('userId')) return false;
-        if (!recipientSearch) return true;
-        const search = recipientSearch.toLowerCase();
-        const fullName = `${user.prenom || ""} ${user.nom || ""}`.toLowerCase();
-        return fullName.includes(search) ||
-          (user.email || "").toLowerCase().includes(search) ||
-          (user.nom || "").toLowerCase().includes(search) ||
-          (user.prenom || "").toLowerCase().includes(search);
-      }
-    );
-
+      (user, index, self) => self.findIndex((u) => u.id === user.id) === index,
+    ) // deduplicate
+    .filter((user) => {
+      if (user.id === localStorage.getItem("userId")) return false;
+      if (!recipientSearch) return true;
+      const search = recipientSearch.toLowerCase();
+      const fullName = `${user.prenom || ""} ${user.nom || ""}`.toLowerCase();
+      return (
+        fullName.includes(search) ||
+        (user.email || "").toLowerCase().includes(search) ||
+        (user.nom || "").toLowerCase().includes(search) ||
+        (user.prenom || "").toLowerCase().includes(search)
+      );
+    });
   const handleAddRecipient = (user) => {
     if (!newMessage.destinataires.some((dest) => dest.id === user.id)) {
       setNewMessage((prev) => ({
@@ -296,30 +311,29 @@ const ComposeModal = ({
   // Filter users for CC field from class users
   const filteredCcUsers = Object.values(classUsers)
     .flat()
-    .filter((user, index, self) => self.findIndex(u => u.id === user.id) === index)
     .filter(
-      (user) => {
-        const search = ccSearch.toLowerCase();
-        const fullName = `${user.prenom || ""} ${user.nom || ""}`.toLowerCase();
-        return (fullName.includes(search) ||
+      (user, index, self) => self.findIndex((u) => u.id === user.id) === index,
+    )
+    .filter((user) => {
+      const search = ccSearch.toLowerCase();
+      const fullName = `${user.prenom || ""} ${user.nom || ""}`.toLowerCase();
+      return (
+        (fullName.includes(search) ||
           (user.email || "").toLowerCase().includes(search) ||
           (user.nom || "").toLowerCase().includes(search) ||
           (user.prenom || "").toLowerCase().includes(search)) &&
         !ccRecipients.some((cc) => cc.id === user.id) &&
         !newMessage.destinataires.some((dest) => dest.id === user.id) &&
-        user.id !== localStorage.getItem('userId');
-      }
-    );
-
+        user.id !== localStorage.getItem("userId")
+      );
+    });
   const handleAddCcRecipient = (user) => {
     setCcRecipients((prev) => [...prev, user]);
     setCcSearch("");
   };
-
   const handleRemoveCcRecipient = (userId) => {
     setCcRecipients((prev) => prev.filter((cc) => cc.id !== userId));
   };
-
   const handleCcEmailInput = (email) => {
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       const emailUser = {
@@ -336,33 +350,29 @@ const ComposeModal = ({
     }
     return false;
   };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 pt-20">
       <div
-        className={`rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto my-auto ${
-          isDark ? "bg-gray-800" : "bg-white"
-        }`}
+        className={`rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto my-auto ${isDark ? "bg-gray-800" : "bg-white"}`}
       >
         <div
-          className={`p-4 border-b flex items-center justify-between ${
-            isDark ? "border-gray-700" : "border-gray-200"
-          }`}
+          className={`p-4 border-b flex items-center justify-between ${isDark ? "border-gray-700" : "border-gray-200"}`}
         >
           <h3
-            className={`text-lg font-semibold ${
-              isDark ? "text-white" : "text-gray-900"
-            }`}
+            className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}
           >
             Nouveau message
           </h3>
           <button
-            className={`p-2 rounded-full ${
-              isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
-            }`}
+            className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
             onClick={() => setShowCompose(false)}
           >
-            <X size={20} />
+            <FontAwesomeIcon
+              icon={faXmark}
+              style={{
+                fontSize: 20,
+              }}
+            />
           </button>
         </div>
 
@@ -376,41 +386,41 @@ const ComposeModal = ({
           {/* Classes Selection */}
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${
-                isDark ? "text-gray-300" : "text-gray-700"
-              }`}
+              className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
             >
               Classes
             </label>
             <div
-              className={`border rounded-lg p-3 ${
-                isDark
-                  ? "border-gray-600 bg-gray-700"
-                  : "border-gray-300 bg-gray-50"
-              }`}
+              className={`border rounded-lg p-3 ${isDark ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-gray-50"}`}
             >
               <div className="flex flex-wrap gap-2 mb-3">
                 {classesList.map((classe) => (
                   <button
                     key={classe.id}
                     onClick={() => toggleClassSelection(classe.id)}
-                    className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm border ${
-                      selectedClasses.includes(classe.id)
-                        ? "bg-blue-100 text-blue-800 border-blue-300"
-                        : isDark
-                        ? "border-gray-500 text-gray-300 hover:bg-gray-600"
-                        : "border-gray-300 text-gray-700 hover:bg-gray-100"
-                    }`}
+                    className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm border ${selectedClasses.includes(classe.id) ? "bg-blue-100 text-blue-800 border-blue-300" : isDark ? "border-gray-500 text-gray-300 hover:bg-gray-600" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
                   >
-                    {selectedClasses.includes(classe.id) && <Check size={14} />}
+                    {selectedClasses.includes(classe.id) && (
+                      <FontAwesomeIcon
+                        icon={faCheck}
+                        style={{
+                          fontSize: 14,
+                        }}
+                      />
+                    )}
                     {classe.nom} ({classe.niveau})
                   </button>
                 ))}
               </div>
               {/* Hide general message option for parents and students */}
               {(() => {
-                const userRole = (localStorage.getItem('userRole') || '').toUpperCase();
-                const isParentOrStudent = userRole.includes('PARENT') || userRole.includes('ELEVE') || userRole.includes('STUDENT');
+                const userRole = (
+                  localStorage.getItem("userRole") || ""
+                ).toUpperCase();
+                const isParentOrStudent =
+                  userRole.includes("PARENT") ||
+                  userRole.includes("ELEVE") ||
+                  userRole.includes("STUDENT");
                 if (isParentOrStudent) return null;
                 return (
                   <div className="flex items-center gap-2">
@@ -424,9 +434,7 @@ const ComposeModal = ({
                     />
                     <label
                       htmlFor="generalMessage"
-                      className={`text-sm ${
-                        selectedClasses.length === 0 ? "opacity-50" : ""
-                      } ${isDark ? "text-gray-300" : "text-gray-700"}`}
+                      className={`text-sm ${selectedClasses.length === 0 ? "opacity-50" : ""} ${isDark ? "text-gray-300" : "text-gray-700"}`}
                     >
                       Message général (envoyé à tous les membres de la classe)
                     </label>
@@ -440,18 +448,12 @@ const ComposeModal = ({
           {!isGeneralMessage && (
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${
-                  isDark ? "text-gray-300" : "text-gray-700"
-                }`}
+                className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
               >
                 À
               </label>
               <div
-                className={`border rounded-lg p-3 ${
-                  isDark
-                    ? "border-gray-600 bg-gray-700"
-                    : "border-gray-300 bg-gray-50"
-                }`}
+                className={`border rounded-lg p-3 ${isDark ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-gray-50"}`}
               >
                 <div className="flex flex-wrap gap-2 mb-2">
                   {newMessage.destinataires.map((dest, index) => (
@@ -461,7 +463,12 @@ const ComposeModal = ({
                     >
                       {dest.email || dest.nom}
                       <button onClick={() => removeRecipient(index)}>
-                        <X size={14} />
+                        <FontAwesomeIcon
+                          icon={faXmark}
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
                       </button>
                     </span>
                   ))}
@@ -478,36 +485,22 @@ const ComposeModal = ({
                         setRecipientSearch("");
                       }
                     }}
-                    className={`w-full px-3 py-2 rounded border ${
-                      isDark
-                        ? "bg-gray-600 border-gray-500 text-white"
-                        : "bg-white border-gray-300"
-                    }`}
+                    className={`w-full px-3 py-2 rounded border ${isDark ? "bg-gray-600 border-gray-500 text-white" : "bg-white border-gray-300"}`}
                   />
                   {recipientSearch && (
                     <div
-                      className={`absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto z-10 ${
-                        isDark ? "bg-gray-700" : "bg-white"
-                      } shadow-lg rounded-md border ${
-                        isDark ? "border-gray-600" : "border-gray-300"
-                      }`}
+                      className={`absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto z-10 ${isDark ? "bg-gray-700" : "bg-white"} shadow-lg rounded-md border ${isDark ? "border-gray-600" : "border-gray-300"}`}
                     >
                       {filteredUsers.length > 0 ? (
                         filteredUsers.map((user) => (
                           <div
                             key={user.id}
-                            className={`p-2 hover:bg-blue-100 cursor-pointer ${
-                              isDark ? "hover:bg-gray-600" : ""
-                            }`}
+                            className={`p-2 hover:bg-blue-100 cursor-pointer ${isDark ? "hover:bg-gray-600" : ""}`}
                             onClick={() => handleAddRecipient(user)}
                           >
                             <div className="flex items-center gap-2">
                               <div
-                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                                  isDark
-                                    ? "bg-gray-600 text-gray-300"
-                                    : "bg-gray-200 text-gray-700"
-                                }`}
+                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${isDark ? "bg-gray-600 text-gray-300" : "bg-gray-200 text-gray-700"}`}
                               >
                                 {user.nom
                                   .split(" ")
@@ -542,19 +535,13 @@ const ComposeModal = ({
           {/* CC Recipients */}
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${
-                isDark ? "text-gray-300" : "text-gray-700"
-              }`}
+              className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
             >
               Copie (CC)
             </label>
 
             <div
-              className={`border rounded-lg p-3 ${
-                isDark
-                  ? "border-gray-600 bg-gray-700"
-                  : "border-gray-300 bg-gray-50"
-              }`}
+              className={`border rounded-lg p-3 ${isDark ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-gray-50"}`}
             >
               <div className="flex flex-wrap gap-2 mb-2">
                 {ccRecipients.map((ccRecipient) => (
@@ -567,7 +554,12 @@ const ComposeModal = ({
                     <button
                       onClick={() => handleRemoveCcRecipient(ccRecipient.id)}
                     >
-                      <X size={14} />
+                      <FontAwesomeIcon
+                        icon={faXmark}
+                        style={{
+                          fontSize: 14,
+                        }}
+                      />
                     </button>
                   </span>
                 ))}
@@ -584,36 +576,22 @@ const ComposeModal = ({
                       handleCcEmailInput(ccSearch);
                     }
                   }}
-                  className={`w-full px-3 py-2 rounded border ${
-                    isDark
-                      ? "bg-gray-600 border-gray-500 text-white placeholder-gray-400"
-                      : "bg-white border-gray-300 placeholder-gray-500"
-                  }`}
+                  className={`w-full px-3 py-2 rounded border ${isDark ? "bg-gray-600 border-gray-500 text-white placeholder-gray-400" : "bg-white border-gray-300 placeholder-gray-500"}`}
                 />
                 {ccSearch && (
                   <div
-                    className={`absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto z-10 ${
-                      isDark ? "bg-gray-700" : "bg-white"
-                    } shadow-lg rounded-md border ${
-                      isDark ? "border-gray-600" : "border-gray-300"
-                    }`}
+                    className={`absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto z-10 ${isDark ? "bg-gray-700" : "bg-white"} shadow-lg rounded-md border ${isDark ? "border-gray-600" : "border-gray-300"}`}
                   >
                     {filteredCcUsers.length > 0 ? (
                       filteredCcUsers.map((user) => (
                         <div
                           key={user.id}
-                          className={`p-2 hover:bg-purple-100 cursor-pointer ${
-                            isDark ? "hover:bg-gray-600" : ""
-                          }`}
+                          className={`p-2 hover:bg-purple-100 cursor-pointer ${isDark ? "hover:bg-gray-600" : ""}`}
                           onClick={() => handleAddCcRecipient(user)}
                         >
                           <div className="flex items-center gap-2">
                             <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                                isDark
-                                  ? "bg-gray-600 text-gray-300"
-                                  : "bg-gray-200 text-gray-700"
-                              }`}
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${isDark ? "bg-gray-600 text-gray-300" : "bg-gray-200 text-gray-700"}`}
                             >
                               {user.nom
                                 .split(" ")
@@ -647,23 +625,20 @@ const ComposeModal = ({
           {/* Subject */}
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${
-                isDark ? "text-gray-300" : "text-gray-700"
-              }`}
+              className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
             >
               Objet
             </label>
             <input
               type="text"
               placeholder="Saisissez l'objet du message"
-              className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                isDark
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-              }`}
+              className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
               value={newMessage.objet}
               onChange={(e) =>
-                setNewMessage((prev) => ({ ...prev, objet: e.target.value }))
+                setNewMessage((prev) => ({
+                  ...prev,
+                  objet: e.target.value,
+                }))
               }
             />
           </div>
@@ -671,23 +646,20 @@ const ComposeModal = ({
           {/* Message Content */}
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${
-                isDark ? "text-gray-300" : "text-gray-700"
-              }`}
+              className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
             >
               Message
             </label>
             <textarea
               placeholder="Tapez votre message ici..."
               rows={6}
-              className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical ${
-                isDark
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-              }`}
+              className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
               value={newMessage.contenu}
               onChange={(e) =>
-                setNewMessage((prev) => ({ ...prev, contenu: e.target.value }))
+                setNewMessage((prev) => ({
+                  ...prev,
+                  contenu: e.target.value,
+                }))
               }
             />
           </div>
@@ -695,36 +667,25 @@ const ComposeModal = ({
 
         {/* Footer */}
         <div
-          className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between ${
-            isDark ? "border-gray-700" : "border-gray-200"
-          }`}
+          className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between ${isDark ? "border-gray-700" : "border-gray-200"}`}
         >
           <button
-            className={`px-4 py-2 rounded-lg border transition-colors mb-2 sm:mb-0 w-full sm:w-auto ${
-              isDark
-                ? "border-gray-600 text-gray-300 hover:bg-gray-700"
-                : "border-gray-300 text-gray-700 hover:bg-gray-50"
-            }`}
+            className={`px-4 py-2 rounded-lg border transition-colors mb-2 sm:mb-0 w-full sm:w-auto ${isDark ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
             onClick={() => setShowCompose(false)}
             disabled={loading}
           >
             Annuler
           </button>
           <button
-            className={`px-4 py-2 rounded-lg text-white transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${
-              loading ||
-              !newMessage.contenu.trim() ||
-              selectedClasses.length === 0 ||
-              (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0)
-                ? "bg-gray-400 cursor-not-allowed"
-                : "hover:shadow-lg"
-            }`}
+            className={`px-4 py-2 rounded-lg text-white transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${loading || !newMessage.contenu.trim() || selectedClasses.length === 0 || (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0) ? "bg-gray-400 cursor-not-allowed" : "hover:shadow-lg"}`}
             style={{
               backgroundColor:
                 loading ||
                 !newMessage.contenu.trim() ||
                 selectedClasses.length === 0 ||
-                (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0)
+                (isGeneralMessage
+                  ? selectedClasses.length === 0
+                  : newMessage.destinataires.length === 0)
                   ? undefined
                   : themeColors.primary,
             }}
@@ -733,17 +694,30 @@ const ComposeModal = ({
               loading ||
               !newMessage.contenu.trim() ||
               selectedClasses.length === 0 ||
-              (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0)
+              (isGeneralMessage
+                ? selectedClasses.length === 0
+                : newMessage.destinataires.length === 0)
             }
           >
             {loading ? (
               <>
-                <RefreshCw size={16} className="animate-spin" />
+                <FontAwesomeIcon
+                  icon={faArrowsRotate}
+                  className="animate-spin"
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
                 Envoi...
               </>
             ) : (
               <>
-                <Send size={16} />
+                <FontAwesomeIcon
+                  icon={faPaperPlane}
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
                 Envoyer
               </>
             )}
@@ -753,7 +727,6 @@ const ComposeModal = ({
     </div>
   );
 };
-
 export default ComposeModal;
 
 // make it such that when we click on the class, in the same way as the request to find the utilisateurs having access to the class, we should also fetch the professeurs who have droit de publication to a class through the link http://localhost:8486/scholchat/droits-publication/classes/{classeId}/utilisateurs and for the add in copy, it should be only the professeur data gotten from this link that can be displaying in autocompilation.

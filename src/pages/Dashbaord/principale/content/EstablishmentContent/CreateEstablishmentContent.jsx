@@ -1,25 +1,33 @@
 import React, { useState, useEffect } from "react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
-import {
-  CheckCircle,
-  AlertCircle,
-  Building2,
-  Mail,
-  Phone,
-  MapPin,
-  Globe,
-  Settings,
-  User,
-  ChevronDown,
-} from "lucide-react";
+import CountrySelect from "../../../../../components/common/CountrySelectSearchable";
 import establishmentService from "../../../../../services/EstablishmentService";
 import gestionnaireService from "../../../../../services/GestionnaireService";
-import { offerService, PeriodiciteContrat, TypeCibleOffre } from "../../../../../services/OfferService";
+import {
+  offerService,
+  PeriodiciteContrat,
+  TypeCibleOffre,
+} from "../../../../../services/OfferService";
 import { useNavigate } from "react-router-dom";
 import PaymentModal from "../../../../../components/modals/PaymentModal";
-
-const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingEstablishment = null }) => {
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBuilding,
+  faChevronDown,
+  faCircleCheck,
+  faCircleExclamation,
+  faEnvelope,
+  faGear,
+  faGlobe,
+  faLocationDot,
+  faUser,
+} from "@fortawesome/free-solid-svg-icons";
+const CreateEstablishmentContent = ({
+  onNavigateToManage,
+  setActiveTab,
+  editingEstablishment = null,
+}) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nom: "",
@@ -31,19 +39,15 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
     optionTokenGeneral: false,
     gestionnaire: null,
   });
-
   const isEditMode = !!editingEstablishment;
-
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("CM");
-
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(5);
-
   const [offres, setOffres] = useState([]);
   const [loadingOffres, setLoadingOffres] = useState(true);
   const [selectedOffreId, setSelectedOffreId] = useState("");
@@ -57,7 +61,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
       try {
         const usersData = await gestionnaireService.getAllGestionnaires();
         setUsers(usersData);
-        
+
         // If editing, populate form with existing data
         if (editingEstablishment) {
           setFormData({
@@ -66,60 +70,80 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
             pays: editingEstablishment.pays || "",
             email: editingEstablishment.email || "",
             telephone: editingEstablishment.telephone || "",
-            optionEnvoiMailNewClasse: editingEstablishment.optionEnvoiMailNewClasse || false,
-            optionTokenGeneral: editingEstablishment.optionTokenGeneral || false,
+            optionEnvoiMailNewClasse:
+              editingEstablishment.optionEnvoiMailNewClasse || false,
+            optionTokenGeneral:
+              editingEstablishment.optionTokenGeneral || false,
             gestionnaire: null, // Will be loaded separately
           });
-          
+
           // Load gestionnaire data
           try {
-            const gestionnaireData = await establishmentService.getEstablishmentGestionnaire(editingEstablishment.id);
-            setFormData(prev => ({ ...prev, gestionnaire: gestionnaireData }));
+            const gestionnaireData =
+              await establishmentService.getEstablishmentGestionnaire(
+                editingEstablishment.id,
+              );
+            setFormData((prev) => ({
+              ...prev,
+              gestionnaire: gestionnaireData,
+            }));
           } catch (error) {
             console.error("Error loading gestionnaire:", error);
           }
         }
         // Pre-fill gestionnaire and email for gestionnaire role (not editing)
         if (!editingEstablishment) {
-          const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase();
+          const selectedRole = (
+            localStorage.getItem("userRole") || ""
+          ).toUpperCase();
           if (selectedRole.includes("GESTIONNAIRE")) {
             const userId = localStorage.getItem("userId");
             const userEmail = localStorage.getItem("userEmail") || "";
-            const userName = localStorage.getItem("userName") || localStorage.getItem("username") || "";
+            const userName =
+              localStorage.getItem("userName") ||
+              localStorage.getItem("username") ||
+              "";
             // Find current user in gestionnaires list
-            const currentUser = (usersData || []).find(u => u.id === userId);
+            const currentUser = (usersData || []).find((u) => u.id === userId);
             if (currentUser) {
-              setFormData(prev => ({
+              setFormData((prev) => ({
                 ...prev,
                 email: currentUser.email || userEmail,
                 gestionnaire: currentUser,
               }));
             } else {
               // Fallback: create a basic user object
-              setFormData(prev => ({
+              setFormData((prev) => ({
                 ...prev,
                 email: userEmail,
-                gestionnaire: { id: userId, nom: userName.split(" ")[1] || "", prenom: userName.split(" ")[0] || "", email: userEmail },
+                gestionnaire: {
+                  id: userId,
+                  nom: userName.split(" ")[1] || "",
+                  prenom: userName.split(" ")[0] || "",
+                  email: userEmail,
+                },
               }));
             }
           }
         }
-
       } catch (error) {
         console.error("Error loading users:", error);
-        setErrors({ users: "Erreur lors du chargement des utilisateurs" });
+        setErrors({
+          users: "Erreur lors du chargement des utilisateurs",
+        });
       } finally {
         setLoadingUsers(false);
       }
     };
     loadUsers();
   }, [editingEstablishment]);
-
   useEffect(() => {
     const loadOffres = async () => {
       try {
         setLoadingOffres(true);
-        const data = await offerService.obtenirOffresActives(TypeCibleOffre.ETABLISSEMENT);
+        const data = await offerService.obtenirOffresActives(
+          TypeCibleOffre.ETABLISSEMENT,
+        );
         setOffres(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Error loading offres etablissement:", error);
@@ -130,22 +154,33 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
     };
     loadOffres();
   }, []);
-
   const selectedOffre = offres.find((o) => o.id === selectedOffreId) || null;
-  const offreReduction = selectedOffre ? offerService.calculerReduction(selectedOffre) : null;
+  const offreReduction = selectedOffre
+    ? offerService.calculerReduction(selectedOffre)
+    : null;
   const montantSelectionne = selectedOffre
-    ? Number(periodicite === PeriodiciteContrat.ANNUEL ? selectedOffre.prixAnnuel : selectedOffre.prixMensuel) || 0
+    ? Number(
+        periodicite === PeriodiciteContrat.ANNUEL
+          ? selectedOffre.prixAnnuel
+          : selectedOffre.prixMensuel,
+      ) || 0
     : 0;
-
   const handleOffreChange = (e) => {
     const offreId = e.target.value;
     setSelectedOffreId(offreId);
     const offre = offres.find((o) => o.id === offreId);
-    if (offre && periodicite === PeriodiciteContrat.ANNUEL && offre.prixAnnuel == null) {
+    if (
+      offre &&
+      periodicite === PeriodiciteContrat.ANNUEL &&
+      offre.prixAnnuel == null
+    ) {
       setPeriodicite(PeriodiciteContrat.MENSUEL);
     }
     if (errors.offre) {
-      setErrors((prev) => ({ ...prev, offre: null }));
+      setErrors((prev) => ({
+        ...prev,
+        offre: null,
+      }));
     }
   };
 
@@ -174,15 +209,12 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
       // Redirect when countdown reaches 0
       handleManualRedirect();
     }
-
     return () => {
       if (timer) clearTimeout(timer);
     };
   }, [success, countdown, setActiveTab, onNavigateToManage, navigate]);
-
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-
     if (type === "checkbox") {
       setFormData((prev) => ({
         ...prev,
@@ -197,24 +229,30 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
 
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: null }));
+      setErrors((prev) => ({
+        ...prev,
+        [name]: null,
+      }));
     }
   };
-
   const handleUserSelect = (user) => {
-    setFormData((prev) => ({ ...prev, gestionnaire: user }));
+    setFormData((prev) => ({
+      ...prev,
+      gestionnaire: user,
+    }));
     setShowUserDropdown(false);
     if (errors.gestionnaire) {
-      setErrors((prev) => ({ ...prev, gestionnaire: null }));
+      setErrors((prev) => ({
+        ...prev,
+        gestionnaire: null,
+      }));
     }
   };
-
   const handlePhoneChange = (value) => {
     setFormData((prev) => ({
       ...prev,
       telephone: value || "",
     }));
-
     if (value) {
       if (value.startsWith("+237")) {
         setSelectedCountry("CM");
@@ -222,51 +260,16 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
         setSelectedCountry("FR");
       }
     }
-
     if (errors.telephone) {
-      setErrors((prev) => ({ ...prev, telephone: null }));
+      setErrors((prev) => ({
+        ...prev,
+        telephone: null,
+      }));
     }
   };
-
-  const CountrySelect = ({ value, onChange, options, ...restProps }) => {
-    const countryToFlag = (countryCode) => {
-      return countryCode
-        .toUpperCase()
-        .replace(/./g, (char) =>
-          String.fromCodePoint(127397 + char.charCodeAt())
-        );
-    };
-
-    return (
-      <select
-        {...restProps}
-        value={value}
-        onChange={(event) => onChange(event.target.value || undefined)}
-        style={{
-          width: "60px",
-          backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='feather feather-chevron-down'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "right 0.5rem center",
-          backgroundSize: "1rem",
-          appearance: "none",
-        }}
-      >
-        {options?.map(({ value, label }) => (
-          <option key={value} value={value}>
-            {countryToFlag(value)} {label}
-          </option>
-        ))}
-        <option value={value} style={{ display: "none" }}>
-          {value ? countryToFlag(value) : ""}
-        </option>
-      </select>
-    );
-  };
-
   const validateForm = () => {
     const validation = establishmentService.validateEstablishment(formData);
     const newErrors = {};
-
     if (!validation.isValid) {
       validation.errors.forEach((error) => {
         if (error.includes("Name")) newErrors.nom = error;
@@ -274,23 +277,18 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
         if (error.includes("phone")) newErrors.telephone = error;
       });
     }
-
     if (!formData.localisation.trim()) {
       newErrors.localisation = "La localisation est requise";
     }
-
     if (!formData.pays.trim()) {
       newErrors.pays = "Le pays est requis";
     }
-
     if (!formData.gestionnaire) {
       newErrors.gestionnaire = "Un gestionnaire est requis";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const buildEstablishmentData = () => ({
     nom: formData.nom,
     localisation: formData.localisation,
@@ -304,29 +302,34 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
       id: formData.gestionnaire.id,
     },
   });
-
   const submitEstablishment = async (establishmentData) => {
     setLoading(true);
     try {
       if (isEditMode) {
-        await establishmentService.updateEstablishment(editingEstablishment.id, establishmentData);
+        await establishmentService.updateEstablishment(
+          editingEstablishment.id,
+          establishmentData,
+        );
       } else {
         await establishmentService.createEstablishment(establishmentData);
       }
       setSuccess(true);
       setCountdown(5);
     } catch (error) {
-      console.error(`Error ${isEditMode ? 'updating' : 'creating'} establishment:`, error);
-      setErrors({ submit: `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} de l'établissement` });
+      console.error(
+        `Error ${isEditMode ? "updating" : "creating"} establishment:`,
+        error,
+      );
+      setErrors({
+        submit: `Erreur lors de ${isEditMode ? "la modification" : "la création"} de l'établissement`,
+      });
       setShowPaymentModal(false);
     } finally {
       setLoading(false);
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) {
       return;
     }
@@ -337,10 +340,8 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
       setShowPaymentModal(true);
       return;
     }
-
     await submitEstablishment(buildEstablishmentData());
   };
-
   const handlePaymentSuccess = async (paymentInfo) => {
     setShowPaymentModal(false);
     const establishmentData = buildEstablishmentData();
@@ -349,20 +350,23 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
     establishmentData.paymentInfo = paymentInfo;
     await submitEstablishment(establishmentData);
   };
-
   if (success) {
     return (
       <div className="flex items-center justify-center py-20 p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+            <FontAwesomeIcon
+              icon={faCircleCheck}
+              className="w-10 h-10 text-green-600"
+            />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Établissement {isEditMode ? 'modifié' : 'créé'} avec succès!
+            Établissement {isEditMode ? "modifié" : "créé"} avec succès!
           </h2>
           <p className="text-gray-600 mb-6">
-            Votre établissement a été {isEditMode ? 'modifié' : 'créé'} avec succès. Redirection automatique
-            vers la gestion des établissements dans {countdown} seconde
+            Votre établissement a été {isEditMode ? "modifié" : "créé"} avec
+            succès. Redirection automatique vers la gestion des établissements
+            dans {countdown} seconde
             {countdown !== 1 ? "s" : ""}.
           </p>
 
@@ -370,7 +374,9 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
           <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-1000 ease-linear"
-              style={{ width: `${((5 - countdown) / 5) * 100}%` }}
+              style={{
+                width: `${((5 - countdown) / 5) * 100}%`,
+              }}
             ></div>
           </div>
 
@@ -389,7 +395,6 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
       </div>
     );
   }
-
   return (
     <div className="py-4 px-4">
       <div className="max-w-4xl mx-auto">
@@ -398,14 +403,21 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 sm:px-8 py-5 sm:py-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <Building2 className="w-6 h-6 text-white" />
+                <FontAwesomeIcon
+                  icon={faBuilding}
+                  className="w-6 h-6 text-white"
+                />
               </div>
               <div className="min-w-0">
                 <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
-                  {isEditMode ? 'Modifier l\'Établissement' : 'Créer un Établissement'}
+                  {isEditMode
+                    ? "Modifier l'Établissement"
+                    : "Créer un Établissement"}
                 </h1>
                 <p className="text-blue-100 text-sm sm:text-base">
-                  {isEditMode ? 'Modifiez les informations de l\'établissement' : 'Ajoutez un nouvel établissement à votre système'}
+                  {isEditMode
+                    ? "Modifiez les informations de l'établissement"
+                    : "Ajoutez un nouvel établissement à votre système"}
                 </p>
               </div>
             </div>
@@ -425,21 +437,25 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                     Nom de l'établissement *
                   </label>
                   <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faBuilding}
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    />
                     <input
                       type="text"
                       name="nom"
                       value={formData.nom}
                       onChange={handleInputChange}
-                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        errors.nom ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.nom ? "border-red-500" : "border-gray-300"}`}
                       placeholder="Nom de l'établissement"
                     />
                   </div>
                   {errors.nom && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
+                      <FontAwesomeIcon
+                        icon={faCircleExclamation}
+                        className="w-4 h-4"
+                      />
                       {errors.nom}
                     </p>
                   )}
@@ -450,23 +466,25 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                     Localisation *
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faLocationDot}
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    />
                     <input
                       type="text"
                       name="localisation"
                       value={formData.localisation}
                       onChange={handleInputChange}
-                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        errors.localisation
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.localisation ? "border-red-500" : "border-gray-300"}`}
                       placeholder="Adresse ou localisation"
                     />
                   </div>
                   {errors.localisation && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
+                      <FontAwesomeIcon
+                        icon={faCircleExclamation}
+                        className="w-4 h-4"
+                      />
                       {errors.localisation}
                     </p>
                   )}
@@ -477,21 +495,25 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                     Pays *
                   </label>
                   <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faGlobe}
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    />
                     <input
                       type="text"
                       name="pays"
                       value={formData.pays}
                       onChange={handleInputChange}
-                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        errors.pays ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.pays ? "border-red-500" : "border-gray-300"}`}
                       placeholder="Pays"
                     />
                   </div>
                   {errors.pays && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
+                      <FontAwesomeIcon
+                        icon={faCircleExclamation}
+                        className="w-4 h-4"
+                      />
                       {errors.pays}
                     </p>
                   )}
@@ -509,21 +531,25 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                     Email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faEnvelope}
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    />
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        errors.email ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.email ? "border-red-500" : "border-gray-300"}`}
                       placeholder="contact@etablissement.com"
                     />
                   </div>
                   {errors.email && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
+                      <FontAwesomeIcon
+                        icon={faCircleExclamation}
+                        className="w-4 h-4"
+                      />
                       {errors.email}
                     </p>
                   )}
@@ -534,9 +560,7 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                     Téléphone
                   </label>
                   <div
-                    className={`relative phone-input-container ${
-                      errors.telephone ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`relative phone-input-container ${errors.telephone ? "border-red-500" : "border-gray-300"}`}
                   >
                     <PhoneInput
                       defaultCountry={selectedCountry}
@@ -551,7 +575,10 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                   </div>
                   {errors.telephone && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
+                      <FontAwesomeIcon
+                        icon={faCircleExclamation}
+                        className="w-4 h-4"
+                      />
                       {errors.telephone}
                     </p>
                   )}
@@ -562,25 +589,23 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                     Gestionnaire *
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faUser}
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    />
                     <button
                       type="button"
                       onClick={() => setShowUserDropdown(!showUserDropdown)}
-                      className={`w-full pl-12 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-left ${
-                        errors.gestionnaire
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full pl-12 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-left ${errors.gestionnaire ? "border-red-500" : "border-gray-300"}`}
                     >
                       {formData.gestionnaire
-                        ? `${formData.gestionnaire.nom} ${
-                            formData.gestionnaire.prenom
-                          } (${formData.gestionnaire.email}) - ${
-                            formData.gestionnaire.type || "N/A"
-                          }`
+                        ? `${formData.gestionnaire.nom} ${formData.gestionnaire.prenom} (${formData.gestionnaire.email}) - ${formData.gestionnaire.type || "N/A"}`
                         : "Sélectionner un gestionnaire"}
                     </button>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faChevronDown}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    />
 
                     {showUserDropdown && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -617,13 +642,19 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                   </div>
                   {errors.gestionnaire && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
+                      <FontAwesomeIcon
+                        icon={faCircleExclamation}
+                        className="w-4 h-4"
+                      />
                       {errors.gestionnaire}
                     </p>
                   )}
                   {errors.users && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
+                      <FontAwesomeIcon
+                        icon={faCircleExclamation}
+                        className="w-4 h-4"
+                      />
                       {errors.users}
                     </p>
                   )}
@@ -631,7 +662,10 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
 
                 <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Settings className="w-5 h-5 text-gray-600" />
+                    <FontAwesomeIcon
+                      icon={faGear}
+                      className="w-5 h-5 text-gray-600"
+                    />
                     <h4 className="font-medium text-gray-900">
                       Options de Configuration
                     </h4>
@@ -666,11 +700,14 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                 {!isEditMode && (
                   <div className="space-y-4 bg-amber-50 border border-amber-200 p-4 rounded-lg">
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-1">Offre / Forfait (optionnel)</h4>
+                      <h4 className="font-medium text-gray-900 mb-1">
+                        Offre / Forfait (optionnel)
+                      </h4>
                       <p className="text-sm text-gray-600 mb-3">
-                        Choisissez un forfait pour définir le quota de classes et la durée de vie de votre
-                        établissement. Sans forfait, l'établissement est créé sans restriction ; un administrateur
-                        pourra vous en associer un plus tard.
+                        Choisissez un forfait pour définir le quota de classes
+                        et la durée de vie de votre établissement. Sans forfait,
+                        l'établissement est créé sans restriction ; un
+                        administrateur pourra vous en associer un plus tard.
                       </p>
                       <select
                         value={selectedOffreId}
@@ -679,7 +716,9 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
                       >
                         <option value="">
-                          {loadingOffres ? "Chargement des offres..." : "Aucun forfait pour le moment"}
+                          {loadingOffres
+                            ? "Chargement des offres..."
+                            : "Aucun forfait pour le moment"}
                         </option>
                         {offres.map((offre) => (
                           <option key={offre.id} value={offre.id}>
@@ -696,43 +735,53 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                     {selectedOffre && (
                       <>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Périodicité</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Périodicité
+                          </label>
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => setPeriodicite(PeriodiciteContrat.MENSUEL)}
+                              onClick={() =>
+                                setPeriodicite(PeriodiciteContrat.MENSUEL)
+                              }
                               disabled={selectedOffre.prixMensuel == null}
-                              className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-40 ${
-                                periodicite === PeriodiciteContrat.MENSUEL
-                                  ? "bg-blue-600 border-blue-600 text-white"
-                                  : "border-gray-300 text-gray-700 hover:bg-gray-100"
-                              }`}
+                              className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-40 ${periodicite === PeriodiciteContrat.MENSUEL ? "bg-blue-600 border-blue-600 text-white" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
                             >
-                              Mensuel{selectedOffre.prixMensuel != null ? ` - ${Number(selectedOffre.prixMensuel).toLocaleString("fr-FR")} FCFA` : ""}
+                              Mensuel
+                              {selectedOffre.prixMensuel != null
+                                ? ` - ${Number(selectedOffre.prixMensuel).toLocaleString("fr-FR")} FCFA`
+                                : ""}
                             </button>
                             <button
                               type="button"
-                              onClick={() => setPeriodicite(PeriodiciteContrat.ANNUEL)}
+                              onClick={() =>
+                                setPeriodicite(PeriodiciteContrat.ANNUEL)
+                              }
                               disabled={selectedOffre.prixAnnuel == null}
-                              className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-40 ${
-                                periodicite === PeriodiciteContrat.ANNUEL
-                                  ? "bg-blue-600 border-blue-600 text-white"
-                                  : "border-gray-300 text-gray-700 hover:bg-gray-100"
-                              }`}
+                              className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-40 ${periodicite === PeriodiciteContrat.ANNUEL ? "bg-blue-600 border-blue-600 text-white" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
                             >
-                              Annuel{selectedOffre.prixAnnuel != null ? ` - ${Number(selectedOffre.prixAnnuel).toLocaleString("fr-FR")} FCFA` : ""}
+                              Annuel
+                              {selectedOffre.prixAnnuel != null
+                                ? ` - ${Number(selectedOffre.prixAnnuel).toLocaleString("fr-FR")} FCFA`
+                                : ""}
                             </button>
                           </div>
-                          {periodicite === PeriodiciteContrat.ANNUEL && offreReduction != null && offreReduction > 0 && (
-                            <p className="mt-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                              🎉 Réduction de {Math.round(offreReduction * 100)}% en optant pour l'annuel !
-                            </p>
-                          )}
+                          {periodicite === PeriodiciteContrat.ANNUEL &&
+                            offreReduction != null &&
+                            offreReduction > 0 && (
+                              <p className="mt-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                🎉 Réduction de{" "}
+                                {Math.round(offreReduction * 100)}% en optant
+                                pour l'annuel !
+                              </p>
+                            )}
                         </div>
 
                         <p className="text-xs text-amber-700 border-t border-amber-200 pt-3">
-                          💳 Le paiement ({montantSelectionne.toLocaleString("fr-FR")} FCFA, simulé) vous sera demandé
-                          à l'étape suivante, après validation du formulaire.
+                          💳 Le paiement (
+                          {montantSelectionne.toLocaleString("fr-FR")} FCFA,
+                          simulé) vous sera demandé à l'étape suivante, après
+                          validation du formulaire.
                         </p>
                       </>
                     )}
@@ -745,7 +794,10 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
             {errors.submit && (
               <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <FontAwesomeIcon
+                    icon={faCircleExclamation}
+                    className="w-5 h-5 text-red-600"
+                  />
                   <p className="text-red-700">{errors.submit}</p>
                 </div>
               </div>
@@ -772,10 +824,10 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 )}
                 {loading
-                  ? `${isEditMode ? 'Modification' : 'Création'} en cours...`
+                  ? `${isEditMode ? "Modification" : "Création"} en cours...`
                   : !isEditMode && selectedOffreId
-                  ? "Continuer vers le paiement"
-                  : `${isEditMode ? 'Modifier les informations' : "Créer l'établissement"}`}
+                    ? "Continuer vers le paiement"
+                    : `${isEditMode ? "Modifier les informations" : "Créer l'établissement"}`}
               </button>
             </div>
           </div>
@@ -788,10 +840,13 @@ const CreateEstablishmentContent = ({ onNavigateToManage, setActiveTab, editingE
         onSuccess={handlePaymentSuccess}
         montant={montantSelectionne}
         label={selectedOffre?.nom || "Souscription établissement"}
-        subLabel={periodicite === PeriodiciteContrat.ANNUEL ? "Périodicité annuelle" : "Périodicité mensuelle"}
+        subLabel={
+          periodicite === PeriodiciteContrat.ANNUEL
+            ? "Périodicité annuelle"
+            : "Périodicité mensuelle"
+        }
       />
     </div>
   );
 };
-
 export default CreateEstablishmentContent;

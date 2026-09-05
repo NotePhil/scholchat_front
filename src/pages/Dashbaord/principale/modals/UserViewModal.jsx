@@ -1,30 +1,31 @@
 import React, { useState, useEffect } from "react";
-import {
-  Check,
-  X,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-  Download,
-  FileText,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
-  Maximize2,
-  User,
-  Calendar,
-  Mail,
-  Phone,
-  Shield,
-  Image as ImageIcon,
-  File,
-} from "lucide-react";
 import { rejectionService } from "../../../../services/RejectionService";
 import { minioS3Service } from "../../../../services/minioS3";
 import { useTranslation } from "../../../../hooks/useTranslation";
 
 // Extracts the relative storage path from a full Wasabi/MinIO URL.
 // Direct Wasabi URLs require presigned access; we must go through the proxy.
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCalendarDays,
+  faCheck,
+  faChevronDown,
+  faChevronUp,
+  faCircleExclamation,
+  faDownload,
+  faEnvelope,
+  faExpand,
+  faFile,
+  faFileLines,
+  faImage,
+  faMagnifyingGlassMinus,
+  faMagnifyingGlassPlus,
+  faPhone,
+  faRotate,
+  faShield,
+  faUser,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const toRelativePath = (raw) => {
   if (!raw || !raw.startsWith("http")) return raw;
   try {
@@ -49,7 +50,6 @@ const resolveMediaUrl = async (path) => {
     return null;
   }
 };
-
 const ProfilePhotoAvatar = ({ user }) => {
   const [photoUrl, setPhotoUrl] = useState(null);
   const path = user?.selfieUrl;
@@ -60,9 +60,10 @@ const ProfilePhotoAvatar = ({ user }) => {
       const url = await resolveMediaUrl(path);
       if (!cancelled && url) setPhotoUrl(url);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [path]);
-
   if (photoUrl) {
     return (
       <img
@@ -75,7 +76,8 @@ const ProfilePhotoAvatar = ({ user }) => {
   }
   return (
     <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
-      {user?.nom?.charAt(0)}{user?.prenom?.charAt(0)}
+      {user?.nom?.charAt(0)}
+      {user?.prenom?.charAt(0)}
     </div>
   );
 };
@@ -84,27 +86,36 @@ const ProfilePhotoAvatar = ({ user }) => {
 const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({
+    x: 0,
+    y: 0,
+  });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-
+  const [dragStart, setDragStart] = useState({
+    x: 0,
+    y: 0,
+  });
   useEffect(() => {
     if (isOpen) {
       setZoom(1);
       setRotation(0);
-      setPosition({ x: 0, y: 0 });
+      setPosition({
+        x: 0,
+        y: 0,
+      });
     }
   }, [isOpen, currentIndex]);
-
   const handleZoomIn = () => setZoom((prev) => Math.min(prev * 1.5, 5));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev / 1.5, 0.5));
   const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
   const handleReset = () => {
     setZoom(1);
     setRotation(0);
-    setPosition({ x: 0, y: 0 });
+    setPosition({
+      x: 0,
+      y: 0,
+    });
   };
-
   const handleMouseDown = (e) => {
     if (zoom > 1) {
       setIsDragging(true);
@@ -114,7 +125,6 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
       });
     }
   };
-
   const handleMouseMove = (e) => {
     if (isDragging && zoom > 1) {
       setPosition({
@@ -123,11 +133,9 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
       });
     }
   };
-
   const handleMouseUp = () => {
     setIsDragging(false);
   };
-
   const handleKeyPress = (e) => {
     switch (e.key) {
       case "Escape":
@@ -152,7 +160,6 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
         break;
     }
   };
-
   useEffect(() => {
     if (isOpen) {
       document.addEventListener("keydown", handleKeyPress);
@@ -165,11 +172,8 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
       };
     }
   }, [isOpen, isDragging, dragStart, currentIndex, images.length]);
-
   if (!isOpen || !images[currentIndex]) return null;
-
   const currentImage = images[currentIndex];
-
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       {/* Header with controls */}
@@ -184,7 +188,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
           onClick={onClose}
           className="text-white hover:text-gray-300 p-2 rounded-full bg-black/50 backdrop-blur-sm transition-colors"
         >
-          <X className="w-6 h-6" />
+          <FontAwesomeIcon icon={faXmark} className="w-6 h-6" />
         </button>
       </div>
 
@@ -194,7 +198,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
           onClick={() => onNavigate(currentIndex - 1)}
           className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 backdrop-blur-sm z-10 transition-colors"
         >
-          <ChevronDown className="w-6 h-6 rotate-90" />
+          <FontAwesomeIcon icon={faChevronDown} className="w-6 h-6 rotate-90" />
         </button>
       )}
       {currentIndex < images.length - 1 && (
@@ -202,7 +206,10 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
           onClick={() => onNavigate(currentIndex + 1)}
           className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 backdrop-blur-sm z-10 transition-colors"
         >
-          <ChevronDown className="w-6 h-6 -rotate-90" />
+          <FontAwesomeIcon
+            icon={faChevronDown}
+            className="w-6 h-6 -rotate-90"
+          />
         </button>
       )}
 
@@ -211,9 +218,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
         <img
           src={currentImage.url}
           alt={currentImage.title}
-          className={`max-w-full max-h-full object-contain transition-transform duration-200 ${
-            zoom > 1 ? "cursor-move" : "cursor-zoom-in"
-          }`}
+          className={`max-w-full max-h-full object-contain transition-transform duration-200 ${zoom > 1 ? "cursor-move" : "cursor-zoom-in"}`}
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${zoom}) rotate(${rotation}deg)`,
             transformOrigin: "center center",
@@ -231,7 +236,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
           className="text-white hover:text-gray-300 p-2 rounded transition-colors"
           disabled={zoom <= 0.5}
         >
-          <ZoomOut className="w-5 h-5" />
+          <FontAwesomeIcon icon={faMagnifyingGlassMinus} className="w-5 h-5" />
         </button>
         <span className="text-white text-sm px-2">
           {Math.round(zoom * 100)}%
@@ -241,26 +246,25 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
           className="text-white hover:text-gray-300 p-2 rounded transition-colors"
           disabled={zoom >= 5}
         >
-          <ZoomIn className="w-5 h-5" />
+          <FontAwesomeIcon icon={faMagnifyingGlassPlus} className="w-5 h-5" />
         </button>
         <div className="w-px h-6 bg-gray-400 mx-2"></div>
         <button
           onClick={handleRotate}
           className="text-white hover:text-gray-300 p-2 rounded transition-colors"
         >
-          <RotateCw className="w-5 h-5" />
+          <FontAwesomeIcon icon={faRotate} className="w-5 h-5" />
         </button>
         <button
           onClick={handleReset}
           className="text-white hover:text-gray-300 p-2 rounded transition-colors"
         >
-          <Maximize2 className="w-5 h-5" />
+          <FontAwesomeIcon icon={faExpand} className="w-5 h-5" />
         </button>
       </div>
     </div>
   );
 };
-
 const UserViewModal = ({ user, onClose, onSuccess }) => {
   const { t } = useTranslation();
   const [showRejectionOptions, setShowRejectionOptions] = useState(false);
@@ -288,14 +292,12 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       user?.etat === "EN_ATTENTE"
     );
   };
-
   useEffect(() => {
     if (shouldShowActions()) {
       fetchRejectionMotifs();
     }
     fetchUserDocuments();
   }, [user]);
-
   const fetchRejectionMotifs = async () => {
     try {
       setIsLoadingMotifs(true);
@@ -310,22 +312,21 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       setIsLoadingMotifs(false);
     }
   };
-
   const getDocumentUrl = async (document) => {
     try {
-      const downloadData = await minioS3Service.generateDownloadUrl(document.id);
+      const downloadData = await minioS3Service.generateDownloadUrl(
+        document.id,
+      );
       return downloadData.downloadUrl;
     } catch (error) {
       console.error("Failed to get document URL:", error);
       return null;
     }
   };
-
   const fetchUserDocuments = async () => {
     try {
       setIsLoadingDocuments(true);
       setError(null);
-
       const userId = user?.id;
       if (!userId) {
         setUserDocuments([]);
@@ -334,21 +335,27 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
       // Only include direct image URLs that the user actually registered (cniUrlRecto, cniUrlVerso, selfieUrl)
       const directImages = [];
-      
       const processDirectPath = async (path, title, idPrefix) => {
         if (!path) return null;
         // Always go through proxy — never expose raw Wasabi URLs (AccessDenied)
         const signedUrl = await resolveMediaUrl(path);
         if (!signedUrl) return null;
-        return { id: `${idPrefix}-${userId}`, title, url: signedUrl, type: "image/jpeg", size: null, uploadDate: null, fileType: "IMAGE", mediaType: "IMAGE" };
+        return {
+          id: `${idPrefix}-${userId}`,
+          title,
+          url: signedUrl,
+          type: "image/jpeg",
+          size: null,
+          uploadDate: null,
+          fileType: "IMAGE",
+          mediaType: "IMAGE",
+        };
       };
-
       const [cniRecto, cniVerso, selfie] = await Promise.all([
         processDirectPath(user?.cniUrlRecto, "CNI Recto", "cni-recto"),
         processDirectPath(user?.cniUrlVerso, "CNI Verso", "cni-verso"),
-        processDirectPath(user?.selfieUrl, "Selfie", "selfie")
+        processDirectPath(user?.selfieUrl, "Selfie", "selfie"),
       ]);
-
       if (cniRecto) directImages.push(cniRecto);
       if (cniVerso) directImages.push(cniVerso);
       if (selfie) directImages.push(selfie);
@@ -357,19 +364,31 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       let minioDocuments = [];
       try {
         const documents = await minioS3Service.getUserMedia(userId);
-        const documentsWithUrls = (await Promise.all(
-          documents.map(async (doc) => {
-            const url = await getDocumentUrl(doc);
-            if (!url) return null;
-            return { id: doc.id, title: doc.fileName || "Document sans nom", url, type: doc.contentType, size: doc.fileSize, uploadDate: doc.uploadedDate, fileType: doc.fileType, mediaType: doc.mediaType };
-          })
-        )).filter(Boolean);
-        const existingUrls = new Set(directImages.map(d => d.url));
-        minioDocuments = documentsWithUrls.filter(d => !existingUrls.has(d.url));
+        const documentsWithUrls = (
+          await Promise.all(
+            documents.map(async (doc) => {
+              const url = await getDocumentUrl(doc);
+              if (!url) return null;
+              return {
+                id: doc.id,
+                title: doc.fileName || "Document sans nom",
+                url,
+                type: doc.contentType,
+                size: doc.fileSize,
+                uploadDate: doc.uploadedDate,
+                fileType: doc.fileType,
+                mediaType: doc.mediaType,
+              };
+            }),
+          )
+        ).filter(Boolean);
+        const existingUrls = new Set(directImages.map((d) => d.url));
+        minioDocuments = documentsWithUrls.filter(
+          (d) => !existingUrls.has(d.url),
+        );
       } catch (minioErr) {
         console.warn("Could not load MinIO documents:", minioErr);
       }
-
       setUserDocuments([...directImages, ...minioDocuments]);
     } catch (err) {
       console.error("Échec du chargement des documents:", err);
@@ -379,15 +398,15 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       setIsLoadingDocuments(false);
     }
   };
-
   const handleDownload = async (document) => {
     try {
-      setDownloadingFiles((prev) => ({ ...prev, [document.id]: true }));
-
+      setDownloadingFiles((prev) => ({
+        ...prev,
+        [document.id]: true,
+      }));
       const downloadData = await minioS3Service.generateDownloadUrl(
-        document.id
+        document.id,
       );
-
       const link = document.createElement("a");
       link.href = downloadData.downloadUrl;
       link.download = document.title;
@@ -398,40 +417,37 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       console.error("Failed to download document:", error);
       setError("Échec du téléchargement du document");
     } finally {
-      setDownloadingFiles((prev) => ({ ...prev, [document.id]: false }));
+      setDownloadingFiles((prev) => ({
+        ...prev,
+        [document.id]: false,
+      }));
     }
   };
-
   const toggleMotif = (motif) => {
     setSelectedMotifs((prev) =>
       prev.some((m) => m.id === motif.id)
         ? prev.filter((m) => m.id !== motif.id)
-        : [...prev, motif]
+        : [...prev, motif],
     );
   };
-
   const handleSuccess = () => {
     if (typeof onSuccess === "function") {
       onSuccess();
     }
     onClose();
   };
-
   const handleReject = async () => {
     try {
       setIsProcessing(true);
       setError(null);
-
       const primaryMotif = selectedMotifs[0] || {
         code: "CUSTOM",
         descriptif: customMotif,
       };
-
       await rejectionService.rejectProfessor(user.id, {
         codeErreur: primaryMotif.code,
         motifSupplementaire: customMotif || primaryMotif.descriptif,
       });
-
       setSuccessMessage("Professeur rejeté avec succès");
       setTimeout(() => {
         handleSuccess();
@@ -440,7 +456,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       console.error("Échec du rejet:", err);
       if (err.response?.status === 409 || err.response?.status === 500) {
         setError(
-          err.message || "Échec du rejet du professeur. Veuillez réessayer."
+          err.message || "Échec du rejet du professeur. Veuillez réessayer.",
         );
       } else {
         setSuccessMessage("Opération réussie (veuillez actualiser la page)");
@@ -452,14 +468,11 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       setIsProcessing(false);
     }
   };
-
   const handleApprove = async () => {
     try {
       setIsProcessing(true);
       setError(null);
-
       await rejectionService.validateProfessor(user.id);
-
       setSuccessMessage("Professeur approuvé avec succès");
       setTimeout(() => {
         handleSuccess();
@@ -469,7 +482,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       if (err.response?.status === 409 || err.response?.status === 500) {
         setError(
           err.message ||
-            "Échec de l'approbation du professeur. Veuillez réessayer."
+            "Échec de l'approbation du professeur. Veuillez réessayer.",
         );
       } else {
         setSuccessMessage("Opération réussie (veuillez actualiser la page)");
@@ -487,7 +500,6 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
     const verificationStatus = user?.verificationStatus;
     const userState = user?.etat;
     const hasRejectionMotif = user?.motif;
-
     let status = "EN_ATTENTE";
     let statusText = "En attente de vérification";
     let statusClass = "bg-yellow-100 text-yellow-800";
@@ -525,7 +537,6 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       statusText = "Approuvé";
       statusClass = "bg-green-100 text-green-800";
     }
-
     return (
       <span
         className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}
@@ -540,14 +551,12 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
     const verificationStatus = user?.verificationStatus;
     const userState = user?.etat;
     const hasRejectionMotif = user?.motif;
-
     if (userState === "ACTIVE" || userState === "APPROUVEE") {
       return {
         type: "success",
         message: "Ce professeur a déjà été approuvé et validé.",
       };
     }
-
     if (
       userState === "INACTIVE" ||
       userState === "REJETEE" ||
@@ -556,31 +565,23 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
     ) {
       return {
         type: "error",
-        message: `Ce professeur a déjà été rejeté${
-          hasRejectionMotif
-            ? ` pour le motif suivant: ${hasRejectionMotif}`
-            : "."
-        }`,
+        message: `Ce professeur a déjà été rejeté${hasRejectionMotif ? ` pour le motif suivant: ${hasRejectionMotif}` : "."}`,
       };
     }
-
     if (verificationStatus === "APPROVED") {
       return {
         type: "success",
         message: "Ce professeur a déjà été approuvé et validé.",
       };
     }
-
     return null;
   };
-
   const formatFileSize = (bytes) => {
     if (!bytes) return "N/A";
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
   };
-
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("fr-FR", {
@@ -591,7 +592,6 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       minute: "2-digit",
     });
   };
-
   const getFileIcon = (contentType) => {
     if (contentType?.startsWith("image/")) return "🖼️";
     if (contentType?.startsWith("video/")) return "🎥";
@@ -605,7 +605,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
   // Get all image documents
   const imageDocuments = userDocuments.filter((doc) =>
-    doc.type?.startsWith("image/")
+    doc.type?.startsWith("image/"),
   );
 
   // Handle image click to open modal
@@ -618,41 +618,46 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
   // Group documents by type
   const groupDocumentsByType = () => {
     const images = userDocuments.filter((doc) =>
-      doc.type?.startsWith("image/")
+      doc.type?.startsWith("image/"),
     );
     const others = userDocuments.filter(
-      (doc) => !doc.type?.startsWith("image/")
+      (doc) => !doc.type?.startsWith("image/"),
     );
-    return { images, others };
+    return {
+      images,
+      others,
+    };
   };
-
   if (successMessage) {
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
           <div className="text-center">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-              <Check className="h-6 w-6 text-green-600" />
+              <FontAwesomeIcon
+                icon={faCheck}
+                className="h-6 w-6 text-green-600"
+              />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.messages.success')}</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {t("common.messages.success")}
+            </h3>
             <div className="text-sm text-gray-500 mb-4">{successMessage}</div>
             <button
               type="button"
               className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
               onClick={handleSuccess}
             >
-              {t('common.actions.close')}
+              {t("common.actions.close")}
             </button>
           </div>
         </div>
       </div>
     );
   }
-
   const statusMessage = getProcessingStatusMessage();
   const showActions = shouldShowActions();
   const { images, others } = groupDocumentsByType();
-
   return (
     <>
       {/* Updated modal with same styling approach as CreateCourseFormModal */}
@@ -662,11 +667,17 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
           <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
             <div className="flex items-center justify-between">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
-                <User className="mr-2 sm:mr-3 text-indigo-600" size={24} />
+                <FontAwesomeIcon
+                  icon={faUser}
+                  className="mr-2 sm:mr-3 text-indigo-600"
+                  style={{
+                    fontSize: 24,
+                  }}
+                />
                 <span className="hidden sm:inline">
-                  {t('users.management.userDetails')}
+                  {t("users.management.userDetails")}
                 </span>
-                <span className="sm:hidden">{t('users.management.user')}</span>
+                <span className="sm:hidden">{t("users.management.user")}</span>
               </h2>
               <div className="flex items-center space-x-3 sm:space-x-4">
                 {getVerificationStatusBadge()}
@@ -674,7 +685,12 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                   onClick={onClose}
                   className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                 >
-                  <X size={20} />
+                  <FontAwesomeIcon
+                    icon={faXmark}
+                    style={{
+                      fontSize: 20,
+                    }}
+                  />
                 </button>
               </div>
             </div>
@@ -682,20 +698,28 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
             {/* Status Messages */}
             {error && (
               <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start text-red-700">
-                <AlertCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+                <FontAwesomeIcon
+                  icon={faCircleExclamation}
+                  className="mr-2 flex-shrink-0 mt-0.5"
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
                 <span className="text-sm">{error}</span>
               </div>
             )}
 
             {statusMessage && (
               <div
-                className={`mt-4 p-3 rounded-lg flex items-start ${
-                  statusMessage.type === "success"
-                    ? "bg-green-50 border border-green-200 text-green-700"
-                    : "bg-orange-50 border border-orange-200 text-orange-700"
-                }`}
+                className={`mt-4 p-3 rounded-lg flex items-start ${statusMessage.type === "success" ? "bg-green-50 border border-green-200 text-green-700" : "bg-orange-50 border border-orange-200 text-orange-700"}`}
               >
-                <AlertCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+                <FontAwesomeIcon
+                  icon={faCircleExclamation}
+                  className="mr-2 flex-shrink-0 mt-0.5"
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
                 <span className="text-sm">{statusMessage.message}</span>
               </div>
             )}
@@ -708,8 +732,14 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
               <div className="flex-1">
                 <div className="bg-slate-50 rounded-xl p-4 sm:p-6 mb-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
-                    <Shield size={18} className="mr-2 text-indigo-600" />
-                    {t('users.management.personalInfo')}
+                    <FontAwesomeIcon
+                      icon={faShield}
+                      className="mr-2 text-indigo-600"
+                      style={{
+                        fontSize: 18,
+                      }}
+                    />
+                    {t("users.management.personalInfo")}
                   </h3>
 
                   {/* User Avatar and Name */}
@@ -720,7 +750,13 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                         {user?.nom} {user?.prenom}
                       </div>
                       <div className="text-sm text-slate-500 capitalize flex items-center">
-                        <User size={14} className="mr-1" />
+                        <FontAwesomeIcon
+                          icon={faUser}
+                          className="mr-1"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
                         {user?.type}
                       </div>
                     </div>
@@ -730,8 +766,14 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
-                        <Mail size={14} className="mr-1" />
-                        {t('admin.form.email')}
+                        <FontAwesomeIcon
+                          icon={faEnvelope}
+                          className="mr-1"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        {t("admin.form.email")}
                       </p>
                       <p className="font-medium text-slate-900 break-all">
                         {user?.email}
@@ -739,24 +781,42 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
-                        <Phone size={14} className="mr-1" />
-                        {t('admin.form.phone')}
+                        <FontAwesomeIcon
+                          icon={faPhone}
+                          className="mr-1"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        {t("admin.form.phone")}
                       </p>
                       <p className="font-medium text-slate-900">
-                        {user?.telephone || t('users.management.notProvided')}
+                        {user?.telephone || t("users.management.notProvided")}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
-                        <Shield size={14} className="mr-1" />
-                        {t('admin.table.status')}
+                        <FontAwesomeIcon
+                          icon={faShield}
+                          className="mr-1"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        {t("admin.table.status")}
                       </p>
                       <div>{getVerificationStatusBadge()}</div>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-500 flex items-center">
-                        <Calendar size={14} className="mr-1" />
-                        {t('users.management.registrationDate')}
+                        <FontAwesomeIcon
+                          icon={faCalendarDays}
+                          className="mr-1"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        {t("users.management.registrationDate")}
                       </p>
                       <p className="font-medium text-slate-900">
                         {user?.dateCreation
@@ -766,15 +826,15 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                 year: "numeric",
                                 month: "long",
                                 day: "numeric",
-                              }
+                              },
                             )
-                          : t('users.management.notAvailable')}
+                          : t("users.management.notAvailable")}
                       </p>
                     </div>
                     {user?.motif && (
                       <div className="col-span-2 space-y-1">
                         <p className="text-sm font-medium text-slate-500">
-                          {t('users.management.rejectionReason')}
+                          {t("users.management.rejectionReason")}
                         </p>
                         <p className="font-medium text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
                           {user.motif}
@@ -787,23 +847,35 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                 {/* Documents Section */}
                 <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                    <FileText size={18} className="mr-2 text-indigo-600" />
-                    {t('users.management.userDocuments')} ({userDocuments.length})
+                    <FontAwesomeIcon
+                      icon={faFileLines}
+                      className="mr-2 text-indigo-600"
+                      style={{
+                        fontSize: 18,
+                      }}
+                    />
+                    {t("users.management.userDocuments")} (
+                    {userDocuments.length})
                   </h3>
 
                   {isLoadingDocuments ? (
                     <div className="flex justify-center items-center p-8 text-slate-500">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                      <span className="ml-3">{t('users.management.loadingDocuments')}</span>
+                      <span className="ml-3">
+                        {t("users.management.loadingDocuments")}
+                      </span>
                     </div>
                   ) : userDocuments.length === 0 ? (
                     <div className="bg-white p-8 rounded-lg text-center text-slate-500 border-2 border-dashed border-slate-300">
-                      <FileText className="mx-auto h-12 w-12 text-slate-400 mb-3" />
+                      <FontAwesomeIcon
+                        icon={faFileLines}
+                        className="mx-auto h-12 w-12 text-slate-400 mb-3"
+                      />
                       <p className="text-lg font-medium mb-1">
-                        {t('users.management.noDocumentsFound')}
+                        {t("users.management.noDocumentsFound")}
                       </p>
                       <p className="text-sm">
-                        {t('users.management.noDocumentsUploaded')}
+                        {t("users.management.noDocumentsUploaded")}
                       </p>
                     </div>
                   ) : (
@@ -812,11 +884,14 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                       {images.length > 0 && (
                         <div>
                           <h4 className="text-md font-semibold mb-4 text-slate-700 flex items-center">
-                            <ImageIcon
-                              size={16}
+                            <FontAwesomeIcon
+                              icon={faImage}
                               className="mr-2 text-indigo-600"
+                              style={{
+                                fontSize: 16,
+                              }}
                             />
-                            {t('users.management.images')} ({images.length})
+                            {t("users.management.images")} ({images.length})
                           </h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {images.map((doc, index) => (
@@ -834,14 +909,18 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                       className="w-full h-32 sm:h-40 object-cover rounded-lg bg-slate-100 border group-hover:scale-105 transition-transform duration-300 shadow-sm"
                                       onError={(e) => {
                                         e.target.onerror = null;
-                                        const card = e.target.closest('[data-doc-card]');
-                                        if (card) card.style.display = 'none';
+                                        const card =
+                                          e.target.closest("[data-doc-card]");
+                                        if (card) card.style.display = "none";
                                       }}
                                     />
                                   </div>
                                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                     <div className="bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full shadow-lg">
-                                      <ZoomIn className="w-4 h-4" />
+                                      <FontAwesomeIcon
+                                        icon={faMagnifyingGlassPlus}
+                                        className="w-4 h-4"
+                                      />
                                     </div>
                                   </div>
                                 </div>
@@ -855,11 +934,23 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                     </h5>
                                     <div className="text-xs text-slate-500 space-y-1">
                                       <p className="flex items-center">
-                                        <File size={12} className="mr-1" />
+                                        <FontAwesomeIcon
+                                          icon={faFile}
+                                          className="mr-1"
+                                          style={{
+                                            fontSize: 12,
+                                          }}
+                                        />
                                         {formatFileSize(doc.size)}
                                       </p>
                                       <p className="flex items-center">
-                                        <Calendar size={12} className="mr-1" />
+                                        <FontAwesomeIcon
+                                          icon={faCalendarDays}
+                                          className="mr-1"
+                                          style={{
+                                            fontSize: 12,
+                                          }}
+                                        />
                                         {formatDate(doc.uploadDate)}
                                       </p>
                                     </div>
@@ -876,7 +967,10 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                     {downloadingFiles[doc.id] ? (
                                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                                     ) : (
-                                      <Download className="w-4 h-4" />
+                                      <FontAwesomeIcon
+                                        icon={faDownload}
+                                        className="w-4 h-4"
+                                      />
                                     )}
                                   </button>
                                 </div>
@@ -890,7 +984,13 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                       {others.length > 0 && (
                         <div>
                           <h4 className="text-md font-semibold mb-4 text-slate-700 flex items-center">
-                            <File size={16} className="mr-2 text-indigo-600" />
+                            <FontAwesomeIcon
+                              icon={faFile}
+                              className="mr-2 text-indigo-600"
+                              style={{
+                                fontSize: 16,
+                              }}
+                            />
                             Autres documents ({others.length})
                           </h4>
                           <div className="space-y-3">
@@ -915,7 +1015,13 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                       </h5>
                                       <div className="text-xs text-slate-500 grid grid-cols-1 sm:grid-cols-3 gap-1">
                                         <p className="flex items-center">
-                                          <File size={12} className="mr-1" />
+                                          <FontAwesomeIcon
+                                            icon={faFile}
+                                            className="mr-1"
+                                            style={{
+                                              fontSize: 12,
+                                            }}
+                                          />
                                           {doc.type
                                             ? doc.type
                                                 .split("/")[1]
@@ -923,16 +1029,22 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                             : "Inconnu"}
                                         </p>
                                         <p className="flex items-center">
-                                          <Download
-                                            size={12}
+                                          <FontAwesomeIcon
+                                            icon={faDownload}
                                             className="mr-1"
+                                            style={{
+                                              fontSize: 12,
+                                            }}
                                           />
                                           {formatFileSize(doc.size)}
                                         </p>
                                         <p className="flex items-center">
-                                          <Calendar
-                                            size={12}
+                                          <FontAwesomeIcon
+                                            icon={faCalendarDays}
                                             className="mr-1"
+                                            style={{
+                                              fontSize: 12,
+                                            }}
                                           />
                                           {formatDate(doc.uploadDate)}
                                         </p>
@@ -948,7 +1060,10 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                     {downloadingFiles[doc.id] ? (
                                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                                     ) : (
-                                      <Download className="w-4 h-4" />
+                                      <FontAwesomeIcon
+                                        icon={faDownload}
+                                        className="w-4 h-4"
+                                      />
                                     )}
                                   </button>
                                 </div>
@@ -967,7 +1082,13 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                 <div className="flex-shrink-0 w-full xl:w-80">
                   <div className="bg-slate-50 rounded-xl p-4 sm:p-6 sticky top-6">
                     <h3 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
-                      <Shield size={18} className="mr-2 text-indigo-600" />
+                      <FontAwesomeIcon
+                        icon={faShield}
+                        className="mr-2 text-indigo-600"
+                        style={{
+                          fontSize: 18,
+                        }}
+                      />
                       Actions de validation
                     </h3>
 
@@ -975,16 +1096,15 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                       <button
                         onClick={handleApprove}
                         disabled={isProcessing}
-                        className={`w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${
-                          isProcessing
-                            ? "opacity-75 cursor-not-allowed transform-none"
-                            : ""
-                        }`}
+                        className={`w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${isProcessing ? "opacity-75 cursor-not-allowed transform-none" : ""}`}
                       >
                         {isProcessing ? (
                           <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
                         ) : (
-                          <Check className="w-5 h-5 mr-2" />
+                          <FontAwesomeIcon
+                            icon={faCheck}
+                            className="w-5 h-5 mr-2"
+                          />
                         )}
                         <span className="hidden sm:inline">
                           Approuver le professeur
@@ -998,30 +1118,38 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                             setShowRejectionOptions(!showRejectionOptions)
                           }
                           disabled={isProcessing}
-                          className={`w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${
-                            isProcessing
-                              ? "opacity-75 cursor-not-allowed transform-none"
-                              : ""
-                          }`}
+                          className={`w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${isProcessing ? "opacity-75 cursor-not-allowed transform-none" : ""}`}
                         >
-                          <X className="w-5 h-5 mr-2" />
+                          <FontAwesomeIcon
+                            icon={faXmark}
+                            className="w-5 h-5 mr-2"
+                          />
                           <span className="flex-1 hidden sm:inline">
                             Rejeter le professeur
                           </span>
                           <span className="flex-1 sm:hidden">Rejeter</span>
                           {showRejectionOptions ? (
-                            <ChevronUp className="w-5 h-5 ml-2" />
+                            <FontAwesomeIcon
+                              icon={faChevronUp}
+                              className="w-5 h-5 ml-2"
+                            />
                           ) : (
-                            <ChevronDown className="w-5 h-5 ml-2" />
+                            <FontAwesomeIcon
+                              icon={faChevronDown}
+                              className="w-5 h-5 ml-2"
+                            />
                           )}
                         </button>
 
                         {showRejectionOptions && (
                           <div className="mt-4 p-4 bg-white border-2 border-red-200 rounded-xl shadow-lg">
                             <h4 className="font-semibold text-slate-900 mb-3 flex items-center">
-                              <AlertCircle
-                                size={16}
+                              <FontAwesomeIcon
+                                icon={faCircleExclamation}
                                 className="mr-2 text-red-600"
+                                style={{
+                                  fontSize: 16,
+                                }}
                               />
                               Motifs de rejet
                             </h4>
@@ -1042,7 +1170,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                       type="checkbox"
                                       className="mr-3 mt-1 rounded border-slate-300 text-red-600 focus:ring-red-500"
                                       checked={selectedMotifs.some(
-                                        (m) => m.id === motif.id
+                                        (m) => m.id === motif.id,
                                       )}
                                       onChange={() => toggleMotif(motif)}
                                       disabled={isProcessing}
@@ -1076,13 +1204,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                                   !customMotif.trim()) ||
                                 isProcessing
                               }
-                              className={`w-full py-3 px-4 rounded-lg text-white font-medium transition-all duration-200 ${
-                                (selectedMotifs.length === 0 &&
-                                  !customMotif.trim()) ||
-                                isProcessing
-                                  ? "bg-slate-400 cursor-not-allowed"
-                                  : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                              }`}
+                              className={`w-full py-3 px-4 rounded-lg text-white font-medium transition-all duration-200 ${(selectedMotifs.length === 0 && !customMotif.trim()) || isProcessing ? "bg-slate-400 cursor-not-allowed" : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"}`}
                             >
                               {isProcessing ? (
                                 <div className="flex items-center justify-center">
@@ -1116,5 +1238,4 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
     </>
   );
 };
-
 export default UserViewModal;

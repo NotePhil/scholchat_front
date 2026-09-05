@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import Sidebar from "./Sidebar";
 import MessageList from "./MessageList";
 import MessageDetailPanel from "./MessageDetailPanel";
@@ -8,24 +14,26 @@ import { useAuth } from "../../../../context/AuthContext";
 import { useSelector } from "react-redux";
 import { messageService } from "../../../../services/MessageService";
 import { useMessageSocket } from "../../../../hooks/useMessageSocket";
-import {
-  ArrowLeft,
-  Search,
-  MoreVertical,
-  Send,
-  ChevronRight,
-  Plus,
-  MessageSquare,
-  Inbox,
-  SendHorizontal,
-  Star,
-  Trash2,
-  RefreshCw,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowLeft,
+  faArrowsRotate,
+  faChevronRight,
+  faCircleExclamation,
+  faEllipsisVertical,
+  faMagnifyingGlass,
+  faMessage,
+  faPaperPlane,
+  faPlus,
+  faSpinner,
+  faInbox,
+  faTrashCan,
+} from "@fortawesome/free-solid-svg-icons";
+import { asIconComponent } from "../../../../utils/faIconAdapter";
+const Inbox = asIconComponent(faInbox);
+const SendHorizontal = asIconComponent(faPaperPlane);
+const Trash2 = asIconComponent(faTrashCan);
 const MobileMessagingInterface = ({
   messages,
   isDark,
@@ -70,16 +78,18 @@ const MobileMessagingInterface = ({
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const chatEndRef = useRef(null);
-
   const filteredMessages = messages.filter(
     (msg) =>
       msg.objet?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getUserDisplay(msg.partner || msg.expediteur).toLowerCase().includes(searchTerm.toLowerCase())
+      getUserDisplay(msg.partner || msg.expediteur)
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()),
   );
-
   useEffect(() => {
     if (selectedThread && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+      chatEndRef.current.scrollIntoView({
+        behavior: "smooth",
+      });
     }
   }, [selectedThread]);
 
@@ -91,10 +101,9 @@ const MobileMessagingInterface = ({
     if (!selectedThread) return;
     const key = selectedThread.partner?.id || selectedThread.expediteur?.id;
     const updated = messages.find(
-      (m) => (m.partner?.id || m.expediteur?.id) === key
+      (m) => (m.partner?.id || m.expediteur?.id) === key,
     );
     if (!updated || updated === selectedThread) return;
-
     setSelectedThread((prev) => {
       if (!prev) return prev;
       const isSameMessage = (a, b) =>
@@ -102,7 +111,6 @@ const MobileMessagingInterface = ({
         (String(a.id).startsWith("temp-") &&
           a.contenu === b.contenu &&
           a.expediteur?.id === b.expediteur?.id);
-
       const merged = [...(prev.thread || [])];
       (updated.thread || []).forEach((freshMsg) => {
         const idx = merged.findIndex((m) => isSameMessage(m, freshMsg));
@@ -112,12 +120,15 @@ const MobileMessagingInterface = ({
           merged[idx] = freshMsg; // replace the optimistic placeholder with the real, persisted message
         }
       });
-      merged.sort((a, b) => new Date(a.dateCreation) - new Date(b.dateCreation));
-
-      return { ...updated, thread: merged };
+      merged.sort(
+        (a, b) => new Date(a.dateCreation) - new Date(b.dateCreation),
+      );
+      return {
+        ...updated,
+        thread: merged,
+      };
     });
   }, [messages]);
-
   const handleSendReply = async () => {
     if (!replyText.trim() || !selectedThread) return;
     setSendingReply(true);
@@ -137,17 +148,19 @@ const MobileMessagingInterface = ({
               etat: "ACTIVE",
               admin: d.admin || false,
             }))
-          : [{
-              type: "utilisateur",
-              id: selectedThread.expediteur.id,
-              nom: selectedThread.expediteur.nom || "",
-              prenom: selectedThread.expediteur.prenom || "",
-              email: selectedThread.expediteur.email || "",
-              telephone: selectedThread.expediteur.telephone || "",
-              adresse: selectedThread.expediteur.adresse || "",
-              etat: "ACTIVE",
-              admin: selectedThread.expediteur.admin || false,
-            }];
+          : [
+              {
+                type: "utilisateur",
+                id: selectedThread.expediteur.id,
+                nom: selectedThread.expediteur.nom || "",
+                prenom: selectedThread.expediteur.prenom || "",
+                email: selectedThread.expediteur.email || "",
+                telephone: selectedThread.expediteur.telephone || "",
+                adresse: selectedThread.expediteur.adresse || "",
+                etat: "ACTIVE",
+                admin: selectedThread.expediteur.admin || false,
+              },
+            ];
       const response = await fetch(
         `${process.env.REACT_APP_API_BASE_URL}/messages`,
         {
@@ -174,7 +187,7 @@ const MobileMessagingInterface = ({
             },
             destinataires: recipientObjects,
           }),
-        }
+        },
       );
       if (response.ok) {
         // Show the sent message immediately instead of waiting on the refetch.
@@ -182,12 +195,20 @@ const MobileMessagingInterface = ({
           id: `temp-${Date.now()}`,
           contenu: replyText,
           dateCreation: new Date().toISOString(),
-          expediteur: { id: userId, ...currentUser },
+          expediteur: {
+            id: userId,
+            ...currentUser,
+          },
           destinataires: recipientObjects,
           read: true,
         };
         setSelectedThread((prev) =>
-          prev ? { ...prev, thread: [...(prev.thread || []), optimisticMsg] } : prev
+          prev
+            ? {
+                ...prev,
+                thread: [...(prev.thread || []), optimisticMsg],
+              }
+            : prev,
         );
         setReplyText("");
         // The WebSocket push will update allMessages — no need for a full refetch.
@@ -200,27 +221,52 @@ const MobileMessagingInterface = ({
       setSendingReply(false);
     }
   };
-
   const filterTabs = [
-    { id: "all", label: "Inbox", icon: Inbox, count: messageCounts?.unreadReceived },
-    { id: "sent", label: "Envoyés", icon: SendHorizontal, count: messageCounts?.sent },
-    { id: "trash", label: "Corbeille", icon: Trash2, count: messageCounts?.trash },
+    {
+      id: "all",
+      label: "Inbox",
+      icon: Inbox,
+      count: messageCounts?.unreadReceived,
+    },
+    {
+      id: "sent",
+      label: "Envoyés",
+      icon: SendHorizontal,
+      count: messageCounts?.sent,
+    },
+    {
+      id: "trash",
+      label: "Corbeille",
+      icon: Trash2,
+      count: messageCounts?.trash,
+    },
   ];
-
   if (selectedThread) {
     return (
       <div className="fixed inset-0 z-[1002] bg-white dark:bg-slate-950 flex flex-col">
         <header className="px-4 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10 shadow-sm">
           <div className="flex items-center space-x-3">
-            <button onClick={() => setSelectedThread(null)} className="p-2 -ml-2 text-gray-600 dark:text-gray-300">
-              <ArrowLeft size={24} />
+            <button
+              onClick={() => setSelectedThread(null)}
+              className="p-2 -ml-2 text-gray-600 dark:text-gray-300"
+            >
+              <FontAwesomeIcon
+                icon={faArrowLeft}
+                style={{
+                  fontSize: 24,
+                }}
+              />
             </button>
             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-500/20">
-              {getUserInitials(selectedThread.partner || selectedThread.expediteur)}
+              {getUserInitials(
+                selectedThread.partner || selectedThread.expediteur,
+              )}
             </div>
             <div>
               <h3 className="text-sm font-black dark:text-white leading-tight">
-                {getUserDisplay(selectedThread.partner || selectedThread.expediteur)}
+                {getUserDisplay(
+                  selectedThread.partner || selectedThread.expediteur,
+                )}
               </h3>
               <p className="text-[10px] text-gray-400 font-bold truncate max-w-[180px]">
                 {selectedThread.objet}
@@ -228,41 +274,56 @@ const MobileMessagingInterface = ({
             </div>
           </div>
           <button className="p-2 text-gray-400">
-            <MoreVertical size={20} />
+            <FontAwesomeIcon
+              icon={faEllipsisVertical}
+              style={{
+                fontSize: 20,
+              }}
+            />
           </button>
         </header>
         <div
           className="flex-1 overflow-y-auto p-4 pt-6 space-y-4"
           style={{
-            maskImage: 'linear-gradient(to bottom, transparent, black 20px)',
-            WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 20px)',
+            maskImage: "linear-gradient(to bottom, transparent, black 20px)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, transparent, black 20px)",
           }}
         >
           {selectedThread.thread?.map((msg, idx) => {
             const isMe = msg.expediteur.id === currentUser?.id;
             return (
-              <div key={idx} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] p-4 rounded-3xl shadow-sm ${
-                  isMe
-                    ? "bg-blue-600 text-white rounded-tr-none shadow-blue-500/10"
-                    : "bg-gray-100 dark:bg-slate-800 dark:text-white rounded-tl-none"
-                }`}>
+              <div
+                key={idx}
+                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[80%] p-4 rounded-3xl shadow-sm ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-blue-500/10" : "bg-gray-100 dark:bg-slate-800 dark:text-white rounded-tl-none"}`}
+                >
                   {(() => {
-                    const sep = msg.contenu?.indexOf("--- Message original ---");
-                    const newPart = sep > -1 ? msg.contenu.slice(0, sep).trim() : msg.contenu;
-                    const quotedPart = sep > -1 ? msg.contenu.slice(sep).trim() : null;
+                    const sep = msg.contenu?.indexOf(
+                      "--- Message original ---",
+                    );
+                    const newPart =
+                      sep > -1 ? msg.contenu.slice(0, sep).trim() : msg.contenu;
+                    const quotedPart =
+                      sep > -1 ? msg.contenu.slice(sep).trim() : null;
                     return (
                       <>
                         <p className="text-sm leading-relaxed">{newPart}</p>
                         {quotedPart && (
-                          <p className={`text-xs mt-2 pt-2 border-t opacity-60 whitespace-pre-wrap ${
-                            isMe ? "border-blue-400" : "border-gray-300"
-                          }`}>{quotedPart}</p>
+                          <p
+                            className={`text-xs mt-2 pt-2 border-t opacity-60 whitespace-pre-wrap ${isMe ? "border-blue-400" : "border-gray-300"}`}
+                          >
+                            {quotedPart}
+                          </p>
                         )}
                       </>
                     );
                   })()}
-                  <p className={`text-[10px] mt-1 opacity-60 text-right ${isMe ? "text-blue-100" : "text-gray-500"}`}>
+                  <p
+                    className={`text-[10px] mt-1 opacity-60 text-right ${isMe ? "text-blue-100" : "text-gray-500"}`}
+                  >
                     {formatDate(msg.dateCreation)}
                   </p>
                 </div>
@@ -273,7 +334,9 @@ const MobileMessagingInterface = ({
         </div>
         <footer
           className="p-4 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-white/5"
-          style={{ paddingBottom: 'calc(28px + env(safe-area-inset-bottom, 16px))' }}
+          style={{
+            paddingBottom: "calc(28px + env(safe-area-inset-bottom, 16px))",
+          }}
         >
           <div className="flex items-center space-x-2 bg-gray-50 dark:bg-slate-800/50 p-2 rounded-[24px]">
             <input
@@ -287,31 +350,57 @@ const MobileMessagingInterface = ({
             <button
               onClick={handleSendReply}
               disabled={!replyText.trim() || sendingReply}
-              className={`p-3 rounded-full shadow-lg transition-all ${
-                replyText.trim()
-                  ? "bg-blue-600 text-white shadow-blue-500/30"
-                  : "bg-gray-200 dark:bg-slate-700 text-gray-400"
-              }`}
+              className={`p-3 rounded-full shadow-lg transition-all ${replyText.trim() ? "bg-blue-600 text-white shadow-blue-500/30" : "bg-gray-200 dark:bg-slate-700 text-gray-400"}`}
             >
-              {sendingReply ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+              {sendingReply ? (
+                <FontAwesomeIcon
+                  icon={faSpinner}
+                  className="animate-spin"
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
+              ) : (
+                <FontAwesomeIcon
+                  icon={faPaperPlane}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
+              )}
             </button>
           </div>
         </footer>
       </div>
     );
   }
-
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-slate-950 pb-32">
       <header className="px-6 pt-6 pb-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-3xl font-black dark:text-white">Messages</h2>
-          <button onClick={handleRefresh} disabled={loading} className="p-2 rounded-xl bg-white dark:bg-slate-800 shadow-sm">
-            <RefreshCw size={18} className={`text-gray-500 ${loading ? "animate-spin" : ""}`} />
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="p-2 rounded-xl bg-white dark:bg-slate-800 shadow-sm"
+          >
+            <FontAwesomeIcon
+              icon={faArrowsRotate}
+              className={`text-gray-500 ${loading ? "animate-spin" : ""}`}
+              style={{
+                fontSize: 18,
+              }}
+            />
           </button>
         </div>
         <div className="relative mb-4">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <FontAwesomeIcon
+            icon={faMagnifyingGlass}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            style={{
+              fontSize: 20,
+            }}
+          />
           <input
             type="text"
             placeholder="Rechercher..."
@@ -327,18 +416,14 @@ const MobileMessagingInterface = ({
               <button
                 key={tab.id}
                 onClick={() => setFilterType(tab.id)}
-                className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  active
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                    : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400"
-                }`}
+                className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${active ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400"}`}
               >
                 <tab.icon size={14} />
                 <span>{tab.label}</span>
                 {tab.count > 0 && (
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                    active ? "bg-white/20 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300"
-                  }`}>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] ${active ? "bg-white/20 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300"}`}
+                  >
                     {tab.count}
                   </span>
                 )}
@@ -350,9 +435,23 @@ const MobileMessagingInterface = ({
 
       {error && (
         <div className="mx-4 mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl flex items-center space-x-2">
-          <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
-          <p className="text-xs text-red-600 dark:text-red-400 flex-1">{error}</p>
-          <button onClick={() => { setError(null); handleRefresh(); }} className="text-xs font-bold text-red-600 dark:text-red-400 underline">
+          <FontAwesomeIcon
+            icon={faCircleExclamation}
+            className="text-red-500 flex-shrink-0"
+            style={{
+              fontSize: 16,
+            }}
+          />
+          <p className="text-xs text-red-600 dark:text-red-400 flex-1">
+            {error}
+          </p>
+          <button
+            onClick={() => {
+              setError(null);
+              handleRefresh();
+            }}
+            className="text-xs font-bold text-red-600 dark:text-red-400 underline"
+          >
             Réessayer
           </button>
         </div>
@@ -360,7 +459,13 @@ const MobileMessagingInterface = ({
 
       {loading && messages.length === 0 && (
         <div className="py-20 text-center">
-          <Loader2 size={32} className="mx-auto text-blue-500 animate-spin mb-4" />
+          <FontAwesomeIcon
+            icon={faSpinner}
+            className="mx-auto text-blue-500 animate-spin mb-4"
+            style={{
+              fontSize: 32,
+            }}
+          />
           <p className="text-sm text-gray-500">Chargement des messages...</p>
         </div>
       )}
@@ -369,16 +474,30 @@ const MobileMessagingInterface = ({
         <div className="flex-1 overflow-y-auto px-4 space-y-2">
           {filteredMessages.map((msg, idx) => (
             <motion.button
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.03 }}
+              initial={{
+                opacity: 0,
+                x: -10,
+              }}
+              animate={{
+                opacity: 1,
+                x: 0,
+              }}
+              transition={{
+                delay: idx * 0.03,
+              }}
               key={msg.id || idx}
               onClick={() => {
                 setSelectedThread(msg);
                 const threadIds = msg.thread
-                  ? msg.thread.filter(m => !m.read && m.expediteur?.id !== currentUser?.id).map(m => m.id)
-                  : (!msg.read && msg.expediteur?.id !== currentUser?.id ? [msg.id] : []);
-                threadIds.forEach(id => handleMarkAsRead(id, true));
+                  ? msg.thread
+                      .filter(
+                        (m) => !m.read && m.expediteur?.id !== currentUser?.id,
+                      )
+                      .map((m) => m.id)
+                  : !msg.read && msg.expediteur?.id !== currentUser?.id
+                    ? [msg.id]
+                    : [];
+                threadIds.forEach((id) => handleMarkAsRead(id, true));
               }}
               className="w-full flex items-center space-x-4 p-4 rounded-[28px] bg-white dark:bg-slate-800 shadow-sm border border-transparent hover:border-blue-500/20 active:scale-[0.98] transition-all group"
             >
@@ -392,22 +511,35 @@ const MobileMessagingInterface = ({
               </div>
               <div className="flex-1 text-left min-w-0">
                 <div className="flex justify-between items-baseline mb-0.5">
-                  <h4 className={`text-sm truncate pr-2 ${!msg.read ? "font-black dark:text-white" : "font-semibold text-gray-700 dark:text-gray-300"}`}>
+                  <h4
+                    className={`text-sm truncate pr-2 ${!msg.read ? "font-black dark:text-white" : "font-semibold text-gray-700 dark:text-gray-300"}`}
+                  >
                     {getUserDisplay(msg.partner || msg.expediteur)}
                   </h4>
                   <span className="text-[10px] text-gray-400 font-bold flex-shrink-0">
                     {formatDate(msg.dateCreation)}
                   </span>
                 </div>
-                <h5 className="text-[11px] font-bold text-blue-600 truncate">{msg.objet}</h5>
+                <h5 className="text-[11px] font-bold text-blue-600 truncate">
+                  {msg.objet}
+                </h5>
                 <p className="text-xs text-gray-500 truncate mt-0.5">
-                  {(msg.contenu || "").split("--- Message original ---")[0].trim()}
+                  {(msg.contenu || "")
+                    .split("--- Message original ---")[0]
+                    .trim()}
                 </p>
               </div>
               {msg.isConversation && (
                 <div className="flex items-center space-x-1 text-gray-300">
-                  <span className="text-[10px] font-bold text-gray-400">{msg.thread?.length}</span>
-                  <ChevronRight size={14} />
+                  <span className="text-[10px] font-bold text-gray-400">
+                    {msg.thread?.length}
+                  </span>
+                  <FontAwesomeIcon
+                    icon={faChevronRight}
+                    style={{
+                      fontSize: 14,
+                    }}
+                  />
                 </div>
               )}
             </motion.button>
@@ -416,11 +548,19 @@ const MobileMessagingInterface = ({
           {filteredMessages.length === 0 && !loading && (
             <div className="py-20 text-center">
               <div className="p-6 bg-gray-100 dark:bg-slate-800 rounded-full w-fit mx-auto mb-4">
-                <MessageSquare size={40} className="text-gray-400" />
+                <FontAwesomeIcon
+                  icon={faMessage}
+                  className="text-gray-400"
+                  style={{
+                    fontSize: 40,
+                  }}
+                />
               </div>
               <h4 className="font-bold dark:text-white mb-1">Aucun message</h4>
               <p className="text-xs text-gray-500">
-                {searchTerm ? "Aucun résultat pour cette recherche" : "Vos conversations apparaîtront ici"}
+                {searchTerm
+                  ? "Aucun résultat pour cette recherche"
+                  : "Vos conversations apparaîtront ici"}
               </p>
             </div>
           )}
@@ -431,7 +571,12 @@ const MobileMessagingInterface = ({
         onClick={() => setShowCompose(true)}
         className="fixed bottom-28 right-6 w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 z-[30] active:scale-95 transition-transform"
       >
-        <Plus size={32} />
+        <FontAwesomeIcon
+          icon={faPlus}
+          style={{
+            fontSize: 32,
+          }}
+        />
       </button>
 
       {showCompose && (
@@ -465,7 +610,9 @@ const MobileMessagingInterface = ({
       {showRecipientSelector && (
         <RecipientSelectorModal
           isDark={isDark}
-          filteredUsers={filteredUsers?.filter((user) => user.role === "TEACHER")}
+          filteredUsers={filteredUsers?.filter(
+            (user) => user.role === "TEACHER",
+          )}
           ccRecipients={ccRecipients}
           setCcRecipients={setCcRecipients}
           setShowRecipientSelector={setShowRecipientSelector}
@@ -476,14 +623,25 @@ const MobileMessagingInterface = ({
     </div>
   );
 };
-
 const MessagingInterface = ({
   isDark = false,
   currentTheme = "blue",
   colorSchemes = {
-    blue: { primary: "#1a73e8", light: "#e8f0fe", dark: "#1557b0" },
-    green: { primary: "#34a853", light: "#e6f4ea", dark: "#137333" },
-    red: { primary: "#ea4335", light: "#fce8e6", dark: "#c5221f" },
+    blue: {
+      primary: "#1a73e8",
+      light: "#e8f0fe",
+      dark: "#1557b0",
+    },
+    green: {
+      primary: "#34a853",
+      light: "#e6f4ea",
+      dark: "#137333",
+    },
+    red: {
+      primary: "#ea4335",
+      light: "#fce8e6",
+      dark: "#c5221f",
+    },
   },
   onClose,
   selectedConversation,
@@ -523,152 +681,172 @@ const MessagingInterface = ({
     objet: "",
     expediteur: currentUser,
   });
-
   const parseMessageContent = (contenu) => {
     const subjectMatch = contenu.match(/\[([^\]]+)\]/);
     if (subjectMatch) {
       const subject = subjectMatch[1];
-      const messageBody = contenu.replace(subjectMatch[0], '').trim();
-      return { subject, messageBody };
+      const messageBody = contenu.replace(subjectMatch[0], "").trim();
+      return {
+        subject,
+        messageBody,
+      };
     }
-    return { subject: "Sans objet", messageBody: contenu };
+    return {
+      subject: "Sans objet",
+      messageBody: contenu,
+    };
   };
-
   const fetchUnreadCount = useCallback(async () => {
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
     if (!userId) return;
     try {
       const count = await messageService.compterNonLus(userId);
-      setUnreadCount(typeof count === 'number' ? count : 0);
+      setUnreadCount(typeof count === "number" ? count : 0);
     } catch (e) {
       // silently ignore — fallback to client-side count
     }
   }, []);
+  const fetchMessages = useCallback(
+    async (background = false) => {
+      const parentId = localStorage.getItem("userId");
+      const selectedRole = (
+        localStorage.getItem("userRole") || ""
+      ).toUpperCase();
+      const isParentRole = selectedRole.includes("PARENT");
+      const userId = isParentRole
+        ? localStorage.getItem("selectedChildId") || parentId
+        : parentId;
+      if (!userId) return;
+      const seq = ++fetchSeqRef.current;
 
-  const fetchMessages = useCallback(async (background = false) => {
-    const parentId = localStorage.getItem('userId');
-    const selectedRole = (localStorage.getItem('userRole') || '').toUpperCase();
-    const isParentRole = selectedRole.includes('PARENT');
-    const userId = isParentRole
-      ? (localStorage.getItem('selectedChildId') || parentId)
-      : parentId;
-    if (!userId) return;
-
-    const seq = ++fetchSeqRef.current;
-
-    // Only show the full-screen spinner on the very first load (no data yet).
-    // Background polls and manual refreshes update silently.
-    if (!background && allMessages.length === 0) {
-      setLoading(true);
-    }
-    try {
-      const accessToken = localStorage.getItem('accessToken');
-      
-      const transformMessage = (msg) => {
-        return {
-          id: msg.id,
-          objet: msg.objet || "Sans objet",
-          contenu: msg.contenu,
-          dateCreation: msg.dateCreation,
-          dateModification: msg.dateModification,
-          etat: msg.etat,
-          expediteur: {
-            id: msg.expediteur.id,
-            nom: msg.expediteur.nom,
-            prenom: msg.expediteur.prenom,
-            email: msg.expediteur.email,
-            telephone: msg.expediteur.telephone,
-            adresse: msg.expediteur.adresse,
-            role: msg.expediteur.admin ? "ADMIN" : "USER",
-            type: msg.expediteur.type
-          },
-          destinataires: msg.destinataires.map(dest => ({
-            id: dest.id,
-            nom: dest.nom,
-            prenom: dest.prenom,
-            email: dest.email,
-            telephone: dest.telephone,
-            adresse: dest.adresse,
-            role: dest.admin ? "ADMIN" : "USER",
-            type: dest.type
-          })),
-          // /received returns lu & favori directly; /sent messages are always read by sender
-          read: msg.lu !== undefined ? msg.lu : true,
-          starred: msg.favori || false,
-          classes: [],
-          isGeneral: false
+      // Only show the full-screen spinner on the very first load (no data yet).
+      // Background polls and manual refreshes update silently.
+      if (!background && allMessages.length === 0) {
+        setLoading(true);
+      }
+      try {
+        const accessToken = localStorage.getItem("accessToken");
+        const transformMessage = (msg) => {
+          return {
+            id: msg.id,
+            objet: msg.objet || "Sans objet",
+            contenu: msg.contenu,
+            dateCreation: msg.dateCreation,
+            dateModification: msg.dateModification,
+            etat: msg.etat,
+            expediteur: {
+              id: msg.expediteur.id,
+              nom: msg.expediteur.nom,
+              prenom: msg.expediteur.prenom,
+              email: msg.expediteur.email,
+              telephone: msg.expediteur.telephone,
+              adresse: msg.expediteur.adresse,
+              role: msg.expediteur.admin ? "ADMIN" : "USER",
+              type: msg.expediteur.type,
+            },
+            destinataires: msg.destinataires.map((dest) => ({
+              id: dest.id,
+              nom: dest.nom,
+              prenom: dest.prenom,
+              email: dest.email,
+              telephone: dest.telephone,
+              adresse: dest.adresse,
+              role: dest.admin ? "ADMIN" : "USER",
+              type: dest.type,
+            })),
+            // /received returns lu & favori directly; /sent messages are always read by sender
+            read: msg.lu !== undefined ? msg.lu : true,
+            starred: msg.favori || false,
+            classes: [],
+            isGeneral: false,
+          };
         };
-      };
-      
-      // Fetch sent, received, and trash messages
-      const [sentResponse, receivedResponse, trashResponse] = await Promise.all([
-        fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/utilisateur/${userId}/sent`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        }),
-        fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/utilisateur/${userId}/received`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        }),
-        fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/utilisateur/${userId}/trash`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        })
-      ]);
 
-      if (!sentResponse.ok || !receivedResponse.ok) {
-        throw new Error('Failed to fetch messages');
+        // Fetch sent, received, and trash messages
+        const [sentResponse, receivedResponse, trashResponse] =
+          await Promise.all([
+            fetch(
+              `${process.env.REACT_APP_API_BASE_URL}/messages/utilisateur/${userId}/sent`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              },
+            ),
+            fetch(
+              `${process.env.REACT_APP_API_BASE_URL}/messages/utilisateur/${userId}/received`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              },
+            ),
+            fetch(
+              `${process.env.REACT_APP_API_BASE_URL}/messages/utilisateur/${userId}/trash`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              },
+            ),
+          ]);
+        if (!sentResponse.ok || !receivedResponse.ok) {
+          throw new Error("Failed to fetch messages");
+        }
+        const [sentData, receivedData] = await Promise.all([
+          sentResponse.json(),
+          receivedResponse.json(),
+        ]);
+
+        // A newer request has already started — this one's result is stale, discard it.
+        if (seq !== fetchSeqRef.current) return;
+
+        // Handle trash messages separately
+        let trashData = [];
+        if (trashResponse.ok) {
+          trashData = await trashResponse.json();
+          setTrashMessages(trashData.map(transformMessage));
+        }
+        const allMessages = [
+          ...sentData.map(transformMessage),
+          ...receivedData.map(transformMessage),
+        ];
+
+        // Preserve read-state for messages the user has already opened this session.
+        // readIdsRef is a stable ref that survives every refetch, so even if the
+        // backend hasn't persisted the status yet (race condition) the badge won't
+        // flash back. When the backend finally confirms, it will return lu=true and
+        // the ref check becomes a no-op.
+        setAllMessages(
+          allMessages.map((m) => ({
+            ...m,
+            read: readIdsRef.current.has(m.id) ? true : m.read,
+          })),
+        );
+        setError(null);
+        fetchUnreadCount();
+      } catch (err) {
+        console.error("Error fetching messages:", err);
+        if (seq === fetchSeqRef.current) {
+          setError("Erreur lors du chargement des messages");
+        }
+      } finally {
+        if (seq === fetchSeqRef.current) {
+          setLoading(false);
+        }
       }
-
-      const [sentData, receivedData] = await Promise.all([
-        sentResponse.json(),
-        receivedResponse.json()
-      ]);
-
-      // A newer request has already started — this one's result is stale, discard it.
-      if (seq !== fetchSeqRef.current) return;
-
-      // Handle trash messages separately
-      let trashData = [];
-      if (trashResponse.ok) {
-        trashData = await trashResponse.json();
-        setTrashMessages(trashData.map(transformMessage));
-      }
-
-      const allMessages = [
-        ...sentData.map(transformMessage),
-        ...receivedData.map(transformMessage)
-      ];
-
-      // Preserve read-state for messages the user has already opened this session.
-      // readIdsRef is a stable ref that survives every refetch, so even if the
-      // backend hasn't persisted the status yet (race condition) the badge won't
-      // flash back. When the backend finally confirms, it will return lu=true and
-      // the ref check becomes a no-op.
-      setAllMessages(allMessages.map(m => ({
-        ...m,
-        read: readIdsRef.current.has(m.id) ? true : m.read,
-      })));
-      setError(null);
-      fetchUnreadCount();
-    } catch (err) {
-      console.error("Error fetching messages:", err);
-      if (seq === fetchSeqRef.current) {
-        setError("Erreur lors du chargement des messages");
-      }
-    } finally {
-      if (seq === fetchSeqRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [allMessages.length]);
+    },
+    [allMessages.length],
+  );
 
   // Groups by conversation PARTNER (the other person), not by subject — so all
   // messages exchanged with the same person (sent + received, any subject)
   // merge into one continuous thread, WhatsApp-style.
   const groupMessagesByConversation = (messages) => {
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
     const conversations = {};
     const partners = {};
-
-    messages.forEach(msg => {
+    messages.forEach((msg) => {
       const isSender = msg.expediteur.id === userId;
       let key;
       let partner;
@@ -682,15 +860,19 @@ const MessagingInterface = ({
         // Sender with several recipients (broadcast/general message) — these
         // don't have a single "other person", keep them grouped by recipient set.
         partner = msg.expediteur;
-        key = `broadcast:${msg.destinataires.map(d => d.id).sort().join(',')}`;
+        key = `broadcast:${msg.destinataires
+          .map((d) => d.id)
+          .sort()
+          .join(",")}`;
       }
       if (!conversations[key]) conversations[key] = [];
       conversations[key].push(msg);
       partners[key] = partner;
     });
-
     return Object.entries(conversations).map(([key, thread]) => {
-      thread.sort((a, b) => new Date(a.dateCreation) - new Date(b.dateCreation));
+      thread.sort(
+        (a, b) => new Date(a.dateCreation) - new Date(b.dateCreation),
+      );
       const latestMessage = thread[thread.length - 1];
       return {
         ...latestMessage,
@@ -700,23 +882,22 @@ const MessagingInterface = ({
       };
     });
   };
-
   const filterMessages = useCallback(() => {
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
     let filteredMessages = [...allMessages];
     switch (filterType) {
       case "all":
-        filteredMessages = filteredMessages.filter(msg =>
-          msg.destinataires.some(dest => dest.id === userId)
+        filteredMessages = filteredMessages.filter((msg) =>
+          msg.destinataires.some((dest) => dest.id === userId),
         );
         break;
       case "sent":
-        filteredMessages = filteredMessages.filter(msg =>
-          msg.expediteur.id === userId
+        filteredMessages = filteredMessages.filter(
+          (msg) => msg.expediteur.id === userId,
         );
         break;
       case "starred":
-        filteredMessages = filteredMessages.filter(msg => msg.starred);
+        filteredMessages = filteredMessages.filter((msg) => msg.starred);
         break;
       case "trash":
         filteredMessages = [...trashMessages];
@@ -724,22 +905,22 @@ const MessagingInterface = ({
       default:
         break;
     }
-
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filteredMessages = filteredMessages.filter(msg =>
-        msg.objet.toLowerCase().includes(term) ||
-        msg.contenu.toLowerCase().includes(term) ||
-        msg.expediteur.nom.toLowerCase().includes(term) ||
-        msg.expediteur.prenom.toLowerCase().includes(term)
+      filteredMessages = filteredMessages.filter(
+        (msg) =>
+          msg.objet.toLowerCase().includes(term) ||
+          msg.contenu.toLowerCase().includes(term) ||
+          msg.expediteur.nom.toLowerCase().includes(term) ||
+          msg.expediteur.prenom.toLowerCase().includes(term),
       );
     }
-
     const conversations = groupMessagesByConversation(filteredMessages);
-    conversations.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+    conversations.sort(
+      (a, b) => new Date(b.dateCreation) - new Date(a.dateCreation),
+    );
     setMessages(conversations);
   }, [allMessages, filterType, searchTerm]);
-
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
@@ -747,15 +928,15 @@ const MessagingInterface = ({
   // ── Real-time WebSocket updates ──────────────────────────────────────────
   // Instead of polling every 10 s, we subscribe to /topic/messages/{userId}
   // and merge incoming messages directly into state — no blinking, instant.
-  const socketUserId = localStorage.getItem('userId');
+  const socketUserId = localStorage.getItem("userId");
   const handleSocketEvent = useCallback((event) => {
-    if (event?.type !== 'NEW_MESSAGE' || !event.message) return;
+    if (event?.type !== "NEW_MESSAGE" || !event.message) return;
     const msg = event.message;
 
     // Transform the incoming MessageDto into the same shape as transformMessage
     const transformed = {
       id: msg.id,
-      objet: msg.objet || 'Sans objet',
+      objet: msg.objet || "Sans objet",
       contenu: msg.contenu,
       dateCreation: msg.dateCreation,
       dateModification: msg.dateModification,
@@ -765,15 +946,15 @@ const MessagingInterface = ({
         nom: msg.expediteur?.nom,
         prenom: msg.expediteur?.prenom,
         email: msg.expediteur?.email,
-        role: msg.expediteur?.admin ? 'ADMIN' : 'USER',
+        role: msg.expediteur?.admin ? "ADMIN" : "USER",
         type: msg.expediteur?.type,
       },
-      destinataires: (msg.destinataires || []).map(d => ({
+      destinataires: (msg.destinataires || []).map((d) => ({
         id: d.id,
         nom: d.nom,
         prenom: d.prenom,
         email: d.email,
-        role: d.admin ? 'ADMIN' : 'USER',
+        role: d.admin ? "ADMIN" : "USER",
         type: d.type,
       })),
       read: readIdsRef.current.has(msg.id) ? true : (msg.lu ?? false),
@@ -781,26 +962,29 @@ const MessagingInterface = ({
       classes: [],
       isGeneral: false,
     };
-
-    setAllMessages(prev => {
+    setAllMessages((prev) => {
       // Deduplicate: if the message already exists update it, else prepend
-      const exists = prev.some(m => m.id === transformed.id);
+      const exists = prev.some((m) => m.id === transformed.id);
       return exists
-        ? prev.map(m => m.id === transformed.id ? { ...m, ...transformed } : m)
+        ? prev.map((m) =>
+            m.id === transformed.id
+              ? {
+                  ...m,
+                  ...transformed,
+                }
+              : m,
+          )
         : [transformed, ...prev];
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useMessageSocket(socketUserId, handleSocketEvent);
-
   useEffect(() => {
     fetchUnreadCount();
   }, [fetchUnreadCount]);
-
   useEffect(() => {
     filterMessages();
   }, [filterMessages]);
-
   const handleRefresh = () => {
     setRefreshing(true);
     // Always use background=true so the list never replaces with a spinner
@@ -808,38 +992,34 @@ const MessagingInterface = ({
       setRefreshing(false);
     });
   };
-
   const getMessageCounts = () => {
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
 
     // Deduplicate allMessages by id first
     const uniqueMessages = allMessages.filter(
-      (msg, idx, self) => self.findIndex(m => m.id === msg.id) === idx
+      (msg, idx, self) => self.findIndex((m) => m.id === msg.id) === idx,
     );
-
-    const receivedMessages = uniqueMessages.filter(msg =>
-      msg.destinataires.some(dest => dest.id === userId)
+    const receivedMessages = uniqueMessages.filter((msg) =>
+      msg.destinataires.some((dest) => dest.id === userId),
     );
-    const unreadReceived = receivedMessages.filter(msg => !msg.read);
-
-    const sentMessages = uniqueMessages.filter(msg =>
-      msg.expediteur.id === userId
+    const unreadReceived = receivedMessages.filter((msg) => !msg.read);
+    const sentMessages = uniqueMessages.filter(
+      (msg) => msg.expediteur.id === userId,
     );
-    const unreadSent = sentMessages.filter(msg => !msg.read);
-
-    const starredMessages = uniqueMessages.filter(msg => msg.starred);
-
+    const unreadSent = sentMessages.filter((msg) => !msg.read);
+    const starredMessages = uniqueMessages.filter((msg) => msg.starred);
     return {
       totalReceived: receivedMessages.length,
       unreadReceived: unreadReceived.length,
-      all: unreadReceived.length,       // inbox badge = unread received only
+      all: unreadReceived.length,
+      // inbox badge = unread received only
       unread: unreadReceived.length,
-      sent: unreadSent.length,          // sent badge = unread by recipient only
+      sent: unreadSent.length,
+      // sent badge = unread by recipient only
       starred: starredMessages.length,
       trash: trashMessages.length,
     };
   };
-
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -850,7 +1030,9 @@ const MessagingInterface = ({
         minute: "2-digit",
       });
     } else if (diffInHours < 168) {
-      return date.toLocaleDateString("fr-FR", { weekday: "short" });
+      return date.toLocaleDateString("fr-FR", {
+        weekday: "short",
+      });
     } else {
       return date.toLocaleDateString("fr-FR", {
         day: "numeric",
@@ -858,21 +1040,18 @@ const MessagingInterface = ({
       });
     }
   };
-
   const getUserInitials = (user) => {
     if (!user?.nom) return "?";
     const nom = user.nom || "";
     const prenom = user.prenom || "";
     return `${nom.charAt(0)}${prenom.charAt(0)}`.toUpperCase();
   };
-
   const getUserDisplay = (user) => {
     if (user?.nom && user?.prenom) {
       return `${user.prenom} ${user.nom}`;
     }
     return user?.email || user?.nom || "Unknown User";
   };
-
   const toggleMessageSelection = (messageId) => {
     const newSelected = new Set(selectedMessages);
     if (newSelected.has(messageId)) {
@@ -882,7 +1061,6 @@ const MessagingInterface = ({
     }
     setSelectedMessages(newSelected);
   };
-
   const handleSendMessage = async () => {
     if (!newMessage.contenu.trim() || newMessage.destinataires.length === 0) {
       setError("Veuillez remplir tous les champs obligatoires");
@@ -906,9 +1084,8 @@ const MessagingInterface = ({
       setError("Erreur lors de l'envoi du message");
     }
   };
-
   const handleMarkAsRead = async (messageId, newRead) => {
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
     // Track in persistent ref so future refetches honour this choice
     if (newRead) {
       readIdsRef.current.add(messageId);
@@ -916,152 +1093,198 @@ const MessagingInterface = ({
       readIdsRef.current.delete(messageId);
     }
     // Optimistically update the message read state
-    setAllMessages(prev => prev.map(msg =>
-      msg.id === messageId ? { ...msg, read: newRead } : msg
-    ));
+    setAllMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              read: newRead,
+            }
+          : msg,
+      ),
+    );
     try {
       await messageService.setStatutLu(messageId, userId, newRead);
     } catch (e) {
-      console.warn('Could not update read status:', e.message);
+      console.warn("Could not update read status:", e.message);
       // Revert both the ref and the state on failure
       if (newRead) {
         readIdsRef.current.delete(messageId);
       } else {
         readIdsRef.current.add(messageId);
       }
-      setAllMessages(prev => prev.map(msg =>
-        msg.id === messageId ? { ...msg, read: !newRead } : msg
-      ));
+      setAllMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                read: !newRead,
+              }
+            : msg,
+        ),
+      );
     }
   };
 
   // Mark as read locally only (no API call) — used for sent messages viewed by sender
   const markReadLocally = (messageId) => {
     readIdsRef.current.add(messageId);
-    setAllMessages(prev => prev.map(msg =>
-      msg.id === messageId ? { ...msg, read: true } : msg
-    ));
+    setAllMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              read: true,
+            }
+          : msg,
+      ),
+    );
   };
-
   const handleDeleteMessage = async (messageId) => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/${messageId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/messages/${messageId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
       if (response.ok) {
-        setMessages(prev => prev.filter(msg => msg.id !== messageId));
-        setAllMessages(prev => prev.filter(msg => msg.id !== messageId));
-        
+        setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+        setAllMessages((prev) => prev.filter((msg) => msg.id !== messageId));
         if (selectedMessage?.id === messageId) {
           setSelectedMessage(null);
         }
-        
+
         // Refresh to update trash
         fetchMessages(true);
       }
     } catch (error) {
-      console.error('Error deleting message:', error);
-      setError('Erreur lors de la suppression du message');
+      console.error("Error deleting message:", error);
+      setError("Erreur lors de la suppression du message");
     }
   };
-
   const handleBulkDelete = async () => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = localStorage.getItem("accessToken");
       const messageIds = Array.from(selectedMessages);
-      
-      await Promise.all(messageIds.map(id => 
-        fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        })
-      ));
-      
-      setMessages(prev => prev.filter(msg => !messageIds.includes(msg.id)));
-      setAllMessages(prev => prev.filter(msg => !messageIds.includes(msg.id)));
+      await Promise.all(
+        messageIds.map((id) =>
+          fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/${id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }),
+        ),
+      );
+      setMessages((prev) => prev.filter((msg) => !messageIds.includes(msg.id)));
+      setAllMessages((prev) =>
+        prev.filter((msg) => !messageIds.includes(msg.id)),
+      );
       setSelectedMessages(new Set());
-      
+
       // Refresh to update trash
       fetchMessages(true);
     } catch (error) {
-      console.error('Error bulk deleting messages:', error);
-      setError('Erreur lors de la suppression des messages');
+      console.error("Error bulk deleting messages:", error);
+      setError("Erreur lors de la suppression des messages");
     }
   };
-
   const handleEmptyTrash = async () => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/trash/cleanup`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/messages/trash/cleanup`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
       if (response.ok) {
         setTrashMessages([]);
-        if (filterType === 'trash') {
+        if (filterType === "trash") {
           setMessages([]);
         }
       }
     } catch (error) {
-      console.error('Error emptying trash:', error);
-      setError('Erreur lors du vidage de la corbeille');
+      console.error("Error emptying trash:", error);
+      setError("Erreur lors du vidage de la corbeille");
     }
   };
-
   const handleRestoreMessage = async (messageId) => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/messages/${messageId}/restore`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/messages/${messageId}/restore`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
       if (response.ok) {
-        setTrashMessages(prev => prev.filter(msg => msg.id !== messageId));
-        if (filterType === 'trash') {
-          setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        setTrashMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+        if (filterType === "trash") {
+          setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
         }
         fetchMessages(true);
       }
     } catch (error) {
-      console.error('Error restoring message:', error);
-      setError('Erreur lors de la restauration du message');
+      console.error("Error restoring message:", error);
+      setError("Erreur lors de la restauration du message");
     }
   };
-
   const toggleStarMessage = async (messageId, isStarred) => {
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
     const newStarred = !isStarred;
-    setAllMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, starred: newStarred } : msg));
+    setAllMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              starred: newStarred,
+            }
+          : msg,
+      ),
+    );
     try {
       await messageService.setStatutFavori(messageId, userId, newStarred);
     } catch (e) {
-      console.warn('Could not update favori status:', e.message);
-      setAllMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, starred: !newStarred } : msg));
+      console.warn("Could not update favori status:", e.message);
+      setAllMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                starred: !newStarred,
+              }
+            : msg,
+        ),
+      );
     }
   };
-
   const addRecipient = (user) => {
-    if (!newMessage.destinataires.some(dest => dest.id === user.id)) {
-      setNewMessage(prev => ({
+    if (!newMessage.destinataires.some((dest) => dest.id === user.id)) {
+      setNewMessage((prev) => ({
         ...prev,
         destinataires: [...prev.destinataires, user],
       }));
       setRecipientSearch("");
     }
   };
-
   const removeRecipient = (index) => {
-    setNewMessage(prev => ({
+    setNewMessage((prev) => ({
       ...prev,
       destinataires: prev.destinataires.filter((_, i) => i !== index),
     }));
   };
-
   const handleEmailInput = (email) => {
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       const emailUser = {
@@ -1071,7 +1294,7 @@ const MessagingInterface = ({
         role: "EXTERNAL",
         type: "repetiteur",
       };
-      setNewMessage(prev => ({
+      setNewMessage((prev) => ({
         ...prev,
         destinataires: [...prev.destinataires, emailUser],
       }));
@@ -1079,9 +1302,7 @@ const MessagingInterface = ({
     }
     return false;
   };
-
   const messageCounts = getMessageCounts();
-
   const isMobile = useSelector((state) => state.ui.isMobile);
 
   // Mobile-only (for now): a conversation's content always carries its FULL
@@ -1089,42 +1310,47 @@ const MessagingInterface = ({
   // used to find it — like WhatsApp, the tab only changes which conversations
   // are listed, never what's inside them. Desktop keeps the existing behavior.
   const mobileConversations = useMemo(() => {
-    const userId = localStorage.getItem('userId');
-
-    if (filterType === 'trash') {
+    const userId = localStorage.getItem("userId");
+    if (filterType === "trash") {
       const conversations = groupMessagesByConversation([...trashMessages]);
-      conversations.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+      conversations.sort(
+        (a, b) => new Date(b.dateCreation) - new Date(a.dateCreation),
+      );
       return conversations;
     }
-
     const allConversations = groupMessagesByConversation([...allMessages]);
-
     let filtered = allConversations;
-    if (filterType === 'all') {
+    if (filterType === "all") {
       filtered = allConversations.filter((c) =>
-        (c.thread || []).some((m) => m.destinataires.some((d) => d.id === userId))
+        (c.thread || []).some((m) =>
+          m.destinataires.some((d) => d.id === userId),
+        ),
       );
-    } else if (filterType === 'sent') {
+    } else if (filterType === "sent") {
       filtered = allConversations.filter((c) =>
-        (c.thread || []).some((m) => m.expediteur.id === userId)
+        (c.thread || []).some((m) => m.expediteur.id === userId),
       );
-    } else if (filterType === 'starred') {
-      filtered = allConversations.filter((c) => (c.thread || []).some((m) => m.starred));
+    } else if (filterType === "starred") {
+      filtered = allConversations.filter((c) =>
+        (c.thread || []).some((m) => m.starred),
+      );
     }
-
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter((c) =>
-        c.objet?.toLowerCase().includes(term) ||
-        c.contenu?.toLowerCase().includes(term) ||
-        getUserDisplay(c.partner || c.expediteur).toLowerCase().includes(term)
+      filtered = filtered.filter(
+        (c) =>
+          c.objet?.toLowerCase().includes(term) ||
+          c.contenu?.toLowerCase().includes(term) ||
+          getUserDisplay(c.partner || c.expediteur)
+            .toLowerCase()
+            .includes(term),
       );
     }
-
-    filtered.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+    filtered.sort(
+      (a, b) => new Date(b.dateCreation) - new Date(a.dateCreation),
+    );
     return filtered;
   }, [allMessages, trashMessages, filterType, searchTerm]);
-
   if (isMobile) {
     return (
       <MobileMessagingInterface
@@ -1168,9 +1394,10 @@ const MessagingInterface = ({
       />
     );
   }
-
   return (
-    <div className={`flex h-full overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}>
+    <div
+      className={`flex h-full overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}
+    >
       {/* Sidebar — fixed width, never shrinks */}
       <div className="flex-shrink-0">
         <Sidebar
@@ -1219,8 +1446,12 @@ const MessagingInterface = ({
 
       {/* Detail panel — fixed width, slides in without pushing the list */}
       {selectedMessage && (
-        <div className="flex-shrink-0 w-96 border-l overflow-hidden"
-          style={{ borderColor: isDark ? "#374151" : "#e5e7eb" }}>
+        <div
+          className="flex-shrink-0 w-96 border-l overflow-hidden"
+          style={{
+            borderColor: isDark ? "#374151" : "#e5e7eb",
+          }}
+        >
           <MessageDetailPanel
             isDark={isDark}
             selectedMessage={selectedMessage}
@@ -1234,38 +1465,40 @@ const MessagingInterface = ({
           />
         </div>
       )}
-     {showCompose && (
-  <ComposeModal
-    isDark={isDark}
-    themeColors={themeColors}
-    newMessage={newMessage}
-    setNewMessage={setNewMessage}
-    loading={loading}
-    recipientSearch={recipientSearch}
-    setRecipientSearch={setRecipientSearch}
-    addRecipient={addRecipient}
-    removeRecipient={removeRecipient}
-    handleEmailInput={handleEmailInput}
-    setShowCompose={setShowCompose}
-    selectedClasses={selectedClasses}
-    setSelectedClasses={setSelectedClasses}
-    isGeneralMessage={isGeneralMessage}
-    setIsGeneralMessage={setIsGeneralMessage}
-    currentUser={currentUser}
-    ccRecipients={ccRecipients}
-    setCcRecipients={setCcRecipients}
-    setShowRecipientSelector={setShowRecipientSelector}
-    onMessageSent={() => fetchMessages(true)}
-    setError={setError}
-    setLoading={setLoading}
-    fetchMessages={fetchMessages}
-  />
-)}
+      {showCompose && (
+        <ComposeModal
+          isDark={isDark}
+          themeColors={themeColors}
+          newMessage={newMessage}
+          setNewMessage={setNewMessage}
+          loading={loading}
+          recipientSearch={recipientSearch}
+          setRecipientSearch={setRecipientSearch}
+          addRecipient={addRecipient}
+          removeRecipient={removeRecipient}
+          handleEmailInput={handleEmailInput}
+          setShowCompose={setShowCompose}
+          selectedClasses={selectedClasses}
+          setSelectedClasses={setSelectedClasses}
+          isGeneralMessage={isGeneralMessage}
+          setIsGeneralMessage={setIsGeneralMessage}
+          currentUser={currentUser}
+          ccRecipients={ccRecipients}
+          setCcRecipients={setCcRecipients}
+          setShowRecipientSelector={setShowRecipientSelector}
+          onMessageSent={() => fetchMessages(true)}
+          setError={setError}
+          setLoading={setLoading}
+          fetchMessages={fetchMessages}
+        />
+      )}
 
       {showRecipientSelector && (
         <RecipientSelectorModal
           isDark={isDark}
-          filteredUsers={filteredUsers.filter(user => user.role === "TEACHER")}
+          filteredUsers={filteredUsers.filter(
+            (user) => user.role === "TEACHER",
+          )}
           ccRecipients={ccRecipients}
           setCcRecipients={setCcRecipients}
           setShowRecipientSelector={setShowRecipientSelector}
@@ -1276,5 +1509,4 @@ const MessagingInterface = ({
     </div>
   );
 };
-
 export default MessagingInterface;

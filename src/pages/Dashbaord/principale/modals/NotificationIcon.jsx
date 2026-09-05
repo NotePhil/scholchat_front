@@ -1,26 +1,32 @@
 import { useEffect, useRef, useCallback } from "react";
-import {
-  Bell,
-  X,
-  ChevronRight,
-  Check,
-  CheckCheck,
-  Trash2,
-  UserPlus,
-  Calendar,
-  CheckCircle,
-  BookOpen,
-  MessageSquare,
-  RefreshCw,
-  Filter,
-  Loader2,
-} from "lucide-react";
 import { useNotifications } from "../../../../hooks/useNotifications";
 import { useTranslation } from "../../../../hooks/useTranslation";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setActiveTab as setActiveTabAction } from "../../../../store/slices/uiSlice";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faBell,
+  faCheck,
+  faCheckDouble,
+  faSpinner,
+  faTrashCan,
+  faXmark,
+  faUserPlus,
+  faCalendarDays,
+  faCircleCheck,
+  faBookOpen,
+  faMessage,
+} from "@fortawesome/free-solid-svg-icons";
+import { asIconComponent } from "../../../../utils/faIconAdapter";
+const Bell = asIconComponent(faBell);
+const BookOpen = asIconComponent(faBookOpen);
+const Calendar = asIconComponent(faCalendarDays);
+const CheckCircle = asIconComponent(faCircleCheck);
+const MessageSquare = asIconComponent(faMessage);
+const RefreshCw = asIconComponent(faArrowsRotate);
+const UserPlus = asIconComponent(faUserPlus);
 const ICON_MAP = {
   UserPlus,
   Calendar,
@@ -30,7 +36,6 @@ const ICON_MAP = {
   RefreshCw,
   Bell,
 };
-
 const COLOR_MAP = {
   blue: {
     bg: "bg-blue-100",
@@ -82,7 +87,6 @@ const COLOR_MAP = {
     dot: "bg-gray-500",
   },
 };
-
 const formatTimeAgo = (dateStr, language) => {
   if (!dateStr) return "";
   const date = new Date(dateStr);
@@ -92,23 +96,16 @@ const formatTimeAgo = (dateStr, language) => {
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
-
   const isFr = language === "fr";
-
   if (diffSec < 60) return isFr ? "A l'instant" : "Just now";
-  if (diffMin < 60)
-    return isFr ? `Il y a ${diffMin} min` : `${diffMin}m ago`;
-  if (diffHour < 24)
-    return isFr ? `Il y a ${diffHour}h` : `${diffHour}h ago`;
-  if (diffDay < 7)
-    return isFr ? `Il y a ${diffDay}j` : `${diffDay}d ago`;
-
+  if (diffMin < 60) return isFr ? `Il y a ${diffMin} min` : `${diffMin}m ago`;
+  if (diffHour < 24) return isFr ? `Il y a ${diffHour}h` : `${diffHour}h ago`;
+  if (diffDay < 7) return isFr ? `Il y a ${diffDay}j` : `${diffDay}d ago`;
   return date.toLocaleDateString(isFr ? "fr-FR" : "en-US", {
     day: "numeric",
     month: "short",
   });
 };
-
 const NotificationItem = ({
   notification,
   onClick,
@@ -126,17 +123,12 @@ const NotificationItem = ({
   // Clean the message: replace literal "null" with a sensible fallback
   const safeMessage = buildMessage
     ? buildMessage(notification)
-    : (notification.message || "").replace(/\bnull\b/gi, "cet exercice").replace(/:\s*$/, "");
-
+    : (notification.message || "")
+        .replace(/\bnull\b/gi, "cet exercice")
+        .replace(/:\s*$/, "");
   return (
     <div
-      className={`flex items-start gap-3 p-3 transition-colors ${
-        disableNavigation ? "cursor-default" : "cursor-pointer"
-      } ${
-        !notification.read
-          ? "bg-blue-50 hover:bg-blue-100/70"
-          : "hover:bg-gray-50"
-      }`}
+      className={`flex items-start gap-3 p-3 transition-colors ${disableNavigation ? "cursor-default" : "cursor-pointer"} ${!notification.read ? "bg-blue-50 hover:bg-blue-100/70" : "hover:bg-gray-50"}`}
       onClick={() => onClick(notification)}
     >
       {/* Icon */}
@@ -150,14 +142,14 @@ const NotificationItem = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <p
-            className={`text-sm leading-snug ${
-              !notification.read ? "font-semibold text-gray-900" : "text-gray-700"
-            }`}
+            className={`text-sm leading-snug ${!notification.read ? "font-semibold text-gray-900" : "text-gray-700"}`}
           >
             {notification.title}
           </p>
           {!notification.read && (
-            <span className={`flex-shrink-0 w-2 h-2 mt-1.5 rounded-full ${colors.dot}`} />
+            <span
+              className={`flex-shrink-0 w-2 h-2 mt-1.5 rounded-full ${colors.dot}`}
+            />
           )}
         </div>
         <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
@@ -189,7 +181,12 @@ const NotificationItem = ({
             className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
             title={language === "fr" ? "Marquer comme lu" : "Mark as read"}
           >
-            <Check size={14} />
+            <FontAwesomeIcon
+              icon={faCheck}
+              style={{
+                fontSize: 14,
+              }}
+            />
           </button>
         )}
         <button
@@ -200,19 +197,29 @@ const NotificationItem = ({
           className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500"
           title={language === "fr" ? "Supprimer" : "Delete"}
         >
-          <Trash2 size={14} />
+          <FontAwesomeIcon
+            icon={faTrashCan}
+            style={{
+              fontSize: 14,
+            }}
+          />
         </button>
       </div>
     </div>
   );
 };
-
 const EmptyState = ({ filter, language }) => {
   const isFr = language === "fr";
   return (
     <div className="flex flex-col items-center justify-center py-10 px-4">
       <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-        <Bell size={24} className="text-gray-400" />
+        <FontAwesomeIcon
+          icon={faBell}
+          className="text-gray-400"
+          style={{
+            fontSize: 24,
+          }}
+        />
       </div>
       <p className="text-sm font-medium text-gray-600">
         {filter === "unread"
@@ -220,8 +227,8 @@ const EmptyState = ({ filter, language }) => {
             ? "Aucune notification non lue"
             : "No unread notifications"
           : isFr
-          ? "Aucune notification"
-          : "No notifications"}
+            ? "Aucune notification"
+            : "No notifications"}
       </p>
       <p className="text-xs text-gray-400 mt-1 text-center">
         {isFr
@@ -231,7 +238,6 @@ const EmptyState = ({ filter, language }) => {
     </div>
   );
 };
-
 const NotificationIcon = () => {
   const {
     notifications,
@@ -250,11 +256,9 @@ const NotificationIcon = () => {
     setFilter,
     getNotificationMeta,
   } = useNotifications();
-
   const { language } = useTranslation();
   const panelRef = useRef(null);
   const buttonRef = useRef(null);
-
   const isFr = language === "fr";
 
   // Close panel on outside click
@@ -270,7 +274,6 @@ const NotificationIcon = () => {
         closePanel();
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("touchstart", handleClickOutside);
     return () => {
@@ -289,15 +292,12 @@ const NotificationIcon = () => {
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, closePanel]);
-
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
   const isStudentOrParent = userRole === "student" || userRole === "parent";
 
   // Use filtered unread count (notifications list is already role-filtered by useNotifications)
-  const unreadCount = notifications.filter(n => !n.read).length;
-
+  const unreadCount = notifications.filter((n) => !n.read).length;
   const handleNotificationClick = useCallback(
     (notification) => {
       if (!notification.read) {
@@ -310,7 +310,9 @@ const NotificationIcon = () => {
       // Determine dashboard path robustly
       const currentPath = window.location.pathname;
       // Match dashboard name — handle paths with or without trailing slash
-      const dashboardMatch = currentPath.match(/\/schoolchat\/Principal\/([\w]+Dashboard)/);
+      const dashboardMatch = currentPath.match(
+        /\/schoolchat\/Principal\/([\w]+Dashboard)/,
+      );
       let dashboard = dashboardMatch ? dashboardMatch[1] : null;
 
       // Fallback: derive from role when URL match fails
@@ -318,27 +320,43 @@ const NotificationIcon = () => {
         if (userRole === "student") dashboard = "StudentDashboard";
         else if (userRole === "parent") dashboard = "ParentDashboard";
         else if (userRole === "admin") dashboard = "AdminDashboard";
-        else if (userRole === "gestionnaire") dashboard = "GestionnaireDashboard";
+        else if (userRole === "gestionnaire")
+          dashboard = "GestionnaireDashboard";
         else dashboard = "ProfessorDashboard";
       }
-
       const { type, relatedEntityId } = notification;
-
       const navigateToTab = (tab, data = null) => {
-        dispatch(setActiveTabAction(data ? { tab, data } : tab));
+        dispatch(
+          setActiveTabAction(
+            data
+              ? {
+                  tab,
+                  data,
+                }
+              : tab,
+          ),
+        );
         navigate(`/schoolchat/Principal/${dashboard}/${tab}`);
       };
 
       // Helper: infer destination from notification title/message when type is ambiguous
       const inferTabFromContent = () => {
-        const text = ((notification.title || "") + " " + (notification.message || "")).toLowerCase();
+        const text = (
+          (notification.title || "") +
+          " " +
+          (notification.message || "")
+        ).toLowerCase();
         if (text.includes("cours") || text.includes("course")) return "cours";
-        if (text.includes("exercice") || text.includes("exercise") || text.includes("devoir")) return "manage-exercises";
+        if (
+          text.includes("exercice") ||
+          text.includes("exercise") ||
+          text.includes("devoir")
+        )
+          return "manage-exercises";
         if (text.includes("classe") || text.includes("class")) return "classes";
         if (text.includes("message")) return "messages";
         return null; // no hint found
       };
-
       if (isStudentOrParent) {
         switch (type) {
           case "CLASS_VALIDATED":
@@ -346,7 +364,9 @@ const NotificationIcon = () => {
           case "CLASS_JOIN":
           case "ACCESS_REQUEST":
           case "DEMANDE_ACCES":
-            navigateToTab("classes", { classId: relatedEntityId });
+            navigateToTab("classes", {
+              classId: relatedEntityId,
+            });
             break;
           case "COURSE_SCHEDULED":
           case "NEW_COURSE":
@@ -365,7 +385,9 @@ const NotificationIcon = () => {
             if (inferred === "cours") {
               navigateToTab("cours"); // no courseId — just open the list
             } else {
-              navigateToTab(inferred || "activities", { activityId: relatedEntityId });
+              navigateToTab(inferred || "activities", {
+                activityId: relatedEntityId,
+              });
             }
             break;
           }
@@ -373,11 +395,15 @@ const NotificationIcon = () => {
           case "EXERCISE_CREATED":
           case "EXERCISE_ASSIGNED":
           case "NOUVEL_EXERCICE":
-            navigateToTab("manage-exercises", { exerciseId: relatedEntityId });
+            navigateToTab("manage-exercises", {
+              exerciseId: relatedEntityId,
+            });
             break;
           case "DEVOIR_ASSIGNED":
           case "NOUVEAU_DEVOIR":
-            navigateToTab("devoirs", { devoirId: relatedEntityId });
+            navigateToTab("devoirs", {
+              devoirId: relatedEntityId,
+            });
             break;
           case "MESSAGE_SENT":
           case "NEW_MESSAGE":
@@ -385,7 +411,12 @@ const NotificationIcon = () => {
             break;
           default: {
             const inferred = inferTabFromContent();
-            console.warn("[NotificationIcon] Unknown type for student/parent:", type, "→", inferred || "activities");
+            console.warn(
+              "[NotificationIcon] Unknown type for student/parent:",
+              type,
+              "→",
+              inferred || "activities",
+            );
             navigateToTab(inferred || "activities");
           }
         }
@@ -396,18 +427,26 @@ const NotificationIcon = () => {
       switch (type) {
         case "ACCESS_REQUEST":
         case "DEMANDE_ACCES":
-          navigateToTab("manage-class", { classId: relatedEntityId, subTab: "access-requests" });
+          navigateToTab("manage-class", {
+            classId: relatedEntityId,
+            subTab: "access-requests",
+          });
           break;
         case "CLASS_VALIDATED":
         case "CLASS_REJECTED":
         case "CLASS_JOIN":
         case "CLASS_CREATED":
-          navigateToTab("manage-class", { classId: relatedEntityId, subTab: "overview" });
+          navigateToTab("manage-class", {
+            classId: relatedEntityId,
+            subTab: "overview",
+          });
           break;
         case "ACTIVITY_CREATED":
         case "NEW_ACTIVITY":
         case "EVENT_UPDATED":
-          navigateToTab("activities", { activityId: relatedEntityId });
+          navigateToTab("activities", {
+            activityId: relatedEntityId,
+          });
           break;
         case "COURSE_SCHEDULED":
         case "NEW_COURSE":
@@ -421,7 +460,9 @@ const NotificationIcon = () => {
         case "EXERCISE_ASSIGNED":
         case "NOUVEL_EXERCICE":
         case "ASSIGNMENT_GIVEN":
-          navigateToTab("manage-exercises", { exerciseId: relatedEntityId });
+          navigateToTab("manage-exercises", {
+            exerciseId: relatedEntityId,
+          });
           break;
         case "MESSAGE_SENT":
         case "NEW_MESSAGE":
@@ -437,11 +478,14 @@ const NotificationIcon = () => {
           navigateToTab("parents");
           break;
         default:
-          console.warn("[NotificationIcon] Unknown notification type for professor/admin:", type);
+          console.warn(
+            "[NotificationIcon] Unknown notification type for professor/admin:",
+            type,
+          );
           navigateToTab("activities");
       }
     },
-    [markAsRead, closePanel, dispatch, navigate, isStudentOrParent]
+    [markAsRead, closePanel, dispatch, navigate, isStudentOrParent],
   );
 
   // Role-based header subtitle
@@ -468,7 +512,6 @@ const NotificationIcon = () => {
       .replace(/:\s*$/, "");
     return cleaned || notification.title || "";
   };
-
   return (
     <div className="relative">
       {/* Bell Button */}
@@ -477,13 +520,20 @@ const NotificationIcon = () => {
         onClick={togglePanel}
         className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
         aria-label="Notifications"
-        style={{ minWidth: "44px", minHeight: "44px" }}
+        style={{
+          minWidth: "44px",
+          minHeight: "44px",
+        }}
       >
-        <Bell size={20} className="text-gray-600" />
+        <FontAwesomeIcon
+          icon={faBell}
+          className="text-gray-600"
+          style={{
+            fontSize: 20,
+          }}
+        />
         {unreadCount > 0 && (
-          <span
-            className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white"
-          >
+          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -503,7 +553,9 @@ const NotificationIcon = () => {
             className="fixed md:absolute right-3 md:right-0 mt-2 w-[360px] max-w-[calc(100vw-24px)] bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden"
             style={{
               maxHeight: "calc(100vh - 120px)",
-              top: buttonRef.current ? buttonRef.current.getBoundingClientRect().bottom + 8 : undefined,
+              top: buttonRef.current
+                ? buttonRef.current.getBoundingClientRect().bottom + 8
+                : undefined,
             }}
           >
             {/* Header */}
@@ -523,12 +575,15 @@ const NotificationIcon = () => {
                       onClick={markAllAsRead}
                       className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                       title={
-                        isFr
-                          ? "Tout marquer comme lu"
-                          : "Mark all as read"
+                        isFr ? "Tout marquer comme lu" : "Mark all as read"
                       }
                     >
-                      <CheckCheck size={14} />
+                      <FontAwesomeIcon
+                        icon={faCheckDouble}
+                        style={{
+                          fontSize: 14,
+                        }}
+                      />
                       <span className="hidden sm:inline">
                         {isFr ? "Tout lire" : "Read all"}
                       </span>
@@ -540,14 +595,24 @@ const NotificationIcon = () => {
                       className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded-md transition-colors"
                       title={isFr ? "Tout supprimer" : "Delete all"}
                     >
-                      <Trash2 size={14} />
+                      <FontAwesomeIcon
+                        icon={faTrashCan}
+                        style={{
+                          fontSize: 14,
+                        }}
+                      />
                     </button>
                   )}
                   <button
                     onClick={closePanel}
                     className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                   >
-                    <X size={16} />
+                    <FontAwesomeIcon
+                      icon={faXmark}
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
                   </button>
                 </div>
               </div>
@@ -556,11 +621,7 @@ const NotificationIcon = () => {
               <div className="flex items-center gap-1 mt-2">
                 <button
                   onClick={() => setFilter("all")}
-                  className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                    filter === "all"
-                      ? "bg-blue-100 text-blue-700 font-medium"
-                      : "text-gray-500 hover:bg-gray-100"
-                  }`}
+                  className={`px-3 py-1 text-xs rounded-full transition-colors ${filter === "all" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-500 hover:bg-gray-100"}`}
                 >
                   {isFr ? "Toutes" : "All"}
                   {notifications.length > 0 && (
@@ -571,11 +632,7 @@ const NotificationIcon = () => {
                 </button>
                 <button
                   onClick={() => setFilter("unread")}
-                  className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                    filter === "unread"
-                      ? "bg-blue-100 text-blue-700 font-medium"
-                      : "text-gray-500 hover:bg-gray-100"
-                  }`}
+                  className={`px-3 py-1 text-xs rounded-full transition-colors ${filter === "unread" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-500 hover:bg-gray-100"}`}
                 >
                   {isFr ? "Non lues" : "Unread"}
                   {unreadCount > 0 && (
@@ -588,11 +645,19 @@ const NotificationIcon = () => {
             {/* Notification List */}
             <div
               className="overflow-y-auto"
-              style={{ maxHeight: "400px" }}
+              style={{
+                maxHeight: "400px",
+              }}
             >
               {loading ? (
                 <div className="flex items-center justify-center py-10">
-                  <Loader2 size={24} className="animate-spin text-blue-500" />
+                  <FontAwesomeIcon
+                    icon={faSpinner}
+                    className="animate-spin text-blue-500"
+                    style={{
+                      fontSize: 24,
+                    }}
+                  />
                   <span className="ml-2 text-sm text-gray-500">
                     {isFr ? "Chargement..." : "Loading..."}
                   </span>
@@ -626,7 +691,12 @@ const NotificationIcon = () => {
                   onClick={refreshNotifications}
                   className="w-full flex items-center justify-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
-                  <RefreshCw size={12} />
+                  <FontAwesomeIcon
+                    icon={faArrowsRotate}
+                    style={{
+                      fontSize: 12,
+                    }}
+                  />
                   {isFr ? "Actualiser" : "Refresh"}
                 </button>
               </div>
@@ -637,5 +707,4 @@ const NotificationIcon = () => {
     </div>
   );
 };
-
 export default NotificationIcon;

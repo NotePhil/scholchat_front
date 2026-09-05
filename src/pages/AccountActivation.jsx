@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Check, AlertTriangle, Loader, Mail } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import { useTranslation } from "../hooks/useTranslation";
 import logoImage from "../components/assets/images/logo.png";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCheck,
+  faEnvelope,
+  faSpinner,
+  faTriangleExclamation,
+} from "@fortawesome/free-solid-svg-icons";
 const AccountActivation = () => {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-
   const queryParams = new URLSearchParams(location.search);
   const urlActivationToken = queryParams.get("activationToken");
-
   const [activationStatus, setActivationStatus] = useState("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [countdown, setCountdown] = useState(5);
@@ -22,18 +25,15 @@ const AccountActivation = () => {
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [inputEmail, setInputEmail] = useState("");
   const [regenerationStatus, setRegenerationStatus] = useState("");
-
   const regenerateActivationToken = async () => {
     if (!inputEmail) {
       setShowEmailInput(true);
       return;
     }
-
     try {
       setActivationStatus("loading");
       setErrorMessage("");
       setRegenerationStatus("");
-
       const response = await fetch(
         `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/regenerate-activation`,
         {
@@ -41,20 +41,19 @@ const AccountActivation = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email: inputEmail }),
-        }
+          body: JSON.stringify({
+            email: inputEmail,
+          }),
+        },
       );
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
-          errorData?.message || "Échec de la régénération du token"
+          errorData?.message || "Échec de la régénération du token",
         );
       }
-
       const data = await response.json();
       setRegenerationStatus("success");
-
       setTimeout(() => {
         navigate("/schoolchat/verify-email");
       }, 2000);
@@ -63,11 +62,10 @@ const AccountActivation = () => {
       setActivationStatus("error");
       setRegenerationStatus("error");
       setErrorMessage(
-        error.message || "Impossible de régénérer le token d'activation"
+        error.message || "Impossible de régénérer le token d'activation",
       );
     }
   };
-
   const activateAccount = async (token = urlActivationToken) => {
     if (!token) {
       setActivationStatus("error");
@@ -82,7 +80,6 @@ const AccountActivation = () => {
       }
       setUserEmail(email);
       setActivationToken(token);
-
       const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/auth/activate?activationToken=${token}`;
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -91,20 +88,26 @@ const AccountActivation = () => {
         },
         credentials: "include",
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         // If already activated (ACTIVE state), go straight to password page
-        if (errorData?.message?.includes("PENDING") || errorData?.message?.includes("ACTIVE")) {
+        if (
+          errorData?.message?.includes("PENDING") ||
+          errorData?.message?.includes("ACTIVE")
+        ) {
           setActivationStatus("success");
-          navigate("/schoolchat/PasswordPage", { state: { activationToken: token, email } });
+          navigate("/schoolchat/PasswordPage", {
+            state: {
+              activationToken: token,
+              email,
+            },
+          });
           return;
         }
         throw new Error(
-          errorData?.message || "L'activation a échoué. Veuillez réessayer."
+          errorData?.message || "L'activation a échoué. Veuillez réessayer.",
         );
       }
-
       setActivationStatus("success");
       const timer = setInterval(() => {
         setCountdown((prev) => {
@@ -121,24 +124,21 @@ const AccountActivation = () => {
           return prev - 1;
         });
       }, 1000);
-
       return () => clearInterval(timer);
     } catch (error) {
       console.error("Erreur d'activation:", error);
       setActivationStatus("error");
       setErrorMessage(
         error.message ||
-          "Une erreur s'est produite lors de l'activation du compte."
+          "Une erreur s'est produite lors de l'activation du compte.",
       );
     }
   };
-
   useEffect(() => {
     if (urlActivationToken) {
       activateAccount(urlActivationToken);
     }
   }, [urlActivationToken]);
-
   return (
     <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden">
       {/* Dynamic Background Elements */}
@@ -159,7 +159,9 @@ const AccountActivation = () => {
               </div>
             </div>
             <h1 className="text-3xl font-bold text-white tracking-tight mb-2">
-              {activationStatus === "loading" ? "Vérification en cours" : t("pages.accountActivation.title")}
+              {activationStatus === "loading"
+                ? "Vérification en cours"
+                : t("pages.accountActivation.title")}
             </h1>
             <div className="h-1 w-20 bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto rounded-full mb-8"></div>
           </div>
@@ -173,12 +175,20 @@ const AccountActivation = () => {
                     <div className="absolute inset-0 border-4 border-blue-500/10 rounded-full"></div>
                     <div className="absolute inset-0 border-4 border-t-blue-500 border-r-indigo-500 rounded-full animate-spin"></div>
                     <div className="absolute inset-6 bg-blue-500/20 rounded-full animate-pulse flex items-center justify-center">
-                      <Loader className="text-blue-400 animate-pulse" size={24} />
+                      <FontAwesomeIcon
+                        icon={faSpinner}
+                        className="text-blue-400 animate-pulse"
+                        style={{
+                          fontSize: 24,
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold text-white/90">Protocoles de sécurité</h3>
+                  <h3 className="text-xl font-semibold text-white/90">
+                    Protocoles de sécurité
+                  </h3>
                   <p className="text-white/50 text-sm leading-relaxed max-w-[240px] mx-auto italic">
                     {t("pages.accountActivation.loading")}
                   </p>
@@ -192,20 +202,32 @@ const AccountActivation = () => {
                 <div className="relative inline-block">
                   <div className="absolute inset-0 bg-emerald-500 blur-3xl opacity-20 animate-pulse"></div>
                   <div className="relative w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
-                    <Check className="text-emerald-400" size={48} strokeWidth={2.5} />
+                    <FontAwesomeIcon
+                      icon={faCheck}
+                      className="text-emerald-400"
+                      style={{
+                        fontSize: 48,
+                      }}
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <h2 className="text-3xl font-bold text-white leading-tight">Succès !</h2>
-                    <p className="text-white/60 text-lg font-medium">{t("pages.accountActivation.success.message")}</p>
+                    <h2 className="text-3xl font-bold text-white leading-tight">
+                      Succès !
+                    </h2>
+                    <p className="text-white/60 text-lg font-medium">
+                      {t("pages.accountActivation.success.message")}
+                    </p>
                   </div>
-                  
+
                   <div className="bg-white/5 border border-white/10 rounded-2xl py-3 px-6 inline-flex items-center gap-3">
                     <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-ping"></span>
                     <p className="text-blue-400 font-medium text-sm">
-                      {t("pages.accountActivation.success.redirect", { countdown })}
+                      {t("pages.accountActivation.success.redirect", {
+                        countdown,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -231,7 +253,13 @@ const AccountActivation = () => {
               <div className="py-8 space-y-8 animate-fade-in">
                 <div className="text-center">
                   <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/30">
-                    <AlertTriangle className="text-rose-400" size={44} />
+                    <FontAwesomeIcon
+                      icon={faTriangleExclamation}
+                      className="text-rose-400"
+                      style={{
+                        fontSize: 44,
+                      }}
+                    />
                   </div>
                   <h2 className="text-2xl font-bold text-white mb-2 underline decoration-rose-500/30 underline-offset-8 decoration-4">
                     {t("pages.accountActivation.error.title")}
@@ -247,13 +275,20 @@ const AccountActivation = () => {
                     </div>
                     <div className="relative group">
                       <div className="absolute left-5 top-1/2 transform -translate-y-1/2 text-white/30 group-focus-within:text-blue-400 transition-colors">
-                        <Mail size={22} />
+                        <FontAwesomeIcon
+                          icon={faEnvelope}
+                          style={{
+                            fontSize: 22,
+                          }}
+                        />
                       </div>
                       <input
                         type="email"
                         value={inputEmail}
                         onChange={(e) => setInputEmail(e.target.value)}
-                        placeholder={t("pages.accountActivation.error.emailPlaceholder")}
+                        placeholder={t(
+                          "pages.accountActivation.error.emailPlaceholder",
+                        )}
                         className="w-full pl-14 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500/50 focus:bg-white/10 transition-all outline-none text-white font-medium placeholder:text-white/20"
                         required
                       />
@@ -268,7 +303,13 @@ const AccountActivation = () => {
 
                     {regenerationStatus === "success" && (
                       <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3 animate-bounce">
-                        <Check className="text-emerald-400 flex-shrink-0" size={20} />
+                        <FontAwesomeIcon
+                          icon={faCheck}
+                          className="text-emerald-400 flex-shrink-0"
+                          style={{
+                            fontSize: 20,
+                          }}
+                        />
                         <p className="text-emerald-200 text-sm font-semibold">
                           {t("pages.accountActivation.error.regenerateSuccess")}
                         </p>
@@ -278,7 +319,9 @@ const AccountActivation = () => {
                 ) : (
                   <div className="space-y-6">
                     <div className="bg-rose-500/10 p-6 rounded-2xl border border-rose-500/20">
-                      <p className="text-rose-200 text-center font-medium leading-relaxed">{errorMessage}</p>
+                      <p className="text-rose-200 text-center font-medium leading-relaxed">
+                        {errorMessage}
+                      </p>
                     </div>
                     <div className="grid gap-4">
                       <button
@@ -303,37 +346,65 @@ const AccountActivation = () => {
 
         <footer className="mt-12 text-center">
           <div className="flex justify-center items-center space-x-6 text-white/40 text-sm font-medium">
-            <a href="/terms" className="hover:text-white transition-colors">{t("pages.accountActivation.footer.terms")}</a>
+            <a href="/terms" className="hover:text-white transition-colors">
+              {t("pages.accountActivation.footer.terms")}
+            </a>
             <span className="w-1.5 h-1.5 bg-white/10 rounded-full"></span>
-            <a href="/privacy" className="hover:text-white transition-colors">{t("pages.accountActivation.footer.privacy")}</a>
+            <a href="/privacy" className="hover:text-white transition-colors">
+              {t("pages.accountActivation.footer.privacy")}
+            </a>
             <span className="w-1.5 h-1.5 bg-white/10 rounded-full"></span>
-            <a href="/contact" className="hover:text-white transition-colors">{t("pages.accountActivation.footer.contact")}</a>
+            <a href="/contact" className="hover:text-white transition-colors">
+              {t("pages.accountActivation.footer.contact")}
+            </a>
           </div>
           <p className="text-white/20 text-[10px] mt-6 font-bold tracking-[0.2em] uppercase">
-            &copy; {new Date().getFullYear()} ScholChat &bull; Advanced Learning Platform
+            &copy; {new Date().getFullYear()} ScholChat &bull; Advanced Learning
+            Platform
           </p>
         </footer>
       </div>
 
       <style jsx>{`
         @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @keyframes scale-in {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
         @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
-        .animate-fade-in-up { animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-scale-in { animation: scale-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
+        .animate-fade-in-up {
+          animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-scale-in {
+          animation: scale-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-fade-in {
+          animation: fade-in 0.6s ease-out forwards;
+        }
       `}</style>
     </div>
   );
 };
-
 export default AccountActivation;

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
-import PhoneInput from "react-phone-number-input";
+import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
+import CountrySelectSearchable from "../components/common/CountrySelectSearchable";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiUser, FiMail, FiPhone, FiMapPin, FiUpload, FiX, FiCheck, FiArrowRight, FiArrowLeft } from "react-icons/fi";
@@ -155,6 +156,12 @@ const SignUp = ({ theme }) => {
     }
     if (!formData.telephone) {
       showAlert("Le numéro de téléphone est requis");
+      newErrors.telephone = true;
+    } else if (!isValidPhoneNumber(formData.telephone)) {
+      // A country was picked but no (or an incomplete) number was typed —
+      // formData.telephone is then just "+237" etc., which is truthy and
+      // used to slip past the check above straight to the next step.
+      showAlert("Le numéro de téléphone est incomplet ou invalide");
       newErrors.telephone = true;
     }
     if (!formData.email.trim()) {
@@ -660,6 +667,7 @@ const SignUp = ({ theme }) => {
                     <PhoneInput
                       international
                       defaultCountry={selectedCountry}
+                      countrySelectComponent={CountrySelectSearchable}
                       value={formData.telephone}
                       onChange={handlePhoneChange}
                       className={`phone-input-custom ${

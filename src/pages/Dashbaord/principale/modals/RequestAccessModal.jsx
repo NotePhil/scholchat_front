@@ -13,22 +13,20 @@ import {
   Row,
   Col,
 } from "antd";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  UserAddOutlined,
-  MailOutlined,
-  InfoCircleOutlined,
-  SendOutlined,
-  BookOutlined,
-} from "@ant-design/icons";
-
+  faBook,
+  faCircleInfo,
+  faEnvelope,
+  faPaperPlane,
+  faUserPlus,
+} from "@fortawesome/free-solid-svg-icons";
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
-
 const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-
   const handleSubmitRequest = async (values) => {
     setLoading(true);
     try {
@@ -41,7 +39,6 @@ const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
         className: classData?.nom,
         requestData: values,
       });
-
       onSuccess();
       form.resetFields();
     } catch (error) {
@@ -50,17 +47,15 @@ const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
       setLoading(false);
     }
   };
-
   const handleCancel = () => {
     form.resetFields();
     onCancel();
   };
-
   return (
     <Modal
       title={
         <Space>
-          <UserAddOutlined />
+          <FontAwesomeIcon icon={faUserPlus} />
           Request Class Access
         </Space>
       }
@@ -72,7 +67,11 @@ const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
     >
       <div>
         {classData && (
-          <Card style={{ marginBottom: 24 }}>
+          <Card
+            style={{
+              marginBottom: 24,
+            }}
+          >
             <Row gutter={16}>
               <Col span={12}>
                 <Text strong>Class Name:</Text>
@@ -86,7 +85,11 @@ const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
               </Col>
             </Row>
             {classData.etablissement && (
-              <Row style={{ marginTop: 12 }}>
+              <Row
+                style={{
+                  marginTop: 12,
+                }}
+              >
                 <Col span={24}>
                   <Text strong>School:</Text>
                   <br />
@@ -102,8 +105,10 @@ const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
           description="Fill out the form below to request access to this class. The class administrator will review your request and respond accordingly."
           type="info"
           showIcon
-          icon={<InfoCircleOutlined />}
-          style={{ marginBottom: 24 }}
+          icon={<FontAwesomeIcon icon={faCircleInfo} />}
+          style={{
+            marginBottom: 24,
+          }}
         />
 
         <Form
@@ -161,7 +166,7 @@ const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
           >
             <Input
               placeholder="Enter your email address"
-              prefix={<MailOutlined />}
+              prefix={<FontAwesomeIcon icon={faEnvelope} />}
             />
           </Form.Item>
 
@@ -236,17 +241,23 @@ const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
             }
             type="success"
             showIcon
-            style={{ marginBottom: 24 }}
+            style={{
+              marginBottom: 24,
+            }}
           />
 
-          <div style={{ textAlign: "right" }}>
+          <div
+            style={{
+              textAlign: "right",
+            }}
+          >
             <Space>
               <Button onClick={handleCancel}>Cancel</Button>
               <Button
                 type="primary"
                 htmlType="submit"
                 loading={loading}
-                icon={<SendOutlined />}
+                icon={<FontAwesomeIcon icon={faPaperPlane} />}
               >
                 Submit Request
               </Button>
@@ -256,9 +267,23 @@ const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
 
         <Divider />
 
-        <div style={{ textAlign: "center" }}>
-          <Text type="secondary" style={{ fontSize: "12px" }}>
-            <BookOutlined style={{ marginRight: 4 }} />
+        <div
+          style={{
+            textAlign: "center",
+          }}
+        >
+          <Text
+            type="secondary"
+            style={{
+              fontSize: "12px",
+            }}
+          >
+            <FontAwesomeIcon
+              icon={faBook}
+              style={{
+                marginRight: 4,
+              }}
+            />
             Make sure to provide accurate information to help with the approval
             process.
           </Text>
@@ -267,5 +292,4 @@ const RequestAccessModal = ({ visible, classData, onSuccess, onCancel }) => {
     </Modal>
   );
 };
-
 export default RequestAccessModal;

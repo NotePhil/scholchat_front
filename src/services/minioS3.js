@@ -23,7 +23,7 @@ minioApi.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 class MinioS3Service {
@@ -35,10 +35,10 @@ class MinioS3Service {
       const userRole = localStorage.getItem("userRole");
 
       const decodedToken = JSON.parse(
-        localStorage.getItem("decodedToken") || "{}"
+        localStorage.getItem("decodedToken") || "{}",
       );
       const authResponse = JSON.parse(
-        localStorage.getItem("authResponse") || "{}"
+        localStorage.getItem("authResponse") || "{}",
       );
 
       return {
@@ -69,7 +69,7 @@ class MinioS3Service {
   getValidUserId() {
     const userId = localStorage.getItem("userId");
     const authResponse = JSON.parse(
-      localStorage.getItem("authResponse") || "{}"
+      localStorage.getItem("authResponse") || "{}",
     );
 
     const finalUserId = userId || authResponse.userId;
@@ -87,24 +87,35 @@ class MinioS3Service {
     contentType,
     mediaType = "DOCUMENT",
     documentType = "general",
-    coursId = null
+    coursId = null,
+    ownerId = null,
   ) {
     try {
-      console.log('=== GENERATING UPLOAD URL ===');
-      console.log('Request params:', { fileName, contentType, mediaType, documentType, coursId });
-      
+      console.log("=== GENERATING UPLOAD URL ===");
+      console.log("Request params:", {
+        fileName,
+        contentType,
+        mediaType,
+        documentType,
+        coursId,
+        ownerId,
+      });
+
       const request = {
         fileName: fileName,
         contentType: contentType,
         mediaType: mediaType,
-        ownerId: this.getValidUserId(),
+        // Defaults to the current session's user — pass an explicit ownerId
+        // when uploading a document on behalf of someone else (e.g. an admin
+        // uploading a new professor's ID documents during account creation).
+        ownerId: ownerId || this.getValidUserId(),
         documentType: documentType,
         ...(coursId && { coursId }),
       };
 
-      console.log('Sending request to /media/presigned-url:', request);
+      console.log("Sending request to /media/presigned-url:", request);
       const response = await minioApi.post("/media/presigned-url", request);
-      console.log('Presigned URL response:', response.data);
+      console.log("Presigned URL response:", response.data);
 
       return {
         uploadUrl: response.data.url,
@@ -115,23 +126,23 @@ class MinioS3Service {
         success: true,
       };
     } catch (error) {
-      console.error('=== UPLOAD URL GENERATION ERROR ===');
-      console.error('Error response:', error.response?.data);
-      console.error('Error message:', error.message);
-      console.error('===================================');
+      console.error("=== UPLOAD URL GENERATION ERROR ===");
+      console.error("Error response:", error.response?.data);
+      console.error("Error message:", error.message);
+      console.error("===================================");
       throw new Error(
         `Failed to generate upload URL: ${
           error.response?.data?.message || error.message
-        }`
+        }`,
       );
     }
   }
 
   async uploadFileToMinio(presignedUrl, file, contentType) {
     try {
-      console.log('=== UPLOADING TO MINIO ===');
-      console.log('Presigned URL:', presignedUrl);
-      console.log('File size:', file.size, 'Content-Type:', contentType);
+      console.log("=== UPLOADING TO MINIO ===");
+      console.log("Presigned URL:", presignedUrl);
+      console.log("File size:", file.size, "Content-Type:", contentType);
 
       // Try direct upload first
       try {
@@ -143,69 +154,93 @@ class MinioS3Service {
           maxBodyLength: Infinity,
           timeout: 60000,
         });
-        console.log('Direct upload success:', uploadResponse.status);
+        console.log("Direct upload success:", uploadResponse.status);
         return { success: true, status: uploadResponse.status };
       } catch (directError) {
-        console.warn('Direct MinIO upload failed (CORS), using backend proxy...');
+        console.warn(
+          "Direct MinIO upload failed (CORS), using backend proxy...",
+        );
       }
 
       // Fallback: upload through backend proxy using FormData
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('presignedUrl', presignedUrl);
-      formData.append('contentType', contentType);
+      formData.append("file", file);
+      formData.append("presignedUrl", presignedUrl);
+      formData.append("contentType", contentType);
 
-      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      const token =
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("authToken");
       const proxyResponse = await axios.post(
         `${process.env.REACT_APP_API_BASE_URL}/media/proxy-upload`,
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
           },
           maxContentLength: Infinity,
           maxBodyLength: Infinity,
           timeout: 120000,
-        }
+        },
       );
 
-      console.log('Proxy upload success:', proxyResponse.status);
-      console.log('=== MINIO UPLOAD SUCCESS (via proxy) ===');
+      console.log("Proxy upload success:", proxyResponse.status);
+      console.log("=== MINIO UPLOAD SUCCESS (via proxy) ===");
       return { success: true, status: proxyResponse.status };
     } catch (error) {
-      console.error('=== MINIO UPLOAD ERROR ===');
-      console.error('Error status:', error.response?.status);
-      console.error('Error data:', error.response?.data);
-      console.error('Error message:', error.message);
-      console.error('==========================');
+      console.error("=== MINIO UPLOAD ERROR ===");
+      console.error("Error status:", error.response?.status);
+      console.error("Error data:", error.response?.data);
+      console.error("Error message:", error.message);
+      console.error("==========================");
       throw new Error(
         `Failed to upload file: ${
           error.response?.data?.message || error.message
-        }`
+        }`,
       );
     }
   }
 
-  async uploadFile(file, mediaType = "DOCUMENT", documentType = "general", coursId = null) {
+  async uploadFile(
+    file,
+    mediaType = "DOCUMENT",
+    documentType = "general",
+    coursId = null,
+    ownerId = null,
+  ) {
     try {
-      console.log('=== MINIO UPLOAD FILE START ===');
-      console.log('File:', file.name, 'MediaType:', mediaType, 'DocumentType:', documentType, 'CoursId:', coursId);
-      
+      console.log("=== MINIO UPLOAD FILE START ===");
+      console.log(
+        "File:",
+        file.name,
+        "MediaType:",
+        mediaType,
+        "DocumentType:",
+        documentType,
+        "CoursId:",
+        coursId,
+        "OwnerId:",
+        ownerId,
+      );
+
       const uploadUrlData = await this.generateUploadUrl(
         file.name,
         file.type,
         mediaType,
         documentType,
-        coursId
+        coursId,
+        ownerId,
       );
 
-      console.log('Generated upload URL data:', uploadUrlData);
+      console.log("Generated upload URL data:", uploadUrlData);
 
       await this.uploadFileToMinio(uploadUrlData.uploadUrl, file, file.type);
 
-      const userId = this.getValidUserId();
-      const expectedFilePath = `users/${userId}/${mediaType.toLowerCase()}/${documentType}/${
+      // The presigned-url response already reflects the ownerId we sent
+      // (explicit override, or the current user as a fallback) — reuse it
+      // instead of re-reading the current session's id here.
+      const expectedFilePath = `users/${uploadUrlData.ownerId}/${mediaType.toLowerCase()}/${documentType}/${
         uploadUrlData.fileName
       }`;
 
@@ -219,15 +254,15 @@ class MinioS3Service {
         contentType: file.type,
         filePath: expectedFilePath,
       };
-      
-      console.log('Upload successful, returning:', result);
-      console.log('=== MINIO UPLOAD FILE END ===');
-      
+
+      console.log("Upload successful, returning:", result);
+      console.log("=== MINIO UPLOAD FILE END ===");
+
       return result;
     } catch (error) {
-      console.error('=== MINIO UPLOAD FILE ERROR ===');
-      console.error('Error details:', error);
-      console.error('===============================');
+      console.error("=== MINIO UPLOAD FILE ERROR ===");
+      console.error("Error details:", error);
+      console.error("===============================");
       throw error;
     }
   }
@@ -246,7 +281,7 @@ class MinioS3Service {
       throw new Error(
         `Failed to generate download URL: ${
           error.response?.data?.message || error.message
-        }`
+        }`,
       );
     }
   }
@@ -254,7 +289,9 @@ class MinioS3Service {
   async generateDownloadUrlByPath(filePath) {
     try {
       // First try to get media info to use proxy URL
-      const response = await minioApi.get(`/media/download-by-path?filePath=${encodeURIComponent(filePath)}`);
+      const response = await minioApi.get(
+        `/media/download-by-path?filePath=${encodeURIComponent(filePath)}`,
+      );
       // If we have an ID, use proxy; otherwise use direct URL
       if (response.data.id) {
         return {
@@ -277,7 +314,7 @@ class MinioS3Service {
       throw new Error(
         `Failed to generate download URL: ${
           error.response?.data?.message || error.message
-        }`
+        }`,
       );
     }
   }
@@ -285,13 +322,15 @@ class MinioS3Service {
   async downloadFileByPath(filePath) {
     try {
       const downloadUrl = `${BASE_URL}/media/download-by-path?filePath=${encodeURIComponent(filePath)}`;
-      
+
       // Use fetch with proper headers for authentication
-      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      const token =
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("authToken");
       const response = await fetch(downloadUrl, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -300,7 +339,7 @@ class MinioS3Service {
       }
 
       const blob = await response.blob();
-      const fileName = filePath.split('/').pop() || 'file';
+      const fileName = filePath.split("/").pop() || "file";
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -316,11 +355,7 @@ class MinioS3Service {
         fileName: fileName,
       };
     } catch (error) {
-      throw new Error(
-        `Failed to download file: ${
-          error.message
-        }`
-      );
+      throw new Error(`Failed to download file: ${error.message}`);
     }
   }
 
@@ -330,13 +365,17 @@ class MinioS3Service {
       return response.data || [];
     } catch (error) {
       if (error.response?.status === 404) return [];
-      throw new Error(`Failed to get course media: ${error.response?.data?.message || error.message}`);
+      throw new Error(
+        `Failed to get course media: ${error.response?.data?.message || error.message}`,
+      );
     }
   }
 
   async findMediaByFileName(fileName, ownerId) {
     try {
-      const response = await minioApi.get(`/media/find`, { params: { fileName, ownerId } });
+      const response = await minioApi.get(`/media/find`, {
+        params: { fileName, ownerId },
+      });
       return response.data || null;
     } catch (error) {
       if (error.response?.status === 404) return null;
@@ -356,33 +395,33 @@ class MinioS3Service {
       throw new Error(
         `Failed to get user media: ${
           error.response?.data?.message || error.message
-        }`
+        }`,
       );
     }
   }
 
   async uploadImage(file, documentType = "event_images") {
     try {
-      console.log('=== MINIO UPLOAD IMAGE START ===');
-      console.log('File:', file.name, 'Size:', file.size, 'Type:', file.type);
-      console.log('Document Type:', documentType);
+      console.log("=== MINIO UPLOAD IMAGE START ===");
+      console.log("File:", file.name, "Size:", file.size, "Type:", file.type);
+      console.log("Document Type:", documentType);
 
       // Generate unique filename for events
       const timestamp = Date.now() + Math.random();
-      const extension = file.name.split('.').pop();
+      const extension = file.name.split(".").pop();
       const uniqueFileName = `${documentType}_${timestamp}.${extension}`;
-      
-      console.log('Generated filename:', uniqueFileName);
+
+      console.log("Generated filename:", uniqueFileName);
 
       // Step 1: Get presigned upload URL
       const uploadUrlData = await this.generateUploadUrl(
         uniqueFileName,
         file.type,
         "IMAGE",
-        documentType
+        documentType,
       );
 
-      console.log('Upload URL data:', uploadUrlData);
+      console.log("Upload URL data:", uploadUrlData);
 
       // Step 2: Upload file to MinIO
       await this.uploadFileToMinio(uploadUrlData.uploadUrl, file, file.type);
@@ -390,7 +429,7 @@ class MinioS3Service {
       // Step 3: Return the expected format for event creation
       const userId = this.getValidUserId();
       const filePath = `users/${userId}/image/${documentType}/${uniqueFileName}`;
-      
+
       const result = {
         fileName: uniqueFileName,
         filePath: filePath,
@@ -398,18 +437,17 @@ class MinioS3Service {
         contentType: file.type,
         fileSize: file.size,
         mediaType: "IMAGE",
-        bucketName: "scholchat"
+        bucketName: "scholchat",
       };
 
-      console.log('Upload successful, returning:', result);
-      console.log('=== MINIO UPLOAD IMAGE END ===');
-      
+      console.log("Upload successful, returning:", result);
+      console.log("=== MINIO UPLOAD IMAGE END ===");
+
       return result;
-      
     } catch (error) {
-      console.error('=== MINIO UPLOAD IMAGE ERROR ===');
-      console.error('Error details:', error);
-      console.error('================================');
+      console.error("=== MINIO UPLOAD IMAGE ERROR ===");
+      console.error("Error details:", error);
+      console.error("================================");
       throw new Error(`Image upload failed: ${error.message}`);
     }
   }
@@ -436,18 +474,18 @@ class MinioS3Service {
     try {
       const response = await minioApi.post("/media/presigned-url", {
         filePath: filePath,
-        contentType: contentType
+        contentType: contentType,
       });
-      
+
       return {
         presignedUrl: response.data.presignedUrl,
-        filePath: response.data.filePath
+        filePath: response.data.filePath,
       };
     } catch (error) {
       throw new Error(
         `Failed to get presigned URL: ${
           error.response?.data?.message || error.message
-        }`
+        }`,
       );
     }
   }

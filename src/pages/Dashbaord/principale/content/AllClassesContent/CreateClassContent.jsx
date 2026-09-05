@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from "react";
-import {
-  CheckCircle,
-  AlertCircle,
-  GraduationCap,
-  School,
-  BookOpen,
-  Key,
-  User,
-  CreditCard,
-  Check,
-} from "lucide-react";
 import { classService, EtatClasse } from "../../../../../services/ClassService";
 import establishmentService from "../../../../../services/EstablishmentService";
-import { offerService, PeriodiciteContrat, TypeCibleOffre } from "../../../../../services/OfferService";
+import {
+  offerService,
+  PeriodiciteContrat,
+  TypeCibleOffre,
+} from "../../../../../services/OfferService";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import { useNavigate } from "react-router-dom";
 import PublicationRightsService from "../../../../../services/PublicationRightsService";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useAuth } from "../../../../../hooks/useAuth";
 import PaymentModal from "../../../../../components/modals/PaymentModal";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBookOpen,
+  faCheck,
+  faCircleCheck,
+  faCircleExclamation,
+  faCreditCard,
+  faGraduationCap,
+  faKey,
+  faSchool,
+} from "@fortawesome/free-solid-svg-icons";
 const CreateClassContent = ({
   onNavigateToClassesList,
   setActiveTab,
@@ -29,12 +32,7 @@ const CreateClassContent = ({
   colorSchemes,
 }) => {
   const { t } = useTranslation();
-  const {
-    user: currentUser,
-    isProfessor,
-    isGestionnaire,
-  } = useAuth();
-
+  const { user: currentUser, isProfessor, isGestionnaire } = useAuth();
   const [formData, setFormData] = useState({
     nom: "",
     niveau: "",
@@ -57,15 +55,16 @@ const CreateClassContent = ({
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [createdClassId, setCreatedClassId] = useState(null);
-
-  const currentUserId = currentUser?.id ||
-    localStorage.getItem("userId") || sessionStorage.getItem("userId");
-
+  const currentUserId =
+    currentUser?.id ||
+    localStorage.getItem("userId") ||
+    sessionStorage.getItem("userId");
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoadingEstablishments(true);
-        const establishmentsData = await establishmentService.getAllEstablishments();
+        const establishmentsData =
+          await establishmentService.getAllEstablishments();
         setEstablishments(establishmentsData || []);
       } catch (error) {
         console.error("Error loading data:", error);
@@ -74,15 +73,15 @@ const CreateClassContent = ({
         setLoadingEstablishments(false);
       }
     };
-
     loadData();
   }, [currentUser]);
-
   useEffect(() => {
     const loadOffres = async () => {
       try {
         setLoadingOffres(true);
-        const data = await offerService.obtenirOffresActives(TypeCibleOffre.CLASSE);
+        const data = await offerService.obtenirOffresActives(
+          TypeCibleOffre.CLASSE,
+        );
         setOffres(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Error loading offres:", error);
@@ -93,26 +92,36 @@ const CreateClassContent = ({
     };
     loadOffres();
   }, []);
-
   const selectedOffre = offres.find((o) => o.id === selectedOffreId) || null;
-  const offreReduction = selectedOffre ? offerService.calculerReduction(selectedOffre) : null;
+  const offreReduction = selectedOffre
+    ? offerService.calculerReduction(selectedOffre)
+    : null;
   const montantSelectionne = selectedOffre
-    ? Number(periodicite === PeriodiciteContrat.ANNUEL ? selectedOffre.prixAnnuel : selectedOffre.prixMensuel) || 0
+    ? Number(
+        periodicite === PeriodiciteContrat.ANNUEL
+          ? selectedOffre.prixAnnuel
+          : selectedOffre.prixMensuel,
+      ) || 0
     : 0;
-
   const handleOffreChange = (e) => {
     const offreId = e.target.value;
     setSelectedOffreId(offreId);
     const offre = offres.find((o) => o.id === offreId);
     // Si l'offre choisie ne propose pas l'annuel, on retombe sur le mensuel.
-    if (offre && periodicite === PeriodiciteContrat.ANNUEL && offre.prixAnnuel == null) {
+    if (
+      offre &&
+      periodicite === PeriodiciteContrat.ANNUEL &&
+      offre.prixAnnuel == null
+    ) {
       setPeriodicite(PeriodiciteContrat.MENSUEL);
     }
     if (errors.offre) {
-      setErrors((prev) => ({ ...prev, offre: null }));
+      setErrors((prev) => ({
+        ...prev,
+        offre: null,
+      }));
     }
   };
-
   const generateToken = () => {
     const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let token = "";
@@ -121,7 +130,6 @@ const CreateClassContent = ({
     }
     return token;
   };
-
   const handleManualRedirect = () => {
     if (setActiveTab) {
       setActiveTab("manage-class");
@@ -131,7 +139,6 @@ const CreateClassContent = ({
       navigate("/manage-class");
     }
   };
-
   useEffect(() => {
     let timer;
     if (success && countdown > 0) {
@@ -141,17 +148,17 @@ const CreateClassContent = ({
     } else if (success && countdown === 0) {
       handleManualRedirect();
     }
-
     return () => {
       if (timer) clearTimeout(timer);
     };
   }, [success, countdown, setActiveTab, onNavigateToClassesList, navigate]);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
     if (name === "accesMajeur") {
-      setFormData((prev) => ({ ...prev, accesMajeur: e.target.checked }));
+      setFormData((prev) => ({
+        ...prev,
+        accesMajeur: e.target.checked,
+      }));
     } else if (name === "etablissement") {
       const establishment = establishments.find((etab) => etab.id === value);
       setSelectedEstablishment(establishment);
@@ -166,55 +173,63 @@ const CreateClassContent = ({
         [name]: value,
       }));
     }
-
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: null }));
+      setErrors((prev) => ({
+        ...prev,
+        [name]: null,
+      }));
     }
   };
-
   const validateForm = () => {
     const newErrors = {};
-
     if (!formData.nom.trim()) {
-      newErrors.nom = t('classes.create.validation.nameRequired', "Le nom de la classe est requis");
+      newErrors.nom = t(
+        "classes.create.validation.nameRequired",
+        "Le nom de la classe est requis",
+      );
     } else if (formData.nom.trim().length < 2) {
-      newErrors.nom = t('classes.create.validation.nameLength', "Le nom doit contenir au moins 2 caractères");
+      newErrors.nom = t(
+        "classes.create.validation.nameLength",
+        "Le nom doit contenir au moins 2 caractères",
+      );
     }
-
     if (!formData.niveau.trim()) {
-      newErrors.niveau = t('classes.create.validation.levelRequired', "Le niveau est requis");
+      newErrors.niveau = t(
+        "classes.create.validation.levelRequired",
+        "Le niveau est requis",
+      );
     }
-
     if (
       formData.etablissement &&
       selectedEstablishment?.optionTokenGeneral &&
       !formData.codeUnique.trim()
     ) {
-      newErrors.codeUnique = t('classes.create.validation.codeRequired', "Le code unique de l'établissement est requis");
+      newErrors.codeUnique = t(
+        "classes.create.validation.codeRequired",
+        "Le code unique de l'établissement est requis",
+      );
     }
-
     if (!formData.etablissement && !selectedOffreId) {
-      newErrors.offre = t('classes.create.validation.offreRequired', "Veuillez sélectionner une offre pour votre classe");
+      newErrors.offre = t(
+        "classes.create.validation.offreRequired",
+        "Veuillez sélectionner une offre pour votre classe",
+      );
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const assignPublicationRightsToCreator = async (classId) => {
     if (!currentUserId) {
       console.error("Cannot assign publication rights: No user ID found");
       return false;
     }
-
     try {
       const response = await PublicationRightsService.assignPublicationRights(
         currentUserId,
         classId,
         true,
-        true
+        true,
       );
-
       if (response.success) {
         console.log("Publication rights assigned successfully");
         return true;
@@ -227,7 +242,6 @@ const CreateClassContent = ({
       return false;
     }
   };
-
   const createClass = async (paymentInfo = null) => {
     setLoading(true);
     try {
@@ -235,7 +249,6 @@ const CreateClassContent = ({
         nom: formData.nom.trim(),
         niveau: formData.niveau.trim(),
       };
-
       classData.creatorId = currentUserId;
       classData.moderatorId = currentUserId;
 
@@ -256,16 +269,14 @@ const CreateClassContent = ({
         classData.offreId = selectedOffreId;
         classData.periodicite = periodicite;
       }
-
       console.log("Creating class with data:", classData);
       const response = await classService.creerClasse(classData);
       console.log("Class created response:", response);
-      
+
       // Extract class ID from response (it's nested in response.classe)
       const createdClassId = response.classe?.id || response.id;
       console.log("Extracted class ID:", createdClassId);
       setCreatedClassId(createdClassId);
-
       setSuccess(true);
       setCountdown(5);
     } catch (error) {
@@ -277,14 +288,11 @@ const CreateClassContent = ({
       setLoading(false);
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) {
       return;
     }
-
     if (formData.etablissement) {
       // Class with establishment
       await createClass();
@@ -293,34 +301,30 @@ const CreateClassContent = ({
       setShowPaymentModal(true);
     }
   };
-
   const handlePaymentSuccess = async (paymentInfo) => {
     setIsProcessingPayment(true);
     setShowPaymentModal(false);
 
     // paymentInfo est déjà au bon format ({ paymentMethod, amount, ... }) — voir PaymentModal partagé
     await createClass(paymentInfo);
-
     setIsProcessingPayment(false);
   };
-
   if (success) {
     return (
       <div className="flex items-center justify-center py-20 p-4">
         <div
-          className={`${
-            isDark ? "bg-gray-800" : "bg-white"
-          } rounded-2xl shadow-xl p-8 max-w-md w-full text-center`}
+          className={`${isDark ? "bg-gray-800" : "bg-white"} rounded-2xl shadow-xl p-8 max-w-md w-full text-center`}
         >
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+            <FontAwesomeIcon
+              icon={faCircleCheck}
+              className="w-10 h-10 text-green-600"
+            />
           </div>
           <h2
-            className={`text-2xl font-bold ${
-              isDark ? "text-white" : "text-gray-900"
-            } mb-4`}
+            className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"} mb-4`}
           >
-            {t('classes.create.success.title', "Classe créée avec succès!")}
+            {t("classes.create.success.title", "Classe créée avec succès!")}
           </h2>
           <p className={`${isDark ? "text-gray-300" : "text-gray-600"} mb-6`}>
             {formData.etablissement
@@ -328,16 +332,21 @@ const CreateClassContent = ({
               : "Votre classe a ete creee et approuvee automatiquement!"}
             {currentUserId && (
               <span className="block mt-2 text-sm text-green-600">
-                Les droits de publication vous ont ete automatiquement attribues.
+                Les droits de publication vous ont ete automatiquement
+                attribues.
               </span>
             )}
-            <span className="block mt-2">Redirection dans {countdown} seconde{countdown > 1 ? "s" : ""}...</span>
+            <span className="block mt-2">
+              Redirection dans {countdown} seconde{countdown > 1 ? "s" : ""}...
+            </span>
           </p>
 
           <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-1000 ease-linear"
-              style={{ width: `${((5 - countdown) / 5) * 100}%` }}
+              style={{
+                width: `${((5 - countdown) / 5) * 100}%`,
+              }}
             ></div>
           </div>
 
@@ -345,7 +354,10 @@ const CreateClassContent = ({
             onClick={handleManualRedirect}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 mb-4"
           >
-            {t('classes.create.success.button', "Aller à la gestion des classes maintenant")}
+            {t(
+              "classes.create.success.button",
+              "Aller à la gestion des classes maintenant",
+            )}
           </button>
 
           <div className="flex justify-center">
@@ -355,30 +367,31 @@ const CreateClassContent = ({
       </div>
     );
   }
-
   return (
     <>
-      <div
-        className="py-4 px-4"
-      >
+      <div className="py-4 px-4">
         <div className="max-w-6xl mx-auto">
           <div
-            className={`${
-              isDark ? "bg-gray-800" : "bg-white"
-            } rounded-2xl shadow-xl overflow-hidden`}
+            className={`${isDark ? "bg-gray-800" : "bg-white"} rounded-2xl shadow-xl overflow-hidden`}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6 text-white" />
+                  <FontAwesomeIcon
+                    icon={faGraduationCap}
+                    className="w-6 h-6 text-white"
+                  />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white">
-                    {t('classes.create.title', "Créer une Classe")}
+                    {t("classes.create.title", "Créer une Classe")}
                   </h1>
                   <p className="text-blue-100">
-                    {t('classes.create.header.subtitle', "Ajoutez une nouvelle classe à votre système")}
+                    {t(
+                      "classes.create.header.subtitle",
+                      "Ajoutez une nouvelle classe à votre système",
+                    )}
                   </p>
                 </div>
               </div>
@@ -393,24 +406,31 @@ const CreateClassContent = ({
                     {/* Class Name */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('classes.create.form.name', "Nom de la classe")} *
+                        {t("classes.create.form.name", "Nom de la classe")} *
                       </label>
                       <div className="relative">
-                        <BookOpen className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <FontAwesomeIcon
+                          icon={faBookOpen}
+                          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                        />
                         <input
                           type="text"
                           name="nom"
                           value={formData.nom}
                           onChange={handleInputChange}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                            errors.nom ? "border-red-500" : "border-gray-300"
-                          }`}
-                          placeholder={t('classes.create.form.namePlaceholder', "Ex: Classe de 3ème A")}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.nom ? "border-red-500" : "border-gray-300"}`}
+                          placeholder={t(
+                            "classes.create.form.namePlaceholder",
+                            "Ex: Classe de 3ème A",
+                          )}
                         />
                       </div>
                       {errors.nom && (
                         <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                          <AlertCircle className="w-4 h-4" />
+                          <FontAwesomeIcon
+                            icon={faCircleExclamation}
+                            className="w-4 h-4"
+                          />
                           {errors.nom}
                         </p>
                       )}
@@ -419,19 +439,25 @@ const CreateClassContent = ({
                     {/* Level */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('classes.create.form.level', "Niveau")} *
+                        {t("classes.create.form.level", "Niveau")} *
                       </label>
                       <div className="relative">
-                        <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <FontAwesomeIcon
+                          icon={faGraduationCap}
+                          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                        />
                         <select
                           name="niveau"
                           value={formData.niveau}
                           onChange={handleInputChange}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                            errors.niveau ? "border-red-500" : "border-gray-300"
-                          }`}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.niveau ? "border-red-500" : "border-gray-300"}`}
                         >
-                          <option value="">{t('classes.create.form.select.level', "Sélectionner un niveau")}</option>
+                          <option value="">
+                            {t(
+                              "classes.create.form.select.level",
+                              "Sélectionner un niveau",
+                            )}
+                          </option>
                           <option value="CP">CP (Cours Préparatoire)</option>
                           <option value="CE1">CE1 (Cours Élémentaire 1)</option>
                           <option value="CE2">CE2 (Cours Élémentaire 2)</option>
@@ -449,7 +475,10 @@ const CreateClassContent = ({
                       </div>
                       {errors.niveau && (
                         <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                          <AlertCircle className="w-4 h-4" />
+                          <FontAwesomeIcon
+                            icon={faCircleExclamation}
+                            className="w-4 h-4"
+                          />
                           {errors.niveau}
                         </p>
                       )}
@@ -465,9 +494,16 @@ const CreateClassContent = ({
                         onChange={handleInputChange}
                         className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                       />
-                      <label htmlFor="accesMajeur" className="text-sm text-purple-800 cursor-pointer">
-                        <span className="font-semibold block">Classe Majeure</span>
-                        <span className="text-purple-600">Les élèves rejoignent par recherche d'email</span>
+                      <label
+                        htmlFor="accesMajeur"
+                        className="text-sm text-purple-800 cursor-pointer"
+                      >
+                        <span className="font-semibold block">
+                          Classe Majeure
+                        </span>
+                        <span className="text-purple-600">
+                          Les élèves rejoignent par recherche d'email
+                        </span>
                       </label>
                     </div>
 
@@ -476,24 +512,32 @@ const CreateClassContent = ({
                       selectedEstablishment?.optionTokenGeneral && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {t('classes.create.form.codeUnique', "Code Unique de l'établissement")} *
+                            {t(
+                              "classes.create.form.codeUnique",
+                              "Code Unique de l'établissement",
+                            )}{" "}
+                            *
                           </label>
                           <div className="relative">
-                            <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <FontAwesomeIcon
+                              icon={faKey}
+                              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                            />
                             <input
                               type="text"
                               name="codeUnique"
                               value={formData.codeUnique}
                               onChange={handleInputChange}
-                              className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                                errors.codeUnique ? "border-red-500" : "border-gray-300"
-                              }`}
+                              className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.codeUnique ? "border-red-500" : "border-gray-300"}`}
                               placeholder="ABC123"
                             />
                           </div>
                           {errors.codeUnique && (
                             <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <AlertCircle className="w-4 h-4" />
+                              <FontAwesomeIcon
+                                icon={faCircleExclamation}
+                                className="w-4 h-4"
+                              />
                               {errors.codeUnique}
                             </p>
                           )}
@@ -506,10 +550,16 @@ const CreateClassContent = ({
                     {/* Establishment */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('classes.create.form.school', "Établissement (Optionnel)")}
+                        {t(
+                          "classes.create.form.school",
+                          "Établissement (Optionnel)",
+                        )}
                       </label>
                       <div className="relative">
-                        <School className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <FontAwesomeIcon
+                          icon={faSchool}
+                          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                        />
                         <select
                           name="etablissement"
                           value={formData.etablissement}
@@ -519,8 +569,14 @@ const CreateClassContent = ({
                         >
                           <option value="">
                             {loadingEstablishments
-                              ? t('classes.create.form.loading.establishments', "Chargement des établissements...")
-                              : t('classes.create.form.select.noEstablishment', "Aucun établissement (Classe indépendante)")}
+                              ? t(
+                                  "classes.create.form.loading.establishments",
+                                  "Chargement des établissements...",
+                                )
+                              : t(
+                                  "classes.create.form.select.noEstablishment",
+                                  "Aucun établissement (Classe indépendante)",
+                                )}
                           </option>
                           {establishments.map((establishment) => (
                             <option
@@ -542,26 +598,44 @@ const CreateClassContent = ({
                     {/* Information Panel */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <FontAwesomeIcon
+                          icon={faCircleExclamation}
+                          className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"
+                        />
                         <div className="text-sm text-blue-700">
                           <p className="font-semibold mb-1">
-                            {t('classes.create.form.info.title', "Information importante")}
+                            {t(
+                              "classes.create.form.info.title",
+                              "Information importante",
+                            )}
                           </p>
                           <p>
-                            {t('classes.create.form.info.required', "Les champs marqués d'un * sont obligatoires.")}
+                            {t(
+                              "classes.create.form.info.required",
+                              "Les champs marqués d'un * sont obligatoires.",
+                            )}
                             {selectedEstablishment?.optionEnvoiMailVersClasse && (
                               <span className="block mt-1">
-                                {t('classes.create.form.info.email', "✉️ Cet établissement envoie des emails aux classes.")}
+                                {t(
+                                  "classes.create.form.info.email",
+                                  "✉️ Cet établissement envoie des emails aux classes.",
+                                )}
                               </span>
                             )}
                             {selectedEstablishment?.optionTokenGeneral && (
                               <span className="block mt-1">
-                                {t('classes.create.form.info.token', "🔑 Un token général est requis pour cet établissement.")}
+                                {t(
+                                  "classes.create.form.info.token",
+                                  "🔑 Un token général est requis pour cet établissement.",
+                                )}
                               </span>
                             )}
                             {selectedEstablishment?.codeUnique && (
                               <span className="block mt-1">
-                                {t('classes.create.form.info.code', "🎯 Un code unique est requis pour cet établissement.")}
+                                {t(
+                                  "classes.create.form.info.code",
+                                  "🎯 Un code unique est requis pour cet établissement.",
+                                )}
                               </span>
                             )}
                           </p>
@@ -580,24 +654,28 @@ const CreateClassContent = ({
                             value={selectedOffreId}
                             onChange={handleOffreChange}
                             disabled={loadingOffres}
-                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 ${
-                              errors.offre ? "border-red-500" : "border-gray-300"
-                            }`}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 ${errors.offre ? "border-red-500" : "border-gray-300"}`}
                           >
                             <option value="">
-                              {loadingOffres ? "Chargement des offres..." : "Choisir une offre..."}
+                              {loadingOffres
+                                ? "Chargement des offres..."
+                                : "Choisir une offre..."}
                             </option>
                             {offres.map((offre) => {
                               return (
                                 <option key={offre.id} value={offre.id}>
-                                  {offre.nom}{offre.estTest ? " (TEST)" : ""}
+                                  {offre.nom}
+                                  {offre.estTest ? " (TEST)" : ""}
                                 </option>
                               );
                             })}
                           </select>
                           {errors.offre && (
                             <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <AlertCircle className="w-4 h-4" />
+                              <FontAwesomeIcon
+                                icon={faCircleExclamation}
+                                className="w-4 h-4"
+                              />
                               {errors.offre}
                             </p>
                           )}
@@ -605,38 +683,42 @@ const CreateClassContent = ({
 
                         {selectedOffre && (
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Périodicité</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Périodicité
+                            </label>
                             <div className="flex gap-2">
                               <button
                                 type="button"
-                                onClick={() => setPeriodicite(PeriodiciteContrat.MENSUEL)}
+                                onClick={() =>
+                                  setPeriodicite(PeriodiciteContrat.MENSUEL)
+                                }
                                 disabled={selectedOffre.prixMensuel == null}
-                                className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-40 ${
-                                  periodicite === PeriodiciteContrat.MENSUEL
-                                    ? "bg-blue-600 border-blue-600 text-white"
-                                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                                }`}
+                                className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-40 ${periodicite === PeriodiciteContrat.MENSUEL ? "bg-blue-600 border-blue-600 text-white" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
                               >
                                 Mensuel
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setPeriodicite(PeriodiciteContrat.ANNUEL)}
+                                onClick={() =>
+                                  setPeriodicite(PeriodiciteContrat.ANNUEL)
+                                }
                                 disabled={selectedOffre.prixAnnuel == null}
-                                className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-40 ${
-                                  periodicite === PeriodiciteContrat.ANNUEL
-                                    ? "bg-blue-600 border-blue-600 text-white"
-                                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                                }`}
+                                className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-40 ${periodicite === PeriodiciteContrat.ANNUEL ? "bg-blue-600 border-blue-600 text-white" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
                               >
                                 Annuel
                               </button>
                             </div>
-                            {periodicite === PeriodiciteContrat.ANNUEL && offreReduction != null && offreReduction > 0 && (
-                              <p className="mt-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                                🎉 Réduction de {offreReduction > 1 ? Math.round(offreReduction) : Math.round(offreReduction * 100)}% pour l'offre annuelle !
-                              </p>
-                            )}
+                            {periodicite === PeriodiciteContrat.ANNUEL &&
+                              offreReduction != null &&
+                              offreReduction > 0 && (
+                                <p className="mt-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                  🎉 Réduction de{" "}
+                                  {offreReduction > 1
+                                    ? Math.round(offreReduction)
+                                    : Math.round(offreReduction * 100)}
+                                  % pour l'offre annuelle !
+                                </p>
+                              )}
                           </div>
                         )}
                       </div>
@@ -649,7 +731,10 @@ const CreateClassContent = ({
                   {errors.submit && (
                     <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
                       <div className="flex items-center gap-2">
-                        <AlertCircle className="w-5 h-5 text-red-600" />
+                        <FontAwesomeIcon
+                          icon={faCircleExclamation}
+                          className="w-5 h-5 text-red-600"
+                        />
                         <p className="text-red-700">{errors.submit}</p>
                       </div>
                     </div>
@@ -660,24 +745,34 @@ const CreateClassContent = ({
                     <button
                       type="submit"
                       disabled={
-                        loading ||
-                        loadingEstablishments ||
-                        isProcessingPayment
+                        loading || loadingEstablishments || isProcessingPayment
                       }
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
                     >
                       {loading || isProcessingPayment ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       ) : !formData.etablissement ? (
-                        <CreditCard className="w-4 h-4" />
+                        <FontAwesomeIcon
+                          icon={faCreditCard}
+                          className="w-4 h-4"
+                        />
                       ) : (
-                        <Check className="w-4 h-4" />
+                        <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
                       )}
                       {loading || isProcessingPayment
-                        ? t('classes.create.form.loading.processing', "Traitement en cours...")
+                        ? t(
+                            "classes.create.form.loading.processing",
+                            "Traitement en cours...",
+                          )
                         : !formData.etablissement
-                        ? t('classes.create.form.actions.proceed', "Procéder au paiement")
-                        : t('classes.create.form.actions.create', "Créer la classe")}
+                          ? t(
+                              "classes.create.form.actions.proceed",
+                              "Procéder au paiement",
+                            )
+                          : t(
+                              "classes.create.form.actions.create",
+                              "Créer la classe",
+                            )}
                     </button>
                   </div>
                 </div>
@@ -694,11 +789,16 @@ const CreateClassContent = ({
         onSuccess={handlePaymentSuccess}
         montant={montantSelectionne}
         label={selectedOffre?.nom || "Création de classe"}
-        subLabel={selectedOffre ? (periodicite === PeriodiciteContrat.ANNUEL ? "Périodicité annuelle" : "Périodicité mensuelle") : ""}
+        subLabel={
+          selectedOffre
+            ? periodicite === PeriodiciteContrat.ANNUEL
+              ? "Périodicité annuelle"
+              : "Périodicité mensuelle"
+            : ""
+        }
         isDark={isDark}
       />
     </>
   );
 };
-
 export default CreateClassContent;

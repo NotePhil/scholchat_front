@@ -1,33 +1,41 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Mail, 
-  ArrowLeft, 
-  CheckCircle2, 
-  AlertCircle,
-  Loader2,
-  LockKeyhole
-} from "lucide-react";
 import ForgotPasswordService from "../services/forgotPassword";
 import logoImage from "../components/assets/images/logo.png";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowLeft,
+  faCircleCheck,
+  faCircleExclamation,
+  faEnvelope,
+  faLock,
+  faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState({ text: "", type: "" });
+  const [message, setMessage] = useState({
+    text: "",
+    type: "",
+  });
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState("request"); // "request" or "confirmation"
 
   const handleChange = (e) => {
     setEmail(e.target.value);
-    if (message.text) setMessage({ text: "", type: "" });
+    if (message.text)
+      setMessage({
+        text: "",
+        type: "",
+      });
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage({ text: "", type: "" });
-
+    setMessage({
+      text: "",
+      type: "",
+    });
     try {
       await ForgotPasswordService.requestPasswordReset(email);
       setStep("confirmation");
@@ -45,7 +53,6 @@ const ForgotPassword = () => {
       setLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4 sm:p-6 lg:p-8">
       {/* Background decoration */}
@@ -59,18 +66,29 @@ const ForgotPassword = () => {
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-10 text-center relative">
             <div className="absolute top-0 right-0 p-4 opacity-10">
-              <LockKeyhole size={120} />
+              <FontAwesomeIcon
+                icon={faLock}
+                style={{
+                  fontSize: 120,
+                }}
+              />
             </div>
-            
+
             <div className="relative inline-block mb-6 group">
               <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
               <div className="relative bg-white rounded-2xl p-4 shadow-xl">
-                <img src={logoImage} alt="ScholChat Logo" className="h-12 w-auto" />
+                <img
+                  src={logoImage}
+                  alt="ScholChat Logo"
+                  className="h-12 w-auto"
+                />
               </div>
             </div>
 
             <h1 className="text-3xl font-extrabold text-white tracking-tight">
-              {step === "request" ? "Mot de passe oublié" : "Vérifiez votre email"}
+              {step === "request"
+                ? "Mot de passe oublié"
+                : "Vérifiez votre email"}
             </h1>
             <p className="text-blue-100 mt-2 text-sm font-medium opacity-80">
               {step === "request"
@@ -83,12 +101,24 @@ const ForgotPassword = () => {
             {step === "request" ? (
               <form onSubmit={handleSubmit} className="space-y-6">
                 {message.text && (
-                  <div className={`p-4 rounded-2xl flex items-center gap-3 animate-fade-in ${
-                    message.type === "error" 
-                      ? "bg-red-50 text-red-800 border border-red-100" 
-                      : "bg-green-50 text-green-800 border border-green-100"
-                  }`}>
-                    {message.type === "error" ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
+                  <div
+                    className={`p-4 rounded-2xl flex items-center gap-3 animate-fade-in ${message.type === "error" ? "bg-red-50 text-red-800 border border-red-100" : "bg-green-50 text-green-800 border border-green-100"}`}
+                  >
+                    {message.type === "error" ? (
+                      <FontAwesomeIcon
+                        icon={faCircleExclamation}
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
+                    ) : (
+                      <FontAwesomeIcon
+                        icon={faCircleCheck}
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
+                    )}
                     <p className="text-sm font-medium">{message.text}</p>
                   </div>
                 )}
@@ -99,7 +129,12 @@ const ForgotPassword = () => {
                   </label>
                   <div className="relative group">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors">
-                      <Mail size={20} />
+                      <FontAwesomeIcon
+                        icon={faEnvelope}
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
                     </div>
                     <input
                       type="email"
@@ -119,7 +154,10 @@ const ForgotPassword = () => {
                 >
                   {loading ? (
                     <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <FontAwesomeIcon
+                        icon={faSpinner}
+                        className="w-5 h-5 animate-spin"
+                      />
                       <span>Envoi en cours...</span>
                     </div>
                   ) : (
@@ -130,16 +168,26 @@ const ForgotPassword = () => {
             ) : (
               <div className="text-center space-y-6 py-4 animate-fade-in">
                 <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto ring-8 ring-green-50/50">
-                  <CheckCircle2 className="text-green-600" size={40} />
+                  <FontAwesomeIcon
+                    icon={faCircleCheck}
+                    className="text-green-600"
+                    style={{
+                      fontSize: 40,
+                    }}
+                  />
                 </div>
-                
+
                 <div className="space-y-3">
                   <p className="text-gray-600 leading-relaxed">
-                    Si un compte existe avec l'adresse <span className="font-bold text-gray-900">{email}</span>, 
-                    vous recevrez un email avec les instructions très prochainement.
+                    Si un compte existe avec l'adresse{" "}
+                    <span className="font-bold text-gray-900">{email}</span>,
+                    vous recevrez un email avec les instructions très
+                    prochainement.
                   </p>
                   <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-amber-800 text-sm">
-                    Pensez à vérifier votre dossier <span className="font-bold underline">Spam</span> si vous ne recevez rien d'ici quelques minutes.
+                    Pensez à vérifier votre dossier{" "}
+                    <span className="font-bold underline">Spam</span> si vous ne
+                    recevez rien d'ici quelques minutes.
                   </div>
                 </div>
 
@@ -157,7 +205,13 @@ const ForgotPassword = () => {
                 onClick={() => navigate("/schoolchat/login")}
                 className="inline-flex items-center gap-2 text-gray-500 hover:text-blue-600 font-semibold transition-all group"
               >
-                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                <FontAwesomeIcon
+                  icon={faArrowLeft}
+                  className="group-hover:-translate-x-1 transition-transform"
+                  style={{
+                    fontSize: 18,
+                  }}
+                />
                 Retour à la connexion
               </button>
             </div>
@@ -172,12 +226,22 @@ const ForgotPassword = () => {
 
       <style jsx>{`
         @keyframes animate-fade-in-down {
-          from { opacity: 0; transform: translateY(-20px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @keyframes animate-fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
         .animate-fade-in-down {
           animation: animate-fade-in-down 0.8s ease-out;
@@ -189,5 +253,4 @@ const ForgotPassword = () => {
     </div>
   );
 };
-
 export default ForgotPassword;

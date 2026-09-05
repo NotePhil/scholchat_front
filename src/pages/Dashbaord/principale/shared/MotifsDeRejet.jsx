@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  AlertCircle,
-  Users,
-  UserCheck,
-  RefreshCw,
-} from "lucide-react";
 import { rejectionService } from "../../../../services/RejectionService";
 import { rejectionServiceClass } from "../../../../services/RejectionServiceClass"; // Import the new service
 import { themes, colorSchemes } from "../../theme";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faCircleExclamation,
+  faPenToSquare,
+  faPlus,
+  faTrashCan,
+  faUserCheck,
+  faUsers,
+} from "@fortawesome/free-solid-svg-icons";
 const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   const [selectedType, setSelectedType] = useState("prof"); // "prof" or "classe"
   const [motifs, setMotifs] = useState([]);
@@ -36,7 +36,6 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
     try {
       setIsLoading(true);
       setError(null);
-
       if (selectedType === "prof") {
         const data = await rejectionService.getAllMotifs();
         setMotifs(data);
@@ -59,9 +58,8 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
         const newMotif = await rejectionService.createMotif(motifData);
         return newMotif;
       } else {
-        const newMotif = await rejectionServiceClass.createClassRejectionMotif(
-          motifData
-        );
+        const newMotif =
+          await rejectionServiceClass.createClassRejectionMotif(motifData);
         return newMotif;
       }
     } catch (err) {
@@ -103,7 +101,6 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
       throw err;
     }
   };
-
   useEffect(() => {
     fetchMotifs();
   }, [selectedType]); // Re-fetch when type changes
@@ -117,11 +114,9 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
       errors.code =
         "Le code doit contenir uniquement des majuscules, chiffres et underscores";
     }
-
     if (!currentMotif.descriptif.trim()) {
       errors.descriptif = "La description est requise";
     }
-
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -129,18 +124,16 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   // Handle form submission
   const handleMotifSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateMotif()) {
       return;
     }
-
     try {
       if (isEditing) {
         const updatedMotif = await updateMotif(currentMotif.id, currentMotif);
         setMotifs(
           motifs.map((motif) =>
-            motif.id === currentMotif.id ? updatedMotif : motif
-          )
+            motif.id === currentMotif.id ? updatedMotif : motif,
+          ),
         );
       } else {
         const response = await createMotif(currentMotif);
@@ -158,7 +151,6 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
       selectedType === "prof"
         ? "Êtes-vous sûr de vouloir supprimer ce motif de rejet de professeur ?"
         : "Êtes-vous sûr de vouloir supprimer ce motif de rejet de classe ?";
-
     if (window.confirm(confirmMessage)) {
       try {
         await deleteMotif(id);
@@ -184,7 +176,9 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
 
   // Edit motif
   const editMotif = (motif) => {
-    setCurrentMotif({ ...motif });
+    setCurrentMotif({
+      ...motif,
+    });
     setIsEditing(true);
     setShowMotifForm(true);
     setError(null);
@@ -193,7 +187,6 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
   // Format date
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-
     const options = {
       year: "numeric",
       month: "2-digit",
@@ -237,7 +230,6 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
       };
     }
   };
-
   return (
     <div className={`flex-1 p-4 sm:p-6 ${theme.background}`}>
       <div className="flex flex-col">
@@ -248,64 +240,58 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
               Gestion des Motifs de Rejet
             </h1>
             <p
-              className={`text-sm ${
-                isDark ? "text-gray-400" : "text-gray-600"
-              } mt-1`}
+              className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"} mt-1`}
             >
               {getCurrentSectionTitle()}
             </p>
           </div>
           <button
-            className={`p-2 rounded text-black hover:bg-gray-100 transition-colors duration-200 ${isLoading ? 'animate-spin' : ''}`}
+            className={`p-2 rounded text-black hover:bg-gray-100 transition-colors duration-200 ${isLoading ? "animate-spin" : ""}`}
             onClick={handleRefresh}
             disabled={isLoading}
           >
-            <RefreshCw className="w-5 h-5" />
+            <FontAwesomeIcon icon={faArrowsRotate} className="w-5 h-5" />
           </button>
         </div>
 
         {/* Type Selection - Responsive */}
         <div className="mb-6">
           <div
-            className={`flex rounded-lg ${
-              isDark ? "bg-gray-700" : "bg-gray-100"
-            } p-1 w-full overflow-hidden`}
+            className={`flex rounded-lg ${isDark ? "bg-gray-700" : "bg-gray-100"} p-1 w-full overflow-hidden`}
           >
             <button
-              className={`flex items-center justify-center px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex-1 ${
-                selectedType === "prof"
-                  ? `text-white shadow-sm`
-                  : `${theme.text} hover:${
-                      isDark ? "bg-gray-600" : "bg-gray-200"
-                    }`
-              }`}
+              className={`flex items-center justify-center px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex-1 ${selectedType === "prof" ? `text-white shadow-sm` : `${theme.text} hover:${isDark ? "bg-gray-600" : "bg-gray-200"}`}`}
               style={
                 selectedType === "prof"
-                  ? { backgroundColor: colors.primary }
+                  ? {
+                      backgroundColor: colors.primary,
+                    }
                   : {}
               }
               onClick={() => handleTypeChange("prof")}
             >
-              <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <FontAwesomeIcon
+                icon={faUserCheck}
+                className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2"
+              />
               <span className="hidden sm:inline">Rejet du Professeur</span>
               <span className="sm:hidden">Professeur</span>
             </button>
             <button
-              className={`flex items-center justify-center px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex-1 ${
-                selectedType === "classe"
-                  ? `text-white shadow-sm`
-                  : `${theme.text} hover:${
-                      isDark ? "bg-gray-600" : "bg-gray-200"
-                    }`
-              }`}
+              className={`flex items-center justify-center px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex-1 ${selectedType === "classe" ? `text-white shadow-sm` : `${theme.text} hover:${isDark ? "bg-gray-600" : "bg-gray-200"}`}`}
               style={
                 selectedType === "classe"
-                  ? { backgroundColor: colors.primary }
+                  ? {
+                      backgroundColor: colors.primary,
+                    }
                   : {}
               }
               onClick={() => handleTypeChange("classe")}
             >
-              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <FontAwesomeIcon
+                icon={faUsers}
+                className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2"
+              />
               <span className="hidden sm:inline">Rejet de Classe</span>
               <span className="sm:hidden">Classe</span>
             </button>
@@ -315,12 +301,13 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
         {/* Error Message */}
         {error && (
           <div
-            className={`mb-4 p-4 rounded-md ${
-              isDark ? "bg-red-900 text-red-100" : "bg-red-100 text-red-700"
-            }`}
+            className={`mb-4 p-4 rounded-md ${isDark ? "bg-red-900 text-red-100" : "bg-red-100 text-red-700"}`}
           >
             <div className="flex items-center">
-              <AlertCircle className="mr-2 flex-shrink-0" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="mr-2 flex-shrink-0"
+              />
               <span className="text-sm">{error}</span>
             </div>
           </div>
@@ -334,13 +321,15 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
             </h2>
             <button
               className={`flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 rounded transition-colors duration-200 text-white hover:bg-opacity-90 text-sm sm:text-base`}
-              style={{ backgroundColor: colors.primary }}
+              style={{
+                backgroundColor: colors.primary,
+              }}
               onClick={() => {
                 resetMotifForm();
                 setShowMotifForm(true);
               }}
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <FontAwesomeIcon icon={faPlus} className="w-4 h-4 mr-2" />
               Ajouter Motif
             </button>
           </div>
@@ -357,19 +346,13 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
               <form onSubmit={handleMotifSubmit}>
                 <div className="mb-4">
                   <label
-                    className={`block text-sm font-medium mb-1 ${
-                      isDark ? "text-gray-300" : "text-gray-700"
-                    }`}
+                    className={`block text-sm font-medium mb-1 ${isDark ? "text-gray-300" : "text-gray-700"}`}
                   >
                     Code <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    className={`w-full p-2 border rounded text-sm ${
-                      isDark
-                        ? "bg-gray-700 border-gray-600 text-white"
-                        : "bg-white border-gray-300"
-                    } ${validationErrors.code ? "border-red-500" : ""}`}
+                    className={`w-full p-2 border rounded text-sm ${isDark ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"} ${validationErrors.code ? "border-red-500" : ""}`}
                     value={currentMotif.code}
                     onChange={(e) =>
                       setCurrentMotif({
@@ -388,18 +371,12 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                 </div>
                 <div className="mb-4">
                   <label
-                    className={`block text-sm font-medium mb-1 ${
-                      isDark ? "text-gray-300" : "text-gray-700"
-                    }`}
+                    className={`block text-sm font-medium mb-1 ${isDark ? "text-gray-300" : "text-gray-700"}`}
                   >
                     Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
-                    className={`w-full p-2 border rounded text-sm ${
-                      isDark
-                        ? "bg-gray-700 border-gray-600 text-white"
-                        : "bg-white border-gray-300"
-                    } ${validationErrors.descriptif ? "border-red-500" : ""}`}
+                    className={`w-full p-2 border rounded text-sm ${isDark ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"} ${validationErrors.descriptif ? "border-red-500" : ""}`}
                     value={currentMotif.descriptif}
                     onChange={(e) =>
                       setCurrentMotif({
@@ -421,11 +398,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                 <div className="flex justify-between">
                   <button
                     type="button"
-                    className={`px-4 py-2 rounded transition-colors duration-200 text-sm ${
-                      isDark
-                        ? "bg-gray-600 text-white hover:bg-gray-500"
-                        : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded transition-colors duration-200 text-sm ${isDark ? "bg-gray-600 text-white hover:bg-gray-500" : "bg-gray-200 text-gray-800 hover:bg-gray-300"}`}
                     onClick={resetMotifForm}
                   >
                     Annuler
@@ -433,7 +406,9 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                   <button
                     type="submit"
                     className="px-4 py-2 rounded text-white transition-colors duration-200 hover:bg-opacity-90 text-sm"
-                    style={{ backgroundColor: colors.primary }}
+                    style={{
+                      backgroundColor: colors.primary,
+                    }}
                   >
                     {isEditing ? "Mettre à jour" : "Enregistrer"}
                   </button>
@@ -449,7 +424,9 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
             >
               <div
                 className="animate-spin rounded-full h-8 w-8 border-b-2"
-                style={{ borderColor: colors.primary }}
+                style={{
+                  borderColor: colors.primary,
+                }}
               ></div>
             </div>
           ) : (
@@ -462,30 +439,22 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                   <thead className={isDark ? "bg-gray-700" : "bg-gray-50"}>
                     <tr>
                       <th
-                        className={`px-6 py-3 text-left text-xs font-medium ${
-                          isDark ? "text-gray-300" : "text-gray-500"
-                        } uppercase tracking-wider`}
+                        className={`px-6 py-3 text-left text-xs font-medium ${isDark ? "text-gray-300" : "text-gray-500"} uppercase tracking-wider`}
                       >
                         Code
                       </th>
                       <th
-                        className={`px-6 py-3 text-left text-xs font-medium ${
-                          isDark ? "text-gray-300" : "text-gray-500"
-                        } uppercase tracking-wider`}
+                        className={`px-6 py-3 text-left text-xs font-medium ${isDark ? "text-gray-300" : "text-gray-500"} uppercase tracking-wider`}
                       >
                         Description
                       </th>
                       <th
-                        className={`px-6 py-3 text-left text-xs font-medium ${
-                          isDark ? "text-gray-300" : "text-gray-500"
-                        } uppercase tracking-wider`}
+                        className={`px-6 py-3 text-left text-xs font-medium ${isDark ? "text-gray-300" : "text-gray-500"} uppercase tracking-wider`}
                       >
                         Date Création
                       </th>
                       <th
-                        className={`px-6 py-3 text-right text-xs font-medium ${
-                          isDark ? "text-gray-300" : "text-gray-500"
-                        } uppercase tracking-wider`}
+                        className={`px-6 py-3 text-right text-xs font-medium ${isDark ? "text-gray-300" : "text-gray-500"} uppercase tracking-wider`}
                       >
                         Actions
                       </th>
@@ -496,26 +465,18 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                       <tr>
                         <td
                           colSpan="4"
-                          className={`px-6 py-4 text-center ${
-                            isDark ? "text-gray-300" : "text-gray-500"
-                          }`}
+                          className={`px-6 py-4 text-center ${isDark ? "text-gray-300" : "text-gray-500"}`}
                         >
                           {isLoading
                             ? "Chargement..."
-                            : `Aucun motif de rejet ${
-                                selectedType === "prof"
-                                  ? "de professeur"
-                                  : "de classe"
-                              } trouvé`}
+                            : `Aucun motif de rejet ${selectedType === "prof" ? "de professeur" : "de classe"} trouvé`}
                         </td>
                       </tr>
                     ) : (
                       motifs.map((motif) => (
                         <tr
                           key={motif.id}
-                          className={`${
-                            isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"
-                          }`}
+                          className={`${isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}
                         >
                           <td
                             className={`px-6 py-4 whitespace-nowrap ${theme.text} font-mono`}
@@ -532,26 +493,24 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button
-                              className={`p-1 rounded mr-2 ${
-                                isDark
-                                  ? "text-blue-400 hover:bg-gray-600"
-                                  : "text-blue-600 hover:bg-gray-100"
-                              }`}
+                              className={`p-1 rounded mr-2 ${isDark ? "text-blue-400 hover:bg-gray-600" : "text-blue-600 hover:bg-gray-100"}`}
                               onClick={() => editMotif(motif)}
                               title="Modifier"
                             >
-                              <Edit className="w-5 h-5" />
+                              <FontAwesomeIcon
+                                icon={faPenToSquare}
+                                className="w-5 h-5"
+                              />
                             </button>
                             <button
-                              className={`p-1 rounded ${
-                                isDark
-                                  ? "text-red-400 hover:bg-gray-600"
-                                  : "text-red-600 hover:bg-gray-100"
-                              }`}
+                              className={`p-1 rounded ${isDark ? "text-red-400 hover:bg-gray-600" : "text-red-600 hover:bg-gray-100"}`}
                               onClick={() => handleDeleteMotif(motif.id)}
                               title="Supprimer"
                             >
-                              <Trash2 className="w-5 h-5" />
+                              <FontAwesomeIcon
+                                icon={faTrashCan}
+                                className="w-5 h-5"
+                              />
                             </button>
                           </td>
                         </tr>
@@ -568,36 +527,24 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                     className={`p-6 rounded shadow-md ${theme.cardBg} text-center`}
                   >
                     <p
-                      className={`${
-                        isDark ? "text-gray-300" : "text-gray-500"
-                      }`}
+                      className={`${isDark ? "text-gray-300" : "text-gray-500"}`}
                     >
                       {isLoading
                         ? "Chargement..."
-                        : `Aucun motif de rejet ${
-                            selectedType === "prof"
-                              ? "de professeur"
-                              : "de classe"
-                          } trouvé`}
+                        : `Aucun motif de rejet ${selectedType === "prof" ? "de professeur" : "de classe"} trouvé`}
                     </p>
                   </div>
                 ) : (
                   motifs.map((motif) => (
                     <div
                       key={motif.id}
-                      className={`p-4 rounded shadow-md ${
-                        theme.cardBg
-                      } border ${
-                        isDark ? "border-gray-600" : "border-gray-200"
-                      }`}
+                      className={`p-4 rounded shadow-md ${theme.cardBg} border ${isDark ? "border-gray-600" : "border-gray-200"}`}
                     >
                       <div className="flex flex-col space-y-3">
                         {/* Code */}
                         <div className="flex flex-col">
                           <span
-                            className={`text-xs font-medium uppercase tracking-wider ${
-                              isDark ? "text-gray-400" : "text-gray-500"
-                            }`}
+                            className={`text-xs font-medium uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}
                           >
                             Code
                           </span>
@@ -611,9 +558,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                         {/* Description */}
                         <div className="flex flex-col">
                           <span
-                            className={`text-xs font-medium uppercase tracking-wider ${
-                              isDark ? "text-gray-400" : "text-gray-500"
-                            }`}
+                            className={`text-xs font-medium uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}
                           >
                             Description
                           </span>
@@ -625,9 +570,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                         {/* Date */}
                         <div className="flex flex-col">
                           <span
-                            className={`text-xs font-medium uppercase tracking-wider ${
-                              isDark ? "text-gray-400" : "text-gray-500"
-                            }`}
+                            className={`text-xs font-medium uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}
                           >
                             Date Création
                           </span>
@@ -639,25 +582,23 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
                         {/* Actions */}
                         <div className="flex justify-end space-x-2 pt-2 border-t border-gray-200 dark:border-gray-600">
                           <button
-                            className={`flex items-center px-3 py-2 rounded text-sm font-medium transition-colors ${
-                              isDark
-                                ? "text-blue-400 hover:bg-gray-700"
-                                : "text-blue-600 hover:bg-blue-50"
-                            }`}
+                            className={`flex items-center px-3 py-2 rounded text-sm font-medium transition-colors ${isDark ? "text-blue-400 hover:bg-gray-700" : "text-blue-600 hover:bg-blue-50"}`}
                             onClick={() => editMotif(motif)}
                           >
-                            <Edit className="w-4 h-4 mr-1" />
+                            <FontAwesomeIcon
+                              icon={faPenToSquare}
+                              className="w-4 h-4 mr-1"
+                            />
                             Modifier
                           </button>
                           <button
-                            className={`flex items-center px-3 py-2 rounded text-sm font-medium transition-colors ${
-                              isDark
-                                ? "text-red-400 hover:bg-gray-700"
-                                : "text-red-600 hover:bg-red-50"
-                            }`}
+                            className={`flex items-center px-3 py-2 rounded text-sm font-medium transition-colors ${isDark ? "text-red-400 hover:bg-gray-700" : "text-red-600 hover:bg-red-50"}`}
                             onClick={() => handleDeleteMotif(motif.id)}
                           >
-                            <Trash2 className="w-4 h-4 mr-1" />
+                            <FontAwesomeIcon
+                              icon={faTrashCan}
+                              className="w-4 h-4 mr-1"
+                            />
                             Supprimer
                           </button>
                         </div>
@@ -673,5 +614,4 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
     </div>
   );
 };
-
 export default ProfessorsContent;

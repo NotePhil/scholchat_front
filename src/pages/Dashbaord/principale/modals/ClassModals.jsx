@@ -1,39 +1,32 @@
 import React from "react";
 import {
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Loader,
-  Eye,
-  X,
-  Check,
-  Calendar,
-  Key,
-  Mail,
-  CreditCard,
-  Power,
-  PowerOff,
-  History,
-  Trash2,
-  GraduationCap,
-  School,
-  Users,
-  MapPin,
-  Phone,
-  User,
-  Clock,
-  Shield,
-  Star,
-  Building2,
-  Globe,
-} from "lucide-react";
-import {
   classService,
   EtatClasse,
   DroitPublication,
 } from "../../../../services/ClassService";
 import ClassEditModal from "../class-management/ClassEditPage";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBuilding,
+  faCalendarDays,
+  faCircleCheck,
+  faCircleXmark,
+  faClock,
+  faEnvelope,
+  faGlobe,
+  faGraduationCap,
+  faKey,
+  faLocationDot,
+  faPhone,
+  faPowerOff,
+  faSchool,
+  faShield,
+  faStar,
+  faTrashCan,
+  faUser,
+  faUsers,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const ClassModals = ({
   selectedClass,
   setSelectedClass,
@@ -76,7 +69,6 @@ const ClassModals = ({
     };
     return moderators[moderatorId] || "Modérateur inconnu";
   };
-
   return (
     <>
       {/* Modern View Modal */}
@@ -89,7 +81,10 @@ const ClassModals = ({
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                    <GraduationCap className="w-8 h-8 text-white" />
+                    <FontAwesomeIcon
+                      icon={faGraduationCap}
+                      className="w-8 h-8 text-white"
+                    />
                   </div>
                   <div>
                     <h2 className="text-3xl font-bold mb-1">
@@ -104,29 +99,23 @@ const ClassModals = ({
                   onClick={() => setSelectedClass(null)}
                   className="p-3 hover:bg-white/20 rounded-full transition-all duration-200 backdrop-blur-sm"
                 >
-                  <X className="w-6 h-6" />
+                  <FontAwesomeIcon icon={faXmark} className="w-6 h-6" />
                 </button>
               </div>
 
               {/* Status Badge */}
               <div className="mt-6">
                 <span
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold backdrop-blur-sm ${
-                    selectedClass.etat === "ACTIF"
-                      ? "bg-green-500/20 text-green-100 border border-green-400/30"
-                      : selectedClass.etat === "EN_ATTENTE_APPROBATION"
-                      ? "bg-yellow-500/20 text-yellow-100 border border-yellow-400/30"
-                      : "bg-red-500/20 text-red-100 border border-red-400/30"
-                  }`}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold backdrop-blur-sm ${selectedClass.etat === "ACTIF" ? "bg-green-500/20 text-green-100 border border-green-400/30" : selectedClass.etat === "EN_ATTENTE_APPROBATION" ? "bg-yellow-500/20 text-yellow-100 border border-yellow-400/30" : "bg-red-500/20 text-red-100 border border-red-400/30"}`}
                 >
                   {selectedClass.etat === "ACTIF" && (
-                    <CheckCircle className="w-4 h-4" />
+                    <FontAwesomeIcon icon={faCircleCheck} className="w-4 h-4" />
                   )}
                   {selectedClass.etat === "EN_ATTENTE_APPROBATION" && (
-                    <Clock className="w-4 h-4" />
+                    <FontAwesomeIcon icon={faClock} className="w-4 h-4" />
                   )}
                   {selectedClass.etat === "INACTIF" && (
-                    <XCircle className="w-4 h-4" />
+                    <FontAwesomeIcon icon={faCircleXmark} className="w-4 h-4" />
                   )}
                   {classService.getEtatDisplayName(selectedClass.etat)}
                 </span>
@@ -140,13 +129,19 @@ const ClassModals = ({
                 <div className="space-y-6">
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <School className="w-5 h-5 text-blue-600" />
+                      <FontAwesomeIcon
+                        icon={faSchool}
+                        className="w-5 h-5 text-blue-600"
+                      />
                       Informations de base
                     </h3>
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <GraduationCap className="w-5 h-5 text-blue-600" />
+                          <FontAwesomeIcon
+                            icon={faGraduationCap}
+                            className="w-5 h-5 text-blue-600"
+                          />
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">
@@ -160,7 +155,10 @@ const ClassModals = ({
 
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <Star className="w-5 h-5 text-purple-600" />
+                          <FontAwesomeIcon
+                            icon={faStar}
+                            className="w-5 h-5 text-purple-600"
+                          />
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Niveau</p>
@@ -172,7 +170,10 @@ const ClassModals = ({
 
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                          <Calendar className="w-5 h-5 text-green-600" />
+                          <FontAwesomeIcon
+                            icon={faCalendarDays}
+                            className="w-5 h-5 text-green-600"
+                          />
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">
@@ -181,7 +182,7 @@ const ClassModals = ({
                           <p className="font-semibold text-gray-900">
                             {selectedClass.dateCreation
                               ? new Date(
-                                  selectedClass.dateCreation
+                                  selectedClass.dateCreation,
                                 ).toLocaleDateString("fr-FR", {
                                   year: "numeric",
                                   month: "long",
@@ -194,7 +195,10 @@ const ClassModals = ({
 
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                          <Key className="w-5 h-5 text-orange-600" />
+                          <FontAwesomeIcon
+                            icon={faKey}
+                            className="w-5 h-5 text-orange-600"
+                          />
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">
@@ -212,12 +216,18 @@ const ClassModals = ({
                   {selectedClass.moderator && (
                     <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-green-600" />
+                        <FontAwesomeIcon
+                          icon={faShield}
+                          className="w-5 h-5 text-green-600"
+                        />
                         Modérateur
                       </h3>
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                          <User className="w-6 h-6 text-green-600" />
+                          <FontAwesomeIcon
+                            icon={faUser}
+                            className="w-6 h-6 text-green-600"
+                          />
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900">
@@ -237,7 +247,10 @@ const ClassModals = ({
                   {selectedClass.etablissement && (
                     <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Building2 className="w-5 h-5 text-purple-600" />
+                        <FontAwesomeIcon
+                          icon={faBuilding}
+                          className="w-5 h-5 text-purple-600"
+                        />
                         Établissement
                       </h3>
                       <div className="space-y-4">
@@ -248,20 +261,29 @@ const ClassModals = ({
                         </div>
 
                         <div className="flex items-center gap-3">
-                          <MapPin className="w-5 h-5 text-purple-600" />
+                          <FontAwesomeIcon
+                            icon={faLocationDot}
+                            className="w-5 h-5 text-purple-600"
+                          />
                           <div>
                             <p className="font-medium text-gray-900">
                               {selectedClass.etablissement.localisation}
                             </p>
                             <p className="text-sm text-gray-600 flex items-center gap-1">
-                              <Globe className="w-4 h-4" />
+                              <FontAwesomeIcon
+                                icon={faGlobe}
+                                className="w-4 h-4"
+                              />
                               {selectedClass.etablissement.pays}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                          <Mail className="w-5 h-5 text-purple-600" />
+                          <FontAwesomeIcon
+                            icon={faEnvelope}
+                            className="w-5 h-5 text-purple-600"
+                          />
                           <div>
                             <p className="font-medium text-gray-900">
                               {selectedClass.etablissement.email}
@@ -273,7 +295,10 @@ const ClassModals = ({
                         </div>
 
                         <div className="flex items-center gap-3">
-                          <Phone className="w-5 h-5 text-purple-600" />
+                          <FontAwesomeIcon
+                            icon={faPhone}
+                            className="w-5 h-5 text-purple-600"
+                          />
                           <div>
                             <p className="font-medium text-gray-900">
                               {selectedClass.etablissement.telephone}
@@ -293,12 +318,7 @@ const ClassModals = ({
                                 Envoi mail vers classe
                               </span>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  selectedClass.etablissement
-                                    .optionEnvoiMailVersClasse
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${selectedClass.etablissement.optionEnvoiMailVersClasse ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
                               >
                                 {selectedClass.etablissement
                                   .optionEnvoiMailVersClasse
@@ -311,11 +331,7 @@ const ClassModals = ({
                                 Token général
                               </span>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  selectedClass.etablissement.optionTokenGeneral
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${selectedClass.etablissement.optionTokenGeneral ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
                               >
                                 {selectedClass.etablissement.optionTokenGeneral
                                   ? "Activé"
@@ -327,11 +343,7 @@ const ClassModals = ({
                                 Code unique
                               </span>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  selectedClass.etablissement.codeUnique
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${selectedClass.etablissement.codeUnique ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
                               >
                                 {selectedClass.etablissement.codeUnique
                                   ? "Activé"
@@ -347,13 +359,19 @@ const ClassModals = ({
                   {/* Statistics */}
                   <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-6 border border-orange-100">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Users className="w-5 h-5 text-orange-600" />
+                      <FontAwesomeIcon
+                        icon={faUsers}
+                        className="w-5 h-5 text-orange-600"
+                      />
                       Statistiques
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="text-center p-4 bg-white/50 rounded-xl">
                         <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <GraduationCap className="w-6 h-6 text-blue-600" />
+                          <FontAwesomeIcon
+                            icon={faGraduationCap}
+                            className="w-6 h-6 text-blue-600"
+                          />
                         </div>
                         <p className="text-2xl font-bold text-gray-900">
                           {selectedClass.eleves?.length || 0}
@@ -362,7 +380,10 @@ const ClassModals = ({
                       </div>
                       <div className="text-center p-4 bg-white/50 rounded-xl">
                         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <Users className="w-6 h-6 text-green-600" />
+                          <FontAwesomeIcon
+                            icon={faUsers}
+                            className="w-6 h-6 text-green-600"
+                          />
                         </div>
                         <p className="text-2xl font-bold text-gray-900">
                           {selectedClass.parents?.length || 0}
@@ -397,7 +418,10 @@ const ClassModals = ({
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                  <FontAwesomeIcon
+                    icon={faCircleCheck}
+                    className="w-6 h-6 text-blue-600"
+                  />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -445,7 +469,10 @@ const ClassModals = ({
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <PowerOff className="w-6 h-6 text-orange-600" />
+                  <FontAwesomeIcon
+                    icon={faPowerOff}
+                    className="w-6 h-6 text-orange-600"
+                  />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -492,7 +519,7 @@ const ClassModals = ({
                     handleDeactivation(
                       showDeactivationModal.id,
                       deactivationReason,
-                      deactivationComment
+                      deactivationComment,
                     )
                   }
                   disabled={
@@ -519,7 +546,10 @@ const ClassModals = ({
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Key className="w-6 h-6 text-blue-600" />
+                  <FontAwesomeIcon
+                    icon={faKey}
+                    className="w-6 h-6 text-blue-600"
+                  />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -572,7 +602,10 @@ const ClassModals = ({
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <Trash2 className="w-6 h-6 text-red-600" />
+                  <FontAwesomeIcon
+                    icon={faTrashCan}
+                    className="w-6 h-6 text-red-600"
+                  />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -626,5 +659,4 @@ const ClassModals = ({
     </>
   );
 };
-
 export default ClassModals;

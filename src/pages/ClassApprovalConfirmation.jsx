@@ -1,39 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
-import axios from 'axios';
-
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import axios from "axios";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCircleCheck,
+  faCircleExclamation,
+  faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 const ClassApprovalConfirmation = () => {
   const { establishmentId, classId } = useParams();
-  const [status, setStatus] = useState('loading'); // loading, success, error
-  const [message, setMessage] = useState('');
-
+  const [status, setStatus] = useState("loading"); // loading, success, error
+  const [message, setMessage] = useState("");
   useEffect(() => {
     const approveClass = async () => {
       try {
         const response = await axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/etablissements/approve-class/${establishmentId}/${classId}`
+          `${process.env.REACT_APP_API_BASE_URL}/etablissements/approve-class/${establishmentId}/${classId}`,
         );
-        
-        setStatus('success');
-        setMessage('Classe validée avec succès par l\'établissement !');
+        setStatus("success");
+        setMessage("Classe validée avec succès par l'établissement !");
       } catch (error) {
-        setStatus('error');
-        setMessage('Erreur lors de la validation de la classe');
+        setStatus("error");
+        setMessage("Erreur lors de la validation de la classe");
       }
     };
-
     if (establishmentId && classId) {
       approveClass();
     }
   }, [establishmentId, classId]);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-        {status === 'loading' && (
+        {status === "loading" && (
           <>
-            <Loader className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
+            <FontAwesomeIcon
+              icon={faSpinner}
+              className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4"
+            />
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               Validation en cours...
             </h2>
@@ -43,9 +46,12 @@ const ClassApprovalConfirmation = () => {
           </>
         )}
 
-        {status === 'success' && (
+        {status === "success" && (
           <>
-            <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+            <FontAwesomeIcon
+              icon={faCircleCheck}
+              className="w-16 h-16 text-green-600 mx-auto mb-4"
+            />
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               Validation réussie !
             </h2>
@@ -56,9 +62,12 @@ const ClassApprovalConfirmation = () => {
           </>
         )}
 
-        {status === 'error' && (
+        {status === "error" && (
           <>
-            <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+            <FontAwesomeIcon
+              icon={faCircleExclamation}
+              className="w-16 h-16 text-red-600 mx-auto mb-4"
+            />
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               Erreur de validation
             </h2>
@@ -72,5 +81,4 @@ const ClassApprovalConfirmation = () => {
     </div>
   );
 };
-
 export default ClassApprovalConfirmation;

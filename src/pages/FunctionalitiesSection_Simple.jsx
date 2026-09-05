@@ -1,18 +1,24 @@
 import React from "react";
-import {
-  BookOpen,
-  Mail,
-  ClipboardList,
-  UserCheck,
-  Target,
-  ChevronRight,
-  Calendar,
-} from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBullseye,
+  faChevronRight,
+  faBookOpen,
+  faEnvelope,
+  faClipboardList,
+  faUserCheck,
+  faCalendarDays,
+} from "@fortawesome/free-solid-svg-icons";
+import { asIconComponent } from "../utils/faIconAdapter";
+const BookOpen = asIconComponent(faBookOpen);
+const Calendar = asIconComponent(faCalendarDays);
+const ClipboardList = asIconComponent(faClipboardList);
+const Mail = asIconComponent(faEnvelope);
+const Target = asIconComponent(faBullseye);
+const UserCheck = asIconComponent(faUserCheck);
 const FunctionalitiesSection = ({ theme = "default" }) => {
   const { t } = useTranslation();
-
   const getThemeClasses = () => {
     switch (theme) {
       case "dark":
@@ -38,9 +44,7 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
         };
     }
   };
-
   const themeClasses = getThemeClasses();
-
   const functionalities = [
     {
       icon: BookOpen,
@@ -91,7 +95,6 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
       textColor: "text-indigo-600",
     },
   ];
-
   return (
     <section className={`min-h-screen ${themeClasses.bg} py-20`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -104,14 +107,21 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
           </div>
 
           <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-3xl mb-8 mx-auto flex items-center justify-center">
-            <Target className="w-10 h-10 text-white" />
+            <FontAwesomeIcon
+              icon={faBullseye}
+              className="w-10 h-10 text-white"
+            />
           </div>
 
           <h2 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="text-blue-500">{t("pages.functionalities.title")}</span>
+            <span className="text-blue-500">
+              {t("pages.functionalities.title")}
+            </span>
           </h2>
 
-          <p className={`text-xl max-w-3xl mx-auto leading-relaxed mb-6 ${themeClasses.text}`}>
+          <p
+            className={`text-xl max-w-3xl mx-auto leading-relaxed mb-6 ${themeClasses.text}`}
+          >
             ✨ {t("pages.functionalities.subtitle")} ⚡
           </p>
 
@@ -127,7 +137,9 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
                 key={index}
                 className={`${themeClasses.cardBg} border ${themeClasses.cardBorder} rounded-3xl p-8 hover:shadow-lg transition-shadow duration-300`}
               >
-                <div className={`w-20 h-20 bg-gradient-to-br ${func.color} rounded-3xl mb-6 flex items-center justify-center`}>
+                <div
+                  className={`w-20 h-20 bg-gradient-to-br ${func.color} rounded-3xl mb-6 flex items-center justify-center`}
+                >
                   <IconComponent className="w-10 h-10 text-white" />
                 </div>
 
@@ -141,7 +153,10 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
 
                 <div className="flex items-center font-medium text-blue-500 hover:text-blue-400 transition-colors cursor-pointer">
                   <span>{t("pages.functionalities.learnMore")}</span>
-                  <ChevronRight className="w-5 h-5 ml-2" />
+                  <FontAwesomeIcon
+                    icon={faChevronRight}
+                    className="w-5 h-5 ml-2"
+                  />
                 </div>
               </div>
             );
@@ -151,5 +166,4 @@ const FunctionalitiesSection = ({ theme = "default" }) => {
     </section>
   );
 };
-
 export default FunctionalitiesSection;

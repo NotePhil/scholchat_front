@@ -19,28 +19,23 @@ import {
   Table,
   Divider,
 } from "antd";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  CheckOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-  HistoryOutlined,
-  UserAddOutlined,
-  UserDeleteOutlined,
-  FileTextOutlined,
-  ArrowLeftOutlined,
-  ReloadOutlined,
-  EyeOutlined,
-  TeamOutlined,
-  UserOutlined,
-  CalendarOutlined,
-  BookOutlined,
-  BankOutlined,
-} from "@ant-design/icons";
-
+  faArrowLeft,
+  faArrowsRotate,
+  faCheck,
+  faClockRotateLeft,
+  faFileLines,
+  faTrash,
+  faUser,
+  faUserGroup,
+  faUserPlus,
+  faUserXmark,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const { TabPane } = Tabs;
 const { Option } = Select;
 const { TextArea } = Input;
-
 const ManageClassDetails = ({
   classData,
   loading,
@@ -53,7 +48,6 @@ const ManageClassDetails = ({
   rejectReason,
   selectedPublicationRight,
   form,
-
   // Handlers
   onBack,
   onRefresh,
@@ -64,7 +58,6 @@ const ManageClassDetails = ({
   onModeratorAssign,
   onModeratorRemove,
   onPublicationRightsUpdate,
-
   // Modal states
   historyModalVisible,
   setHistoryModalVisible,
@@ -89,7 +82,6 @@ const ManageClassDetails = ({
         return "default";
     }
   };
-
   const getPublicationRightLabel = (droit) => {
     switch (droit) {
       case "PROFESSEURS_SEULEMENT":
@@ -104,7 +96,6 @@ const ManageClassDetails = ({
         return "Non défini";
     }
   };
-
   const historyColumns = [
     {
       title: "Date",
@@ -129,7 +120,6 @@ const ManageClassDetails = ({
       ),
     },
   ];
-
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-96">
@@ -138,7 +128,6 @@ const ManageClassDetails = ({
       </div>
     );
   }
-
   if (!classData) {
     return (
       <div className="p-6">
@@ -161,13 +150,16 @@ const ManageClassDetails = ({
       </div>
     );
   }
-
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-          <Button icon={<ArrowLeftOutlined />} onClick={onBack} type="text" />
+          <Button
+            icon={<FontAwesomeIcon icon={faArrowLeft} />}
+            onClick={onBack}
+            type="text"
+          />
           <div>
             <h2 className="text-2xl font-bold m-0">Gestion de la classe</h2>
             <p className="text-gray-500 m-0">{classData.nom}</p>
@@ -176,7 +168,7 @@ const ManageClassDetails = ({
 
         <div className="flex gap-2">
           <Button
-            icon={<ReloadOutlined />}
+            icon={<FontAwesomeIcon icon={faArrowsRotate} />}
             onClick={onRefresh}
             loading={refreshing}
             type="default"
@@ -189,7 +181,7 @@ const ManageClassDetails = ({
               <>
                 <Button
                   type="primary"
-                  icon={<CheckOutlined />}
+                  icon={<FontAwesomeIcon icon={faCheck} />}
                   onClick={() =>
                     onApprove(classData.id, classData.etablissement.id)
                   }
@@ -199,7 +191,7 @@ const ManageClassDetails = ({
                 </Button>
                 <Button
                   danger
-                  icon={<CloseOutlined />}
+                  icon={<FontAwesomeIcon icon={faXmark} />}
                   onClick={() =>
                     onReject(classData.id, classData.etablissement.id)
                   }
@@ -216,11 +208,13 @@ const ManageClassDetails = ({
             onConfirm={onDelete}
             okText="Oui"
             cancelText="Non"
-            okButtonProps={{ danger: true }}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               danger
-              icon={<DeleteOutlined />}
+              icon={<FontAwesomeIcon icon={faTrash} />}
               loading={actionLoading === "delete"}
             >
               Supprimer
@@ -255,7 +249,7 @@ const ManageClassDetails = ({
       <div className="mb-6">
         <Space wrap>
           <Button
-            icon={<HistoryOutlined />}
+            icon={<FontAwesomeIcon icon={faClockRotateLeft} />}
             onClick={onFetchActivationHistory}
             loading={actionLoading === "history"}
           >
@@ -263,7 +257,7 @@ const ManageClassDetails = ({
           </Button>
 
           <Button
-            icon={<FileTextOutlined />}
+            icon={<FontAwesomeIcon icon={faFileLines} />}
             onClick={() => setPublicationRightsModalVisible(true)}
           >
             Droits de publication
@@ -271,7 +265,7 @@ const ManageClassDetails = ({
 
           <Button
             type="dashed"
-            icon={<UserAddOutlined />}
+            icon={<FontAwesomeIcon icon={faUserPlus} />}
             onClick={() => setModeratorModalVisible(true)}
             disabled={!professors.length}
           >
@@ -281,7 +275,7 @@ const ManageClassDetails = ({
           {classData.moderator && (
             <Button
               danger
-              icon={<UserDeleteOutlined />}
+              icon={<FontAwesomeIcon icon={faUserXmark} />}
               onClick={onModeratorRemove}
               loading={actionLoading === "removeModerator"}
             >
@@ -333,7 +327,7 @@ const ManageClassDetails = ({
           <TabPane
             tab={
               <span>
-                <TeamOutlined />
+                <FontAwesomeIcon icon={faUserGroup} />
                 Élèves ({classData.eleves?.length || 0})
               </span>
             }
@@ -347,14 +341,32 @@ const ManageClassDetails = ({
             ) : (
               <Table
                 columns={[
-                  { title: "Nom", dataIndex: "nom", key: "nom" },
-                  { title: "Prénom", dataIndex: "prenom", key: "prenom" },
-                  { title: "Email", dataIndex: "email", key: "email" },
-                  { title: "Niveau", dataIndex: "niveau", key: "niveau" },
+                  {
+                    title: "Nom",
+                    dataIndex: "nom",
+                    key: "nom",
+                  },
+                  {
+                    title: "Prénom",
+                    dataIndex: "prenom",
+                    key: "prenom",
+                  },
+                  {
+                    title: "Email",
+                    dataIndex: "email",
+                    key: "email",
+                  },
+                  {
+                    title: "Niveau",
+                    dataIndex: "niveau",
+                    key: "niveau",
+                  },
                 ]}
                 dataSource={classData.eleves}
                 rowKey="id"
-                pagination={{ pageSize: 10 }}
+                pagination={{
+                  pageSize: 10,
+                }}
                 size="small"
               />
             )}
@@ -363,7 +375,7 @@ const ManageClassDetails = ({
           <TabPane
             tab={
               <span>
-                <UserOutlined />
+                <FontAwesomeIcon icon={faUser} />
                 Parents ({classData.parents?.length || 0})
               </span>
             }
@@ -377,9 +389,21 @@ const ManageClassDetails = ({
             ) : (
               <Table
                 columns={[
-                  { title: "Nom", dataIndex: "nom", key: "nom" },
-                  { title: "Prénom", dataIndex: "prenom", key: "prenom" },
-                  { title: "Email", dataIndex: "email", key: "email" },
+                  {
+                    title: "Nom",
+                    dataIndex: "nom",
+                    key: "nom",
+                  },
+                  {
+                    title: "Prénom",
+                    dataIndex: "prenom",
+                    key: "prenom",
+                  },
+                  {
+                    title: "Email",
+                    dataIndex: "email",
+                    key: "email",
+                  },
                   {
                     title: "Téléphone",
                     dataIndex: "telephone",
@@ -388,7 +412,9 @@ const ManageClassDetails = ({
                 ]}
                 dataSource={classData.parents}
                 rowKey="id"
-                pagination={{ pageSize: 10 }}
+                pagination={{
+                  pageSize: 10,
+                }}
                 size="small"
               />
             )}
@@ -462,7 +488,9 @@ const ManageClassDetails = ({
         }}
         onOk={onReject}
         okText="Rejeter"
-        okButtonProps={{ danger: true }}
+        okButtonProps={{
+          danger: true,
+        }}
         confirmLoading={actionLoading === "reject"}
       >
         <p>Veuillez fournir une raison pour le rejet de cette classe :</p>
@@ -487,7 +515,9 @@ const ManageClassDetails = ({
           Sélectionnez qui peut publier du contenu dans cette classe :
         </p>
         <Select
-          style={{ width: "100%" }}
+          style={{
+            width: "100%",
+          }}
           value={selectedPublicationRight}
           onChange={(value) => setSelectedPublicationRight(value)}
           placeholder="Sélectionner les droits de publication"
@@ -501,5 +531,4 @@ const ManageClassDetails = ({
     </div>
   );
 };
-
 export default ManageClassDetails;

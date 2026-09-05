@@ -1,31 +1,35 @@
 import React, { useState, useEffect } from "react";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  ChevronRight,
-  Filter,
-  Search,
-  BookOpen,
-  Eye,
-  ArrowLeft,
-  CheckCircle,
-  AlertCircle,
-  PlayCircle,
-  GraduationCap,
-  Plus,
-  Loader,
-  Radio,
-} from "lucide-react";
 import CourseDetailsView from "./CourseDetailsView";
 import LiveSession from "../CoursProgrammerContent/LiveSession/LiveSession";
 
 // ── Pagination ────────────────────────────────────────────────────────────────
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowLeft,
+  faBookOpen,
+  faCalendarDays,
+  faChevronRight,
+  faCircleCheck,
+  faCircleDot,
+  faCircleExclamation,
+  faCirclePlay,
+  faClock,
+  faEye,
+  faFilter,
+  faGraduationCap,
+  faLocationDot,
+  faMagnifyingGlass,
+  faPlus,
+  faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 const Pagination = ({ total, page, totalPages, onPage }) => {
   if (totalPages <= 1) return null;
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1).filter(
-    (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1
-  );
+  const pages = Array.from(
+    {
+      length: totalPages,
+    },
+    (_, i) => i + 1,
+  ).filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1);
   const withEllipsis = pages.reduce((acc, p, i, arr) => {
     if (i > 0 && p - arr[i - 1] > 1) acc.push("…");
     acc.push(p);
@@ -53,15 +57,11 @@ const Pagination = ({ total, page, totalPages, onPage }) => {
             <button
               key={p}
               onClick={() => onPage(p)}
-              className={`px-2.5 py-1 text-xs rounded border transition-colors ${
-                p === page
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "border-gray-200 hover:bg-gray-50"
-              }`}
+              className={`px-2.5 py-1 text-xs rounded border transition-colors ${p === page ? "bg-blue-600 text-white border-blue-600" : "border-gray-200 hover:bg-gray-50"}`}
             >
               {p}
             </button>
-          )
+          ),
         )}
         <button
           disabled={page === totalPages}
@@ -77,53 +77,92 @@ const Pagination = ({ total, page, totalPages, onPage }) => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const STATUS_STYLE = {
-  PLANIFIE: { color: "bg-blue-100 text-blue-800 border-blue-200",  icon: <Clock className="w-3 h-3" />,      label: "Planifié" },
-  EN_COURS: { color: "bg-green-100 text-green-800 border-green-200", icon: <PlayCircle className="w-3 h-3" />, label: "En cours" },
-  TERMINE:  { color: "bg-gray-100 text-gray-800 border-gray-200",  icon: <CheckCircle className="w-3 h-3" />, label: "Terminé" },
-  ANNULE:   { color: "bg-red-100 text-red-800 border-red-200",     icon: <AlertCircle className="w-3 h-3" />, label: "Annulé" },
+  PLANIFIE: {
+    color: "bg-blue-100 text-blue-800 border-blue-200",
+    icon: <FontAwesomeIcon icon={faClock} className="w-3 h-3" />,
+    label: "Planifié",
+  },
+  EN_COURS: {
+    color: "bg-green-100 text-green-800 border-green-200",
+    icon: <FontAwesomeIcon icon={faCirclePlay} className="w-3 h-3" />,
+    label: "En cours",
+  },
+  TERMINE: {
+    color: "bg-gray-100 text-gray-800 border-gray-200",
+    icon: <FontAwesomeIcon icon={faCircleCheck} className="w-3 h-3" />,
+    label: "Terminé",
+  },
+  ANNULE: {
+    color: "bg-red-100 text-red-800 border-red-200",
+    icon: <FontAwesomeIcon icon={faCircleExclamation} className="w-3 h-3" />,
+    label: "Annulé",
+  },
 };
-
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("fr-FR", {
-        weekday: "long", year: "numeric", month: "long", day: "numeric",
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       })
     : "Date non définie";
-
 const fmtTime = (d) =>
   d
-    ? new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    ? new Date(d).toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
     : "";
-
 const sortByCourseStatus = (arr) => {
-  const ORDER = { EN_COURS: 0, PLANIFIE: 1, ANNULE: 2 };
+  const ORDER = {
+    EN_COURS: 0,
+    PLANIFIE: 1,
+    ANNULE: 2,
+  };
   return [...arr].sort((a, b) => {
     const oa = ORDER[a.etatCoursProgramme] ?? 3;
     const ob = ORDER[b.etatCoursProgramme] ?? 3;
-    return oa !== ob ? oa - ob : new Date(b.dateCoursPrevue) - new Date(a.dateCoursPrevue);
+    return oa !== ob
+      ? oa - ob
+      : new Date(b.dateCoursPrevue) - new Date(a.dateCoursPrevue);
   });
 };
 
 // ── Main component ────────────────────────────────────────────────────────────
-const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, userRole, tabData }) => {
-  const [courses, setCourses] = useState([]);   // enriched scheduled courses
+const CoursProgrammeManagement = ({
+  selectedClass,
+  onBack,
+  onScheduleCourse,
+  userRole,
+  tabData,
+}) => {
+  const [courses, setCourses] = useState([]); // enriched scheduled courses
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("TOUS");
   const [page, setPage] = useState(1);
   const [selectedCourse, setSelectedCourse] = useState(
-    tabData?.courseId ? { coursId: tabData.courseId } : null
+    tabData?.courseId
+      ? {
+          coursId: tabData.courseId,
+        }
+      : null,
   );
   const [liveSession, setLiveSession] = useState(null);
-  const [toast, setToast] = useState({ show: false, message: "" });
-
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+  });
   const PAGE_SIZE = 6;
-
   const userId = (() => {
-    const isParent = (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT");
+    const isParent = (localStorage.getItem("userRole") || "")
+      .toUpperCase()
+      .includes("PARENT");
     return isParent
-      ? localStorage.getItem("selectedChildId") || localStorage.getItem("userId")
+      ? localStorage.getItem("selectedChildId") ||
+          localStorage.getItem("userId")
       : localStorage.getItem("userId");
   })();
 
@@ -133,31 +172,32 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   //   2. GET /cours/accessibles/{userId}  (batch course details — no per-course calls)
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       if (!userId) return;
       setLoading(true);
       setError("");
       setPage(1);
-
       try {
-        const { coursProgrammerService } = await import("../../../../../services/coursProgrammerService");
-        const { coursService } = await import("../../../../../services/CoursService");
-
+        const { coursProgrammerService } =
+          await import("../../../../../services/coursProgrammerService");
+        const { coursService } =
+          await import("../../../../../services/CoursService");
         const [scheduledRes, detailsRes] = await Promise.allSettled([
           selectedClass
-            ? coursProgrammerService.obtenirProgrammationParClasse(selectedClass.id)
+            ? coursProgrammerService.obtenirProgrammationParClasse(
+                selectedClass.id,
+              )
             : coursProgrammerService.obtenirProgrammationAccessible(userId),
           coursService.getCoursAccessibles(userId).catch(() => []),
         ]);
-
         if (cancelled) return;
-
-        const scheduled = scheduledRes.status === "fulfilled" ? scheduledRes.value || [] : [];
+        const scheduled =
+          scheduledRes.status === "fulfilled" ? scheduledRes.value || [] : [];
         const detailsMap = new Map(
-          (detailsRes.status === "fulfilled" ? detailsRes.value || [] : []).map((c) => [c.id, c])
+          (detailsRes.status === "fulfilled" ? detailsRes.value || [] : []).map(
+            (c) => [c.id, c],
+          ),
         );
-
         const enriched = scheduled.map((sc) => {
           const detail = detailsMap.get(sc.coursId) || {};
           return {
@@ -169,7 +209,6 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
             },
           };
         });
-
         setCourses(sortByCourseStatus(enriched));
       } catch (err) {
         if (!cancelled) setError(`Erreur lors du chargement : ${err.message}`);
@@ -177,32 +216,59 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
         if (!cancelled) setLoading(false);
       }
     };
-
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [selectedClass, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset page on filter/search change
-  useEffect(() => { setPage(1); }, [searchTerm, statusFilter]);
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter]);
 
   // ── Check live session on-demand (only when student clicks "Rejoindre") ────
   const handleJoinLive = async (course) => {
     const cId = course.cours?.id || course.coursId;
     try {
-      const { default: liveSessionService } = await import("../../../../../services/LiveSessionService");
+      const { default: liveSessionService } =
+        await import("../../../../../services/LiveSessionService");
       const session = await liveSessionService.getActiveSession(cId);
       if (session) {
-        setLiveSession({ scheduledCourse: course, cours: course.cours, isModerator: false });
+        setLiveSession({
+          scheduledCourse: course,
+          cours: course.cours,
+          isModerator: false,
+        });
       } else {
-        setToast({ show: true, message: "Aucune session active pour ce cours." });
-        setTimeout(() => setToast({ show: false, message: "" }), 3000);
+        setToast({
+          show: true,
+          message: "Aucune session active pour ce cours.",
+        });
+        setTimeout(
+          () =>
+            setToast({
+              show: false,
+              message: "",
+            }),
+          3000,
+        );
       }
     } catch {
-      setToast({ show: true, message: "Impossible de vérifier la session." });
-      setTimeout(() => setToast({ show: false, message: "" }), 3000);
+      setToast({
+        show: true,
+        message: "Impossible de vérifier la session.",
+      });
+      setTimeout(
+        () =>
+          setToast({
+            show: false,
+            message: "",
+          }),
+        3000,
+      );
     }
   };
-
   const getClassName = (course) => {
     if (selectedClass) return selectedClass.nom;
     if (course.classes?.length > 0) return course.classes[0].nom || "";
@@ -234,25 +300,28 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
   // ── Filter + paginate ─────────────────────────────────────────────────────
   const filtered = courses.filter((c) => {
     const titre = c.cours?.titre || "";
-    const desc  = c.cours?.description || "";
+    const desc = c.cours?.description || "";
     const matchSearch =
       !searchTerm ||
       titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       desc.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStatus = statusFilter === "TOUS" || c.etatCoursProgramme === statusFilter;
+    const matchStatus =
+      statusFilter === "TOUS" || c.etatCoursProgramme === statusFilter;
     return matchSearch && matchStatus;
   });
-
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = filtered.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
 
   // Stats
   const stats = {
     planifie: courses.filter((c) => c.etatCoursProgramme === "PLANIFIE").length,
-    enCours:  courses.filter((c) => c.etatCoursProgramme === "EN_COURS").length,
-    termine:  courses.filter((c) => c.etatCoursProgramme === "TERMINE").length,
-    total:    courses.length,
+    enCours: courses.filter((c) => c.etatCoursProgramme === "EN_COURS").length,
+    termine: courses.filter((c) => c.etatCoursProgramme === "TERMINE").length,
+    total: courses.length,
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -267,12 +336,15 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                 onClick={onBack}
                 className="p-1.5 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
               </button>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-base font-bold flex items-center truncate">
-                    <GraduationCap className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <FontAwesomeIcon
+                      icon={faGraduationCap}
+                      className="w-4 h-4 mr-2 flex-shrink-0"
+                    />
                     <span className="truncate">
                       {selectedClass?.nom || "Gestion des Cours"}
                     </span>
@@ -282,7 +354,7 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                       onClick={onScheduleCourse}
                       className="px-3 py-1 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1 text-xs"
                     >
-                      <Plus className="w-3 h-3" />
+                      <FontAwesomeIcon icon={faPlus} className="w-3 h-3" />
                       Programmer
                     </button>
                   )}
@@ -304,7 +376,10 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
         <div className="px-3 py-2 bg-gray-50 border-t">
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1 relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <FontAwesomeIcon
+                icon={faMagnifyingGlass}
+                className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 type="text"
                 placeholder="Rechercher un cours..."
@@ -314,7 +389,10 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
               />
             </div>
             <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+              <FontAwesomeIcon
+                icon={faFilter}
+                className="w-3.5 h-3.5 text-gray-500 flex-shrink-0"
+              />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -334,7 +412,10 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
       {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <FontAwesomeIcon
+            icon={faCircleExclamation}
+            className="w-5 h-5 text-red-600 flex-shrink-0"
+          />
           <p className="text-red-700 text-sm">{error}</p>
         </div>
       )}
@@ -342,14 +423,22 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
       {/* Loading */}
       {loading ? (
         <div className="flex items-center justify-center min-h-64 gap-3">
-          <Loader className="w-8 h-8 animate-spin text-blue-600" />
+          <FontAwesomeIcon
+            icon={faSpinner}
+            className="w-8 h-8 animate-spin text-blue-600"
+          />
           <span className="text-gray-600">Chargement des cours…</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl shadow p-8 text-center">
-          <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <FontAwesomeIcon
+            icon={faBookOpen}
+            className="w-12 h-12 text-gray-400 mx-auto mb-3"
+          />
           <h3 className="text-base font-medium text-gray-900 mb-1">
-            {courses.length === 0 ? "Aucun cours disponible" : "Aucun cours trouvé"}
+            {courses.length === 0
+              ? "Aucun cours disponible"
+              : "Aucun cours trouvé"}
           </h3>
           <p className="text-sm text-gray-600">
             {courses.length === 0
@@ -362,16 +451,15 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
           {/* Course cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {paged.map((course) => {
-              const s = STATUS_STYLE[course.etatCoursProgramme] || STATUS_STYLE["PLANIFIE"];
+              const s =
+                STATUS_STYLE[course.etatCoursProgramme] ||
+                STATUS_STYLE["PLANIFIE"];
               const isLive = course.etatCoursProgramme === "EN_COURS";
               const className = getClassName(course);
-
               return (
                 <div
                   key={course.id}
-                  className={`bg-white rounded-xl shadow-lg transition-all duration-300 border-2 overflow-hidden ${
-                    isLive ? "border-green-400 shadow-green-100" : "border-gray-100 hover:shadow-xl"
-                  }`}
+                  className={`bg-white rounded-xl shadow-lg transition-all duration-300 border-2 overflow-hidden ${isLive ? "border-green-400 shadow-green-100" : "border-gray-100 hover:shadow-xl"}`}
                 >
                   {/* Live banner */}
                   {isLive && (
@@ -408,28 +496,43 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                         </p>
                         {className && (
                           <p className="text-indigo-600 text-xs font-medium mt-1 flex items-center gap-1">
-                            <GraduationCap className="w-3 h-3" />
+                            <FontAwesomeIcon
+                              icon={faGraduationCap}
+                              className="w-3 h-3"
+                            />
                             {className}
                           </p>
                         )}
                       </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+                      <FontAwesomeIcon
+                        icon={faChevronRight}
+                        className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0"
+                      />
                     </div>
 
                     <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-2">
                       <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5" />
+                        <FontAwesomeIcon
+                          icon={faCalendarDays}
+                          className="w-3.5 h-3.5"
+                        />
                         {fmtDate(course.dateCoursPrevue)}
                       </span>
                       {fmtTime(course.dateCoursPrevue) && (
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
+                          <FontAwesomeIcon
+                            icon={faClock}
+                            className="w-3.5 h-3.5"
+                          />
                           {fmtTime(course.dateCoursPrevue)}
                         </span>
                       )}
                       {course.lieu && (
                         <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5" />
+                          <FontAwesomeIcon
+                            icon={faLocationDot}
+                            className="w-3.5 h-3.5"
+                          />
                           {course.lieu}
                         </span>
                       )}
@@ -443,7 +546,10 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                         onClick={() => handleJoinLive(course)}
                         className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-sm transition-colors shadow"
                       >
-                        <Radio className="w-4 h-4 animate-pulse" />
+                        <FontAwesomeIcon
+                          icon={faCircleDot}
+                          className="w-4 h-4 animate-pulse"
+                        />
                         Rejoindre la session en direct
                       </button>
                     ) : course.etatCoursProgramme === "TERMINE" ? (
@@ -451,19 +557,25 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
                         onClick={() => setSelectedCourse(course)}
                         className="w-full flex items-center justify-center gap-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm transition-colors"
                       >
-                        <Eye className="w-4 h-4" />
+                        <FontAwesomeIcon icon={faEye} className="w-4 h-4" />
                         Voir le contenu du cours
                       </button>
                     ) : course.etatCoursProgramme === "ANNULE" ? (
                       <div className="flex items-center gap-2 py-2 px-3 bg-red-50 rounded-xl">
-                        <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                        <FontAwesomeIcon
+                          icon={faCircleExclamation}
+                          className="w-4 h-4 text-red-400 flex-shrink-0"
+                        />
                         <span className="text-xs text-red-500 font-medium">
                           Ce cours a été annulé
                         </span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 py-2 px-3 bg-blue-50 rounded-xl">
-                        <Clock className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        <FontAwesomeIcon
+                          icon={faClock}
+                          className="w-4 h-4 text-blue-400 flex-shrink-0"
+                        />
                         <span className="text-xs text-blue-600 font-medium">
                           En attente du démarrage par le professeur
                         </span>
@@ -485,18 +597,42 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
           {/* Stats strip */}
           <div className="mt-6 bg-white rounded-xl shadow-lg p-4">
             <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-indigo-600" />
+              <FontAwesomeIcon
+                icon={faBookOpen}
+                className="w-4 h-4 text-indigo-600"
+              />
               Statistiques des cours
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: "Planifiés",  value: stats.planifie, color: "blue" },
-                { label: "En cours",   value: stats.enCours,  color: "green" },
-                { label: "Terminés",   value: stats.termine,  color: "gray" },
-                { label: "Total",      value: stats.total,    color: "purple" },
+                {
+                  label: "Planifiés",
+                  value: stats.planifie,
+                  color: "blue",
+                },
+                {
+                  label: "En cours",
+                  value: stats.enCours,
+                  color: "green",
+                },
+                {
+                  label: "Terminés",
+                  value: stats.termine,
+                  color: "gray",
+                },
+                {
+                  label: "Total",
+                  value: stats.total,
+                  color: "purple",
+                },
               ].map(({ label, value, color }) => (
-                <div key={label} className={`text-center p-3 bg-${color}-50 rounded-lg`}>
-                  <div className={`text-xl font-bold text-${color}-600 mb-0.5`}>{value}</div>
+                <div
+                  key={label}
+                  className={`text-center p-3 bg-${color}-50 rounded-lg`}
+                >
+                  <div className={`text-xl font-bold text-${color}-600 mb-0.5`}>
+                    {value}
+                  </div>
                   <div className="text-xs text-gray-600">{label}</div>
                 </div>
               ))}
@@ -515,5 +651,4 @@ const CoursProgrammeManagement = ({ selectedClass, onBack, onScheduleCourse, use
     </div>
   );
 };
-
 export default CoursProgrammeManagement;

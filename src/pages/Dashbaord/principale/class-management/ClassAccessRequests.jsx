@@ -9,22 +9,21 @@ import {
   Tabs,
   Typography,
 } from "antd";
-import {
-  CheckOutlined,
-  CloseOutlined,
-  ExclamationCircleOutlined,
-  TeamOutlined,
-  DeleteOutlined,
-  UserOutlined,
-  SolutionOutlined,
-  SafetyCertificateOutlined,
-  ClockCircleOutlined,
-} from "@ant-design/icons";
 import AccederService from "../../../../services/accederService";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCertificate,
+  faCheck,
+  faCircleExclamation,
+  faClock,
+  faLightbulb,
+  faTrash,
+  faUser,
+  faUserGroup,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const { TabPane } = Tabs;
 const { Text } = Typography;
-
 const ClassAccessRequests = ({
   classId,
   onError,
@@ -37,31 +36,24 @@ const ClassAccessRequests = ({
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("pending");
-
   useEffect(() => {
     if (classId) {
       fetchAccessData();
     }
   }, [classId]);
-
   const fetchAccessData = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const requests = await AccederService.obtenirDemandesAccesPourClasse(
-        classId
-      );
+      const requests =
+        await AccederService.obtenirDemandesAccesPourClasse(classId);
       const membersResponse = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/utilisateurs?classeIds=${classId}`
+        `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/utilisateurs?classeIds=${classId}`,
       );
-
       if (!membersResponse.ok) {
         throw new Error("Failed to fetch approved members");
       }
-
       const members = await membersResponse.json();
-
       const processedRequests = (requests || [])
         .filter((request) => request.etat === "EN_ATTENTE")
         .map((request) => ({
@@ -79,7 +71,6 @@ const ClassAccessRequests = ({
           eleveAssocieNom: request.eleveAssocieNom || "",
           eleveAssociePrenom: request.eleveAssociePrenom || "",
         }));
-
       const processedMembers = (members || []).map((member) => ({
         id: member.id || member.utilisateurId || "",
         nom: member.nom || member.utilisateurNom || "",
@@ -89,7 +80,6 @@ const ClassAccessRequests = ({
         etat: "APPROUVEE",
         dateApproval: member.dateApproval || member.dateDemande || "",
       }));
-
       setPendingRequests(processedRequests);
       setApprovedMembers(processedMembers);
     } catch (err) {
@@ -126,13 +116,12 @@ const ClassAccessRequests = ({
       setActionLoading(null);
     }
   };
-
   const handleRejectAccessRequest = async (requestId) => {
     try {
       setActionLoading(`reject-${requestId}`);
       await AccederService.rejeterDemandeAcces(
         requestId,
-        "Rejected by administrator"
+        "Rejected by administrator",
       );
       message.success("Access request rejected successfully");
       if (onSuccess) {
@@ -149,7 +138,6 @@ const ClassAccessRequests = ({
       setActionLoading(null);
     }
   };
-
   const handleRemoveMember = async (userId) => {
     try {
       setActionLoading(`remove-${userId}`);
@@ -172,30 +160,28 @@ const ClassAccessRequests = ({
       setActionLoading(null);
     }
   };
-
   const renderStatusTag = (etat) => {
     let color, icon, text;
     switch (etat) {
       case "APPROUVEE":
         color = "#52c41a";
-        icon = <CheckOutlined />;
+        icon = <FontAwesomeIcon icon={faCheck} />;
         text = "Approved";
         break;
       case "EN_ATTENTE":
         color = "#faad14";
-        icon = <ClockCircleOutlined />;
+        icon = <FontAwesomeIcon icon={faClock} />;
         text = "Pending";
         break;
       case "REJETEE":
         color = "#f5222d";
-        icon = <CloseOutlined />;
+        icon = <FontAwesomeIcon icon={faXmark} />;
         text = "Rejected";
         break;
       default:
         color = "#d9d9d9";
         text = etat || "Unknown";
     }
-
     return (
       <Tag
         icon={icon}
@@ -212,45 +198,43 @@ const ClassAccessRequests = ({
       </Tag>
     );
   };
-
   const renderRoleTag = (type) => {
     let color, icon, text;
     switch ((type || "").toLowerCase()) {
       case "admin":
       case "administrator":
         color = "red";
-        icon = <TeamOutlined />;
+        icon = <FontAwesomeIcon icon={faUserGroup} />;
         text = "Admin";
         break;
       case "enseignant":
       case "teacher":
       case "professor":
         color = "blue";
-        icon = <UserOutlined />;
+        icon = <FontAwesomeIcon icon={faUser} />;
         text = "Teacher";
         break;
       case "eleve":
       case "student":
         color = "green";
-        icon = <SolutionOutlined />;
+        icon = <FontAwesomeIcon icon={faLightbulb} />;
         text = "Student";
         break;
       case "parent":
         color = "orange";
-        icon = <SafetyCertificateOutlined />;
+        icon = <FontAwesomeIcon icon={faCertificate} />;
         text = "Parent";
         break;
       case "utilisateur":
         color = "gray";
-        icon = <UserOutlined />;
+        icon = <FontAwesomeIcon icon={faUser} />;
         text = "User";
         break;
       default:
         color = "gray";
-        icon = <UserOutlined />;
+        icon = <FontAwesomeIcon icon={faUser} />;
         text = type || "Member";
     }
-
     return (
       <Tag
         icon={icon}
@@ -267,7 +251,6 @@ const ClassAccessRequests = ({
       </Tag>
     );
   };
-
   const pendingRequestColumns = [
     {
       title: "Name",
@@ -297,10 +280,14 @@ const ClassAccessRequests = ({
         if (!record.estParent && !record.eleveAssocieId) {
           return <Text type="secondary">-</Text>;
         }
-        const eleveName = `${record.eleveAssociePrenom || ""} ${record.eleveAssocieNom || ""}`.trim();
-        return eleveName || record.eleveAssocieId || <Text type="secondary">Non renseigné</Text>;
+        const eleveName =
+          `${record.eleveAssociePrenom || ""} ${record.eleveAssocieNom || ""}`.trim();
+        return (
+          eleveName ||
+          record.eleveAssocieId || <Text type="secondary">Non renseigné</Text>
+        );
       },
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ["xs", "sm", "md", "lg", "xl"],
     },
     {
       title: "Status",
@@ -339,7 +326,7 @@ const ClassAccessRequests = ({
               background: "#52c41a",
               borderColor: "#52c41a",
             }}
-            icon={<CheckOutlined />}
+            icon={<FontAwesomeIcon icon={faCheck} />}
           >
             Approve
           </Button>
@@ -347,8 +334,10 @@ const ClassAccessRequests = ({
             danger
             onClick={() => handleRejectAccessRequest(record.id)}
             loading={actionLoading === `reject-${record.id}`}
-            style={{ borderRadius: "8px" }}
-            icon={<CloseOutlined />}
+            style={{
+              borderRadius: "8px",
+            }}
+            icon={<FontAwesomeIcon icon={faXmark} />}
           >
             Reject
           </Button>
@@ -356,7 +345,6 @@ const ClassAccessRequests = ({
       ),
     },
   ];
-
   const memberColumns = [
     {
       title: "Name",
@@ -396,40 +384,48 @@ const ClassAccessRequests = ({
       render: (_, record) => (
         <Button
           danger
-          icon={<DeleteOutlined />}
+          icon={<FontAwesomeIcon icon={faTrash} />}
           onClick={() => handleRemoveMember(record.id)}
           loading={actionLoading === `remove-${record.id}`}
-          style={{ borderRadius: "8px" }}
+          style={{
+            borderRadius: "8px",
+          }}
         >
           Remove
         </Button>
       ),
     },
   ];
-
   if (error) {
     return (
       <Empty
         description={
-          <span style={{ color: "#ff4d4f" }}>
+          <span
+            style={{
+              color: "#ff4d4f",
+            }}
+          >
             Error loading access data: {error}
           </span>
         }
       />
     );
   }
-
   return (
     <Tabs
       defaultActiveKey="pending"
       activeKey={activeTab}
       onChange={setActiveTab}
-      style={{ background: "#fff", padding: "16px", borderRadius: "8px" }}
+      style={{
+        background: "#fff",
+        padding: "16px",
+        borderRadius: "8px",
+      }}
     >
       <TabPane
         tab={
           <span>
-            <ExclamationCircleOutlined />
+            <FontAwesomeIcon icon={faCircleExclamation} />
             Pending Requests ({pendingRequests.length})
           </span>
         }
@@ -448,7 +444,9 @@ const ClassAccessRequests = ({
               />
             ),
           }}
-          scroll={{ x: 1200 }}
+          scroll={{
+            x: 1200,
+          }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -459,7 +457,7 @@ const ClassAccessRequests = ({
       <TabPane
         tab={
           <span>
-            <TeamOutlined />
+            <FontAwesomeIcon icon={faUserGroup} />
             Approved Members ({approvedMembers.length})
           </span>
         }
@@ -478,7 +476,9 @@ const ClassAccessRequests = ({
               />
             ),
           }}
-          scroll={{ x: 1000 }}
+          scroll={{
+            x: 1000,
+          }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -489,5 +489,4 @@ const ClassAccessRequests = ({
     </Tabs>
   );
 };
-
 export default ClassAccessRequests;

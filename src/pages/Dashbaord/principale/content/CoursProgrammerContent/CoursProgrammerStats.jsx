@@ -1,27 +1,35 @@
 import React from "react";
 import {
-  Calendar,
-  Clock,
-  PlayCircle,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
-
-const CoursProgrammerStats = ({ scheduledCourses, filterStatus, setFilterStatus }) => {
+  faCalendarDays,
+  faClock,
+  faCirclePlay,
+  faCircleCheck,
+  faCircleXmark,
+} from "@fortawesome/free-solid-svg-icons";
+import { asIconComponent } from "../../../../../utils/faIconAdapter";
+const Calendar = asIconComponent(faCalendarDays);
+const CheckCircle = asIconComponent(faCircleCheck);
+const Clock = asIconComponent(faClock);
+const PlayCircle = asIconComponent(faCirclePlay);
+const XCircle = asIconComponent(faCircleXmark);
+const CoursProgrammerStats = ({
+  scheduledCourses,
+  filterStatus,
+  setFilterStatus,
+}) => {
   const totalScheduled = scheduledCourses.length;
   const planifie = scheduledCourses.filter(
-    (c) => c.etatCoursProgramme === "PLANIFIE"
+    (c) => c.etatCoursProgramme === "PLANIFIE",
   ).length;
   const enCours = scheduledCourses.filter(
-    (c) => c.etatCoursProgramme === "EN_COURS"
+    (c) => c.etatCoursProgramme === "EN_COURS",
   ).length;
   const termine = scheduledCourses.filter(
-    (c) => c.etatCoursProgramme === "TERMINE"
+    (c) => c.etatCoursProgramme === "TERMINE",
   ).length;
   const annule = scheduledCourses.filter(
-    (c) => c.etatCoursProgramme === "ANNULE"
+    (c) => c.etatCoursProgramme === "ANNULE",
   ).length;
-
   const stats = [
     {
       label: "Total Programmé",
@@ -84,16 +92,13 @@ const CoursProgrammerStats = ({ scheduledCourses, filterStatus, setFilterStatus 
       ringColor: "ring-red-500",
     },
   ];
-
   return (
     <div className="hidden sm:grid sm:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3 mb-4 sm:mb-6">
       {stats.map((stat, index) => (
         <div
           key={index}
           onClick={() => setFilterStatus(stat.filterValue)}
-          className={`bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer ${
-            filterStatus === stat.filterValue ? `ring-2 ${stat.ringColor}` : ''
-          }`}
+          className={`bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer ${filterStatus === stat.filterValue ? `ring-2 ${stat.ringColor}` : ""}`}
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -101,18 +106,26 @@ const CoursProgrammerStats = ({ scheduledCourses, filterStatus, setFilterStatus 
                 {stat.label}
               </p>
               <div className="flex items-center gap-1 flex-wrap">
-                <p className={`text-xl sm:text-2xl font-bold leading-none ${stat.textColor}`}>
+                <p
+                  className={`text-xl sm:text-2xl font-bold leading-none ${stat.textColor}`}
+                >
                   {stat.value}
                 </p>
                 {totalScheduled > 0 && (
-                  <span className={`text-[10px] font-semibold px-1 py-0.5 rounded-full ${stat.bgColor} ${stat.textColor}`}>
+                  <span
+                    className={`text-[10px] font-semibold px-1 py-0.5 rounded-full ${stat.bgColor} ${stat.textColor}`}
+                  >
                     {Math.round((stat.value / totalScheduled) * 100)}%
                   </span>
                 )}
               </div>
             </div>
-            <div className={`p-1.5 sm:p-2 ${stat.iconBg} rounded-lg group-hover:scale-110 transition-transform duration-200 flex-shrink-0`}>
-              <stat.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${stat.iconColor}`} />
+            <div
+              className={`p-1.5 sm:p-2 ${stat.iconBg} rounded-lg group-hover:scale-110 transition-transform duration-200 flex-shrink-0`}
+            >
+              <stat.icon
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${stat.iconColor}`}
+              />
             </div>
           </div>
 
@@ -121,7 +134,9 @@ const CoursProgrammerStats = ({ scheduledCourses, filterStatus, setFilterStatus 
               <div className="w-full bg-slate-100 rounded-full h-1">
                 <div
                   className={`bg-gradient-to-r ${stat.color} h-1 rounded-full transition-all duration-500 ease-out`}
-                  style={{ width: `${Math.min((stat.value / totalScheduled) * 100, 100)}%` }}
+                  style={{
+                    width: `${Math.min((stat.value / totalScheduled) * 100, 100)}%`,
+                  }}
                 />
               </div>
             </div>
@@ -131,5 +146,4 @@ const CoursProgrammerStats = ({ scheduledCourses, filterStatus, setFilterStatus 
     </div>
   );
 };
-
 export default CoursProgrammerStats;

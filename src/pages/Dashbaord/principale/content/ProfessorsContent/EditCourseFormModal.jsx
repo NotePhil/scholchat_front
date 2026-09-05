@@ -2,32 +2,29 @@ import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import {
-  X,
-  Plus,
-  Trash2,
-  Edit3,
-  Save,
-  ChevronUp,
-  ChevronDown,
-  XCircle,
-  FileText,
-  Upload,
-  Image,
-  Paperclip,
-  Loader,
-} from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import { minioS3Service } from "../../../../../services/minioS3";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronDown,
+  faChevronUp,
+  faCircleXmark,
+  faFileLines,
+  faFloppyDisk,
+  faPaperclip,
+  faPencil,
+  faPlus,
+  faSpinner,
+  faTrashCan,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const chapterSchema = yup.object().shape({
   titre: yup.string().required("Le titre du chapitre est requis"),
   description: yup.string(),
   contenu: yup.string().required("Le contenu du chapitre est requis"),
   ordre: yup.number().required(),
 });
-
 const courseSchema = yup.object().shape({
   titre: yup.string().required("Le titre est requis"),
   description: yup.string().required("La description est requise"),
@@ -42,7 +39,6 @@ const courseSchema = yup.object().shape({
     .of(chapterSchema)
     .min(1, "Au moins un chapitre est requis"),
 });
-
 const RichTextEditor = ({
   value,
   onChange,
@@ -54,12 +50,10 @@ const RichTextEditor = ({
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
-
   const execCommand = (command, value = null) => {
     document.execCommand(command, false, value);
     handleContentChange();
   };
-
   const handleContentChange = () => {
     if (editorRef.current) {
       const htmlContent = editorRef.current.innerHTML;
@@ -94,11 +88,12 @@ const RichTextEditor = ({
     // Validate files
     for (const file of files) {
       if (!file.name || file.name.trim() === "") {
-        alert("Un des fichiers sélectionnés n'a pas de nom valide. Ou na pas été retrouvé");
+        alert(
+          "Un des fichiers sélectionnés n'a pas de nom valide. Ou na pas été retrouvé",
+        );
         return;
       }
     }
-
     try {
       setUploading(true);
       const uploadResults = [];
@@ -112,14 +107,14 @@ const RichTextEditor = ({
               file,
               result: uploadResult,
               downloadData: await minioS3Service.generateDownloadUrlByPath(
-                uploadResult.filePath
+                uploadResult.filePath,
               ),
             });
           }
         } catch (error) {
           console.error(`Error uploading ${file.name}:`, error);
           alert(
-            `Erreur lors du téléchargement de ${file.name}: ${error.message}`
+            `Erreur lors du téléchargement de ${file.name}: ${error.message}`,
           );
         }
       }
@@ -127,7 +122,6 @@ const RichTextEditor = ({
       // Insert all successfully uploaded files
       const selection = window.getSelection();
       const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-
       for (const { file, result, downloadData } of uploadResults) {
         if (file.type.startsWith("image/")) {
           // Insert image
@@ -139,7 +133,6 @@ const RichTextEditor = ({
           img.style.borderRadius = "4px";
           img.style.margin = "8px 0";
           img.style.display = "block";
-
           if (range) {
             range.insertNode(img);
             range.setStartAfter(img);
@@ -172,10 +165,8 @@ const RichTextEditor = ({
           link.style.textDecoration = "underline";
           link.style.fontWeight = "500";
           link.textContent = file.name;
-
           linkContainer.appendChild(icon);
           linkContainer.appendChild(link);
-
           if (range) {
             range.insertNode(linkContainer);
             range.setStartAfter(linkContainer);
@@ -196,7 +187,6 @@ const RichTextEditor = ({
           },
         ]);
       }
-
       if (uploadResults.length > 0) {
         handleContentChange();
       }
@@ -214,7 +204,7 @@ const RichTextEditor = ({
   // Remove uploaded file from list
   const removeUploadedFile = (timestamp) => {
     setUploadedFiles((prev) =>
-      prev.filter((file) => file.timestamp !== timestamp)
+      prev.filter((file) => file.timestamp !== timestamp),
     );
   };
 
@@ -258,7 +248,8 @@ const RichTextEditor = ({
           if (link.href && link.textContent) {
             existingFiles.push({
               name: link.textContent,
-              type: "application/pdf", // Assume PDF for documents
+              type: "application/pdf",
+              // Assume PDF for documents
               url: link.href,
               timestamp: Date.now() + index, // Unique timestamp
             });
@@ -271,24 +262,22 @@ const RichTextEditor = ({
           if (img.src && img.alt) {
             existingFiles.push({
               name: img.alt,
-              type: "image/jpeg", // Assume image
+              type: "image/jpeg",
+              // Assume image
               url: img.src,
               timestamp: Date.now() + 1000 + index, // Unique timestamp
             });
           }
         });
-
         if (existingFiles.length > 0) {
           setUploadedFiles(existingFiles);
         }
       }
     }
   }, [value]);
-
   const handlePaste = (e) => {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
-
     const selection = window.getSelection();
     if (selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
@@ -297,7 +286,6 @@ const RichTextEditor = ({
       // Create a document fragment with properly formatted text
       const fragment = document.createDocumentFragment();
       const lines = text.split("\n");
-
       lines.forEach((line, index) => {
         if (index > 0) {
           fragment.appendChild(document.createElement("br"));
@@ -306,13 +294,11 @@ const RichTextEditor = ({
           fragment.appendChild(document.createTextNode(line));
         }
       });
-
       range.insertNode(fragment);
       range.collapse(false);
       selection.removeAllRanges();
       selection.addRange(range);
     }
-
     setTimeout(() => handleContentChange(), 10);
   };
 
@@ -320,14 +306,19 @@ const RichTextEditor = ({
   const handleInput = (e) => {
     handleContentChange();
   };
-
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
       {/* Uploaded Files Display at Top */}
       {uploadedFiles.length > 0 && (
         <div className="bg-blue-50 border-b border-blue-200 p-3">
           <div className="flex items-center gap-2 mb-2">
-            <Paperclip size={16} className="text-blue-600" />
+            <FontAwesomeIcon
+              icon={faPaperclip}
+              className="text-blue-600"
+              style={{
+                fontSize: 16,
+              }}
+            />
             <span className="text-sm font-medium text-blue-800">
               Fichiers téléchargés:
             </span>
@@ -380,7 +371,12 @@ const RichTextEditor = ({
                     title="Supprimer de la liste"
                     type="button"
                   >
-                    <X size={14} />
+                    <FontAwesomeIcon
+                      icon={faXmark}
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                   </button>
                 </div>
               </div>
@@ -462,9 +458,20 @@ const RichTextEditor = ({
           disabled={uploading}
         >
           {uploading ? (
-            <Loader size={14} className="animate-spin" />
+            <FontAwesomeIcon
+              icon={faSpinner}
+              className="animate-spin"
+              style={{
+                fontSize: 14,
+              }}
+            />
           ) : (
-            <Paperclip size={14} />
+            <FontAwesomeIcon
+              icon={faPaperclip}
+              style={{
+                fontSize: 14,
+              }}
+            />
           )}
           <span className="text-xs">Fichiers</span>
         </button>
@@ -566,13 +573,11 @@ const ChapterCard = ({
     if (text.length <= length) return text;
     return text.substring(0, length) + "...";
   };
-
   const getPlainText = (html) => {
     const div = document.createElement("div");
     div.innerHTML = html;
     return div.textContent || div.innerText || "";
   };
-
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow relative group">
       <div className="flex items-start justify-between">
@@ -604,7 +609,12 @@ const ChapterCard = ({
               className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
               title="Déplacer vers le haut"
             >
-              <ChevronUp size={14} />
+              <FontAwesomeIcon
+                icon={faChevronUp}
+                style={{
+                  fontSize: 14,
+                }}
+              />
             </button>
           )}
           {canMoveDown && (
@@ -616,7 +626,12 @@ const ChapterCard = ({
               className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
               title="Déplacer vers le bas"
             >
-              <ChevronDown size={14} />
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                style={{
+                  fontSize: 14,
+                }}
+              />
             </button>
           )}
           <button
@@ -628,7 +643,12 @@ const ChapterCard = ({
             className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
             title="Modifier"
           >
-            <Edit3 size={14} />
+            <FontAwesomeIcon
+              icon={faPencil}
+              style={{
+                fontSize: 14,
+              }}
+            />
           </button>
           <button
             onClick={(e) => {
@@ -639,14 +659,18 @@ const ChapterCard = ({
             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             title="Supprimer"
           >
-            <Trash2 size={14} />
+            <FontAwesomeIcon
+              icon={faTrashCan}
+              style={{
+                fontSize: 14,
+              }}
+            />
           </button>
         </div>
       </div>
     </div>
   );
 };
-
 const ChapterEditor = ({
   mode,
   initialData,
@@ -661,9 +685,7 @@ const ChapterEditor = ({
     contenu: "",
     ordre: 0,
   });
-
   const [errors, setErrors] = useState({});
-
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -674,7 +696,6 @@ const ChapterEditor = ({
       });
     }
   }, [initialData, mode, totalChapters]);
-
   const validateForm = () => {
     const newErrors = {};
     if (!formData.titre.trim()) {
@@ -686,7 +707,6 @@ const ChapterEditor = ({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSave = () => {
     if (validateForm()) {
       onSave({
@@ -704,14 +724,18 @@ const ChapterEditor = ({
       }
     }
   };
-
   const chapterNumber = mode === "create" ? totalChapters + 1 : formData.ordre;
-
   return (
     <div className="bg-white rounded-xl p-6 border-2 border-indigo-200 shadow-sm mb-6">
       <div className="flex items-center justify-between mb-6">
         <h4 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-          <FileText size={20} className="text-indigo-600" />
+          <FontAwesomeIcon
+            icon={faFileLines}
+            className="text-indigo-600"
+            style={{
+              fontSize: 20,
+            }}
+          />
           {mode === "create"
             ? `Nouveau Chapitre ${chapterNumber}`
             : `Modifier Chapitre ${chapterNumber}`}
@@ -724,7 +748,12 @@ const ChapterEditor = ({
           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           title="Annuler"
         >
-          <XCircle size={18} />
+          <FontAwesomeIcon
+            icon={faCircleXmark}
+            style={{
+              fontSize: 18,
+            }}
+          />
         </button>
       </div>
 
@@ -737,12 +766,13 @@ const ChapterEditor = ({
             type="text"
             value={formData.titre}
             onChange={(e) =>
-              setFormData({ ...formData, titre: e.target.value })
+              setFormData({
+                ...formData,
+                titre: e.target.value,
+              })
             }
             onClick={(e) => e.stopPropagation()}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-              errors.titre ? "border-red-300" : "border-slate-200"
-            }`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${errors.titre ? "border-red-300" : "border-slate-200"}`}
             placeholder="Titre du chapitre"
           />
           {errors.titre && (
@@ -757,7 +787,10 @@ const ChapterEditor = ({
           <textarea
             value={formData.description}
             onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
+              setFormData({
+                ...formData,
+                description: e.target.value,
+              })
             }
             onClick={(e) => e.stopPropagation()}
             rows={2}
@@ -773,7 +806,10 @@ const ChapterEditor = ({
           <RichTextEditor
             value={formData.contenu}
             onChange={(content) =>
-              setFormData({ ...formData, contenu: content })
+              setFormData({
+                ...formData,
+                contenu: content,
+              })
             }
             placeholder="Contenu détaillé du chapitre..."
             chapterIndex={chapterNumber - 1}
@@ -804,14 +840,18 @@ const ChapterEditor = ({
           }}
           className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
         >
-          <Save size={16} />
+          <FontAwesomeIcon
+            icon={faFloppyDisk}
+            style={{
+              fontSize: 16,
+            }}
+          />
           {mode === "create" ? "Ajouter" : "Sauvegarder"}
         </button>
       </div>
     </div>
   );
 };
-
 const GeneralInfoSection = ({
   register,
   errors,
@@ -838,9 +878,7 @@ const GeneralInfoSection = ({
             id="titre"
             type="text"
             {...register("titre")}
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-              errors.titre ? "border-red-300" : "border-slate-200"
-            }`}
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${errors.titre ? "border-red-300" : "border-slate-200"}`}
             placeholder="Introduction à la programmation"
           />
           {errors.titre && (
@@ -876,9 +914,7 @@ const GeneralInfoSection = ({
             id="description"
             {...register("description")}
             rows={3}
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${
-              errors.description ? "border-red-300" : "border-slate-200"
-            }`}
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 ${errors.description ? "border-red-300" : "border-slate-200"}`}
             placeholder="Décrivez le contenu général de ce cours..."
           />
           {errors.description && (
@@ -925,7 +961,6 @@ const GeneralInfoSection = ({
     </div>
   );
 };
-
 const ChaptersSection = ({
   savedChapters,
   activeEditor,
@@ -955,7 +990,12 @@ const ChaptersSection = ({
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm"
             data-testid="create-chapter-button"
           >
-            <Plus size={16} />
+            <FontAwesomeIcon
+              icon={faPlus}
+              style={{
+                fontSize: 16,
+              }}
+            />
             Nouveau chapitre
           </button>
         )}
@@ -1001,7 +1041,13 @@ const ChaptersSection = ({
 
         {savedChapters.length === 0 && !activeEditor && (
           <div className="text-center py-8 text-slate-500">
-            <FileText className="mx-auto mb-4 text-slate-400" size={48} />
+            <FontAwesomeIcon
+              icon={faFileLines}
+              className="mx-auto mb-4 text-slate-400"
+              style={{
+                fontSize: 48,
+              }}
+            />
             <p className="mb-4">Aucun chapitre ajouté</p>
             <button
               type="button"
@@ -1019,7 +1065,6 @@ const ChaptersSection = ({
     </div>
   );
 };
-
 const EditCourseFormModal = ({
   selectedCourse,
   subjects,
@@ -1039,7 +1084,6 @@ const EditCourseFormModal = ({
   // Add missing refs and state for file handling
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -1055,9 +1099,7 @@ const EditCourseFormModal = ({
       chapitres: [],
     },
   });
-
   const watchedMatiereIds = watch("matieres");
-
   useEffect(() => {
     if (selectedCourse) {
       reset({
@@ -1068,7 +1110,6 @@ const EditCourseFormModal = ({
         restriction: selectedCourse.restriction || "PRIVE",
       });
       setSelectedMatiereIds(selectedCourse.matieres?.map((m) => m.id) || []);
-
       if (selectedCourse.chapitres && selectedCourse.chapitres.length > 0) {
         setSavedChapters(
           selectedCourse.chapitres.map((ch) => ({
@@ -1077,14 +1118,13 @@ const EditCourseFormModal = ({
             description: ch.description || "",
             contenu: ch.contenu,
             ordre: ch.ordre,
-          }))
+          })),
         );
       }
     } else {
       resetForm();
     }
   }, [selectedCourse, reset]);
-
   useEffect(() => {
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
@@ -1100,10 +1140,8 @@ const EditCourseFormModal = ({
       if (!file || !file.name) {
         throw new Error("Invalid file or missing file name");
       }
-
       let documentType = "documents";
       let mediaType = "DOCUMENT";
-
       if (file.type.startsWith("image/")) {
         documentType = "images";
         mediaType = "IMAGE";
@@ -1111,18 +1149,17 @@ const EditCourseFormModal = ({
         documentType = "videos";
         mediaType = "VIDEO";
       }
-
       const timestamp = Date.now();
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const uniqueFileName = `${timestamp}_${cleanFileName}`;
-
       const result = await minioS3Service.uploadFile(
-        new File([file], uniqueFileName, { type: file.type }),
+        new File([file], uniqueFileName, {
+          type: file.type,
+        }),
         mediaType,
         documentType,
-        selectedCourse?.id || null
+        selectedCourse?.id || null,
       );
-
       return result;
     } catch (error) {
       console.error("Error uploading file:", error);
@@ -1134,26 +1171,22 @@ const EditCourseFormModal = ({
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (!file.name || file.name.trim() === "") {
       alert("Le fichier sélectionné n'a pas de nom valide.");
       return;
     }
-
     try {
       setUploading(true);
-
       const uploadResult = await onFileUpload(file);
-
       if (uploadResult.success) {
         if (file.type.startsWith("image/")) {
           const downloadData = await minioS3Service.generateDownloadUrlByPath(
-            uploadResult.filePath
+            uploadResult.filePath,
           );
           document.execCommand("insertImage", false, downloadData.downloadUrl);
         } else {
           const downloadData = await minioS3Service.generateDownloadUrlByPath(
-            uploadResult.filePath
+            uploadResult.filePath,
           );
           const fileName = file.name;
           const link = `<a href="${downloadData.downloadUrl}" target="_blank" style="color: #3b82f6; text-decoration: underline;">${fileName}</a>`;
@@ -1171,7 +1204,6 @@ const EditCourseFormModal = ({
       }
     }
   };
-
   const handleSaveChapter = (chapterData) => {
     if (activeEditor === "edit" && editingIndex !== null) {
       const updatedChapters = [...savedChapters];
@@ -1188,18 +1220,17 @@ const EditCourseFormModal = ({
       };
       setSavedChapters([...savedChapters, newChapter]);
     }
-
     setActiveEditor(null);
     setEditingData(null);
     setEditingIndex(null);
   };
-
   const handleEditChapter = (index) => {
     setActiveEditor("edit");
-    setEditingData({ ...savedChapters[index] });
+    setEditingData({
+      ...savedChapters[index],
+    });
     setEditingIndex(index);
   };
-
   const handleDeleteChapter = (index) => {
     const updatedChapters = savedChapters.filter((_, i) => i !== index);
     const reorderedChapters = updatedChapters.map((chapter, i) => ({
@@ -1208,7 +1239,6 @@ const EditCourseFormModal = ({
     }));
     setSavedChapters(reorderedChapters);
   };
-
   const moveChapter = (index, direction) => {
     const newIndex = direction === "up" ? index - 1 : index + 1;
     if (newIndex >= 0 && newIndex < savedChapters.length) {
@@ -1224,28 +1254,23 @@ const EditCourseFormModal = ({
       setSavedChapters(reorderedChapters);
     }
   };
-
   const handleCancelEditor = () => {
     setActiveEditor(null);
     setEditingData(null);
     setEditingIndex(null);
   };
-
   const onSubmit = async (data) => {
     try {
       setLoading(true);
       setError("");
-
       if (savedChapters.length === 0) {
         setError("Au moins un chapitre est requis");
         return;
       }
-
       const professorId = localStorage.getItem("userId");
       if (!professorId) {
         throw new Error("ID du professeur non trouvé");
       }
-
       const chapitresData = savedChapters.map((chapitre, index) => {
         return {
           id: chapitre.id || null,
@@ -1255,9 +1280,9 @@ const EditCourseFormModal = ({
           ordre: index + 1,
         };
       });
-
-      const matieresData = selectedMatiereIds.map((id) => ({ id }));
-
+      const matieresData = selectedMatiereIds.map((id) => ({
+        id,
+      }));
       const courseData = {
         titre: data.titre,
         description: data.description,
@@ -1268,16 +1293,12 @@ const EditCourseFormModal = ({
         matieres: matieresData,
         chapitres: chapitresData,
       };
-
       console.log("Updating course:", courseData);
-
       const result = await coursService.updateCours(
         selectedCourse.id,
-        courseData
+        courseData,
       );
-
       setSuccess("Cours modifié avec succès !");
-
       setShowCreateModal(false);
       resetForm();
       loadCourses();
@@ -1288,7 +1309,6 @@ const EditCourseFormModal = ({
       setLoading(false);
     }
   };
-
   const resetForm = () => {
     reset({
       titre: "",
@@ -1303,26 +1323,23 @@ const EditCourseFormModal = ({
     setEditingData(null);
     setEditingIndex(null);
   };
-
   const handleMatiereChange = (newSelectedIds) => {
     setSelectedMatiereIds(newSelectedIds);
-    setValue("matieres", newSelectedIds, { shouldValidate: true });
+    setValue("matieres", newSelectedIds, {
+      shouldValidate: true,
+    });
   };
-
   const handleFormSubmit = (e) => {
     e.preventDefault();
     e.stopPropagation();
     handleSubmit(onSubmit)(e);
   };
-
   const handleModalClose = (e) => {
     if (e.target === e.currentTarget) {
       setShowCreateModal(false);
     }
   };
-
   if (!showCreateModal) return null;
-
   return (
     <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-8 overflow-y-auto"
@@ -1341,7 +1358,12 @@ const EditCourseFormModal = ({
               onClick={() => setShowCreateModal(false)}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <X size={20} />
+              <FontAwesomeIcon
+                icon={faXmark}
+                style={{
+                  fontSize: 20,
+                }}
+              />
             </button>
           </div>
         </div>
@@ -1396,5 +1418,4 @@ const EditCourseFormModal = ({
     </div>
   );
 };
-
 export default EditCourseFormModal;

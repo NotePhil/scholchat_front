@@ -23,41 +23,37 @@ import {
   Badge,
   message,
 } from "antd";
-import {
-  ArrowLeftOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  SaveOutlined,
-  CloseOutlined,
-  BankOutlined,
-  EnvironmentOutlined,
-  GlobalOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  SettingOutlined,
-  ExclamationCircleOutlined,
-  ReloadOutlined,
-  TeamOutlined,
-  BookOutlined,
-  CalendarOutlined,
-  InfoCircleOutlined,
-  EyeOutlined,
-  CheckOutlined,
-  StopOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
 import EstablishmentService from "../../../../services/EstablishmentService";
 import gestionnaireService from "../../../../services/GestionnaireService";
 import { classService } from "../../../../services/ClassService";
 import { scholchatService } from "../../../../services/ScholchatService";
 import OffreInfoPanel from "../shared/OffreInfoPanel";
 import UserViewModal from "../modals/UserViewModal";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowLeft,
+  faArrowsRotate,
+  faBuildingColumns,
+  faCheck,
+  faCircleExclamation,
+  faCircleInfo,
+  faEnvelope,
+  faEye,
+  faFloppyDisk,
+  faGear,
+  faGlobe,
+  faLocationDot,
+  faPenToSquare,
+  faPhone,
+  faStop,
+  faTrash,
+  faUser,
+  faUserGroup,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 const { confirm } = Modal;
-
-
 const ManageEstablishmentDetailsView = ({
   establishmentId,
   onBack,
@@ -84,7 +80,7 @@ const ManageEstablishmentDetailsView = ({
   const [professors, setProfessors] = useState([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [professorsLoading, setProfessorsLoading] = useState(false);
-  
+
   // User selection states
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -94,7 +90,6 @@ const ManageEstablishmentDetailsView = ({
   // Modal states
   const [selectedProfessor, setSelectedProfessor] = useState(null);
   const [isProfessorModalOpen, setIsProfessorModalOpen] = useState(false);
-
   useEffect(() => {
     if (establishmentId) {
       fetchEstablishmentDetails();
@@ -104,14 +99,12 @@ const ManageEstablishmentDetailsView = ({
       fetchUsers();
     }
   }, [establishmentId]);
-
   const fetchEstablishmentDetails = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await EstablishmentService.getEstablishmentById(
-        establishmentId
-      );
+      const data =
+        await EstablishmentService.getEstablishmentById(establishmentId);
       setEstablishment(data);
 
       // Set form values
@@ -123,7 +116,6 @@ const ManageEstablishmentDetailsView = ({
         telephone: data.telephone || "",
         optionEnvoiMailNewClasse: data.optionEnvoiMailNewClasse || false,
         optionTokenGeneral: data.optionTokenGeneral || false,
-
       });
     } catch (error) {
       console.error("Error fetching establishment details:", error);
@@ -132,17 +124,18 @@ const ManageEstablishmentDetailsView = ({
       setLoading(false);
     }
   };
-
   const fetchEstablishmentGestionnaire = async () => {
     try {
-      const gestionnaireData = await EstablishmentService.getEstablishmentGestionnaire(establishmentId);
+      const gestionnaireData =
+        await EstablishmentService.getEstablishmentGestionnaire(
+          establishmentId,
+        );
       setGestionnaire(gestionnaireData);
       setSelectedGestionnaire(gestionnaireData);
     } catch (error) {
       console.error("Error fetching establishment gestionnaire:", error);
     }
   };
-
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
@@ -154,7 +147,6 @@ const ManageEstablishmentDetailsView = ({
       setLoadingUsers(false);
     }
   };
-
   const fetchEstablishmentClasses = async () => {
     try {
       setClassesLoading(true);
@@ -162,7 +154,7 @@ const ManageEstablishmentDetailsView = ({
       const allClasses = await classService.obtenirToutesLesClasses();
       const establishmentClasses = allClasses.filter(
         (classe) =>
-          classe.etablissement && classe.etablissement.id === establishmentId
+          classe.etablissement && classe.etablissement.id === establishmentId,
       );
       setClasses(establishmentClasses);
     } catch (error) {
@@ -172,7 +164,6 @@ const ManageEstablishmentDetailsView = ({
       setClassesLoading(false);
     }
   };
-
   const fetchEstablishmentProfessors = async () => {
     try {
       setProfessorsLoading(true);
@@ -180,13 +171,12 @@ const ManageEstablishmentDetailsView = ({
       const allClasses = await classService.obtenirToutesLesClasses();
       const establishmentClasses = allClasses.filter(
         (classe) =>
-          classe.etablissement && classe.etablissement.id === establishmentId
+          classe.etablissement && classe.etablissement.id === establishmentId,
       );
 
       // Get unique professors who moderate classes in this establishment
       const professorIds = new Set();
       const professorsList = [];
-
       establishmentClasses.forEach((classe) => {
         if (
           classe.moderator &&
@@ -197,12 +187,11 @@ const ManageEstablishmentDetailsView = ({
           professorsList.push({
             ...classe.moderator,
             moderatedClassesInEstablishment: establishmentClasses.filter(
-              (c) => c.moderator && c.moderator.id === classe.moderator.id
+              (c) => c.moderator && c.moderator.id === classe.moderator.id,
             ).length,
           });
         }
       });
-
       setProfessors(professorsList);
     } catch (error) {
       console.error("Error fetching establishment professors:", error);
@@ -211,7 +200,6 @@ const ManageEstablishmentDetailsView = ({
       setProfessorsLoading(false);
     }
   };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
@@ -224,7 +212,6 @@ const ManageEstablishmentDetailsView = ({
     setSuccessMessage("Données actualisées avec succès");
     setTimeout(() => setSuccessMessage(null), 3000);
   };
-
   const handleEdit = () => {
     if (onEdit) {
       onEdit(establishment);
@@ -235,7 +222,6 @@ const ManageEstablishmentDetailsView = ({
       setSelectedGestionnaire(gestionnaire);
     }
   };
-
   const handleCancelEdit = () => {
     setEditing(false);
     setError(null);
@@ -248,20 +234,16 @@ const ManageEstablishmentDetailsView = ({
       pays: establishment.pays || "",
       email: establishment.email || "",
       telephone: establishment.telephone || "",
-      optionEnvoiMailNewClasse:
-        establishment.optionEnvoiMailNewClasse || false,
+      optionEnvoiMailNewClasse: establishment.optionEnvoiMailNewClasse || false,
       optionTokenGeneral: establishment.optionTokenGeneral || false,
     });
   };
-
   const handleSave = async () => {
     try {
       setSaving(true);
       setActionLoading("save");
       setError(null);
-
       const values = await form.validateFields();
-
       if (!selectedGestionnaire) {
         setError("Un gestionnaire est requis");
         return;
@@ -273,17 +255,18 @@ const ManageEstablishmentDetailsView = ({
         setError(validation.errors.join(", "));
         return;
       }
-
       const updateData = {
         ...values,
         gestionnaire: {
           type: selectedGestionnaire.type,
-          id: selectedGestionnaire.id
-        }
+          id: selectedGestionnaire.id,
+        },
       };
-
       await onUpdate(establishmentId, updateData);
-      setEstablishment({ ...establishment, ...values });
+      setEstablishment({
+        ...establishment,
+        ...values,
+      });
       setGestionnaire(selectedGestionnaire);
       setEditing(false);
       setSuccessMessage("Établissement mis à jour avec succès");
@@ -296,11 +279,10 @@ const ManageEstablishmentDetailsView = ({
       setActionLoading(null);
     }
   };
-
   const handleDelete = () => {
     confirm({
       title: "Supprimer l'établissement",
-      icon: <ExclamationCircleOutlined />,
+      icon: <FontAwesomeIcon icon={faCircleExclamation} />,
       content: `Êtes-vous sûr de vouloir supprimer l'établissement "${establishment?.nom}" ? Cette action est irréversible.`,
       okText: "Supprimer",
       okType: "danger",
@@ -334,7 +316,6 @@ const ManageEstablishmentDetailsView = ({
       setActionLoading(null);
     }
   };
-
   const handleRejectClass = async (classId) => {
     try {
       setActionLoading(`reject-${classId}`);
@@ -348,7 +329,6 @@ const ManageEstablishmentDetailsView = ({
       setActionLoading(null);
     }
   };
-
   const handleDeleteClass = async (classId) => {
     confirm({
       title: "Supprimer la classe",
@@ -376,9 +356,8 @@ const ManageEstablishmentDetailsView = ({
   const handleViewProfessor = async (professorId) => {
     try {
       // Fetch the complete professor data
-      const professorData = await scholchatService.getProfessorById(
-        professorId
-      );
+      const professorData =
+        await scholchatService.getProfessorById(professorId);
       setSelectedProfessor(professorData);
       setIsProfessorModalOpen(true);
     } catch (error) {
@@ -386,18 +365,15 @@ const ManageEstablishmentDetailsView = ({
       message.error("Erreur lors du chargement des détails du professeur");
     }
   };
-
   const handleCloseProfessorModal = () => {
     setIsProfessorModalOpen(false);
     setSelectedProfessor(null);
   };
-
   const handleProfessorModalSuccess = () => {
     // Refresh the professors list after successful action
     fetchEstablishmentProfessors();
     handleCloseProfessorModal();
   };
-
   const handleDeleteProfessor = async (professorId) => {
     confirm({
       title: "Supprimer le professeur",
@@ -420,7 +396,6 @@ const ManageEstablishmentDetailsView = ({
       },
     });
   };
-
   const getStatusTag = (establishment) => {
     // Assuming we determine status based on data completeness
     const hasRequiredInfo =
@@ -431,7 +406,6 @@ const ManageEstablishmentDetailsView = ({
       </Tag>
     );
   };
-
   const getClassStatusTag = (status) => {
     switch (status) {
       case "ACTIF":
@@ -444,7 +418,6 @@ const ManageEstablishmentDetailsView = ({
         return <Tag color="default">{status}</Tag>;
     }
   };
-
   const getProfessorStatusTag = (status) => {
     switch (status) {
       case "ACTIVE":
@@ -498,7 +471,7 @@ const ManageEstablishmentDetailsView = ({
             <Button
               type="text"
               size="small"
-              icon={<EyeOutlined />}
+              icon={<FontAwesomeIcon icon={faEye} />}
               onClick={() => message.info(`Voir classe ${record.nom}`)}
             />
           </Tooltip>
@@ -508,20 +481,24 @@ const ManageEstablishmentDetailsView = ({
                 <Button
                   type="text"
                   size="small"
-                  icon={<CheckOutlined />}
+                  icon={<FontAwesomeIcon icon={faCheck} />}
                   loading={actionLoading === `approve-${record.id}`}
                   onClick={() => handleApproveClass(record.id)}
-                  style={{ color: "#52c41a" }}
+                  style={{
+                    color: "#52c41a",
+                  }}
                 />
               </Tooltip>
               <Tooltip title="Rejeter">
                 <Button
                   type="text"
                   size="small"
-                  icon={<StopOutlined />}
+                  icon={<FontAwesomeIcon icon={faStop} />}
                   loading={actionLoading === `reject-${record.id}`}
                   onClick={() => handleRejectClass(record.id)}
-                  style={{ color: "#ff4d4f" }}
+                  style={{
+                    color: "#ff4d4f",
+                  }}
                 />
               </Tooltip>
             </>
@@ -537,7 +514,7 @@ const ManageEstablishmentDetailsView = ({
               <Button
                 type="text"
                 size="small"
-                icon={<DeleteOutlined />}
+                icon={<FontAwesomeIcon icon={faTrash} />}
                 loading={actionLoading === `delete-${record.id}`}
                 danger
               />
@@ -559,7 +536,12 @@ const ManageEstablishmentDetailsView = ({
             {record.nom} {record.prenom}
           </Text>
           <br />
-          <Text type="secondary" style={{ fontSize: "12px" }}>
+          <Text
+            type="secondary"
+            style={{
+              fontSize: "12px",
+            }}
+          >
             {record.email}
           </Text>
         </div>
@@ -575,7 +557,13 @@ const ManageEstablishmentDetailsView = ({
       dataIndex: "moderatedClassesInEstablishment",
       key: "moderatedClasses",
       render: (count) => (
-        <Badge count={count} showZero style={{ backgroundColor: "#1890ff" }} />
+        <Badge
+          count={count}
+          showZero
+          style={{
+            backgroundColor: "#1890ff",
+          }}
+        />
       ),
     },
     {
@@ -593,7 +581,7 @@ const ManageEstablishmentDetailsView = ({
             <Button
               type="text"
               size="small"
-              icon={<EyeOutlined />}
+              icon={<FontAwesomeIcon icon={faEye} />}
               onClick={() => handleViewProfessor(record.id)}
             />
           </Tooltip>
@@ -608,7 +596,7 @@ const ManageEstablishmentDetailsView = ({
               <Button
                 type="text"
                 size="small"
-                icon={<DeleteOutlined />}
+                icon={<FontAwesomeIcon icon={faTrash} />}
                 loading={actionLoading === `delete-prof-${record.id}`}
                 danger
               />
@@ -618,7 +606,6 @@ const ManageEstablishmentDetailsView = ({
       ),
     },
   ];
-
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-96">
@@ -629,7 +616,6 @@ const ManageEstablishmentDetailsView = ({
       </div>
     );
   }
-
   if (!establishment) {
     return (
       <div className="p-6">
@@ -652,14 +638,17 @@ const ManageEstablishmentDetailsView = ({
       </div>
     );
   }
-
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header - Made Responsive */}
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div className="flex items-center gap-3">
-            <Button icon={<ArrowLeftOutlined />} onClick={onBack} type="text" />
+            <Button
+              icon={<FontAwesomeIcon icon={faArrowLeft} />}
+              onClick={onBack}
+              type="text"
+            />
             <div>
               <h2 className="text-2xl font-bold m-0">
                 Gestion de l'établissement
@@ -670,7 +659,7 @@ const ManageEstablishmentDetailsView = ({
 
           <div className="flex flex-wrap gap-2">
             <Button
-              icon={<ReloadOutlined />}
+              icon={<FontAwesomeIcon icon={faArrowsRotate} />}
               onClick={handleRefresh}
               loading={refreshing}
               type="default"
@@ -681,7 +670,7 @@ const ManageEstablishmentDetailsView = ({
             {editing ? (
               <>
                 <Button
-                  icon={<CloseOutlined />}
+                  icon={<FontAwesomeIcon icon={faXmark} />}
                   onClick={handleCancelEdit}
                   disabled={saving}
                 >
@@ -689,7 +678,7 @@ const ManageEstablishmentDetailsView = ({
                 </Button>
                 <Button
                   type="primary"
-                  icon={<SaveOutlined />}
+                  icon={<FontAwesomeIcon icon={faFloppyDisk} />}
                   onClick={handleSave}
                   loading={saving}
                 >
@@ -699,7 +688,7 @@ const ManageEstablishmentDetailsView = ({
             ) : (
               <>
                 <Button
-                  icon={<EditOutlined />}
+                  icon={<FontAwesomeIcon icon={faPenToSquare} />}
                   onClick={handleEdit}
                   type="primary"
                 >
@@ -711,11 +700,13 @@ const ManageEstablishmentDetailsView = ({
                   onConfirm={handleDelete}
                   okText="Oui"
                   cancelText="Non"
-                  okButtonProps={{ danger: true }}
+                  okButtonProps={{
+                    danger: true,
+                  }}
                 >
                   <Button
                     danger
-                    icon={<DeleteOutlined />}
+                    icon={<FontAwesomeIcon icon={faTrash} />}
                     loading={actionLoading === "delete"}
                   >
                     Supprimer
@@ -754,30 +745,59 @@ const ManageEstablishmentDetailsView = ({
       <Card title="Informations de l'établissement" className="mb-6">
         <Row gutter={[24, 16]}>
           <Col xs={24} md={12}>
-            <Descriptions column={1} size="small" labelStyle={{ color: "#1a1a1a", fontWeight: "700" }}>
+            <Descriptions
+              column={1}
+              size="small"
+              labelStyle={{
+                color: "#1a1a1a",
+                fontWeight: "700",
+              }}
+            >
               <Descriptions.Item label="Nom">
                 {establishment.nom || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Localisation">
                 <Space>
-                  <EnvironmentOutlined style={{ color: "#52c41a" }} />
+                  <FontAwesomeIcon
+                    icon={faLocationDot}
+                    style={{
+                      color: "#52c41a",
+                    }}
+                  />
                   <Text>{establishment.localisation || "N/A"}</Text>
                 </Space>
               </Descriptions.Item>
               <Descriptions.Item label="Pays">
                 <Space>
-                  <GlobalOutlined style={{ color: "#1890ff" }} />
+                  <FontAwesomeIcon
+                    icon={faGlobe}
+                    style={{
+                      color: "#1890ff",
+                    }}
+                  />
                   <Text>{establishment.pays || "N/A"}</Text>
                 </Space>
               </Descriptions.Item>
             </Descriptions>
           </Col>
           <Col xs={24} md={12}>
-            <Descriptions column={1} size="small" labelStyle={{ color: "#1a1a1a", fontWeight: "700" }}>
+            <Descriptions
+              column={1}
+              size="small"
+              labelStyle={{
+                color: "#1a1a1a",
+                fontWeight: "700",
+              }}
+            >
               <Descriptions.Item label="Email">
                 {establishment.email ? (
                   <Space>
-                    <MailOutlined style={{ color: "#faad14" }} />
+                    <FontAwesomeIcon
+                      icon={faEnvelope}
+                      style={{
+                        color: "#faad14",
+                      }}
+                    />
                     <Text copyable>{establishment.email}</Text>
                   </Space>
                 ) : (
@@ -787,7 +807,12 @@ const ManageEstablishmentDetailsView = ({
               <Descriptions.Item label="Téléphone">
                 {establishment.telephone ? (
                   <Space>
-                    <PhoneOutlined style={{ color: "#13c2c2" }} />
+                    <FontAwesomeIcon
+                      icon={faPhone}
+                      style={{
+                        color: "#13c2c2",
+                      }}
+                    />
                     <Text copyable>{establishment.telephone}</Text>
                   </Space>
                 ) : (
@@ -798,7 +823,14 @@ const ManageEstablishmentDetailsView = ({
                 <Descriptions.Item label="Code Unique">
                   <div className="flex items-center gap-2">
                     <div className="px-3 py-1 bg-gradient-to-r from-purple-100 to-purple-200 border border-purple-300 rounded-lg">
-                      <Text strong style={{ color: "#7c3aed", fontSize: "16px" }} copyable>
+                      <Text
+                        strong
+                        style={{
+                          color: "#7c3aed",
+                          fontSize: "16px",
+                        }}
+                        copyable
+                      >
                         {establishment.codeUnique}
                       </Text>
                     </div>
@@ -811,39 +843,70 @@ const ManageEstablishmentDetailsView = ({
             </Descriptions>
           </Col>
         </Row>
-        
+
         {/* Gestionnaire Information */}
         {gestionnaire && (
           <>
             <Divider orientation="left">
               <Space>
-                <UserOutlined style={{ color: "#1890ff" }} />
+                <FontAwesomeIcon
+                  icon={faUser}
+                  style={{
+                    color: "#1890ff",
+                  }}
+                />
                 <Text strong>Gestionnaire</Text>
               </Space>
             </Divider>
             <Row gutter={[24, 16]}>
               <Col xs={24} md={12}>
-                <Descriptions column={1} size="small" labelStyle={{ color: "#1a1a1a", fontWeight: "700" }}>
+                <Descriptions
+                  column={1}
+                  size="small"
+                  labelStyle={{
+                    color: "#1a1a1a",
+                    fontWeight: "700",
+                  }}
+                >
                   <Descriptions.Item label="Nom">
-                    <Text strong>{gestionnaire.nom} {gestionnaire.prenom}</Text>
+                    <Text strong>
+                      {gestionnaire.nom} {gestionnaire.prenom}
+                    </Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="Type">
                     <Tag color="blue">{gestionnaire.type}</Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Email">
                     <Space>
-                      <MailOutlined style={{ color: "#faad14" }} />
+                      <FontAwesomeIcon
+                        icon={faEnvelope}
+                        style={{
+                          color: "#faad14",
+                        }}
+                      />
                       <Text copyable>{gestionnaire.email}</Text>
                     </Space>
                   </Descriptions.Item>
                 </Descriptions>
               </Col>
               <Col xs={24} md={12}>
-                <Descriptions column={1} size="small" labelStyle={{ color: "#1a1a1a", fontWeight: "700" }}>
+                <Descriptions
+                  column={1}
+                  size="small"
+                  labelStyle={{
+                    color: "#1a1a1a",
+                    fontWeight: "700",
+                  }}
+                >
                   <Descriptions.Item label="Téléphone">
                     {gestionnaire.telephone ? (
                       <Space>
-                        <PhoneOutlined style={{ color: "#13c2c2" }} />
+                        <FontAwesomeIcon
+                          icon={faPhone}
+                          style={{
+                            color: "#13c2c2",
+                          }}
+                        />
                         <Text copyable>{gestionnaire.telephone}</Text>
                       </Space>
                     ) : (
@@ -851,7 +914,11 @@ const ManageEstablishmentDetailsView = ({
                     )}
                   </Descriptions.Item>
                   <Descriptions.Item label="Statut">
-                    <Tag color={gestionnaire.etat === 'ACTIVE' ? 'green' : 'orange'}>
+                    <Tag
+                      color={
+                        gestionnaire.etat === "ACTIVE" ? "green" : "orange"
+                      }
+                    >
                       {gestionnaire.etat}
                     </Tag>
                   </Descriptions.Item>
@@ -867,12 +934,15 @@ const ManageEstablishmentDetailsView = ({
 
       {/* Offre / Forfait */}
       <div className="mb-6">
-        <OffreInfoPanel type="ETABLISSEMENT" entityId={establishmentId} isDark={false} />
+        <OffreInfoPanel
+          type="ETABLISSEMENT"
+          entityId={establishmentId}
+          isDark={false}
+        />
       </div>
 
       {/* Configuration Options */}
-      {editing ? (
-        /* Edit Form */
+      {editing /* Edit Form */ ? (
         <Card title="Modifier les informations" className="mb-6">
           <Form form={form} layout="vertical" onFinish={handleSave}>
             <Row gutter={[24, 24]}>
@@ -880,7 +950,7 @@ const ManageEstablishmentDetailsView = ({
                 <Card
                   title={
                     <Space>
-                      <BankOutlined />
+                      <FontAwesomeIcon icon={faBuildingColumns} />
                       <span>Informations Générales</span>
                     </Space>
                   }
@@ -890,7 +960,10 @@ const ManageEstablishmentDetailsView = ({
                     name="nom"
                     label="Nom de l'établissement"
                     rules={[
-                      { required: true, message: "Le nom est requis" },
+                      {
+                        required: true,
+                        message: "Le nom est requis",
+                      },
                       {
                         min: 2,
                         message: "Le nom doit contenir au moins 2 caractères",
@@ -898,7 +971,7 @@ const ManageEstablishmentDetailsView = ({
                     ]}
                   >
                     <Input
-                      prefix={<BankOutlined />}
+                      prefix={<FontAwesomeIcon icon={faBuildingColumns} />}
                       placeholder="Nom de l'établissement"
                     />
                   </Form.Item>
@@ -914,7 +987,7 @@ const ManageEstablishmentDetailsView = ({
                     ]}
                   >
                     <Input
-                      prefix={<EnvironmentOutlined />}
+                      prefix={<FontAwesomeIcon icon={faLocationDot} />}
                       placeholder="Adresse ou localisation"
                     />
                   </Form.Item>
@@ -922,9 +995,17 @@ const ManageEstablishmentDetailsView = ({
                   <Form.Item
                     name="pays"
                     label="Pays"
-                    rules={[{ required: true, message: "Le pays est requis" }]}
+                    rules={[
+                      {
+                        required: true,
+                        message: "Le pays est requis",
+                      },
+                    ]}
                   >
-                    <Input prefix={<GlobalOutlined />} placeholder="Pays" />
+                    <Input
+                      prefix={<FontAwesomeIcon icon={faGlobe} />}
+                      placeholder="Pays"
+                    />
                   </Form.Item>
                 </Card>
               </Col>
@@ -933,7 +1014,7 @@ const ManageEstablishmentDetailsView = ({
                 <Card
                   title={
                     <Space>
-                      <MailOutlined />
+                      <FontAwesomeIcon icon={faEnvelope} />
                       <span>Contact & Options</span>
                     </Space>
                   }
@@ -943,25 +1024,28 @@ const ManageEstablishmentDetailsView = ({
                     name="email"
                     label="Email"
                     rules={[
-                      { type: "email", message: "Format email invalide" },
+                      {
+                        type: "email",
+                        message: "Format email invalide",
+                      },
                     ]}
                   >
                     <Input
-                      prefix={<MailOutlined />}
+                      prefix={<FontAwesomeIcon icon={faEnvelope} />}
                       placeholder="contact@etablissement.com"
                     />
                   </Form.Item>
 
                   <Form.Item name="telephone" label="Téléphone">
                     <Input
-                      prefix={<PhoneOutlined />}
+                      prefix={<FontAwesomeIcon icon={faPhone} />}
                       placeholder="+33 1 23 45 67 89"
                     />
                   </Form.Item>
 
                   <Divider orientation="left">
                     <Space>
-                      <SettingOutlined />
+                      <FontAwesomeIcon icon={faGear} />
                       <span>Options</span>
                     </Space>
                   </Divider>
@@ -994,25 +1078,32 @@ const ManageEstablishmentDetailsView = ({
                       <Switch />
                     </div>
                   </Form.Item>
-
-
                 </Card>
               </Col>
             </Row>
-            
+
             {/* Gestionnaire Selection */}
-            <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+            <Row
+              gutter={[24, 24]}
+              style={{
+                marginTop: 24,
+              }}
+            >
               <Col xs={24}>
                 <Card
                   title={
                     <Space>
-                      <UserOutlined />
+                      <FontAwesomeIcon icon={faUser} />
                       <span>Gestionnaire</span>
                     </Space>
                   }
                   size="small"
                 >
-                  <div style={{ position: "relative" }}>
+                  <div
+                    style={{
+                      position: "relative",
+                    }}
+                  >
                     <Button
                       onClick={() => setShowUserDropdown(!showUserDropdown)}
                       style={{
@@ -1021,7 +1112,7 @@ const ManageEstablishmentDetailsView = ({
                         height: "40px",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "space-between"
+                        justifyContent: "space-between",
                       }}
                     >
                       <span>
@@ -1031,27 +1122,39 @@ const ManageEstablishmentDetailsView = ({
                       </span>
                       <span>▼</span>
                     </Button>
-                    
+
                     {showUserDropdown && (
-                      <div style={{
-                        position: "absolute",
-                        top: "100%",
-                        left: 0,
-                        right: 0,
-                        zIndex: 1000,
-                        backgroundColor: "white",
-                        border: "1px solid #d9d9d9",
-                        borderRadius: "6px",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                        maxHeight: "200px",
-                        overflowY: "auto"
-                      }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          right: 0,
+                          zIndex: 1000,
+                          backgroundColor: "white",
+                          border: "1px solid #d9d9d9",
+                          borderRadius: "6px",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                          maxHeight: "200px",
+                          overflowY: "auto",
+                        }}
+                      >
                         {loadingUsers ? (
-                          <div style={{ padding: "16px", textAlign: "center" }}>
+                          <div
+                            style={{
+                              padding: "16px",
+                              textAlign: "center",
+                            }}
+                          >
                             Chargement des utilisateurs...
                           </div>
                         ) : users.length === 0 ? (
-                          <div style={{ padding: "16px", textAlign: "center" }}>
+                          <div
+                            style={{
+                              padding: "16px",
+                              textAlign: "center",
+                            }}
+                          >
                             Aucun utilisateur disponible
                           </div>
                         ) : (
@@ -1066,19 +1169,40 @@ const ManageEstablishmentDetailsView = ({
                                 padding: "12px 16px",
                                 cursor: "pointer",
                                 borderBottom: "1px solid #f0f0f0",
-                                ":hover": { backgroundColor: "#f5f5f5" }
+                                ":hover": {
+                                  backgroundColor: "#f5f5f5",
+                                },
                               }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = "#f5f5f5"}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = "white"}
+                              onMouseEnter={(e) =>
+                                (e.target.style.backgroundColor = "#f5f5f5")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.target.style.backgroundColor = "white")
+                              }
                             >
-                              <div style={{ fontWeight: "500" }}>
+                              <div
+                                style={{
+                                  fontWeight: "500",
+                                }}
+                              >
                                 {user.nom} {user.prenom}
                               </div>
-                              <div style={{ fontSize: "12px", color: "#666" }}>
+                              <div
+                                style={{
+                                  fontSize: "12px",
+                                  color: "#666",
+                                }}
+                              >
                                 {user.email}
                               </div>
-                              <div style={{ fontSize: "11px", color: "#1890ff", fontWeight: "500" }}>
-                                {user.type || 'Type non défini'}
+                              <div
+                                style={{
+                                  fontSize: "11px",
+                                  color: "#1890ff",
+                                  fontWeight: "500",
+                                }}
+                              >
+                                {user.type || "Type non défini"}
                               </div>
                             </div>
                           ))
@@ -1090,9 +1214,8 @@ const ManageEstablishmentDetailsView = ({
               </Col>
             </Row>
           </Form>
-        </Card>
+        </Card> /* Configuration Options Card */
       ) : (
-        /* Configuration Options Card */
         <Card title="Options de Configuration" className="mb-6">
           <Row gutter={[24, 16]}>
             <Col xs={24} md={8}>
@@ -1100,9 +1223,7 @@ const ManageEstablishmentDetailsView = ({
                 <Text>Validation nouvelle classe</Text>
                 <Tag
                   color={
-                    establishment.optionEnvoiMailNewClasse
-                      ? "green"
-                      : "default"
+                    establishment.optionEnvoiMailNewClasse ? "green" : "default"
                   }
                 >
                   {establishment.optionEnvoiMailNewClasse
@@ -1114,14 +1235,29 @@ const ManageEstablishmentDetailsView = ({
             <Col xs={24} md={8}>
               <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
-                  <Text strong style={{ color: "#7c3aed", fontSize: "16px" }}>Code Unique</Text>
+                  <Text
+                    strong
+                    style={{
+                      color: "#7c3aed",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Code Unique
+                  </Text>
                   <Tag color={establishment.codeUnique ? "purple" : "default"}>
                     {establishment.codeUnique ? "Activé" : "Désactivé"}
                   </Tag>
                 </div>
                 {establishment.codeUnique && (
                   <div className="mt-2 p-2 bg-white border border-purple-200 rounded">
-                    <Text code copyable style={{ fontSize: "14px", fontWeight: "600" }}>
+                    <Text
+                      code
+                      copyable
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "600",
+                      }}
+                    >
                       {establishment.codeUnique}
                     </Text>
                   </div>
@@ -1139,7 +1275,7 @@ const ManageEstablishmentDetailsView = ({
             <TabPane
               tab={
                 <span>
-                  <TeamOutlined />
+                  <FontAwesomeIcon icon={faUserGroup} />
                   Classes ({classes.length})
                 </span>
               }
@@ -1157,7 +1293,9 @@ const ManageEstablishmentDetailsView = ({
                   showTotal: (total, range) =>
                     `${range[0]}-${range[1]} sur ${total} classes`,
                 }}
-                scroll={{ x: 800 }}
+                scroll={{
+                  x: 800,
+                }}
                 locale={{
                   emptyText: (
                     <Empty
@@ -1172,7 +1310,7 @@ const ManageEstablishmentDetailsView = ({
             <TabPane
               tab={
                 <span>
-                  <UserOutlined />
+                  <FontAwesomeIcon icon={faUser} />
                   Professeurs ({professors.length})
                 </span>
               }
@@ -1190,7 +1328,9 @@ const ManageEstablishmentDetailsView = ({
                   showTotal: (total, range) =>
                     `${range[0]}-${range[1]} sur ${total} professeurs`,
                 }}
-                scroll={{ x: 800 }}
+                scroll={{
+                  x: 800,
+                }}
                 locale={{
                   emptyText: (
                     <Empty
@@ -1205,20 +1345,21 @@ const ManageEstablishmentDetailsView = ({
             <TabPane
               tab={
                 <span>
-                  <InfoCircleOutlined />
+                  <FontAwesomeIcon icon={faCircleInfo} />
                   Informations Système
                 </span>
               }
               key="3"
             >
               <Descriptions
-                column={{ xs: 1, sm: 2, md: 3 }}
+                column={{
+                  xs: 1,
+                  sm: 2,
+                  md: 3,
+                }}
                 bordered
                 size="small"
               >
-                <Descriptions.Item label="ID">
-                  <Text code>{establishment.id}</Text>
-                </Descriptions.Item>
                 <Descriptions.Item label="Date de création">
                   <Text>
                     {establishment.dateCreation
@@ -1228,40 +1369,38 @@ const ManageEstablishmentDetailsView = ({
                             year: "numeric",
                             month: "long",
                             day: "numeric",
-                          }
+                          },
                         )
                       : establishment.creationDate
-                      ? new Date(establishment.creationDate).toLocaleDateString(
-                          "fr-FR",
-                          {
+                        ? new Date(
+                            establishment.creationDate,
+                          ).toLocaleDateString("fr-FR", {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
-                          }
-                        )
-                      : "N/A"}
+                          })
+                        : "N/A"}
                   </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Dernière modification">
                   <Text>
                     {establishment.dateModification
                       ? new Date(
-                          establishment.dateModification
+                          establishment.dateModification,
                         ).toLocaleDateString("fr-FR", {
                           year: "numeric",
                           month: "long",
                           day: "numeric",
                         })
                       : establishment.lastModified
-                      ? new Date(establishment.lastModified).toLocaleDateString(
-                          "fr-FR",
-                          {
+                        ? new Date(
+                            establishment.lastModified,
+                          ).toLocaleDateString("fr-FR", {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
-                          }
-                        )
-                      : "N/A"}
+                          })
+                        : "N/A"}
                   </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Code Unique" span={3}>
@@ -1271,14 +1410,18 @@ const ManageEstablishmentDetailsView = ({
                   <Badge
                     count={classes.length}
                     showZero
-                    style={{ backgroundColor: "#52c41a" }}
+                    style={{
+                      backgroundColor: "#52c41a",
+                    }}
                   />
                 </Descriptions.Item>
                 <Descriptions.Item label="Classes Actives" span={1}>
                   <Badge
                     count={classes.filter((c) => c.etat === "ACTIF").length}
                     showZero
-                    style={{ backgroundColor: "#1890ff" }}
+                    style={{
+                      backgroundColor: "#1890ff",
+                    }}
                   />
                 </Descriptions.Item>
                 <Descriptions.Item label="Classes en Attente" span={1}>
@@ -1288,14 +1431,18 @@ const ManageEstablishmentDetailsView = ({
                         .length
                     }
                     showZero
-                    style={{ backgroundColor: "#faad14" }}
+                    style={{
+                      backgroundColor: "#faad14",
+                    }}
                   />
                 </Descriptions.Item>
                 <Descriptions.Item label="Total Professeurs" span={3}>
                   <Badge
                     count={professors.length}
                     showZero
-                    style={{ backgroundColor: "#13c2c2" }}
+                    style={{
+                      backgroundColor: "#13c2c2",
+                    }}
                   />
                 </Descriptions.Item>
               </Descriptions>
@@ -1315,5 +1462,4 @@ const ManageEstablishmentDetailsView = ({
     </div>
   );
 };
-
 export default ManageEstablishmentDetailsView;

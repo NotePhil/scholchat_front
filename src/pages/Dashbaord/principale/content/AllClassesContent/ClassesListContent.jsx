@@ -1,31 +1,4 @@
 import React, { useState, useEffect } from "react";
-import {
-  GraduationCap,
-  Search,
-  Edit,
-  Trash2,
-  Plus,
-  Users,
-  School,
-  Clock,
-  PowerOff,
-  Check,
-  Calendar,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Loader,
-  Eye,
-  Key,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  Download,
-  RefreshCw,
-  Settings,
-  UserCheck,
-  UserX,
-} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { classService, EtatClasse } from "../../../../../services/ClassService";
 import ClassModals from "../../modals/ClassModals";
@@ -33,7 +6,32 @@ import PublicationRightsService from "../../../../../services/PublicationRightsS
 import accederService from "../../../../../services/accederService";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useSelector } from "react-redux";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faCalendarDays,
+  faCheck,
+  faChevronLeft,
+  faChevronRight,
+  faCircleCheck,
+  faCircleExclamation,
+  faCircleXmark,
+  faClock,
+  faEye,
+  faGear,
+  faGraduationCap,
+  faKey,
+  faMagnifyingGlass,
+  faPenToSquare,
+  faPlus,
+  faPowerOff,
+  faSchool,
+  faSpinner,
+  faTrashCan,
+  faUserCheck,
+  faUserXmark,
+  faUsers,
+} from "@fortawesome/free-solid-svg-icons";
 const ClassesListContent = ({
   onNavigateToCreate,
   userRole = "professeur",
@@ -46,15 +44,12 @@ const ClassesListContent = ({
   const [paginatedClasses, setPaginatedClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("TOUS");
   const [etablissementFilter, setEtablissementFilter] = useState("TOUS");
-
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(9);
   const [totalPages, setTotalPages] = useState(1);
-
   const [selectedClass, setSelectedClass] = useState(null);
   const [editingClass, setEditingClass] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(null);
@@ -64,7 +59,6 @@ const ClassesListContent = ({
   const [showPaymentModal, setShowPaymentModal] = useState(null);
   const [showPublicationRightsModal, setShowPublicationRightsModal] =
     useState(null);
-
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -77,49 +71,38 @@ const ClassesListContent = ({
     cvv: "",
     cardHolder: "",
   });
-
   const [publicationRights, setPublicationRights] = useState({});
   const [loadingRights, setLoadingRights] = useState({});
-
   const [accessRequestCounts, setAccessRequestCounts] = useState({});
-
   const [showEditPage, setShowEditPage] = useState(false);
   const [availableEtablissements, setAvailableEtablissements] = useState([]);
-
   const currentUserId =
     localStorage.getItem("userId") || sessionStorage.getItem("userId");
-
   useEffect(() => {
     loadClasses();
     loadEtablissements();
   }, [userRole]);
-
   useEffect(() => {
     if (classes.length > 0) {
       loadAccessRequestCounts();
     }
   }, [classes]);
-
   useEffect(() => {
     applyFiltersAndSearch();
   }, [searchTerm, statusFilter, etablissementFilter, classes]);
-
   useEffect(() => {
     applyPagination();
   }, [filteredClasses, currentPage, itemsPerPage]);
-
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
-
   const loadClasses = async () => {
     try {
       setLoading(true);
       let data = [];
-
       switch (userRole) {
         case "administrateur":
           data = await classService.obtenirToutesLesClasses();
@@ -130,7 +113,8 @@ const ClassesListContent = ({
         default:
           if (currentUserId) {
             try {
-              data = await classService.obtenirClassesUtilisateur(currentUserId);
+              data =
+                await classService.obtenirClassesUtilisateur(currentUserId);
             } catch (error) {
               console.warn("Failed to load user classes:", error);
               data = [];
@@ -140,9 +124,7 @@ const ClassesListContent = ({
           }
           break;
       }
-
       data.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
-
       setClasses(data);
       setError("");
     } catch (error) {
@@ -152,7 +134,6 @@ const ClassesListContent = ({
       setLoading(false);
     }
   };
-
   const loadEtablissements = async () => {
     try {
       const etablissements = classes
@@ -160,23 +141,22 @@ const ClassesListContent = ({
         .map((c) => c.etablissement)
         .filter(
           (e, index, self) =>
-            self.findIndex((item) => item.id === e.id) === index
+            self.findIndex((item) => item.id === e.id) === index,
         );
-
       setAvailableEtablissements(etablissements);
     } catch (error) {
       console.error("Error loading etablissements:", error);
     }
   };
-
   const loadPublicationRights = async (classId) => {
     if (!classId) return;
-
     try {
-      setLoadingRights((prev) => ({ ...prev, [classId]: true }));
+      setLoadingRights((prev) => ({
+        ...prev,
+        [classId]: true,
+      }));
       const response =
         await PublicationRightsService.getUsersWithRightsForClass(classId);
-
       if (response.success) {
         setPublicationRights((prev) => ({
           ...prev,
@@ -186,23 +166,26 @@ const ClassesListContent = ({
     } catch (error) {
       console.error(
         `Error loading publication rights for class ${classId}:`,
-        error
+        error,
       );
     } finally {
-      setLoadingRights((prev) => ({ ...prev, [classId]: false }));
+      setLoadingRights((prev) => ({
+        ...prev,
+        [classId]: false,
+      }));
     }
   };
-
   const loadAccessRequestCounts = async () => {
     try {
       const counts = {};
       await Promise.all(
         classes.map(async (classe) => {
           try {
-            const requests = await accederService.obtenirDemandesAccesPourClasse(classe.id);
+            const requests =
+              await accederService.obtenirDemandesAccesPourClasse(classe.id);
             if (requests && Array.isArray(requests)) {
               const pendingCount = requests.filter(
-                (req) => req.etat === "EN_ATTENTE"
+                (req) => req.etat === "EN_ATTENTE",
               ).length;
               counts[classe.id] = pendingCount;
             } else {
@@ -211,45 +194,49 @@ const ClassesListContent = ({
           } catch (error) {
             console.error(
               `Error loading access requests for class ${classe.id}:`,
-              error
+              error,
             );
             counts[classe.id] = 0;
           }
-        })
+        }),
       );
       setAccessRequestCounts(counts);
     } catch (error) {
       console.error("Error loading access request counts:", error);
     }
   };
-
   const hasPublicationRights = (classId) => {
     if (!currentUserId || !publicationRights[classId]) return false;
-
     return publicationRights[classId].some((user) => user.id === currentUserId);
   };
-
   const isModerator = (classe) => {
     if (userRole === "administrateur") return true;
     if (!classe) return false;
-    
+
     // Check if user is the moderator assigned to the class
-    if (classe.moderator?.id === currentUserId || classe.moderatorId === currentUserId) return true;
-    
+    if (
+      classe.moderator?.id === currentUserId ||
+      classe.moderatorId === currentUserId
+    )
+      return true;
+
     // Check if user is the creator (using various possible field names)
-    if (classe.createurId === currentUserId || classe.utilisateurId === currentUserId) return true;
-    
+    if (
+      classe.createurId === currentUserId ||
+      classe.utilisateurId === currentUserId
+    )
+      return true;
+
     // Check if user has explicit moderation rights
     if (publicationRights[classe.id]) {
-      return publicationRights[classe.id].some(user => user.id === currentUserId && user.peutModerer);
+      return publicationRights[classe.id].some(
+        (user) => user.id === currentUserId && user.peutModerer,
+      );
     }
-    
     return false;
   };
-
   const applyFiltersAndSearch = () => {
     let filtered = [...classes];
-
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -257,44 +244,40 @@ const ClassesListContent = ({
           (cls.nom || "").toLowerCase().includes(searchLower) ||
           (cls.niveau || "").toLowerCase().includes(searchLower) ||
           (cls.codeActivation || "").toLowerCase().includes(searchLower) ||
-          (cls.etablissement?.nom || "").toLowerCase().includes(searchLower)
+          (cls.etablissement?.nom || "").toLowerCase().includes(searchLower),
       );
     }
-
     if (statusFilter !== "TOUS") {
-      filtered = filtered.filter((cls) => (cls.etat || cls.statut) === statusFilter);
+      filtered = filtered.filter(
+        (cls) => (cls.etat || cls.statut) === statusFilter,
+      );
     }
-
     if (etablissementFilter !== "TOUS") {
       filtered = filtered.filter(
-        (cls) => (cls.etablissement?.id || cls.etablissementId) === etablissementFilter
+        (cls) =>
+          (cls.etablissement?.id || cls.etablissementId) ===
+          etablissementFilter,
       );
     }
-
     setFilteredClasses(filtered);
     setCurrentPage(1);
   };
-
   const applyPagination = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const paginated = filteredClasses.slice(startIndex, endIndex);
-
     setPaginatedClasses(paginated);
     setTotalPages(Math.ceil(filteredClasses.length / itemsPerPage));
   };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadClasses();
     setRefreshing(false);
     setSuccessMessage("Liste des classes actualisée");
   };
-
   const handleEdit = (classe) => {
     setEditingClass(classe);
   };
-
   const handleEditSave = async (updatedClass) => {
     try {
       setActionLoading("edit");
@@ -309,12 +292,10 @@ const ClassesListContent = ({
       setActionLoading(null);
     }
   };
-
   const handleEditCancel = () => {
     setShowEditPage(false);
     setEditingClass(null);
   };
-
   const handleApprove = async (classId) => {
     try {
       setActionLoading(classId);
@@ -330,7 +311,6 @@ const ClassesListContent = ({
       setActionLoading(null);
     }
   };
-
   const handleReject = async (classId, motif) => {
     try {
       setActionLoading(classId);
@@ -346,11 +326,14 @@ const ClassesListContent = ({
       setActionLoading(null);
     }
   };
-
   const handleDeactivation = async (classId, motif, commentaire) => {
     try {
       setActionLoading(classId);
-      console.log("Deactivating class:", { classId, motif, commentaire });
+      console.log("Deactivating class:", {
+        classId,
+        motif,
+        commentaire,
+      });
       await loadClasses();
       setShowDeactivationModal(null);
       setDeactivationReason("");
@@ -364,27 +347,22 @@ const ClassesListContent = ({
       setActionLoading(null);
     }
   };
-
   const handleAccessRequest = async () => {
     if (!accessToken.trim()) {
       setError("Veuillez entrer un token d'accès");
       return;
     }
-
     try {
       setActionLoading("access-request");
       setError("");
       setSuccessMessage("");
-
       console.log("Searching for class with token:", accessToken);
-      
+
       // 1. Find class by activation code
       const targetClass = await classService.obtenirClasseParCode(accessToken);
-      
       if (!targetClass || !targetClass.id) {
         throw new Error("Classe non trouvée avec ce code");
       }
-
       console.log("Found class:", targetClass);
 
       // 2. Request access
@@ -393,13 +371,12 @@ const ClassesListContent = ({
         utilisateurId: currentUserId,
         classeId: targetClass.id,
         codeActivation: accessToken,
-        estParent: userRole === "parent"
+        estParent: userRole === "parent",
       });
-
       setSuccessMessage("Demande d'accès envoyée avec succès au modérateur");
       setShowAccessRequestModal(false);
       setAccessToken("");
-      
+
       // Optional: reload counts or classes if needed
       await loadClasses();
     } catch (error) {
@@ -409,13 +386,11 @@ const ClassesListContent = ({
       setActionLoading(null);
     }
   };
-
   const handlePayment = async (classData) => {
     try {
       setActionLoading("payment");
       console.log("Processing payment:", paymentData);
       console.log("Creating class:", classData);
-
       setTimeout(() => {
         setShowPaymentModal(null);
         setPaymentData({
@@ -434,7 +409,6 @@ const ClassesListContent = ({
       setActionLoading(null);
     }
   };
-
   const handleDelete = async (classId) => {
     try {
       setActionLoading(classId);
@@ -451,18 +425,15 @@ const ClassesListContent = ({
       setActionLoading(null);
     }
   };
-
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
-
   const handleManagePublicationRights = async (classe) => {
     setShowPublicationRightsModal(classe);
     await loadPublicationRights(classe.id);
   };
-
   const getStatusColor = (etat) => {
     switch (etat) {
       case EtatClasse.ACTIF:
@@ -475,20 +446,20 @@ const ClassesListContent = ({
         return "bg-gray-100 text-gray-800";
     }
   };
-
   const getStatusIcon = (etat) => {
     switch (etat) {
       case EtatClasse.ACTIF:
-        return <CheckCircle className="w-4 h-4" />;
+        return <FontAwesomeIcon icon={faCircleCheck} className="w-4 h-4" />;
       case EtatClasse.EN_ATTENTE_APPROBATION:
-        return <Clock className="w-4 h-4" />;
+        return <FontAwesomeIcon icon={faClock} className="w-4 h-4" />;
       case EtatClasse.INACTIF:
-        return <XCircle className="w-4 h-4" />;
+        return <FontAwesomeIcon icon={faCircleXmark} className="w-4 h-4" />;
       default:
-        return <AlertCircle className="w-4 h-4" />;
+        return (
+          <FontAwesomeIcon icon={faCircleExclamation} className="w-4 h-4" />
+        );
     }
   };
-
   const handleManageClass = (classe) => {
     if (onSelectClass) {
       onSelectClass(classe.id);
@@ -496,84 +467,108 @@ const ClassesListContent = ({
       console.log("Managing class:", classe.id);
     }
   };
-
   const shouldShowManageButton = (classe) => {
     if (userRole === "administrateur") {
       return true;
     }
-
     if (userRole === "professeur") {
       return (
         classe.etat === EtatClasse.ACTIF && hasPublicationRights(classe.id)
       );
     }
-
     if (userRole === "etablissement") {
       return classe.etat === EtatClasse.ACTIF;
     }
-
     return false;
   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <FontAwesomeIcon
+            icon={faSpinner}
+            className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4"
+          />
           <p className="text-gray-600">Chargement des classes...</p>
         </div>
       </div>
     );
   }
-
   return (
-    <div className={`${isMobile ? 'py-4 px-2' : 'py-4 px-4'}`}>
+    <div className={`${isMobile ? "py-4 px-2" : "py-4 px-4"}`}>
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
-          <div className={`bg-gradient-to-r from-blue-600 to-indigo-600 ${isMobile ? 'px-4 py-3' : 'px-8 py-6'}`}>
-            <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
+          <div
+            className={`bg-gradient-to-r from-blue-600 to-indigo-600 ${isMobile ? "px-4 py-3" : "px-8 py-6"}`}
+          >
+            <div
+              className={`flex ${isMobile ? "flex-col gap-3" : "items-center justify-between"}`}
+            >
               <div className="flex items-center gap-3">
-                <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-white/20 rounded-full flex items-center justify-center`}>
-                  <GraduationCap className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'} text-white`} />
+                <div
+                  className={`${isMobile ? "w-8 h-8" : "w-10 h-10"} bg-white/20 rounded-full flex items-center justify-center`}
+                >
+                  <FontAwesomeIcon
+                    icon={faGraduationCap}
+                    className={`${isMobile ? "w-4 h-4" : "w-6 h-6"} text-white`}
+                  />
                 </div>
                 <div>
-                  <h1 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-white`}>
-                    {t('classes.title', 'Gestion des Classes')}
+                  <h1
+                    className={`${isMobile ? "text-lg" : "text-2xl"} font-bold text-white`}
+                  >
+                    {t("classes.title", "Gestion des Classes")}
                   </h1>
-                  <p className={`text-blue-100 ${isMobile ? 'text-xs' : ''}`}>
-                    {filteredClasses.length} {t('classes.classCount', 'classe')}
-                    {filteredClasses.length !== 1 ? "s" : ""} {t('classes.found', 'trouvée')}
-                    {filteredClasses.length !== 1 ? "s" : ""} {t('common.on', 'sur')}{" "}
-                    {classes.length}
+                  <p className={`text-blue-100 ${isMobile ? "text-xs" : ""}`}>
+                    {filteredClasses.length} {t("classes.classCount", "classe")}
+                    {filteredClasses.length !== 1 ? "s" : ""}{" "}
+                    {t("classes.found", "trouvée")}
+                    {filteredClasses.length !== 1 ? "s" : ""}{" "}
+                    {t("common.on", "sur")} {classes.length}
                   </p>
                 </div>
               </div>
-              <div className={`flex ${isMobile ? 'gap-1.5 flex-wrap' : 'gap-3'}`}>
+              <div
+                className={`flex ${isMobile ? "gap-1.5 flex-wrap" : "gap-3"}`}
+              >
                 <button
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className={`bg-white/20 text-white ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-2'} rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5`}
+                  className={`bg-white/20 text-white ${isMobile ? "px-2 py-1.5 text-xs" : "px-4 py-2"} rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5`}
                 >
-                  <RefreshCw
-                    className={`${isMobile ? 'w-3.5 h-3.5' : 'w-5 h-5'} ${refreshing ? "animate-spin" : ""}`}
+                  <FontAwesomeIcon
+                    icon={faArrowsRotate}
+                    className={`${isMobile ? "w-3.5 h-3.5" : "w-5 h-5"} ${refreshing ? "animate-spin" : ""}`}
                   />
-                  {!isMobile && t('common.actions.refresh', 'Actualiser')}
+                  {!isMobile && t("common.actions.refresh", "Actualiser")}
                 </button>
                 {userRole === "professeur" && (
                   <>
                     <button
                       onClick={() => setShowAccessRequestModal(true)}
-                      className={`bg-white/20 text-white ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-6 py-2'} rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5`}
+                      className={`bg-white/20 text-white ${isMobile ? "px-2 py-1.5 text-xs" : "px-6 py-2"} rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5`}
                     >
-                      <Key className={`${isMobile ? 'w-3.5 h-3.5' : 'w-5 h-5'}`} />
-                      {!isMobile && t('classes.accessRequest', 'Demande accès à une autre classe')}
+                      <FontAwesomeIcon
+                        icon={faKey}
+                        className={`${isMobile ? "w-3.5 h-3.5" : "w-5 h-5"}`}
+                      />
+                      {!isMobile &&
+                        t(
+                          "classes.accessRequest",
+                          "Demande accès à une autre classe",
+                        )}
                     </button>
                     <button
                       onClick={onNavigateToCreate}
-                      className={`bg-white text-blue-600 ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-6 py-2'} rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center gap-1.5`}
+                      className={`bg-white text-blue-600 ${isMobile ? "px-2 py-1.5 text-xs" : "px-6 py-2"} rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center gap-1.5`}
                     >
-                      <Plus className={`${isMobile ? 'w-3.5 h-3.5' : 'w-5 h-5'}`} />
-                      {isMobile ? t('classes.newClass', 'Nouvelle Classe').split(' ')[0] : t('classes.newClass', 'Nouvelle Classe')}
+                      <FontAwesomeIcon
+                        icon={faPlus}
+                        className={`${isMobile ? "w-3.5 h-3.5" : "w-5 h-5"}`}
+                      />
+                      {isMobile
+                        ? t("classes.newClass", "Nouvelle Classe").split(" ")[0]
+                        : t("classes.newClass", "Nouvelle Classe")}
                     </button>
                   </>
                 )}
@@ -581,40 +576,63 @@ const ClassesListContent = ({
             </div>
           </div>
 
-          <div className={`${isMobile ? 'p-3' : 'p-6'} border-b border-gray-200`}>
-            <div className={`flex flex-col ${isMobile ? 'gap-2' : 'lg:flex-row gap-4'}`}>
-              <div className={`relative flex-1 ${isMobile ? 'max-w-full' : 'max-w-md'}`}>
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-gray-400`} />
+          <div
+            className={`${isMobile ? "p-3" : "p-6"} border-b border-gray-200`}
+          >
+            <div
+              className={`flex flex-col ${isMobile ? "gap-2" : "lg:flex-row gap-4"}`}
+            >
+              <div
+                className={`relative flex-1 ${isMobile ? "max-w-full" : "max-w-md"}`}
+              >
+                <FontAwesomeIcon
+                  icon={faMagnifyingGlass}
+                  className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isMobile ? "w-4 h-4" : "w-5 h-5"} text-gray-400`}
+                />
                 <input
                   type="text"
-                  placeholder={t('classes.searchPlaceholder', 'Rechercher une classe...')}
+                  placeholder={t(
+                    "classes.searchPlaceholder",
+                    "Rechercher une classe...",
+                  )}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`w-full ${isMobile ? 'pl-9 pr-3 py-2 text-xs' : 'pl-12 pr-4 py-3'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  className={`w-full ${isMobile ? "pl-9 pr-3 py-2 text-xs" : "pl-12 pr-4 py-3"} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                 />
               </div>
 
-              <div className={`flex ${isMobile ? 'flex-col gap-2' : 'gap-3'}`}>
+              <div className={`flex ${isMobile ? "flex-col gap-2" : "gap-3"}`}>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className={`${isMobile ? 'w-full px-3 py-1.5 text-xs' : 'px-4 py-3'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  className={`${isMobile ? "w-full px-3 py-1.5 text-xs" : "px-4 py-3"} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                 >
-                  <option value="TOUS">{t('classes.filters.allStatuses', 'Tous les statuts')}</option>
-                  <option value={EtatClasse.ACTIF}>{t('classes.status.active', 'Actif')}</option>
-                  <option value={EtatClasse.EN_ATTENTE_APPROBATION}>
-                    {t('classes.status.pending', 'En attente')}
+                  <option value="TOUS">
+                    {t("classes.filters.allStatuses", "Tous les statuts")}
                   </option>
-                  <option value={EtatClasse.INACTIF}>{t('classes.status.inactive', 'Inactif')}</option>
+                  <option value={EtatClasse.ACTIF}>
+                    {t("classes.status.active", "Actif")}
+                  </option>
+                  <option value={EtatClasse.EN_ATTENTE_APPROBATION}>
+                    {t("classes.status.pending", "En attente")}
+                  </option>
+                  <option value={EtatClasse.INACTIF}>
+                    {t("classes.status.inactive", "Inactif")}
+                  </option>
                 </select>
 
                 {availableEtablissements.length > 0 && (
                   <select
                     value={etablissementFilter}
                     onChange={(e) => setEtablissementFilter(e.target.value)}
-                    className={`${isMobile ? 'w-full px-3 py-1.5 text-xs' : 'px-4 py-3'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    className={`${isMobile ? "w-full px-3 py-1.5 text-xs" : "px-4 py-3"} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                   >
-                    <option value="TOUS">{t('classes.filters.allSchools', 'Tous les établissements')}</option>
+                    <option value="TOUS">
+                      {t(
+                        "classes.filters.allSchools",
+                        "Tous les établissements",
+                      )}
+                    </option>
                     {availableEtablissements.map((etab) => (
                       <option key={etab.id} value={etab.id}>
                         {etab.nom}
@@ -626,12 +644,28 @@ const ClassesListContent = ({
                 <select
                   value={itemsPerPage}
                   onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                  className={`${isMobile ? 'w-full px-3 py-1.5 text-xs' : 'px-4 py-3'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  className={`${isMobile ? "w-full px-3 py-1.5 text-xs" : "px-4 py-3"} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                 >
-                  <option value={9}>{t('common.perPage', '{{count}} par page', { count: 9 })}</option>
-                  <option value={12}>{t('common.perPage', '{{count}} par page', { count: 12 })}</option>
-                  <option value={18}>{t('common.perPage', '{{count}} par page', { count: 18 })}</option>
-                  <option value={24}>{t('common.perPage', '{{count}} par page', { count: 24 })}</option>
+                  <option value={9}>
+                    {t("common.perPage", "{{count}} par page", {
+                      count: 9,
+                    })}
+                  </option>
+                  <option value={12}>
+                    {t("common.perPage", "{{count}} par page", {
+                      count: 12,
+                    })}
+                  </option>
+                  <option value={18}>
+                    {t("common.perPage", "{{count}} par page", {
+                      count: 18,
+                    })}
+                  </option>
+                  <option value={24}>
+                    {t("common.perPage", "{{count}} par page", {
+                      count: 24,
+                    })}
+                  </option>
                 </select>
               </div>
             </div>
@@ -640,34 +674,49 @@ const ClassesListContent = ({
 
         {successMessage && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
+            <FontAwesomeIcon
+              icon={faCircleCheck}
+              className="w-5 h-5 text-green-600"
+            />
             <p className="text-green-700">{successMessage}</p>
           </div>
         )}
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-600" />
+            <FontAwesomeIcon
+              icon={faCircleExclamation}
+              className="w-5 h-5 text-red-600"
+            />
             <p className="text-red-700">{error}</p>
           </div>
         )}
 
         {paginatedClasses.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-            <GraduationCap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <FontAwesomeIcon
+              icon={faGraduationCap}
+              className="w-16 h-16 text-gray-400 mx-auto mb-4"
+            />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               {searchTerm ||
               statusFilter !== "TOUS" ||
               etablissementFilter !== "TOUS"
-                ? t('classes.empty.noResults', "Aucun résultat trouvé")
-                : t('classes.empty.noClasses', "Aucune classe")}
+                ? t("classes.empty.noResults", "Aucun résultat trouvé")
+                : t("classes.empty.noClasses", "Aucune classe")}
             </h3>
             <p className="text-gray-600 mb-6">
               {searchTerm ||
               statusFilter !== "TOUS" ||
               etablissementFilter !== "TOUS"
-                ? t('classes.empty.noResultsDesc', "Essayez avec d'autres critères de recherche")
-                : t('classes.empty.noClassesDesc', "Commencez par créer votre première classe")}
+                ? t(
+                    "classes.empty.noResultsDesc",
+                    "Essayez avec d'autres critères de recherche",
+                  )
+                : t(
+                    "classes.empty.noClassesDesc",
+                    "Commencez par créer votre première classe",
+                  )}
             </p>
             {!searchTerm &&
               statusFilter === "TOUS" &&
@@ -677,8 +726,8 @@ const ClassesListContent = ({
                   onClick={onNavigateToCreate}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center gap-2 mx-auto"
                 >
-                  <Plus className="w-5 h-5" />
-                  {t('classes.empty.createFirst', "Créer une classe")}
+                  <FontAwesomeIcon icon={faPlus} className="w-5 h-5" />
+                  {t("classes.empty.createFirst", "Créer une classe")}
                 </button>
               )}
           </div>
@@ -686,17 +735,31 @@ const ClassesListContent = ({
           <>
             <AnimatePresence mode="wait">
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'} mb-6`}
+                initial={{
+                  opacity: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                }}
+                className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"} mb-6`}
               >
                 {paginatedClasses.map((classe, index) => (
                   <motion.div
                     key={classe.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
+                    initial={{
+                      opacity: 0,
+                      y: 20,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    transition={{
+                      delay: index * 0.05,
+                    }}
                     className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-200 hover:border-blue-300 group relative"
                   >
                     {/* Notification Badge - Keep as is */}
@@ -718,19 +781,24 @@ const ClassesListContent = ({
                             {classe.nom}
                           </h3>
                           <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                            <GraduationCap className="w-3.5 h-3.5" />
+                            <FontAwesomeIcon
+                              icon={faGraduationCap}
+                              className="w-3.5 h-3.5"
+                            />
                             <span className="font-medium">{classe.niveau}</span>
                           </div>
                         </div>
-                        
+
                         {/* Status Badge - Smaller */}
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                            classe.etat
-                          )}`}
+                          className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(classe.etat)}`}
                         >
-                          <span className="w-3 h-3">{getStatusIcon(classe.etat)}</span>
-                          <span className="hidden sm:inline">{classService.getEtatDisplayName(classe.etat)}</span>
+                          <span className="w-3 h-3">
+                            {getStatusIcon(classe.etat)}
+                          </span>
+                          <span className="hidden sm:inline">
+                            {classService.getEtatDisplayName(classe.etat)}
+                          </span>
                         </span>
                       </div>
 
@@ -740,9 +808,14 @@ const ClassesListContent = ({
                         {classe.etablissement && (
                           <div className="flex items-center gap-2 text-xs text-gray-600">
                             <div className="w-6 h-6 bg-blue-50 rounded flex items-center justify-center flex-shrink-0">
-                              <School className="w-3 h-3 text-blue-600" />
+                              <FontAwesomeIcon
+                                icon={faSchool}
+                                className="w-3 h-3 text-blue-600"
+                              />
                             </div>
-                            <span className="truncate font-medium">{classe.etablissement.nom}</span>
+                            <span className="truncate font-medium">
+                              {classe.etablissement.nom}
+                            </span>
                           </div>
                         )}
 
@@ -750,7 +823,10 @@ const ClassesListContent = ({
                         <div className="flex items-center gap-3 text-xs text-gray-600">
                           <div className="flex items-center gap-1.5">
                             <div className="w-6 h-6 bg-green-50 rounded flex items-center justify-center flex-shrink-0">
-                              <Users className="w-3 h-3 text-green-600" />
+                              <FontAwesomeIcon
+                                icon={faUsers}
+                                className="w-3 h-3 text-green-600"
+                              />
                             </div>
                             <span className="font-semibold text-gray-900">
                               {classe.nombreEtudiants ||
@@ -758,18 +834,25 @@ const ClassesListContent = ({
                                 classe.participants?.length ||
                                 0}
                             </span>
-                            <span className="text-gray-500">{t('classes.card.students', 'élèves')}</span>
+                            <span className="text-gray-500">
+                              {t("classes.card.students", "élèves")}
+                            </span>
                           </div>
 
                           {classe.dateCreation && (
                             <div className="flex items-center gap-1.5">
                               <div className="w-6 h-6 bg-purple-50 rounded flex items-center justify-center flex-shrink-0">
-                                <Calendar className="w-3 h-3 text-purple-600" />
+                                <FontAwesomeIcon
+                                  icon={faCalendarDays}
+                                  className="w-3 h-3 text-purple-600"
+                                />
                               </div>
                               <span className="text-gray-600">
-                                {new Date(classe.dateCreation).toLocaleDateString('fr-FR', {
-                                  day: 'numeric',
-                                  month: 'short'
+                                {new Date(
+                                  classe.dateCreation,
+                                ).toLocaleDateString("fr-FR", {
+                                  day: "numeric",
+                                  month: "short",
                                 })}
                               </span>
                             </div>
@@ -779,21 +862,30 @@ const ClassesListContent = ({
                         {/* Publication Rights - Compact */}
                         {userRole === "professeur" && (
                           <div
-                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium ${
-                              hasPublicationRights(classe.id)
-                                ? 'bg-green-50 text-green-700'
-                                : 'bg-amber-50 text-amber-700'
-                            }`}
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium ${hasPublicationRights(classe.id) ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}
                           >
                             {hasPublicationRights(classe.id) ? (
                               <>
-                                <UserCheck className="w-3 h-3 flex-shrink-0" />
-                                <span>{t('classes.card.rightsGranted', 'Droits accordés')}</span>
+                                <FontAwesomeIcon
+                                  icon={faUserCheck}
+                                  className="w-3 h-3 flex-shrink-0"
+                                />
+                                <span>
+                                  {t(
+                                    "classes.card.rightsGranted",
+                                    "Droits accordés",
+                                  )}
+                                </span>
                               </>
                             ) : (
                               <>
-                                <UserX className="w-3 h-3 flex-shrink-0" />
-                                <span>{t('classes.card.rights.none', 'Aucun droit')}</span>
+                                <FontAwesomeIcon
+                                  icon={faUserXmark}
+                                  className="w-3 h-3 flex-shrink-0"
+                                />
+                                <span>
+                                  {t("classes.card.rights.none", "Aucun droit")}
+                                </span>
                               </>
                             )}
                           </div>
@@ -803,8 +895,16 @@ const ClassesListContent = ({
                         {classe.etat === EtatClasse.EN_ATTENTE_APPROBATION &&
                           userRole === "professeur" && (
                             <div className="flex items-start gap-1.5 px-2 py-1.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
-                              <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                              <span>{t('classes.card.pendingBadge', "En attente d'approbation")}</span>
+                              <FontAwesomeIcon
+                                icon={faCircleExclamation}
+                                className="w-3 h-3 flex-shrink-0 mt-0.5"
+                              />
+                              <span>
+                                {t(
+                                  "classes.card.pendingBadge",
+                                  "En attente d'approbation",
+                                )}
+                              </span>
                             </div>
                           )}
                       </div>
@@ -818,8 +918,13 @@ const ClassesListContent = ({
                               onClick={() => handleManageClass(classe)}
                               className="relative flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-xs transition-colors shadow-sm hover:shadow-md"
                             >
-                              <Settings className="w-3.5 h-3.5" />
-                              <span>{t('classes.actions.manage', 'Gérer')}</span>
+                              <FontAwesomeIcon
+                                icon={faGear}
+                                className="w-3.5 h-3.5"
+                              />
+                              <span>
+                                {t("classes.actions.manage", "Gérer")}
+                              </span>
                               {accessRequestCounts[classe.id] > 0 && (
                                 <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse border-2 border-white shadow-sm">
                                   {accessRequestCounts[classe.id]}
@@ -830,14 +935,15 @@ const ClassesListContent = ({
 
                           <button
                             onClick={() => setSelectedClass(classe)}
-                            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs transition-colors ${
-                              shouldShowManageButton(classe) 
-                                ? "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200" 
-                                : "bg-blue-600 hover:bg-blue-700 text-white col-span-2 shadow-sm"
-                            }`}
+                            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs transition-colors ${shouldShowManageButton(classe) ? "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200" : "bg-blue-600 hover:bg-blue-700 text-white col-span-2 shadow-sm"}`}
                           >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>{t('classes.card.seeDetails', 'Détails')}</span>
+                            <FontAwesomeIcon
+                              icon={faEye}
+                              className="w-3.5 h-3.5"
+                            />
+                            <span>
+                              {t("classes.card.seeDetails", "Détails")}
+                            </span>
                           </button>
 
                           {!shouldShowManageButton(classe) && (
@@ -845,16 +951,25 @@ const ClassesListContent = ({
                               onClick={() => handleEdit(classe)}
                               disabled={
                                 actionLoading === "edit" ||
-                                (userRole === "professeur" && !isModerator(classe))
+                                (userRole === "professeur" &&
+                                  !isModerator(classe))
                               }
                               className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed col-span-2"
                             >
                               {actionLoading === "edit" ? (
-                                <Loader className="w-3.5 h-3.5 animate-spin" />
+                                <FontAwesomeIcon
+                                  icon={faSpinner}
+                                  className="w-3.5 h-3.5 animate-spin"
+                                />
                               ) : (
-                                <Edit className="w-3.5 h-3.5" />
+                                <FontAwesomeIcon
+                                  icon={faPenToSquare}
+                                  className="w-3.5 h-3.5"
+                                />
                               )}
-                              <span>{t('classes.actions.edit', 'Modifier')}</span>
+                              <span>
+                                {t("classes.actions.edit", "Modifier")}
+                              </span>
                             </button>
                           )}
                         </div>
@@ -862,44 +977,68 @@ const ClassesListContent = ({
                         {/* Secondary Row - More Compact */}
                         <div className="flex gap-1.5">
                           {(userRole === "administrateur" ||
-                            (userRole === "professeur" && isModerator(classe))) && (
-                              <button
-                                onClick={() => handleManagePublicationRights(classe)}
-                                disabled={loadingRights[classe.id]}
-                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded text-xs font-medium transition-colors disabled:opacity-50"
-                              >
-                                {loadingRights[classe.id] ? (
-                                  <Loader className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <UserCheck className="w-3 h-3" />
-                                )}
-                                <span className="hidden sm:inline">{t('classes.actions.rights', 'Droits')}</span>
-                              </button>
-                            )}
+                            (userRole === "professeur" &&
+                              isModerator(classe))) && (
+                            <button
+                              onClick={() =>
+                                handleManagePublicationRights(classe)
+                              }
+                              disabled={loadingRights[classe.id]}
+                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                            >
+                              {loadingRights[classe.id] ? (
+                                <FontAwesomeIcon
+                                  icon={faSpinner}
+                                  className="w-3 h-3 animate-spin"
+                                />
+                              ) : (
+                                <FontAwesomeIcon
+                                  icon={faUserCheck}
+                                  className="w-3 h-3"
+                                />
+                              )}
+                              <span className="hidden sm:inline">
+                                {t("classes.actions.rights", "Droits")}
+                              </span>
+                            </button>
+                          )}
 
                           {(userRole === "administrateur" ||
-                            (userRole === "professeur" && isModerator(classe))) && (
+                            (userRole === "professeur" &&
+                              isModerator(classe))) && (
                             <button
                               onClick={() => setShowDeleteModal(classe)}
                               disabled={actionLoading === classe.id}
                               className="flex items-center justify-center gap-1 px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded text-xs font-medium transition-colors disabled:opacity-50"
                             >
                               {actionLoading === classe.id ? (
-                                <Loader className="w-3 h-3 animate-spin" />
+                                <FontAwesomeIcon
+                                  icon={faSpinner}
+                                  className="w-3 h-3 animate-spin"
+                                />
                               ) : (
-                                <Trash2 className="w-3 h-3" />
+                                <FontAwesomeIcon
+                                  icon={faTrashCan}
+                                  className="w-3 h-3"
+                                />
                               )}
                             </button>
                           )}
 
                           {userRole === "etablissement" &&
-                            classe.etat === EtatClasse.EN_ATTENTE_APPROBATION && (
+                            classe.etat ===
+                              EtatClasse.EN_ATTENTE_APPROBATION && (
                               <button
                                 onClick={() => setShowApprovalModal(classe)}
                                 className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded text-xs font-medium transition-colors"
                               >
-                                <Check className="w-3 h-3" />
-                                <span>{t('classes.actions.approve', 'Approuver')}</span>
+                                <FontAwesomeIcon
+                                  icon={faCheck}
+                                  className="w-3 h-3"
+                                />
+                                <span>
+                                  {t("classes.actions.approve", "Approuver")}
+                                </span>
                               </button>
                             )}
 
@@ -910,8 +1049,16 @@ const ClassesListContent = ({
                                 onClick={() => setShowDeactivationModal(classe)}
                                 className="flex items-center justify-center gap-1 px-2 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded text-xs font-medium transition-colors"
                               >
-                                <PowerOff className="w-3 h-3" />
-                                <span className="hidden sm:inline">{t('classes.actions.deactivate', 'Désactiver')}</span>
+                                <FontAwesomeIcon
+                                  icon={faPowerOff}
+                                  className="w-3 h-3"
+                                />
+                                <span className="hidden sm:inline">
+                                  {t(
+                                    "classes.actions.deactivate",
+                                    "Désactiver",
+                                  )}
+                                </span>
                               </button>
                             )}
                         </div>
@@ -926,10 +1073,13 @@ const ClassesListContent = ({
               <div className="bg-white rounded-2xl shadow-xl p-6">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">
-                    {t('subjects.pagination.showing', { 
+                    {t("subjects.pagination.showing", {
                       start: (currentPage - 1) * itemsPerPage + 1,
-                      end: Math.min(currentPage * itemsPerPage, filteredClasses.length),
-                      total: filteredClasses.length
+                      end: Math.min(
+                        currentPage * itemsPerPage,
+                        filteredClasses.length,
+                      ),
+                      total: filteredClasses.length,
                     })}
                   </div>
 
@@ -939,7 +1089,10 @@ const ClassesListContent = ({
                       disabled={currentPage === 1}
                       className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <FontAwesomeIcon
+                        icon={faChevronLeft}
+                        className="w-4 h-4"
+                      />
                     </button>
 
                     {[...Array(totalPages)].map((_, index) => {
@@ -949,7 +1102,6 @@ const ClassesListContent = ({
                         page === 1 ||
                         page === totalPages ||
                         (page >= currentPage - 1 && page <= currentPage + 1);
-
                       if (!shouldShow) {
                         if (
                           page === currentPage - 2 ||
@@ -963,16 +1115,11 @@ const ClassesListContent = ({
                         }
                         return null;
                       }
-
                       return (
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            isCurrentPage
-                              ? "bg-blue-600 text-white"
-                              : "border border-gray-300 hover:bg-gray-50"
-                          }`}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isCurrentPage ? "bg-blue-600 text-white" : "border border-gray-300 hover:bg-gray-50"}`}
                         >
                           {page}
                         </button>
@@ -984,7 +1131,10 @@ const ClassesListContent = ({
                       disabled={currentPage === totalPages}
                       className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <FontAwesomeIcon
+                        icon={faChevronRight}
+                        className="w-4 h-4"
+                      />
                     </button>
                   </div>
                 </div>
@@ -1038,5 +1188,4 @@ const ClassesListContent = ({
     </div>
   );
 };
-
 export default ClassesListContent;

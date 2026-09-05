@@ -1,6 +1,10 @@
 import React from "react";
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronLeft,
+  faChevronRight,
+  faEllipsis,
+} from "@fortawesome/free-solid-svg-icons";
 const Pagination = ({
   currentPage,
   totalPages,
@@ -10,12 +14,10 @@ const Pagination = ({
 }) => {
   // Don't render if there's only one page or no pages
   if (totalPages <= 1) return null;
-
   const getVisiblePages = () => {
     const delta = 2;
     const range = [];
     const rangeWithDots = [];
-
     for (
       let i = Math.max(2, currentPage - delta);
       i <= Math.min(totalPages - 1, currentPage + delta);
@@ -23,26 +25,20 @@ const Pagination = ({
     ) {
       range.push(i);
     }
-
     if (currentPage - delta > 2) {
       rangeWithDots.push(1, "...");
     } else {
       rangeWithDots.push(1);
     }
-
     rangeWithDots.push(...range);
-
     if (currentPage + delta < totalPages - 1) {
       rangeWithDots.push("...", totalPages);
     } else {
       rangeWithDots.push(totalPages);
     }
-
     return rangeWithDots;
   };
-
   const visiblePages = getVisiblePages();
-
   const handlePageClick = (page) => {
     if (
       page !== "..." &&
@@ -53,19 +49,16 @@ const Pagination = ({
       onPageChange(page);
     }
   };
-
   const handlePrevious = () => {
     if (currentPage > 1) {
       onPageChange(currentPage - 1);
     }
   };
-
   const handleNext = () => {
     if (currentPage < totalPages) {
       onPageChange(currentPage + 1);
     }
   };
-
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6">
       {showInfo && totalItems > 0 && (
@@ -82,14 +75,10 @@ const Pagination = ({
           disabled={currentPage === 1}
           className={`
             inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200
-            ${
-              currentPage === 1
-                ? "text-slate-400 cursor-not-allowed"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            }
+            ${currentPage === 1 ? "text-slate-400 cursor-not-allowed" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}
           `}
         >
-          <ChevronLeft className="w-4 h-4 mr-1" />
+          <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4 mr-1" />
           Précédent
         </button>
 
@@ -99,18 +88,14 @@ const Pagination = ({
             <React.Fragment key={index}>
               {page === "..." ? (
                 <span className="inline-flex items-center justify-center w-10 h-10 text-slate-400">
-                  <MoreHorizontal className="w-4 h-4" />
+                  <FontAwesomeIcon icon={faEllipsis} className="w-4 h-4" />
                 </span>
               ) : (
                 <button
                   onClick={() => handlePageClick(page)}
                   className={`
                     inline-flex items-center justify-center w-10 h-10 text-sm font-medium rounded-lg transition-all duration-200
-                    ${
-                      page === currentPage
-                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                    }
+                    ${page === currentPage ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}
                   `}
                 >
                   {page}
@@ -131,19 +116,14 @@ const Pagination = ({
           disabled={currentPage === totalPages}
           className={`
             inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200
-            ${
-              currentPage === totalPages
-                ? "text-slate-400 cursor-not-allowed"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            }
+            ${currentPage === totalPages ? "text-slate-400 cursor-not-allowed" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}
           `}
         >
           Suivant
-          <ChevronRight className="w-4 h-4 ml-1" />
+          <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4 ml-1" />
         </button>
       </div>
     </div>
   );
 };
-
 export default Pagination;

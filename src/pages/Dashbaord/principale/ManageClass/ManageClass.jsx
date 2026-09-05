@@ -1,62 +1,79 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  Video,
-  Users,
-  MessageSquare,
-  FileText,
-  Clipboard,
-  Monitor,
-  MicOff,
-  Mic,
-  Camera,
-  CameraOff,
-  Hand,
-  X,
-  Send,
-  Plus,
-  Calendar,
-  Clock,
-  Settings,
-  Download,
-  UploadCloud,
-  CheckCircle,
-  ArrowLeft,
-  Maximize2,
-  Minimize2,
-  ChevronDown,
-  MoreVertical,
-  Eye,
-  Bell,
-  AlertCircle,
-  Search,
-  Filter,
-  BookOpen,
-  Check,
-  ChevronRight,
-} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMobile } from "../../../../hooks/useMobile";
-
-const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) => {
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowLeft,
+  faCalendarDays,
+  faCamera,
+  faClipboard,
+  faCloudArrowUp,
+  faCompress,
+  faDesktop,
+  faDownload,
+  faEllipsisVertical,
+  faExpand,
+  faFileLines,
+  faFilter,
+  faGear,
+  faHand,
+  faMagnifyingGlass,
+  faMessage,
+  faMicrophone,
+  faMicrophoneSlash,
+  faPaperPlane,
+  faPlus,
+  faUsers,
+  faVideo,
+  faVideoSlash,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
+import { asIconComponent } from "../../../../utils/faIconAdapter";
+const Clipboard = asIconComponent(faClipboard);
+const FileText = asIconComponent(faFileLines);
+const Video = asIconComponent(faVideo);
+const ManageClassMobile = ({
+  classeInfo,
+  participants,
+  chatMessages,
+  onBack,
+}) => {
   const [activeTab, setActiveTab] = useState("video");
   const [micActive, setMicActive] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
-
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
       <header className="flex items-center justify-between px-4 py-4 bg-gray-900/50 backdrop-blur-md z-10">
-        <button onClick={onBack} className="p-2 bg-gray-800 rounded-2xl hover:bg-gray-700 transition-colors">
-          <ArrowLeft size={20} />
+        <button
+          onClick={onBack}
+          className="p-2 bg-gray-800 rounded-2xl hover:bg-gray-700 transition-colors"
+        >
+          <FontAwesomeIcon
+            icon={faArrowLeft}
+            style={{
+              fontSize: 20,
+            }}
+          />
         </button>
         <div className="text-center">
-          <h1 className="text-sm font-bold truncate max-w-[150px]">{classeInfo.name}</h1>
+          <h1 className="text-sm font-bold truncate max-w-[150px]">
+            {classeInfo.name}
+          </h1>
           <p className="text-[10px] text-gray-400">Dr. Richard Martinez</p>
         </div>
         <div className="flex space-x-2">
-          <button onClick={() => setShowParticipants(true)} className="p-2 bg-gray-800 rounded-2xl relative">
-            <Users size={20} />
+          <button
+            onClick={() => setShowParticipants(true)}
+            className="p-2 bg-gray-800 rounded-2xl relative"
+          >
+            <FontAwesomeIcon
+              icon={faUsers}
+              style={{
+                fontSize: 20,
+              }}
+            />
             <span className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full border border-gray-900"></span>
           </button>
         </div>
@@ -64,18 +81,26 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
 
       <div className="flex px-4 py-2 bg-gray-900/50 border-b border-gray-800 overflow-x-auto no-scrollbar space-x-2">
         {[
-          { id: "video", label: "Meeting", icon: Video },
-          { id: "assignments", label: "Homework", icon: Clipboard },
-          { id: "docs", label: "Library", icon: FileText }
+          {
+            id: "video",
+            label: "Meeting",
+            icon: Video,
+          },
+          {
+            id: "assignments",
+            label: "Homework",
+            icon: Clipboard,
+          },
+          {
+            id: "docs",
+            label: "Library",
+            icon: FileText,
+          },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
-              activeTab === tab.id
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-              : "bg-gray-800 text-gray-400"
-            }`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all ${activeTab === tab.id ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "bg-gray-800 text-gray-400"}`}
           >
             <tab.icon size={14} />
             <span>{tab.label}</span>
@@ -87,21 +112,39 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
         <AnimatePresence mode="wait">
           {activeTab === "video" && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{
+                opacity: 0,
+              }}
+              animate={{
+                opacity: 1,
+              }}
+              exit={{
+                opacity: 0,
+              }}
               className="h-full flex flex-col"
             >
               <div className="flex-1 bg-gray-800 m-4 rounded-3xl overflow-hidden relative shadow-2xl">
                 {!cameraActive ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800/80 backdrop-blur-xl">
                     <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center mb-4 border-2 border-gray-600">
-                      <CameraOff size={40} className="text-gray-500" />
+                      <FontAwesomeIcon
+                        icon={faVideoSlash}
+                        className="text-gray-500"
+                        style={{
+                          fontSize: 40,
+                        }}
+                      />
                     </div>
-                    <p className="text-gray-400 font-medium">Your camera is off</p>
+                    <p className="text-gray-400 font-medium">
+                      Your camera is off
+                    </p>
                   </div>
                 ) : (
-                  <img src="/api/placeholder/400/600" alt="Main video" className="w-full h-full object-cover" />
+                  <img
+                    src="/api/placeholder/400/600"
+                    alt="Main video"
+                    className="w-full h-full object-cover"
+                  />
                 )}
                 <div className="absolute bottom-4 left-4 flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -112,14 +155,42 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
               <div className="px-4 pb-4">
                 <div className="flex items-center space-x-3 overflow-x-auto no-scrollbar pb-2">
                   {participants.slice(1, 6).map((p) => (
-                    <div key={p.id} className="min-w-[100px] h-[140px] bg-gray-800 rounded-2xl overflow-hidden relative border border-gray-700 shadow-xl">
-                      <img src={`/api/placeholder/100/140?text=${p.name.charAt(0)}`} alt={p.name} className="w-full h-full object-cover opacity-60" />
+                    <div
+                      key={p.id}
+                      className="min-w-[100px] h-[140px] bg-gray-800 rounded-2xl overflow-hidden relative border border-gray-700 shadow-xl"
+                    >
+                      <img
+                        src={`/api/placeholder/100/140?text=${p.name.charAt(0)}`}
+                        alt={p.name}
+                        className="w-full h-full object-cover opacity-60"
+                      />
                       <div className="absolute top-2 right-2 flex flex-col space-y-1">
-                        {!p.hasMic && <div className="p-1 bg-red-500/80 backdrop-blur-sm rounded-lg"><MicOff size={10} /></div>}
-                        {p.hasHand && <div className="p-1 bg-yellow-500/80 backdrop-blur-sm rounded-lg"><Hand size={10} className="text-gray-900" /></div>}
+                        {!p.hasMic && (
+                          <div className="p-1 bg-red-500/80 backdrop-blur-sm rounded-lg">
+                            <FontAwesomeIcon
+                              icon={faMicrophoneSlash}
+                              style={{
+                                fontSize: 10,
+                              }}
+                            />
+                          </div>
+                        )}
+                        {p.hasHand && (
+                          <div className="p-1 bg-yellow-500/80 backdrop-blur-sm rounded-lg">
+                            <FontAwesomeIcon
+                              icon={faHand}
+                              className="text-gray-900"
+                              style={{
+                                fontSize: 10,
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                        <p className="text-[10px] font-bold truncate">{p.name.split(' ')[0]}</p>
+                        <p className="text-[10px] font-bold truncate">
+                          {p.name.split(" ")[0]}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -130,21 +201,64 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
                 <div className="flex justify-around items-center max-w-sm mx-auto">
                   <button
                     onClick={() => setMicActive(!micActive)}
-                    className={`p-5 rounded-3xl transition-all shadow-xl ${micActive ? 'bg-blue-600 shadow-blue-500/20' : 'bg-gray-800 border border-gray-700'}`}
+                    className={`p-5 rounded-3xl transition-all shadow-xl ${micActive ? "bg-blue-600 shadow-blue-500/20" : "bg-gray-800 border border-gray-700"}`}
                   >
-                    {micActive ? <Mic size={24} /> : <MicOff size={24} className="text-red-500" />}
+                    {micActive ? (
+                      <FontAwesomeIcon
+                        icon={faMicrophone}
+                        style={{
+                          fontSize: 24,
+                        }}
+                      />
+                    ) : (
+                      <FontAwesomeIcon
+                        icon={faMicrophoneSlash}
+                        className="text-red-500"
+                        style={{
+                          fontSize: 24,
+                        }}
+                      />
+                    )}
                   </button>
                   <button
                     onClick={() => setCameraActive(!cameraActive)}
-                    className={`p-5 rounded-3xl transition-all shadow-xl ${cameraActive ? 'bg-blue-600 shadow-blue-500/20' : 'bg-gray-800 border border-gray-700'}`}
+                    className={`p-5 rounded-3xl transition-all shadow-xl ${cameraActive ? "bg-blue-600 shadow-blue-500/20" : "bg-gray-800 border border-gray-700"}`}
                   >
-                    {cameraActive ? <Camera size={24} /> : <CameraOff size={24} className="text-red-500" />}
+                    {cameraActive ? (
+                      <FontAwesomeIcon
+                        icon={faCamera}
+                        style={{
+                          fontSize: 24,
+                        }}
+                      />
+                    ) : (
+                      <FontAwesomeIcon
+                        icon={faVideoSlash}
+                        className="text-red-500"
+                        style={{
+                          fontSize: 24,
+                        }}
+                      />
+                    )}
                   </button>
-                  <button onClick={() => setShowChat(true)} className="p-5 rounded-3xl bg-gray-800 border border-gray-700 shadow-xl">
-                    <MessageSquare size={24} />
+                  <button
+                    onClick={() => setShowChat(true)}
+                    className="p-5 rounded-3xl bg-gray-800 border border-gray-700 shadow-xl"
+                  >
+                    <FontAwesomeIcon
+                      icon={faMessage}
+                      style={{
+                        fontSize: 24,
+                      }}
+                    />
                   </button>
                   <button className="p-5 rounded-3xl bg-red-600 shadow-xl shadow-red-500/20">
-                    <X size={24} />
+                    <FontAwesomeIcon
+                      icon={faXmark}
+                      style={{
+                        fontSize: 24,
+                      }}
+                    />
                   </button>
                 </div>
               </div>
@@ -153,27 +267,60 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
 
           {activeTab === "assignments" && (
             <motion.div
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -20, opacity: 0 }}
+              initial={{
+                x: 20,
+                opacity: 0,
+              }}
+              animate={{
+                x: 0,
+                opacity: 1,
+              }}
+              exit={{
+                x: -20,
+                opacity: 0,
+              }}
               className="p-4 h-full overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold">Your Assignments</h2>
-                <button className="p-2 bg-blue-600 rounded-xl"><Maximize2 size={16}/></button>
+                <button className="p-2 bg-blue-600 rounded-xl">
+                  <FontAwesomeIcon
+                    icon={faExpand}
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
+                </button>
               </div>
               <div className="space-y-4 pb-20">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-gray-800 border border-gray-700 p-5 rounded-[28px] hover:border-blue-500/50 transition-all group">
+                  <div
+                    key={i}
+                    className="bg-gray-800 border border-gray-700 p-5 rounded-[28px] hover:border-blue-500/50 transition-all group"
+                  >
                     <div className="flex justify-between items-start mb-3">
                       <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                        <Clipboard size={20} />
+                        <FontAwesomeIcon
+                          icon={faClipboard}
+                          style={{
+                            fontSize: 20,
+                          }}
+                        />
                       </div>
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500">Due May {10+i}</span>
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500">
+                        Due May {10 + i}
+                      </span>
                     </div>
-                    <h3 className="font-bold text-lg mb-2">Advanced Mathematics - Part {i}</h3>
-                    <p className="text-sm text-gray-400 mb-4 line-clamp-2">Complete the exercises on page {40+i} regarding linear equations and matrix transformations.</p>
-                    <button className="w-full py-3 bg-gray-700 rounded-2xl text-xs font-bold hover:bg-gray-600 transition-colors">View Details</button>
+                    <h3 className="font-bold text-lg mb-2">
+                      Advanced Mathematics - Part {i}
+                    </h3>
+                    <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+                      Complete the exercises on page {40 + i} regarding linear
+                      equations and matrix transformations.
+                    </p>
+                    <button className="w-full py-3 bg-gray-700 rounded-2xl text-xs font-bold hover:bg-gray-600 transition-colors">
+                      View Details
+                    </button>
                   </div>
                 ))}
               </div>
@@ -182,21 +329,50 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
 
           {activeTab === "docs" && (
             <motion.div
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -20, opacity: 0 }}
+              initial={{
+                x: 20,
+                opacity: 0,
+              }}
+              animate={{
+                x: 0,
+                opacity: 1,
+              }}
+              exit={{
+                x: -20,
+                opacity: 0,
+              }}
               className="p-4 h-full overflow-y-auto"
             >
               <h2 className="text-xl font-bold mb-6">Class Resources</h2>
               <div className="grid grid-cols-2 gap-4 pb-20">
-                {['PDF', 'DOC', 'IMG', 'VID'].map((type, i) => (
-                  <div key={i} className="bg-gray-800 border border-gray-700 p-4 rounded-3xl flex flex-col items-center text-center">
+                {["PDF", "DOC", "IMG", "VID"].map((type, i) => (
+                  <div
+                    key={i}
+                    className="bg-gray-800 border border-gray-700 p-4 rounded-3xl flex flex-col items-center text-center"
+                  >
                     <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center mb-3">
-                      <FileText size={24} className="text-blue-400" />
+                      <FontAwesomeIcon
+                        icon={faFileLines}
+                        className="text-blue-400"
+                        style={{
+                          fontSize: 24,
+                        }}
+                      />
                     </div>
-                    <span className="text-[10px] font-bold text-gray-500 mb-1">{type} File</span>
-                    <h4 className="text-xs font-bold mb-3 truncate w-full">Lecture_Note_{i+1}</h4>
-                    <button className="p-2 bg-gray-700 rounded-xl w-full flex justify-center"><Send size={14}/></button>
+                    <span className="text-[10px] font-bold text-gray-500 mb-1">
+                      {type} File
+                    </span>
+                    <h4 className="text-xs font-bold mb-3 truncate w-full">
+                      Lecture_Note_{i + 1}
+                    </h4>
+                    <button className="p-2 bg-gray-700 rounded-xl w-full flex justify-center">
+                      <FontAwesomeIcon
+                        icon={faPaperPlane}
+                        style={{
+                          fontSize: 14,
+                        }}
+                      />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -208,19 +384,29 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
       <AnimatePresence>
         {showChat && (
           <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            initial={{
+              y: "100%",
+            }}
+            animate={{
+              y: 0,
+            }}
+            exit={{
+              y: "100%",
+            }}
             className="fixed inset-0 bg-gray-900 z-[100] flex flex-col"
           >
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <h3 className="font-bold">Live Chat</h3>
-              <button onClick={() => setShowChat(false)}><X/></button>
+              <button onClick={() => setShowChat(false)}>
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
             </div>
             <div className="flex-1 p-4 overflow-y-auto space-y-4">
               {chatMessages.map((m) => (
                 <div key={m.id} className="flex flex-col space-y-1">
-                  <span className="text-[10px] font-bold text-blue-400">{m.user}</span>
+                  <span className="text-[10px] font-bold text-blue-400">
+                    {m.user}
+                  </span>
                   <div className="bg-gray-800 p-3 rounded-2xl rounded-tl-none">
                     <p className="text-sm">{m.message}</p>
                   </div>
@@ -229,8 +415,18 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
             </div>
             <div className="p-4 bg-gray-900 border-t border-gray-800">
               <div className="flex space-x-2 bg-gray-800 rounded-2xl p-2">
-                <input placeholder="Type a message..." className="bg-transparent flex-1 px-4 outline-none text-sm" />
-                <button className="p-2 bg-blue-600 rounded-xl"><Send size={18}/></button>
+                <input
+                  placeholder="Type a message..."
+                  className="bg-transparent flex-1 px-4 outline-none text-sm"
+                />
+                <button className="p-2 bg-blue-600 rounded-xl">
+                  <FontAwesomeIcon
+                    icon={faPaperPlane}
+                    style={{
+                      fontSize: 18,
+                    }}
+                  />
+                </button>
               </div>
             </div>
           </motion.div>
@@ -240,26 +436,56 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
       <AnimatePresence>
         {showParticipants && (
           <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
+            initial={{
+              x: "100%",
+            }}
+            animate={{
+              x: 0,
+            }}
+            exit={{
+              x: "100%",
+            }}
             className="fixed inset-0 bg-gray-900 z-[100] p-4 pt-12"
           >
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold">Participants ({participants.length})</h2>
-              <button onClick={() => setShowParticipants(false)} className="p-3 bg-gray-800 rounded-2xl"><X/></button>
+              <h2 className="text-2xl font-bold">
+                Participants ({participants.length})
+              </h2>
+              <button
+                onClick={() => setShowParticipants(false)}
+                className="p-3 bg-gray-800 rounded-2xl"
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
             </div>
             <div className="space-y-4">
-              {participants.map(p => (
-                <div key={p.id} className="flex items-center justify-between p-4 bg-gray-800 rounded-[24px]">
+              {participants.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-4 bg-gray-800 rounded-[24px]"
+                >
                   <div className="flex items-center space-x-4">
-                    <img src={`/api/placeholder/40/40?text=${p.name.charAt(0)}`} className="w-10 h-10 rounded-xl" alt={p.name} />
+                    <img
+                      src={`/api/placeholder/40/40?text=${p.name.charAt(0)}`}
+                      className="w-10 h-10 rounded-xl"
+                      alt={p.name}
+                    />
                     <div>
                       <h4 className="font-bold text-sm">{p.name}</h4>
-                      <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{p.role}</span>
+                      <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                        {p.role}
+                      </span>
                     </div>
                   </div>
-                  {!p.hasMic && <MicOff size={16} className="text-gray-600" />}
+                  {!p.hasMic && (
+                    <FontAwesomeIcon
+                      icon={faMicrophoneSlash}
+                      className="text-gray-600"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -269,7 +495,6 @@ const ManageClassMobile = ({ classeInfo, participants, chatMessages, onBack }) =
     </div>
   );
 };
-
 const ManageClass = ({ classInfo, onBack }) => {
   // États principaux
   const [activeTab, setActiveTab] = useState("videoconference");
@@ -295,7 +520,6 @@ const ManageClass = ({ classInfo, onBack }) => {
     currentSession: "Algèbre Linéaire - Séance 12",
     nextSession: "Vendredi 17 Mai, 9:00",
   };
-
   const participants = [
     {
       id: 1,
@@ -370,7 +594,6 @@ const ManageClass = ({ classInfo, onBack }) => {
       hasCamera: false,
     },
   ];
-
   const chatMessages = [
     {
       id: 1,
@@ -412,7 +635,6 @@ const ManageClass = ({ classInfo, onBack }) => {
       timestamp: "09:08",
     },
   ];
-
   const assignments = [
     {
       id: 1,
@@ -451,7 +673,6 @@ const ManageClass = ({ classInfo, onBack }) => {
       points: 15,
     },
   ];
-
   const documents = [
     {
       id: 1,
@@ -461,7 +682,6 @@ const ManageClass = ({ classInfo, onBack }) => {
       size: "2.4 MB",
       category: "cours",
     },
-
     {
       id: 2,
       title: "Exercices supplémentaires",
@@ -495,7 +715,6 @@ const ManageClass = ({ classInfo, onBack }) => {
         setShowParticipants(false);
       }
     };
-
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
@@ -508,7 +727,6 @@ const ManageClass = ({ classInfo, onBack }) => {
     console.log("Message envoyé:", chatMessage);
     setChatMessage("");
   };
-
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       if (videoContainerRef.current.requestFullscreen) {
@@ -522,11 +740,9 @@ const ManageClass = ({ classInfo, onBack }) => {
       }
     }
   };
-
   const handleStartSharing = () => {
     setSharingScreen(true);
   };
-
   const handleStopSharing = () => {
     setSharingScreen(false);
   };
@@ -536,7 +752,6 @@ const ManageClass = ({ classInfo, onBack }) => {
     const matchesSearch = assignment.title
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-
     if (assignmentFilter === "all") return matchesSearch;
     if (assignmentFilter === "active")
       return matchesSearch && assignment.status === "active";
@@ -544,15 +759,12 @@ const ManageClass = ({ classInfo, onBack }) => {
       return matchesSearch && assignment.status === "upcoming";
     if (assignmentFilter === "completed")
       return matchesSearch && assignment.status === "completed";
-
     return matchesSearch;
   });
-
   const filteredDocuments = documents.filter((document) => {
     const matchesSearch = document.title
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-
     if (documentFilter === "all") return matchesSearch;
     if (documentFilter === "cours")
       return matchesSearch && document.category === "cours";
@@ -562,7 +774,6 @@ const ManageClass = ({ classInfo, onBack }) => {
       return matchesSearch && document.category === "presentations";
     if (documentFilter === "corriges")
       return matchesSearch && document.category === "corriges";
-
     return matchesSearch;
   });
 
@@ -576,19 +787,23 @@ const ManageClass = ({ classInfo, onBack }) => {
       points: "100",
       attachments: [],
     });
-
     const handleSubmit = (e) => {
       e.preventDefault();
       console.log("Nouveau devoir créé:", assignmentData);
       setShowCreateAssignment(false);
     };
-
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
           <div className="flex justify-between items-center mb-4">
             <button onClick={onBack} className="back-button">
-              <ArrowLeft size={20} className="mr-1" />
+              <FontAwesomeIcon
+                icon={faArrowLeft}
+                className="mr-1"
+                style={{
+                  fontSize: 20,
+                }}
+              />
               Back to Classes
             </button>
             <h2>Manage Class</h2>
@@ -597,7 +812,12 @@ const ManageClass = ({ classInfo, onBack }) => {
               className="text-gray-500 hover:text-gray-700"
               onClick={() => setShowCreateAssignment(false)}
             >
-              <X size={20} />
+              <FontAwesomeIcon
+                icon={faXmark}
+                style={{
+                  fontSize: 20,
+                }}
+              />
             </button>
           </div>
 
@@ -698,7 +918,13 @@ const ManageClass = ({ classInfo, onBack }) => {
                 Pièces jointes
               </label>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <UploadCloud size={36} className="mx-auto text-gray-400 mb-2" />
+                <FontAwesomeIcon
+                  icon={faCloudArrowUp}
+                  className="mx-auto text-gray-400 mb-2"
+                  style={{
+                    fontSize: 36,
+                  }}
+                />
                 <p className="text-sm text-gray-500">
                   Glissez et déposez des fichiers ici ou
                   <button
@@ -746,7 +972,12 @@ const ManageClass = ({ classInfo, onBack }) => {
               className="text-gray-500 hover:text-gray-700"
               onClick={onClose}
             >
-              <X size={20} />
+              <FontAwesomeIcon
+                icon={faXmark}
+                style={{
+                  fontSize: 20,
+                }}
+              />
             </button>
           </div>
 
@@ -754,24 +985,24 @@ const ManageClass = ({ classInfo, onBack }) => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    assignment.status === "active"
-                      ? "bg-green-100 text-green-800"
-                      : assignment.status === "upcoming"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${assignment.status === "active" ? "bg-green-100 text-green-800" : assignment.status === "upcoming" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}
                 >
                   {assignment.status === "active"
                     ? "Actif"
                     : assignment.status === "upcoming"
-                    ? "À venir"
-                    : "Terminé"}
+                      ? "À venir"
+                      : "Terminé"}
                 </span>
               </div>
               <div className="text-sm text-gray-600">
-                <Calendar size={14} className="inline mr-1" />À rendre avant le{" "}
-                {assignment.dueDate}
+                <FontAwesomeIcon
+                  icon={faCalendarDays}
+                  className="inline mr-1"
+                  style={{
+                    fontSize: 14,
+                  }}
+                />
+                À rendre avant le {assignment.dueDate}
               </div>
             </div>
 
@@ -810,7 +1041,13 @@ const ManageClass = ({ classInfo, onBack }) => {
                     key={i}
                     className="flex items-center p-2 border rounded-lg"
                   >
-                    <FileText size={16} className="text-gray-500 mr-2" />
+                    <FontAwesomeIcon
+                      icon={faFileLines}
+                      className="text-gray-500 mr-2"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
                     <span className="text-sm text-gray-600">
                       Document_{i + 1}.pdf
                     </span>
@@ -844,20 +1081,17 @@ const ManageClass = ({ classInfo, onBack }) => {
       </div>
     );
   };
-
   const isMobile = useMobile();
-
   if (isMobile) {
     return (
-      <ManageClassMobile 
-        classeInfo={classeInfo} 
-        participants={participants} 
-        chatMessages={chatMessages} 
-        onBack={onBack} 
+      <ManageClassMobile
+        classeInfo={classeInfo}
+        participants={participants}
+        chatMessages={chatMessages}
+        onBack={onBack}
       />
     );
   }
-
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* En-tête de la classe */}
@@ -865,14 +1099,25 @@ const ManageClass = ({ classInfo, onBack }) => {
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             <button className="mr-4 text-gray-600 hover:text-gray-900">
-              <ArrowLeft size={20} />
+              <FontAwesomeIcon
+                icon={faArrowLeft}
+                style={{
+                  fontSize: 20,
+                }}
+              />
             </button>
             <div>
               <h1 className="text-xl font-bold text-gray-900">
                 {classeInfo.name}
               </h1>
               <div className="flex items-center text-sm text-gray-600 mt-1">
-                <Calendar size={14} className="mr-1" />
+                <FontAwesomeIcon
+                  icon={faCalendarDays}
+                  className="mr-1"
+                  style={{
+                    fontSize: 14,
+                  }}
+                />
                 <span>{classeInfo.schedule}</span>
               </div>
             </div>
@@ -887,7 +1132,12 @@ const ManageClass = ({ classInfo, onBack }) => {
               </div>
             </div>
             <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full">
-              <Settings size={20} />
+              <FontAwesomeIcon
+                icon={faGear}
+                style={{
+                  fontSize: 20,
+                }}
+              />
             </button>
           </div>
         </div>
@@ -897,36 +1147,42 @@ const ManageClass = ({ classInfo, onBack }) => {
       <div className="bg-white border-b px-6">
         <div className="flex flex-wrap -mb-px">
           <button
-            className={`inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 ${
-              activeTab === "videoconference"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
+            className={`inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 ${activeTab === "videoconference" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
             onClick={() => setActiveTab("videoconference")}
           >
-            <Video size={18} className="mr-2" />
+            <FontAwesomeIcon
+              icon={faVideo}
+              className="mr-2"
+              style={{
+                fontSize: 18,
+              }}
+            />
             Visioconférence
           </button>
           <button
-            className={`inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 ${
-              activeTab === "assignments"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
+            className={`inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 ${activeTab === "assignments" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
             onClick={() => setActiveTab("assignments")}
           >
-            <Clipboard size={18} className="mr-2" />
+            <FontAwesomeIcon
+              icon={faClipboard}
+              className="mr-2"
+              style={{
+                fontSize: 18,
+              }}
+            />
             Devoirs
           </button>
           <button
-            className={`inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 ${
-              activeTab === "documents"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
+            className={`inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 ${activeTab === "documents" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
             onClick={() => setActiveTab("documents")}
           >
-            <FileText size={18} className="mr-2" />
+            <FontAwesomeIcon
+              icon={faFileLines}
+              className="mr-2"
+              style={{
+                fontSize: 18,
+              }}
+            />
             Documents
           </button>
         </div>
@@ -940,9 +1196,7 @@ const ManageClass = ({ classInfo, onBack }) => {
             {/* Zone principale de la visioconférence */}
             <div
               ref={videoContainerRef}
-              className={`flex-1 flex flex-col ${
-                fullscreenMode ? "fixed inset-0 z-50 bg-black" : ""
-              }`}
+              className={`flex-1 flex flex-col ${fullscreenMode ? "fixed inset-0 z-50 bg-black" : ""}`}
             >
               {/* Écran vidéo */}
               <div className="flex-1 bg-gray-900 relative p-2">
@@ -962,7 +1216,13 @@ const ManageClass = ({ classInfo, onBack }) => {
                   ) : (
                     <>
                       <div className="text-gray-400 text-center">
-                        <Camera size={48} className="mx-auto mb-2 opacity-20" />
+                        <FontAwesomeIcon
+                          icon={faCamera}
+                          className="mx-auto mb-2 opacity-20"
+                          style={{
+                            fontSize: 48,
+                          }}
+                        />
                         <p className="text-sm">
                           {cameraActive
                             ? "Caméra en cours de chargement..."
@@ -988,9 +1248,7 @@ const ManageClass = ({ classInfo, onBack }) => {
                       >
                         {participant.hasCamera ? (
                           <img
-                            src={`/api/placeholder/96/144?text=${participant.name.charAt(
-                              0
-                            )}`}
+                            src={`/api/placeholder/96/144?text=${participant.name.charAt(0)}`}
                             alt={participant.name}
                             className="w-full h-full object-cover"
                           />
@@ -1004,12 +1262,23 @@ const ManageClass = ({ classInfo, onBack }) => {
                         <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1">
                           {participant.name.split(" ")[0]}
                           {!participant.hasMic && (
-                            <MicOff size={10} className="inline ml-1" />
+                            <FontAwesomeIcon
+                              icon={faMicrophoneSlash}
+                              className="inline ml-1"
+                              style={{
+                                fontSize: 10,
+                              }}
+                            />
                           )}
                         </div>
                         {participant.hasHand && (
                           <div className="absolute top-1 right-1 text-yellow-300">
-                            <Hand size={14} />
+                            <FontAwesomeIcon
+                              icon={faHand}
+                              style={{
+                                fontSize: 14,
+                              }}
+                            />
                           </div>
                         )}
                       </div>
@@ -1026,44 +1295,62 @@ const ManageClass = ({ classInfo, onBack }) => {
 
                 <div className="flex space-x-2 md:space-x-4">
                   <button
-                    className={`p-3 rounded-full ${
-                      micActive
-                        ? "bg-blue-600 hover:bg-blue-700"
-                        : "bg-gray-700 hover:bg-gray-600"
-                    }`}
+                    className={`p-3 rounded-full ${micActive ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-700 hover:bg-gray-600"}`}
                     onClick={() => setMicActive(!micActive)}
                   >
                     {micActive ? (
-                      <Mic size={20} className="text-white" />
+                      <FontAwesomeIcon
+                        icon={faMicrophone}
+                        className="text-white"
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
                     ) : (
-                      <MicOff size={20} className="text-white" />
+                      <FontAwesomeIcon
+                        icon={faMicrophoneSlash}
+                        className="text-white"
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
                     )}
                   </button>
 
                   <button
-                    className={`p-3 rounded-full ${
-                      cameraActive
-                        ? "bg-blue-600 hover:bg-blue-700"
-                        : "bg-gray-700 hover:bg-gray-600"
-                    }`}
+                    className={`p-3 rounded-full ${cameraActive ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-700 hover:bg-gray-600"}`}
                     onClick={() => setCameraActive(!cameraActive)}
                   >
                     {cameraActive ? (
-                      <Camera size={20} className="text-white" />
+                      <FontAwesomeIcon
+                        icon={faCamera}
+                        className="text-white"
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
                     ) : (
-                      <CameraOff size={20} className="text-white" />
+                      <FontAwesomeIcon
+                        icon={faVideoSlash}
+                        className="text-white"
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
                     )}
                   </button>
 
                   <button
-                    className={`p-3 rounded-full ${
-                      handRaised
-                        ? "bg-yellow-500 hover:bg-yellow-600"
-                        : "bg-gray-700 hover:bg-gray-600"
-                    }`}
+                    className={`p-3 rounded-full ${handRaised ? "bg-yellow-500 hover:bg-yellow-600" : "bg-gray-700 hover:bg-gray-600"}`}
                     onClick={() => setHandRaised(!handRaised)}
                   >
-                    <Hand size={20} className="text-white" />
+                    <FontAwesomeIcon
+                      icon={faHand}
+                      className="text-white"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
                   </button>
 
                   {sharingScreen ? (
@@ -1071,7 +1358,13 @@ const ManageClass = ({ classInfo, onBack }) => {
                       className="p-3 rounded-full bg-red-600 hover:bg-red-700"
                       onClick={handleStopSharing}
                     >
-                      <X size={20} className="text-white" />
+                      <FontAwesomeIcon
+                        icon={faXmark}
+                        className="text-white"
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
                       <span className="hidden md:inline ml-2 text-white text-sm">
                         Arrêter le partage
                       </span>
@@ -1081,7 +1374,13 @@ const ManageClass = ({ classInfo, onBack }) => {
                       className="p-3 rounded-full bg-green-600 hover:bg-green-700"
                       onClick={handleStartSharing}
                     >
-                      <Monitor size={20} className="text-white" />
+                      <FontAwesomeIcon
+                        icon={faDesktop}
+                        className="text-white"
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
                       <span className="hidden md:inline ml-2 text-white text-sm">
                         Partager l'écran
                       </span>
@@ -1095,9 +1394,21 @@ const ManageClass = ({ classInfo, onBack }) => {
                     onClick={toggleFullscreen}
                   >
                     {fullscreenMode ? (
-                      <Minimize2 size={20} className="text-white" />
+                      <FontAwesomeIcon
+                        icon={faCompress}
+                        className="text-white"
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
                     ) : (
-                      <Maximize2 size={20} className="text-white" />
+                      <FontAwesomeIcon
+                        icon={faExpand}
+                        className="text-white"
+                        style={{
+                          fontSize: 20,
+                        }}
+                      />
                     )}
                   </button>
 
@@ -1105,14 +1416,26 @@ const ManageClass = ({ classInfo, onBack }) => {
                     className="md:hidden p-2 rounded-full bg-gray-700 hover:bg-gray-600"
                     onClick={() => setShowParticipants(!showParticipants)}
                   >
-                    <Users size={20} className="text-white" />
+                    <FontAwesomeIcon
+                      icon={faUsers}
+                      className="text-white"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
                   </button>
 
                   <button
                     className="md:hidden p-2 rounded-full bg-gray-700 hover:bg-gray-600"
                     onClick={() => setShowChat(!showChat)}
                   >
-                    <MessageSquare size={20} className="text-white" />
+                    <FontAwesomeIcon
+                      icon={faMessage}
+                      className="text-white"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
                   </button>
                 </div>
               </div>
@@ -1120,38 +1443,40 @@ const ManageClass = ({ classInfo, onBack }) => {
 
             {/* Panneau latéral (participants et chat) */}
             <div
-              className={`w-80 bg-white border-l flex flex-col ${
-                showParticipants || showChat ? "block" : "hidden md:flex"
-              }`}
+              className={`w-80 bg-white border-l flex flex-col ${showParticipants || showChat ? "block" : "hidden md:flex"}`}
             >
               <div className="border-b px-4 py-3">
                 <div className="flex space-x-2">
                   <button
-                    className={`flex-1 text-center py-2 text-sm font-medium rounded-md ${
-                      showParticipants
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
+                    className={`flex-1 text-center py-2 text-sm font-medium rounded-md ${showParticipants ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-100"}`}
                     onClick={() => {
                       setShowParticipants(true);
                       setShowChat(false);
                     }}
                   >
-                    <Users size={16} className="inline mr-1" />
+                    <FontAwesomeIcon
+                      icon={faUsers}
+                      className="inline mr-1"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
                     Participants
                   </button>
                   <button
-                    className={`flex-1 text-center py-2 text-sm font-medium rounded-md ${
-                      showChat
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
+                    className={`flex-1 text-center py-2 text-sm font-medium rounded-md ${showChat ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-100"}`}
                     onClick={() => {
                       setShowChat(true);
                       setShowParticipants(false);
                     }}
                   >
-                    <MessageSquare size={16} className="inline mr-1" />
+                    <FontAwesomeIcon
+                      icon={faMessage}
+                      className="inline mr-1"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
                     Chat
                   </button>
                 </div>
@@ -1170,11 +1495,7 @@ const ManageClass = ({ classInfo, onBack }) => {
                       {participants.map((participant) => (
                         <div
                           key={participant.id}
-                          className={`flex items-center px-3 py-2 rounded-lg ${
-                            participant.isActive
-                              ? "bg-gray-50"
-                              : "bg-gray-100 opacity-60"
-                          }`}
+                          className={`flex items-center px-3 py-2 rounded-lg ${participant.isActive ? "bg-gray-50" : "bg-gray-100 opacity-60"}`}
                         >
                           <div className="relative">
                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -1195,17 +1516,32 @@ const ManageClass = ({ classInfo, onBack }) => {
                           <div className="flex items-center space-x-1">
                             {participant.hasHand && (
                               <div className="text-yellow-500">
-                                <Hand size={16} />
+                                <FontAwesomeIcon
+                                  icon={faHand}
+                                  style={{
+                                    fontSize: 16,
+                                  }}
+                                />
                               </div>
                             )}
                             {!participant.hasMic && (
                               <div className="text-gray-400">
-                                <MicOff size={16} />
+                                <FontAwesomeIcon
+                                  icon={faMicrophoneSlash}
+                                  style={{
+                                    fontSize: 16,
+                                  }}
+                                />
                               </div>
                             )}
                             {!participant.hasCamera && (
                               <div className="text-gray-400">
-                                <CameraOff size={16} />
+                                <FontAwesomeIcon
+                                  icon={faVideoSlash}
+                                  style={{
+                                    fontSize: 16,
+                                  }}
+                                />
                               </div>
                             )}
                           </div>
@@ -1257,7 +1593,12 @@ const ManageClass = ({ classInfo, onBack }) => {
                         className="bg-blue-600 text-white px-3 py-2 rounded-r-lg hover:bg-blue-700"
                         onClick={handleSendMessage}
                       >
-                        <Send size={18} />
+                        <FontAwesomeIcon
+                          icon={faPaperPlane}
+                          style={{
+                            fontSize: 18,
+                          }}
+                        />
                       </button>
                     </div>
                   </div>
@@ -1276,7 +1617,13 @@ const ManageClass = ({ classInfo, onBack }) => {
                 className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                 onClick={() => setShowCreateAssignment(true)}
               >
-                <Plus size={18} className="mr-2" />
+                <FontAwesomeIcon
+                  icon={faPlus}
+                  className="mr-2"
+                  style={{
+                    fontSize: 18,
+                  }}
+                />
                 Créer un devoir
               </button>
             </div>
@@ -1284,9 +1631,12 @@ const ManageClass = ({ classInfo, onBack }) => {
             {/* Filtres pour les devoirs */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <div className="relative w-full md:w-64">
-                <Search
+                <FontAwesomeIcon
+                  icon={faMagnifyingGlass}
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  size={18}
+                  style={{
+                    fontSize: 18,
+                  }}
                 />
                 <input
                   type="text"
@@ -1298,7 +1648,13 @@ const ManageClass = ({ classInfo, onBack }) => {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Filter size={18} className="text-gray-500" />
+                <FontAwesomeIcon
+                  icon={faFilter}
+                  className="text-gray-500"
+                  style={{
+                    fontSize: 18,
+                  }}
+                />
                 <select
                   className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={assignmentFilter}
@@ -1331,33 +1687,39 @@ const ManageClass = ({ classInfo, onBack }) => {
                           </p>
                         </div>
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            assignment.status === "active"
-                              ? "bg-green-100 text-green-800"
-                              : assignment.status === "upcoming"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${assignment.status === "active" ? "bg-green-100 text-green-800" : assignment.status === "upcoming" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}
                         >
                           {assignment.status === "active"
                             ? "Actif"
                             : assignment.status === "upcoming"
-                            ? "À venir"
-                            : "Terminé"}
+                              ? "À venir"
+                              : "Terminé"}
                         </span>
                       </div>
 
                       <div className="mt-4 flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center text-sm text-gray-600">
-                            <Users size={16} className="mr-1" />
+                            <FontAwesomeIcon
+                              icon={faUsers}
+                              className="mr-1"
+                              style={{
+                                fontSize: 16,
+                              }}
+                            />
                             <span>
                               {assignment.submissionCount}/
                               {assignment.totalStudents} soumissions
                             </span>
                           </div>
                           <div className="flex items-center text-sm text-gray-600">
-                            <FileText size={16} className="mr-1" />
+                            <FontAwesomeIcon
+                              icon={faFileLines}
+                              className="mr-1"
+                              style={{
+                                fontSize: 16,
+                              }}
+                            />
                             <span>
                               {assignment.attachments} pièce(s) jointe(s)
                             </span>
@@ -1370,7 +1732,12 @@ const ManageClass = ({ classInfo, onBack }) => {
                           </button>
                           {assignment.status !== "completed" && (
                             <button className="text-gray-500 hover:text-gray-700">
-                              <MoreVertical size={18} />
+                              <FontAwesomeIcon
+                                icon={faEllipsisVertical}
+                                style={{
+                                  fontSize: 18,
+                                }}
+                              />
                             </button>
                           )}
                         </div>
@@ -1395,7 +1762,13 @@ const ManageClass = ({ classInfo, onBack }) => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Documents de la classe</h2>
               <button className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                <Plus size={18} className="mr-2" />
+                <FontAwesomeIcon
+                  icon={faPlus}
+                  className="mr-2"
+                  style={{
+                    fontSize: 18,
+                  }}
+                />
                 Ajouter un document
               </button>
             </div>
@@ -1403,9 +1776,12 @@ const ManageClass = ({ classInfo, onBack }) => {
             {/* Filtres pour les documents */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <div className="relative w-full md:w-64">
-                <Search
+                <FontAwesomeIcon
+                  icon={faMagnifyingGlass}
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  size={18}
+                  style={{
+                    fontSize: 18,
+                  }}
                 />
                 <input
                   type="text"
@@ -1417,7 +1793,13 @@ const ManageClass = ({ classInfo, onBack }) => {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Filter size={18} className="text-gray-500" />
+                <FontAwesomeIcon
+                  icon={faFilter}
+                  className="text-gray-500"
+                  style={{
+                    fontSize: 18,
+                  }}
+                />
                 <select
                   className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={documentFilter}
@@ -1443,7 +1825,13 @@ const ManageClass = ({ classInfo, onBack }) => {
                     <div className="p-4">
                       <div className="flex items-start">
                         <div className="bg-blue-100 p-3 rounded-lg mr-4">
-                          <FileText size={24} className="text-blue-600" />
+                          <FontAwesomeIcon
+                            icon={faFileLines}
+                            className="text-blue-600"
+                            style={{
+                              fontSize: 24,
+                            }}
+                          />
                         </div>
                         <div className="flex-1">
                           <h3 className="font-medium">{document.title}</h3>
@@ -1458,11 +1846,22 @@ const ManageClass = ({ classInfo, onBack }) => {
 
                       <div className="mt-4 flex justify-between items-center">
                         <button className="text-blue-600 hover:text-blue-800 text-sm flex items-center">
-                          <Download size={16} className="mr-1" />
+                          <FontAwesomeIcon
+                            icon={faDownload}
+                            className="mr-1"
+                            style={{
+                              fontSize: 16,
+                            }}
+                          />
                           Télécharger
                         </button>
                         <button className="text-gray-500 hover:text-gray-700">
-                          <MoreVertical size={18} />
+                          <FontAwesomeIcon
+                            icon={faEllipsisVertical}
+                            style={{
+                              fontSize: 18,
+                            }}
+                          />
                         </button>
                       </div>
                     </div>
@@ -1480,5 +1879,4 @@ const ManageClass = ({ classInfo, onBack }) => {
     </div>
   );
 };
-
 export default ManageClass;

@@ -1,30 +1,33 @@
 import React, { useState, useEffect } from "react";
-import {
-  X,
-  Plus,
-  AlertCircle,
-  Calendar,
-  Clock,
-  MapPin,
-  FileText,
-  Users2,
-  BookOpen,
-  Activity,
-  Hash,
-} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import AccederService from "../../../../../../services/accederService";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBookOpen,
+  faCalendarDays,
+  faCircleExclamation,
+  faClock,
+  faFileLines,
+  faHashtag,
+  faHeartPulse,
+  faLocationDot,
+  faPlus,
+  faUserGroup,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
+import { asIconComponent } from "../../../../../../utils/faIconAdapter";
+const Activity = asIconComponent(faHeartPulse);
+const BookOpen = asIconComponent(faBookOpen);
+const Calendar = asIconComponent(faCalendarDays);
+const X = asIconComponent(faXmark);
 const schedulingSchema = yup.object().shape({
   coursId: yup.string().required("Le cours est obligatoire"),
   classeId: yup.string().required("La classe est obligatoire"),
-  dateCoursPrevue: yup
-    .string()
-    .required("La date prevue est obligatoire"),
-    // Note: Date validation will be handled in the form submit logic
+  dateCoursPrevue: yup.string().required("La date prevue est obligatoire"),
+  // Note: Date validation will be handled in the form submit logic
   dateDebutEffectif: yup
     .string()
     .nullable()
@@ -36,7 +39,7 @@ const schedulingSchema = yup.object().shape({
         const { dateFinEffectif } = this.parent;
         if (value && !dateFinEffectif) return false;
         return true;
-      }
+      },
     )
     .test(
       "after-planned",
@@ -45,7 +48,7 @@ const schedulingSchema = yup.object().shape({
         const { dateCoursPrevue } = this.parent;
         if (!value || !dateCoursPrevue) return true;
         return new Date(value) >= new Date(dateCoursPrevue);
-      }
+      },
     ),
   dateFinEffectif: yup
     .string()
@@ -58,7 +61,7 @@ const schedulingSchema = yup.object().shape({
         const { dateDebutEffectif } = this.parent;
         if (value && !dateDebutEffectif) return false;
         return true;
-      }
+      },
     )
     .test(
       "after-start",
@@ -67,7 +70,7 @@ const schedulingSchema = yup.object().shape({
         const { dateDebutEffectif } = this.parent;
         if (!value || !dateDebutEffectif) return true;
         return new Date(value) >= new Date(dateDebutEffectif);
-      }
+      },
     ),
   lieu: yup.string().required("Le lieu est obligatoire"),
   description: yup.string().nullable(),
@@ -83,7 +86,6 @@ const schedulingSchema = yup.object().shape({
   participantsIds: yup.array().of(yup.string()).nullable().optional(),
   etatCoursProgramme: yup.string().required("L'état est obligatoire"),
 });
-
 const CoursProgrammerForm = ({
   isOpen,
   onClose,
@@ -99,7 +101,6 @@ const CoursProgrammerForm = ({
   const [classParticipants, setClassParticipants] = useState([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [submitError, setSubmitError] = useState("");
-
   const {
     register,
     handleSubmit,
@@ -120,7 +121,6 @@ const CoursProgrammerForm = ({
       dateFinEffectif: "",
     },
   });
-
   const watchedParticipants = watch("participantsIds");
   const watchedClassId = watch("classeId");
   const watchedEtat = watch("etatCoursProgramme");
@@ -143,15 +143,11 @@ const CoursProgrammerForm = ({
         setValue("participantsIds", []);
         return;
       }
-
       try {
         setLoadingParticipants(true);
         console.log("Fetching participants for class:", classeId);
-
-        const participants = await AccederService.obtenirUtilisateursAvecAcces(
-          classeId
-        );
-
+        const participants =
+          await AccederService.obtenirUtilisateursAvecAcces(classeId);
         console.log("Raw participants data:", participants);
 
         // Format users properly for the dropdown - EXCLUDE parents
@@ -170,7 +166,6 @@ const CoursProgrammerForm = ({
 
             // Fallback to email or ID if no name is available
             const displayName = fullName || user.email || `User ${user.id}`;
-
             return {
               id: user.id,
               name: displayName,
@@ -182,7 +177,6 @@ const CoursProgrammerForm = ({
           })
           // Sort participants alphabetically by name for better UX
           .sort((a, b) => a.name.localeCompare(b.name));
-
         console.log("Processed participants:", approvedUsers);
         setClassParticipants(approvedUsers);
 
@@ -193,13 +187,12 @@ const CoursProgrammerForm = ({
         console.error("Error fetching class participants:", error);
         setClassParticipants([]);
         setSubmitError(
-          "Erreur lors du chargement des participants de la classe"
+          "Erreur lors du chargement des participants de la classe",
         );
       } finally {
         setLoadingParticipants(false);
       }
     };
-
     if (watchedClassId) {
       fetchClassParticipants(watchedClassId);
     } else {
@@ -213,7 +206,6 @@ const CoursProgrammerForm = ({
   useEffect(() => {
     if (isOpen) {
       setSubmitError("");
-
       if ((modalMode === "edit" || isReprogramme) && selectedScheduledCourse) {
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
@@ -225,29 +217,38 @@ const CoursProgrammerForm = ({
           const minutes = String(date.getMinutes()).padStart(2, "0");
           return `${year}-${month}-${day}T${hours}:${minutes}`;
         };
-
         const initialValues = {
-          coursId: selectedScheduledCourse.coursId || selectedScheduledCourse.cours?.id || "",
-          classeId: selectedScheduledCourse.classeId || (selectedScheduledCourse.classesIds && selectedScheduledCourse.classesIds[0]) || "",
+          coursId:
+            selectedScheduledCourse.coursId ||
+            selectedScheduledCourse.cours?.id ||
+            "",
+          classeId:
+            selectedScheduledCourse.classeId ||
+            (selectedScheduledCourse.classesIds &&
+              selectedScheduledCourse.classesIds[0]) ||
+            "",
           // For reprogramming, clear date fields so the user picks a new date
-          dateCoursPrevue: isReprogramme ? "" : formatDateForInput(
-            selectedScheduledCourse.dateCoursPrevue
-          ),
-          dateDebutEffectif: isReprogramme ? "" : formatDateForInput(
-            selectedScheduledCourse.dateDebutEffectif
-          ),
-          dateFinEffectif: isReprogramme ? "" : formatDateForInput(
-            selectedScheduledCourse.dateFinEffectif
-          ),
+          dateCoursPrevue: isReprogramme
+            ? ""
+            : formatDateForInput(selectedScheduledCourse.dateCoursPrevue),
+          dateDebutEffectif: isReprogramme
+            ? ""
+            : formatDateForInput(selectedScheduledCourse.dateDebutEffectif),
+          dateFinEffectif: isReprogramme
+            ? ""
+            : formatDateForInput(selectedScheduledCourse.dateFinEffectif),
           lieu: selectedScheduledCourse.lieu || "",
           description: isReprogramme
-            ? (selectedScheduledCourse.description?.includes("Annulé:") ? "" : selectedScheduledCourse.description || "")
+            ? selectedScheduledCourse.description?.includes("Annulé:")
+              ? ""
+              : selectedScheduledCourse.description || ""
             : selectedScheduledCourse.description || "",
           capaciteMax: selectedScheduledCourse.capaciteMax?.toString() || "",
           participantsIds: selectedScheduledCourse.participantsIds || [],
-          etatCoursProgramme: isReprogramme ? "PLANIFIE" : (selectedScheduledCourse.etatCoursProgramme || "PLANIFIE"),
+          etatCoursProgramme: isReprogramme
+            ? "PLANIFIE"
+            : selectedScheduledCourse.etatCoursProgramme || "PLANIFIE",
         };
-
         reset(initialValues);
         setSelectedParticipants(initialValues.participantsIds);
       } else {
@@ -255,7 +256,6 @@ const CoursProgrammerForm = ({
       }
     }
   }, [isOpen, modalMode, selectedScheduledCourse, reset]);
-
   const resetForm = () => {
     reset({
       coursId: "",
@@ -273,7 +273,6 @@ const CoursProgrammerForm = ({
     setClassParticipants([]);
     setSubmitError("");
   };
-
   const handleSelectAllParticipants = () => {
     if (selectedParticipants.length === classParticipants.length) {
       handleParticipantChange([]);
@@ -287,12 +286,13 @@ const CoursProgrammerForm = ({
     console.log("Participant selection changed:", {
       previous: selectedParticipants,
       new: newSelectedIds,
-      classParticipants: classParticipants.length
+      classParticipants: classParticipants.length,
     });
     setSelectedParticipants(newSelectedIds);
-    setValue("participantsIds", newSelectedIds, { shouldValidate: true });
+    setValue("participantsIds", newSelectedIds, {
+      shouldValidate: true,
+    });
   };
-
   const getCurrentDateTime = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -302,21 +302,18 @@ const CoursProgrammerForm = ({
     const minutes = String(now.getMinutes()).padStart(2, "0");
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
-
   const getMinDateDebutEffectif = () => {
     if (watchedDatePrevue) {
       return watchedDatePrevue;
     }
     return getCurrentDateTime();
   };
-
   const getMinDateFinEffectif = () => {
     if (watchedDateDebut) {
       return watchedDateDebut;
     }
     return getCurrentDateTime();
   };
-
   const handleFormSubmit = async (data) => {
     try {
       setSubmitError("");
@@ -349,21 +346,17 @@ const CoursProgrammerForm = ({
           return;
         }
       }
-
       const formatDate = (dateString) => {
         if (!dateString) return null;
         return new Date(dateString).toISOString();
       };
-
       const calculateEndDate = (startDate, hoursToAdd = 2) => {
         if (!startDate) return null;
         const date = new Date(startDate);
         date.setHours(date.getHours() + hoursToAdd);
         return date.toISOString();
       };
-
       const isPlanifie = data.etatCoursProgramme === "PLANIFIE";
-
       const scheduleData = {
         coursId: data.coursId,
         professeurId: localStorage.getItem("userId") || "",
@@ -380,44 +373,54 @@ const CoursProgrammerForm = ({
         classesIds: data.classeId ? [data.classeId] : [],
         // Filter and validate participant IDs
         participantsIds: selectedParticipants
-          .filter((id) => id && typeof id === 'string' && id.trim())
-          .map(id => id.trim()),
+          .filter((id) => id && typeof id === "string" && id.trim())
+          .map((id) => id.trim()),
       };
-
       console.log("Submitting schedule data:", {
         ...scheduleData,
         participantCount: scheduleData.participantsIds.length,
-        participantIds: scheduleData.participantsIds
+        participantIds: scheduleData.participantsIds,
       });
       await onSubmit(scheduleData);
     } catch (error) {
       console.error("Error submitting form:", error);
       setSubmitError(
-        error.message || "Une erreur est survenue lors de l'enregistrement"
+        error.message || "Une erreur est survenue lors de l'enregistrement",
       );
     }
   };
-
   const handleClose = () => {
     resetForm();
     onClose();
   };
-
   const shouldDisableDateDebutEffectif = watchedEtat === "PLANIFIE";
   const shouldDisableDateFinEffectif = watchedEtat !== "TERMINE";
-
   const getStatusDisplay = (status) => {
     const statusMap = {
-      PLANIFIE: { icon: Calendar, text: "Planifié", color: "text-blue-600" },
-      EN_COURS: { icon: Activity, text: "En cours", color: "text-green-600" },
-      TERMINE: { icon: BookOpen, text: "Terminé", color: "text-gray-600" },
-      ANNULE: { icon: X, text: "Annulé", color: "text-red-600" },
+      PLANIFIE: {
+        icon: Calendar,
+        text: "Planifié",
+        color: "text-blue-600",
+      },
+      EN_COURS: {
+        icon: Activity,
+        text: "En cours",
+        color: "text-green-600",
+      },
+      TERMINE: {
+        icon: BookOpen,
+        text: "Terminé",
+        color: "text-gray-600",
+      },
+      ANNULE: {
+        icon: X,
+        text: "Annulé",
+        color: "text-red-600",
+      },
     };
     return statusMap[status] || statusMap.PLANIFIE;
   };
-
   if (!isOpen) return null;
-
   return (
     // FIXED: Added higher z-index and proper positioning to avoid header conflicts
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
@@ -426,25 +429,50 @@ const CoursProgrammerForm = ({
         <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
           <div className="flex items-center justify-between">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
-              <Calendar className="mr-2 sm:mr-3 text-indigo-600" size={24} />
+              <FontAwesomeIcon
+                icon={faCalendarDays}
+                className="mr-2 sm:mr-3 text-indigo-600"
+                style={{
+                  fontSize: 24,
+                }}
+              />
               <span className="hidden sm:inline">
-                {isReprogramme ? "Reprogrammer le Cours" : modalMode === "create" ? "Programmer un Cours" : "Modifier la Programmation"}
+                {isReprogramme
+                  ? "Reprogrammer le Cours"
+                  : modalMode === "create"
+                    ? "Programmer un Cours"
+                    : "Modifier la Programmation"}
               </span>
               <span className="sm:hidden">
-                {isReprogramme ? "Reprogrammer" : modalMode === "create" ? "Programmer" : "Modifier"}
+                {isReprogramme
+                  ? "Reprogrammer"
+                  : modalMode === "create"
+                    ? "Programmer"
+                    : "Modifier"}
               </span>
             </h2>
             <button
               onClick={handleClose}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <X size={20} />
+              <FontAwesomeIcon
+                icon={faXmark}
+                style={{
+                  fontSize: 20,
+                }}
+              />
             </button>
           </div>
 
           {submitError && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start text-red-700">
-              <AlertCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="mr-2 flex-shrink-0 mt-0.5"
+                style={{
+                  fontSize: 16,
+                }}
+              />
               <span className="text-sm">{submitError}</span>
             </div>
           )}
@@ -464,17 +492,19 @@ const CoursProgrammerForm = ({
                   htmlFor="coursId"
                   className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
                 >
-                  <BookOpen size={16} className="mr-2 text-indigo-600" />
+                  <FontAwesomeIcon
+                    icon={faBookOpen}
+                    className="mr-2 text-indigo-600"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   Cours *
                 </label>
                 <select
                   id="coursId"
                   {...register("coursId")}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${
-                    errors.coursId
-                      ? "border-red-300 bg-red-50"
-                      : "border-slate-200"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${errors.coursId ? "border-red-300 bg-red-50" : "border-slate-200"}`}
                   disabled={modalMode === "edit" || isReprogramme}
                 >
                   <option value="">Sélectionnez un cours</option>
@@ -486,7 +516,13 @@ const CoursProgrammerForm = ({
                 </select>
                 {errors.coursId && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle size={14} className="mr-1" />
+                    <FontAwesomeIcon
+                      icon={faCircleExclamation}
+                      className="mr-1"
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                     {errors.coursId.message}
                   </p>
                 )}
@@ -497,17 +533,19 @@ const CoursProgrammerForm = ({
                   htmlFor="etatCoursProgramme"
                   className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
                 >
-                  <Activity size={16} className="mr-2 text-indigo-600" />
+                  <FontAwesomeIcon
+                    icon={faHeartPulse}
+                    className="mr-2 text-indigo-600"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   État *
                 </label>
                 <select
                   id="etatCoursProgramme"
                   {...register("etatCoursProgramme")}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${
-                    errors.etatCoursProgramme
-                      ? "border-red-300 bg-red-50"
-                      : "border-slate-200"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${errors.etatCoursProgramme ? "border-red-300 bg-red-50" : "border-slate-200"}`}
                   onChange={(e) => {
                     setValue("etatCoursProgramme", e.target.value);
                     if (e.target.value === "PLANIFIE") {
@@ -526,7 +564,13 @@ const CoursProgrammerForm = ({
                 </select>
                 {errors.etatCoursProgramme && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle size={14} className="mr-1" />
+                    <FontAwesomeIcon
+                      icon={faCircleExclamation}
+                      className="mr-1"
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                     {errors.etatCoursProgramme.message}
                   </p>
                 )}
@@ -540,17 +584,19 @@ const CoursProgrammerForm = ({
                   htmlFor="classeId"
                   className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
                 >
-                  <Users2 size={16} className="mr-2 text-indigo-600" />
+                  <FontAwesomeIcon
+                    icon={faUserGroup}
+                    className="mr-2 text-indigo-600"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   Classe *
                 </label>
                 <select
                   id="classeId"
                   {...register("classeId")}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${
-                    errors.classeId
-                      ? "border-red-300 bg-red-50"
-                      : "border-slate-200"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${errors.classeId ? "border-red-300 bg-red-50" : "border-slate-200"}`}
                 >
                   <option value="">Sélectionnez une classe</option>
                   {classes.map((classe) => (
@@ -561,7 +607,13 @@ const CoursProgrammerForm = ({
                 </select>
                 {errors.classeId && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle size={14} className="mr-1" />
+                    <FontAwesomeIcon
+                      icon={faCircleExclamation}
+                      className="mr-1"
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                     {errors.classeId.message}
                   </p>
                 )}
@@ -572,7 +624,13 @@ const CoursProgrammerForm = ({
                   htmlFor="capaciteMax"
                   className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
                 >
-                  <Hash size={16} className="mr-2 text-indigo-600" />
+                  <FontAwesomeIcon
+                    icon={faHashtag}
+                    className="mr-2 text-indigo-600"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   Capacité maximale
                 </label>
                 <input
@@ -580,16 +638,18 @@ const CoursProgrammerForm = ({
                   type="number"
                   min="1"
                   {...register("capaciteMax")}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${
-                    errors.capaciteMax
-                      ? "border-red-300 bg-red-50"
-                      : "border-slate-200"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${errors.capaciteMax ? "border-red-300 bg-red-50" : "border-slate-200"}`}
                   placeholder="30 (optionnel)"
                 />
                 {errors.capaciteMax && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle size={14} className="mr-1" />
+                    <FontAwesomeIcon
+                      icon={faCircleExclamation}
+                      className="mr-1"
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                     {errors.capaciteMax.message}
                   </p>
                 )}
@@ -599,7 +659,13 @@ const CoursProgrammerForm = ({
             {/* FIXED: Date Controls with better responsive layout */}
             <div className="bg-slate-50 p-4 sm:p-6 rounded-xl">
               <h3 className="text-lg font-semibold text-slate-800 mb-4 sm:mb-6 flex items-center">
-                <Clock className="mr-2 text-indigo-600" size={20} />
+                <FontAwesomeIcon
+                  icon={faClock}
+                  className="mr-2 text-indigo-600"
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
                 Planning des dates
               </h3>
 
@@ -610,25 +676,32 @@ const CoursProgrammerForm = ({
                     htmlFor="dateCoursPrevue"
                     className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                   >
-                    <Calendar size={16} className="mr-2 text-blue-600" />
+                    <FontAwesomeIcon
+                      icon={faCalendarDays}
+                      className="mr-2 text-blue-600"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
                     Date prévue *
                   </label>
                   <input
                     id="dateCoursPrevue"
                     type="datetime-local"
                     {...register("dateCoursPrevue")}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white text-base ${
-                      errors.dateCoursPrevue
-                        ? "border-red-300 bg-red-50"
-                        : "border-slate-200"
-                    }`}
-                    style={{ minHeight: "48px" }}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white text-base ${errors.dateCoursPrevue ? "border-red-300 bg-red-50" : "border-slate-200"}`}
+                    style={{
+                      minHeight: "48px",
+                    }}
                   />
                   {errors.dateCoursPrevue && (
                     <p className="mt-2 text-sm text-red-600 flex items-start">
-                      <AlertCircle
-                        size={14}
+                      <FontAwesomeIcon
+                        icon={faCircleExclamation}
                         className="mr-1 flex-shrink-0 mt-0.5"
+                        style={{
+                          fontSize: 14,
+                        }}
                       />
                       {errors.dateCoursPrevue.message}
                     </p>
@@ -637,69 +710,83 @@ const CoursProgrammerForm = ({
 
                 {/* Effective Dates - Only show when NOT planifié */}
                 {watchedEtat !== "PLANIFIE" && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  <div>
-                    <label
-                      htmlFor="dateDebutEffectif"
-                      className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
-                    >
-                      <Activity size={16} className="mr-2 text-green-600" />
-                      Date début effectif
-                    </label>
-                    <input
-                      id="dateDebutEffectif"
-                      type="datetime-local"
-                      min={getMinDateDebutEffectif()}
-                      {...register("dateDebutEffectif")}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-base ${
-                        errors.dateDebutEffectif
-                          ? "border-red-300 bg-red-50"
-                          : "border-slate-200"
-                      }`}
-                      style={{ minHeight: "48px" }}
-                    />
-                    {errors.dateDebutEffectif && (
-                      <p className="mt-2 text-sm text-red-600 flex items-start">
-                        <AlertCircle
-                          size={14}
-                          className="mr-1 flex-shrink-0 mt-0.5"
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                      <label
+                        htmlFor="dateDebutEffectif"
+                        className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
+                      >
+                        <FontAwesomeIcon
+                          icon={faHeartPulse}
+                          className="mr-2 text-green-600"
+                          style={{
+                            fontSize: 16,
+                          }}
                         />
-                        {errors.dateDebutEffectif.message}
-                      </p>
-                    )}
-                  </div>
+                        Date début effectif
+                      </label>
+                      <input
+                        id="dateDebutEffectif"
+                        type="datetime-local"
+                        min={getMinDateDebutEffectif()}
+                        {...register("dateDebutEffectif")}
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-base ${errors.dateDebutEffectif ? "border-red-300 bg-red-50" : "border-slate-200"}`}
+                        style={{
+                          minHeight: "48px",
+                        }}
+                      />
+                      {errors.dateDebutEffectif && (
+                        <p className="mt-2 text-sm text-red-600 flex items-start">
+                          <FontAwesomeIcon
+                            icon={faCircleExclamation}
+                            className="mr-1 flex-shrink-0 mt-0.5"
+                            style={{
+                              fontSize: 14,
+                            }}
+                          />
+                          {errors.dateDebutEffectif.message}
+                        </p>
+                      )}
+                    </div>
 
-                  <div>
-                    <label
-                      htmlFor="dateFinEffectif"
-                      className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
-                    >
-                      <BookOpen size={16} className="mr-2 text-gray-600" />
-                      Date fin effectif
-                    </label>
-                    <input
-                      id="dateFinEffectif"
-                      type="datetime-local"
-                      min={getMinDateFinEffectif()}
-                      {...register("dateFinEffectif")}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-base ${
-                        errors.dateFinEffectif
-                          ? "border-red-300 bg-red-50"
-                          : "border-slate-200"
-                      }`}
-                      style={{ minHeight: "48px" }}
-                    />
-                    {errors.dateFinEffectif && (
-                      <p className="mt-2 text-sm text-red-600 flex items-start">
-                        <AlertCircle
-                          size={14}
-                          className="mr-1 flex-shrink-0 mt-0.5"
+                    <div>
+                      <label
+                        htmlFor="dateFinEffectif"
+                        className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
+                      >
+                        <FontAwesomeIcon
+                          icon={faBookOpen}
+                          className="mr-2 text-gray-600"
+                          style={{
+                            fontSize: 16,
+                          }}
                         />
-                        {errors.dateFinEffectif.message}
-                      </p>
-                    )}
+                        Date fin effectif
+                      </label>
+                      <input
+                        id="dateFinEffectif"
+                        type="datetime-local"
+                        min={getMinDateFinEffectif()}
+                        {...register("dateFinEffectif")}
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-base ${errors.dateFinEffectif ? "border-red-300 bg-red-50" : "border-slate-200"}`}
+                        style={{
+                          minHeight: "48px",
+                        }}
+                      />
+                      {errors.dateFinEffectif && (
+                        <p className="mt-2 text-sm text-red-600 flex items-start">
+                          <FontAwesomeIcon
+                            icon={faCircleExclamation}
+                            className="mr-1 flex-shrink-0 mt-0.5"
+                            style={{
+                              fontSize: 14,
+                            }}
+                          />
+                          {errors.dateFinEffectif.message}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
                 )}
               </div>
             </div>
@@ -710,21 +797,31 @@ const CoursProgrammerForm = ({
                 htmlFor="lieu"
                 className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
               >
-                <MapPin size={16} className="mr-2 text-indigo-600" />
+                <FontAwesomeIcon
+                  icon={faLocationDot}
+                  className="mr-2 text-indigo-600"
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
                 Lieu *
               </label>
               <input
                 id="lieu"
                 type="text"
                 {...register("lieu")}
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${
-                  errors.lieu ? "border-red-300 bg-red-50" : "border-slate-200"
-                }`}
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${errors.lieu ? "border-red-300 bg-red-50" : "border-slate-200"}`}
                 placeholder="Salle 203, Bâtiment A"
               />
               {errors.lieu && (
                 <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle size={14} className="mr-1" />
+                  <FontAwesomeIcon
+                    icon={faCircleExclamation}
+                    className="mr-1"
+                    style={{
+                      fontSize: 14,
+                    }}
+                  />
                   {errors.lieu.message}
                 </p>
               )}
@@ -736,7 +833,13 @@ const CoursProgrammerForm = ({
                 htmlFor="description"
                 className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
               >
-                <FileText size={16} className="mr-2 text-indigo-600" />
+                <FontAwesomeIcon
+                  icon={faFileLines}
+                  className="mr-2 text-indigo-600"
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
                 Description / Notes
               </label>
               <textarea
@@ -754,18 +857,33 @@ const CoursProgrammerForm = ({
                 <div className="flex-1">
                   <label className="block text-sm font-semibold text-slate-700">
                     <div className="flex items-center">
-                      <Users2 size={16} className="mr-2 text-indigo-600" />
+                      <FontAwesomeIcon
+                        icon={faUserGroup}
+                        className="mr-2 text-indigo-600"
+                        style={{
+                          fontSize: 16,
+                        }}
+                      />
                       Participants (optionnel)
                     </div>
                     {!watchedClassId ? (
                       <span className="block text-xs text-amber-600 font-medium mt-1 flex items-center">
-                        <AlertCircle size={12} className="mr-1" />
+                        <FontAwesomeIcon
+                          icon={faCircleExclamation}
+                          className="mr-1"
+                          style={{
+                            fontSize: 12,
+                          }}
+                        />
                         Sélectionnez d'abord une classe
                       </span>
                     ) : (
                       <span className="block text-xs text-slate-500 mt-1">
-                        <strong>Aucune sélection :</strong> Tous les étudiants de la classe peuvent participer<br/>
-                        <strong>Sélection spécifique :</strong> Seuls les participants sélectionnés peuvent participer
+                        <strong>Aucune sélection :</strong> Tous les étudiants
+                        de la classe peuvent participer
+                        <br />
+                        <strong>Sélection spécifique :</strong> Seuls les
+                        participants sélectionnés peuvent participer
                       </span>
                     )}
                   </label>
@@ -858,12 +976,18 @@ const CoursProgrammerForm = ({
                   {selectedParticipants.length === 0 ? (
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <div className="flex items-start">
-                        <Users2 className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
+                        <FontAwesomeIcon
+                          icon={faUserGroup}
+                          className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0"
+                        />
                         <div className="text-sm text-blue-700">
-                          <div className="font-medium mb-1">Cours ouvert à tous les étudiants de la classe</div>
+                          <div className="font-medium mb-1">
+                            Cours ouvert à tous les étudiants de la classe
+                          </div>
                           <div className="text-xs text-blue-600">
-                            Tous les {classParticipants.length} étudiants de la classe pourront rejoindre ce cours.
-                            Leur présence sera suivie automatiquement.
+                            Tous les {classParticipants.length} étudiants de la
+                            classe pourront rejoindre ce cours. Leur présence
+                            sera suivie automatiquement.
                           </div>
                         </div>
                       </div>
@@ -871,12 +995,18 @@ const CoursProgrammerForm = ({
                   ) : (
                     <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                       <div className="flex items-start">
-                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 mr-2 flex-shrink-0" />
+                        <FontAwesomeIcon
+                          icon={faCircleExclamation}
+                          className="w-4 h-4 text-amber-600 mt-0.5 mr-2 flex-shrink-0"
+                        />
                         <div className="text-sm text-amber-700">
-                          <div className="font-medium mb-1">Cours réservé aux participants sélectionnés</div>
+                          <div className="font-medium mb-1">
+                            Cours réservé aux participants sélectionnés
+                          </div>
                           <div className="text-xs text-amber-600">
-                            Seuls les {selectedParticipants.length} participants sélectionnés pourront rejoindre ce cours.
-                            Les autres étudiants de la classe n'y auront pas accès.
+                            Seuls les {selectedParticipants.length} participants
+                            sélectionnés pourront rejoindre ce cours. Les autres
+                            étudiants de la classe n'y auront pas accès.
                           </div>
                         </div>
                       </div>
@@ -887,7 +1017,13 @@ const CoursProgrammerForm = ({
 
               {errors.participantsIds && (
                 <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle size={14} className="mr-1" />
+                  <FontAwesomeIcon
+                    icon={faCircleExclamation}
+                    className="mr-1"
+                    style={{
+                      fontSize: 14,
+                    }}
+                  />
                   {errors.participantsIds.message}
                 </p>
               )}
@@ -903,7 +1039,13 @@ const CoursProgrammerForm = ({
               onClick={handleClose}
               className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors rounded-lg hover:bg-slate-200 flex items-center justify-center order-2 sm:order-1"
             >
-              <X size={16} className="mr-2" />
+              <FontAwesomeIcon
+                icon={faXmark}
+                className="mr-2"
+                style={{
+                  fontSize: 16,
+                }}
+              />
               Annuler
             </button>
             <button
@@ -945,13 +1087,25 @@ const CoursProgrammerForm = ({
                 </>
               ) : modalMode === "create" ? (
                 <>
-                  <Plus size={16} className="mr-2" />
+                  <FontAwesomeIcon
+                    icon={faPlus}
+                    className="mr-2"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   <span className="hidden sm:inline">Programmer</span>
                   <span className="sm:hidden">Créer</span>
                 </>
               ) : (
                 <>
-                  <BookOpen size={16} className="mr-2" />
+                  <FontAwesomeIcon
+                    icon={faBookOpen}
+                    className="mr-2"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   Sauvegarder
                 </>
               )}
@@ -962,5 +1116,4 @@ const CoursProgrammerForm = ({
     </div>
   );
 };
-
 export default CoursProgrammerForm;

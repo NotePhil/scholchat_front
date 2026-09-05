@@ -1,35 +1,39 @@
 import React, { useState, useEffect } from "react";
-import {
-  BookOpen,
-  Plus,
-  Search,
-  Filter,
-  Edit2,
-  Clock,
-  Calendar,
-  CheckCircle,
-  AlertCircle,
-  ChevronDown,
-  FileText,
-  Star,
-  TrendingUp,
-  Activity,
-  Grid,
-  List,
-  X,
-  RefreshCw,
-} from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import { matiereService } from "../../../../../services/MatiereService";
 import { classService } from "../../../../../services/ClassService";
 import { coursProgrammerService } from "../../../../../services/coursProgrammerService";
-
 import CreateCourseComponent from "./CreateCourseComponent";
 import CourseContentView from "./CourseContentView";
 import CourseCard from "./CourseCard";
 import CourseTableRow from "./CourseTableRow";
 import { motion } from "framer-motion";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faBookOpen,
+  faCalendarDays,
+  faChevronDown,
+  faCircleCheck,
+  faCircleExclamation,
+  faFilter,
+  faList,
+  faMagnifyingGlass,
+  faPlus,
+  faTableCells,
+  faXmark,
+  faArrowTrendUp,
+  faFileLines,
+  faHeartPulse,
+  faStar,
+} from "@fortawesome/free-solid-svg-icons";
+import { asIconComponent } from "../../../../../utils/faIconAdapter";
+const Activity = asIconComponent(faHeartPulse);
+const BookOpen = asIconComponent(faBookOpen);
+const CheckCircle = asIconComponent(faCircleCheck);
+const FileText = asIconComponent(faFileLines);
+const Star = asIconComponent(faStar);
+const TrendingUp = asIconComponent(faArrowTrendUp);
 const ProfessorCoursesContent = ({ setActiveTab }) => {
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
@@ -47,7 +51,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
   const [showCourseContent, setShowCourseContent] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [showEditForm, setShowEditForm] = useState(false);
-
   useEffect(() => {
     const savedClassId = localStorage.getItem("selectedClassId");
     if (savedClassId) {
@@ -60,11 +63,9 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
     loadSubjects();
     loadProfessorClasses(savedClassId || null);
   }, []);
-
   useEffect(() => {
     filterCourses();
   }, [courses, searchTerm, filterStatus]);
-
   const loadProfessorClasses = async (preselectedClassId) => {
     try {
       const userId = localStorage.getItem("userId");
@@ -72,12 +73,18 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       const classes = await classService.obtenirClassesUtilisateur(userId);
       setProfessorClasses(classes || []);
       if (preselectedClassId && classes) {
-        const cls = classes.find(c => String(c.id) === String(preselectedClassId));
-        if (cls) setFilterClassName(cls.nom || cls.name || cls.titre || `Classe ${cls.id}`);
+        const cls = classes.find(
+          (c) => String(c.id) === String(preselectedClassId),
+        );
+        if (cls)
+          setFilterClassName(
+            cls.nom || cls.name || cls.titre || `Classe ${cls.id}`,
+          );
       }
-    } catch { /* non-blocking */ }
+    } catch {
+      /* non-blocking */
+    }
   };
-
   const loadCourses = async (classeId) => {
     try {
       setLoading(true);
@@ -90,14 +97,19 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       if (classeId) {
         // Load scheduled courses for the class to find which course IDs are in it
         try {
-          const scheduled = await coursProgrammerService.obtenirProgrammationParClasse(classeId);
+          const scheduled =
+            await coursProgrammerService.obtenirProgrammationParClasse(
+              classeId,
+            );
           const courseIdsInClass = new Set(
             (scheduled || [])
-              .map(sc => sc.coursId || sc.cours?.id)
+              .map((sc) => sc.coursId || sc.cours?.id)
               .filter(Boolean)
-              .map(String)
+              .map(String),
           );
-          const filtered = (allCourses || []).filter(c => courseIdsInClass.has(String(c.id)));
+          const filtered = (allCourses || []).filter((c) =>
+            courseIdsInClass.has(String(c.id)),
+          );
           setCourses(filtered);
         } catch {
           setCourses(allCourses || []);
@@ -112,14 +124,14 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       setLoading(false);
     }
   };
-
   const handleClassFilterChange = (classId) => {
-    const cls = professorClasses.find(c => String(c.id) === String(classId));
+    const cls = professorClasses.find((c) => String(c.id) === String(classId));
     setFilterClassId(classId || null);
-    setFilterClassName(cls ? (cls.nom || cls.name || cls.titre || `Classe ${cls.id}`) : "");
+    setFilterClassName(
+      cls ? cls.nom || cls.name || cls.titre || `Classe ${cls.id}` : "",
+    );
     loadCourses(classId || null);
   };
-
   const loadSubjects = async () => {
     try {
       const subjectsData = await matiereService.getAllMatieres();
@@ -129,7 +141,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       setError("Erreur lors du chargement des matières: " + err.message);
     }
   };
-
   const filterCourses = () => {
     let filtered = courses;
     if (searchTerm) {
@@ -139,7 +150,7 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           course.description
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          course.matiere?.nom?.toLowerCase().includes(searchTerm.toLowerCase())
+          course.matiere?.nom?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
     if (filterStatus !== "all") {
@@ -147,37 +158,28 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
     }
     setFilteredCourses(filtered);
   };
-
   const handleCreateCourse = () => {
     if (setActiveTab) setActiveTab("create-course");
   };
-
   const handleBackFromCreate = () => {
     // no-op: kept for compatibility if called elsewhere
   };
-
   const handleBackFromCourseContent = () => {
     setShowCourseContent(false);
     setViewingCourse(null);
   };
-
   const handleEditCourse = (course) => {
     setEditingCourse(course);
     setShowEditForm(true);
   };
-
   const handleBackFromEdit = () => {
     setShowEditForm(false);
     setEditingCourse(null);
   };
-
   const handleViewCourse = (course) => {
     setViewingCourse(course);
     setShowCourseContent(true);
   };
-
-
-
   const getInitials = (title) => {
     return (
       title
@@ -188,7 +190,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
         .toUpperCase() || "CO"
     );
   };
-
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => {
@@ -197,7 +198,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       return () => clearTimeout(timer);
     }
   }, [success]);
-
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
@@ -206,7 +206,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       return () => clearTimeout(timer);
     }
   }, [error]);
-
   if (loading && courses.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -215,7 +214,9 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
             <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
             <div
               className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-600 rounded-full animate-spin absolute top-0 left-0"
-              style={{ clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)" }}
+              style={{
+                clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)",
+              }}
             ></div>
           </div>
           <p className="text-slate-600 font-medium text-sm sm:text-base">
@@ -225,7 +226,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       </div>
     );
   }
-
   if (showEditForm && editingCourse) {
     return (
       <CreateCourseComponent
@@ -240,7 +240,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       />
     );
   }
-
   if (showCourseContent && viewingCourse) {
     return (
       <CourseContentView
@@ -249,14 +248,16 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       />
     );
   }
-
   return (
     <div className="full-bleed-page">
       <div className="w-full px-3 sm:px-6 py-3 sm:py-4">
         <div className="mb-4 sm:mb-6">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-md flex-shrink-0">
-              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <FontAwesomeIcon
+                icon={faBookOpen}
+                className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+              />
             </div>
             <div className="min-w-0">
               <h1 className="text-lg sm:text-2xl font-bold text-slate-900 leading-tight">
@@ -273,11 +274,19 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           <div className="mb-3 bg-green-50 border border-green-200 rounded-xl p-3 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-start gap-2 min-w-0 flex-1">
-                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <p className="text-green-700 text-xs sm:text-sm break-words">{success}</p>
+                <FontAwesomeIcon
+                  icon={faCircleCheck}
+                  className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0"
+                />
+                <p className="text-green-700 text-xs sm:text-sm break-words">
+                  {success}
+                </p>
               </div>
-              <button onClick={() => setSuccess("")} className="text-green-400 hover:text-green-600 flex-shrink-0">
-                <X className="w-3.5 h-3.5" />
+              <button
+                onClick={() => setSuccess("")}
+                className="text-green-400 hover:text-green-600 flex-shrink-0"
+              >
+                <FontAwesomeIcon icon={faXmark} className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -287,11 +296,19 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           <div className="mb-3 bg-red-50 border border-red-200 rounded-xl p-3 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-start gap-2 min-w-0 flex-1">
-                <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-red-700 text-xs sm:text-sm break-words">{error}</p>
+                <FontAwesomeIcon
+                  icon={faCircleExclamation}
+                  className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0"
+                />
+                <p className="text-red-700 text-xs sm:text-sm break-words">
+                  {error}
+                </p>
               </div>
-              <button onClick={() => setError("")} className="text-red-400 hover:text-red-600 flex-shrink-0">
-                <X className="w-3.5 h-3.5" />
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-600 flex-shrink-0"
+              >
+                <FontAwesomeIcon icon={faXmark} className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -299,25 +316,68 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
 
         <div className="hidden sm:grid sm:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
           {[
-            { label: 'Total Cours', value: courses.length, color: 'text-slate-900', icon: BookOpen, iconBg: 'bg-blue-100', iconColor: 'text-blue-600', ring: 'ring-blue-500', filter: 'all', sub: 'Tous les cours', subIcon: TrendingUp },
-            { label: 'Brouillon', value: courses.filter(c => c.etat === 'BROUILLON').length, color: 'text-yellow-600', icon: FileText, iconBg: 'bg-yellow-100', iconColor: 'text-yellow-600', ring: 'ring-yellow-500', filter: 'BROUILLON', sub: 'Non publiés', subIcon: Activity },
-            { label: 'Publiés', value: courses.filter(c => c.etat === 'PUBLIE').length, color: 'text-green-600', icon: CheckCircle, iconBg: 'bg-green-100', iconColor: 'text-green-600', ring: 'ring-green-500', filter: 'PUBLIE', sub: 'Disponibles', subIcon: Star },
+            {
+              label: "Total Cours",
+              value: courses.length,
+              color: "text-slate-900",
+              icon: BookOpen,
+              iconBg: "bg-blue-100",
+              iconColor: "text-blue-600",
+              ring: "ring-blue-500",
+              filter: "all",
+              sub: "Tous les cours",
+              subIcon: TrendingUp,
+            },
+            {
+              label: "Brouillon",
+              value: courses.filter((c) => c.etat === "BROUILLON").length,
+              color: "text-yellow-600",
+              icon: FileText,
+              iconBg: "bg-yellow-100",
+              iconColor: "text-yellow-600",
+              ring: "ring-yellow-500",
+              filter: "BROUILLON",
+              sub: "Non publiés",
+              subIcon: Activity,
+            },
+            {
+              label: "Publiés",
+              value: courses.filter((c) => c.etat === "PUBLIE").length,
+              color: "text-green-600",
+              icon: CheckCircle,
+              iconBg: "bg-green-100",
+              iconColor: "text-green-600",
+              ring: "ring-green-500",
+              filter: "PUBLIE",
+              sub: "Disponibles",
+              subIcon: Star,
+            },
           ].map((stat) => (
             <div
               key={stat.filter}
               onClick={() => setFilterStatus(stat.filter)}
-              className={`bg-white border border-slate-100 rounded-xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all cursor-pointer ${filterStatus === stat.filter ? `ring-2 ${stat.ring}` : ''}`}
+              className={`bg-white border border-slate-100 rounded-xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all cursor-pointer ${filterStatus === stat.filter ? `ring-2 ${stat.ring}` : ""}`}
             >
               <div className="flex items-center justify-between gap-1 mb-1">
-                <p className="text-slate-500 text-[10px] sm:text-xs font-medium truncate">{stat.label}</p>
-                <div className={`p-1.5 ${stat.iconBg} rounded-lg flex-shrink-0`}>
-                  <stat.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${stat.iconColor}`} />
+                <p className="text-slate-500 text-[10px] sm:text-xs font-medium truncate">
+                  {stat.label}
+                </p>
+                <div
+                  className={`p-1.5 ${stat.iconBg} rounded-lg flex-shrink-0`}
+                >
+                  <stat.icon
+                    className={`w-3 h-3 sm:w-4 sm:h-4 ${stat.iconColor}`}
+                  />
                 </div>
               </div>
-              <p className={`text-xl sm:text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+              <p className={`text-xl sm:text-3xl font-bold ${stat.color}`}>
+                {stat.value}
+              </p>
               <div className="mt-1.5 flex items-center gap-1">
                 <stat.subIcon className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                <span className="text-slate-400 text-[10px] sm:text-xs truncate">{stat.sub}</span>
+                <span className="text-slate-400 text-[10px] sm:text-xs truncate">
+                  {stat.sub}
+                </span>
               </div>
             </div>
           ))}
@@ -326,16 +386,20 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
         {filterClassId && filterClassName && (
           <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3 shadow-sm flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <BookOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <FontAwesomeIcon
+                icon={faBookOpen}
+                className="w-4 h-4 text-blue-500 flex-shrink-0"
+              />
               <p className="text-blue-700 text-xs sm:text-sm font-medium truncate">
-                Cours de la classe : <span className="font-bold">{filterClassName}</span>
+                Cours de la classe :{" "}
+                <span className="font-bold">{filterClassName}</span>
               </p>
             </div>
             <button
               onClick={() => handleClassFilterChange("")}
               className="text-blue-400 hover:text-blue-600 flex-shrink-0"
             >
-              <X className="w-3.5 h-3.5" />
+              <FontAwesomeIcon icon={faXmark} className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
@@ -344,7 +408,13 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           {/* Row 1: Search + New Course button */}
           <div className="flex items-center gap-2 mb-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+              <FontAwesomeIcon
+                icon={faMagnifyingGlass}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                style={{
+                  fontSize: 15,
+                }}
+              />
               <input
                 type="text"
                 placeholder="Rechercher par titre, description, matière..."
@@ -357,7 +427,12 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
               onClick={handleCreateCourse}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-3 sm:px-5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-md font-medium text-sm whitespace-nowrap flex-shrink-0"
             >
-              <Plus size={15} />
+              <FontAwesomeIcon
+                icon={faPlus}
+                style={{
+                  fontSize: 15,
+                }}
+              />
               <span className="hidden sm:inline">Nouveau Cours</span>
               <span className="sm:hidden">Nouveau</span>
             </button>
@@ -365,7 +440,13 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           {/* Row 2: Filter + view toggle + schedule + refresh */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[120px]">
-              <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+              <FontAwesomeIcon
+                icon={faFilter}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                style={{
+                  fontSize: 13,
+                }}
+              />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -375,13 +456,25 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
                 <option value="BROUILLON">Brouillon</option>
                 <option value="PUBLIE">Publié</option>
               </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                style={{
+                  fontSize: 12,
+                }}
+              />
             </div>
 
             {/* Class filter */}
             {professorClasses.length > 0 && (
               <div className="relative flex-1 min-w-[130px]">
-                <BookOpen className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+                <FontAwesomeIcon
+                  icon={faBookOpen}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  style={{
+                    fontSize: 13,
+                  }}
+                />
                 <select
                   value={filterClassId || ""}
                   onChange={(e) => handleClassFilterChange(e.target.value)}
@@ -394,7 +487,13 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+                <FontAwesomeIcon
+                  icon={faChevronDown}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  style={{
+                    fontSize: 12,
+                  }}
+                />
               </div>
             )}
 
@@ -404,13 +503,23 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
                 onClick={() => setViewMode("grid")}
                 className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
               >
-                <Grid size={15} />
+                <FontAwesomeIcon
+                  icon={faTableCells}
+                  style={{
+                    fontSize: 15,
+                  }}
+                />
               </button>
               <button
                 onClick={() => setViewMode("table")}
                 className={`p-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
               >
-                <List size={15} />
+                <FontAwesomeIcon
+                  icon={faList}
+                  style={{
+                    fontSize: 15,
+                  }}
+                />
               </button>
             </div>
 
@@ -419,7 +528,13 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
               onClick={() => setActiveTab("schedule-course")}
               className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-all shadow-sm font-medium text-xs sm:text-sm flex-shrink-0"
             >
-              <Calendar size={14} className="text-indigo-600 flex-shrink-0" />
+              <FontAwesomeIcon
+                icon={faCalendarDays}
+                className="text-indigo-600 flex-shrink-0"
+                style={{
+                  fontSize: 14,
+                }}
+              />
               <span className="hidden sm:inline">Programmer</span>
             </button>
 
@@ -430,7 +545,13 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
               className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
               title="Actualiser"
             >
-              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+              <FontAwesomeIcon
+                icon={faArrowsRotate}
+                className={loading ? "animate-spin" : ""}
+                style={{
+                  fontSize: 15,
+                }}
+              />
             </button>
           </div>
         </div>
@@ -490,7 +611,10 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-12">
             <div className="text-center">
               <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4 sm:mb-6">
-                <BookOpen className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400" />
+                <FontAwesomeIcon
+                  icon={faBookOpen}
+                  className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400"
+                />
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
                 {searchTerm || filterStatus !== "all" || filterClassId
@@ -501,15 +625,21 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
                 {filterClassId
                   ? `Aucun cours trouvé pour la classe ${filterClassName || filterClassId}. Créez un cours associé à cette classe.`
                   : searchTerm || filterStatus !== "all"
-                  ? "Essayez de modifier vos critères de recherche ou de filtrage."
-                  : "Commencez par créer votre premier cours pour vos étudiants."}
+                    ? "Essayez de modifier vos critères de recherche ou de filtrage."
+                    : "Commencez par créer votre premier cours pour vos étudiants."}
               </p>
               {!searchTerm && filterStatus === "all" && (
                 <button
                   onClick={handleCreateCourse}
                   className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto text-sm sm:text-base"
                 >
-                  <Plus size={16} className="sm:w-5 sm:h-5" />
+                  <FontAwesomeIcon
+                    icon={faPlus}
+                    className="sm:w-5 sm:h-5"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   Créer mon premier cours
                 </button>
               )}
@@ -538,10 +668,7 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
           </div>
         )}
       </div>
-
-
     </div>
   );
 };
-
 export default ProfessorCoursesContent;

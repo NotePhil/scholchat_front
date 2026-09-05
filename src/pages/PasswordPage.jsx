@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Lock, KeyRound, Eye, EyeOff, ShieldCheck, AlertTriangle, Check } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCheck,
+  faEye,
+  faEyeSlash,
+  faKey,
+  faLock,
+  faShieldHalved,
+  faTriangleExclamation,
+} from "@fortawesome/free-solid-svg-icons";
 const PasswordPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -14,7 +22,6 @@ const PasswordPage = () => {
   const [loading, setLoading] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [activationToken, setActivationToken] = useState("");
-
   useEffect(() => {
     if (location.state) {
       const { email, activationToken } = location.state;
@@ -28,7 +35,6 @@ const PasswordPage = () => {
       showAlert("Aucun email ou token trouvé. Veuillez vous réinscrire.");
     }
   }, [location.state]);
-
   const showAlert = (message, type = "error") => {
     setAlertMessage(message);
     setAlertType(type);
@@ -37,34 +43,28 @@ const PasswordPage = () => {
       setAlertType("");
     }, 3000);
   };
-
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     if (passeAccess.length < 8) {
       showAlert("Le mot de passe doit contenir au moins 8 caractères.");
       setLoading(false);
       return;
     }
-
     if (passeAccess !== confirmPassword) {
       showAlert("Les mots de passe ne correspondent pas.");
       setLoading(false);
       return;
     }
-
     const hasUppercase = /[A-Z]/.test(passeAccess);
     const hasLowercase = /[a-z]/.test(passeAccess);
     const hasNumber = /[0-9]/.test(passeAccess);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(passeAccess);
-
     if (!(hasUppercase && hasLowercase && hasNumber && hasSpecialChar)) {
       showAlert("Mot de passe trop faible. Utilisez des caractères variés.");
       setLoading(false);
       return;
     }
-
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_BASE_URL}/auth/registerPassword`,
@@ -79,30 +79,29 @@ const PasswordPage = () => {
             passeAccess: passeAccess,
             type: "utilisateur",
           }),
-        }
+        },
       );
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
-          errorData.message || "Échec de la définition du mot de passe"
+          errorData.message || "Échec de la définition du mot de passe",
         );
       }
-
       showAlert("Mot de passe défini avec succès !", "success");
       localStorage.removeItem("userEmail");
       setTimeout(() => {
-        navigate("/schoolchat/login", { replace: true });
+        navigate("/schoolchat/login", {
+          replace: true,
+        });
       }, 2000);
     } catch (error) {
       console.error("Registration error:", error);
       showAlert(
-        error.message || "Erreur lors de la définition du mot de passe"
+        error.message || "Erreur lors de la définition du mot de passe",
       );
       setLoading(false);
     }
   };
-
   const togglePasswordVisibility = (field) => {
     if (field === "password") {
       setShowPassword(!showPassword);
@@ -110,7 +109,6 @@ const PasswordPage = () => {
       setShowConfirmPassword(!showConfirmPassword);
     }
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4 sm:p-6 lg:p-8">
       {/* Background decoration */}
@@ -121,15 +119,27 @@ const PasswordPage = () => {
 
       {alertMessage && (
         <div className={`fixed top-8 right-8 z-50 animate-fade-in-down`}>
-          <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-md border ${
-            alertType === "success" 
-              ? "bg-green-50/90 border-green-200 text-green-800" 
-              : "bg-red-50/90 border-red-200 text-red-800"
-          }`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              alertType === "success" ? "bg-green-100" : "bg-red-100"
-            }`}>
-              {alertType === "success" ? <Check size={20} /> : <AlertTriangle size={20} />}
+          <div
+            className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-md border ${alertType === "success" ? "bg-green-50/90 border-green-200 text-green-800" : "bg-red-50/90 border-red-200 text-red-800"}`}
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center ${alertType === "success" ? "bg-green-100" : "bg-red-100"}`}
+            >
+              {alertType === "success" ? (
+                <FontAwesomeIcon
+                  icon={faCheck}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
+              ) : (
+                <FontAwesomeIcon
+                  icon={faTriangleExclamation}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
+              )}
             </div>
             <p className="font-bold">{alertMessage}</p>
           </div>
@@ -141,15 +151,24 @@ const PasswordPage = () => {
           {/* Header */}
           <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-12 text-center text-white relative">
             <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none overflow-hidden">
-              <Lock className="absolute -top-10 -right-10 w-48 h-48 rotate-12" />
+              <FontAwesomeIcon
+                icon={faLock}
+                className="absolute -top-10 -right-10 w-48 h-48 rotate-12"
+              />
             </div>
-            
+
             <div className="relative inline-block mb-6">
               <div className="w-24 h-24 bg-white/20 backdrop-blur-lg rounded-3xl flex items-center justify-center mx-auto ring-8 ring-white/10">
-                <Lock className="text-white" size={48} strokeWidth={2.5} />
+                <FontAwesomeIcon
+                  icon={faLock}
+                  className="text-white"
+                  style={{
+                    fontSize: 48,
+                  }}
+                />
               </div>
             </div>
-            
+
             <h2 className="text-3xl font-black tracking-tight leading-tight mb-2">
               Sécurisez votre compte
             </h2>
@@ -176,7 +195,12 @@ const PasswordPage = () => {
                 </label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors">
-                    <KeyRound size={22} />
+                    <FontAwesomeIcon
+                      icon={faKey}
+                      style={{
+                        fontSize: 22,
+                      }}
+                    />
                   </div>
                   <input
                     type={showPassword ? "text" : "password"}
@@ -191,27 +215,38 @@ const PasswordPage = () => {
                     onClick={() => togglePasswordVisibility("password")}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
-                    {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                    {showPassword ? (
+                      <FontAwesomeIcon
+                        icon={faEyeSlash}
+                        style={{
+                          fontSize: 22,
+                        }}
+                      />
+                    ) : (
+                      <FontAwesomeIcon
+                        icon={faEye}
+                        style={{
+                          fontSize: 22,
+                        }}
+                      />
+                    )}
                   </button>
                 </div>
 
                 {/* Requirements Indicator */}
                 <div className="grid grid-cols-2 gap-2 pt-2">
-                  <Requirement 
-                    met={passeAccess.length >= 8} 
-                    text="8+ caractères" 
+                  <Requirement
+                    met={passeAccess.length >= 8}
+                    text="8+ caractères"
                   />
-                  <Requirement 
-                    met={/[A-Z]/.test(passeAccess)} 
-                    text="Majuscule" 
+                  <Requirement
+                    met={/[A-Z]/.test(passeAccess)}
+                    text="Majuscule"
                   />
-                  <Requirement 
-                    met={/[0-9]/.test(passeAccess)} 
-                    text="Chiffre" 
-                  />
-                  <Requirement 
-                    met={/[!@#$%^&*(),.?":{}|<>]/.test(passeAccess)} 
-                    text="Spécial" 
+                  <Requirement met={/[0-9]/.test(passeAccess)} text="Chiffre" />
+                  <Requirement
+                    met={/[!@#$%^&*(),.?":{}|<>]/.test(passeAccess)}
+                    text="Spécial"
                   />
                 </div>
               </div>
@@ -223,18 +258,19 @@ const PasswordPage = () => {
                 </label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors">
-                    <ShieldCheck size={22} />
+                    <FontAwesomeIcon
+                      icon={faShieldHalved}
+                      style={{
+                        fontSize: 22,
+                      }}
+                    />
                   </div>
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Répétez votre mot de passe"
-                    className={`w-full pl-14 pr-14 py-4 border rounded-2xl focus:ring-4 transition-all outline-none text-gray-900 font-medium text-lg ${
-                      confirmPassword && passeAccess !== confirmPassword 
-                        ? "bg-red-50 border-red-200 focus:ring-red-500/10 focus:border-red-500" 
-                        : "bg-gray-50 border-gray-200 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white"
-                    }`}
+                    className={`w-full pl-14 pr-14 py-4 border rounded-2xl focus:ring-4 transition-all outline-none text-gray-900 font-medium text-lg ${confirmPassword && passeAccess !== confirmPassword ? "bg-red-50 border-red-200 focus:ring-red-500/10 focus:border-red-500" : "bg-gray-50 border-gray-200 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white"}`}
                     required
                   />
                   <button
@@ -242,12 +278,32 @@ const PasswordPage = () => {
                     onClick={() => togglePasswordVisibility("confirm")}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
-                    {showConfirmPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                    {showConfirmPassword ? (
+                      <FontAwesomeIcon
+                        icon={faEyeSlash}
+                        style={{
+                          fontSize: 22,
+                        }}
+                      />
+                    ) : (
+                      <FontAwesomeIcon
+                        icon={faEye}
+                        style={{
+                          fontSize: 22,
+                        }}
+                      />
+                    )}
                   </button>
                 </div>
                 {confirmPassword && confirmPassword === passeAccess && (
                   <p className="text-green-600 text-xs font-bold flex items-center gap-1 ml-4 animate-bounce">
-                    <Check size={14} strokeWidth={3} /> Les mots de passe correspondent
+                    <FontAwesomeIcon
+                      icon={faCheck}
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />{" "}
+                    Les mots de passe correspondent
                   </p>
                 )}
               </div>
@@ -275,14 +331,21 @@ const PasswordPage = () => {
 
         {/* Footer */}
         <p className="text-center text-white/50 text-xs mt-8 font-medium tracking-widest uppercase">
-          &copy; {new Date().getFullYear()} ScholChat. Sécurité renforcée par SSL.
+          &copy; {new Date().getFullYear()} ScholChat. Sécurité renforcée par
+          SSL.
         </p>
       </div>
 
       <style jsx>{`
         @keyframes fade-in-down {
-          from { opacity: 0; transform: translateY(-20px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         .animate-fade-in-down {
           animation: fade-in-down 0.8s ease-out;
@@ -291,20 +354,21 @@ const PasswordPage = () => {
     </div>
   );
 };
-
 const Requirement = ({ met, text }) => (
-  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-500 border ${
-    met 
-      ? "bg-green-50 border-green-100 text-green-700 font-bold scale-100" 
-      : "bg-gray-50 border-gray-100 text-gray-400 scale-95 opacity-60"
-  }`}>
-    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-      met ? "bg-green-500 text-white" : "bg-gray-200"
-    }`}>
-      <Check size={10} strokeWidth={4} />
+  <div
+    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-500 border ${met ? "bg-green-50 border-green-100 text-green-700 font-bold scale-100" : "bg-gray-50 border-gray-100 text-gray-400 scale-95 opacity-60"}`}
+  >
+    <div
+      className={`w-4 h-4 rounded-full flex items-center justify-center ${met ? "bg-green-500 text-white" : "bg-gray-200"}`}
+    >
+      <FontAwesomeIcon
+        icon={faCheck}
+        style={{
+          fontSize: 10,
+        }}
+      />
     </div>
     <span className="text-[10px] uppercase tracking-tighter">{text}</span>
   </div>
 );
-
 export default PasswordPage;

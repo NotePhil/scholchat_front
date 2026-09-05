@@ -1,6 +1,13 @@
 import React, { useState } from "react";
-import { X, Download, FileText, File, Maximize2, Minimize2, ChevronLeft, ChevronRight } from "lucide-react";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCompress,
+  faDownload,
+  faExpand,
+  faFile,
+  faFileLines,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 /**
  * Universal Document Viewer - supports PDF, images, videos, and office docs
  * - PDF: uses browser's built-in PDF viewer via iframe
@@ -11,25 +18,38 @@ import { X, Download, FileText, File, Maximize2, Minimize2, ChevronLeft, Chevron
 const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-
   if (!isOpen || !url) return null;
-
   const getFileType = () => {
     const name = (fileName || "").toLowerCase();
     const type = (contentType || "").toLowerCase();
     const urlStr = (url || "").toLowerCase();
-
     if (type.includes("pdf") || name.endsWith(".pdf")) return "pdf";
-    if (type.includes("image") || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name)) return "image";
-    if (type.includes("video") || /\.(mp4|webm|ogg|mov|avi)$/i.test(name)) return "video";
+    if (
+      type.includes("image") ||
+      /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name)
+    )
+      return "image";
+    if (type.includes("video") || /\.(mp4|webm|ogg|mov|avi)$/i.test(name))
+      return "video";
     // Detect video by URL pattern for backend proxy URLs
-    if (urlStr.includes("/media/") && urlStr.endsWith("/content")) return "video";
-    if (/\.(ppt|pptx)$/i.test(name) || type.includes("presentation")) return "ppt";
-    if (/\.(xls|xlsx)$/i.test(name) || type.includes("spreadsheet") || type.includes("excel")) return "excel";
-    if (/\.(doc|docx)$/i.test(name) || type.includes("word") || type.includes("document")) return "word";
+    if (urlStr.includes("/media/") && urlStr.endsWith("/content"))
+      return "video";
+    if (/\.(ppt|pptx)$/i.test(name) || type.includes("presentation"))
+      return "ppt";
+    if (
+      /\.(xls|xlsx)$/i.test(name) ||
+      type.includes("spreadsheet") ||
+      type.includes("excel")
+    )
+      return "excel";
+    if (
+      /\.(doc|docx)$/i.test(name) ||
+      type.includes("word") ||
+      type.includes("document")
+    )
+      return "word";
     return "unknown";
   };
-
   const fileType = getFileType();
 
   // Google Docs Viewer URL for office documents
@@ -40,22 +60,25 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
     }
     return url;
   };
-
   const containerClass = isFullscreen
     ? "fixed inset-0 z-[10000] bg-black"
     : "fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4";
-
   const contentClass = isFullscreen
     ? "w-full h-full"
     : "bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden";
-
   return (
-    <div className={containerClass} onClick={!isFullscreen ? onClose : undefined}>
+    <div
+      className={containerClass}
+      onClick={!isFullscreen ? onClose : undefined}
+    >
       <div className={contentClass} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <FileText className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+            <FontAwesomeIcon
+              icon={faFileLines}
+              className="w-5 h-5 text-indigo-500 flex-shrink-0"
+            />
             <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
               {fileName || "Document"}
             </span>
@@ -72,20 +95,30 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
               className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title="Telecharger"
             >
-              <Download className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              <FontAwesomeIcon
+                icon={faDownload}
+                className="w-4 h-4 text-gray-600 dark:text-gray-300"
+              />
             </a>
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title={isFullscreen ? "Reduire" : "Plein ecran"}
             >
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {isFullscreen ? (
+                <FontAwesomeIcon icon={faCompress} className="w-4 h-4" />
+              ) : (
+                <FontAwesomeIcon icon={faExpand} className="w-4 h-4" />
+              )}
             </button>
             <button
               onClick={onClose}
               className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
             >
-              <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              <FontAwesomeIcon
+                icon={faXmark}
+                className="w-4 h-4 text-gray-600 dark:text-gray-300"
+              />
             </button>
           </div>
         </div>
@@ -98,7 +131,9 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
               src={`${url}#toolbar=1&navpanes=1&scrollbar=1`}
               title={fileName}
               className="w-full h-full border-0"
-              style={{ minHeight: isFullscreen ? "100vh" : "70vh" }}
+              style={{
+                minHeight: isFullscreen ? "100vh" : "70vh",
+              }}
             />
           )}
 
@@ -123,7 +158,9 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
                 playsInline
                 preload="metadata"
                 className="max-w-full max-h-full"
-                style={{ maxHeight: isFullscreen ? "100vh" : "70vh" }}
+                style={{
+                  maxHeight: isFullscreen ? "100vh" : "70vh",
+                }}
               >
                 Votre navigateur ne supporte pas la lecture video.
               </video>
@@ -131,12 +168,16 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
           )}
 
           {/* Office Documents (PPT, Excel, Word) via Google Docs Viewer */}
-          {(fileType === "ppt" || fileType === "excel" || fileType === "word") && (
+          {(fileType === "ppt" ||
+            fileType === "excel" ||
+            fileType === "word") && (
             <iframe
               src={getOfficeViewerUrl()}
               title={fileName}
               className="w-full h-full border-0"
-              style={{ minHeight: isFullscreen ? "100vh" : "70vh" }}
+              style={{
+                minHeight: isFullscreen ? "100vh" : "70vh",
+              }}
               sandbox="allow-scripts allow-same-origin allow-popups"
             />
           )}
@@ -144,7 +185,10 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
           {/* Unknown file type */}
           {fileType === "unknown" && (
             <div className="w-full h-full flex flex-col items-center justify-center p-8">
-              <File className="w-16 h-16 text-gray-400 mb-4" />
+              <FontAwesomeIcon
+                icon={faFile}
+                className="w-16 h-16 text-gray-400 mb-4"
+              />
               <p className="text-gray-600 dark:text-gray-400 text-center mb-4">
                 Apercu non disponible pour ce type de fichier
               </p>
@@ -166,17 +210,20 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
 // File size limits configuration
 export const FILE_LIMITS = {
   image: {
-    maxSize: 5 * 1024 * 1024, // 5MB
+    maxSize: 5 * 1024 * 1024,
+    // 5MB
     maxSizeLabel: "5 Mo",
     formats: ["image/jpeg", "image/png", "image/gif", "image/webp"],
   },
   video: {
-    maxSize: 50 * 1024 * 1024, // 50MB
+    maxSize: 50 * 1024 * 1024,
+    // 50MB
     maxSizeLabel: "50 Mo",
     formats: ["video/mp4", "video/webm", "video/ogg"],
   },
   document: {
-    maxSize: 20 * 1024 * 1024, // 20MB
+    maxSize: 20 * 1024 * 1024,
+    // 20MB
     maxSizeLabel: "20 Mo",
     formats: [
       "application/pdf",
@@ -195,8 +242,11 @@ export const FILE_LIMITS = {
  * Returns { valid: boolean, error: string | null }
  */
 export const validateFile = (file) => {
-  if (!file) return { valid: false, error: "Aucun fichier selectionne" };
-
+  if (!file)
+    return {
+      valid: false,
+      error: "Aucun fichier selectionne",
+    };
   const type = file.type;
   const size = file.size;
 
@@ -204,17 +254,16 @@ export const validateFile = (file) => {
   let category = "document";
   if (type.startsWith("image/")) category = "image";
   else if (type.startsWith("video/")) category = "video";
-
   const limits = FILE_LIMITS[category];
-
   if (size > limits.maxSize) {
     return {
       valid: false,
       error: `Le fichier est trop volumineux (${(size / 1024 / 1024).toFixed(1)} Mo). Taille maximale: ${limits.maxSizeLabel}`,
     };
   }
-
-  return { valid: true, error: null };
+  return {
+    valid: true,
+    error: null,
+  };
 };
-
 export default DocumentViewer;

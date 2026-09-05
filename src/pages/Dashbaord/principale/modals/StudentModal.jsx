@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from "react";
-import {
-  X,
-  Save,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  ChevronDown,
-  School,
-  Calendar,
-  BookOpen,
-  AlertCircle,
-} from "lucide-react";
 import { scholchatService } from "../../../../services/ScholchatService";
 import axios from "axios";
-import PhoneInput from "react-phone-number-input";
+import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
-
+import CountrySelect from "../../../../components/common/CountrySelectSearchable";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBookOpen,
+  faCalendarDays,
+  faCircleExclamation,
+  faEnvelope,
+  faFloppyDisk,
+  faLocationDot,
+  faPhone,
+  faUser,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const StudentModal = ({
   showModal,
   setShowModal,
@@ -37,7 +36,6 @@ const StudentModal = ({
     dateNaissance: "",
     classe: null,
   });
-
   const [selectedCountry, setSelectedCountry] = useState("CM");
   const [submitError, setSubmitError] = useState("");
 
@@ -82,7 +80,6 @@ const StudentModal = ({
       }
     }
   }, [showModal, modalMode, selectedStudent]);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -90,13 +87,11 @@ const StudentModal = ({
       [name]: value,
     }));
   };
-
   const handlePhoneChange = (value) => {
     setFormData((prev) => ({
       ...prev,
       telephone: value || "",
     }));
-
     if (value) {
       if (value.startsWith("+237")) {
         setSelectedCountry("CM");
@@ -105,40 +100,6 @@ const StudentModal = ({
       }
     }
   };
-
-  const CountrySelect = ({ value, onChange, options, ...restProps }) => {
-    const countryToFlag = (countryCode) => {
-      return countryCode
-        .toUpperCase()
-        .replace(/./g, (char) =>
-          String.fromCodePoint(127397 + char.charCodeAt())
-        );
-    };
-
-    return (
-      <select
-        {...restProps}
-        value={value}
-        onChange={(event) => onChange(event.target.value || undefined)}
-        className="border border-gray-300 rounded-l-lg px-2 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-        style={{
-          width: "70px",
-          backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "right 0.25rem center",
-          backgroundSize: "0.8rem",
-          appearance: "none",
-        }}
-      >
-        {options?.map(({ value, label }) => (
-          <option key={value} value={value}>
-            {countryToFlag(value)}
-          </option>
-        ))}
-      </select>
-    );
-  };
-
   const handleClassSelection = (e) => {
     const classId = e.target.value;
     if (!classId) {
@@ -148,18 +109,19 @@ const StudentModal = ({
       }));
       return;
     }
-
     const selectedClass = classes.find((c) => c.id === classId);
     if (!selectedClass) return;
-
     setFormData((prev) => ({
       ...prev,
       classe: selectedClass,
     }));
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.telephone && !isValidPhoneNumber(formData.telephone)) {
+      setSubmitError("Le numéro de téléphone est incomplet ou invalide");
+      return;
+    }
     try {
       setLoading(true);
       setSubmitError("");
@@ -175,7 +137,6 @@ const StudentModal = ({
         dateNaissance: formData.dateNaissance,
         classeId: formData.classe?.id || null,
       };
-
       if (modalMode === "create") {
         // Create new student
         await scholchatService.createStudent(studentData);
@@ -183,7 +144,6 @@ const StudentModal = ({
         // Update existing student using patchUser method
         await scholchatService.patchUser(selectedStudent.id, studentData);
       }
-
       await loadData();
       setShowModal(false);
     } catch (err) {
@@ -198,12 +158,10 @@ const StudentModal = ({
       setLoading(false);
     }
   };
-
   const handleClose = () => {
     setShowModal(false);
     setSubmitError("");
   };
-
   if (!showModal) return null;
 
   // View Mode Component - Updated with responsive structure
@@ -215,7 +173,13 @@ const StudentModal = ({
           <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
             <div className="flex items-center justify-between">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
-                <User className="mr-2 sm:mr-3 text-blue-600" size={24} />
+                <FontAwesomeIcon
+                  icon={faUser}
+                  className="mr-2 sm:mr-3 text-blue-600"
+                  style={{
+                    fontSize: 24,
+                  }}
+                />
                 <span className="hidden sm:inline">Profil Élève</span>
                 <span className="sm:hidden">Élève</span>
               </h2>
@@ -223,7 +187,12 @@ const StudentModal = ({
                 onClick={handleClose}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <X size={20} />
+                <FontAwesomeIcon
+                  icon={faXmark}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
               </button>
             </div>
           </div>
@@ -234,7 +203,10 @@ const StudentModal = ({
               {/* Name Section */}
               <div className="text-center pb-6 border-b border-gray-100">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <User className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
+                  <FontAwesomeIcon
+                    icon={faUser}
+                    className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600"
+                  />
                 </div>
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                   {formData.prenom} {formData.nom}
@@ -246,7 +218,10 @@ const StudentModal = ({
                 {/* Email */}
                 <div className="flex items-start p-4 bg-gray-50 rounded-xl">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                    <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                    <FontAwesomeIcon
+                      icon={faEnvelope}
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600"
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-500">Email</p>
@@ -259,7 +234,10 @@ const StudentModal = ({
                 {/* Phone */}
                 <div className="flex items-start p-4 bg-gray-50 rounded-xl">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                    <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+                    <FontAwesomeIcon
+                      icon={faPhone}
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-green-600"
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-500">
@@ -274,7 +252,10 @@ const StudentModal = ({
                 {/* Date of Birth */}
                 <div className="flex items-start p-4 bg-gray-50 rounded-xl">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+                    <FontAwesomeIcon
+                      icon={faCalendarDays}
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600"
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-500">
@@ -289,7 +270,10 @@ const StudentModal = ({
                 {/* Class */}
                 <div className="flex items-start p-4 bg-gray-50 rounded-xl">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                    <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+                    <FontAwesomeIcon
+                      icon={faBookOpen}
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600"
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-500">Classe</p>
@@ -305,7 +289,10 @@ const StudentModal = ({
               {/* Address (full width) */}
               <div className="flex items-start p-4 bg-gray-50 rounded-xl">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                  <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
+                  <FontAwesomeIcon
+                    icon={faLocationDot}
+                    className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-500">Adresse</p>
@@ -339,7 +326,13 @@ const StudentModal = ({
         <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
           <div className="flex items-center justify-between">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
-              <User className="mr-2 sm:mr-3 text-blue-600" size={24} />
+              <FontAwesomeIcon
+                icon={faUser}
+                className="mr-2 sm:mr-3 text-blue-600"
+                style={{
+                  fontSize: 24,
+                }}
+              />
               <span className="hidden sm:inline">
                 {modalMode === "create" ? "Nouvel Élève" : "Modifier Élève"}
               </span>
@@ -351,14 +344,25 @@ const StudentModal = ({
               onClick={handleClose}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <X size={20} />
+              <FontAwesomeIcon
+                icon={faXmark}
+                style={{
+                  fontSize: 20,
+                }}
+              />
             </button>
           </div>
 
           {/* Error display in header */}
           {submitError && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start text-red-700">
-              <AlertCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="mr-2 flex-shrink-0 mt-0.5"
+                style={{
+                  fontSize: 16,
+                }}
+              />
               <span className="text-sm">{submitError}</span>
             </div>
           )}
@@ -374,7 +378,10 @@ const StudentModal = ({
             {/* Personal Information Section */}
             <div className="bg-slate-50 rounded-xl p-4 sm:p-6">
               <h3 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
-                <User className="w-5 h-5 mr-2 text-blue-600" />
+                <FontAwesomeIcon
+                  icon={faUser}
+                  className="w-5 h-5 mr-2 text-blue-600"
+                />
                 Informations personnelles
               </h3>
 
@@ -545,7 +552,10 @@ const StudentModal = ({
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 w-5 h-5" />
+                  <FontAwesomeIcon
+                    icon={faFloppyDisk}
+                    className="mr-2 w-5 h-5"
+                  />
                   <span className="hidden sm:inline">Enregistrer</span>
                   <span className="sm:hidden">Sauver</span>
                 </>
@@ -557,5 +567,4 @@ const StudentModal = ({
     </div>
   );
 };
-
 export default StudentModal;

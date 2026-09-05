@@ -1,6 +1,18 @@
 import React from "react";
-import { Search, RefreshCw, X, Mail, AlertCircle, Star, StarOff, CheckCircle, Circle, Trash2, Users, Undo2 } from "lucide-react";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faCircle,
+  faCircleCheck,
+  faCircleExclamation,
+  faEnvelope,
+  faMagnifyingGlass,
+  faRotateLeft,
+  faStar,
+  faTrashCan,
+  faUsers,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const MessageList = ({
   isDark,
   messages,
@@ -29,10 +41,12 @@ const MessageList = ({
   formatDate,
   currentUser,
 }) => {
-  const userId = localStorage.getItem('userId');
+  const userId = localStorage.getItem("userId");
   return (
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-      <div className={`px-6 py-3 border-b flex items-center gap-4 ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}>
+      <div
+        className={`px-6 py-3 border-b flex items-center gap-4 ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}`}
+      >
         <div className="flex items-center gap-2">
           {selectedMessages.size > 0 && (
             <div className="flex items-center gap-2 mr-4">
@@ -40,27 +54,45 @@ const MessageList = ({
                 className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
                 onClick={() => setSelectedMessages(new Set())}
               >
-                <X size={16} />
+                <FontAwesomeIcon
+                  icon={faXmark}
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
               </button>
-              <span className="text-sm text-gray-600">{selectedMessages.size} sélectionné(s)</span>
+              <span className="text-sm text-gray-600">
+                {selectedMessages.size} sélectionné(s)
+              </span>
               <button
                 className={`p-2 rounded-full text-red-600 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
-                onClick={filterType === 'trash' ? handleEmptyTrash : handleBulkDelete}
+                onClick={
+                  filterType === "trash" ? handleEmptyTrash : handleBulkDelete
+                }
               >
-                <Trash2 size={16} />
+                <FontAwesomeIcon
+                  icon={faTrashCan}
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
               </button>
             </div>
           )}
         </div>
 
         <div className="relative flex-1 max-w-2xl">
-          <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 ${isDark ? "text-gray-400" : "text-gray-500"}`} size={18} />
+          <FontAwesomeIcon
+            icon={faMagnifyingGlass}
+            className={`absolute left-4 top-1/2 transform -translate-y-1/2 ${isDark ? "text-gray-400" : "text-gray-500"}`}
+            style={{
+              fontSize: 18,
+            }}
+          />
           <input
             type="text"
             placeholder="Rechercher dans les messages"
-            className={`w-full pl-12 pr-4 py-3 rounded-full border-2 focus:outline-none focus:border-blue-500 ${
-              isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500"
-            }`}
+            className={`w-full pl-12 pr-4 py-3 rounded-full border-2 focus:outline-none focus:border-blue-500 ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500"}`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -71,34 +103,68 @@ const MessageList = ({
           onClick={handleRefresh}
           disabled={refreshing}
         >
-          <RefreshCw className={refreshing ? "animate-spin" : ""} size={18} />
+          <FontAwesomeIcon
+            icon={faArrowsRotate}
+            className={refreshing ? "animate-spin" : ""}
+            style={{
+              fontSize: 18,
+            }}
+          />
         </button>
       </div>
 
       {error && (
         <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
-          <AlertCircle size={16} />
+          <FontAwesomeIcon
+            icon={faCircleExclamation}
+            style={{
+              fontSize: 16,
+            }}
+          />
           <span>{error}</span>
           <button onClick={() => setError(null)} className="ml-auto">
-            <X size={16} />
+            <FontAwesomeIcon
+              icon={faXmark}
+              style={{
+                fontSize: 16,
+              }}
+            />
           </button>
         </div>
       )}
 
-      <div className={`flex-1 overflow-y-auto ${isDark ? "bg-gray-900" : "bg-white"}`}>
+      <div
+        className={`flex-1 overflow-y-auto ${isDark ? "bg-gray-900" : "bg-white"}`}
+      >
         {/* Only show full-screen spinner on true first load (no data yet) */}
         {loading && messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <RefreshCw className="animate-spin text-blue-600" size={32} />
+            <FontAwesomeIcon
+              icon={faArrowsRotate}
+              className="animate-spin text-blue-600"
+              style={{
+                fontSize: 32,
+              }}
+            />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <Mail size={64} className={`mb-4 ${isDark ? "text-gray-600" : "text-gray-300"}`} />
-            <h3 className={`text-xl font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+            <FontAwesomeIcon
+              icon={faEnvelope}
+              className={`mb-4 ${isDark ? "text-gray-600" : "text-gray-300"}`}
+              style={{
+                fontSize: 64,
+              }}
+            />
+            <h3
+              className={`text-xl font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
+            >
               {searchTerm ? "Aucun résultat trouvé" : "Aucun message"}
             </h3>
             <p className={`${isDark ? "text-gray-500" : "text-gray-500"}`}>
-              {searchTerm ? "Essayez avec d'autres mots-clés" : "Votre boîte de réception est vide"}
+              {searchTerm
+                ? "Essayez avec d'autres mots-clés"
+                : "Votre boîte de réception est vide"}
             </p>
           </div>
         ) : (
@@ -106,15 +172,7 @@ const MessageList = ({
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex items-center px-6 py-4 hover:shadow-md transition-all cursor-pointer group ${
-                  selectedMessage?.id === message.id
-                    ? isDark
-                      ? "bg-blue-900"
-                      : "bg-blue-50"
-                    : isDark
-                    ? "hover:bg-gray-800"
-                    : "hover:bg-gray-50"
-                } ${
+                className={`flex items-center px-6 py-4 hover:shadow-md transition-all cursor-pointer group ${selectedMessage?.id === message.id ? (isDark ? "bg-blue-900" : "bg-blue-50") : isDark ? "hover:bg-gray-800" : "hover:bg-gray-50"} ${
                   // Only show unread indicator when current user is a recipient (not sender)
                   !message.read && message.expediteur?.id !== userId
                     ? "border-l-4 border-blue-500"
@@ -124,10 +182,11 @@ const MessageList = ({
                   setSelectedMessage(message);
                   // Get all unread messages in this thread
                   const threadMsgs = message.thread
-                    ? message.thread.filter(m => !m.read)
-                    : (!message.read ? [message] : []);
-
-                  threadMsgs.forEach(m => {
+                    ? message.thread.filter((m) => !m.read)
+                    : !message.read
+                      ? [message]
+                      : [];
+                  threadMsgs.forEach((m) => {
                     if (m.expediteur?.id !== userId) {
                       // Received — call API to mark as read
                       handleMarkAsRead(m.id, true);
@@ -156,64 +215,105 @@ const MessageList = ({
                   }}
                 >
                   {message.starred ? (
-                    <Star size={16} className="text-yellow-500 fill-current" />
+                    <FontAwesomeIcon
+                      icon={faStar}
+                      className="text-yellow-500 fill-current"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
                   ) : (
-                    <StarOff size={16} className={isDark ? "text-gray-400" : "text-gray-400"} />
+                    <FontAwesomeIcon
+                      icon={faStar}
+                      className={isDark ? "text-gray-400" : "text-gray-400"}
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
                   )}
                 </button>
 
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium mr-4 ${
-                    isDark ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-700"
-                  }`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium mr-4 ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-700"}`}
                 >
                   {getUserInitials(message.partner || message.expediteur)}
                 </div>
-<div className="flex-1 min-w-0">
-  <div className="flex items-center justify-between mb-1">
-    <div className="flex items-center gap-2">
-      <span className={`font-medium truncate ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}>
-        {getUserDisplay(message.partner || message.expediteur)}
-      </span>
-      <span className={`text-xs px-2 py-1 rounded-full ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}>
-        {(message.partner || message.expediteur)?.role}
-      </span>
-    </div>
-    <div className="flex items-center gap-2">
-      {/* Blue dot for sent messages not yet read by recipient — disappears when selected */}
-      {message.expediteur?.id === userId && !message.read && selectedMessage?.id !== message.id && (
-        <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" title="Non lu par le destinataire" />
-      )}
-      <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-        {formatDate(message.dateCreation)}
-      </span>
-    </div>
-  </div>
-  <div className="flex items-center justify-between mb-1">
-    <span className={`font-medium text-sm ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"} truncate`}>
-      {message.objet || "Sans objet"}
-    </span>
-    {message.isConversation && (
-      <span className={`text-xs px-2 py-1 rounded-full ml-2 ${isDark ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-800"}`}>
-        {message.thread.length}
-      </span>
-    )}
-  </div>
-  <p className={`text-sm truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-    {(message.contenu || "").split("--- Message original ---")[0].trim()}
-  </p>
-  {message.destinataires && message.destinataires.length > 0 && (
-    <div className="flex items-center gap-1 mt-1">
-      <Users size={12} className={isDark ? "text-gray-500" : "text-gray-400"} />
-      <span className={`text-xs ${isDark ? "text-gray-500" : "text-gray-500"}`}>
-        {message.destinataires.map((dest) => getUserDisplay(dest)).join(", ")}
-      </span>
-    </div>
-  )}
-</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`font-medium truncate ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}
+                      >
+                        {getUserDisplay(message.partner || message.expediteur)}
+                      </span>
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
+                      >
+                        {(message.partner || message.expediteur)?.role}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Blue dot for sent messages not yet read by recipient — disappears when selected */}
+                      {message.expediteur?.id === userId &&
+                        !message.read &&
+                        selectedMessage?.id !== message.id && (
+                          <span
+                            className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0"
+                            title="Non lu par le destinataire"
+                          />
+                        )}
+                      <span
+                        className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                      >
+                        {formatDate(message.dateCreation)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span
+                      className={`font-medium text-sm ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"} truncate`}
+                    >
+                      {message.objet || "Sans objet"}
+                    </span>
+                    {message.isConversation && (
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ml-2 ${isDark ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-800"}`}
+                      >
+                        {message.thread.length}
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    className={`text-sm truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}
+                  >
+                    {(message.contenu || "")
+                      .split("--- Message original ---")[0]
+                      .trim()}
+                  </p>
+                  {message.destinataires &&
+                    message.destinataires.length > 0 && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <FontAwesomeIcon
+                          icon={faUsers}
+                          className={isDark ? "text-gray-500" : "text-gray-400"}
+                          style={{
+                            fontSize: 12,
+                          }}
+                        />
+                        <span
+                          className={`text-xs ${isDark ? "text-gray-500" : "text-gray-500"}`}
+                        >
+                          {message.destinataires
+                            .map((dest) => getUserDisplay(dest))
+                            .join(", ")}
+                        </span>
+                      </div>
+                    )}
+                </div>
 
-
-                <div className={`flex items-center gap-1 ${filterType === 'trash' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                <div
+                  className={`flex items-center gap-1 ${filterType === "trash" ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity`}
+                >
                   <button
                     className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
                     onClick={(e) => {
@@ -221,9 +321,23 @@ const MessageList = ({
                       handleMarkAsRead(message.id, !message.read);
                     }}
                   >
-                    {message.read ? <Circle size={14} /> : <CheckCircle size={14} />}
+                    {message.read ? (
+                      <FontAwesomeIcon
+                        icon={faCircle}
+                        style={{
+                          fontSize: 14,
+                        }}
+                      />
+                    ) : (
+                      <FontAwesomeIcon
+                        icon={faCircleCheck}
+                        style={{
+                          fontSize: 14,
+                        }}
+                      />
+                    )}
                   </button>
-                  {filterType === 'trash' ? (
+                  {filterType === "trash" ? (
                     <button
                       className={`p-2 rounded-full text-green-600 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
                       onClick={(e) => {
@@ -232,7 +346,12 @@ const MessageList = ({
                       }}
                       title="Restaurer le message"
                     >
-                      <Undo2 size={14} />
+                      <FontAwesomeIcon
+                        icon={faRotateLeft}
+                        style={{
+                          fontSize: 14,
+                        }}
+                      />
                     </button>
                   ) : (
                     <button
@@ -242,7 +361,12 @@ const MessageList = ({
                         handleDeleteMessage(message.id);
                       }}
                     >
-                      <Trash2 size={14} />
+                      <FontAwesomeIcon
+                        icon={faTrashCan}
+                        style={{
+                          fontSize: 14,
+                        }}
+                      />
                     </button>
                   )}
                 </div>
@@ -254,5 +378,4 @@ const MessageList = ({
     </div>
   );
 };
-
 export default MessageList;

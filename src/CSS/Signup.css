@@ -134,41 +134,10 @@
   align-items: center;
 }
 
-.PhoneInputCountry {
-  position: relative;
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  margin-right: 0.5rem;
-}
-
-.PhoneInputCountrySelect {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  z-index: 1;
-  border: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.PhoneInputCountryIcon {
-  width: 1.5em;
-  height: 1em;
-  border-radius: 2px;
-}
-
-.PhoneInputCountryIcon--square {
-  width: 1.5em;
-}
-
-.PhoneInputCountryIconImg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
+/* .PhoneInputCountry, its trigger, and the flag are now styled by
+   CountrySelectSearchable.css — this app renders the country picker via a
+   custom searchable dropdown (see src/components/common/CountrySelectSearchable.jsx),
+   not the library's default invisible native <select> overlay. */
 
 .PhoneInputInput {
   flex: 1;

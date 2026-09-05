@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Table, Tag, Button, Space, Popconfirm, Tooltip, Switch, message } from "antd";
 import {
-  EyeOutlined,
-  UserDeleteOutlined,
-  CheckOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-} from "@ant-design/icons";
+  Table,
+  Tag,
+  Button,
+  Space,
+  Popconfirm,
+  Tooltip,
+  Switch,
+  message,
+} from "antd";
 import { scholchatService } from "../../../../../services/ScholchatService";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCheck,
+  faEye,
+  faTrash,
+  faUserXmark,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const UserTables = ({
   users,
   loading,
@@ -32,13 +40,10 @@ const UserTables = ({
     console.log(`UserTables - ${userType}:`, users);
     console.log(`Nombre d'${userType}:`, users.length);
   }, [users, userType]);
-
   const [tableLoading, setTableLoading] = useState(false);
-
   const handleDeleteUser = async (userId, userType) => {
     try {
       setTableLoading(true);
-
       switch (userType) {
         case "professeurs":
           await scholchatService.deleteProfessor(userId);
@@ -55,11 +60,14 @@ const UserTables = ({
         case "utilisateurs":
           // For utilisateurs, we'll use the onDeleteUser prop since they may need special handling
           if (onDeleteUser) {
-            await onDeleteUser({ id: userId, type: "utilisateur" });
+            await onDeleteUser({
+              id: userId,
+              type: "utilisateur",
+            });
           } else {
             // Fallback - try to delete as a general user (you may need to implement this endpoint)
             message.warning(
-              "Suppression non implémentée pour ce type d'utilisateur"
+              "Suppression non implémentée pour ce type d'utilisateur",
             );
           }
           break;
@@ -78,14 +86,12 @@ const UserTables = ({
       setTableLoading(false);
     }
   };
-
   const getColumns = (type) => {
     // Vérifier si les données sont valides
     if (!users || !Array.isArray(users)) {
       console.warn(`Aucune donnée valide pour ${type}`);
       return [];
     }
-
     const baseColumns = [
       {
         title: "Nom",
@@ -157,7 +163,9 @@ const UserTables = ({
                 checked={hasRight}
                 checkedChildren="Oui"
                 unCheckedChildren="Non"
-                onChange={(checked) => onTogglePublicationRights?.(record, checked)}
+                onChange={(checked) =>
+                  onTogglePublicationRights?.(record, checked)
+                }
               />
             );
           },
@@ -192,7 +200,7 @@ const UserTables = ({
             if (!dateB) return -1;
             return new Date(dateA) - new Date(dateB);
           },
-        }
+        },
       );
     } else if (type === "eleves") {
       baseColumns.push(
@@ -231,7 +239,7 @@ const UserTables = ({
             if (!dateB) return -1;
             return new Date(dateA) - new Date(dateB);
           },
-        }
+        },
       );
     } else if (type === "parents") {
       baseColumns.push(
@@ -270,7 +278,7 @@ const UserTables = ({
             if (!dateB) return -1;
             return new Date(dateA) - new Date(dateB);
           },
-        }
+        },
       );
     } else if (type === "utilisateurs") {
       // Columns specific to utilisateurs (unchanged from your original code)
@@ -330,7 +338,7 @@ const UserTables = ({
             if (!dateB) return -1;
             return new Date(dateA) - new Date(dateB);
           },
-        }
+        },
       );
     }
 
@@ -349,8 +357,14 @@ const UserTables = ({
           );
         },
         filters: [
-          { text: "Actif", value: "ACTIVE" },
-          { text: "Inactif", value: "INACTIVE" },
+          {
+            text: "Actif",
+            value: "ACTIVE",
+          },
+          {
+            text: "Inactif",
+            value: "INACTIVE",
+          },
         ],
         onFilter: (value, record) => {
           const isActive = record.etat === "ACTIVE" || record.etat === "ACTIF";
@@ -358,7 +372,6 @@ const UserTables = ({
         },
       });
     }
-
     const actionColumn = {
       title: "Actions",
       key: "actions",
@@ -367,7 +380,7 @@ const UserTables = ({
         <Space size="small">
           <Tooltip title="Voir les détails">
             <Button
-              icon={<EyeOutlined />}
+              icon={<FontAwesomeIcon icon={faEye} />}
               size="small"
               onClick={() => onViewUser(record)}
             />
@@ -379,7 +392,7 @@ const UserTables = ({
                 <>
                   <Tooltip title="Approuver la demande">
                     <Button
-                      icon={<CheckOutlined />}
+                      icon={<FontAwesomeIcon icon={faCheck} />}
                       size="small"
                       type="primary"
                       onClick={() => onApproveRequest(record)}
@@ -387,7 +400,7 @@ const UserTables = ({
                   </Tooltip>
                   <Tooltip title="Rejeter la demande">
                     <Button
-                      icon={<CloseOutlined />}
+                      icon={<FontAwesomeIcon icon={faXmark} />}
                       size="small"
                       danger
                       onClick={() => onRejectRequest(record)}
@@ -410,7 +423,11 @@ const UserTables = ({
                       cancelText="Non"
                     >
                       <Tooltip title="Retirer l'accès à la classe">
-                        <Button icon={<UserDeleteOutlined />} size="small" danger />
+                        <Button
+                          icon={<FontAwesomeIcon icon={faUserXmark} />}
+                          size="small"
+                          danger
+                        />
                       </Tooltip>
                     </Popconfirm>
                   )}
@@ -418,7 +435,9 @@ const UserTables = ({
               )}
 
               {/* Show delete button only for administrators */}
-              {(userRole === "ADMIN" || userRole === "ROLE_ADMIN" || userRole === "administrateur") && (
+              {(userRole === "ADMIN" ||
+                userRole === "ROLE_ADMIN" ||
+                userRole === "administrateur") && (
                 <Popconfirm
                   title={`Supprimer définitivement cet utilisateur ?`}
                   description="Cette action supprimera complètement l'utilisateur du système. Cette action est irréversible."
@@ -429,7 +448,7 @@ const UserTables = ({
                 >
                   <Tooltip title="Supprimer l'utilisateur du système">
                     <Button
-                      icon={<DeleteOutlined />}
+                      icon={<FontAwesomeIcon icon={faTrash} />}
                       size="small"
                       danger
                       type="primary"
@@ -463,28 +482,40 @@ const UserTables = ({
                 type === "PROFESSEUR"
                   ? "blue"
                   : type === "ELEVE"
-                  ? "green"
-                  : type === "PARENT"
-                  ? "orange"
-                  : "purple" // Color for general utilisateur
+                    ? "green"
+                    : type === "PARENT"
+                      ? "orange"
+                      : "purple" // Color for general utilisateur
               }
             >
               {type === "PROFESSEUR"
                 ? "Professeur"
                 : type === "ELEVE"
-                ? "Élève"
-                : type === "PARENT"
-                ? "Parent"
-                : type === "UTILISATEUR"
-                ? "Utilisateur"
-                : type}
+                  ? "Élève"
+                  : type === "PARENT"
+                    ? "Parent"
+                    : type === "UTILISATEUR"
+                      ? "Utilisateur"
+                      : type}
             </Tag>
           ),
           filters: [
-            { text: "Professeur", value: "PROFESSEUR" },
-            { text: "Élève", value: "ELEVE" },
-            { text: "Parent", value: "PARENT" },
-            { text: "Utilisateur", value: "UTILISATEUR" },
+            {
+              text: "Professeur",
+              value: "PROFESSEUR",
+            },
+            {
+              text: "Élève",
+              value: "ELEVE",
+            },
+            {
+              text: "Parent",
+              value: "PARENT",
+            },
+            {
+              text: "Utilisateur",
+              value: "UTILISATEUR",
+            },
           ],
           onFilter: (value, record) => record.typeUtilisateur === value,
         },
@@ -497,13 +528,11 @@ const UserTables = ({
               {etat === "EN_ATTENTE" ? "En attente" : etat}
             </Tag>
           ),
-        }
+        },
       );
     }
-
     return [...baseColumns, actionColumn];
   };
-
   const getTableTitle = () => {
     const titles = {
       professeurs: "Professeurs ayant accès à la classe",
@@ -514,7 +543,6 @@ const UserTables = ({
     };
     return titles[userType] || "Utilisateurs";
   };
-
   const getEmptyText = () => {
     const emptyTexts = {
       professeurs: "Aucun professeur n'a accès à cette classe",
@@ -525,7 +553,6 @@ const UserTables = ({
     };
     return emptyTexts[userType] || `Aucun ${userType} trouvé`;
   };
-
   return (
     <div className="user-table-container">
       <Table
@@ -537,10 +564,20 @@ const UserTables = ({
               alignItems: "center",
             }}
           >
-            <span style={{ fontWeight: "bold", fontSize: "16px" }}>
+            <span
+              style={{
+                fontWeight: "bold",
+                fontSize: "16px",
+              }}
+            >
               {getTableTitle()}
             </span>
-            <Tag color="blue" style={{ fontSize: "12px" }}>
+            <Tag
+              color="blue"
+              style={{
+                fontSize: "12px",
+              }}
+            >
               {users.length}{" "}
               {userType === "access-requests" ? "demande(s)" : "utilisateur(s)"}
             </Tag>
@@ -554,12 +591,12 @@ const UserTables = ({
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) =>
-            `${range[0]}-${range[1]} sur ${total} ${
-              userType === "access-requests" ? "demandes" : "utilisateurs"
-            }`,
+            `${range[0]}-${range[1]} sur ${total} ${userType === "access-requests" ? "demandes" : "utilisateurs"}`,
           pageSizeOptions: ["10", "20", "50", "100"],
         }}
-        scroll={{ x: 800 }}
+        scroll={{
+          x: 800,
+        }}
         rowKey="id"
         locale={{
           emptyText: getEmptyText(),
@@ -575,5 +612,4 @@ const UserTables = ({
     </div>
   );
 };
-
 export default UserTables;

@@ -2,35 +2,32 @@ import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import {
-  X,
-  Plus,
-  Trash2,
-  Edit3,
-  Save,
-  ChevronUp,
-  ChevronDown,
-  XCircle,
-  FileText,
-  Upload,
-  Image,
-  Paperclip,
-  Loader,
-  BookOpen,
-  Users2,
-  AlertCircle,
-} from "lucide-react";
 import { coursService } from "../../../../../services/CoursService";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import { minioS3Service } from "../../../../../services/minioS3";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBookOpen,
+  faChevronDown,
+  faChevronUp,
+  faCircleExclamation,
+  faCircleXmark,
+  faFileLines,
+  faFloppyDisk,
+  faPaperclip,
+  faPencil,
+  faPlus,
+  faSpinner,
+  faTrashCan,
+  faUserGroup,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const chapterSchema = yup.object().shape({
   titre: yup.string().required("Le titre du chapitre est requis"),
   description: yup.string(),
   contenu: yup.string().required("Le contenu du chapitre est requis"),
   ordre: yup.number().required(),
 });
-
 const courseSchema = yup.object().shape({
   titre: yup.string().required("Le titre est requis"),
   description: yup.string().required("La description est requise"),
@@ -45,7 +42,6 @@ const courseSchema = yup.object().shape({
     .of(chapterSchema)
     .min(1, "Au moins un chapitre est requis"),
 });
-
 const RichTextEditor = ({
   value,
   onChange,
@@ -57,19 +53,16 @@ const RichTextEditor = ({
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
-
   const execCommand = (command, value = null) => {
     document.execCommand(command, false, value);
     handleContentChange();
   };
-
   const handleContentChange = () => {
     if (editorRef.current) {
       const htmlContent = editorRef.current.innerHTML;
       onChange(htmlContent);
     }
   };
-
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       setTimeout(() => {
@@ -77,29 +70,24 @@ const RichTextEditor = ({
       }, 10);
       return;
     }
-
     if (e.key === " " || e.key === "Backspace" || e.key === "Delete") {
       setTimeout(() => {
         handleContentChange();
       }, 10);
     }
   };
-
   const handleFileInputChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-
     for (const file of files) {
       if (!file.name || file.name.trim() === "") {
         alert("Un des fichiers sélectionnés n'a pas de nom valide.");
         return;
       }
     }
-
     try {
       setUploading(true);
       const uploadResults = [];
-
       for (const file of files) {
         try {
           const uploadResult = await onFileUpload(file);
@@ -108,21 +96,19 @@ const RichTextEditor = ({
               file,
               result: uploadResult,
               downloadData: await minioS3Service.generateDownloadUrlByPath(
-                uploadResult.filePath
+                uploadResult.filePath,
               ),
             });
           }
         } catch (error) {
           console.error(`Error uploading ${file.name}:`, error);
           alert(
-            `Erreur lors du téléchargement de ${file.name}: ${error.message}`
+            `Erreur lors du téléchargement de ${file.name}: ${error.message}`,
           );
         }
       }
-
       const selection = window.getSelection();
       const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-
       for (const { file, result, downloadData } of uploadResults) {
         if (file.type.startsWith("image/")) {
           const img = document.createElement("img");
@@ -133,7 +119,6 @@ const RichTextEditor = ({
           img.style.borderRadius = "4px";
           img.style.margin = "8px 0";
           img.style.display = "block";
-
           if (range) {
             range.insertNode(img);
             range.setStartAfter(img);
@@ -151,11 +136,9 @@ const RichTextEditor = ({
           linkContainer.style.display = "flex";
           linkContainer.style.alignItems = "center";
           linkContainer.style.gap = "8px";
-
           const icon = document.createElement("span");
           icon.innerHTML = "📄";
           icon.style.fontSize = "16px";
-
           const link = document.createElement("a");
           link.href = downloadData.downloadUrl;
           link.target = "_blank";
@@ -163,10 +146,8 @@ const RichTextEditor = ({
           link.style.textDecoration = "underline";
           link.style.fontWeight = "500";
           link.textContent = file.name;
-
           linkContainer.appendChild(icon);
           linkContainer.appendChild(link);
-
           if (range) {
             range.insertNode(linkContainer);
             range.setStartAfter(linkContainer);
@@ -175,7 +156,6 @@ const RichTextEditor = ({
             editorRef.current.appendChild(linkContainer);
           }
         }
-
         setUploadedFiles((prev) => [
           ...prev,
           {
@@ -186,7 +166,6 @@ const RichTextEditor = ({
           },
         ]);
       }
-
       if (uploadResults.length > 0) {
         handleContentChange();
       }
@@ -200,25 +179,21 @@ const RichTextEditor = ({
       }
     }
   };
-
   const removeUploadedFile = (timestamp) => {
     setUploadedFiles((prev) =>
-      prev.filter((file) => file.timestamp !== timestamp)
+      prev.filter((file) => file.timestamp !== timestamp),
     );
   };
-
   const downloadFile = async (file) => {
     try {
       const response = await fetch(file.url);
       const blob = await response.blob();
-
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = file.name;
       document.body.appendChild(link);
       link.click();
-
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
@@ -226,25 +201,20 @@ const RichTextEditor = ({
       window.open(file.url, "_blank");
     }
   };
-
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
       editorRef.current.innerHTML = value || "";
     }
   }, [value]);
-
   const handlePaste = (e) => {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
-
     const selection = window.getSelection();
     if (selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       range.deleteContents();
-
       const fragment = document.createDocumentFragment();
       const lines = text.split("\n");
-
       lines.forEach((line, index) => {
         if (index > 0) {
           fragment.appendChild(document.createElement("br"));
@@ -253,26 +223,28 @@ const RichTextEditor = ({
           fragment.appendChild(document.createTextNode(line));
         }
       });
-
       range.insertNode(fragment);
       range.collapse(false);
       selection.removeAllRanges();
       selection.addRange(range);
     }
-
     setTimeout(() => handleContentChange(), 10);
   };
-
   const handleInput = (e) => {
     handleContentChange();
   };
-
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
       {uploadedFiles.length > 0 && (
         <div className="bg-blue-50 border-b border-blue-200 p-3">
           <div className="flex items-center gap-2 mb-2">
-            <Paperclip size={16} className="text-blue-600" />
+            <FontAwesomeIcon
+              icon={faPaperclip}
+              className="text-blue-600"
+              style={{
+                fontSize: 16,
+              }}
+            />
             <span className="text-sm font-medium text-blue-800">
               Fichiers téléchargés:
             </span>
@@ -315,7 +287,12 @@ const RichTextEditor = ({
                     className="text-red-500 hover:text-red-700 p-1"
                     title="Supprimer de la liste"
                   >
-                    <X size={14} />
+                    <FontAwesomeIcon
+                      icon={faXmark}
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                   </button>
                 </div>
               </div>
@@ -397,9 +374,20 @@ const RichTextEditor = ({
           disabled={uploading}
         >
           {uploading ? (
-            <Loader size={14} className="animate-spin" />
+            <FontAwesomeIcon
+              icon={faSpinner}
+              className="animate-spin"
+              style={{
+                fontSize: 14,
+              }}
+            />
           ) : (
-            <Paperclip size={14} />
+            <FontAwesomeIcon
+              icon={faPaperclip}
+              style={{
+                fontSize: 14,
+              }}
+            />
           )}
           <span className="text-xs hidden sm:inline">Fichiers</span>
         </button>
@@ -487,7 +475,6 @@ const RichTextEditor = ({
     </div>
   );
 };
-
 const ChapterCard = ({
   chapter,
   index,
@@ -502,13 +489,11 @@ const ChapterCard = ({
     if (text.length <= length) return text;
     return text.substring(0, length) + "...";
   };
-
   const getPlainText = (html) => {
     const div = document.createElement("div");
     div.innerHTML = html;
     return div.textContent || div.innerText || "";
   };
-
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow relative group">
       <div className="flex items-start justify-between">
@@ -540,7 +525,12 @@ const ChapterCard = ({
               className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
               title="Déplacer vers le haut"
             >
-              <ChevronUp size={14} />
+              <FontAwesomeIcon
+                icon={faChevronUp}
+                style={{
+                  fontSize: 14,
+                }}
+              />
             </button>
           )}
           {canMoveDown && (
@@ -552,7 +542,12 @@ const ChapterCard = ({
               className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
               title="Déplacer vers le bas"
             >
-              <ChevronDown size={14} />
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                style={{
+                  fontSize: 14,
+                }}
+              />
             </button>
           )}
           <button
@@ -563,7 +558,12 @@ const ChapterCard = ({
             className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
             title="Modifier"
           >
-            <Edit3 size={14} />
+            <FontAwesomeIcon
+              icon={faPencil}
+              style={{
+                fontSize: 14,
+              }}
+            />
           </button>
           <button
             onClick={(e) => {
@@ -573,14 +573,18 @@ const ChapterCard = ({
             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             title="Supprimer"
           >
-            <Trash2 size={14} />
+            <FontAwesomeIcon
+              icon={faTrashCan}
+              style={{
+                fontSize: 14,
+              }}
+            />
           </button>
         </div>
       </div>
     </div>
   );
 };
-
 const ChapterEditor = ({
   mode,
   initialData,
@@ -595,9 +599,7 @@ const ChapterEditor = ({
     contenu: "",
     ordre: 0,
   });
-
   const [errors, setErrors] = useState({});
-
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -608,7 +610,6 @@ const ChapterEditor = ({
       });
     }
   }, [initialData, mode, totalChapters]);
-
   const validateForm = () => {
     const newErrors = {};
     if (!formData.titre.trim()) {
@@ -620,7 +621,6 @@ const ChapterEditor = ({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSave = () => {
     if (validateForm()) {
       onSave({
@@ -638,14 +638,18 @@ const ChapterEditor = ({
       }
     }
   };
-
   const chapterNumber = mode === "create" ? totalChapters + 1 : formData.ordre;
-
   return (
     <div className="bg-white rounded-xl p-4 sm:p-6 border-2 border-indigo-200 shadow-sm mb-4 sm:mb-6">
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <h4 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-          <FileText size={20} className="text-indigo-600" />
+          <FontAwesomeIcon
+            icon={faFileLines}
+            className="text-indigo-600"
+            style={{
+              fontSize: 20,
+            }}
+          />
           <span className="hidden sm:inline">
             {mode === "create"
               ? `Nouveau Chapitre ${chapterNumber}`
@@ -665,7 +669,12 @@ const ChapterEditor = ({
           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           title="Annuler"
         >
-          <XCircle size={18} />
+          <FontAwesomeIcon
+            icon={faCircleXmark}
+            style={{
+              fontSize: 18,
+            }}
+          />
         </button>
       </div>
 
@@ -678,17 +687,24 @@ const ChapterEditor = ({
             type="text"
             value={formData.titre}
             onChange={(e) =>
-              setFormData({ ...formData, titre: e.target.value })
+              setFormData({
+                ...formData,
+                titre: e.target.value,
+              })
             }
             onClick={(e) => e.stopPropagation()}
-            className={`w-full px-3 py-2 sm:py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
-              errors.titre ? "border-red-300 bg-red-50" : "border-slate-200"
-            }`}
+            className={`w-full px-3 py-2 sm:py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${errors.titre ? "border-red-300 bg-red-50" : "border-slate-200"}`}
             placeholder="Titre du chapitre"
           />
           {errors.titre && (
             <p className="mt-1 text-sm text-red-600 flex items-center">
-              <AlertCircle size={14} className="mr-1" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="mr-1"
+                style={{
+                  fontSize: 14,
+                }}
+              />
               {errors.titre}
             </p>
           )}
@@ -701,7 +717,10 @@ const ChapterEditor = ({
           <textarea
             value={formData.description}
             onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
+              setFormData({
+                ...formData,
+                description: e.target.value,
+              })
             }
             onClick={(e) => e.stopPropagation()}
             rows={2}
@@ -717,7 +736,10 @@ const ChapterEditor = ({
           <RichTextEditor
             value={formData.contenu}
             onChange={(content) =>
-              setFormData({ ...formData, contenu: content })
+              setFormData({
+                ...formData,
+                contenu: content,
+              })
             }
             placeholder="Contenu détaillé du chapitre..."
             chapterIndex={chapterNumber - 1}
@@ -725,7 +747,13 @@ const ChapterEditor = ({
           />
           {errors.contenu && (
             <p className="mt-1 text-sm text-red-600 flex items-center">
-              <AlertCircle size={14} className="mr-1" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="mr-1"
+                style={{
+                  fontSize: 14,
+                }}
+              />
               {errors.contenu}
             </p>
           )}
@@ -751,14 +779,18 @@ const ChapterEditor = ({
           }}
           className="px-4 py-2 sm:py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 order-1 sm:order-2"
         >
-          <Save size={16} />
+          <FontAwesomeIcon
+            icon={faFloppyDisk}
+            style={{
+              fontSize: 16,
+            }}
+          />
           {mode === "create" ? "Ajouter" : "Sauvegarder"}
         </button>
       </div>
     </div>
   );
 };
-
 const GeneralInfoSection = ({
   register,
   errors,
@@ -770,7 +802,13 @@ const GeneralInfoSection = ({
   return (
     <div className="bg-slate-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
       <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-        <BookOpen size={18} className="mr-2 text-indigo-600" />
+        <FontAwesomeIcon
+          icon={faBookOpen}
+          className="mr-2 text-indigo-600"
+          style={{
+            fontSize: 18,
+          }}
+        />
         Informations générales
       </h3>
 
@@ -786,14 +824,18 @@ const GeneralInfoSection = ({
             id="titre"
             type="text"
             {...register("titre")}
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${
-              errors.titre ? "border-red-300 bg-red-50" : "border-slate-200"
-            }`}
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white ${errors.titre ? "border-red-300 bg-red-50" : "border-slate-200"}`}
             placeholder="Introduction à la programmation"
           />
           {errors.titre && (
             <p className="mt-1 text-sm text-red-600 flex items-center">
-              <AlertCircle size={14} className="mr-1" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="mr-1"
+                style={{
+                  fontSize: 14,
+                }}
+              />
               {errors.titre.message}
             </p>
           )}
@@ -827,16 +869,18 @@ const GeneralInfoSection = ({
             id="description"
             {...register("description")}
             rows={3}
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white resize-none ${
-              errors.description
-                ? "border-red-300 bg-red-50"
-                : "border-slate-200"
-            }`}
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white resize-none ${errors.description ? "border-red-300 bg-red-50" : "border-slate-200"}`}
             placeholder="Décrivez le contenu général de ce cours..."
           />
           {errors.description && (
             <p className="mt-1 text-sm text-red-600 flex items-center">
-              <AlertCircle size={14} className="mr-1" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="mr-1"
+                style={{
+                  fontSize: 14,
+                }}
+              />
               {errors.description.message}
             </p>
           )}
@@ -844,7 +888,13 @@ const GeneralInfoSection = ({
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-            <Users2 size={16} className="mr-2 text-indigo-600" />
+            <FontAwesomeIcon
+              icon={faUserGroup}
+              className="mr-2 text-indigo-600"
+              style={{
+                fontSize: 16,
+              }}
+            />
             Matières associées *
           </label>
           <MultiSelectDropdown
@@ -856,7 +906,13 @@ const GeneralInfoSection = ({
           />
           {errors.matieres && (
             <p className="mt-1 text-sm text-red-600 flex items-center">
-              <AlertCircle size={14} className="mr-1" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="mr-1"
+                style={{
+                  fontSize: 14,
+                }}
+              />
               {errors.matieres.message}
             </p>
           )}
@@ -867,7 +923,13 @@ const GeneralInfoSection = ({
             htmlFor="references"
             className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
           >
-            <FileText size={16} className="mr-2 text-indigo-600" />
+            <FontAwesomeIcon
+              icon={faFileLines}
+              className="mr-2 text-indigo-600"
+              style={{
+                fontSize: 16,
+              }}
+            />
             Références
           </label>
           <textarea
@@ -882,7 +944,6 @@ const GeneralInfoSection = ({
     </div>
   );
 };
-
 const ChaptersSection = ({
   savedChapters,
   activeEditor,
@@ -900,7 +961,13 @@ const ChaptersSection = ({
     <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
         <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-          <FileText size={18} className="mr-2 text-indigo-600" />
+          <FontAwesomeIcon
+            icon={faFileLines}
+            className="mr-2 text-indigo-600"
+            style={{
+              fontSize: 18,
+            }}
+          />
           Chapitres du cours * ({savedChapters.length})
         </h3>
         {!activeEditor && (
@@ -910,7 +977,12 @@ const ChaptersSection = ({
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
             data-testid="create-chapter-button"
           >
-            <Plus size={16} />
+            <FontAwesomeIcon
+              icon={faPlus}
+              style={{
+                fontSize: 16,
+              }}
+            />
             <span className="hidden sm:inline">Nouveau chapitre</span>
             <span className="sm:hidden">Nouveau</span>
           </button>
@@ -948,7 +1020,13 @@ const ChaptersSection = ({
 
         {savedChapters.length === 0 && !activeEditor && (
           <div className="text-center py-8 text-slate-500">
-            <FileText className="mx-auto mb-4 text-slate-400" size={48} />
+            <FontAwesomeIcon
+              icon={faFileLines}
+              className="mx-auto mb-4 text-slate-400"
+              style={{
+                fontSize: 48,
+              }}
+            />
             <p className="mb-4">Aucun chapitre ajouté</p>
             <button
               type="button"
@@ -963,7 +1041,6 @@ const ChaptersSection = ({
     </div>
   );
 };
-
 const CreateCourseFormModal = ({
   subjects,
   showCreateModal,
@@ -984,7 +1061,6 @@ const CreateCourseFormModal = ({
   // Add missing refs and state for file handling
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -1000,9 +1076,7 @@ const CreateCourseFormModal = ({
       chapitres: [],
     },
   });
-
   const watchedMatiereIds = watch("matieres");
-
   useEffect(() => {
     setSelectedMatiereIds(watchedMatiereIds || []);
   }, [watchedMatiereIds]);
@@ -1013,10 +1087,8 @@ const CreateCourseFormModal = ({
       if (!file || !file.name) {
         throw new Error("Invalid file or missing file name");
       }
-
       let documentType = "documents";
       let mediaType = "DOCUMENT";
-
       if (file.type.startsWith("image/")) {
         documentType = "images";
         mediaType = "IMAGE";
@@ -1024,17 +1096,18 @@ const CreateCourseFormModal = ({
         documentType = "videos";
         mediaType = "VIDEO";
       }
-
       const timestamp = Date.now();
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const uniqueFileName = `temp_${timestamp}_${cleanFileName}`;
 
       // Upload the file with course ID (null for create mode, will be set on edit)
       const result = await minioS3Service.uploadFile(
-        new File([file], uniqueFileName, { type: file.type }),
+        new File([file], uniqueFileName, {
+          type: file.type,
+        }),
         mediaType,
         documentType,
-        null  // No coursId yet in create mode
+        null, // No coursId yet in create mode
       );
 
       // Get the current user ID to construct the expected file path
@@ -1042,7 +1115,6 @@ const CreateCourseFormModal = ({
 
       // Construct the file path that matches your backend structure
       const expectedFilePath = `users/${userId}/${mediaType.toLowerCase()}/${documentType}/${uniqueFileName}`;
-
       return {
         ...result,
         filePath: expectedFilePath,
@@ -1053,7 +1125,6 @@ const CreateCourseFormModal = ({
       throw error;
     }
   };
-
   const handleSaveChapter = (chapterData) => {
     if (activeEditor === "edit" && editingIndex !== null) {
       const updatedChapters = [...savedChapters];
@@ -1070,18 +1141,17 @@ const CreateCourseFormModal = ({
       };
       setSavedChapters([...savedChapters, newChapter]);
     }
-
     setActiveEditor(null);
     setEditingData(null);
     setEditingIndex(null);
   };
-
   const handleEditChapter = (index) => {
     setActiveEditor("edit");
-    setEditingData({ ...savedChapters[index] });
+    setEditingData({
+      ...savedChapters[index],
+    });
     setEditingIndex(index);
   };
-
   const handleDeleteChapter = (index) => {
     const updatedChapters = savedChapters.filter((_, i) => i !== index);
     const reorderedChapters = updatedChapters.map((chapter, i) => ({
@@ -1090,7 +1160,6 @@ const CreateCourseFormModal = ({
     }));
     setSavedChapters(reorderedChapters);
   };
-
   const moveChapter = (index, direction) => {
     const newIndex = direction === "up" ? index - 1 : index + 1;
     if (newIndex >= 0 && newIndex < savedChapters.length) {
@@ -1106,29 +1175,24 @@ const CreateCourseFormModal = ({
       setSavedChapters(reorderedChapters);
     }
   };
-
   const handleCancelEditor = () => {
     setActiveEditor(null);
     setEditingData(null);
     setEditingIndex(null);
   };
-
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
       setLoading(true);
       setError("");
       setSubmitError("");
-
       if (savedChapters.length === 0) {
         throw new Error("Au moins un chapitre est requis");
       }
-
       const professorId = localStorage.getItem("userId");
       if (!professorId) {
         throw new Error("ID du professeur non trouvé");
       }
-
       const chapitresData = savedChapters.map((chapitre, index) => {
         return {
           id: chapitre.id || null,
@@ -1138,9 +1202,9 @@ const CreateCourseFormModal = ({
           ordre: index + 1,
         };
       });
-
-      const matieresData = selectedMatiereIds.map((id) => ({ id }));
-
+      const matieresData = selectedMatiereIds.map((id) => ({
+        id,
+      }));
       const courseData = {
         titre: data.titre,
         description: data.description,
@@ -1151,9 +1215,7 @@ const CreateCourseFormModal = ({
         matieres: matieresData,
         chapitres: chapitresData,
       };
-
       const result = await coursService.createCours(courseData);
-
       setSuccess("Cours créé avec succès !");
       setShowCreateModal(false);
       resetForm();
@@ -1168,7 +1230,6 @@ const CreateCourseFormModal = ({
       setLoading(false);
     }
   };
-
   const resetForm = () => {
     reset({
       titre: "",
@@ -1184,19 +1245,17 @@ const CreateCourseFormModal = ({
     setEditingIndex(null);
     setSubmitError("");
   };
-
   const handleMatiereChange = (newSelectedIds) => {
     setSelectedMatiereIds(newSelectedIds);
-    setValue("matieres", newSelectedIds, { shouldValidate: true });
+    setValue("matieres", newSelectedIds, {
+      shouldValidate: true,
+    });
   };
-
   const handleClose = () => {
     setShowCreateModal(false);
     resetForm();
   };
-
   if (!showCreateModal) return null;
-
   return (
     // FIXED: Added higher z-index and proper positioning to match CoursProgrammerForm
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
@@ -1205,7 +1264,13 @@ const CreateCourseFormModal = ({
         <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
           <div className="flex items-center justify-between">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
-              <BookOpen className="mr-2 sm:mr-3 text-indigo-600" size={24} />
+              <FontAwesomeIcon
+                icon={faBookOpen}
+                className="mr-2 sm:mr-3 text-indigo-600"
+                style={{
+                  fontSize: 24,
+                }}
+              />
               <span className="hidden sm:inline">Nouveau Cours</span>
               <span className="sm:hidden">Nouveau Cours</span>
             </h2>
@@ -1213,13 +1278,24 @@ const CreateCourseFormModal = ({
               onClick={handleClose}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <X size={20} />
+              <FontAwesomeIcon
+                icon={faXmark}
+                style={{
+                  fontSize: 20,
+                }}
+              />
             </button>
           </div>
 
           {submitError && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start text-red-700">
-              <AlertCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="mr-2 flex-shrink-0 mt-0.5"
+                style={{
+                  fontSize: 16,
+                }}
+              />
               <span className="text-sm">{submitError}</span>
             </div>
           )}
@@ -1266,7 +1342,13 @@ const CreateCourseFormModal = ({
               disabled={isSubmitting}
               className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors rounded-lg hover:bg-slate-200 flex items-center justify-center order-2 sm:order-1"
             >
-              <X size={16} className="mr-2" />
+              <FontAwesomeIcon
+                icon={faXmark}
+                className="mr-2"
+                style={{
+                  fontSize: 16,
+                }}
+              />
               Annuler
             </button>
             <button
@@ -1302,7 +1384,13 @@ const CreateCourseFormModal = ({
                 </>
               ) : (
                 <>
-                  <Plus size={16} className="mr-2" />
+                  <FontAwesomeIcon
+                    icon={faPlus}
+                    className="mr-2"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   <span className="hidden sm:inline">Créer le cours</span>
                   <span className="sm:hidden">Créer</span>
                 </>
@@ -1314,5 +1402,4 @@ const CreateCourseFormModal = ({
     </div>
   );
 };
-
 export default CreateCourseFormModal;

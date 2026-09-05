@@ -1,34 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "../../../../../hooks/useTranslation";
-import {
-  Search,
-  Plus,
-  Edit2,
-  Trash2,
-  Eye,
-  Users,
-  Filter,
-  X,
-  UserCheck,
-  UserX,
-  Mail,
-  Phone,
-  MapPin,
-  ChevronDown,
-  MoreVertical,
-  Calendar,
-  Activity,
-  User,
-  Clock,
-  RefreshCw,
-} from "lucide-react";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import accederService from "../../../../../services/accederService";
 import parentService from "../../../../../services/parentService";
 import ParentModal from "../../modals/ParentModal";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import UserViewModalParentStudent from "../../modals/UserViewModalParentStudent";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faCalendarDays,
+  faChevronDown,
+  faClock,
+  faEllipsisVertical,
+  faEnvelope,
+  faEye,
+  faFilter,
+  faHeartPulse,
+  faLocationDot,
+  faMagnifyingGlass,
+  faPen,
+  faPhone,
+  faPlus,
+  faTrashCan,
+  faUser,
+  faUserCheck,
+  faUserXmark,
+  faUsers,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const ParentsContent = () => {
   const { t } = useTranslation();
   const [parents, setParents] = useState([]);
@@ -46,26 +46,21 @@ const ParentsContent = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [viewMode, setViewMode] = useState("grid");
   const [userRole, setUserRole] = useState("");
-
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     if (role) {
       setUserRole(role.toUpperCase());
     }
-
     loadData();
   }, []);
-
   useEffect(() => {
     filterParents();
   }, [parents, searchTerm, filterStatus]);
-
   const loadData = async () => {
     try {
       setLoading(true);
       const role = localStorage.getItem("userRole")?.toUpperCase();
       const userId = localStorage.getItem("userId");
-
       let rawParents;
       if (role === "PROFESSOR" || role === "ROLE_PROFESSOR") {
         rawParents = await parentService.getParentsByProfesseur(userId);
@@ -73,17 +68,21 @@ const ParentsContent = () => {
         rawParents = await scholchatService.getAllParents();
       }
       const safeParents = Array.isArray(rawParents) ? rawParents : [];
-
       const enriched = await Promise.all(
         safeParents.map(async (p) => {
-          try { p.classes = await accederService.obtenirClassesAccessibles(p.id); }
-          catch { p.classes = []; }
-          try { p.enfants = await parentService.getChildren(p.id); }
-          catch { p.enfants = []; }
+          try {
+            p.classes = await accederService.obtenirClassesAccessibles(p.id);
+          } catch {
+            p.classes = [];
+          }
+          try {
+            p.enfants = await parentService.getChildren(p.id);
+          } catch {
+            p.enfants = [];
+          }
           return p;
-        })
+        }),
       );
-
       setParents(enriched);
       setClasses([]);
     } catch (err) {
@@ -92,28 +91,23 @@ const ParentsContent = () => {
       setLoading(false);
     }
   };
-
   const filterParents = () => {
     const safeParents = Array.isArray(parents) ? parents : [];
     let filtered = safeParents;
-
     if (searchTerm) {
       filtered = filtered.filter(
         (parent) =>
           parent.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           parent.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           parent.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          parent.telephone?.toLowerCase().includes(searchTerm.toLowerCase())
+          parent.telephone?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
-
     if (filterStatus !== "all") {
       filtered = filtered.filter((parent) => parent.etat === filterStatus);
     }
-
     setFilteredParents(filtered);
   };
-
   const getStatusBadge = (status) => {
     const badges = {
       ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -123,7 +117,6 @@ const ParentsContent = () => {
     };
     return badges[status] || "bg-gray-50 text-gray-700 border-gray-200";
   };
-
   const getStatusText = (status) => {
     const statusMap = {
       ACTIVE: t("parents.status.active"),
@@ -133,7 +126,6 @@ const ParentsContent = () => {
     };
     return statusMap[status] || status;
   };
-
   const getStatusIcon = (status) => {
     switch (status) {
       case "ACTIVE":
@@ -155,7 +147,6 @@ const ParentsContent = () => {
         );
     }
   };
-
   const handleDelete = async () => {
     try {
       setLoading(true);
@@ -169,25 +160,18 @@ const ParentsContent = () => {
       setLoading(false);
     }
   };
-
   const handleViewUser = (parent) => {
     setCurrentUser(parent);
     setIsViewModalOpen(true);
   };
-
   const handleSuccess = () => {
     setIsViewModalOpen(false);
     loadData();
   };
-
   const getInitials = (firstName, lastName) => {
-    return `${firstName?.charAt(0) || ""}${
-      lastName?.charAt(0) || ""
-    }`.toUpperCase();
+    return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase();
   };
-
   const isAdmin = userRole === "ADMIN" || userRole === "ROLE_ADMIN";
-
   if (loading && parents.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -196,7 +180,9 @@ const ParentsContent = () => {
             <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
             <div
               className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-600 rounded-full animate-spin absolute top-0 left-0"
-              style={{ clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)" }}
+              style={{
+                clipPath: "polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)",
+              }}
             ></div>
           </div>
           <p className="text-slate-600 font-medium text-sm sm:text-base">
@@ -206,7 +192,6 @@ const ParentsContent = () => {
       </div>
     );
   }
-
   return (
     <div className="full-bleed-page">
       <div className="w-full px-3 sm:px-6 py-3 sm:py-6">
@@ -214,7 +199,10 @@ const ParentsContent = () => {
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
             <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg sm:rounded-xl shadow-lg">
-              <User className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              <FontAwesomeIcon
+                icon={faUser}
+                className="w-4 h-4 sm:w-6 sm:h-6 text-white"
+              />
             </div>
             <div>
               <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
@@ -234,7 +222,10 @@ const ParentsContent = () => {
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   <div className="w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center">
-                    <X className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                    <FontAwesomeIcon
+                      icon={faXmark}
+                      className="w-2 h-2 sm:w-3 sm:h-3 text-white"
+                    />
                   </div>
                 </div>
                 <div className="ml-3 flex-1">
@@ -249,7 +240,10 @@ const ParentsContent = () => {
                   onClick={() => setError("")}
                   className="flex-shrink-0 ml-4 text-red-400 hover:text-red-600 transition-colors"
                 >
-                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <FontAwesomeIcon
+                    icon={faXmark}
+                    className="w-3 h-3 sm:w-4 sm:h-4"
+                  />
                 </button>
               </div>
             </div>
@@ -258,11 +252,10 @@ const ParentsContent = () => {
 
         {/* Stats Cards */}
         <div className="hidden md:grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div 
+          <div
             onClick={() => setFilterStatus("all")}
-            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
-              filterStatus === "all" ? "ring-2 ring-blue-500" : ""
-            }`}>
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${filterStatus === "all" ? "ring-2 ring-blue-500" : ""}`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -273,33 +266,45 @@ const ParentsContent = () => {
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg sm:rounded-xl">
-                <Users className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
+                <FontAwesomeIcon
+                  icon={faUsers}
+                  className="w-3 h-3 sm:w-6 sm:h-6 text-white"
+                />
               </div>
             </div>
             <div className="mt-2 sm:mt-4 flex items-center">
-              <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2" />
+              <FontAwesomeIcon
+                icon={faHeartPulse}
+                className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2"
+              />
               <span className="text-slate-500 text-xs sm:text-sm">
                 {t("parents.stats.registered")}
               </span>
             </div>
           </div>
 
-          <div 
+          <div
             onClick={() => setFilterStatus("ACTIVE")}
-            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
-              filterStatus === "ACTIVE" ? "ring-2 ring-emerald-500" : ""
-            }`}>
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${filterStatus === "ACTIVE" ? "ring-2 ring-emerald-500" : ""}`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
                   {t("parents.stats.active")}
                 </p>
                 <p className="text-lg sm:text-3xl font-bold text-emerald-600 mt-1">
-                  {(Array.isArray(parents) ? parents : []).filter((p) => p.etat === "ACTIVE").length}
+                  {
+                    (Array.isArray(parents) ? parents : []).filter(
+                      (p) => p.etat === "ACTIVE",
+                    ).length
+                  }
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg sm:rounded-xl">
-                <UserCheck className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
+                <FontAwesomeIcon
+                  icon={faUserCheck}
+                  className="w-3 h-3 sm:w-6 sm:h-6 text-white"
+                />
               </div>
             </div>
             <div className="mt-2 sm:mt-4 flex items-center">
@@ -310,11 +315,10 @@ const ParentsContent = () => {
             </div>
           </div>
 
-          <div 
+          <div
             onClick={() => setFilterStatus("PENDING")}
-            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
-              filterStatus === "PENDING" ? "ring-2 ring-amber-500" : ""
-            }`}>
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${filterStatus === "PENDING" ? "ring-2 ring-amber-500" : ""}`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
@@ -324,13 +328,17 @@ const ParentsContent = () => {
                   {
                     (Array.isArray(parents) ? parents : []).filter(
                       (p) =>
-                        p.etat === "PENDING" || p.etat === "AWAITING_VALIDATION"
+                        p.etat === "PENDING" ||
+                        p.etat === "AWAITING_VALIDATION",
                     ).length
                   }
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg sm:rounded-xl">
-                <Clock className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
+                <FontAwesomeIcon
+                  icon={faClock}
+                  className="w-3 h-3 sm:w-6 sm:h-6 text-white"
+                />
               </div>
             </div>
             <div className="mt-2 sm:mt-4 flex items-center">
@@ -341,22 +349,28 @@ const ParentsContent = () => {
             </div>
           </div>
 
-          <div 
+          <div
             onClick={() => setFilterStatus("INACTIVE")}
-            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
-              filterStatus === "INACTIVE" ? "ring-2 ring-red-500" : ""
-            }`}>
+            className={`bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${filterStatus === "INACTIVE" ? "ring-2 ring-red-500" : ""}`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-xs sm:text-sm font-medium">
                   {t("parents.stats.inactive")}
                 </p>
                 <p className="text-lg sm:text-3xl font-bold text-red-600 mt-1">
-                  {(Array.isArray(parents) ? parents : []).filter((p) => p.etat === "INACTIVE").length}
+                  {
+                    (Array.isArray(parents) ? parents : []).filter(
+                      (p) => p.etat === "INACTIVE",
+                    ).length
+                  }
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-r from-red-500 to-red-600 rounded-lg sm:rounded-xl">
-                <UserX className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
+                <FontAwesomeIcon
+                  icon={faUserXmark}
+                  className="w-3 h-3 sm:w-6 sm:h-6 text-white"
+                />
               </div>
             </div>
             <div className="mt-2 sm:mt-4 flex items-center">
@@ -372,9 +386,12 @@ const ParentsContent = () => {
         <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-lg mb-6 sm:mb-8">
           <div className="flex flex-col space-y-3 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between lg:space-x-6">
             <div className="relative flex-1 max-w-full lg:max-w-md">
-              <Search
+              <FontAwesomeIcon
+                icon={faMagnifyingGlass}
                 className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                size={16}
+                style={{
+                  fontSize: 16,
+                }}
               />
               <input
                 type="text"
@@ -387,9 +404,12 @@ const ParentsContent = () => {
 
             <div className="flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4">
               <div className="relative flex-1 min-[480px]:flex-none min-w-0">
-                <Filter
+                <FontAwesomeIcon
+                  icon={faFilter}
                   className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
-                  size={14}
+                  style={{
+                    fontSize: 14,
+                  }}
                 />
                 <select
                   value={filterStatus}
@@ -403,9 +423,12 @@ const ParentsContent = () => {
                   </option>
                   <option value="PENDING">{t("parents.status.pending")}</option>
                 </select>
-                <ChevronDown
+                <FontAwesomeIcon
+                  icon={faChevronDown}
                   className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-                  size={14}
+                  style={{
+                    fontSize: 14,
+                  }}
                 />
               </div>
 
@@ -415,10 +438,16 @@ const ParentsContent = () => {
                   disabled={loading}
                   className="px-3 sm:px-4 py-2 sm:py-3 bg-white border border-slate-200 text-slate-600 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <RefreshCw size={14} className={`sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
+                  <FontAwesomeIcon
+                    icon={faArrowsRotate}
+                    className={`sm:w-4 sm:h-4 ${loading ? "animate-spin" : ""}`}
+                    style={{
+                      fontSize: 14,
+                    }}
+                  />
                   Actualiser
                 </button>
-                
+
                 {isAdmin && (
                   <button
                     onClick={() => {
@@ -428,7 +457,13 @@ const ParentsContent = () => {
                     }}
                     className="px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1 sm:gap-2"
                   >
-                    <Plus size={14} className="sm:w-4 sm:h-4" />
+                    <FontAwesomeIcon
+                      icon={faPlus}
+                      className="sm:w-4 sm:h-4"
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                     {t("parents.actions.add")}
                   </button>
                 )}
@@ -436,21 +471,13 @@ const ParentsContent = () => {
                 <div className="flex bg-slate-100 rounded-lg sm:rounded-xl p-1">
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                      viewMode === "grid"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
+                    className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${viewMode === "grid" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
                   >
                     {t("parents.actions.grid")}
                   </button>
                   <button
                     onClick={() => setViewMode("table")}
-                    className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                      viewMode === "table"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
+                    className={`px-3 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${viewMode === "table" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
                   >
                     {t("parents.actions.table")}
                   </button>
@@ -486,34 +513,44 @@ const ParentsContent = () => {
                           {parent.prenom} {parent.nom}
                         </h3>
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                            parent.etat
-                          )}`}
+                          className={`inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium border ${getStatusBadge(parent.etat)}`}
                         >
                           {getStatusText(parent.etat)}
                         </span>
                       </div>
                     </div>
                     <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                      <MoreVertical size={12} className="sm:w-4 sm:h-4" />
+                      <FontAwesomeIcon
+                        icon={faEllipsisVertical}
+                        className="sm:w-4 sm:h-4"
+                        style={{
+                          fontSize: 12,
+                        }}
+                      />
                     </button>
                   </div>
                 </div>
 
                 <div className="px-3 sm:px-5 pb-3 sm:pb-4 flex-grow space-y-2 sm:space-y-3">
                   <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                    <Mail
-                      size={10}
+                    <FontAwesomeIcon
+                      icon={faEnvelope}
                       className="sm:w-3.5 sm:h-3.5 mr-2 sm:mr-3 text-slate-400 flex-shrink-0"
+                      style={{
+                        fontSize: 10,
+                      }}
                     />
                     <span className="truncate">{parent.email}</span>
                   </div>
 
                   {parent.telephone && (
                     <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                      <Phone
-                        size={10}
+                      <FontAwesomeIcon
+                        icon={faPhone}
                         className="sm:w-3.5 sm:h-3.5 mr-2 sm:mr-3 text-slate-400 flex-shrink-0"
+                        style={{
+                          fontSize: 10,
+                        }}
                       />
                       <span className="truncate">{parent.telephone}</span>
                     </div>
@@ -521,18 +558,24 @@ const ParentsContent = () => {
 
                   {parent.adresse && (
                     <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                      <MapPin
-                        size={10}
+                      <FontAwesomeIcon
+                        icon={faLocationDot}
                         className="sm:w-3.5 sm:h-3.5 mr-2 sm:mr-3 text-slate-400 flex-shrink-0"
+                        style={{
+                          fontSize: 10,
+                        }}
                       />
                       <span className="truncate">{parent.adresse}</span>
                     </div>
                   )}
 
                   <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                    <Calendar
-                      size={10}
+                    <FontAwesomeIcon
+                      icon={faCalendarDays}
                       className="sm:w-3.5 sm:h-3.5 mr-2 sm:mr-3 text-slate-400 flex-shrink-0"
+                      style={{
+                        fontSize: 10,
+                      }}
                     />
                     <span className="truncate">
                       {t("parents.card.registeredOn")}{" "}
@@ -577,7 +620,13 @@ const ParentsContent = () => {
                       className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
                       title={t("parents.actions.view")}
                     >
-                      <Eye size={12} className="sm:w-4 sm:h-4" />
+                      <FontAwesomeIcon
+                        icon={faEye}
+                        className="sm:w-4 sm:h-4"
+                        style={{
+                          fontSize: 12,
+                        }}
+                      />
                     </button>
 
                     {isAdmin && (
@@ -591,7 +640,13 @@ const ParentsContent = () => {
                           className="p-1.5 sm:p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
                           title={t("parents.actions.edit")}
                         >
-                          <Edit2 size={12} className="sm:w-4 sm:h-4" />
+                          <FontAwesomeIcon
+                            icon={faPen}
+                            className="sm:w-4 sm:h-4"
+                            style={{
+                              fontSize: 12,
+                            }}
+                          />
                         </button>
                         <button
                           onClick={() => {
@@ -601,7 +656,13 @@ const ParentsContent = () => {
                           className="p-1.5 sm:p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
                           title={t("parents.actions.delete")}
                         >
-                          <Trash2 size={12} className="sm:w-4 sm:h-4" />
+                          <FontAwesomeIcon
+                            icon={faTrashCan}
+                            className="sm:w-4 sm:h-4"
+                            style={{
+                              fontSize: 12,
+                            }}
+                          />
                         </button>
                       </>
                     )}
@@ -660,9 +721,12 @@ const ParentsContent = () => {
                               {parent.prenom} {parent.nom}
                             </div>
                             <div className="text-xs text-slate-500 flex items-center truncate">
-                              <MapPin
-                                size={10}
+                              <FontAwesomeIcon
+                                icon={faLocationDot}
                                 className="mr-1 flex-shrink-0"
+                                style={{
+                                  fontSize: 10,
+                                }}
                               />
                               <span className="truncate">
                                 {parent.adresse ||
@@ -675,17 +739,23 @@ const ParentsContent = () => {
                       <td className="px-3 sm:px-6 py-2 sm:py-4">
                         <div className="space-y-1">
                           <div className="text-xs sm:text-sm text-slate-900 flex items-center">
-                            <Mail
-                              size={10}
+                            <FontAwesomeIcon
+                              icon={faEnvelope}
                               className="mr-1 sm:mr-2 text-slate-400 flex-shrink-0"
+                              style={{
+                                fontSize: 10,
+                              }}
                             />
                             <span className="truncate">{parent.email}</span>
                           </div>
                           {parent.telephone && (
                             <div className="text-xs text-slate-500 flex items-center">
-                              <Phone
-                                size={10}
+                              <FontAwesomeIcon
+                                icon={faPhone}
                                 className="mr-1 sm:mr-2 text-slate-400 flex-shrink-0"
+                                style={{
+                                  fontSize: 10,
+                                }}
                               />
                               <span className="truncate">
                                 {parent.telephone}
@@ -726,19 +796,10 @@ const ParentsContent = () => {
                       </td>
                       <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                            parent.etat
-                          )}`}
+                          className={`inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium border ${getStatusBadge(parent.etat)}`}
                         >
                           <div
-                            className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full mr-1 sm:mr-2 ${
-                              parent.etat === "ACTIVE"
-                                ? "bg-emerald-500"
-                                : parent.etat === "PENDING" ||
-                                  parent.etat === "AWAITING_VALIDATION"
-                                ? "bg-amber-500"
-                                : "bg-red-500"
-                            }`}
+                            className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full mr-1 sm:mr-2 ${parent.etat === "ACTIVE" ? "bg-emerald-500" : parent.etat === "PENDING" || parent.etat === "AWAITING_VALIDATION" ? "bg-amber-500" : "bg-red-500"}`}
                           ></div>
                           {getStatusText(parent.etat)}
                         </span>
@@ -750,7 +811,13 @@ const ParentsContent = () => {
                             className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
                             title={t("parents.actions.view")}
                           >
-                            <Eye size={12} className="sm:w-4 sm:h-4" />
+                            <FontAwesomeIcon
+                              icon={faEye}
+                              className="sm:w-4 sm:h-4"
+                              style={{
+                                fontSize: 12,
+                              }}
+                            />
                           </button>
 
                           {isAdmin && (
@@ -764,7 +831,13 @@ const ParentsContent = () => {
                                 className="p-1.5 sm:p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
                                 title={t("parents.actions.edit")}
                               >
-                                <Edit2 size={12} className="sm:w-4 sm:h-4" />
+                                <FontAwesomeIcon
+                                  icon={faPen}
+                                  className="sm:w-4 sm:h-4"
+                                  style={{
+                                    fontSize: 12,
+                                  }}
+                                />
                               </button>
                               <button
                                 onClick={() => {
@@ -774,7 +847,13 @@ const ParentsContent = () => {
                                 className="p-1.5 sm:p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
                                 title={t("parents.actions.delete")}
                               >
-                                <Trash2 size={12} className="sm:w-4 sm:h-4" />
+                                <FontAwesomeIcon
+                                  icon={faTrashCan}
+                                  className="sm:w-4 sm:h-4"
+                                  style={{
+                                    fontSize: 12,
+                                  }}
+                                />
                               </button>
                             </>
                           )}
@@ -793,7 +872,10 @@ const ParentsContent = () => {
           <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-12">
             <div className="text-center">
               <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4 sm:mb-6">
-                <User className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400" />
+                <FontAwesomeIcon
+                  icon={faUser}
+                  className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400"
+                />
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
                 {searchTerm || filterStatus !== "all"
@@ -814,7 +896,13 @@ const ParentsContent = () => {
                   }}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto text-sm sm:text-base"
                 >
-                  <Plus size={16} className="sm:w-5 sm:h-5" />
+                  <FontAwesomeIcon
+                    icon={faPlus}
+                    className="sm:w-5 sm:h-5"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   {t("parents.search.addParent")}
                 </button>
               )}
@@ -881,5 +969,4 @@ const ParentsContent = () => {
     </div>
   );
 };
-
 export default ParentsContent;

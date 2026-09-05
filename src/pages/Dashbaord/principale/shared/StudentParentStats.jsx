@@ -11,28 +11,29 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import {
-  BookOpen,
-  TrendingUp,
-  MessageCircle,
-  Award,
-  Target,
-  Bell,
-  User,
-  CheckCircle,
-  AlertCircle,
-  ChevronDown,
-  Calendar,
-  Clock,
-  RefreshCw,
-  Users,
-} from "lucide-react";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
 import parentService from "../../../../services/parentService";
 import AccederService from "../../../../services/accederService";
 import { coursProgrammerService } from "../../../../services/coursProgrammerService";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faBell,
+  faBookOpen,
+  faCalendarDays,
+  faChevronDown,
+  faCircleCheck,
+  faCircleExclamation,
+  faUsers,
+  faClock,
+} from "@fortawesome/free-solid-svg-icons";
+import { asIconComponent } from "../../../../utils/faIconAdapter";
+const Bell = asIconComponent(faBell);
+const BookOpen = asIconComponent(faBookOpen);
+const Calendar = asIconComponent(faCalendarDays);
+const CheckCircle = asIconComponent(faCircleCheck);
+const Clock = asIconComponent(faClock);
 const StudentParentStats = ({
   isDark = false,
   themes,
@@ -43,7 +44,9 @@ const StudentParentStats = ({
   const isMobile = useSelector((state) => state.ui.isMobile);
   // Notifications come from Redux (populated once on mount + WebSocket pushes).
   // No extra HTTP fetch needed here.
-  const reduxNotifications = useSelector((state) => state.notifications?.notifications || []);
+  const reduxNotifications = useSelector(
+    (state) => state.notifications?.notifications || [],
+  );
   const userId = localStorage.getItem("userId");
 
   // Real data states
@@ -67,7 +70,6 @@ const StudentParentStats = ({
     if (!userId) return;
     setIsLoading(true);
     setError(null);
-
     try {
       if (userRole === "parent") {
         const childrenData = await parentService.getChildren(userId);
@@ -75,7 +77,7 @@ const StudentParentStats = ({
         if (childrenData.length > 0) {
           // Use child selected from header switcher, or first child
           const storedChildId = localStorage.getItem("selectedChildId");
-          const found = childrenData.find(c => c.id === storedChildId);
+          const found = childrenData.find((c) => c.id === storedChildId);
           setSelectedChild(found || childrenData[0]);
         }
       } else {
@@ -84,8 +86,12 @@ const StudentParentStats = ({
           AccederService.obtenirClassesAccessibles(userId),
           coursProgrammerService.obtenirProgrammationParParticipant(userId),
         ]);
-        setOwnClasses(classes.status === "fulfilled" ? classes.value || [] : []);
-        setOwnCourses(courses.status === "fulfilled" ? courses.value || [] : []);
+        setOwnClasses(
+          classes.status === "fulfilled" ? classes.value || [] : [],
+        );
+        setOwnCourses(
+          courses.status === "fulfilled" ? courses.value || [] : [],
+        );
       }
     } catch (err) {
       console.error("Error loading initial data:", err);
@@ -98,26 +104,51 @@ const StudentParentStats = ({
   // Load data for selected child - fetches ONLY this child's data using direct fetch (no cache)
   const loadChildData = useCallback(async (child) => {
     if (!child?.id) return;
-
-    console.log("=== LOADING DATA FOR CHILD ===", child.id, child.prenom, child.nom);
+    console.log(
+      "=== LOADING DATA FOR CHILD ===",
+      child.id,
+      child.prenom,
+      child.nom,
+    );
 
     // Use direct fetch to avoid any axios caching or interceptor issues
-    const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+    const token =
+      localStorage.getItem("accessToken") || localStorage.getItem("authToken");
     const baseUrl = process.env.REACT_APP_API_BASE_URL;
-    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
-
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
     try {
       // Fetch classes directly for THIS child ID - no fallback to parent
-      const classesResp = await fetch(`${baseUrl}/acceder/utilisateurs/${child.id}/classes`, { headers });
+      const classesResp = await fetch(
+        `${baseUrl}/acceder/utilisateurs/${child.id}/classes`,
+        {
+          headers,
+        },
+      );
       const childClassesResult = classesResp.ok ? await classesResp.json() : [];
 
       // Fetch courses for this child
-      const coursesResp = await fetch(`${baseUrl}/cours-programmes/by-participant/${child.id}`, { headers });
+      const coursesResp = await fetch(
+        `${baseUrl}/cours-programmes/by-participant/${child.id}`,
+        {
+          headers,
+        },
+      );
       const childCoursesResult = coursesResp.ok ? await coursesResp.json() : [];
-
-      console.log("=== CHILD CLASSES ===", child.prenom, ":", childClassesResult.length);
-      console.log("=== CHILD COURSES ===", child.prenom, ":", childCoursesResult.length);
-
+      console.log(
+        "=== CHILD CLASSES ===",
+        child.prenom,
+        ":",
+        childClassesResult.length,
+      );
+      console.log(
+        "=== CHILD COURSES ===",
+        child.prenom,
+        ":",
+        childCoursesResult.length,
+      );
       setChildClasses(childClassesResult);
       setChildCourses(childCoursesResult);
     } catch (err) {
@@ -126,7 +157,6 @@ const StudentParentStats = ({
       setChildCourses([]);
     }
   }, []);
-
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
@@ -136,13 +166,15 @@ const StudentParentStats = ({
     const handleChildChanged = () => {
       const storedChildId = localStorage.getItem("selectedChildId");
       if (storedChildId && children.length > 0) {
-        const found = children.find(c => c.id === storedChildId);
+        const found = children.find((c) => c.id === storedChildId);
         if (found) {
           // Clear ALL previous child data immediately
           setChildClasses([]);
           setChildCourses([]);
           // Create new object reference to force re-render
-          const newChild = { ...found };
+          const newChild = {
+            ...found,
+          };
           setSelectedChild(newChild);
           // Directly reload data for this child
           loadChildData(newChild);
@@ -159,7 +191,6 @@ const StudentParentStats = ({
       loadChildData(selectedChild);
     }
   }, [selectedChild, loadChildData, userRole]);
-
   const handleRefresh = async () => {
     setRefreshing(true);
     if (userRole === "parent" && selectedChild) {
@@ -176,37 +207,47 @@ const StudentParentStats = ({
   // Use Redux notifications — no child-specific filtering needed since the backend
   // already returns only notifications for the authenticated user.
   const currentNotifications = reduxNotifications;
-
   const upcomingCourses = currentCourses.filter((c) => {
     const courseDate = new Date(c.dateCoursPrevue);
     return courseDate > new Date() && c.etatCoursProgramme === "PLANIFIE";
   });
-
   const completedCourses = currentCourses.filter(
-    (c) => c.etatCoursProgramme === "TERMINE"
+    (c) => c.etatCoursProgramme === "TERMINE",
   );
-
   const inProgressCourses = currentCourses.filter(
-    (c) => c.etatCoursProgramme === "EN_COURS"
+    (c) => c.etatCoursProgramme === "EN_COURS",
   );
-
   const unreadNotifications = currentNotifications.filter((n) => !n.read);
 
   // Chart data - courses by class
   const coursesByClassData = currentClasses.map((classe) => ({
-    name: classe.nom?.length > 12 ? classe.nom.substring(0, 12) + "..." : classe.nom || "Classe",
-    courses: currentCourses.filter((c) =>
-      c.classesIds?.includes(classe.id) || c.classeId === classe.id
+    name:
+      classe.nom?.length > 12
+        ? classe.nom.substring(0, 12) + "..."
+        : classe.nom || "Classe",
+    courses: currentCourses.filter(
+      (c) => c.classesIds?.includes(classe.id) || c.classeId === classe.id,
     ).length,
   }));
 
   // Course status distribution
   const courseStatusData = [
-    { name: "Terminés", value: completedCourses.length, color: "#10B981" },
-    { name: "En cours", value: inProgressCourses.length, color: "#3B82F6" },
-    { name: "Planifiés", value: upcomingCourses.length, color: "#F59E0B" },
+    {
+      name: "Terminés",
+      value: completedCourses.length,
+      color: "#10B981",
+    },
+    {
+      name: "En cours",
+      value: inProgressCourses.length,
+      color: "#3B82F6",
+    },
+    {
+      name: "Planifiés",
+      value: upcomingCourses.length,
+      color: "#F59E0B",
+    },
   ].filter((d) => d.value > 0);
-
   const getThemeColors = () => {
     if (isDark) {
       return {
@@ -223,39 +264,62 @@ const StudentParentStats = ({
       border: "border-gray-200",
     };
   };
-
   const themeColors = getThemeColors();
-
   const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick }) => (
     <motion.div
-      whileHover={isMobile ? {} : { y: -5, scale: 1.02 }}
+      whileHover={
+        isMobile
+          ? {}
+          : {
+              y: -5,
+              scale: 1.02,
+            }
+      }
       onClick={onClick}
       className={`${isDark ? "bg-gray-800/80 border-white/5" : "bg-white/80 border-white/20"} backdrop-blur-xl rounded-2xl shadow-xl border ${isMobile ? "p-3" : "p-5 sm:p-6"} group transition-all duration-300 relative overflow-hidden ${onClick ? "cursor-pointer" : ""}`}
     >
-      <div className={`absolute top-0 right-0 w-24 h-24 ${color}/10 rounded-full blur-2xl -mr-12 -mt-12`}></div>
+      <div
+        className={`absolute top-0 right-0 w-24 h-24 ${color}/10 rounded-full blur-2xl -mr-12 -mt-12`}
+      ></div>
 
-      <div className={`flex ${isMobile ? "flex-col gap-2" : "items-center justify-between"} relative z-10`}>
-        <div className={`flex items-center ${isMobile ? "justify-between" : ""}`}>
-          <div className={`${isMobile ? "p-2 rounded-xl" : "p-4 rounded-2xl"} ${color} shadow-lg transition-transform duration-300 ${isMobile ? "order-2" : ""}`}>
-            <Icon className={`${isMobile ? "h-4 w-4" : "h-6 w-6"} text-white`} />
+      <div
+        className={`flex ${isMobile ? "flex-col gap-2" : "items-center justify-between"} relative z-10`}
+      >
+        <div
+          className={`flex items-center ${isMobile ? "justify-between" : ""}`}
+        >
+          <div
+            className={`${isMobile ? "p-2 rounded-xl" : "p-4 rounded-2xl"} ${color} shadow-lg transition-transform duration-300 ${isMobile ? "order-2" : ""}`}
+          >
+            <Icon
+              className={`${isMobile ? "h-4 w-4" : "h-6 w-6"} text-white`}
+            />
           </div>
           {isMobile && (
-            <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"} order-1`}>
+            <p
+              className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"} order-1`}
+            >
               {title}
             </p>
           )}
         </div>
         <div className={`flex-1 min-w-0 ${isMobile ? "" : "pr-4"}`}>
           {!isMobile && (
-            <p className={`text-xs font-black uppercase tracking-widest ${isDark ? "text-gray-400" : "text-gray-500"} mb-1`}>
+            <p
+              className={`text-xs font-black uppercase tracking-widest ${isDark ? "text-gray-400" : "text-gray-500"} mb-1`}
+            >
               {title}
             </p>
           )}
-          <p className={`${isMobile ? "text-xl" : "text-2xl sm:text-3xl"} font-black ${isDark ? "text-white" : "text-slate-900"} leading-none`}>
+          <p
+            className={`${isMobile ? "text-xl" : "text-2xl sm:text-3xl"} font-black ${isDark ? "text-white" : "text-slate-900"} leading-none`}
+          >
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {subtitle && (
-            <p className={`text-[10px] sm:text-xs ${isDark ? "text-gray-400" : "text-gray-500"} ${isMobile ? "mt-1" : "mt-2"} flex items-center gap-1 font-medium`}>
+            <p
+              className={`text-[10px] sm:text-xs ${isDark ? "text-gray-400" : "text-gray-500"} ${isMobile ? "mt-1" : "mt-2"} flex items-center gap-1 font-medium`}
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
               {subtitle}
             </p>
@@ -264,23 +328,27 @@ const StudentParentStats = ({
       </div>
     </motion.div>
   );
-
   const StudentSelector = () => {
     if (children.length === 0) {
       return (
-        <div className={`px-4 py-2 rounded-lg border ${themeColors.border} ${themeColors.cardBg}`}>
-          <p className={`text-sm ${themeColors.textSecondary}`}>Aucun enfant associé</p>
+        <div
+          className={`px-4 py-2 rounded-lg border ${themeColors.border} ${themeColors.cardBg}`}
+        >
+          <p className={`text-sm ${themeColors.textSecondary}`}>
+            Aucun enfant associé
+          </p>
         </div>
       );
     }
-
     return (
       <div className="relative">
         <button
           onClick={() => setShowStudentDropdown(!showStudentDropdown)}
           className={`flex items-center space-x-3 px-4 py-2 rounded-lg border ${themeColors.border} ${themeColors.cardBg} hover:shadow-md transition-all duration-200`}
         >
-          <div className={`w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-sm`}>
+          <div
+            className={`w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-sm`}
+          >
             {(selectedChild?.prenom || "E")[0].toUpperCase()}
           </div>
           <div className="text-left">
@@ -289,10 +357,12 @@ const StudentParentStats = ({
             </p>
             <p className={`text-xs ${themeColors.textSecondary}`}>
               {selectedChild?.niveau || selectedChild?.email || ""}
-              {childClasses.length > 0 && ` - ${childClasses.length} classe${childClasses.length > 1 ? "s" : ""}`}
+              {childClasses.length > 0 &&
+                ` - ${childClasses.length} classe${childClasses.length > 1 ? "s" : ""}`}
             </p>
           </div>
-          <ChevronDown
+          <FontAwesomeIcon
+            icon={faChevronDown}
             className={`h-4 w-4 ${themeColors.textSecondary} transition-transform ${showStudentDropdown ? "rotate-180" : ""}`}
           />
         </button>
@@ -316,13 +386,11 @@ const StudentParentStats = ({
                     localStorage.setItem("selectedChildId", child.id);
                     window.dispatchEvent(new Event("childChanged"));
                   }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                    selectedChild?.id === child.id
-                      ? isDark ? "bg-gray-700" : "bg-blue-50"
-                      : isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"
-                  }`}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors first:rounded-t-lg last:rounded-b-lg ${selectedChild?.id === child.id ? (isDark ? "bg-gray-700" : "bg-blue-50") : isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}
                 >
-                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-sm`}>
+                  <div
+                    className={`w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-sm`}
+                  >
                     {(child.prenom || "E")[0].toUpperCase()}
                   </div>
                   <div className="text-left">
@@ -334,7 +402,10 @@ const StudentParentStats = ({
                     </p>
                   </div>
                   {selectedChild?.id === child.id && (
-                    <CheckCircle className="h-4 w-4 text-blue-500 ml-auto" />
+                    <FontAwesomeIcon
+                      icon={faCircleCheck}
+                      className="h-4 w-4 text-blue-500 ml-auto"
+                    />
                   )}
                 </button>
               ))}
@@ -344,18 +415,23 @@ const StudentParentStats = ({
       </div>
     );
   };
-
   const UpcomingCoursesList = () => {
     const displayCourses = upcomingCourses.slice(0, 5);
-
     if (displayCourses.length === 0) {
       return (
-        <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}>
-          <h3 className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}>
+        <div
+          className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}
+        >
+          <h3
+            className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}
+          >
             Cours à Venir
           </h3>
           <div className="text-center py-6">
-            <Calendar className={`h-10 w-10 mx-auto mb-2 ${themeColors.textSecondary} opacity-40`} />
+            <FontAwesomeIcon
+              icon={faCalendarDays}
+              className={`h-10 w-10 mx-auto mb-2 ${themeColors.textSecondary} opacity-40`}
+            />
             <p className={`text-sm ${themeColors.textSecondary}`}>
               Aucun cours planifié pour le moment
             </p>
@@ -363,11 +439,16 @@ const StudentParentStats = ({
         </div>
       );
     }
-
     return (
-      <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}>
-        <div className={`flex justify-between items-center ${isMobile ? "mb-3" : "mb-4"}`}>
-          <h3 className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary}`}>
+      <div
+        className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}
+      >
+        <div
+          className={`flex justify-between items-center ${isMobile ? "mb-3" : "mb-4"}`}
+        >
+          <h3
+            className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary}`}
+          >
             Cours à Venir
           </h3>
           {setActiveTab && (
@@ -387,11 +468,18 @@ const StudentParentStats = ({
                 key={course.id}
                 className={`flex items-center space-x-3 p-3 rounded-lg ${isDark ? "bg-gray-700/50" : "bg-gray-50"} transition-colors`}
               >
-                <div className={`p-2 rounded-full ${isDark ? "bg-gray-600" : "bg-blue-100"}`}>
-                  <BookOpen className={`h-4 w-4 ${isDark ? "text-blue-400" : "text-blue-600"}`} />
+                <div
+                  className={`p-2 rounded-full ${isDark ? "bg-gray-600" : "bg-blue-100"}`}
+                >
+                  <FontAwesomeIcon
+                    icon={faBookOpen}
+                    className={`h-4 w-4 ${isDark ? "text-blue-400" : "text-blue-600"}`}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${themeColors.textPrimary} truncate`}>
+                  <p
+                    className={`text-sm font-medium ${themeColors.textPrimary} truncate`}
+                  >
                     {course.coursNom || course.description || "Cours programmé"}
                   </p>
                   <p className={`text-xs ${themeColors.textSecondary}`}>
@@ -399,11 +487,19 @@ const StudentParentStats = ({
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className={`text-xs font-medium ${themeColors.textPrimary}`}>
-                    {courseDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                  <p
+                    className={`text-xs font-medium ${themeColors.textPrimary}`}
+                  >
+                    {courseDate.toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "short",
+                    })}
                   </p>
                   <p className={`text-[10px] ${themeColors.textSecondary}`}>
-                    {courseDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                    {courseDate.toLocaleTimeString("fr-FR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                 </div>
               </div>
@@ -413,16 +509,22 @@ const StudentParentStats = ({
       </div>
     );
   };
-
   const ClassesList = () => {
     if (currentClasses.length === 0) {
       return (
-        <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}>
-          <h3 className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}>
+        <div
+          className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}
+        >
+          <h3
+            className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}
+          >
             Classes
           </h3>
           <div className="text-center py-6">
-            <Users className={`h-10 w-10 mx-auto mb-2 ${themeColors.textSecondary} opacity-40`} />
+            <FontAwesomeIcon
+              icon={faUsers}
+              className={`h-10 w-10 mx-auto mb-2 ${themeColors.textSecondary} opacity-40`}
+            />
             <p className={`text-sm ${themeColors.textSecondary} mb-3`}>
               {userRole === "parent"
                 ? "Cet enfant n'est inscrit dans aucune classe"
@@ -430,22 +532,33 @@ const StudentParentStats = ({
             </p>
             {setActiveTab && (
               <button
-                onClick={() => setActiveTab(userRole === "parent" ? "my-children" : "manage-class")}
+                onClick={() =>
+                  setActiveTab(
+                    userRole === "parent" ? "my-children" : "manage-class",
+                  )
+                }
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
               >
-                <Users className="w-4 h-4" />
-                {userRole === "parent" ? "Inscrire mon enfant" : "Rechercher une classe"}
+                <FontAwesomeIcon icon={faUsers} className="w-4 h-4" />
+                {userRole === "parent"
+                  ? "Inscrire mon enfant"
+                  : "Rechercher une classe"}
               </button>
             )}
           </div>
         </div>
       );
     }
-
     return (
-      <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}>
-        <div className={`flex justify-between items-center ${isMobile ? "mb-3" : "mb-4"}`}>
-          <h3 className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary}`}>
+      <div
+        className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}
+      >
+        <div
+          className={`flex justify-between items-center ${isMobile ? "mb-3" : "mb-4"}`}
+        >
+          <h3
+            className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary}`}
+          >
             Classes ({currentClasses.length})
           </h3>
           {setActiveTab && (
@@ -460,33 +573,38 @@ const StudentParentStats = ({
         <div className="space-y-2">
           {currentClasses.map((classe) => {
             const classCourseCount = currentCourses.filter(
-              (c) => c.classesIds?.includes(classe.id) || c.classeId === classe.id
+              (c) =>
+                c.classesIds?.includes(classe.id) || c.classeId === classe.id,
             ).length;
-
             return (
               <div
                 key={classe.id}
                 className={`flex items-center space-x-3 p-3 rounded-lg ${isDark ? "hover:bg-gray-700/50" : "hover:bg-gray-50"} transition-colors`}
               >
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
+                <div
+                  className={`w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}
+                >
                   {(classe.nom || "C")[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${themeColors.textPrimary} truncate`}>
+                  <p
+                    className={`text-sm font-medium ${themeColors.textPrimary} truncate`}
+                  >
                     {classe.nom}
                   </p>
                   <p className={`text-xs ${themeColors.textSecondary}`}>
-                    {classe.niveau || ""} {classCourseCount > 0 ? `- ${classCourseCount} cours` : ""}
+                    {classe.niveau || ""}{" "}
+                    {classCourseCount > 0 ? `- ${classCourseCount} cours` : ""}
                   </p>
                 </div>
-                <div className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-                  classe.etat === "ACTIF"
-                    ? "bg-green-100 text-green-700"
+                <div
+                  className={`px-2 py-1 rounded-full text-[10px] font-bold ${classe.etat === "ACTIF" ? "bg-green-100 text-green-700" : classe.etat === "EN_ATTENTE" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}
+                >
+                  {classe.etat === "ACTIF"
+                    ? "Actif"
                     : classe.etat === "EN_ATTENTE"
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-blue-100 text-blue-700"
-                }`}>
-                  {classe.etat === "ACTIF" ? "Actif" : classe.etat === "EN_ATTENTE" ? "En attente" : classe.etat || "Inscrit"}
+                      ? "En attente"
+                      : classe.etat || "Inscrit"}
                 </div>
               </div>
             );
@@ -495,20 +613,24 @@ const StudentParentStats = ({
       </div>
     );
   };
-
   const NotificationsList = () => {
     if (userRole !== "parent") return null;
-
     const displayNotifications = currentNotifications.slice(0, 5);
-
     if (displayNotifications.length === 0) {
       return (
-        <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}>
-          <h3 className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}>
+        <div
+          className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}
+        >
+          <h3
+            className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}
+          >
             Notifications
           </h3>
           <div className="text-center py-6">
-            <Bell className={`h-10 w-10 mx-auto mb-2 ${themeColors.textSecondary} opacity-40`} />
+            <FontAwesomeIcon
+              icon={faBell}
+              className={`h-10 w-10 mx-auto mb-2 ${themeColors.textSecondary} opacity-40`}
+            />
             <p className={`text-sm ${themeColors.textSecondary}`}>
               Aucune notification
             </p>
@@ -516,11 +638,16 @@ const StudentParentStats = ({
         </div>
       );
     }
-
     return (
-      <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}>
-        <div className={`flex justify-between items-center ${isMobile ? "mb-3" : "mb-4"}`}>
-          <h3 className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary}`}>
+      <div
+        className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}
+      >
+        <div
+          className={`flex justify-between items-center ${isMobile ? "mb-3" : "mb-4"}`}
+        >
+          <h3
+            className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary}`}
+          >
             Notifications
             {unreadNotifications.length > 0 && (
               <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
@@ -533,30 +660,31 @@ const StudentParentStats = ({
           {displayNotifications.map((notif) => (
             <div
               key={notif.id}
-              className={`flex items-start space-x-3 p-3 rounded-lg ${
-                !notif.read
-                  ? isDark ? "bg-blue-900/20" : "bg-blue-50"
-                  : isDark ? "bg-gray-700/30" : ""
-              } transition-colors`}
+              className={`flex items-start space-x-3 p-3 rounded-lg ${!notif.read ? (isDark ? "bg-blue-900/20" : "bg-blue-50") : isDark ? "bg-gray-700/30" : ""} transition-colors`}
             >
-              <div className={`p-1.5 rounded-full flex-shrink-0 ${
-                !notif.read
-                  ? "bg-blue-100 text-blue-600"
-                  : isDark ? "bg-gray-600 text-gray-400" : "bg-gray-100 text-gray-500"
-              }`}>
-                <Bell className="h-3.5 w-3.5" />
+              <div
+                className={`p-1.5 rounded-full flex-shrink-0 ${!notif.read ? "bg-blue-100 text-blue-600" : isDark ? "bg-gray-600 text-gray-400" : "bg-gray-100 text-gray-500"}`}
+              >
+                <FontAwesomeIcon icon={faBell} className="h-3.5 w-3.5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${themeColors.textPrimary} truncate`}>
+                <p
+                  className={`text-sm font-medium ${themeColors.textPrimary} truncate`}
+                >
                   {notif.title || "Notification"}
                 </p>
                 <p className={`text-xs ${themeColors.textSecondary} truncate`}>
                   {notif.message}
                 </p>
               </div>
-              <p className={`text-[10px] ${themeColors.textSecondary} flex-shrink-0`}>
+              <p
+                className={`text-[10px] ${themeColors.textSecondary} flex-shrink-0`}
+              >
                 {notif.createdAt
-                  ? new Date(notif.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
+                  ? new Date(notif.createdAt).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "short",
+                    })
                   : ""}
               </p>
             </div>
@@ -565,28 +693,37 @@ const StudentParentStats = ({
       </div>
     );
   };
-
   if (isLoading) {
     return (
-      <div className={`min-h-screen ${isDark ? "bg-gray-900" : "bg-gray-50"} flex items-center justify-center`}>
+      <div
+        className={`min-h-screen ${isDark ? "bg-gray-900" : "bg-gray-50"} flex items-center justify-center`}
+      >
         <div className="text-center">
           <div className="relative w-16 h-16 mx-auto">
             <div className="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
             <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
           </div>
-          <p className={`mt-4 font-medium ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+          <p
+            className={`mt-4 font-medium ${isDark ? "text-gray-300" : "text-gray-600"}`}
+          >
             Chargement des données...
           </p>
         </div>
       </div>
     );
   }
-
   if (error) {
     return (
-      <div className={`min-h-screen ${isDark ? "bg-gray-900" : "bg-gray-50"} flex items-center justify-center`}>
-        <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-8 max-w-md w-full text-center`}>
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+      <div
+        className={`min-h-screen ${isDark ? "bg-gray-900" : "bg-gray-50"} flex items-center justify-center`}
+      >
+        <div
+          className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-8 max-w-md w-full text-center`}
+        >
+          <FontAwesomeIcon
+            icon={faCircleExclamation}
+            className="h-12 w-12 text-red-500 mx-auto mb-4"
+          />
           <h3 className={`font-semibold ${themeColors.textPrimary} mb-2`}>
             Erreur de chargement
           </h3>
@@ -601,28 +738,41 @@ const StudentParentStats = ({
       </div>
     );
   }
-
   return (
-    <div className={`min-h-screen ${isDark ? "bg-gray-900" : "bg-gray-50"} transition-colors duration-300`}>
+    <div
+      className={`min-h-screen ${isDark ? "bg-gray-900" : "bg-gray-50"} transition-colors duration-300`}
+    >
       {/* Header */}
-      <div className={`${themeColors.cardBg} shadow-sm border-b ${themeColors.border}`}>
-        <div className={`max-w-7xl mx-auto ${isMobile ? "px-3" : "px-4 sm:px-6 lg:px-8"}`}>
-          <div className={`flex ${isMobile ? "flex-col gap-3 py-3" : "justify-between items-center py-6"}`}>
+      <div
+        className={`${themeColors.cardBg} shadow-sm border-b ${themeColors.border}`}
+      >
+        <div
+          className={`max-w-7xl mx-auto ${isMobile ? "px-3" : "px-4 sm:px-6 lg:px-8"}`}
+        >
+          <div
+            className={`flex ${isMobile ? "flex-col gap-3 py-3" : "justify-between items-center py-6"}`}
+          >
             <div>
-              <h1 className={`${isMobile ? "text-lg" : "text-3xl"} font-bold ${themeColors.textPrimary}`}>
+              <h1
+                className={`${isMobile ? "text-lg" : "text-3xl"} font-bold ${themeColors.textPrimary}`}
+              >
                 {userRole === "student"
                   ? "Mon Tableau de Bord"
                   : "Suivi Scolaire"}
               </h1>
-              <p className={`${themeColors.textSecondary} ${isMobile ? "text-xs mt-0.5" : "mt-1"}`}>
+              <p
+                className={`${themeColors.textSecondary} ${isMobile ? "text-xs mt-0.5" : "mt-1"}`}
+              >
                 {userRole === "student"
                   ? "Suivez vos progrès et activités scolaires"
                   : selectedChild
-                  ? `Suivi de ${selectedChild.prenom} ${selectedChild.nom || ""}`
-                  : "Sélectionnez un enfant pour voir ses données"}
+                    ? `Suivi de ${selectedChild.prenom} ${selectedChild.nom || ""}`
+                    : "Sélectionnez un enfant pour voir ses données"}
               </p>
             </div>
-            <div className={`flex items-center ${isMobile ? "gap-2" : "space-x-4"}`}>
+            <div
+              className={`flex items-center ${isMobile ? "gap-2" : "space-x-4"}`}
+            >
               {/* Child selector for parents */}
               {userRole === "parent" && children.length > 0 && (
                 <StudentSelector />
@@ -632,19 +782,31 @@ const StudentParentStats = ({
                 disabled={refreshing}
                 className={`${isMobile ? "p-2" : "p-2.5"} rounded-lg border ${themeColors.border} ${themeColors.cardBg} hover:shadow-md transition-all`}
               >
-                <RefreshCw className={`${isMobile ? "h-4 w-4" : "h-5 w-5"} ${themeColors.textSecondary} ${refreshing ? "animate-spin" : ""}`} />
+                <FontAwesomeIcon
+                  icon={faArrowsRotate}
+                  className={`${isMobile ? "h-4 w-4" : "h-5 w-5"} ${themeColors.textSecondary} ${refreshing ? "animate-spin" : ""}`}
+                />
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className={`max-w-7xl mx-auto ${isMobile ? "px-3 py-3" : "px-4 sm:px-6 lg:px-8 py-8"}`}>
+      <div
+        className={`max-w-7xl mx-auto ${isMobile ? "px-3 py-3" : "px-4 sm:px-6 lg:px-8 py-8"}`}
+      >
         {/* No children message for parent */}
         {userRole === "parent" && children.length === 0 && (
-          <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-8 text-center`}>
-            <Users className={`h-16 w-16 mx-auto mb-4 ${themeColors.textSecondary} opacity-40`} />
-            <h3 className={`text-xl font-semibold ${themeColors.textPrimary} mb-2`}>
+          <div
+            className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} p-8 text-center`}
+          >
+            <FontAwesomeIcon
+              icon={faUsers}
+              className={`h-16 w-16 mx-auto mb-4 ${themeColors.textSecondary} opacity-40`}
+            />
+            <h3
+              className={`text-xl font-semibold ${themeColors.textPrimary} mb-2`}
+            >
               Aucun enfant associé
             </h3>
             <p className={`${themeColors.textSecondary} mb-4`}>
@@ -665,14 +827,18 @@ const StudentParentStats = ({
         {/* Stats Cards */}
         {(userRole !== "parent" || children.length > 0) && (
           <>
-            <div className={`${isMobile ? "hidden" : "grid"} grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4 sm:mb-8`}>
+            <div
+              className={`${isMobile ? "hidden" : "grid"} grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4 sm:mb-8`}
+            >
               <StatCard
                 title="Classes"
                 value={currentClasses.length}
                 icon={BookOpen}
                 color="bg-blue-500"
                 subtitle={`${currentClasses.filter((c) => c.etat === "ACTIF").length} active${currentClasses.filter((c) => c.etat === "ACTIF").length > 1 ? "s" : ""}`}
-                onClick={setActiveTab ? () => setActiveTab("classes") : undefined}
+                onClick={
+                  setActiveTab ? () => setActiveTab("classes") : undefined
+                }
               />
               <StatCard
                 title="Cours Programmés"
@@ -687,9 +853,10 @@ const StudentParentStats = ({
                 value={completedCourses.length}
                 icon={CheckCircle}
                 color="bg-purple-500"
-                subtitle={currentCourses.length > 0
-                  ? `${Math.round((completedCourses.length / currentCourses.length) * 100)}% du total`
-                  : "Aucun cours"
+                subtitle={
+                  currentCourses.length > 0
+                    ? `${Math.round((completedCourses.length / currentCourses.length) * 100)}% du total`
+                    : "Aucun cours"
                 }
               />
               {userRole === "parent" ? (
@@ -713,22 +880,40 @@ const StudentParentStats = ({
 
             {/* Charts Row */}
             {currentCourses.length > 0 && (
-              <div className={`grid grid-cols-1 ${isMobile ? "gap-3" : "lg:grid-cols-2 gap-6"} mb-4 sm:mb-8`}>
+              <div
+                className={`grid grid-cols-1 ${isMobile ? "gap-3" : "lg:grid-cols-2 gap-6"} mb-4 sm:mb-8`}
+              >
                 {/* Courses by Class */}
                 {coursesByClassData.length > 0 && (
-                  <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}>
-                    <h3 className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}>
+                  <div
+                    className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}
+                  >
+                    <h3
+                      className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}
+                    >
                       Cours par Classe
                     </h3>
-                    <ResponsiveContainer width="100%" height={isMobile ? 200 : 280}>
+                    <ResponsiveContainer
+                      width="100%"
+                      height={isMobile ? 200 : 280}
+                    >
                       <BarChart data={coursesByClassData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#E5E7EB"} />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={isDark ? "#374151" : "#E5E7EB"}
+                        />
                         <XAxis
                           dataKey="name"
-                          tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: isMobile ? 9 : 12 }}
+                          tick={{
+                            fill: isDark ? "#D1D5DB" : "#6B7280",
+                            fontSize: isMobile ? 9 : 12,
+                          }}
                         />
                         <YAxis
-                          tick={{ fill: isDark ? "#D1D5DB" : "#6B7280", fontSize: isMobile ? 9 : 12 }}
+                          tick={{
+                            fill: isDark ? "#D1D5DB" : "#6B7280",
+                            fontSize: isMobile ? 9 : 12,
+                          }}
                           width={isMobile ? 28 : 40}
                           allowDecimals={false}
                         />
@@ -740,7 +925,12 @@ const StudentParentStats = ({
                             color: isDark ? "#F9FAFB" : "#111827",
                           }}
                         />
-                        <Bar dataKey="courses" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Cours" />
+                        <Bar
+                          dataKey="courses"
+                          fill="#3B82F6"
+                          radius={[4, 4, 0, 0]}
+                          name="Cours"
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -748,11 +938,18 @@ const StudentParentStats = ({
 
                 {/* Course Status Distribution */}
                 {courseStatusData.length > 0 && (
-                  <div className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}>
-                    <h3 className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}>
+                  <div
+                    className={`${themeColors.cardBg} rounded-xl shadow-sm border ${themeColors.border} ${isMobile ? "p-3" : "p-6"}`}
+                  >
+                    <h3
+                      className={`${isMobile ? "text-sm" : "text-lg"} font-semibold ${themeColors.textPrimary} mb-3`}
+                    >
                       État des Cours
                     </h3>
-                    <ResponsiveContainer width="100%" height={isMobile ? 180 : 250}>
+                    <ResponsiveContainer
+                      width="100%"
+                      height={isMobile ? 180 : 250}
+                    >
                       <PieChart>
                         <Pie
                           data={courseStatusData}
@@ -761,7 +958,11 @@ const StudentParentStats = ({
                           outerRadius={isMobile ? 60 : 80}
                           fill="#8884d8"
                           dataKey="value"
-                          label={isMobile ? false : ({ name, value }) => `${name} (${value})`}
+                          label={
+                            isMobile
+                              ? false
+                              : ({ name, value }) => `${name} (${value})`
+                          }
                         >
                           {courseStatusData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -776,11 +977,23 @@ const StudentParentStats = ({
                         />
                       </PieChart>
                     </ResponsiveContainer>
-                    <div className={`flex justify-center ${isMobile ? "gap-3 mt-1" : "gap-4 mt-2"}`}>
+                    <div
+                      className={`flex justify-center ${isMobile ? "gap-3 mt-1" : "gap-4 mt-2"}`}
+                    >
                       {courseStatusData.map((entry) => (
-                        <div key={entry.name} className="flex items-center gap-1">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                          <span className={`${isMobile ? "text-[10px]" : "text-xs"} font-medium ${themeColors.textSecondary}`}>
+                        <div
+                          key={entry.name}
+                          className="flex items-center gap-1"
+                        >
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{
+                              backgroundColor: entry.color,
+                            }}
+                          />
+                          <span
+                            className={`${isMobile ? "text-[10px]" : "text-xs"} font-medium ${themeColors.textSecondary}`}
+                          >
                             {entry.name} ({entry.value})
                           </span>
                         </div>
@@ -792,7 +1005,9 @@ const StudentParentStats = ({
             )}
 
             {/* Bottom section - Classes, Upcoming Courses, Notifications */}
-            <div className={`grid grid-cols-1 ${isMobile ? "gap-3" : "lg:grid-cols-3 gap-6"}`}>
+            <div
+              className={`grid grid-cols-1 ${isMobile ? "gap-3" : "lg:grid-cols-3 gap-6"}`}
+            >
               <ClassesList />
               <UpcomingCoursesList />
               <NotificationsList />
@@ -803,5 +1018,4 @@ const StudentParentStats = ({
     </div>
   );
 };
-
 export default StudentParentStats;

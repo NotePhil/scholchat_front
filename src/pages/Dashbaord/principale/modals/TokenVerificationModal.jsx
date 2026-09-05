@@ -10,19 +10,17 @@ import {
   Card,
   Divider,
 } from "antd";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  SafetyOutlined,
-  KeyOutlined,
-  MailOutlined,
-  InfoCircleOutlined,
-} from "@ant-design/icons";
-
+  faCircleInfo,
+  faEnvelope,
+  faKey,
+  faShield,
+} from "@fortawesome/free-solid-svg-icons";
 const { Title, Text, Paragraph } = Typography;
-
 const TokenVerificationModal = ({ visible, onVerify, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-
   const handleVerifyToken = async (values) => {
     setLoading(true);
     try {
@@ -35,17 +33,15 @@ const TokenVerificationModal = ({ visible, onVerify, onCancel }) => {
       setLoading(false);
     }
   };
-
   const handleCancel = () => {
     form.resetFields();
     onCancel();
   };
-
   return (
     <Modal
       title={
         <Space>
-          <SafetyOutlined />
+          <FontAwesomeIcon icon={faShield} />
           School Token Verification
         </Space>
       }
@@ -61,13 +57,24 @@ const TokenVerificationModal = ({ visible, onVerify, onCancel }) => {
           description="The selected school requires token verification for class creation. Please enter the verification token provided by your school."
           type="info"
           showIcon
-          icon={<InfoCircleOutlined />}
-          style={{ marginBottom: 24 }}
+          icon={<FontAwesomeIcon icon={faCircleInfo} />}
+          style={{
+            marginBottom: 24,
+          }}
         />
 
-        <Card style={{ marginBottom: 24 }}>
+        <Card
+          style={{
+            marginBottom: 24,
+          }}
+        >
           <Title level={4}>
-            <MailOutlined style={{ marginRight: 8 }} />
+            <FontAwesomeIcon
+              icon={faEnvelope}
+              style={{
+                marginRight: 8,
+              }}
+            />
             What happens next?
           </Title>
           <Paragraph>
@@ -98,7 +105,7 @@ const TokenVerificationModal = ({ visible, onVerify, onCancel }) => {
           >
             <Input.Password
               placeholder="Enter the token provided by your school"
-              prefix={<KeyOutlined />}
+              prefix={<FontAwesomeIcon icon={faKey} />}
               size="large"
             />
           </Form.Item>
@@ -108,7 +115,12 @@ const TokenVerificationModal = ({ visible, onVerify, onCancel }) => {
             description={
               <div>
                 <Text>If you don't have a verification token:</Text>
-                <ul style={{ marginTop: 8, marginBottom: 0 }}>
+                <ul
+                  style={{
+                    marginTop: 8,
+                    marginBottom: 0,
+                  }}
+                >
                   <li>Contact your school administrator</li>
                   <li>Check your email for the token</li>
                   <li>Verify you selected the correct school</li>
@@ -117,17 +129,23 @@ const TokenVerificationModal = ({ visible, onVerify, onCancel }) => {
             }
             type="warning"
             showIcon
-            style={{ marginBottom: 24 }}
+            style={{
+              marginBottom: 24,
+            }}
           />
 
-          <div style={{ textAlign: "right" }}>
+          <div
+            style={{
+              textAlign: "right",
+            }}
+          >
             <Space>
               <Button onClick={handleCancel}>Cancel</Button>
               <Button
                 type="primary"
                 htmlType="submit"
                 loading={loading}
-                icon={<SafetyOutlined />}
+                icon={<FontAwesomeIcon icon={faShield} />}
               >
                 Verify Token
               </Button>
@@ -137,8 +155,17 @@ const TokenVerificationModal = ({ visible, onVerify, onCancel }) => {
 
         <Divider />
 
-        <div style={{ textAlign: "center" }}>
-          <Text type="secondary" style={{ fontSize: "12px" }}>
+        <div
+          style={{
+            textAlign: "center",
+          }}
+        >
+          <Text
+            type="secondary"
+            style={{
+              fontSize: "12px",
+            }}
+          >
             This verification ensures that only authorized users can create
             classes associated with your school.
           </Text>
@@ -147,5 +174,4 @@ const TokenVerificationModal = ({ visible, onVerify, onCancel }) => {
     </Modal>
   );
 };
-
 export default TokenVerificationModal;

@@ -1,32 +1,29 @@
 import React, { useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  Calendar,
-  MapPin,
-  Users,
-  Eye,
-  Edit2,
-  XCircle,
-  Clock,
-  PlayCircle,
-  PauseCircle,
-  CheckCircle,
-  MoreVertical,
-  CalendarPlus,
-  UserCheck,
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
-
+  faCalendarDays,
+  faCalendarPlus,
+  faChevronLeft,
+  faChevronRight,
+  faCircleCheck,
+  faCirclePause,
+  faCirclePlay,
+  faCircleXmark,
+  faClock,
+  faEllipsisVertical,
+  faEye,
+  faLocationDot,
+  faPen,
+  faPlus,
+  faUserCheck,
+  faUsers,
+} from "@fortawesome/free-solid-svg-icons";
 const SCHEDULED_COURSE_STATES = {
   PLANIFIE: "PLANIFIE",
   EN_COURS: "EN_COURS",
   TERMINE: "TERMINE",
   ANNULE: "ANNULE",
 };
-
 const getStatusBadge = (status) => {
   switch (status) {
     case SCHEDULED_COURSE_STATES.PLANIFIE:
@@ -41,7 +38,6 @@ const getStatusBadge = (status) => {
       return "bg-gray-50 text-gray-700 border-gray-200";
   }
 };
-
 const getStatusText = (status) => {
   switch (status) {
     case SCHEDULED_COURSE_STATES.PLANIFIE:
@@ -56,23 +52,21 @@ const getStatusText = (status) => {
       return "Inconnu";
   }
 };
-
 const getStatusIcon = (status) => {
   const className = "w-4 h-4";
   switch (status) {
     case SCHEDULED_COURSE_STATES.PLANIFIE:
-      return <Clock className={className} />;
+      return <FontAwesomeIcon icon={faClock} className={className} />;
     case SCHEDULED_COURSE_STATES.EN_COURS:
-      return <PlayCircle className={className} />;
+      return <FontAwesomeIcon icon={faCirclePlay} className={className} />;
     case SCHEDULED_COURSE_STATES.TERMINE:
-      return <CheckCircle className={className} />;
+      return <FontAwesomeIcon icon={faCircleCheck} className={className} />;
     case SCHEDULED_COURSE_STATES.ANNULE:
-      return <XCircle className={className} />;
+      return <FontAwesomeIcon icon={faCircleXmark} className={className} />;
     default:
-      return <Clock className={className} />;
+      return <FontAwesomeIcon icon={faClock} className={className} />;
   }
 };
-
 const formatDate = (dateString) => {
   if (!dateString) return "Non défini";
   const date = new Date(dateString);
@@ -84,7 +78,6 @@ const formatDate = (dateString) => {
     minute: "2-digit",
   });
 };
-
 const getInitials = (name) => {
   if (!name) return "??";
   const words = name.split(" ");
@@ -94,7 +87,6 @@ const getInitials = (name) => {
     .substring(0, 2)
     .toUpperCase();
 };
-
 const CoursProgrammerList = ({
   scheduledCourses,
   viewMode,
@@ -111,36 +103,35 @@ const CoursProgrammerList = ({
   onPageSizeChange,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-
   useEffect(() => {
     setCurrentPage(1);
   }, [scheduledCourses, searchTerm, filterStatus, pageSize]);
-
   const getClassName = (classeIdOrScheduled) => {
     // Handle both direct classeId and classesIds array
     let classeId = classeIdOrScheduled;
-    if (typeof classeIdOrScheduled === 'object' && classeIdOrScheduled !== null) {
-      classeId = classeIdOrScheduled.classeId || (classeIdOrScheduled.classesIds && classeIdOrScheduled.classesIds[0]);
+    if (
+      typeof classeIdOrScheduled === "object" &&
+      classeIdOrScheduled !== null
+    ) {
+      classeId =
+        classeIdOrScheduled.classeId ||
+        (classeIdOrScheduled.classesIds && classeIdOrScheduled.classesIds[0]);
     }
     if (!classeId || !classes.length) return "Classe non définie";
     const classe = classes.find((c) => c.id === classeId);
     return classe ? classe.nom : "Classe non définie";
   };
-
   const totalItems = scheduledCourses.length;
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentItems = scheduledCourses.slice(startIndex, endIndex);
-
   const handlePageChange = (page) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
-
   const getPageNumbers = () => {
     const maxVisiblePages = 5;
     const pages = [];
-
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -148,20 +139,16 @@ const CoursProgrammerList = ({
     } else {
       const startPage = Math.max(
         1,
-        currentPage - Math.floor(maxVisiblePages / 2)
+        currentPage - Math.floor(maxVisiblePages / 2),
       );
       const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
       const adjustedStart = Math.max(1, endPage - maxVisiblePages + 1);
-
       for (let i = adjustedStart; i <= endPage; i++) {
         pages.push(i);
       }
     }
-
     return pages;
   };
-
   const ActionButtons = ({ scheduledCourse }) => (
     <>
       {scheduledCourse.etatCoursProgramme === "PLANIFIE" && (
@@ -170,7 +157,12 @@ const CoursProgrammerList = ({
           className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
           title="Démarrer"
         >
-          <PlayCircle size={16} />
+          <FontAwesomeIcon
+            icon={faCirclePlay}
+            style={{
+              fontSize: 16,
+            }}
+          />
         </button>
       )}
       {scheduledCourse.etatCoursProgramme === "EN_COURS" && (
@@ -179,7 +171,12 @@ const CoursProgrammerList = ({
           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
           title="Terminer"
         >
-          <PauseCircle size={16} />
+          <FontAwesomeIcon
+            icon={faCirclePause}
+            style={{
+              fontSize: 16,
+            }}
+          />
         </button>
       )}
       {(scheduledCourse.etatCoursProgramme === "PLANIFIE" ||
@@ -191,7 +188,12 @@ const CoursProgrammerList = ({
           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
           title="Annuler"
         >
-          <XCircle size={16} />
+          <FontAwesomeIcon
+            icon={faCircleXmark}
+            style={{
+              fontSize: 16,
+            }}
+          />
         </button>
       )}
       <button
@@ -199,18 +201,27 @@ const CoursProgrammerList = ({
         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
         title="Voir les détails"
       >
-        <Eye size={16} />
+        <FontAwesomeIcon
+          icon={faEye}
+          style={{
+            fontSize: 16,
+          }}
+        />
       </button>
       <button
         onClick={() => onEdit(scheduledCourse)}
         className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
         title="Modifier"
       >
-        <Edit2 size={16} />
+        <FontAwesomeIcon
+          icon={faPen}
+          style={{
+            fontSize: 16,
+          }}
+        />
       </button>
     </>
   );
-
   const PaginationControls = () => (
     <div className="flex items-center justify-center gap-2 mt-6">
       <button
@@ -219,7 +230,12 @@ const CoursProgrammerList = ({
         className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
         title="Page précédente"
       >
-        <ChevronLeft size={16} />
+        <FontAwesomeIcon
+          icon={faChevronLeft}
+          style={{
+            fontSize: 16,
+          }}
+        />
       </button>
 
       <div className="flex items-center gap-1">
@@ -227,11 +243,7 @@ const CoursProgrammerList = ({
           <button
             key={page}
             onClick={() => handlePageChange(page)}
-            className={`px-2 py-1 sm:px-3 sm:py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-              page === currentPage
-                ? "bg-indigo-600 text-white"
-                : "text-slate-600 hover:text-slate-800 hover:bg-slate-100"
-            }`}
+            className={`px-2 py-1 sm:px-3 sm:py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${page === currentPage ? "bg-indigo-600 text-white" : "text-slate-600 hover:text-slate-800 hover:bg-slate-100"}`}
           >
             {page}
           </button>
@@ -244,17 +256,24 @@ const CoursProgrammerList = ({
         className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
         title="Page suivante"
       >
-        <ChevronRight size={16} />
+        <FontAwesomeIcon
+          icon={faChevronRight}
+          style={{
+            fontSize: 16,
+          }}
+        />
       </button>
     </div>
   );
-
   if (scheduledCourses.length === 0) {
     return (
       <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg p-8 sm:p-12">
         <div className="text-center">
           <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4 sm:mb-6">
-            <CalendarPlus className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400" />
+            <FontAwesomeIcon
+              icon={faCalendarPlus}
+              className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400"
+            />
           </div>
           <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
             {searchTerm || filterStatus !== "all"
@@ -271,7 +290,12 @@ const CoursProgrammerList = ({
               onClick={onScheduleCourse}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium mx-auto text-sm sm:text-base"
             >
-              <Plus size={18} />
+              <FontAwesomeIcon
+                icon={faPlus}
+                style={{
+                  fontSize: 18,
+                }}
+              />
               Programmer mon premier cours
             </button>
           )}
@@ -279,7 +303,6 @@ const CoursProgrammerList = ({
       </div>
     );
   }
-
   if (viewMode === "grid") {
     return (
       <>
@@ -303,7 +326,9 @@ const CoursProgrammerList = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-slate-900 text-xs sm:text-sm leading-tight break-words">
-                      {scheduledCourse.cours?.titre || scheduledCourse.coursNom || "Cours sans titre"}
+                      {scheduledCourse.cours?.titre ||
+                        scheduledCourse.coursNom ||
+                        "Cours sans titre"}
                     </h3>
                     <p className="text-xs text-slate-600 truncate mt-1">
                       {getClassName(scheduledCourse)}
@@ -312,16 +337,19 @@ const CoursProgrammerList = ({
                 </div>
                 <div className="relative group/actions">
                   <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                    <MoreVertical size={14} />
+                    <FontAwesomeIcon
+                      icon={faEllipsisVertical}
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                   </button>
                 </div>
               </div>
 
               <div className="mb-3 sm:mb-4">
                 <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                    scheduledCourse.etatCoursProgramme
-                  )}`}
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(scheduledCourse.etatCoursProgramme)}`}
                 >
                   {getStatusText(scheduledCourse.etatCoursProgramme)}
                 </span>
@@ -329,9 +357,12 @@ const CoursProgrammerList = ({
 
               <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
                 <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                  <Calendar
-                    size={12}
+                  <FontAwesomeIcon
+                    icon={faCalendarDays}
                     className="mr-1.5 sm:mr-2 text-slate-400"
+                    style={{
+                      fontSize: 12,
+                    }}
                   />
                   <span className="truncate">
                     Prévu: {formatDate(scheduledCourse.dateCoursPrevue)}
@@ -339,27 +370,36 @@ const CoursProgrammerList = ({
                 </div>
                 {scheduledCourse.lieu && (
                   <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                    <MapPin
-                      size={12}
+                    <FontAwesomeIcon
+                      icon={faLocationDot}
                       className="mr-1.5 sm:mr-2 text-slate-400"
+                      style={{
+                        fontSize: 12,
+                      }}
                     />
                     <span className="truncate">{scheduledCourse.lieu}</span>
                   </div>
                 )}
                 {scheduledCourse.capaciteMax && (
                   <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                    <Users
-                      size={12}
+                    <FontAwesomeIcon
+                      icon={faUsers}
                       className="mr-1.5 sm:mr-2 text-slate-400"
+                      style={{
+                        fontSize: 12,
+                      }}
                     />
                     <span>Capacité: {scheduledCourse.capaciteMax}</span>
                   </div>
                 )}
                 {scheduledCourse.participantsIds?.length > 0 && (
                   <div className="flex items-center text-xs sm:text-sm text-slate-600">
-                    <UserCheck
-                      size={12}
+                    <FontAwesomeIcon
+                      icon={faUserCheck}
                       className="mr-1.5 sm:mr-2 text-slate-400"
+                      style={{
+                        fontSize: 12,
+                      }}
                     />
                     <span>
                       Participants: {scheduledCourse.participantsIds.length}
@@ -380,7 +420,6 @@ const CoursProgrammerList = ({
       </>
     );
   }
-
   return (
     <>
       <div className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg overflow-hidden">
@@ -425,7 +464,9 @@ const CoursProgrammerList = ({
                       </div>
                       <div className="ml-2 sm:ml-4 flex-1 min-w-0">
                         <div className="text-xs sm:text-sm font-semibold text-slate-900 break-words leading-tight">
-                          {scheduledCourse.cours?.titre || scheduledCourse.coursNom || "Cours sans titre"}
+                          {scheduledCourse.cours?.titre ||
+                            scheduledCourse.coursNom ||
+                            "Cours sans titre"}
                         </div>
                         <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                           {scheduledCourse.description || "Aucune description"}
@@ -460,9 +501,7 @@ const CoursProgrammerList = ({
                   </td>
                   <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                        scheduledCourse.etatCoursProgramme
-                      )}`}
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(scheduledCourse.etatCoursProgramme)}`}
                     >
                       <div className="mr-1">
                         {getStatusIcon(scheduledCourse.etatCoursProgramme)}
@@ -485,5 +524,4 @@ const CoursProgrammerList = ({
     </>
   );
 };
-
 export default CoursProgrammerList;

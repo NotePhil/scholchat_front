@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Mail, Loader, ArrowRight } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowRight,
+  faEnvelope,
+  faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 const VerifyEmail = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -10,7 +14,6 @@ const VerifyEmail = () => {
   const queryParams = new URLSearchParams(location.search);
   const email = queryParams.get("email");
   const [userType, setUserType] = useState("");
-
   useEffect(() => {
     // Get user type from localStorage
     const storedUserType = localStorage.getItem("userType");
@@ -18,11 +21,9 @@ const VerifyEmail = () => {
       setUserType(storedUserType);
     }
   }, []);
-
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("");
-
   const showAlert = (message, type = "error") => {
     setAlertMessage(message);
     setAlertType(type);
@@ -31,40 +32,32 @@ const VerifyEmail = () => {
       setAlertType("");
     }, 3000);
   };
-
   const handleResendVerification = async () => {
     if (isResendingEmail || !email || userType === "professeur") return;
-
     try {
       setIsResendingEmail(true);
-
-      const resendUrl = `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/regenerate-activation?email=${encodeURIComponent(
-        email
-      )}`;
-
+      const resendUrl = `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/regenerate-activation?email=${encodeURIComponent(email)}`;
       const response = await fetch(resendUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
-          errorData.message || "Échec de l'envoi de l'e-mail de vérification"
+          errorData.message || "Échec de l'envoi de l'e-mail de vérification",
         );
       }
-
       showAlert(
         "L'e-mail de vérification a été renvoyé. Veuillez vérifier votre boîte de réception.",
-        "success"
+        "success",
       );
     } catch (err) {
       console.error("Erreur de renvoi de vérification:", err);
       showAlert(
         err.message ||
-          "Échec de l'envoi de l'e-mail de vérification. Veuillez réessayer."
+          "Échec de l'envoi de l'e-mail de vérification. Veuillez réessayer.",
       );
     } finally {
       setIsResendingEmail(false);
@@ -74,7 +67,6 @@ const VerifyEmail = () => {
   // Custom message for professors
   const professorMessage =
     "Un mail de confirmation de création de compte a été envoyé. Veuillez consulter votre boite mail pour plus d'informations.";
-
   return (
     <div className="verification-page">
       {alertMessage && (
@@ -82,7 +74,12 @@ const VerifyEmail = () => {
       )}
       <div className="verification-container">
         <div className="verification-icon">
-          <Mail size={64} strokeWidth={1.5} />
+          <FontAwesomeIcon
+            icon={faEnvelope}
+            style={{
+              fontSize: 64,
+            }}
+          />
         </div>
         <h2>Vérifiez votre e-mail</h2>
         <p className="verification-message">
@@ -103,21 +100,31 @@ const VerifyEmail = () => {
           {userType !== "professeur" && (
             <button
               type="button"
-              className={`action-button resend-button ${
-                userType === "professeur" ? "disabled" : ""
-              }`}
+              className={`action-button resend-button ${userType === "professeur" ? "disabled" : ""}`}
               onClick={handleResendVerification}
               disabled={isResendingEmail || userType === "professeur"}
             >
               {isResendingEmail ? (
                 <>
-                  <Loader className="button-icon spinner" size={18} />
+                  <FontAwesomeIcon
+                    icon={faSpinner}
+                    className="button-icon spinner"
+                    style={{
+                      fontSize: 18,
+                    }}
+                  />
                   <span>Envoi en cours...</span>
                 </>
               ) : (
                 <>
                   <span>Renvoyer l'email</span>
-                  <Mail className="button-icon" size={18} />
+                  <FontAwesomeIcon
+                    icon={faEnvelope}
+                    className="button-icon"
+                    style={{
+                      fontSize: 18,
+                    }}
+                  />
                 </>
               )}
             </button>
@@ -128,7 +135,13 @@ const VerifyEmail = () => {
             onClick={() => navigate("/schoolchat/login")}
           >
             <span>Aller à la connexion</span>
-            <ArrowRight className="button-icon" size={18} />
+            <FontAwesomeIcon
+              icon={faArrowRight}
+              className="button-icon"
+              style={{
+                fontSize: 18,
+              }}
+            />
           </button>
         </div>
       </div>
@@ -293,5 +306,4 @@ const VerifyEmail = () => {
     </div>
   );
 };
-
 export default VerifyEmail;

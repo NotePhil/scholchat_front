@@ -1,23 +1,26 @@
 import React from "react";
-import {
-  Eye,
-  Edit2,
-  Trash2,
-  Share2,
-  FileText,
-  Clock,
-  CheckCircle,
-  Archive,
-  AlertCircle,
-  CalendarPlus,
-} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBoxArchive,
+  faCalendarPlus,
+  faCircleCheck,
+  faCircleExclamation,
+  faClock,
+  faEye,
+  faFileLines,
+  faPen,
+  faShareNodes,
+  faTrashCan,
+} from "@fortawesome/free-solid-svg-icons";
 const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
   const navigate = useNavigate();
-
   const handleSchedule = () => {
-    navigate('/schoolchat/Principal/ProfessorDashboard/schedule-course', { state: { course } });
+    navigate("/schoolchat/Principal/ProfessorDashboard/schedule-course", {
+      state: {
+        course,
+      },
+    });
   };
   const getStatusBadge = (status) => {
     const badges = {
@@ -28,7 +31,6 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
     };
     return badges[status] || "bg-gray-50 text-gray-700 border-gray-200";
   };
-
   const getStatusText = (status) => {
     const texts = {
       BROUILLON: "Brouillon",
@@ -38,22 +40,42 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
     };
     return texts[status] || status;
   };
-
   const getStatusIcon = (status) => {
     switch (status) {
       case "BROUILLON":
-        return <FileText className="w-4 h-4 text-yellow-500" />;
+        return (
+          <FontAwesomeIcon
+            icon={faFileLines}
+            className="w-4 h-4 text-yellow-500"
+          />
+        );
       case "EN_ATTENTE_VALIDATION":
-        return <Clock className="w-4 h-4 text-blue-500" />;
+        return (
+          <FontAwesomeIcon icon={faClock} className="w-4 h-4 text-blue-500" />
+        );
       case "PUBLIE":
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return (
+          <FontAwesomeIcon
+            icon={faCircleCheck}
+            className="w-4 h-4 text-green-500"
+          />
+        );
       case "ARCHIVE":
-        return <Archive className="w-4 h-4 text-gray-500" />;
+        return (
+          <FontAwesomeIcon
+            icon={faBoxArchive}
+            className="w-4 h-4 text-gray-500"
+          />
+        );
       default:
-        return <AlertCircle className="w-4 h-4 text-gray-500" />;
+        return (
+          <FontAwesomeIcon
+            icon={faCircleExclamation}
+            className="w-4 h-4 text-gray-500"
+          />
+        );
     }
   };
-
   const formatDate = (dateString) => {
     if (!dateString) return "Non défini";
     return new Date(dateString).toLocaleDateString("fr-FR", {
@@ -64,7 +86,6 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
       minute: "2-digit",
     });
   };
-
   return (
     <tr className="hover:bg-white/50 transition-colors duration-200">
       <td className="px-6 py-4">
@@ -101,9 +122,7 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <span
-          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-            course.etat
-          )}`}
+          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(course.etat)}`}
         >
           <div className="mr-2">{getStatusIcon(course.etat)}</div>
           {getStatusText(course.etat)}
@@ -116,38 +135,62 @@ const CourseTableRow = ({ course, onView, onEdit, getInitials }) => {
             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
             title="Voir les détails"
           >
-            <Eye size={16} />
+            <FontAwesomeIcon
+              icon={faEye}
+              style={{
+                fontSize: 16,
+              }}
+            />
           </button>
           <button
             onClick={() => onEdit(course)}
             className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
             title="Modifier"
           >
-            <Edit2 size={16} />
+            <FontAwesomeIcon
+              icon={faPen}
+              style={{
+                fontSize: 16,
+              }}
+            />
           </button>
           <button
             onClick={handleSchedule}
             className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
             title="Programmer"
           >
-            <CalendarPlus size={16} />
+            <FontAwesomeIcon
+              icon={faCalendarPlus}
+              style={{
+                fontSize: 16,
+              }}
+            />
           </button>
           <button
             className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all duration-200"
             title="Partager"
           >
-            <Share2 size={16} />
+            <FontAwesomeIcon
+              icon={faShareNodes}
+              style={{
+                fontSize: 16,
+              }}
+            />
           </button>
           <button
             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
             title="Supprimer"
           >
-            <Trash2 size={16} />
+            <FontAwesomeIcon
+              icon={faTrashCan}
+              style={{
+                fontSize: 16,
+              }}
+            />
           </button>
         </div>
       </td>
     </tr>
   );
 };
-
 export default CourseTableRow;

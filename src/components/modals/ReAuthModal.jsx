@@ -1,15 +1,19 @@
 import React, { useState } from "react";
-import { Lock, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CryptoJS from "crypto-js";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCircleExclamation,
+  faEye,
+  faEyeSlash,
+  faLock,
+  faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 const ENCRYPTION_KEY = "scholchat-secure-key-2024-v1-32b";
-
 const ReAuthModal = ({ isOpen, email, onConfirm, onClose, loading }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!password.trim()) {
@@ -18,37 +22,61 @@ const ReAuthModal = ({ isOpen, email, onConfirm, onClose, loading }) => {
     }
     setError("");
     try {
-      const encryptedPassword = CryptoJS.AES.encrypt(password, ENCRYPTION_KEY).toString();
+      const encryptedPassword = CryptoJS.AES.encrypt(
+        password,
+        ENCRYPTION_KEY,
+      ).toString();
       await onConfirm(encryptedPassword);
       setPassword("");
     } catch (err) {
       setError(err.message || "Mot de passe incorrect");
     }
   };
-
   if (!isOpen) return null;
-
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={{
+          opacity: 0,
+        }}
+        animate={{
+          opacity: 1,
+        }}
+        exit={{
+          opacity: 0,
+        }}
         className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{
+            opacity: 0,
+            scale: 0.9,
+            y: 20,
+          }}
+          animate={{
+            opacity: 1,
+            scale: 1,
+            y: 0,
+          }}
+          exit={{
+            opacity: 0,
+            scale: 0.9,
+            y: 20,
+          }}
           className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-6 text-center">
             <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-7 h-7 text-amber-600" />
+              <FontAwesomeIcon
+                icon={faLock}
+                className="w-7 h-7 text-amber-600"
+              />
             </div>
-            <h2 className="text-lg font-bold text-gray-900">Confirmer votre identite</h2>
+            <h2 className="text-lg font-bold text-gray-900">
+              Confirmer votre identite
+            </h2>
             <p className="text-sm text-gray-500 mt-1">
               Entrez votre mot de passe pour changer de role
             </p>
@@ -62,7 +90,10 @@ const ReAuthModal = ({ isOpen, email, onConfirm, onClose, loading }) => {
           <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4">
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <FontAwesomeIcon
+                  icon={faCircleExclamation}
+                  className="w-4 h-4 flex-shrink-0"
+                />
                 {error}
               </div>
             )}
@@ -81,7 +112,11 @@ const ReAuthModal = ({ isOpen, email, onConfirm, onClose, loading }) => {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? (
+                  <FontAwesomeIcon icon={faEyeSlash} className="w-4 h-4" />
+                ) : (
+                  <FontAwesomeIcon icon={faEye} className="w-4 h-4" />
+                )}
               </button>
             </div>
 
@@ -92,7 +127,10 @@ const ReAuthModal = ({ isOpen, email, onConfirm, onClose, loading }) => {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <FontAwesomeIcon
+                    icon={faSpinner}
+                    className="w-4 h-4 animate-spin"
+                  />
                   Verification...
                 </>
               ) : (
@@ -102,7 +140,11 @@ const ReAuthModal = ({ isOpen, email, onConfirm, onClose, loading }) => {
 
             <button
               type="button"
-              onClick={() => { setPassword(""); setError(""); onClose(); }}
+              onClick={() => {
+                setPassword("");
+                setError("");
+                onClose();
+              }}
               className="w-full py-2.5 text-sm text-gray-500 hover:text-gray-700 font-medium"
             >
               Annuler
@@ -113,5 +155,4 @@ const ReAuthModal = ({ isOpen, email, onConfirm, onClose, loading }) => {
     </AnimatePresence>
   );
 };
-
 export default ReAuthModal;

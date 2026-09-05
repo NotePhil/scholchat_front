@@ -1,9 +1,9 @@
 // components/Header.jsx
 import React from "react";
-import { Menu, Bell } from "lucide-react";
 import ThemeSelector from "./ThemeSelector";
 import { InstallButton } from "../../../components/PWAInstallPrompt";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBars, faBell } from "@fortawesome/free-solid-svg-icons";
 export default function Header({
   showSidebar,
   setShowSidebar,
@@ -16,18 +16,15 @@ export default function Header({
 }) {
   return (
     <header
-      className={`${
-        isDark ? themes.dark.cardBg : themes.light.cardBg
-      } shadow-lg transition-colors duration-300`}
+      className={`${isDark ? themes.dark.cardBg : themes.light.cardBg} shadow-lg transition-colors duration-300`}
     >
       <div className="flex items-center justify-between p-4">
         <button
           onClick={() => setShowSidebar(!showSidebar)}
-          className={`md:hidden p-2 rounded-md transition-colors duration-200 ${
-            isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
-          }`}
+          className={`md:hidden p-2 rounded-md transition-colors duration-200 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
         >
-          <Menu
+          <FontAwesomeIcon
+            icon={faBars}
             className={`w-6 h-6 ${isDark ? "text-white" : "text-gray-600"}`}
           />
         </button>
@@ -45,21 +42,24 @@ export default function Header({
           <InstallButton />
 
           <div className="relative">
-            <Bell
-              className={`w-6 h-6 ${
-                isDark ? "text-white" : "text-gray-600"
-              } cursor-pointer`}
+            <FontAwesomeIcon
+              icon={faBell}
+              className={`w-6 h-6 ${isDark ? "text-white" : "text-gray-600"} cursor-pointer`}
             />
             <span
               className="absolute -top-1 -right-1 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
-              style={{ backgroundColor: colorSchemes[currentTheme].primary }}
+              style={{
+                backgroundColor: colorSchemes[currentTheme].primary,
+              }}
             >
               3
             </span>
           </div>
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: colorSchemes[currentTheme].primary }}
+            style={{
+              backgroundColor: colorSchemes[currentTheme].primary,
+            }}
           >
             <span className="text-white text-sm font-semibold">SC</span>
           </div>

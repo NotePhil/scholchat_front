@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from "react";
-import {
-  X,
-  Save,
-  Trash2,
-  User,
-  Mail,
-  Phone,
-  Home,
-  Lock,
-  Image,
-  CheckCircle,
-} from "lucide-react";
-import PhoneInput from "react-phone-number-input";
+import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
+import CountrySelect from "../../../../components/common/CountrySelectSearchable";
 import { scholchatService } from "../../../../services/ScholchatService";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCircleCheck,
+  faEnvelope,
+  faFloppyDisk,
+  faHouse,
+  faImage,
+  faPhone,
+  faTrashCan,
+  faUser,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const UserModal = ({ user, type, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     type: "student",
@@ -31,7 +31,6 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
     nomEtablissement: "",
     matriculeProfesseur: "",
   });
-
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -41,7 +40,6 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
     cniUrlVerso: null,
     selfieUrl: null,
   });
-
   useEffect(() => {
     if (user) {
       setFormData({
@@ -59,7 +57,6 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
         nomEtablissement: user.nomEtablissement || "",
         matriculeProfesseur: user.matriculeProfesseur || "",
       });
-
       if (user.telephone) {
         if (user.telephone.startsWith("+237")) {
           setSelectedCountry("CM");
@@ -67,7 +64,6 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
           setSelectedCountry("FR");
         }
       }
-
       if (user.cniUrlRecto) {
         setPreviewImages((prev) => ({
           ...prev,
@@ -81,11 +77,13 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
         }));
       }
       if (user.selfieUrl) {
-        setPreviewImages((prev) => ({ ...prev, selfieUrl: user.selfieUrl }));
+        setPreviewImages((prev) => ({
+          ...prev,
+          selfieUrl: user.selfieUrl,
+        }));
       }
     }
   }, [user]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -93,16 +91,17 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
       [name]: value,
     }));
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: false }));
+      setErrors((prev) => ({
+        ...prev,
+        [name]: false,
+      }));
     }
   };
-
   const handlePhoneChange = (value) => {
     setFormData((prev) => ({
       ...prev,
       telephone: value || "",
     }));
-
     if (value) {
       if (value.startsWith("+237")) {
         setSelectedCountry("CM");
@@ -110,63 +109,27 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
         setSelectedCountry("FR");
       }
     }
-
     if (errors.telephone) {
-      setErrors((prev) => ({ ...prev, telephone: false }));
+      setErrors((prev) => ({
+        ...prev,
+        telephone: false,
+      }));
     }
   };
-
-  const CountrySelect = ({ value, onChange, options, ...props }) => {
-    const countryToFlag = (countryCode) => {
-      return countryCode
-        .toUpperCase()
-        .replace(/./g, (char) =>
-          String.fromCodePoint(127397 + char.charCodeAt())
-        );
-    };
-
-    return (
-      <select
-        {...props}
-        value={value}
-        onChange={(event) => onChange(event.target.value || undefined)}
-        style={{
-          width: "60px",
-          backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='feather feather-chevron-down'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "right 0.5rem center",
-          backgroundSize: "1rem",
-          appearance: "none",
-        }}
-      >
-        {options.map(({ value, label }) => (
-          <option key={value} value={value}>
-            {countryToFlag(value)} {label}
-          </option>
-        ))}
-        <option value={value} style={{ display: "none" }}>
-          {value ? countryToFlag(value) : ""}
-        </option>
-      </select>
-    );
-  };
-
   const validateFileSize = async (file) => {
     const maxSize = 300 * 1024;
     if (file.size > maxSize) {
       let quality = 0.5;
       let compressedDataUrl = await compressImage(file, quality);
       let compressedSize = atob(compressedDataUrl.split(",")[1]).length;
-
       while (compressedSize > maxSize && quality > 0.1) {
         quality -= 0.1;
         compressedDataUrl = await compressImage(file, quality);
         compressedSize = atob(compressedDataUrl.split(",")[1]).length;
       }
-
       if (compressedSize > maxSize) {
         alert(
-          "L'image est trop volumineuse. Veuillez utiliser une image plus petite."
+          "L'image est trop volumineuse. Veuillez utiliser une image plus petite.",
         );
         return null;
       }
@@ -174,7 +137,6 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
     }
     return await compressImage(file, 0.5);
   };
-
   const compressImage = async (file, quality) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -186,10 +148,8 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
           const canvas = document.createElement("canvas");
           let width = img.width;
           let height = img.height;
-
           const maxWidth = 600;
           const maxHeight = 400;
-
           if (width > height) {
             if (width > maxWidth) {
               height = Math.round((height * maxWidth) / width);
@@ -201,48 +161,41 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
               height = maxHeight;
             }
           }
-
           canvas.width = width;
           canvas.height = height;
-
           const ctx = canvas.getContext("2d");
           ctx.fillStyle = "#FFFFFF";
           ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
-
           const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
           resolve(compressedDataUrl);
         };
       };
     });
   };
-
   const handleFileChange = async (e, fieldName) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (!file.type.startsWith("image/")) {
       alert("Veuillez télécharger un fichier image (JPEG, PNG)");
       e.target.value = "";
       return;
     }
-
     try {
       const compressedDataUrl = await validateFileSize(file);
       if (!compressedDataUrl) {
         e.target.value = "";
         return;
       }
-
-      setPreviewImages((prev) => ({ ...prev, [fieldName]: compressedDataUrl }));
-
+      setPreviewImages((prev) => ({
+        ...prev,
+        [fieldName]: compressedDataUrl,
+      }));
       const mockUrl = `http://example.com/${file.name.replace(/\s+/g, "_")}`;
-
       setFormData((prev) => ({
         ...prev,
         [fieldName]: mockUrl,
       }));
-
       setErrors((prev) => ({
         ...prev,
         [fieldName]: false,
@@ -250,15 +203,13 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
     } catch (error) {
       console.error("Erreur lors du traitement de l'image:", error);
       alert(
-        "Erreur lors du traitement de l'image. Veuillez essayer une autre image."
+        "Erreur lors du traitement de l'image. Veuillez essayer une autre image.",
       );
       e.target.value = "";
     }
   };
-
   const validateForm = () => {
     const newErrors = {};
-
     if (!formData.nom.trim()) {
       newErrors.nom = "Le nom est requis";
     }
@@ -267,32 +218,21 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
     }
     if (!formData.telephone) {
       newErrors.telephone = "Le numéro de téléphone est requis";
-    } else {
-      const cleanedPhone = formData.telephone.replace(/\s+|-|\(|\)/g, "");
-
-      if (
-        selectedCountry === "CM" &&
-        !cleanedPhone.match(/^(\+237|00237)?[6-9]\d{8}$/)
-      ) {
-        newErrors.telephone = "Format de téléphone camerounais invalide";
-      } else if (
-        selectedCountry === "FR" &&
-        !cleanedPhone.match(/^(\+33|0033)?[1-9]\d{8}$/)
-      ) {
-        newErrors.telephone = "Format de téléphone français invalide";
-      }
+    } else if (!isValidPhoneNumber(formData.telephone)) {
+      // Selecting a country without typing any digits leaves formData.telephone
+      // as just "+237" etc. — truthy, so it needs its own completeness check
+      // (this also replaces the old CM/FR-only regexes, which silently
+      // accepted anything for every other country in the new searchable list).
+      newErrors.telephone = "Le numéro de téléphone est incomplet ou invalide";
     }
-
     if (!formData.email.trim()) {
       newErrors.email = "L'email est requis";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Adresse email invalide";
     }
-
     if (!formData.adresse.trim()) {
       newErrors.adresse = "L'adresse est requise";
     }
-
     if (formData.type === "professor") {
       if (!formData.cniUrlRecto) {
         newErrors.cniUrlRecto = "L'image recto de la CNI est requise";
@@ -308,18 +248,13 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
         newErrors.niveau = "Le niveau d'éducation est requis";
       }
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) return;
-
     setIsSubmitting(true);
-
     try {
       let payloadData = {
         nom: formData.nom,
@@ -330,7 +265,6 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
         type: formData.type,
         etat: formData.etat,
       };
-
       if (formData.type === "professor") {
         payloadData = {
           ...payloadData,
@@ -354,7 +288,6 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
       const method = type === "edit" && user?.id ? "PUT" : "POST";
       const urlWithId =
         type === "edit" && user?.id ? `${apiUrl}/${user.id}` : apiUrl;
-
       const response = await fetch(urlWithId, {
         method: method,
         headers: {
@@ -364,25 +297,19 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
         credentials: "include",
         body: JSON.stringify(payloadData),
       });
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Error: ${response.status}`);
       }
-
       const result = await response.json();
 
       // Inform the parent component about the successful submission
       if (typeof onSubmit === "function") {
         await onSubmit(result);
       }
-
       setSuccessMessage(
-        `Utilisateur ${
-          type === "edit" ? "modifié" : "enregistré"
-        } avec succès, et un mail d'activation a été envoyé à ${formData.email}`
+        `Utilisateur ${type === "edit" ? "modifié" : "enregistré"} avec succès, et un mail d'activation a été envoyé à ${formData.email}`,
       );
-
       setTimeout(() => {
         setSuccessMessage("");
         onClose();
@@ -390,16 +317,14 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
     } catch (error) {
       console.error("Error submitting form:", error);
       alert(
-        error.message || "Une erreur est survenue lors de l'enregistrement"
+        error.message || "Une erreur est survenue lors de l'enregistrement",
       );
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const renderImagePreview = (fieldName, label) => {
     if (!previewImages[fieldName]) return null;
-
     return (
       <div className="mt-2">
         <p className="text-sm text-gray-500 mb-1">{label}</p>
@@ -413,7 +338,6 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
       </div>
     );
   };
-
   const renderFileInput = (fieldName, label, required = false) => {
     return (
       <div className="mb-4">
@@ -429,13 +353,13 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
               accept="image/*"
             />
             <div className="flex items-center">
-              <Image className="h-4 w-4 mr-2" />
+              <FontAwesomeIcon icon={faImage} className="h-4 w-4 mr-2" />
               Choisir un fichier
             </div>
           </label>
           {formData[fieldName] && (
             <span className="ml-2 text-green-600 flex items-center">
-              <CheckCircle className="h-4 w-4 mr-1" />
+              <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4 mr-1" />
               Fichier sélectionné
             </span>
           )}
@@ -447,13 +371,15 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
       </div>
     );
   };
-
   if (successMessage) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
           <div className="text-center">
-            <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
+            <FontAwesomeIcon
+              icon={faCircleCheck}
+              className="mx-auto h-12 w-12 text-green-500"
+            />
             <h3 className="mt-2 text-lg font-medium text-gray-900">Succès</h3>
             <div className="mt-2 text-sm text-gray-500">{successMessage}</div>
             <div className="mt-4">
@@ -473,7 +399,6 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
       </div>
     );
   }
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-screen overflow-y-auto">
@@ -482,16 +407,16 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
             {type === "create"
               ? "Créer un nouvel utilisateur"
               : type === "edit"
-              ? "Modifier l'utilisateur"
-              : type === "view"
-              ? "Détails de l'utilisateur"
-              : "Confirmer la suppression"}
+                ? "Modifier l'utilisateur"
+                : type === "view"
+                  ? "Détails de l'utilisateur"
+                  : "Confirmer la suppression"}
           </h3>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
           >
-            <X className="w-5 h-5" />
+            <FontAwesomeIcon icon={faXmark} className="w-5 h-5" />
           </button>
         </div>
 
@@ -525,7 +450,7 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
+                <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-2" />
                 Supprimer
               </button>
             </div>
@@ -554,24 +479,12 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                 <p className="text-gray-500">{user?.email}</p>
                 <div className="flex mt-2">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      user?.etat === "ACTIVE"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${user?.etat === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
                   >
                     {user?.etat}
                   </span>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ml-2 ${
-                      user?.type === "admin"
-                        ? "bg-purple-100 text-purple-800"
-                        : user?.type === "professor"
-                        ? "bg-blue-100 text-blue-800"
-                        : user?.type === "parent"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
+                    className={`px-2 py-1 rounded-full text-xs font-medium ml-2 ${user?.type === "admin" ? "bg-purple-100 text-purple-800" : user?.type === "professor" ? "bg-blue-100 text-blue-800" : user?.type === "parent" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}
                   >
                     {user?.type?.charAt(0).toUpperCase() + user?.type?.slice(1)}
                   </span>
@@ -586,14 +499,18 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                 </h5>
                 <div className="space-y-2">
                   <p className="flex items-center text-gray-600">
-                    <Mail className="w-4 h-4 mr-2" /> {user?.email}
+                    <FontAwesomeIcon
+                      icon={faEnvelope}
+                      className="w-4 h-4 mr-2"
+                    />{" "}
+                    {user?.email}
                   </p>
                   <p className="flex items-center text-gray-600">
-                    <Phone className="w-4 h-4 mr-2" />{" "}
+                    <FontAwesomeIcon icon={faPhone} className="w-4 h-4 mr-2" />{" "}
                     {user?.telephone || "Non fourni"}
                   </p>
                   <p className="flex items-center text-gray-600">
-                    <Home className="w-4 h-4 mr-2" />{" "}
+                    <FontAwesomeIcon icon={faHouse} className="w-4 h-4 mr-2" />{" "}
                     {user?.adresse || "Non fourni"}
                   </p>
                 </div>
@@ -672,16 +589,17 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faUser}
+                      className="h-5 w-5 text-gray-400"
+                    />
                   </div>
                   <input
                     type="text"
                     name="prenom"
                     value={formData.prenom}
                     onChange={handleChange}
-                    className={`pl-10 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${
-                      errors.prenom ? "border-red-500" : ""
-                    }`}
+                    className={`pl-10 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${errors.prenom ? "border-red-500" : ""}`}
                     required
                   />
                 </div>
@@ -696,16 +614,17 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faUser}
+                      className="h-5 w-5 text-gray-400"
+                    />
                   </div>
                   <input
                     type="text"
                     name="nom"
                     value={formData.nom}
                     onChange={handleChange}
-                    className={`pl-10 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${
-                      errors.nom ? "border-red-500" : ""
-                    }`}
+                    className={`pl-10 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${errors.nom ? "border-red-500" : ""}`}
                     required
                   />
                 </div>
@@ -720,16 +639,17 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faEnvelope}
+                      className="h-5 w-5 text-gray-400"
+                    />
                   </div>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`pl-10 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${
-                      errors.email ? "border-red-500" : ""
-                    }`}
+                    className={`pl-10 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${errors.email ? "border-red-500" : ""}`}
                     required
                   />
                 </div>
@@ -743,9 +663,7 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                   Téléphone <span className="text-red-500">*</span>
                 </label>
                 <div
-                  className={`phone-input-container ${
-                    errors.telephone ? "border-red-500 rounded-md" : ""
-                  }`}
+                  className={`phone-input-container ${errors.telephone ? "border-red-500 rounded-md" : ""}`}
                 >
                   <PhoneInput
                     defaultCountry={selectedCountry}
@@ -755,9 +673,7 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                     placeholder="Entrez votre numéro"
                     international
                     countryCallingCodeEditable={false}
-                    className={`block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${
-                      errors.telephone ? "border-red-500" : ""
-                    }`}
+                    className={`block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${errors.telephone ? "border-red-500" : ""}`}
                   />
                 </div>
                 {errors.telephone && (
@@ -773,16 +689,17 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Home className="h-5 w-5 text-gray-400" />
+                    <FontAwesomeIcon
+                      icon={faHouse}
+                      className="h-5 w-5 text-gray-400"
+                    />
                   </div>
                   <input
                     type="text"
                     name="adresse"
                     value={formData.adresse}
                     onChange={handleChange}
-                    className={`pl-10 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${
-                      errors.adresse ? "border-red-500" : ""
-                    }`}
+                    className={`pl-10 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border ${errors.adresse ? "border-red-500" : ""}`}
                     required
                   />
                 </div>
@@ -799,9 +716,7 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                   name="type"
                   value={formData.type}
                   onChange={handleChange}
-                  className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border ${
-                    errors.type ? "border-red-500" : ""
-                  }`}
+                  className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border ${errors.type ? "border-red-500" : ""}`}
                   required
                 >
                   <option value="admin">Admin</option>
@@ -840,9 +755,7 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                   name="niveau"
                   value={formData.niveau}
                   onChange={handleChange}
-                  className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border ${
-                    errors.niveau ? "border-red-500" : ""
-                  }`}
+                  className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border ${errors.niveau ? "border-red-500" : ""}`}
                   required
                 >
                   <option value="">Sélectionnez le niveau d'éducation</option>
@@ -936,7 +849,10 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4 mr-2" />
+                    <FontAwesomeIcon
+                      icon={faFloppyDisk}
+                      className="w-4 h-4 mr-2"
+                    />
                     {type === "create" ? "Créer" : "Enregistrer"}
                   </>
                 )}
@@ -948,5 +864,4 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
     </div>
   );
 };
-
 export default UserModal;

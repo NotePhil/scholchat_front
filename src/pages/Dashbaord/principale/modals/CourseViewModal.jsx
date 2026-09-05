@@ -1,43 +1,33 @@
 import React, { useState, useEffect } from "react";
-import {
-  X,
-  AlertCircle,
-  Users,
-  BookOpen,
-  MapPin,
-  Calendar,
-  FileText,
-  Search,
-  Filter,
-  ChevronDown,
-  Download,
-  Eye,
-  Grid,
-  List,
-  User,
-  Mail,
-  Phone,
-  School,
-  ChevronRight,
-  Clock,
-  Edit2,
-  Share2,
-  Archive,
-  Star,
-  CheckCircle,
-  XCircle,
-  Activity,
-  Timer,
-  UserCheck,
-  PlayCircle,
-  CalendarPlus,
-} from "lucide-react";
 import { minioS3Service } from "../../../../services/minioS3";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBookOpen,
+  faBoxArchive,
+  faCalendarDays,
+  faCalendarPlus,
+  faCircleCheck,
+  faCircleExclamation,
+  faClock,
+  faEnvelope,
+  faFileLines,
+  faList,
+  faLocationDot,
+  faMagnifyingGlass,
+  faPen,
+  faPhone,
+  faSchool,
+  faShareNodes,
+  faStopwatch,
+  faTableCells,
+  faUser,
+  faUserCheck,
+  faUsers,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
   // Handle the course data (passed as classe prop)
   const course = classe;
-
   const [courseDocuments, setCourseDocuments] = useState([]);
   const [filteredDocuments, setFilteredDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,11 +45,9 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
       fetchCourseData();
     }
   }, [course]);
-
   useEffect(() => {
     filterDocuments();
   }, [documentSearchTerm, documentFilter, courseDocuments]);
-
   useEffect(() => {
     if (course && course.chapitres) {
       processChapterContent();
@@ -70,7 +58,6 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
   if (!course) {
     return null;
   }
-
   const fetchCourseData = async () => {
     try {
       setIsLoading(true);
@@ -93,10 +80,8 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
       setIsLoading(false);
     }
   };
-
   const processChapterContent = async () => {
     if (!course.chapitres) return;
-
     try {
       const processedChaps = await Promise.all(
         course.chapitres.map(async (chapter) => {
@@ -107,7 +92,6 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
             /(?:https?:\/\/[^\/\s]+\/)?(images|videos|documents)\/[^"\s<>]+\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|txt)/g;
           let match;
           const pathsToProcess = [];
-
           while ((match = minioPathRegex.exec(processedContent)) !== null) {
             pathsToProcess.push(match[0]);
           }
@@ -117,55 +101,46 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
             try {
               // Clean the path to get just the relative path
               const cleanPath = path.replace(/^https?:\/\/[^\/]+\//, "");
-
               const downloadData =
                 await minioS3Service.generateDownloadUrlByPath(cleanPath);
-
               if (downloadData && downloadData.downloadUrl) {
                 // Replace the path with the signed URL
                 processedContent = processedContent.replace(
                   new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
-                  downloadData.downloadUrl
+                  downloadData.downloadUrl,
                 );
               }
             } catch (error) {
               console.warn(
                 `Failed to generate download URL for ${path}:`,
-                error
+                error,
               );
             }
           }
-
           return {
             ...chapter,
             processedContent,
           };
-        })
+        }),
       );
-
       setProcessedChapters(processedChaps);
     } catch (error) {
       console.error("Error processing chapter content:", error);
       setProcessedChapters(course.chapitres || []);
     }
   };
-
   const filterDocuments = () => {
     let filtered = courseDocuments;
-
     if (documentSearchTerm) {
       filtered = filtered.filter((doc) =>
-        doc.title.toLowerCase().includes(documentSearchTerm.toLowerCase())
+        doc.title.toLowerCase().includes(documentSearchTerm.toLowerCase()),
       );
     }
-
     if (documentFilter !== "all") {
       filtered = filtered.filter((doc) => doc.type === documentFilter);
     }
-
     setFilteredDocuments(filtered);
   };
-
   const getStatusBadge = (status) => {
     const statusConfig = {
       BROUILLON: {
@@ -189,29 +164,18 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
         text: status || "Non défini",
       },
     };
-
     const config = statusConfig[status] || statusConfig.default;
-
     return (
       <span
         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${config.className}`}
       >
         <div
-          className={`w-1.5 h-1.5 rounded-full mr-2 ${
-            status === "PUBLIE"
-              ? "bg-emerald-500"
-              : status === "BROUILLON"
-              ? "bg-yellow-500"
-              : status === "EN_ATTENTE_VALIDATION"
-              ? "bg-blue-500"
-              : "bg-red-500"
-          }`}
+          className={`w-1.5 h-1.5 rounded-full mr-2 ${status === "PUBLIE" ? "bg-emerald-500" : status === "BROUILLON" ? "bg-yellow-500" : status === "EN_ATTENTE_VALIDATION" ? "bg-blue-500" : "bg-red-500"}`}
         ></div>
         {config.text}
       </span>
     );
   };
-
   const getDocumentTypeBadge = (type) => {
     const typeConfig = {
       identity: {
@@ -227,32 +191,28 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
         text: "Académique",
       },
     };
-
     const config = typeConfig[type] || {
       className: "bg-slate-50 text-slate-700 border-slate-200",
       text: "Autre",
     };
-
     return (
       <span
         className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${config.className}`}
       >
         {type === "identity" ? (
-          <User className="w-4 h-4 mr-1" />
+          <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-1" />
         ) : type === "profile" ? (
-          <User className="w-4 h-4 mr-1" />
+          <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-1" />
         ) : (
-          <FileText className="w-4 h-4 mr-1" />
+          <FontAwesomeIcon icon={faFileLines} className="w-4 h-4 mr-1" />
         )}
         {config.text}
       </span>
     );
   };
-
   const handleDocumentView = (document) => {
     window.open(document.url, "_blank");
   };
-
   const handleDocumentDownload = (document) => {
     const link = document.createElement("a");
     link.href = document.url;
@@ -261,7 +221,6 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
     link.click();
     document.body.removeChild(link);
   };
-
   const formatDate = (dateString) => {
     if (!dateString) return "Non défini";
     const date = new Date(dateString);
@@ -273,7 +232,6 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
       minute: "2-digit",
     });
   };
-
   const formatDateOnly = (dateString) => {
     if (!dateString) return "Non défini";
     const date = new Date(dateString);
@@ -283,7 +241,6 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
       year: "numeric",
     });
   };
-
   const formatTimeOnly = (dateString) => {
     if (!dateString) return "Non défini";
     const date = new Date(dateString);
@@ -292,7 +249,6 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
       minute: "2-digit",
     });
   };
-
   const getInitials = (name) => {
     if (!name) return "??";
     const words = name.split(" ");
@@ -302,24 +258,23 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
       .substring(0, 2)
       .toUpperCase();
   };
-
   const renderChapterContent = (content) => {
     if (!content) return null;
 
     // Convert newlines to <br> tags for display
     const formattedContent = content.replace(/\n/g, "<br>");
-
     return (
       <div
         className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
-        dangerouslySetInnerHTML={{ __html: formattedContent }}
+        dangerouslySetInnerHTML={{
+          __html: formattedContent,
+        }}
         style={{
           wordBreak: "break-word",
         }}
       />
     );
   };
-
   return (
     <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
@@ -328,7 +283,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
           <div className="flex justify-between items-start">
             <div className="flex items-center space-x-4">
               <div className="p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg">
-                <BookOpen className="w-6 h-6 text-white" />
+                <FontAwesomeIcon
+                  icon={faBookOpen}
+                  className="w-6 h-6 text-white"
+                />
               </div>
               <div>
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
@@ -344,7 +302,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                 onClick={onClose}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
               >
-                <X className="w-6 h-6" />
+                <FontAwesomeIcon icon={faXmark} className="w-6 h-6" />
               </button>
             </div>
           </div>
@@ -355,11 +313,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
           <div className="flex space-x-6">
             <button
               onClick={() => setActiveTab("details")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                activeTab === "details"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${activeTab === "details" ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}`}
             >
               Détails
             </button>
@@ -367,11 +321,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
               (course?.chapitres && course.chapitres.length > 0)) && (
               <button
                 onClick={() => setActiveTab("chapters")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                  activeTab === "chapters"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                }`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${activeTab === "chapters" ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}`}
               >
                 Chapitres (
                 {processedChapters.length || course?.chapitres?.length || 0})
@@ -380,32 +330,20 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
             {participants.length > 0 && (
               <button
                 onClick={() => setActiveTab("participants")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                  activeTab === "participants"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                }`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${activeTab === "participants" ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}`}
               >
                 Participants ({participants.length})
               </button>
             )}
             <button
               onClick={() => setActiveTab("documents")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                activeTab === "documents"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${activeTab === "documents" ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}`}
             >
               Documents ({courseDocuments.length})
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                activeTab === "history"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${activeTab === "history" ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}`}
             >
               Historique
             </button>
@@ -416,7 +354,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
         <div className="flex-1 overflow-y-auto">
           {error && (
             <div className="mx-8 mt-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-center border border-red-200">
-              <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                className="w-5 h-5 mr-3 flex-shrink-0"
+              />
               <span>{error}</span>
             </div>
           )}
@@ -428,7 +369,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                 {/* Course Information */}
                 <div className="bg-gradient-to-r from-white to-slate-50 rounded-2xl p-8 shadow-lg border border-slate-200">
                   <h3 className="text-xl font-semibold text-slate-900 mb-6 flex items-center">
-                    <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
+                    <FontAwesomeIcon
+                      icon={faBookOpen}
+                      className="w-5 h-5 mr-2 text-indigo-600"
+                    />
                     Informations du Cours
                   </h3>
 
@@ -444,15 +388,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                           </div>
                           <div className="absolute -bottom-2 -right-2">
                             <div
-                              className={`w-6 h-6 rounded-full border-4 border-white ${
-                                course?.etat === "PUBLIE"
-                                  ? "bg-emerald-500"
-                                  : course?.etat === "BROUILLON"
-                                  ? "bg-yellow-500"
-                                  : course?.etat === "EN_ATTENTE_VALIDATION"
-                                  ? "bg-blue-500"
-                                  : "bg-red-500"
-                              }`}
+                              className={`w-6 h-6 rounded-full border-4 border-white ${course?.etat === "PUBLIE" ? "bg-emerald-500" : course?.etat === "BROUILLON" ? "bg-yellow-500" : course?.etat === "EN_ATTENTE_VALIDATION" ? "bg-blue-500" : "bg-red-500"}`}
                             ></div>
                           </div>
                         </div>
@@ -473,7 +409,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                         <div className="space-y-4">
                           <div className="flex items-center space-x-3">
                             <div className="p-2 bg-blue-50 rounded-lg">
-                              <Calendar className="w-4 h-4 text-blue-600" />
+                              <FontAwesomeIcon
+                                icon={faCalendarDays}
+                                className="w-4 h-4 text-blue-600"
+                              />
                             </div>
                             <div>
                               <p className="text-sm text-slate-500 font-medium">
@@ -487,7 +426,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
 
                           <div className="flex items-center space-x-3">
                             <div className="p-2 bg-green-50 rounded-lg">
-                              <Clock className="w-4 h-4 text-green-600" />
+                              <FontAwesomeIcon
+                                icon={faClock}
+                                className="w-4 h-4 text-green-600"
+                              />
                             </div>
                             <div>
                               <p className="text-sm text-slate-500 font-medium">
@@ -502,7 +444,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                           {course?.dateCreation && (
                             <div className="flex items-center space-x-3">
                               <div className="p-2 bg-purple-50 rounded-lg">
-                                <CalendarPlus className="w-4 h-4 text-purple-600" />
+                                <FontAwesomeIcon
+                                  icon={faCalendarPlus}
+                                  className="w-4 h-4 text-purple-600"
+                                />
                               </div>
                               <div>
                                 <p className="text-sm text-slate-500 font-medium">
@@ -519,7 +464,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                         <div className="space-y-4">
                           <div className="flex items-center space-x-3">
                             <div className="p-2 bg-amber-50 rounded-lg">
-                              <MapPin className="w-4 h-4 text-amber-600" />
+                              <FontAwesomeIcon
+                                icon={faLocationDot}
+                                className="w-4 h-4 text-amber-600"
+                              />
                             </div>
                             <div>
                               <p className="text-sm text-slate-500 font-medium">
@@ -533,7 +481,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
 
                           <div className="flex items-center space-x-3">
                             <div className="p-2 bg-indigo-50 rounded-lg">
-                              <User className="w-4 h-4 text-indigo-600" />
+                              <FontAwesomeIcon
+                                icon={faUser}
+                                className="w-4 h-4 text-indigo-600"
+                              />
                             </div>
                             <div>
                               <p className="text-sm text-slate-500 font-medium">
@@ -542,9 +493,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                               <p className="text-slate-900">
                                 {course?.redacteur?.nom ||
                                 course?.redacteur?.prenom
-                                  ? `${course.redacteur.prenom || ""} ${
-                                      course.redacteur.nom || ""
-                                    }`.trim()
+                                  ? `${course.redacteur.prenom || ""} ${course.redacteur.nom || ""}`.trim()
                                   : "Non spécifié"}
                               </p>
                             </div>
@@ -553,7 +502,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                           {course?.duree && (
                             <div className="flex items-center space-x-3">
                               <div className="p-2 bg-rose-50 rounded-lg">
-                                <Timer className="w-4 h-4 text-rose-600" />
+                                <FontAwesomeIcon
+                                  icon={faStopwatch}
+                                  className="w-4 h-4 text-rose-600"
+                                />
                               </div>
                               <div>
                                 <p className="text-sm text-slate-500 font-medium">
@@ -573,7 +525,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                   {course?.description && (
                     <div className="mt-8 pt-6 border-t border-slate-200">
                       <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <FileText className="w-5 h-5 mr-2 text-indigo-600" />
+                        <FontAwesomeIcon
+                          icon={faFileLines}
+                          className="w-5 h-5 mr-2 text-indigo-600"
+                        />
                         Description
                       </h4>
                       <p className="text-slate-700 leading-relaxed">
@@ -585,7 +540,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                   {course?.contenu && (
                     <div className="mt-8 pt-6 border-t border-slate-200">
                       <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
+                        <FontAwesomeIcon
+                          icon={faBookOpen}
+                          className="w-5 h-5 mr-2 text-indigo-600"
+                        />
                         Contenu du cours
                       </h4>
                       <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
@@ -599,7 +557,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                   {course?.references && (
                     <div className="mt-8 pt-6 border-t border-slate-200">
                       <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <FileText className="w-5 h-5 mr-2 text-indigo-600" />
+                        <FontAwesomeIcon
+                          icon={faFileLines}
+                          className="w-5 h-5 mr-2 text-indigo-600"
+                        />
                         Références
                       </h4>
                       <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
@@ -615,7 +576,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                     (course?.matieres && course.matieres.length > 0)) && (
                     <div className="mt-8 pt-6 border-t border-slate-200">
                       <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                        <School className="w-5 h-5 mr-2 text-indigo-600" />
+                        <FontAwesomeIcon
+                          icon={faSchool}
+                          className="w-5 h-5 mr-2 text-indigo-600"
+                        />
                         {course?.matieres && course.matieres.length > 1
                           ? "Matières Associées"
                           : "Matière Associée"}
@@ -642,11 +606,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                               )}
                             </div>
                             <span
-                              className={`text-xs px-2 py-1 rounded-full ${
-                                course.matiere.etat === "ACTIF"
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : "bg-amber-100 text-amber-800"
-                              }`}
+                              className={`text-xs px-2 py-1 rounded-full ${course.matiere.etat === "ACTIF" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}
                             >
                               {course.matiere.etat}
                             </span>
@@ -678,11 +638,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                                   )}
                                 </div>
                                 <span
-                                  className={`text-xs px-2 py-1 rounded-full ${
-                                    matiere.etat === "ACTIF"
-                                      ? "bg-emerald-100 text-emerald-800"
-                                      : "bg-amber-100 text-amber-800"
-                                  }`}
+                                  className={`text-xs px-2 py-1 rounded-full ${matiere.etat === "ACTIF" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}
                                 >
                                   {matiere.etat || "ACTIF"}
                                 </span>
@@ -702,7 +658,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-slate-900 flex items-center">
-                    <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
+                    <FontAwesomeIcon
+                      icon={faBookOpen}
+                      className="w-5 h-5 mr-2 text-indigo-600"
+                    />
                     Chapitres du Cours (
                     {processedChapters.length || course?.chapitres?.length || 0}
                     )
@@ -713,7 +672,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                 (!course?.chapitres || course.chapitres.length === 0) ? (
                   <div className="text-center py-12">
                     <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <BookOpen className="w-8 h-8 text-slate-400" />
+                      <FontAwesomeIcon
+                        icon={faBookOpen}
+                        className="w-8 h-8 text-slate-400"
+                      />
                     </div>
                     <h4 className="text-lg font-medium text-slate-900 mb-2">
                       Aucun chapitre disponible
@@ -775,7 +737,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-slate-900 flex items-center">
-                    <UserCheck className="w-5 h-5 mr-2 text-indigo-600" />
+                    <FontAwesomeIcon
+                      icon={faUserCheck}
+                      className="w-5 h-5 mr-2 text-indigo-600"
+                    />
                     Participants ({participants.length})
                   </h3>
                 </div>
@@ -783,7 +748,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                 {participants.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <Users className="w-8 h-8 text-slate-400" />
+                      <FontAwesomeIcon
+                        icon={faUsers}
+                        className="w-8 h-8 text-slate-400"
+                      />
                     </div>
                     <h4 className="text-lg font-medium text-slate-900 mb-2">
                       Aucun participant inscrit
@@ -815,7 +783,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                             <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-600">
                               {participant.email && (
                                 <div className="flex items-center">
-                                  <Mail className="w-4 h-4 mr-2 text-slate-400" />
+                                  <FontAwesomeIcon
+                                    icon={faEnvelope}
+                                    className="w-4 h-4 mr-2 text-slate-400"
+                                  />
                                   <span className="truncate">
                                     {participant.email}
                                   </span>
@@ -823,7 +794,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                               )}
                               {participant.telephone && (
                                 <div className="flex items-center">
-                                  <Phone className="w-4 h-4 mr-2 text-slate-400" />
+                                  <FontAwesomeIcon
+                                    icon={faPhone}
+                                    className="w-4 h-4 mr-2 text-slate-400"
+                                  />
                                   <span>{participant.telephone}</span>
                                 </div>
                               )}
@@ -831,19 +805,13 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                           </div>
                           <div className="flex-shrink-0">
                             <span
-                              className={`text-xs px-2 py-1 rounded-full ${
-                                participant.etat === "ACTIVE"
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : participant.etat === "INACTIVE"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-amber-100 text-amber-800"
-                              }`}
+                              className={`text-xs px-2 py-1 rounded-full ${participant.etat === "ACTIVE" ? "bg-emerald-100 text-emerald-800" : participant.etat === "INACTIVE" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}
                             >
                               {participant.etat === "ACTIVE"
                                 ? "Actif"
                                 : participant.etat === "INACTIVE"
-                                ? "Inactif"
-                                : participant.etat || "Statut inconnu"}
+                                  ? "Inactif"
+                                  : participant.etat || "Statut inconnu"}
                             </span>
                           </div>
                         </div>
@@ -859,7 +827,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-slate-900 flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-indigo-600" />
+                    <FontAwesomeIcon
+                      icon={faFileLines}
+                      className="w-5 h-5 mr-2 text-indigo-600"
+                    />
                     Documents ({filteredDocuments.length})
                   </h3>
 
@@ -867,9 +838,12 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                   <div className="flex items-center space-x-4">
                     {/* Search */}
                     <div className="relative">
-                      <Search
+                      <FontAwesomeIcon
+                        icon={faMagnifyingGlass}
                         className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-                        size={16}
+                        style={{
+                          fontSize: 16,
+                        }}
                       />
                       <input
                         type="text"
@@ -884,23 +858,18 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                     <div className="flex bg-slate-100 rounded-lg p-1">
                       <button
                         onClick={() => setDocumentViewMode("grid")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                          documentViewMode === "grid"
-                            ? "bg-white text-indigo-600 shadow-sm"
-                            : "text-slate-600 hover:text-slate-900"
-                        }`}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${documentViewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
                       >
-                        <Grid className="w-4 h-4" />
+                        <FontAwesomeIcon
+                          icon={faTableCells}
+                          className="w-4 h-4"
+                        />
                       </button>
                       <button
                         onClick={() => setDocumentViewMode("list")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                          documentViewMode === "list"
-                            ? "bg-white text-indigo-600 shadow-sm"
-                            : "text-slate-600 hover:text-slate-900"
-                        }`}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${documentViewMode === "list" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
                       >
-                        <List className="w-4 h-4" />
+                        <FontAwesomeIcon icon={faList} className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -910,7 +879,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                 {filteredDocuments.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <FileText className="w-8 h-8 text-slate-400" />
+                      <FontAwesomeIcon
+                        icon={faFileLines}
+                        className="w-8 h-8 text-slate-400"
+                      />
                     </div>
                     <h4 className="text-lg font-medium text-slate-900 mb-2">
                       Aucun document disponible
@@ -922,7 +894,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                 ) : (
                   <div className="text-center py-12">
                     <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <FileText className="w-8 h-8 text-slate-400" />
+                      <FontAwesomeIcon
+                        icon={faFileLines}
+                        className="w-8 h-8 text-slate-400"
+                      />
                     </div>
                     <h4 className="text-lg font-medium text-slate-900 mb-2">
                       Documents à venir
@@ -940,7 +915,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-slate-900 flex items-center">
-                    <Clock className="w-5 h-5 mr-2 text-indigo-600" />
+                    <FontAwesomeIcon
+                      icon={faClock}
+                      className="w-5 h-5 mr-2 text-indigo-600"
+                    />
                     Historique des Modifications
                   </h3>
                 </div>
@@ -950,7 +928,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                     <div className="flex items-start space-x-4">
                       <div className="flex-shrink-0">
                         <div className="h-10 w-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                          <BookOpen className="w-5 h-5 text-white" />
+                          <FontAwesomeIcon
+                            icon={faBookOpen}
+                            className="w-5 h-5 text-white"
+                          />
                         </div>
                       </div>
                       <div className="flex-1">
@@ -974,7 +955,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                       <div className="flex items-start space-x-4">
                         <div className="flex-shrink-0">
                           <div className="h-10 w-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-white" />
+                            <FontAwesomeIcon
+                              icon={faCalendarDays}
+                              className="w-5 h-5 text-white"
+                            />
                           </div>
                         </div>
                         <div className="flex-1">
@@ -997,7 +981,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                       <div className="flex items-start space-x-4">
                         <div className="flex-shrink-0">
                           <div className="h-10 w-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <Clock className="w-5 h-5 text-white" />
+                            <FontAwesomeIcon
+                              icon={faClock}
+                              className="w-5 h-5 text-white"
+                            />
                           </div>
                         </div>
                         <div className="flex-1">
@@ -1020,7 +1007,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                       <div className="flex items-start space-x-4">
                         <div className="flex-shrink-0">
                           <div className="h-10 w-10 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                            <CheckCircle className="w-5 h-5 text-white" />
+                            <FontAwesomeIcon
+                              icon={faCircleCheck}
+                              className="w-5 h-5 text-white"
+                            />
                           </div>
                         </div>
                         <div className="flex-1">
@@ -1040,7 +1030,10 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                       <div className="flex items-start space-x-4">
                         <div className="flex-shrink-0">
                           <div className="h-10 w-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center">
-                            <Archive className="w-5 h-5 text-white" />
+                            <FontAwesomeIcon
+                              icon={faBoxArchive}
+                              className="w-5 h-5 text-white"
+                            />
                           </div>
                         </div>
                         <div className="flex-1">
@@ -1062,11 +1055,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
 
         {/* Footer Actions */}
         <div className="bg-slate-50 px-8 py-6 border-t border-slate-200">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-slate-600">
-              ID: {course?.id || "Non défini"}
-            </div>
-
+          <div className="flex items-center justify-end">
             <div className="flex items-center space-x-3">
               {/* Action buttons based on course state */}
               {onEdit && (
@@ -1077,7 +1066,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                   }}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <FontAwesomeIcon icon={faPen} className="w-4 h-4" />
                   Modifier
                 </button>
               )}
@@ -1099,7 +1088,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                 }}
                 className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl flex items-center gap-2 transition-colors font-medium"
               >
-                <Share2 className="w-4 h-4" />
+                <FontAwesomeIcon icon={faShareNodes} className="w-4 h-4" />
                 Partager
               </button>
 
@@ -1116,6 +1105,4 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
     </div>
   );
 };
-
 export default CourseViewModal;
-

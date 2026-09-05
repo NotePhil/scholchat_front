@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, CheckCircle, X } from "lucide-react";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronDown,
+  faCircleCheck,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const MultiSelectDropdown = ({
   options,
   selected,
@@ -10,42 +14,35 @@ const MultiSelectDropdown = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
-
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
   const handleSelect = (optionId) => {
     const newSelected = selected.includes(optionId)
       ? selected.filter((id) => id !== optionId)
       : [...selected, optionId];
     onChange(newSelected);
   };
-
   const getSelectedLabels = () => {
     return options
       .filter((option) => selected.includes(option.id))
       .map((option) => option.nom)
       .join(", ");
   };
-
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-left flex items-center justify-between ${
-          error ? "border-red-300" : "border-slate-200"
-        }`}
+        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-left flex items-center justify-between ${error ? "border-red-300" : "border-slate-200"}`}
       >
         <span
           className={
@@ -54,10 +51,9 @@ const MultiSelectDropdown = ({
         >
           {selected.length === 0 ? placeholder : getSelectedLabels()}
         </span>
-        <ChevronDown
-          className={`w-4 h-4 text-slate-400 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
+        <FontAwesomeIcon
+          icon={faChevronDown}
+          className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
@@ -67,15 +63,14 @@ const MultiSelectDropdown = ({
             <div
               key={option.id}
               onClick={() => handleSelect(option.id)}
-              className={`px-4 py-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between ${
-                selected.includes(option.id)
-                  ? "bg-indigo-50 text-indigo-900"
-                  : "text-slate-700"
-              }`}
+              className={`px-4 py-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between ${selected.includes(option.id) ? "bg-indigo-50 text-indigo-900" : "text-slate-700"}`}
             >
               <span>{option.nom}</span>
               {selected.includes(option.id) && (
-                <CheckCircle className="w-4 h-4 text-indigo-600" />
+                <FontAwesomeIcon
+                  icon={faCircleCheck}
+                  className="w-4 h-4 text-indigo-600"
+                />
               )}
             </div>
           ))}
@@ -102,7 +97,7 @@ const MultiSelectDropdown = ({
                   onClick={() => handleSelect(option.id)}
                   className="ml-2 hover:text-indigo-600"
                 >
-                  <X className="w-3 h-3" />
+                  <FontAwesomeIcon icon={faXmark} className="w-3 h-3" />
                 </button>
               </span>
             ))}
@@ -111,5 +106,4 @@ const MultiSelectDropdown = ({
     </div>
   );
 };
-
 export default MultiSelectDropdown;

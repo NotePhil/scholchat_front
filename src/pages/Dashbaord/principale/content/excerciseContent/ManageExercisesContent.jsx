@@ -11,18 +11,9 @@ import {
   Divider,
 } from "antd";
 import {
-  BookOutlined,
-  PlusOutlined,
-  ArrowLeftOutlined,
-  ReadOutlined,
-  CheckCircleOutlined,
-  GlobalOutlined,
-  FileTextOutlined,
-  ClockCircleOutlined,
-  TrophyOutlined,
-  LockOutlined,
-} from "@ant-design/icons";
-import { exerciseService, participationExerciseService } from "../../../../../services/exerciseService";
+  exerciseService,
+  participationExerciseService,
+} from "../../../../../services/exerciseService";
 import { exerciseProgrammerService } from "../../../../../services/exerciseService";
 import { classService } from "../../../../../services/ClassService";
 import ExerciseList from "./ExerciseList";
@@ -30,9 +21,18 @@ import CreateExerciseForm from "./CreateExerciseForm";
 import EditExerciseForm from "./EditExerciseForm";
 import ExerciseDetailsView from "./ExerciseDetailsView";
 import StudentExerciseView from "./StudentExerciseView";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowLeft,
+  faBook,
+  faBookOpen,
+  faCircleCheck,
+  faClock,
+  faGlobe,
+  faPlus,
+  faTrophy,
+} from "@fortawesome/free-solid-svg-icons";
 const { Title, Text } = Typography;
-
 const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const initClassId = localStorage.getItem("selectedClassId") || null;
   const [filterClassId, setFilterClassId] = useState(initClassId);
@@ -42,7 +42,8 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   const [exercises, setExercises] = useState([]);
   const [participationMap, setParticipationMap] = useState({});
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
-  const [selectedExerciseProgrammerId, setSelectedExerciseProgrammerId] = useState(null);
+  const [selectedExerciseProgrammerId, setSelectedExerciseProgrammerId] =
+    useState(null);
   const [selectedExerciseData, setSelectedExerciseData] = useState(null);
   const [editingExerciseId, setEditingExerciseId] = useState(null);
   const [currentView, setCurrentView] = useState("list"); // list, create, details, edit, take-exercise
@@ -58,7 +59,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
-
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(""), 5000);
@@ -87,21 +87,27 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     if (initClassId) localStorage.removeItem("selectedClassId");
     fetchExercises();
   }, []);
-
   const loadProfessorClasses = async () => {
     try {
       const userId = localStorage.getItem("userId");
       if (!userId) return;
-      const role = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
+      const role = (localStorage.getItem("userRole") || "")
+        .toUpperCase()
+        .replace("ROLE_", "");
       if (role !== "PROFESSOR" && role !== "ADMIN" && role !== "TUTOR") return;
       const classes = await classService.obtenirClassesUtilisateur(userId);
       setProfessorClasses(classes || []);
       // Resolve class name for pre-selected filter
       if (initClassId && classes) {
-        const cls = classes.find(c => String(c.id) === String(initClassId));
-        if (cls) setFilterClassName(cls.nom || cls.name || cls.titre || `Classe ${cls.id}`);
+        const cls = classes.find((c) => String(c.id) === String(initClassId));
+        if (cls)
+          setFilterClassName(
+            cls.nom || cls.name || cls.titre || `Classe ${cls.id}`,
+          );
       }
-    } catch { /* non-blocking */ }
+    } catch {
+      /* non-blocking */
+    }
   };
 
   // Client-side class filter — no extra API call needed.
@@ -110,22 +116,22 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
       setExercises(data);
       return;
     }
-    const filtered = data.filter(e => {
+    const filtered = data.filter((e) => {
       const ids = [
-        ...(e.classesDiffusees || []).map(c => String(c.id || c)),
+        ...(e.classesDiffusees || []).map((c) => String(c.id || c)),
         ...(e.classeIds || e.classesIds || []).map(String),
       ];
       return ids.includes(String(classId));
     });
     setExercises(filtered.length > 0 ? filtered : data);
   };
-
   const handleClassFilterChange = (classId) => {
-    const cls = professorClasses.find(c => String(c.id) === String(classId));
+    const cls = professorClasses.find((c) => String(c.id) === String(classId));
     setFilterClassId(classId || null);
-    setFilterClassName(cls ? (cls.nom || cls.name || cls.titre || `Classe ${cls.id}`) : "");
+    setFilterClassName(
+      cls ? cls.nom || cls.name || cls.titre || `Classe ${cls.id}` : "",
+    );
   };
-
   const fetchExercises = async () => {
     try {
       setLoading(true);
@@ -133,57 +139,75 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
 
       // Get current user info - for parents, use selected child ID
       const parentIdExo = localStorage.getItem("userId");
-      const isParentRoleExo = (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT");
+      const isParentRoleExo = (localStorage.getItem("userRole") || "")
+        .toUpperCase()
+        .includes("PARENT");
       const userId = isParentRoleExo
-        ? (localStorage.getItem("selectedChildId") || parentIdExo)
-        : (sessionStorage.getItem("userId") || parentIdExo);
+        ? localStorage.getItem("selectedChildId") || parentIdExo
+        : sessionStorage.getItem("userId") || parentIdExo;
 
       // Use SELECTED role only (not JWT roles array) for multi-role users
-      const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
-
+      const selectedRole = (localStorage.getItem("userRole") || "")
+        .toUpperCase()
+        .replace("ROLE_", "");
       if (!userId) {
         throw new Error("Utilisateur non connecté. Veuillez vous reconnecter.");
       }
-
-      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      const token =
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("authToken");
       const baseUrl = process.env.REACT_APP_API_BASE_URL;
-      const authHeader = { Authorization: `Bearer ${token}` };
+      const authHeader = {
+        Authorization: `Bearer ${token}`,
+      };
       let data = [];
-
       if (selectedRole === "PROFESSOR" || selectedRole === "TUTOR") {
         // Fetch in parallel — 3 requests total:
         //   1. GET /exercises/professeur/{id}              → professor's own exercises (full details)
         //   2. GET /exercises-programmer/professeur/{id}   → programmer records (exerciseProgrammerId)
         //   3. GET /classes/utilisateur/{id}               → professor's classes (for filter dropdown)
         // No per-class calls, no per-exercise enrichment calls.
-        const [ownExercisesRes, progRecordsRes, classesRes] = await Promise.allSettled([
-          exerciseService.getExercisesByProfesseur(userId).catch(() => []),
-          exerciseProgrammerService.getExercisesProgrammesParProfesseur(userId).catch(() => []),
-          classService.obtenirClassesUtilisateur(userId).catch(() => []),
-        ]);
-
-        const ownExercises  = ownExercisesRes.status  === "fulfilled" ? (ownExercisesRes.value  || []) : [];
-        const progRecords   = progRecordsRes.status   === "fulfilled" ? (progRecordsRes.value   || []) : [];
-        const classesData   = classesRes.status       === "fulfilled" ? (classesRes.value       || []) : [];
+        const [ownExercisesRes, progRecordsRes, classesRes] =
+          await Promise.allSettled([
+            exerciseService.getExercisesByProfesseur(userId).catch(() => []),
+            exerciseProgrammerService
+              .getExercisesProgrammesParProfesseur(userId)
+              .catch(() => []),
+            classService.obtenirClassesUtilisateur(userId).catch(() => []),
+          ]);
+        const ownExercises =
+          ownExercisesRes.status === "fulfilled"
+            ? ownExercisesRes.value || []
+            : [];
+        const progRecords =
+          progRecordsRes.status === "fulfilled"
+            ? progRecordsRes.value || []
+            : [];
+        const classesData =
+          classesRes.status === "fulfilled" ? classesRes.value || [] : [];
 
         // Populate class filter dropdown (replaces the separate loadProfessorClasses call)
         setProfessorClasses(classesData);
         if (initClassId && classesData.length > 0) {
-          const cls = classesData.find(c => String(c.id) === String(initClassId));
-          if (cls) setFilterClassName(cls.nom || cls.name || cls.titre || `Classe ${cls.id}`);
+          const cls = classesData.find(
+            (c) => String(c.id) === String(initClassId),
+          );
+          if (cls)
+            setFilterClassName(
+              cls.nom || cls.name || cls.titre || `Classe ${cls.id}`,
+            );
         }
 
         // Build exerciseId → latest exerciseProgrammerId map from programmer records.
         // ExerciseProgrammerResponseDTO now has `exerciseId` field (added to backend).
         const programmerByExId = new Map();
-        progRecords.forEach(p => {
+        progRecords.forEach((p) => {
           const exId = p.exerciseId || p.exercise?.id;
           if (exId) programmerByExId.set(String(exId), p.id);
         });
-
         data = ownExercises
-          .filter(ex => ex?.id)
-          .map(ex => ({
+          .filter((ex) => ex?.id)
+          .map((ex) => ({
             ...ex,
             id: String(ex.id),
             exerciseProgrammerId: programmerByExId.get(String(ex.id)) || null,
@@ -200,7 +224,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         try {
           const classesResp = await fetch(
             `${baseUrl}/acceder/utilisateurs/${userId}/classes`,
-            { headers: authHeader }
+            {
+              headers: authHeader,
+            },
           );
           if (!classesResp.ok) {
             data = [];
@@ -210,20 +236,21 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
               data = [];
             } else {
               const classNameMap = {};
-              classes.forEach(c => {
-                classNameMap[String(c.id)] = c.nom || c.name || `Classe ${c.id}`;
+              classes.forEach((c) => {
+                classNameMap[String(c.id)] =
+                  c.nom || c.name || `Classe ${c.id}`;
               });
-
               const allMap = new Map(); // keyed by programmer record ID
               for (const cls of classes) {
                 try {
                   const exoResp = await fetch(
                     `${baseUrl}/exercises-programmer/classe/${cls.id}`,
-                    { headers: authHeader }
+                    {
+                      headers: authHeader,
+                    },
                   );
                   if (!exoResp.ok) continue;
                   const programmerRecords = await exoResp.json();
-
                   for (const prog of programmerRecords) {
                     if (allMap.has(prog.id)) continue; // already seen from another class
 
@@ -231,18 +258,21 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                     // prog.id           = programmer record ID (for participations)
                     // prog.exerciseId   = base exercise ID (for /questions/exercise/{id})
                     if (!prog.exerciseId) {
-                      console.error("[ManageExercisesContent] programmer record missing exerciseId — skipping card, questions could not be resolved:", prog);
+                      console.error(
+                        "[ManageExercisesContent] programmer record missing exerciseId — skipping card, questions could not be resolved:",
+                        prog,
+                      );
                       continue;
                     }
                     const exerciseId = prog.exerciseId;
-                    const classeNom = cls.nom || cls.name || classNameMap[String(cls.id)] || "";
+                    const classeNom =
+                      cls.nom || cls.name || classNameMap[String(cls.id)] || "";
 
                     // participations embedded in the programmer record
                     // (participations: [{ utilisateurId, exerciseProgrammerId, etatSoumission, ... }])
                     const myParticipation = (prog.participations || []).find(
-                      p => p.utilisateurId === userId
+                      (p) => p.utilisateurId === userId,
                     );
-
                     allMap.set(prog.id, {
                       // The programmer record ID is used as the card key
                       exerciseProgrammerId: prog.id,
@@ -265,14 +295,16 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                       etatSoumission: myParticipation?.etatSoumission || null,
                     });
                   }
-                } catch { /* ignore per-class errors */ }
+                } catch {
+                  /* ignore per-class errors */
+                }
               }
 
               // Filter out BROUILLON exercises and ones the student already opened
               // (EN_COURS means they started but didn't submit — keep them out of the list
               //  so only "À faire" and completed ones are shown; EN_COURS is re-enterable)
               data = Array.from(allMap.values()).filter(
-                e => e.etat !== "BROUILLON"
+                (e) => e.etat !== "BROUILLON",
               );
             }
           }
@@ -280,15 +312,18 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
           data = [];
         }
       }
-
       const safeData = data || [];
       setAllExercises(safeData);
       await applyClassFilter(safeData, filterClassId);
 
       // Build participationMap from embedded participation data for students
-      if (selectedRole !== "PROFESSOR" && selectedRole !== "ADMIN" && selectedRole !== "TUTOR") {
+      if (
+        selectedRole !== "PROFESSOR" &&
+        selectedRole !== "ADMIN" &&
+        selectedRole !== "TUTOR"
+      ) {
         const map = {};
-        safeData.forEach(e => {
+        safeData.forEach((e) => {
           if (e.exerciseProgrammerId && e.myParticipation) {
             map[e.exerciseProgrammerId] = e.myParticipation;
           }
@@ -305,7 +340,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
       setLoading(false);
     }
   };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchExercises();
@@ -313,7 +347,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     setSuccessMessage("Données actualisées avec succès");
     message.success("Données actualisées avec succès");
   };
-
   const handleSelectExercise = (exerciseId, exerciseProgrammerId) => {
     setSelectedExerciseId(exerciseId);
     setSelectedExerciseProgrammerId(exerciseProgrammerId || null);
@@ -321,7 +354,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
       const found = allExercises.find(
         (e) =>
           String(e.exerciseId) === String(exerciseId) ||
-          String(e.exerciseProgrammerId) === String(exerciseProgrammerId)
+          String(e.exerciseProgrammerId) === String(exerciseProgrammerId),
       );
       setSelectedExerciseData(found || null);
       setCurrentView("take-exercise");
@@ -332,7 +365,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     setError("");
     setSuccessMessage("");
   };
-
   const handleBackToList = () => {
     setSelectedExerciseId(null);
     setSelectedExerciseProgrammerId(null);
@@ -342,13 +374,11 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     setError("");
     setSuccessMessage("");
   };
-
   const handleShowCreateForm = () => {
     setCurrentView("create");
     setError("");
     setSuccessMessage("");
   };
-
   const handleShowEditForm = (exerciseId) => {
     setEditingExerciseId(exerciseId);
     setSelectedExerciseId(null);
@@ -356,14 +386,12 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     setError("");
     setSuccessMessage("");
   };
-
   const handleTakeExercise = (exerciseId) => {
     setSelectedExerciseId(exerciseId);
     setCurrentView("take-exercise");
     setError("");
     setSuccessMessage("");
   };
-
   const handleCreateExercise = async (exerciseData) => {
     try {
       const newExercise = await exerciseService.createExercise(exerciseData);
@@ -381,7 +409,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
       throw error;
     }
   };
-
   const handleUpdateExercise = async (exerciseId, updatedData) => {
     try {
       await exerciseService.updateExercise(exerciseId, updatedData);
@@ -397,7 +424,6 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
       throw error;
     }
   };
-
   const handleDeleteExercise = async (exerciseId) => {
     try {
       await exerciseService.deleteExercise(exerciseId);
@@ -415,8 +441,13 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
   };
 
   // Check user permissions based on SELECTED role only
-  const selectedRoleForPerms = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
-  const canCreateExercise = selectedRoleForPerms === "PROFESSOR" || selectedRoleForPerms === "ADMIN" || selectedRoleForPerms === "TUTOR";
+  const selectedRoleForPerms = (localStorage.getItem("userRole") || "")
+    .toUpperCase()
+    .replace("ROLE_", "");
+  const canCreateExercise =
+    selectedRoleForPerms === "PROFESSOR" ||
+    selectedRoleForPerms === "ADMIN" ||
+    selectedRoleForPerms === "TUTOR";
 
   // Student header stats — use embedded participation state
   const getStudentParticipation = (e) => {
@@ -426,112 +457,150 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     return null;
   };
   const studentTotal = exercises.length;
-  const studentDone = exercises.filter(e => {
+  const studentDone = exercises.filter((e) => {
     const p = getStudentParticipation(e);
     const s = p?.etatSoumission;
-    return s === "SOUMIS" || s === "EN_ATTENTE_CORRECTION" || s === "CORRIGE" || s === "VALIDE";
+    return (
+      s === "SOUMIS" ||
+      s === "EN_ATTENTE_CORRECTION" ||
+      s === "CORRIGE" ||
+      s === "VALIDE"
+    );
   }).length;
-  const studentCorrected = exercises.filter(e => {
+  const studentCorrected = exercises.filter((e) => {
     const p = getStudentParticipation(e);
     return p?.etatSoumission === "CORRIGE" || p?.etatSoumission === "VALIDE";
   }).length;
   const studentTodo = studentTotal - studentDone;
-
   return (
     <div className="full-bleed-page">
       <div className="w-full px-3 sm:px-6 py-3 sm:py-4">
-      {/* List View */}
-      {currentView === "list" && (
+        {/* List View */}
+        {currentView === "list" && (
           <div>
             {/* ── Student header ── */}
             {!canCreateExercise ? (
               <div
                 className="mb-4 rounded-xl p-4"
                 style={{
-                  background: "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)",
+                  background:
+                    "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)",
                   color: "#fff",
                 }}
               >
                 <div className="flex items-center gap-3 mb-1.5">
                   {onBack && (
                     <Button
-                      icon={<ArrowLeftOutlined />}
+                      icon={<FontAwesomeIcon icon={faArrowLeft} />}
                       onClick={onBack}
                       type="text"
                       size="middle"
-                      style={{ color: "#fff" }}
+                      style={{
+                        color: "#fff",
+                      }}
                     />
                   )}
-                  <ReadOutlined style={{ fontSize: 22 }} />
+                  <FontAwesomeIcon
+                    icon={faBookOpen}
+                    style={{
+                      fontSize: 22,
+                    }}
+                  />
                   <span className="text-base font-bold">Mes Exercices</span>
                 </div>
                 <p className="text-xs opacity-80 mb-3 pl-1">
-                  Retrouvez ici tous les exercices disponibles pour votre niveau.
+                  Retrouvez ici tous les exercices disponibles pour votre
+                  niveau.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
-                    <BookOutlined />
-                    <span className="text-sm font-semibold">{studentTotal}</span>
-                    <span className="text-xs opacity-80">exercice{studentTotal !== 1 ? "s" : ""}</span>
+                    <FontAwesomeIcon icon={faBook} />
+                    <span className="text-sm font-semibold">
+                      {studentTotal}
+                    </span>
+                    <span className="text-xs opacity-80">
+                      exercice{studentTotal !== 1 ? "s" : ""}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
-                    <CheckCircleOutlined />
+                    <FontAwesomeIcon icon={faCircleCheck} />
                     <span className="text-sm font-semibold">{studentDone}</span>
                     <span className="text-xs opacity-80">soumis</span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
-                    <TrophyOutlined />
-                    <span className="text-sm font-semibold">{studentCorrected}</span>
-                    <span className="text-xs opacity-80">corrigé{studentCorrected !== 1 ? "s" : ""}</span>
+                    <FontAwesomeIcon icon={faTrophy} />
+                    <span className="text-sm font-semibold">
+                      {studentCorrected}
+                    </span>
+                    <span className="text-xs opacity-80">
+                      corrigé{studentCorrected !== 1 ? "s" : ""}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
-                    <ClockCircleOutlined />
+                    <FontAwesomeIcon icon={faClock} />
                     <span className="text-sm font-semibold">{studentTodo}</span>
                     <span className="text-xs opacity-80">à faire</span>
                   </div>
                 </div>
-              </div>
+              </div> /* ── Professor / Admin header ── */
             ) : (
-              /* ── Professor / Admin header ── */
               <div
                 className="mb-4 rounded-xl overflow-hidden"
-                style={{ border: "1px solid #e8edf5" }}
+                style={{
+                  border: "1px solid #e8edf5",
+                }}
               >
                 {/* Top band */}
                 <div
                   className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                   style={{
-                    background: "linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)",
+                    background:
+                      "linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)",
                   }}
                 >
                   <div className="flex items-center gap-3">
                     {onBack && (
                       <Button
-                        icon={<ArrowLeftOutlined />}
+                        icon={<FontAwesomeIcon icon={faArrowLeft} />}
                         onClick={onBack}
                         type="text"
                         size="middle"
-                        style={{ color: "#fff", flexShrink: 0 }}
+                        style={{
+                          color: "#fff",
+                          flexShrink: 0,
+                        }}
                       />
                     )}
                     <div
                       className="flex items-center justify-center rounded-lg"
-                      style={{ width: 36, height: 36, background: "rgba(255,255,255,0.15)", flexShrink: 0 }}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        background: "rgba(255,255,255,0.15)",
+                        flexShrink: 0,
+                      }}
                     >
-                      <BookOutlined style={{ fontSize: 18, color: "#fff" }} />
+                      <FontAwesomeIcon
+                        icon={faBook}
+                        style={{
+                          fontSize: 18,
+                          color: "#fff",
+                        }}
+                      />
                     </div>
                     <div className="min-w-0">
                       <div className="text-white font-bold text-base leading-tight truncate">
                         Gestion des Exercices
                       </div>
                       <div className="text-blue-100 text-xs opacity-90">
-                        Créez, gérez et programmez des exercices pour vos classes
+                        Créez, gérez et programmez des exercices pour vos
+                        classes
                       </div>
                     </div>
                   </div>
                   <Button
                     type="primary"
-                    icon={<PlusOutlined />}
+                    icon={<FontAwesomeIcon icon={faPlus} />}
                     onClick={handleShowCreateForm}
                     size="middle"
                     style={{
@@ -549,24 +618,75 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                 {/* Stats strip — hidden on mobile */}
                 <div
                   className="hidden sm:grid sm:grid-cols-4 divide-x"
-                  style={{ background: "#f8faff", borderTop: "1px solid #e8edf5" }}
+                  style={{
+                    background: "#f8faff",
+                    borderTop: "1px solid #e8edf5",
+                  }}
                 >
                   {[
-                    { label: "Total", value: allExercises.length, color: "#2d6a9f", icon: <BookOutlined /> },
-                    { label: "Actifs", value: allExercises.filter(e => e.etat === "ACTIF").length, color: "#389e0d", icon: <CheckCircleOutlined /> },
-                    { label: "Brouillons", value: allExercises.filter(e => e.etat === "BROUILLON").length, color: "#d48806", icon: <ClockCircleOutlined /> },
-                    { label: "Publics", value: allExercises.filter(e => e.restriction === "PUBLIC").length, color: "#531dab", icon: <GlobalOutlined /> },
+                    {
+                      label: "Total",
+                      value: allExercises.length,
+                      color: "#2d6a9f",
+                      icon: <FontAwesomeIcon icon={faBook} />,
+                    },
+                    {
+                      label: "Actifs",
+                      value: allExercises.filter((e) => e.etat === "ACTIF")
+                        .length,
+                      color: "#389e0d",
+                      icon: <FontAwesomeIcon icon={faCircleCheck} />,
+                    },
+                    {
+                      label: "Brouillons",
+                      value: allExercises.filter((e) => e.etat === "BROUILLON")
+                        .length,
+                      color: "#d48806",
+                      icon: <FontAwesomeIcon icon={faClock} />,
+                    },
+                    {
+                      label: "Publics",
+                      value: allExercises.filter(
+                        (e) => e.restriction === "PUBLIC",
+                      ).length,
+                      color: "#531dab",
+                      icon: <FontAwesomeIcon icon={faGlobe} />,
+                    },
                   ].map(({ label, value, color, icon }) => (
-                    <div key={label} className="flex items-center gap-2 px-4 py-3">
+                    <div
+                      key={label}
+                      className="flex items-center gap-2 px-4 py-3"
+                    >
                       <div
                         className="flex items-center justify-center rounded-lg"
-                        style={{ width: 32, height: 32, background: `${color}18`, flexShrink: 0 }}
+                        style={{
+                          width: 32,
+                          height: 32,
+                          background: `${color}18`,
+                          flexShrink: 0,
+                        }}
                       >
-                        <span style={{ color, fontSize: 14 }}>{icon}</span>
+                        <span
+                          style={{
+                            color,
+                            fontSize: 14,
+                          }}
+                        >
+                          {icon}
+                        </span>
                       </div>
                       <div>
-                        <div className="font-bold text-base leading-none" style={{ color }}>{value}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+                        <div
+                          className="font-bold text-base leading-none"
+                          style={{
+                            color,
+                          }}
+                        >
+                          {value}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {label}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -586,7 +706,10 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                       <option value="">Toutes les classes</option>
                       {professorClasses.map((cls) => (
                         <option key={cls.id} value={cls.id}>
-                          {cls.nom || cls.name || cls.titre || `Classe ${cls.id}`}
+                          {cls.nom ||
+                            cls.name ||
+                            cls.titre ||
+                            `Classe ${cls.id}`}
                         </option>
                       ))}
                     </select>
@@ -598,7 +721,11 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                     type="info"
                     showIcon
                     closable
-                    style={{ borderRadius: "8px", padding: "4px 12px", flex: 1 }}
+                    style={{
+                      borderRadius: "8px",
+                      padding: "4px 12px",
+                      flex: 1,
+                    }}
                     onClose={() => handleClassFilterChange("")}
                   />
                 )}
@@ -612,7 +739,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                 showIcon
                 closable
                 className="mb-4"
-                style={{ borderRadius: "8px" }}
+                style={{
+                  borderRadius: "8px",
+                }}
                 onClose={() => setSuccessMessage("")}
               />
             )}
@@ -624,7 +753,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                 showIcon
                 closable
                 className="mb-4"
-                style={{ borderRadius: "8px" }}
+                style={{
+                  borderRadius: "8px",
+                }}
                 onClose={() => setError("")}
               />
             )}
@@ -667,7 +798,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                 showIcon
                 closable
                 className="mb-4"
-                style={{ borderRadius: "8px" }}
+                style={{
+                  borderRadius: "8px",
+                }}
                 onClose={() => setError("")}
               />
             )}
@@ -697,22 +830,28 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
         )}
 
         {/* Student Take Exercise View */}
-        {currentView === "take-exercise" && selectedExerciseData?.exerciseId && (
-          <StudentExerciseView
-            key={selectedExerciseData.exerciseProgrammerId || selectedExerciseData.exerciseId}
-            exerciseId={selectedExerciseData.exerciseId}
-            exerciseProgrammerId={selectedExerciseData.exerciseProgrammerId}
-            exerciseName={selectedExerciseData.nom}
-            exerciseDescription={selectedExerciseData.description}
-            existingParticipation={selectedExerciseData.myParticipation || null}
-            onBack={handleBackToList}
-            onComplete={() => {
-              fetchExercises();
-              setSuccessMessage("Exercice soumis avec succès !");
-              handleBackToList();
-            }}
-          />
-        )}
+        {currentView === "take-exercise" &&
+          selectedExerciseData?.exerciseId && (
+            <StudentExerciseView
+              key={
+                selectedExerciseData.exerciseProgrammerId ||
+                selectedExerciseData.exerciseId
+              }
+              exerciseId={selectedExerciseData.exerciseId}
+              exerciseProgrammerId={selectedExerciseData.exerciseProgrammerId}
+              exerciseName={selectedExerciseData.nom}
+              exerciseDescription={selectedExerciseData.description}
+              existingParticipation={
+                selectedExerciseData.myParticipation || null
+              }
+              onBack={handleBackToList}
+              onComplete={() => {
+                fetchExercises();
+                setSuccessMessage("Exercice soumis avec succès !");
+                handleBackToList();
+              }}
+            />
+          )}
 
         {/* Edit View */}
         {currentView === "edit" && editingExerciseId && (
@@ -724,7 +863,9 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
                 showIcon
                 closable
                 className="mb-4"
-                style={{ borderRadius: "8px" }}
+                style={{
+                  borderRadius: "8px",
+                }}
                 onClose={() => setError("")}
               />
             )}
@@ -743,5 +884,4 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     </div>
   );
 };
-
 export default ManageExercisesContent;

@@ -1,22 +1,28 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  X,
-  Save,
-  Camera,
-  Check,
-  XCircle,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  IdCard,
-  FileImage,
-  Shield,
-} from "lucide-react";
 import { scholchatService } from "../../../../services/ScholchatService";
+import { minioS3Service } from "../../../../services/minioS3";
 import axios from "axios";
 import { message } from "antd";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCamera,
+  faCheck,
+  faCircleXmark,
+  faEnvelope,
+  faFileImage,
+  faFloppyDisk,
+  faIdCard,
+  faLocationDot,
+  faPhone,
+  faShield,
+  faUser,
+  faUserXmark,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
+import { asIconComponent } from "../../../../utils/faIconAdapter";
+const FileImage = asIconComponent(faFileImage);
+const IdCard = asIconComponent(faIdCard);
+const User = asIconComponent(faUser);
 const ProfessorModal = ({
   showModal,
   setShowModal,
@@ -35,55 +41,76 @@ const ProfessorModal = ({
     telephone: "",
     adresse: "",
     matriculeProfesseur: "",
-    statut: "EN_ATTENTE", // Default status
   });
 
+  // Reject-with-motif modal state (mirrors ProfessorsContent.jsx's working flow)
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [motifs, setMotifs] = useState([]);
+  const [motifsLoading, setMotifsLoading] = useState(false);
+  const [selectedMotifCode, setSelectedMotifCode] = useState("");
+  const [motifSupplementaire, setMotifSupplementaire] = useState("");
   const [imagePreview, setImagePreview] = useState({
     cniRecto: null,
     cniVerso: null,
     selfie: null,
   });
-
   const [existingImages, setExistingImages] = useState({
     cniRecto: null,
     cniVerso: null,
     selfie: null,
   });
-
   const [imageUrls, setImageUrls] = useState({
     cniRecto: null,
     cniVerso: null,
     selfie: null,
   });
-
   const loadExistingImages = useCallback(async (professor) => {
     try {
       const imageTypes = [
-        { field: "cniRecto", urlField: "cniUrlRecto", docType: "CNI_RECTO" },
-        { field: "cniVerso", urlField: "cniUrlVerso", docType: "CNI_VERSO" },
-        { field: "selfie", urlField: "selfieUrl", docType: "PROFILE_PHOTO" },
+        {
+          field: "cniRecto",
+          urlField: "cniUrlRecto",
+          docType: "CNI_RECTO",
+        },
+        {
+          field: "cniVerso",
+          urlField: "cniUrlVerso",
+          docType: "CNI_VERSO",
+        },
+        {
+          field: "selfie",
+          urlField: "selfieUrl",
+          docType: "PROFILE_PHOTO",
+        },
       ];
-      const urls = {};
 
-      for (const { field, urlField, docType } of imageTypes) {
-        if (professor[urlField]) {
+      // Fire all lookups in parallel instead of awaiting them one by one —
+      // up to 3 independent round trips, no reason to serialize them.
+      const entries = await Promise.all(
+        imageTypes.map(async ({ field, urlField, docType }) => {
+          if (!professor[urlField]) return [field, getDefaultImage(docType)];
           try {
             const filePath = professor[urlField];
             const fileName = filePath.split("/").pop();
             const downloadResponse = await axios.get(
               `${process.env.REACT_APP_API_BASE_URL}/media/download-by-path`,
-              { params: { filePath: fileName } }
+              {
+                params: {
+                  filePath: fileName,
+                },
+              },
             );
-            urls[field] = downloadResponse.data?.url || getDefaultImage(docType);
+            return [
+              field,
+              downloadResponse.data?.url || getDefaultImage(docType),
+            ];
           } catch (error) {
             console.warn(`Failed to load ${field}:`, error);
-            urls[field] = getDefaultImage(docType);
+            return [field, getDefaultImage(docType)];
           }
-        } else {
-          urls[field] = getDefaultImage(docType);
-        }
-      }
-
+        }),
+      );
+      const urls = Object.fromEntries(entries);
       setImageUrls(urls);
     } catch (error) {
       console.error("Error loading existing images:", error);
@@ -107,7 +134,6 @@ const ProfessorModal = ({
           telephone: "",
           adresse: "",
           matriculeProfesseur: "",
-          statut: "EN_ATTENTE",
         });
         setImagePreview({
           cniRecto: null,
@@ -136,7 +162,6 @@ const ProfessorModal = ({
           telephone: selectedProfessor.telephone || "",
           adresse: selectedProfessor.adresse || "",
           matriculeProfesseur: selectedProfessor.matriculeProfesseur || "",
-          statut: selectedProfessor.statut || "EN_ATTENTE",
         });
 
         // Store existing image references
@@ -158,7 +183,6 @@ const ProfessorModal = ({
       }
     }
   }, [showModal, modalMode, selectedProfessor, loadExistingImages]);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -167,38 +191,66 @@ const ProfessorModal = ({
     }));
   };
 
-  const handleStatusChange = async (newStatus) => {
+  // Approve/reject a pending professor. The backend has no generic "statut"
+  // field on the user model — PUTting one (the old behavior here) was
+  // silently ignored. The real mechanism is these two dedicated endpoints,
+  // same as ProfessorsContent.jsx's own working detail panel.
+  const handleApproveProfessor = async () => {
     try {
       setLoading(true);
-
-      // Update the professor's status
-      await scholchatService.updateUser(selectedProfessor.id, {
-        statut: newStatus,
-      });
-
-      // Update local state
-      setFormData((prev) => ({
-        ...prev,
-        statut: newStatus,
-      }));
-
-      // Reload data to refresh the list
+      await scholchatService.validateProfessor(selectedProfessor.id);
+      message.success("Professeur approuvé avec succès");
       await loadData();
-
-      // Optional: Close modal after status change
-      // setShowModal(false);
+      setShowModal(false);
     } catch (err) {
-      console.error("Error updating status:", err);
+      console.error("Error validating professor:", err);
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
-        "Erreur lors de la mise à jour du statut";
-      setError("Erreur lors de la mise à jour du statut: " + errorMessage);
+        "Erreur lors de l'approbation du professeur";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
-
+  const openRejectModal = async () => {
+    setShowRejectModal(true);
+    setSelectedMotifCode("");
+    setMotifSupplementaire("");
+    setMotifsLoading(true);
+    try {
+      const data = await scholchatService.getAllMotifs();
+      setMotifs(Array.isArray(data) ? data : []);
+    } catch {
+      setMotifs([]);
+    } finally {
+      setMotifsLoading(false);
+    }
+  };
+  const handleConfirmReject = async () => {
+    if (!selectedMotifCode) return;
+    try {
+      setLoading(true);
+      await scholchatService.rejectProfessor(
+        selectedProfessor.id,
+        selectedMotifCode,
+        motifSupplementaire || undefined,
+      );
+      setShowRejectModal(false);
+      message.success("Professeur rejeté");
+      await loadData();
+      setShowModal(false);
+    } catch (err) {
+      console.error("Error rejecting professor:", err);
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        "Erreur lors du rejet du professeur";
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
   const compressImage = async (file, quality = 0.7) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -212,7 +264,6 @@ const ProfessorModal = ({
           const maxHeight = 800;
           let width = img.width;
           let height = img.height;
-
           if (width > height) {
             if (width > maxWidth) {
               height *= maxWidth / width;
@@ -224,7 +275,6 @@ const ProfessorModal = ({
               height = maxHeight;
             }
           }
-
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext("2d");
@@ -234,24 +284,20 @@ const ProfessorModal = ({
       };
     });
   };
-
   const handleFileChange = async (e, fieldName) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (!file.type.startsWith("image/")) {
       setError("Veuillez télécharger un fichier image (JPEG, PNG)");
       e.target.value = "";
       return;
     }
-
     try {
       const compressedDataUrl = await compressImage(file);
       setImagePreview((prev) => ({
         ...prev,
         [fieldName]: compressedDataUrl,
       }));
-
       setFormData((prev) => ({
         ...prev,
         [fieldName]: file,
@@ -262,35 +308,30 @@ const ProfessorModal = ({
       e.target.value = "";
     }
   };
-
   const handleRemoveImage = (fieldName) => {
     setImagePreview((prev) => ({
       ...prev,
       [fieldName]: null,
     }));
-
     setFormData((prev) => ({
       ...prev,
       [fieldName]: "",
     }));
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
-
       let professorData = {
         nom: formData.nom.trim(),
         prenom: formData.prenom.trim(),
-        email: formData.email.trim().toLowerCase(), // Ensure lowercase email
+        email: formData.email.trim().toLowerCase(),
+        // Ensure lowercase email
         telephone: formData.telephone,
         adresse: formData.adresse.trim(),
         matriculeProfesseur: formData.matriculeProfesseur?.trim() || null,
         type: "professeur",
-        statut: formData.statut,
       };
-
       if (modalMode === "create") {
         // Step 1: Create the professor first
         const response = await scholchatService.createUser(professorData);
@@ -306,8 +347,8 @@ const ProfessorModal = ({
             uploadFileToS3(formData.cniRecto, newUserId, "CNI_RECTO").then(
               (fileName) => {
                 updatePayload.cniUrlRecto = fileName;
-              }
-            )
+              },
+            ),
           );
         }
 
@@ -317,8 +358,8 @@ const ProfessorModal = ({
             uploadFileToS3(formData.cniVerso, newUserId, "CNI_VERSO").then(
               (fileName) => {
                 updatePayload.cniUrlVerso = fileName;
-              }
-            )
+              },
+            ),
           );
         }
 
@@ -328,8 +369,8 @@ const ProfessorModal = ({
             uploadFileToS3(formData.selfie, newUserId, "PROFILE_PHOTO").then(
               (fileName) => {
                 updatePayload.selfieUrl = fileName;
-              }
-            )
+              },
+            ),
           );
         }
 
@@ -342,7 +383,9 @@ const ProfessorModal = ({
         }
       } else {
         // Edit mode - handle updates
-        const updatePayload = { ...professorData };
+        const updatePayload = {
+          ...professorData,
+        };
         const mediaPromises = [];
 
         // Handle file updates only if new files were provided
@@ -351,38 +394,36 @@ const ProfessorModal = ({
             uploadFileToS3(
               formData.cniRecto,
               selectedProfessor.id,
-              "CNI_RECTO"
+              "CNI_RECTO",
             ).then((fileName) => {
               updatePayload.cniUrlRecto = fileName;
-            })
+            }),
           );
         } else if (existingImages.cniRecto) {
           updatePayload.cniUrlRecto = existingImages.cniRecto;
         }
-
         if (formData.cniVerso) {
           mediaPromises.push(
             uploadFileToS3(
               formData.cniVerso,
               selectedProfessor.id,
-              "CNI_VERSO"
+              "CNI_VERSO",
             ).then((fileName) => {
               updatePayload.cniUrlVerso = fileName;
-            })
+            }),
           );
         } else if (existingImages.cniVerso) {
           updatePayload.cniUrlVerso = existingImages.cniVerso;
         }
-
         if (formData.selfie) {
           mediaPromises.push(
             uploadFileToS3(
               formData.selfie,
               selectedProfessor.id,
-              "PROFILE_PHOTO"
+              "PROFILE_PHOTO",
             ).then((fileName) => {
               updatePayload.selfieUrl = fileName;
-            })
+            }),
           );
         } else if (existingImages.selfie) {
           updatePayload.selfieUrl = existingImages.selfie;
@@ -394,12 +435,11 @@ const ProfessorModal = ({
         // Use patch for partial updates
         await scholchatService.patchUser(selectedProfessor.id, updatePayload);
       }
-
       await loadData();
       message.success(
         modalMode === "create"
           ? "Professeur créé avec succès"
-          : "Professeur mis à jour avec succès"
+          : "Professeur mis à jour avec succès",
       );
       setShowModal(false);
     } catch (err) {
@@ -414,62 +454,33 @@ const ProfessorModal = ({
     }
   };
 
+  // Delegates to the shared minioS3Service upload pipeline (presigned URL +
+  // PUT, with a backend-proxy fallback) instead of duplicating it here.
+  // The target professor's id is passed as an explicit owner override so the
+  // document is attributed to them — not to the admin performing the upload,
+  // which is what minioS3Service.uploadFile() would do by default (it reads
+  // the current session's user id).
   const uploadFileToS3 = async (file, userId, documentType) => {
     try {
-      // Generate a unique filename
       const timestamp = Date.now();
       const fileExtension = file.name.split(".").pop().toLowerCase();
-      const fileName = `${userId}_${documentType}_${timestamp}.${fileExtension}`;
-
-      // Step 1: Get presigned URL from backend
-      const presignedResponse = await axios.post(
-        `${process.env.REACT_APP_API_BASE_URL}/media/presigned-url`,
-        {
-          fileName: fileName,
-          contentType: file.type,
-          mediaType: "IMAGE",
-          ownerId: userId,
-          documentType: documentType,
-        }
-      );
-
-      const { url } = presignedResponse.data;
-
-      // Step 2: Prepare file for upload
-      let fileToUpload;
-      if (typeof file === "string" && file.startsWith("data:")) {
-        // Handle base64/data URL
-        const res = await fetch(file);
-        fileToUpload = await res.blob();
-      } else if (file instanceof Blob) {
-        // Already a blob
-        fileToUpload = file;
-      } else {
-        // Convert File to Blob
-        fileToUpload = new Blob([file], { type: file.type });
-      }
-
-      // Step 3: Upload to S3 using presigned URL
-      const uploadResponse = await fetch(url, {
-        method: "PUT",
-        body: fileToUpload,
-        headers: {
-          "Content-Type": file.type,
-        },
+      const uniqueFileName = `${userId}_${documentType}_${timestamp}.${fileExtension}`;
+      const renamedFile = new File([file], uniqueFileName, {
+        type: file.type,
       });
-
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed with status ${uploadResponse.status}`);
-      }
-
-      // Step 4: Return the file path that can be used to retrieve the file
-      return fileName;
+      const result = await minioS3Service.uploadFile(
+        renamedFile,
+        "IMAGE",
+        documentType,
+        null,
+        userId,
+      );
+      return result.fileName;
     } catch (error) {
       console.error("Upload error:", error);
       throw new Error(`Failed to upload ${documentType}: ${error.message}`);
     }
   };
-
   const getDefaultImage = (docType) => {
     switch (docType) {
       case "CNI_RECTO":
@@ -483,42 +494,44 @@ const ProfessorModal = ({
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "APPROVED":
+  // Keyed off the real backend field (Utilisateurs.etat) — there is no
+  // separate "statut" field on the user model.
+  const getStatusColor = (etat) => {
+    switch (etat) {
+      case "ACTIVE":
+      case "PENDING":
         return "bg-green-100 text-green-800 border-green-200";
       case "REJECTED":
         return "bg-red-100 text-red-800 border-red-200";
-      case "EN_ATTENTE":
+      case "AWAITING_VALIDATION":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case "APPROVED":
-        return "Approuvé";
+  const getStatusText = (etat) => {
+    switch (etat) {
+      case "ACTIVE":
+        return "Actif";
+      case "PENDING":
+        return "Approuvé — activation en attente";
       case "REJECTED":
         return "Rejeté";
-      case "EN_ATTENTE":
-        return "En attente";
+      case "AWAITING_VALIDATION":
+        return "En attente d'approbation";
       default:
-        return status;
+        return etat;
     }
   };
-
   const renderImageSection = (
     fieldName,
     label,
     isRequired = false,
-    icon = FileImage
+    icon = FileImage,
   ) => {
     const hasNewImage = imagePreview[fieldName];
     const hasExistingImage = imageUrls[fieldName];
     const IconComponent = icon;
-
     return (
       <div className="bg-slate-50 rounded-xl p-4">
         <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center">
@@ -532,7 +545,13 @@ const ProfessorModal = ({
         {modalMode !== "view" && (
           <div className="flex items-center mb-4">
             <label className="flex items-center px-4 py-3 bg-white border-2 border-slate-200 rounded-lg cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200 shadow-sm">
-              <Camera size={16} className="mr-2 text-indigo-600" />
+              <FontAwesomeIcon
+                icon={faCamera}
+                className="mr-2 text-indigo-600"
+                style={{
+                  fontSize: 16,
+                }}
+              />
               <span className="text-sm font-medium text-slate-700">
                 Choisir un fichier
               </span>
@@ -551,7 +570,13 @@ const ProfessorModal = ({
         {hasNewImage && (
           <div className="mb-4 relative">
             <p className="text-xs text-green-600 mb-2 font-medium flex items-center">
-              <Check size={12} className="mr-1" />
+              <FontAwesomeIcon
+                icon={faCheck}
+                className="mr-1"
+                style={{
+                  fontSize: 12,
+                }}
+              />
               Nouvelle image:
             </p>
             <div className="relative inline-block">
@@ -567,7 +592,12 @@ const ProfessorModal = ({
                   onClick={() => handleRemoveImage(fieldName)}
                   aria-label="Supprimer l'image"
                 >
-                  <X size={12} />
+                  <FontAwesomeIcon
+                    icon={faXmark}
+                    style={{
+                      fontSize: 12,
+                    }}
+                  />
                 </button>
               )}
             </div>
@@ -600,260 +630,480 @@ const ProfessorModal = ({
       </div>
     );
   };
-
   if (!showModal) return null;
 
   // Check if approve/reject buttons should be shown
   const shouldShowApprovalButtons =
     modalMode === "view" &&
     selectedProfessor &&
-    formData.statut === "EN_ATTENTE";
-
+    selectedProfessor.etat === "AWAITING_VALIDATION";
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col relative">
-        {/* Header - Fixed and sticky */}
-        <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
-                <User className="mr-2 sm:mr-3 text-indigo-600" size={24} />
-                <span className="hidden sm:inline">
-                  {modalMode === "create"
-                    ? "Nouveau Professeur"
-                    : modalMode === "edit"
-                    ? "Modifier Professeur"
-                    : "Détails Professeur"}
-                </span>
-                <span className="sm:hidden">
-                  {modalMode === "create"
-                    ? "Nouveau"
-                    : modalMode === "edit"
-                    ? "Modifier"
-                    : "Détails"}
-                </span>
-              </h3>
-              {/* Status Badge */}
-              {(modalMode === "edit" || modalMode === "view") &&
-                selectedProfessor && (
-                  <span
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(
-                      formData.statut
-                    )}`}
-                  >
-                    <Shield size={12} className="mr-1" />
-                    {getStatusText(formData.statut)}
+    <>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col relative">
+          {/* Header - Fixed and sticky */}
+          <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center">
+                  <FontAwesomeIcon
+                    icon={faUser}
+                    className="mr-2 sm:mr-3 text-indigo-600"
+                    style={{
+                      fontSize: 24,
+                    }}
+                  />
+                  <span className="hidden sm:inline">
+                    {modalMode === "create"
+                      ? "Nouveau Professeur"
+                      : modalMode === "edit"
+                        ? "Modifier Professeur"
+                        : "Détails Professeur"}
                   </span>
-                )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowModal(false)}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {/* Personal Information Section */}
-              <div className="bg-slate-50 rounded-xl p-4 sm:p-6">
-                <h4 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
-                  <User size={18} className="mr-2 text-indigo-600" />
-                  Informations Personnelles
-                </h4>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                      <User size={14} className="mr-1 text-indigo-600" />
-                      Prénom <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="prenom"
-                      value={formData.prenom}
-                      onChange={handleInputChange}
-                      required
-                      disabled={modalMode === "view"}
-                      placeholder="Entrez le prénom"
-                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                      <User size={14} className="mr-1 text-indigo-600" />
-                      Nom <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="nom"
-                      value={formData.nom}
-                      onChange={handleInputChange}
-                      required
-                      disabled={modalMode === "view"}
-                      placeholder="Entrez le nom"
-                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                      <Mail size={14} className="mr-1 text-indigo-600" />
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                      disabled={modalMode === "view"}
-                      placeholder="exemple@email.com"
-                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                      <Phone size={14} className="mr-1 text-indigo-600" />
-                      Numéro de téléphone{" "}
-                      <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      name="telephone"
-                      value={formData.telephone}
-                      onChange={handleInputChange}
-                      required
-                      disabled={modalMode === "view"}
-                      placeholder="+237 6XX XXX XXX"
-                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                      <MapPin size={14} className="mr-1 text-indigo-600" />
-                      Adresse <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="adresse"
-                      value={formData.adresse}
-                      onChange={handleInputChange}
-                      required
-                      disabled={modalMode === "view"}
-                      placeholder="Entrez l'adresse complète"
-                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                      <IdCard size={14} className="mr-1 text-indigo-600" />
-                      Matricule du professeur (Optionnel)
-                    </label>
-                    <input
-                      type="text"
-                      name="matriculeProfesseur"
-                      value={formData.matriculeProfesseur || ""}
-                      onChange={handleInputChange}
-                      disabled={modalMode === "view"}
-                      placeholder="Matricule professionnel"
-                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Documents Section */}
-              <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
-                <h4 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
-                  <FileImage size={18} className="mr-2 text-indigo-600" />
-                  Documents d'identité
-                </h4>
-
-                <div className="space-y-6">
-                  {renderImageSection("cniRecto", "CNI Recto", true, IdCard)}
-                  {renderImageSection("cniVerso", "CNI Verso", true, IdCard)}
-                  {renderImageSection("selfie", "Photo de profil", true, User)}
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        {/* Footer with Action Buttons */}
-        <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex-shrink-0 sticky bottom-0 rounded-b-2xl">
-          <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
-            {/* Status Action Buttons - Only show when in view mode and EN_ATTENTE */}
-            {shouldShowApprovalButtons && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange("APPROVED")}
-                  disabled={loading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-transparent shadow-lg px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-base font-semibold text-white hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-75 disabled:cursor-not-allowed transform hover:-translate-y-0.5 transition-all duration-200 order-1 sm:order-3"
-                >
-                  {loading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                  ) : (
-                    <Check size={16} className="mr-2" />
+                  <span className="sm:hidden">
+                    {modalMode === "create"
+                      ? "Nouveau"
+                      : modalMode === "edit"
+                        ? "Modifier"
+                        : "Détails"}
+                  </span>
+                </h3>
+                {/* Status Badge */}
+                {(modalMode === "edit" || modalMode === "view") &&
+                  selectedProfessor && (
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(selectedProfessor.etat)}`}
+                    >
+                      <FontAwesomeIcon
+                        icon={faShield}
+                        className="mr-1"
+                        style={{
+                          fontSize: 12,
+                        }}
+                      />
+                      {getStatusText(selectedProfessor.etat)}
+                    </span>
                   )}
-                  {loading ? "Traitement..." : "Approuver"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange("REJECTED")}
-                  disabled={loading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-transparent shadow-lg px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-base font-semibold text-white hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-75 disabled:cursor-not-allowed transform hover:-translate-y-0.5 transition-all duration-200 order-2 sm:order-4"
-                >
-                  {loading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                  ) : (
-                    <XCircle size={16} className="mr-2" />
-                  )}
-                  {loading ? "Traitement..." : "Rejeter"}
-                </button>
-              </>
-            )}
-
-            {/* Regular Form Buttons */}
-            {modalMode !== "view" && (
+              </div>
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-transparent shadow-lg px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-base font-semibold text-white hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 disabled:cursor-not-allowed transform hover:-translate-y-0.5 transition-all duration-200 order-1 sm:order-2"
-                onClick={handleSubmit}
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                ) : (
-                  <Save size={16} className="mr-2" />
-                )}
-                {loading ? "Enregistrement..." : "Enregistrer"}
+                <FontAwesomeIcon
+                  icon={faXmark}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
               </button>
-            )}
+            </div>
+          </div>
 
-            <button
-              type="button"
-              onClick={() => setShowModal(false)}
-              className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border-2 border-slate-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 order-3 sm:order-1"
-            >
-              <X size={16} className="mr-2" />
-              {modalMode === "view" ? "Fermer" : "Annuler"}
-            </button>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {/* Personal Information Section */}
+                <div className="bg-slate-50 rounded-xl p-4 sm:p-6">
+                  <h4 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
+                    <FontAwesomeIcon
+                      icon={faUser}
+                      className="mr-2 text-indigo-600"
+                      style={{
+                        fontSize: 18,
+                      }}
+                    />
+                    Informations Personnelles
+                  </h4>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                        <FontAwesomeIcon
+                          icon={faUser}
+                          className="mr-1 text-indigo-600"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        Prénom <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="prenom"
+                        value={formData.prenom}
+                        onChange={handleInputChange}
+                        required
+                        disabled={modalMode === "view"}
+                        placeholder="Entrez le prénom"
+                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                        <FontAwesomeIcon
+                          icon={faUser}
+                          className="mr-1 text-indigo-600"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        Nom <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="nom"
+                        value={formData.nom}
+                        onChange={handleInputChange}
+                        required
+                        disabled={modalMode === "view"}
+                        placeholder="Entrez le nom"
+                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                        <FontAwesomeIcon
+                          icon={faEnvelope}
+                          className="mr-1 text-indigo-600"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                        disabled={modalMode === "view"}
+                        placeholder="exemple@email.com"
+                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                        <FontAwesomeIcon
+                          icon={faPhone}
+                          className="mr-1 text-indigo-600"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        Numéro de téléphone{" "}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        name="telephone"
+                        value={formData.telephone}
+                        onChange={handleInputChange}
+                        required
+                        disabled={modalMode === "view"}
+                        placeholder="+237 6XX XXX XXX"
+                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                        <FontAwesomeIcon
+                          icon={faLocationDot}
+                          className="mr-1 text-indigo-600"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        Adresse <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="adresse"
+                        value={formData.adresse}
+                        onChange={handleInputChange}
+                        required
+                        disabled={modalMode === "view"}
+                        placeholder="Entrez l'adresse complète"
+                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                        <FontAwesomeIcon
+                          icon={faIdCard}
+                          className="mr-1 text-indigo-600"
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
+                        Matricule du professeur (Optionnel)
+                      </label>
+                      <input
+                        type="text"
+                        name="matriculeProfesseur"
+                        value={formData.matriculeProfesseur || ""}
+                        onChange={handleInputChange}
+                        disabled={modalMode === "view"}
+                        placeholder="Matricule professionnel"
+                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 transition-all duration-200 bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents Section */}
+                <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
+                  <h4 className="text-lg font-semibold text-slate-900 mb-4 sm:mb-6 flex items-center">
+                    <FontAwesomeIcon
+                      icon={faFileImage}
+                      className="mr-2 text-indigo-600"
+                      style={{
+                        fontSize: 18,
+                      }}
+                    />
+                    Documents d'identité
+                  </h4>
+
+                  <div className="space-y-6">
+                    {renderImageSection("cniRecto", "CNI Recto", true, IdCard)}
+                    {renderImageSection("cniVerso", "CNI Verso", true, IdCard)}
+                    {renderImageSection(
+                      "selfie",
+                      "Photo de profil",
+                      true,
+                      User,
+                    )}
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Footer with Action Buttons */}
+          <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex-shrink-0 sticky bottom-0 rounded-b-2xl">
+            <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+              {/* Status Action Buttons - Only show when in view mode and awaiting approval */}
+              {shouldShowApprovalButtons && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleApproveProfessor}
+                    disabled={loading}
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-transparent shadow-lg px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-base font-semibold text-white hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-75 disabled:cursor-not-allowed transform hover:-translate-y-0.5 transition-all duration-200 order-1 sm:order-3"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                    ) : (
+                      <FontAwesomeIcon
+                        icon={faCheck}
+                        className="mr-2"
+                        style={{
+                          fontSize: 16,
+                        }}
+                      />
+                    )}
+                    {loading ? "Traitement..." : "Approuver"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openRejectModal}
+                    disabled={loading}
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-transparent shadow-lg px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-base font-semibold text-white hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-75 disabled:cursor-not-allowed transform hover:-translate-y-0.5 transition-all duration-200 order-2 sm:order-4"
+                  >
+                    <FontAwesomeIcon
+                      icon={faCircleXmark}
+                      className="mr-2"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
+                    Rejeter
+                  </button>
+                </>
+              )}
+
+              {/* Regular Form Buttons */}
+              {modalMode !== "view" && (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-transparent shadow-lg px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-base font-semibold text-white hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 disabled:cursor-not-allowed transform hover:-translate-y-0.5 transition-all duration-200 order-1 sm:order-2"
+                  onClick={handleSubmit}
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                  ) : (
+                    <FontAwesomeIcon
+                      icon={faFloppyDisk}
+                      className="mr-2"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
+                  )}
+                  {loading ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border-2 border-slate-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 order-3 sm:order-1"
+              >
+                <FontAwesomeIcon
+                  icon={faXmark}
+                  className="mr-2"
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
+                {modalMode === "view" ? "Fermer" : "Annuler"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Reject-with-motif modal */}
+      {showRejectModal && selectedProfessor && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div
+              className="px-5 py-4 border-b border-slate-100 flex items-center justify-between"
+              style={{
+                background: "linear-gradient(135deg, #fef2f2 0%, #fff 100%)",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">
+                  <FontAwesomeIcon
+                    icon={faUserXmark}
+                    className="text-red-600"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Rejeter le professeur
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {selectedProfessor.prenom} {selectedProfessor.nom}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400"
+              >
+                <FontAwesomeIcon
+                  icon={faXmark}
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Motif de rejet <span className="text-red-500">*</span>
+                </label>
+                {motifsLoading ? (
+                  <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
+                    <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                    Chargement des motifs...
+                  </div>
+                ) : motifs.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">
+                    Aucun motif disponible.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {motifs.map((m) => (
+                      <label
+                        key={m.id}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${selectedMotifCode === m.code ? "border-red-400 bg-red-50" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="motif"
+                          value={m.code}
+                          checked={selectedMotifCode === m.code}
+                          onChange={() => setSelectedMotifCode(m.code)}
+                          className="mt-0.5 accent-red-600 flex-shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-700">
+                            {m.code}
+                          </p>
+                          {m.descriptif && (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {m.descriptif}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Motif supplémentaire{" "}
+                  <span className="text-slate-400 font-normal">
+                    (optionnel)
+                  </span>
+                </label>
+                <textarea
+                  value={motifSupplementaire}
+                  onChange={(e) => setMotifSupplementaire(e.target.value)}
+                  placeholder="Précisez si nécessaire..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none transition-all"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50/50">
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmReject}
+                disabled={!selectedMotifCode || loading}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: "#dc2626",
+                }}
+              >
+                {loading ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <FontAwesomeIcon
+                    icon={faUserXmark}
+                    style={{
+                      fontSize: 14,
+                    }}
+                  />
+                )}
+                Confirmer le rejet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
-
 export default ProfessorModal;

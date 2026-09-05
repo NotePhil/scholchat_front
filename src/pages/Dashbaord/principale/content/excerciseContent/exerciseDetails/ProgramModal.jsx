@@ -1,16 +1,26 @@
 import React from "react";
 import {
-  Modal, Form, DatePicker, Select, Button, Alert,
-  Divider, Switch, Typography, Space,
+  Modal,
+  Form,
+  DatePicker,
+  Select,
+  Button,
+  Alert,
+  Divider,
+  Switch,
+  Typography,
+  Space,
 } from "antd";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  CalendarOutlined, TeamOutlined, SendOutlined,
-  BookOutlined, FileTextOutlined,
-} from "@ant-design/icons";
-
+  faBook,
+  faCalendarDays,
+  faFileLines,
+  faPaperPlane,
+  faUserGroup,
+} from "@fortawesome/free-solid-svg-icons";
 const { Option } = Select;
 const { Text } = Typography;
-
 const ProgramModal = ({
   open,
   onCancel,
@@ -26,7 +36,12 @@ const ProgramModal = ({
       onCancel={onCancel}
       title={
         <Space>
-          <CalendarOutlined style={{ color: "#1677ff" }} />
+          <FontAwesomeIcon
+            icon={faCalendarDays}
+            style={{
+              color: "#1677ff",
+            }}
+          />
           <span className="font-semibold">Programmer l'exercice</span>
         </Space>
       }
@@ -35,30 +50,47 @@ const ProgramModal = ({
       destroyOnClose
     >
       <Form form={form} layout="vertical" onFinish={onFinish} className="pt-2">
-
         {/* Type d'assignation */}
         <Form.Item
           name="typeAssignation"
           label="Type d'assignation"
           initialValue="EXERCICE"
-          rules={[{ required: true }]}
+          rules={[
+            {
+              required: true,
+            },
+          ]}
         >
           <Select size="large">
             <Option value="EXERCICE">
               <Space>
-                <BookOutlined style={{ color: "#1677ff" }} />
+                <FontAwesomeIcon
+                  icon={faBook}
+                  style={{
+                    color: "#1677ff",
+                  }}
+                />
                 <div>
                   <div className="font-medium">Exercice libre</div>
-                  <div className="text-xs text-gray-400">Auto-corrigé, résultat immédiat</div>
+                  <div className="text-xs text-gray-400">
+                    Auto-corrigé, résultat immédiat
+                  </div>
                 </div>
               </Space>
             </Option>
             <Option value="DEVOIR">
               <Space>
-                <FileTextOutlined style={{ color: "#531dab" }} />
+                <FontAwesomeIcon
+                  icon={faFileLines}
+                  style={{
+                    color: "#531dab",
+                  }}
+                />
                 <div>
                   <div className="font-medium">Devoir</div>
-                  <div className="text-xs text-gray-400">Soumis, correction manuelle du prof</div>
+                  <div className="text-xs text-gray-400">
+                    Soumis, correction manuelle du prof
+                  </div>
                 </div>
               </Space>
             </Option>
@@ -72,41 +104,90 @@ const ProgramModal = ({
           <Form.Item
             name="dateExoPrevue"
             label="Date prévue"
-            rules={[{ required: true, message: "Requis" }]}
+            rules={[
+              {
+                required: true,
+                message: "Requis",
+              },
+            ]}
           >
-            <DatePicker style={{ width: "100%" }} showTime format="DD/MM/YYYY HH:mm" placeholder="Date prévue" />
+            <DatePicker
+              style={{
+                width: "100%",
+              }}
+              showTime
+              format="DD/MM/YYYY HH:mm"
+              placeholder="Date prévue"
+            />
           </Form.Item>
           <Form.Item
             name="dateDebutExoEffectif"
             label="Début effectif"
-            rules={[{ required: true, message: "Requis" }]}
+            rules={[
+              {
+                required: true,
+                message: "Requis",
+              },
+            ]}
           >
-            <DatePicker style={{ width: "100%" }} showTime format="DD/MM/YYYY HH:mm" placeholder="Début" />
+            <DatePicker
+              style={{
+                width: "100%",
+              }}
+              showTime
+              format="DD/MM/YYYY HH:mm"
+              placeholder="Début"
+            />
           </Form.Item>
           <Form.Item
             name="dateFinExoEffectif"
             label="Fin effective"
             rules={[
-              { required: true, message: "Requis" },
+              {
+                required: true,
+                message: "Requis",
+              },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   const start = getFieldValue("dateDebutExoEffectif");
-                  if (!value || !start || value.isAfter(start)) return Promise.resolve();
+                  if (!value || !start || value.isAfter(start))
+                    return Promise.resolve();
                   return Promise.reject(new Error("Doit être après le début"));
                 },
               }),
             ]}
           >
-            <DatePicker style={{ width: "100%" }} showTime format="DD/MM/YYYY HH:mm" placeholder="Fin" />
+            <DatePicker
+              style={{
+                width: "100%",
+              }}
+              showTime
+              format="DD/MM/YYYY HH:mm"
+              placeholder="Fin"
+            />
           </Form.Item>
         </div>
 
         {/* Classes */}
         <Form.Item
           name="classeIds"
-          label={<Space><TeamOutlined />Classes concernées</Space>}
-          rules={[{ required: true, message: "Sélectionnez au moins une classe" }]}
-          extra={classesLoading ? "Chargement..." : `${classes.length} classe(s) disponible(s)`}
+          label={
+            <Space>
+              <FontAwesomeIcon icon={faUserGroup} />
+              Classes concernées
+            </Space>
+          }
+          rules={[
+            {
+              required: true,
+              message: "Sélectionnez au moins une classe",
+            },
+          ]}
+          extra={
+            classesLoading
+              ? "Chargement..."
+              : `${classes.length} classe(s) disponible(s)`
+          }
         >
           <Select
             mode="multiple"
@@ -115,20 +196,32 @@ const ProgramModal = ({
             optionFilterProp="children"
             size="large"
           >
-            {classes.map(c => (
+            {classes.map((c) => (
               <Option key={c.id} value={c.id}>
-                {c.nom}{c.niveau ? ` — ${c.niveau}` : ""}
+                {c.nom}
+                {c.niveau ? ` — ${c.niveau}` : ""}
               </Option>
             ))}
           </Select>
         </Form.Item>
 
         {/* Diffuse immediately toggle */}
-        <Form.Item name="diffuseImmediately" valuePropName="checked" initialValue={true}>
-          <div className="flex items-center justify-between p-3 rounded-lg"
-            style={{ background: "#f0f5ff", border: "1px solid #adc6ff" }}>
+        <Form.Item
+          name="diffuseImmediately"
+          valuePropName="checked"
+          initialValue={true}
+        >
+          <div
+            className="flex items-center justify-between p-3 rounded-lg"
+            style={{
+              background: "#f0f5ff",
+              border: "1px solid #adc6ff",
+            }}
+          >
             <div>
-              <Text strong className="text-sm">Diffuser immédiatement</Text>
+              <Text strong className="text-sm">
+                Diffuser immédiatement
+              </Text>
               <br />
               <Text type="secondary" className="text-xs">
                 L'exercice sera visible par les élèves dès maintenant
@@ -144,7 +237,7 @@ const ProgramModal = ({
             type="primary"
             htmlType="submit"
             loading={loading}
-            icon={<SendOutlined />}
+            icon={<FontAwesomeIcon icon={faPaperPlane} />}
           >
             Programmer et diffuser
           </Button>
@@ -153,5 +246,4 @@ const ProgramModal = ({
     </Modal>
   );
 };
-
 export default ProgramModal;

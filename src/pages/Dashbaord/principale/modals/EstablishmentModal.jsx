@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  X,
-  Save,
-  Building2,
-  Mail,
-  Phone,
-  MapPin,
-  Globe,
-  Settings,
-} from "lucide-react";
-
+  faBuilding,
+  faEnvelope,
+  faFloppyDisk,
+  faGear,
+  faGlobe,
+  faLocationDot,
+  faPhone,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const EstablishmentModal = ({
   showModal,
   setShowModal,
@@ -61,7 +61,6 @@ const EstablishmentModal = ({
       }
     }
   }, [showModal, modalMode, selectedEstablishment]);
-
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -69,7 +68,6 @@ const EstablishmentModal = ({
       [name]: type === "checkbox" ? checked : value,
     }));
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     const establishmentData = {
@@ -82,7 +80,6 @@ const EstablishmentModal = ({
     };
     await onSave(establishmentData);
   };
-
   if (!showModal) return null;
 
   // View Mode Component
@@ -97,29 +94,37 @@ const EstablishmentModal = ({
 
           <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
             <div className="bg-white px-6 py-6">
-            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-8">
-              <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                    <Building2 className="w-6 h-6" />
-                  </div>
-                  Détails de l'Établissement
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
-                >
-                  <X size={24} />
-                </button>
+              <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-8">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <FontAwesomeIcon icon={faBuilding} className="w-6 h-6" />
+                    </div>
+                    Détails de l'Établissement
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
+                  >
+                    <FontAwesomeIcon
+                      icon={faXmark}
+                      style={{
+                        fontSize: 24,
+                      }}
+                    />
+                  </button>
+                </div>
               </div>
-            </div>
 
               <div className="space-y-6">
                 {/* Name Section */}
                 <div className="text-center pb-4 border-b border-gray-100">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Building2 className="w-8 h-8 text-blue-600" />
+                    <FontAwesomeIcon
+                      icon={faBuilding}
+                      className="w-8 h-8 text-blue-600"
+                    />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900">
                     {formData.nom}
@@ -130,7 +135,10 @@ const EstablishmentModal = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                     <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-                      <MapPin className="w-5 h-5 text-purple-600" />
+                      <FontAwesomeIcon
+                        icon={faLocationDot}
+                        className="w-5 h-5 text-purple-600"
+                      />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-500">
@@ -144,7 +152,10 @@ const EstablishmentModal = ({
 
                   <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                      <Globe className="w-5 h-5 text-green-600" />
+                      <FontAwesomeIcon
+                        icon={faGlobe}
+                        className="w-5 h-5 text-green-600"
+                      />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-500">Pays</p>
@@ -157,7 +168,10 @@ const EstablishmentModal = ({
                   {formData.email && (
                     <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                       <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                        <Mail className="w-5 h-5 text-blue-600" />
+                        <FontAwesomeIcon
+                          icon={faEnvelope}
+                          className="w-5 h-5 text-blue-600"
+                        />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-500">
@@ -173,7 +187,10 @@ const EstablishmentModal = ({
                   {formData.telephone && (
                     <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                       <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
-                        <Phone className="w-5 h-5 text-orange-600" />
+                        <FontAwesomeIcon
+                          icon={faPhone}
+                          className="w-5 h-5 text-orange-600"
+                        />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-500">
@@ -189,7 +206,10 @@ const EstablishmentModal = ({
                   {selectedEstablishment?.tokenGeneral && (
                     <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                       <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
-                        <Settings className="w-5 h-5 text-indigo-600" />
+                        <FontAwesomeIcon
+                          icon={faGear}
+                          className="w-5 h-5 text-indigo-600"
+                        />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-500">
@@ -205,7 +225,10 @@ const EstablishmentModal = ({
                   {selectedEstablishment?.codeUniqueValue && (
                     <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                       <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-                        <Settings className="w-5 h-5 text-purple-600" />
+                        <FontAwesomeIcon
+                          icon={faGear}
+                          className="w-5 h-5 text-purple-600"
+                        />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-500">
@@ -223,7 +246,10 @@ const EstablishmentModal = ({
                 <div className="border-t border-gray-100 pt-6">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
-                      <Settings className="w-5 h-5 text-indigo-600" />
+                      <FontAwesomeIcon
+                        icon={faGear}
+                        className="w-5 h-5 text-indigo-600"
+                      />
                     </div>
                     <h4 className="text-lg font-semibold text-gray-900">
                       Options configurées
@@ -235,11 +261,7 @@ const EstablishmentModal = ({
                         Email vers classes
                       </span>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          formData.optionEnvoiMailVersClasse
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${formData.optionEnvoiMailVersClasse ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}
                       >
                         {formData.optionEnvoiMailVersClasse
                           ? "Activé"
@@ -251,11 +273,7 @@ const EstablishmentModal = ({
                         Token général
                       </span>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          formData.optionTokenGeneral
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${formData.optionTokenGeneral ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}
                       >
                         {formData.optionTokenGeneral ? "Activé" : "Désactivé"}
                       </span>
@@ -265,11 +283,7 @@ const EstablishmentModal = ({
                         Code unique
                       </span>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          formData.codeUnique
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${formData.codeUnique ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}
                       >
                         {formData.codeUnique ? "Activé" : "Désactivé"}
                       </span>
@@ -306,25 +320,30 @@ const EstablishmentModal = ({
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
           <form onSubmit={handleSubmit}>
             <div className="bg-white px-6 py-6">
-            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 px-6 py-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-white flex items-center gap-3">
-                  <div className="p-2 bg-white/10 rounded-lg">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  {modalMode === "create"
-                    ? "Nouvel Établissement"
-                    : "Modifier l'Établissement"}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="text-white/60 hover:text-white p-2 hover:bg-white/10 rounded-full transition-all"
-                >
-                  <X size={24} />
-                </button>
+              <div className="bg-gradient-to-r from-blue-700 to-indigo-800 px-6 py-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                    <div className="p-2 bg-white/10 rounded-lg">
+                      <FontAwesomeIcon icon={faBuilding} className="w-5 h-5" />
+                    </div>
+                    {modalMode === "create"
+                      ? "Nouvel Établissement"
+                      : "Modifier l'Établissement"}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="text-white/60 hover:text-white p-2 hover:bg-white/10 rounded-full transition-all"
+                  >
+                    <FontAwesomeIcon
+                      icon={faXmark}
+                      style={{
+                        fontSize: 24,
+                      }}
+                    />
+                  </button>
+                </div>
               </div>
-            </div>
 
               <div className="flex flex-col md:flex-row gap-8">
                 {/* Left Column */}
@@ -493,7 +512,7 @@ const EstablishmentModal = ({
                 disabled={loading}
                 className="w-full sm:w-auto inline-flex justify-center items-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-blue-600 text-base font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Save className="mr-2 w-5 h-5" />
+                <FontAwesomeIcon icon={faFloppyDisk} className="mr-2 w-5 h-5" />
                 {loading ? "Enregistrement..." : "Enregistrer"}
               </button>
               <button
@@ -510,5 +529,4 @@ const EstablishmentModal = ({
     </div>
   );
 };
-
 export default EstablishmentModal;
