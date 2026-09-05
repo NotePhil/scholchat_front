@@ -55,6 +55,8 @@ import GestionnairesManagement from "./content/GestionnaireContent/Gestionnaires
 import RoleSelectorModal from "../../../components/modals/RoleSelectorModal";
 import ReAuthModal from "../../../components/modals/ReAuthModal";
 import ChildSelectorModal from "../../../components/modals/ChildSelectorModal";
+import CompleteProfileModal from "./modals/CompleteProfileModal";
+import { scholchatService } from "../../../services/ScholchatService";
 import { InstallButton } from "../../../components/PWAInstallPrompt";
 import "../../../CSS/Principal.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -185,6 +187,40 @@ const Principal = () => {
   const [pendingChildSwitch, setPendingChildSwitch] = useState(null);
   const [showChildAuthModal, setShowChildAuthModal] = useState(false);
   const [childAuthLoading, setChildAuthLoading] = useState(false);
+  // Professor "complete your profile" prompt — admin validation no longer
+  // requires all documents to be present (see UtilisateursBusiness.validerProfesseur),
+  // so a validated professor missing a document (e.g. an upload that failed
+  // mid-signup) is nudged to finish it here instead of being blocked earlier.
+  const [showCompleteProfileModal, setShowCompleteProfileModal] = useState(false);
+  const [missingProfessorDocs, setMissingProfessorDocs] = useState([]);
+
+  useEffect(() => {
+    if (!isProfessor) return;
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const professor = await scholchatService.getUserById(userId);
+        if (cancelled || !professor) return;
+        const docFields = [
+          { field: "cniUrlRecto", docType: "CNI_RECTO", label: "CNI - Recto" },
+          { field: "cniUrlVerso", docType: "CNI_VERSO", label: "CNI - Verso" },
+          { field: "selfieUrl", docType: "PROFILE_PHOTO", label: "Photo de profil" },
+        ];
+        const missing = docFields.filter((doc) => !professor[doc.field]);
+        if (missing.length > 0) {
+          setMissingProfessorDocs(missing);
+          setShowCompleteProfileModal(true);
+        }
+      } catch (e) {
+        console.warn("Could not check professor document completeness:", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isProfessor]);
 
   // Fetch children for parent role
   const fetchParentChildren = useCallback(async () => {
@@ -784,6 +820,17 @@ const Principal = () => {
           </div>
         </div>
       </Modal>
+
+      <CompleteProfileModal
+        isOpen={showCompleteProfileModal}
+        userId={localStorage.getItem("userId")}
+        missingDocs={missingProfessorDocs}
+        onClose={() => setShowCompleteProfileModal(false)}
+        onCompleted={() => {
+          setShowCompleteProfileModal(false);
+          setMissingProfessorDocs([]);
+        }}
+      />
 
       {/* Role Switch Flow */}
       <RoleSelectorModal
