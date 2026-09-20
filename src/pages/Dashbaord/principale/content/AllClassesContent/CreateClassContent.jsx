@@ -708,6 +708,16 @@ const CreateClassContent = ({
                                 Annuel
                               </button>
                             </div>
+                            <p className="mt-2 text-sm font-medium text-gray-800">
+                              Prix :{" "}
+                              <span className="font-semibold">
+                                {montantSelectionne.toLocaleString("fr-FR")}{" "}
+                                FCFA
+                              </span>{" "}
+                              {periodicite === PeriodiciteContrat.ANNUEL
+                                ? "/ an"
+                                : "/ mois"}
+                            </p>
                             {periodicite === PeriodiciteContrat.ANNUEL &&
                               offreReduction != null &&
                               offreReduction > 0 && (

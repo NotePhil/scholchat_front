@@ -180,7 +180,7 @@ const PaymentModal = ({
         exit={{
           opacity: 0,
         }}
-        className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+        className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
         onClick={(e) => e.target === e.currentTarget && step !== 3 && onClose()}
       >
         <motion.div

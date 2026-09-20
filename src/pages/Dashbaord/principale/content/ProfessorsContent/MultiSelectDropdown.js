@@ -1,10 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChevronDown,
-  faCircleCheck,
-  faXmark,
-} from "@fortawesome/free-solid-svg-icons";
+import { faCircleCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 const MultiSelectDropdown = ({
   options,
   selected,
@@ -13,6 +9,7 @@ const MultiSelectDropdown = ({
   error,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const dropdownRef = useRef(null);
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -30,36 +27,32 @@ const MultiSelectDropdown = ({
       ? selected.filter((id) => id !== optionId)
       : [...selected, optionId];
     onChange(newSelected);
+    setQuery("");
   };
-  const getSelectedLabels = () => {
-    return options
-      .filter((option) => selected.includes(option.id))
-      .map((option) => option.nom)
-      .join(", ");
-  };
+  const filteredOptions = options.filter((option) =>
+    option.nom.toLowerCase().includes(query.trim().toLowerCase()),
+  );
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-left flex items-center justify-between ${error ? "border-red-300" : "border-slate-200"}`}
+      <div
+        className={`w-full px-4 py-3 border rounded-xl focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all duration-200 ${error ? "border-red-300" : "border-slate-200"}`}
       >
-        <span
-          className={
-            selected.length === 0 ? "text-slate-400" : "text-slate-900"
-          }
-        >
-          {selected.length === 0 ? placeholder : getSelectedLabels()}
-        </span>
-        <FontAwesomeIcon
-          icon={faChevronDown}
-          className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={selected.length === 0 ? placeholder : "Ajouter une matière..."}
+          className="w-full outline-none placeholder:text-slate-400 text-slate-900"
         />
-      </button>
+      </div>
 
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-          {options.map((option) => (
+          {filteredOptions.map((option) => (
             <div
               key={option.id}
               onClick={() => handleSelect(option.id)}
@@ -74,9 +67,11 @@ const MultiSelectDropdown = ({
               )}
             </div>
           ))}
-          {options.length === 0 && (
+          {filteredOptions.length === 0 && (
             <div className="px-4 py-3 text-slate-500 text-center">
-              Aucune matière disponible
+              {options.length === 0
+                ? "Aucune matière disponible"
+                : "Aucun résultat"}
             </div>
           )}
         </div>

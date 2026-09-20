@@ -117,7 +117,9 @@ Fill Course General Info
     Input Text    xpath://input[@placeholder='Introduction à la programmation']    ${titre}
     Select From List By Value    xpath://select[.//option[text()='Privé']]    PUBLIC
     Input Text    xpath://textarea[@placeholder='Décrivez le contenu général de ce cours...']    ${description}
-    Click Element    xpath://button[.//span[contains(@class,'text-slate-400') and contains(text(),'Sélectionnez les matières')]]
+    # Matières is an autocomplete input: click to open, type to filter, click the match
+    Click Element    xpath://input[@placeholder='Sélectionnez les matières...']
+    Input Text    xpath://input[@placeholder='Sélectionnez les matières...']    ${matiere_nom}
     Wait Until Page Contains Element    xpath://div[contains(@class,'absolute')]//span[text()='${matiere_nom}']    timeout=5s
     Click Element    xpath://div[contains(@class,'absolute')]//span[text()='${matiere_nom}']
     Wait Until Page Contains    ${matiere_nom}    timeout=5s
@@ -141,7 +143,7 @@ Submit Course Form
 # ── Programmer le Cours ────────────────────────────────────────────────────────
 
 Go To Schedule Course
-    Go To    https://scholchat-front-kult.onrender.com/schoolchat/Principal/ProfessorDashboard/schedule-course
+    Go To    ${BASE_URL}/schoolchat/Principal/ProfessorDashboard/schedule-course
     Wait Until Page Contains    Programmation des Cours    timeout=15s
 
 Open Programmer Form

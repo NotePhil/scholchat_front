@@ -56,6 +56,18 @@ const DUREE_PRESETS = [
   },
 ];
 
+// La durée est stockée en minutes côté API mais toujours affichée/saisie en jours dans ce formulaire.
+const MINUTES_PAR_JOUR = 24 * 60;
+const minutesEnJours = (minutes) => {
+  if (minutes === "" || minutes === null || minutes === undefined) return "";
+  const jours = Number(minutes) / MINUTES_PAR_JOUR;
+  return Number.isInteger(jours) ? jours : Math.round(jours * 10000) / 10000;
+};
+const joursEnMinutes = (jours) =>
+  jours === "" || jours === null || jours === undefined
+    ? ""
+    : Math.round(Number(jours) * MINUTES_PAR_JOUR);
+
 // Raccourcis pour les delais de purge post-expiration (rappel puis suppression definitive).
 const DELAI_RAPPEL_PRESETS = [
   {
@@ -227,6 +239,12 @@ const OfferAdminContent = ({ isDark }) => {
       [champDuree]: minutes,
     }));
   };
+  const handleDureeJoursChange = (champDureeMinutes) => (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      [champDureeMinutes]: joursEnMinutes(e.target.value),
+    }));
+  };
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -380,14 +398,15 @@ const OfferAdminContent = ({ isDark }) => {
                 </div>
                 <div>
                   <label className={`block text-sm mb-1 ${textMuted}`}>
-                    Durée (minutes)
+                    Durée (jours)
                   </label>
                   <input
                     className={inputCls}
                     type="number"
-                    name="dureeMensuelleMinutes"
-                    value={formData.dureeMensuelleMinutes}
-                    onChange={handleChange}
+                    step="any"
+                    name="dureeMensuelleJours"
+                    value={minutesEnJours(formData.dureeMensuelleMinutes)}
+                    onChange={handleDureeJoursChange("dureeMensuelleMinutes")}
                   />
                   <div className="flex flex-wrap gap-2 mt-1">
                     {DUREE_PRESETS.map((p) => (
@@ -427,14 +446,15 @@ const OfferAdminContent = ({ isDark }) => {
                 </div>
                 <div>
                   <label className={`block text-sm mb-1 ${textMuted}`}>
-                    Durée (minutes)
+                    Durée (jours)
                   </label>
                   <input
                     className={inputCls}
                     type="number"
-                    name="dureeAnnuelleMinutes"
-                    value={formData.dureeAnnuelleMinutes}
-                    onChange={handleChange}
+                    step="any"
+                    name="dureeAnnuelleJours"
+                    value={minutesEnJours(formData.dureeAnnuelleMinutes)}
+                    onChange={handleDureeJoursChange("dureeAnnuelleMinutes")}
                   />
                   <div className="flex flex-wrap gap-2 mt-1">
                     {DUREE_PRESETS.map((p) => (

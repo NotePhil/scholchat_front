@@ -133,6 +133,32 @@ Go To Admin Manage Establishment
     ...    xpath://ul[contains(@class,'dropdown-menu')]//li[.//span[@class='menu-text' and text()='Gérer un Établissement']]
     Wait Until Page Contains    Gestion des Établissements    timeout=20s
 
+# ── Professors ────────────────────────────────────────────────────────────────
+
+Go To Manage Professors
+    Navigate To Sidebar Dropdown Item    Gérer Utilisateur    Professeurs
+    # "Professeurs" alone is also the sidebar link's own label (always present regardless of
+    # which page is active), so assert on the page heading instead to actually catch mis-navigation.
+    Wait Until Page Contains    Gestion des Professeurs    timeout=15s
+
+Search Professor By Email
+    [Arguments]    ${email}
+    Wait Until Page Contains Element    xpath://input[@placeholder='Rechercher...']    timeout=10s
+    Input Text    xpath://input[@placeholder='Rechercher...']    ${email}
+    Sleep    0.5s
+
+Validate Professor With Email
+    [Documentation]    Search for the professor by email, open their detail view (the compact
+    ...    list card has no validate button — it only lives in the "Voir les détails" view),
+    ...    and click "Valider le professeur" there (only shown while etat == AWAITING_VALIDATION).
+    [Arguments]    ${email}
+    Search Professor By Email    ${email}
+    Wait Until Page Contains Element    xpath://button[@title='Voir les détails']    timeout=10s
+    Click Element    xpath://button[@title='Voir les détails']
+    Wait Until Page Contains Element    xpath://button[contains(.,'Valider le professeur')]    timeout=10s
+    Click Element    xpath://button[contains(.,'Valider le professeur')]
+    Wait Until Page Contains    validé avec succès    timeout=15s
+
 Open Admin Establishments Dropdown
     ${visible}=    Run Keyword And Return Status
     ...    Page Should Contain Element

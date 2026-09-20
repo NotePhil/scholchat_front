@@ -150,13 +150,22 @@ const CoursProgrammerForm = ({
           await AccederService.obtenirUtilisateursAvecAcces(classeId);
         console.log("Raw participants data:", participants);
 
-        // Format users properly for the dropdown - EXCLUDE parents
+        // Format users properly for the dropdown - only actual students can be
+        // course participants (users with class access also include the
+        // professor/gestionnaire who created the class, and parents).
         const approvedUsers = participants
           .filter((user) => {
-            // Exclude parents from participant list
-            const userType = (user.type || "").toUpperCase();
-            const userRole = (user.role || "").toUpperCase();
-            return !userType.includes("PARENT") && !userRole.includes("PARENT");
+            const userType = (
+              user.typeUtilisateur ||
+              user.type ||
+              user.role ||
+              ""
+            ).toUpperCase();
+            return (
+              userType === "ELEVE" ||
+              userType === "ÉLÈVE" ||
+              userType === "STUDENT"
+            );
           })
           .map((user) => {
             // Get the full name in a professional format
@@ -206,7 +215,7 @@ const CoursProgrammerForm = ({
   useEffect(() => {
     if (isOpen) {
       setSubmitError("");
-      if ((modalMode === "edit" || isReprogramme) && selectedScheduledCourse) {
+      if (selectedScheduledCourse) {
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
           const date = new Date(dateString);
