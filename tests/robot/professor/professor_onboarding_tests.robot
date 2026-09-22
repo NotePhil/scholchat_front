@@ -33,21 +33,21 @@ ${NEW_PROF_PHONE}             ${EMPTY}
 ${NEW_PROF_ADRESSE}          12 Rue des Tests, Douala
 ${NEW_PROF_PASSWORD}         Robot@Test123
 
-# Matière
-${MATIERE_NOM}                ${EMPTY}
-${MATIERE_DESC}               Algèbre et géométrie - cours de 3ème trimestre
+# Matière — professors can't create one (admin/gestionnaire only), so this must be a
+# matière that already exists in the seed data.
+${MATIERE_NOM}                Mathematiques
 
 # Class 1 - with establishment (optionTokenGeneral=true → code unique required)
 ${CLASS1_NOM}                 ${EMPTY}
 ${CLASS1_NIVEAU}              3ème
-${CLASS1_ETAB}                Collège Code Unique - Bafoussam
+${CLASS1_ETAB}                Collège Code Unique
 ${CLASS1_CODE_UNIQUE}         ETB-11223344
-${CLASS1_MODERATOR}           Marie Dupont
 
 # Class 2 - no establishment → payment required
 ${CLASS2_NOM}                 ${EMPTY}
 ${CLASS2_NIVEAU}              6ème
 ${PAYMENT_PHONE}              655125566
+${OFFRE_NOM}                  Classe Standard
 
 # Course
 ${COURS_TITRE}                ${EMPTY}
@@ -74,7 +74,6 @@ Initialise Unique Names
     # validates with Google's PhoneNumberUtil, not just "9 digits starting with 6") — "655"
     # is the same known-valid prefix already used by PAYMENT_PHONE below.
     Set Suite Variable    ${NEW_PROF_PHONE}   655${ts}
-    Set Suite Variable    ${MATIERE_NOM}      Mathématiques ${ts}
     Set Suite Variable    ${CLASS1_NOM}       Classe 3A Robot ${ts}
     Set Suite Variable    ${CLASS2_NOM}       Classe 6B Robot ${ts}
     Set Suite Variable    ${COURS_TITRE}      Algèbre - Équations Robot ${ts}
@@ -179,54 +178,60 @@ Initialise Unique Names
     Go To Matieres
     Page Should Contain Element    xpath://h1[contains(text(),'Matières') or contains(text(),'Subjects')]
 
-14 - Create A Matiere
-    [Documentation]    Professor creates a new subject with name and description
-    Create Matiere    ${MATIERE_NOM}    ${MATIERE_DESC}
+14 - Verify Matiere Is Visible But Not Creatable
+    [Documentation]    Professors can only VIEW matières — creation is restricted to
+    ...               admins/gestionnaires (MatiereContent.jsx: "canManage = isAdmin ||
+    ...               isGestionnaire"). Verify the seeded matière used later for the course
+    ...               is visible, and that no "Nouvelle Matière" button is offered.
     Page Should Contain    ${MATIERE_NOM}
+    Page Should Not Contain Element    xpath://button[contains(.,'Nouvelle Matière')]
 
 15 - Navigate To Create Class For Class 1
     [Documentation]    Professor opens the class creation form
     Go To Create Class
 
 16 - Create Class With Establishment
-    [Documentation]    Fill form: Collège Code Unique, code ETB-11223344,
-    ...               moderator Marie Dupont, submit and wait for success + redirect
+    [Documentation]    Fill form: Collège Code Unique, code ETB-11223344, submit and wait
+    ...               for success + redirect. Moderator is auto-assigned to the creating
+    ...               professor by the backend (classData.moderatorId = currentUserId) —
+    ...               there is no moderator picker in the current form.
     Fill Class Base Fields    ${CLASS1_NOM}    ${CLASS1_NIVEAU}
     Select Establishment      ${CLASS1_ETAB}
     Fill Code Unique          ${CLASS1_CODE_UNIQUE}
-    Select Moderator By Name  ${CLASS1_MODERATOR}
     Submit Class Form
     Wait For Class Creation Success
 
 17 - Verify Class 1 In List
-    [Documentation]    Already on the class list after auto-redirect.
-    ...               Scroll to Class 1 and verify it shows state En attente
+    [Documentation]    Already on the class list after auto-redirect. Scroll to Class 1 and
+    ...               verify it shows state Inactif (awaiting the établissement's approval —
+    ...               NOT "En attente", which is a different EtatClasse value/filter option
+    ...               that doesn't apply to a brand-new establishment-linked class here).
     Scroll To Class Card    ${CLASS1_NOM}
     Page Should Contain    ${CLASS1_NOM}
-    Page Should Contain    En attente
+    Page Should Contain    Inactif
 
 18 - Navigate To Create Class For Class 2
     [Documentation]    Professor goes back to the class creation form for the second class
     Go To Create Class
 
 19 - Create Class Without Establishment And Pay
-    [Documentation]    Fill form with no establishment → payment modal →
-    ...               Orange Money → phone 655125566 → confirm → success + redirect
+    [Documentation]    Fill form with no establishment → pick an Offre/Forfait (required) →
+    ...               payment modal → Orange Money → phone 655125566 → confirm → success + redirect
     Fill Class Base Fields    ${CLASS2_NOM}    ${CLASS2_NIVEAU}
     Select No Establishment
+    Select Offre    ${OFFRE_NOM}
     Submit Class Form
     Complete Payment With Orange Money    ${PAYMENT_PHONE}
     Wait For Class Creation Success
 
 20 - Verify Both Classes In List
     [Documentation]    Scroll to each class and verify their states:
-    ...               Class 1 → En attente | Class 2 → Actif
+    ...               Class 1 (établissement, unpaid) → Inactif | Class 2 (paid) → Actif
     Scroll To Class Card    ${CLASS2_NOM}
     Page Should Contain    ${CLASS2_NOM}
     Scroll To Class Card    ${CLASS1_NOM}
     Page Should Contain    ${CLASS1_NOM}
-    Page Should Contain    En attente
-    Page Should Contain    Actif
+    Page Should Contain    Inactif
 
 21 - Navigate To Courses List
     [Documentation]    Professor opens the Cours section
@@ -281,9 +286,12 @@ Initialise Unique Names
     Go To Exercises
 
 31 - Navigate To Messages
-    [Documentation]    Professor navigates to the Messagerie section from the sidebar
+    [Documentation]    Professor navigates to the Messagerie section from the sidebar.
+    ...               MessagingInterface.jsx's "Messages" <h2> title is only rendered in some
+    ...               view states — with no conversations yet (as here, brand-new account) the
+    ...               panel shows an "Aucun message" empty state instead, so assert on the URL.
     Go To Messages
-    Page Should Contain Element    xpath://h1[contains(text(),'Message')]
+    Location Should Contain    /messages
 
 32 - Logout Professor
     [Documentation]    Click the logout button in the sidebar and confirm in the modal

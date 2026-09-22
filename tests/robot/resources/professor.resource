@@ -57,6 +57,14 @@ Select No Establishment
     Wait Until Element Is Enabled    xpath://select[@name='etablissement']    timeout=10s
     Select From List By Index    xpath://select[@name='etablissement']    0
 
+Select Offre
+    [Documentation]    Required (Offre / Forfait *) once no établissement is selected — the
+    ...    form silently refuses to submit (inline "Veuillez sélectionner une offre" error,
+    ...    no payment modal) without it. Has no name/id, only reachable via its section.
+    [Arguments]    ${offre_nom}
+    Wait Until Element Is Enabled    xpath://div[contains(@class,'bg-amber-50')]//select    timeout=10s
+    Select From List By Label    xpath://div[contains(@class,'bg-amber-50')]//select    ${offre_nom}
+
 Fill Code Unique
     [Arguments]    ${code}
     Wait Until Page Contains Element    xpath://input[@name='codeUnique']    timeout=5s
@@ -72,7 +80,9 @@ Submit Class Form
 
 Wait For Class Creation Success
     Wait Until Page Contains    créée avec succès    timeout=20s
-    Wait Until Page Contains    Gestion des Classes    timeout=15s
+    # "Gestion des Classes" is not the professor-facing list's heading (that page shows
+    # "Mes classes" instead) — it never appears here, which made this wait always time out.
+    Wait Until Page Contains    Mes classes    timeout=15s
 
 Scroll To Class Card
     [Arguments]    ${class_name}
