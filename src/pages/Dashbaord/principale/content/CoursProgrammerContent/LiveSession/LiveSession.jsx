@@ -64,6 +64,19 @@ const LiveSession = ({
   const [sessionEnded, setSessionEnded] = useState(false);
   const [mobileTab, setMobileTab] = useState("video"); // "video" | "content" | "chat"
   const [chapterChanging, setChapterChanging] = useState(false);
+  // The mobile and desktop layouts below both render a <JitsiRoom>, with
+  // Tailwind's `lg:hidden`/`hidden lg:flex` only toggling CSS display - not
+  // unmounting. Left as-is, BOTH mount simultaneously and each opens its own
+  // independent Jitsi connection to the same room as the same user. Tracking
+  // the breakpoint in JS instead lets us render the single active one only.
+  const [isDesktopLayout, setIsDesktopLayout] = useState(
+    () => window.innerWidth >= 1024,
+  );
+  useEffect(() => {
+    const onResize = () => setIsDesktopLayout(window.innerWidth >= 1024);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const sessionRef = useRef(null);
   const currentUserId = localStorage.getItem("userId");
   const userName =
@@ -554,16 +567,18 @@ const LiveSession = ({
           <div
             className={`w-full h-full ${mobileTab === "video" ? "block" : "hidden"}`}
           >
-            <JitsiRoom
-              roomName={session?.roomName}
-              jitsiJwt={session?.jitsiJwt}
-              jitsiDomain={session?.jitsiDomain}
-              displayName={userName}
-              subject={coursTitle}
-              isModerator={isModerator}
-              mode={session?.mode}
-              onHangup={isModerator ? handleEndSession : onClose}
-            />
+            {!isDesktopLayout && (
+              <JitsiRoom
+                roomName={session?.roomName}
+                jitsiJwt={session?.jitsiJwt}
+                jitsiDomain={session?.jitsiDomain}
+                displayName={userName}
+                subject={coursTitle}
+                isModerator={isModerator}
+                mode={session?.mode}
+                onHangup={isModerator ? handleEndSession : onClose}
+              />
+            )}
           </div>
           {/* Content tab */}
           <div
@@ -630,16 +645,18 @@ const LiveSession = ({
           className={`flex flex-col transition-all duration-300 ${panelCollapsed ? "flex-1" : "flex-1 lg:w-0 lg:flex-none lg:basis-[55%]"}`}
         >
           <div className="flex-1 p-2">
-            <JitsiRoom
-              roomName={session?.roomName}
-              jitsiJwt={session?.jitsiJwt}
-              jitsiDomain={session?.jitsiDomain}
-              displayName={userName}
-              subject={coursTitle}
-              isModerator={isModerator}
-              mode={session?.mode}
-              onHangup={isModerator ? handleEndSession : onClose}
-            />
+            {isDesktopLayout && (
+              <JitsiRoom
+                roomName={session?.roomName}
+                jitsiJwt={session?.jitsiJwt}
+                jitsiDomain={session?.jitsiDomain}
+                displayName={userName}
+                subject={coursTitle}
+                isModerator={isModerator}
+                mode={session?.mode}
+                onHangup={isModerator ? handleEndSession : onClose}
+              />
+            )}
           </div>
         </div>
         <div
