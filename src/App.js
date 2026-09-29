@@ -296,18 +296,29 @@ function AnimatedRoutes({ theme, setTheme }) {
 }
 
 // Settings' dark-mode toggle only ever updated Redux's `ui.isDark` and the
-// components that read it directly via inline ternaries. ~30 other files
-// (Principal.jsx, Header.jsx, Login.jsx, etc.) style themselves with
-// Tailwind's `dark:` variant instead, which only activates behind a literal
-// `dark` class on <html> — nothing anywhere ever added or removed that
-// class, so those files were permanently stuck on their light styling no
-// matter what the toggle said. This is what actually flips it, app-wide.
+// dashboard components that read it directly via inline ternaries. Several
+// dashboard files (Principal.jsx, etc.) style themselves with Tailwind's
+// `dark:` variant instead, which only activates behind a literal `dark`
+// class on <html> — nothing put that there, so those files were stuck on
+// light styling no matter what the toggle said. This applies it.
+//
+// Scoped to dashboard routes only: the public pages (Login.jsx, Header.jsx,
+// Home, ...) already have their own independent light/dark system — each
+// page adds `dark` to its OWN wrapper div based on a local `theme` prop
+// (Header's own toggle), not Redux. Setting `dark` on <html> globally made
+// their `dark:` utility classes activate even while their local `theme`
+// was "light", producing mismatched combinations like white text on a
+// light background. Redux's isDark also isn't cleared on logout, so it
+// would otherwise leak onto the public login page. Keeping this off outside
+// the dashboard leaves that separate system alone entirely.
 const ThemeClassSync = () => {
   const isDark = useSelector((state) => state.ui.isDark);
+  const location = useLocation();
+  const inDashboard = location.pathname.startsWith("/schoolchat/Principal");
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", !!isDark);
-  }, [isDark]);
+    document.documentElement.classList.toggle("dark", inDashboard && !!isDark);
+  }, [isDark, inDashboard]);
 
   return null;
 };
