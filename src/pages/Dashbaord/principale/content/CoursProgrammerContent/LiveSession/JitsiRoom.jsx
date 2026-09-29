@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 
-const JitsiRoom = ({ roomName, jitsiJwt, jitsiDomain, displayName, isModerator, mode, onHangup }) => {
+const JitsiRoom = ({ roomName, jitsiJwt, jitsiDomain, displayName, subject, isModerator, mode, onHangup }) => {
   const containerRef = useRef(null);
   const apiRef = useRef(null);
 
@@ -27,6 +27,12 @@ const JitsiRoom = ({ roomName, jitsiJwt, jitsiDomain, displayName, isModerator, 
           prejoinPageEnabled: false,
           disableInviteFunctions: true,
           enableWelcomePage: false,
+          // Jitsi shows the raw technical room name (roomName above) as its
+          // conference title by default. "subject" is the documented way to
+          // override that with the human-readable name instead, so users
+          // never see the internal "scholchat-<id>-<timestamp>" slug.
+          subject: subject || "Session ScholChat",
+          readOnlyName: true,
           toolbarButtons: isModerator
             ? ["microphone", "camera", "desktop", "chat", "raisehand", "tileview", "hangup"]
             : ["microphone", "camera", "chat", "raisehand", "tileview", "hangup"],
@@ -36,6 +42,7 @@ const JitsiRoom = ({ roomName, jitsiJwt, jitsiDomain, displayName, isModerator, 
           SHOW_WATERMARK_FOR_GUESTS: false,
           TOOLBAR_ALWAYS_VISIBLE: true,
           HIDE_INVITE_MORE_HEADER: true,
+          DEFAULT_REMOTE_DISPLAY_NAME: "Participant",
         },
       };
 
@@ -71,7 +78,7 @@ const JitsiRoom = ({ roomName, jitsiJwt, jitsiDomain, displayName, isModerator, 
         apiRef.current = null;
       }
     };
-  }, [roomName, jitsiJwt, jitsiDomain, displayName, isModerator, mode]);
+  }, [roomName, jitsiJwt, jitsiDomain, displayName, subject, isModerator, mode]);
 
   if (mode === "CONTENT_ONLY") {
     return (
