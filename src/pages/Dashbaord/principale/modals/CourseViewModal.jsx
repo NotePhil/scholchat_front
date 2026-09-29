@@ -397,7 +397,11 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                             {course?.titre}
                           </div>
                           <div className="text-slate-600 font-medium mt-1">
-                            {course?.matiere?.nom || "Matière non définie"}
+                            {course?.matiere?.nom ||
+                              course?.matieres
+                                ?.map((m) => m.nom)
+                                .join(", ") ||
+                              "Matière non définie"}
                           </div>
                         </div>
                       </div>

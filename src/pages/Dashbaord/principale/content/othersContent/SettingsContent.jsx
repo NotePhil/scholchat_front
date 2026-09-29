@@ -370,10 +370,10 @@ const SettingsContent = ({
             >
               {/* Enhanced Profile Tab */}
               {activeTab === "profile" && (
-                <div className="p-8">
+                <div className="p-4 sm:p-8">
                   {/* Profile Header */}
                   <div
-                    className={`${isDark ? "bg-gradient-to-r from-gray-800 to-gray-700" : "bg-gradient-to-r from-blue-50 to-indigo-50"} rounded-2xl p-6 mb-8`}
+                    className={`${isDark ? "bg-gradient-to-r from-gray-800 to-gray-700" : "bg-gradient-to-r from-blue-50 to-indigo-50"} rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8`}
                   >
                     <div className="flex flex-col md:flex-row items-center gap-6">
                       <div className="relative">
@@ -614,22 +614,24 @@ const SettingsContent = ({
 
               {/* Enhanced Security Tab */}
               {activeTab === "security" && (
-                <div className="p-8">
+                <div className="p-4 sm:p-8">
                   {/* Security Header */}
                   <div
-                    className={`${isDark ? "bg-gradient-to-r from-gray-800 to-gray-700" : "bg-gradient-to-r from-red-50 to-orange-50"} rounded-2xl p-6 mb-8`}
+                    className={`${isDark ? "bg-gradient-to-r from-gray-800 to-gray-700" : "bg-gradient-to-r from-red-50 to-orange-50"} rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8`}
                   >
                     <div className="flex items-center gap-4">
                       <div
-                        className={`w-16 h-16 rounded-2xl ${isDark ? "bg-gradient-to-br from-red-600 to-orange-600" : "bg-gradient-to-br from-red-500 to-orange-500"} flex items-center justify-center shadow-xl`}
+                        className={`w-12 h-12 sm:w-16 sm:h-16 shrink-0 rounded-2xl ${isDark ? "bg-gradient-to-br from-red-600 to-orange-600" : "bg-gradient-to-br from-red-500 to-orange-500"} flex items-center justify-center shadow-xl`}
                       >
                         <FontAwesomeIcon
                           icon={faShield}
-                          className="w-8 h-8 text-white"
+                          className="w-6 h-6 sm:w-8 sm:h-8 text-white"
                         />
                       </div>
-                      <div>
-                        <h2 className={`text-3xl font-bold ${textClass} mb-2`}>
+                      <div className="min-w-0 flex-1">
+                        <h2
+                          className={`text-xl sm:text-3xl font-bold ${textClass} mb-2 break-words`}
+                        >
                           Sécurité du Compte
                         </h2>
                         <p className={textSecondaryClass}>
@@ -942,22 +944,24 @@ const SettingsContent = ({
 
               {/* Enhanced Appearance Tab */}
               {activeTab === "appearance" && (
-                <div className="p-8">
+                <div className="p-4 sm:p-8">
                   {/* Appearance Header */}
                   <div
-                    className={`${isDark ? "bg-gradient-to-r from-gray-800 to-gray-700" : "bg-gradient-to-r from-purple-50 to-pink-50"} rounded-2xl p-6 mb-8`}
+                    className={`${isDark ? "bg-gradient-to-r from-gray-800 to-gray-700" : "bg-gradient-to-r from-purple-50 to-pink-50"} rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8`}
                   >
                     <div className="flex items-center gap-4">
                       <div
-                        className={`w-16 h-16 rounded-2xl ${isDark ? "bg-gradient-to-br from-purple-600 to-pink-600" : "bg-gradient-to-br from-purple-500 to-pink-500"} flex items-center justify-center shadow-xl`}
+                        className={`w-12 h-12 sm:w-16 sm:h-16 shrink-0 rounded-2xl ${isDark ? "bg-gradient-to-br from-purple-600 to-pink-600" : "bg-gradient-to-br from-purple-500 to-pink-500"} flex items-center justify-center shadow-xl`}
                       >
                         <FontAwesomeIcon
                           icon={faPalette}
-                          className="w-8 h-8 text-white"
+                          className="w-6 h-6 sm:w-8 sm:h-8 text-white"
                         />
                       </div>
-                      <div>
-                        <h2 className={`text-3xl font-bold ${textClass} mb-2`}>
+                      <div className="min-w-0 flex-1">
+                        <h2
+                          className={`text-xl sm:text-3xl font-bold ${textClass} mb-2 break-words`}
+                        >
                           Personnalisation
                         </h2>
                         <p className={textSecondaryClass}>

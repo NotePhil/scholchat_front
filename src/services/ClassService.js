@@ -202,9 +202,16 @@ class ClassService {
           : null,
         // Send moderator as just the ID string (not an object)
         moderator: classeModifiee.moderator,
-        parents: classeModifiee.parents.map((p) => ({ id: p.id })),
-        eleves: classeModifiee.eleves.map((e) => ({ id: e.id })),
       };
+      // Only transform parents/eleves when the caller actually supplied them
+      // (e.g. quick edit forms only send nom/niveau/description/codeActivation
+      // and must not wipe out existing relationships on the backend).
+      if (classeModifiee.parents) {
+        dataToSend.parents = classeModifiee.parents.map((p) => ({ id: p.id }));
+      }
+      if (classeModifiee.eleves) {
+        dataToSend.eleves = classeModifiee.eleves.map((e) => ({ id: e.id }));
+      }
 
       return await this.axiosRequest(`/classes/${idClasse}`, {
         method: "put",

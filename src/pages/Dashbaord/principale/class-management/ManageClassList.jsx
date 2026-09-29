@@ -584,6 +584,7 @@ const ManageClassList = ({
           <Form.Item name="codeActivation" label="Code d'activation">
             <Input
               placeholder="Code d'activation"
+              disabled
               style={{
                 borderRadius: 8,
               }}

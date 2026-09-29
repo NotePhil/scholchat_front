@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Provider } from "react-redux";
+import { Provider, useSelector } from "react-redux";
 import { store } from "./store/store";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { Layout } from "./components/common/Layout";
@@ -295,6 +295,23 @@ function AnimatedRoutes({ theme, setTheme }) {
   );
 }
 
+// Settings' dark-mode toggle only ever updated Redux's `ui.isDark` and the
+// components that read it directly via inline ternaries. ~30 other files
+// (Principal.jsx, Header.jsx, Login.jsx, etc.) style themselves with
+// Tailwind's `dark:` variant instead, which only activates behind a literal
+// `dark` class on <html> — nothing anywhere ever added or removed that
+// class, so those files were permanently stuck on their light styling no
+// matter what the toggle said. This is what actually flips it, app-wide.
+const ThemeClassSync = () => {
+  const isDark = useSelector((state) => state.ui.isDark);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", !!isDark);
+  }, [isDark]);
+
+  return null;
+};
+
 function App() {
   const [theme, setTheme] = useState("default");
 
@@ -302,6 +319,7 @@ function App() {
     <Provider store={store}>
       <BrowserRouter>
         <AuthProvider>
+          <ThemeClassSync />
           <ScrollToTop />
           <AnimatedRoutes theme={theme} setTheme={setTheme} />
           <PWAInstallPrompt />

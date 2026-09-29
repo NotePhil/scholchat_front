@@ -5,6 +5,15 @@
   z-index: 10000 !important;
 }
 
+/* Ant Design popups (date pickers, selects, ...) default to a much lower
+   z-index than the modal override above, so when opened from inside a
+   Modal (e.g. scheduling an exercise) they rendered behind the modal and
+   never became visible. Push them above the modal stack. */
+.ant-picker-dropdown,
+.ant-select-dropdown {
+  z-index: 10050 !important;
+}
+
 /* Safe area padding for mobile devices with gesture bars */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-area-bottom {

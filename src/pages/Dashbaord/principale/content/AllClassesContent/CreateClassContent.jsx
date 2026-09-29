@@ -507,42 +507,6 @@ const CreateClassContent = ({
                       </label>
                     </div>
 
-                    {/* Code Unique Field */}
-                    {formData.etablissement &&
-                      selectedEstablishment?.optionTokenGeneral && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {t(
-                              "classes.create.form.codeUnique",
-                              "Code Unique de l'établissement",
-                            )}{" "}
-                            *
-                          </label>
-                          <div className="relative">
-                            <FontAwesomeIcon
-                              icon={faKey}
-                              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-                            />
-                            <input
-                              type="text"
-                              name="codeUnique"
-                              value={formData.codeUnique}
-                              onChange={handleInputChange}
-                              className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.codeUnique ? "border-red-500" : "border-gray-300"}`}
-                              placeholder="ABC123"
-                            />
-                          </div>
-                          {errors.codeUnique && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <FontAwesomeIcon
-                                icon={faCircleExclamation}
-                                className="w-4 h-4"
-                              />
-                              {errors.codeUnique}
-                            </p>
-                          )}
-                        </div>
-                      )}
                   </div>
 
                   {/* Right Column */}
@@ -594,6 +558,44 @@ const CreateClassContent = ({
                         </p>
                       )}
                     </div>
+
+                    {/* Code Unique Field — shown right below Établissement since it only
+                        applies once one with optionTokenGeneral is selected */}
+                    {formData.etablissement &&
+                      selectedEstablishment?.optionTokenGeneral && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {t(
+                              "classes.create.form.codeUnique",
+                              "Code Unique de l'établissement",
+                            )}{" "}
+                            *
+                          </label>
+                          <div className="relative">
+                            <FontAwesomeIcon
+                              icon={faKey}
+                              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                            />
+                            <input
+                              type="text"
+                              name="codeUnique"
+                              value={formData.codeUnique}
+                              onChange={handleInputChange}
+                              className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.codeUnique ? "border-red-500" : "border-gray-300"}`}
+                              placeholder="ABC123"
+                            />
+                          </div>
+                          {errors.codeUnique && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                              <FontAwesomeIcon
+                                icon={faCircleExclamation}
+                                className="w-4 h-4"
+                              />
+                              {errors.codeUnique}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                     {/* Information Panel */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

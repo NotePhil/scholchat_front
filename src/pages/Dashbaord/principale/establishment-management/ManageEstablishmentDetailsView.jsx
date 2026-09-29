@@ -90,6 +90,8 @@ const ManageEstablishmentDetailsView = ({
   // Modal states
   const [selectedProfessor, setSelectedProfessor] = useState(null);
   const [isProfessorModalOpen, setIsProfessorModalOpen] = useState(false);
+  const [selectedClassView, setSelectedClassView] = useState(null);
+  const [isClassViewModalOpen, setIsClassViewModalOpen] = useState(false);
   useEffect(() => {
     if (establishmentId) {
       fetchEstablishmentDetails();
@@ -352,6 +354,22 @@ const ManageEstablishmentDetailsView = ({
     });
   };
 
+  // Class actions
+  const handleViewClass = async (classId) => {
+    try {
+      const classData = await classService.obtenirClasseParId(classId);
+      setSelectedClassView(classData);
+      setIsClassViewModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching class details:", error);
+      message.error("Erreur lors du chargement des détails de la classe");
+    }
+  };
+  const handleCloseClassViewModal = () => {
+    setIsClassViewModalOpen(false);
+    setSelectedClassView(null);
+  };
+
   // Professor actions
   const handleViewProfessor = async (professorId) => {
     try {
@@ -472,7 +490,7 @@ const ManageEstablishmentDetailsView = ({
               type="text"
               size="small"
               icon={<FontAwesomeIcon icon={faEye} />}
-              onClick={() => message.info(`Voir classe ${record.nom}`)}
+              onClick={() => handleViewClass(record.id)}
             />
           </Tooltip>
           {record.etat === "EN_ATTENTE_APPROBATION" && (
@@ -1459,6 +1477,52 @@ const ManageEstablishmentDetailsView = ({
           onSuccess={handleProfessorModalSuccess}
         />
       )}
+
+      {/* Class View Modal */}
+      <Modal
+        title={
+          <Space>
+            <FontAwesomeIcon icon={faSchool} style={{ color: "#4f46e5" }} />
+            <span>{selectedClassView?.nom || "Détails de la classe"}</span>
+          </Space>
+        }
+        open={isClassViewModalOpen}
+        onCancel={handleCloseClassViewModal}
+        footer={
+          <Button type="primary" onClick={handleCloseClassViewModal}>
+            Fermer
+          </Button>
+        }
+        width={560}
+        centered
+      >
+        {selectedClassView && (
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="Nom">
+              {selectedClassView.nom}
+            </Descriptions.Item>
+            <Descriptions.Item label="Niveau">
+              {selectedClassView.niveau || "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Description">
+              {selectedClassView.description || "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Code d'activation">
+              <Text code>{selectedClassView.codeActivation || "-"}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Statut">
+              {getClassStatusTag(selectedClassView.etat)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Date de création">
+              {selectedClassView.dateCreation
+                ? new Date(selectedClassView.dateCreation).toLocaleDateString(
+                    "fr-FR",
+                  )
+                : "-"}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Modal>
     </div>
   );
 };

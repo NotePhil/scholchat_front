@@ -107,7 +107,9 @@ const CourseCard = ({ course, onView, onEdit, getInitials }) => {
               {course.titre}
             </h3>
             <p className="text-xs text-slate-600 truncate mt-1">
-              {course.matiere?.nom || "Matière non définie"}
+              {course.matiere?.nom ||
+                course.matieres?.map((m) => m.nom).join(", ") ||
+                "Matière non définie"}
             </p>
           </div>
         </div>

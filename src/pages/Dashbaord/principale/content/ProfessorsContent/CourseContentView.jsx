@@ -473,7 +473,8 @@ const CourseContentView = ({ course, onBack }) => {
                 {getStatusBadge(course?.etat)}
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                {course?.matiere?.nom && (
+                {(course?.matiere?.nom ||
+                  course?.matieres?.length > 0) && (
                   <span className="flex items-center gap-1 text-blue-100 text-xs">
                     <FontAwesomeIcon
                       icon={faSchool}
@@ -481,7 +482,8 @@ const CourseContentView = ({ course, onBack }) => {
                         fontSize: 10,
                       }}
                     />
-                    {course.matiere.nom}
+                    {course.matiere?.nom ||
+                      course.matieres.map((m) => m.nom).join(", ")}
                   </span>
                 )}
                 {course?.dateCreation && (
@@ -641,7 +643,9 @@ const CourseContentView = ({ course, onBack }) => {
                       {course?.titre}
                     </h2>
                     <p className="text-sm text-slate-500 mt-0.5">
-                      {course?.matiere?.nom || "Matière non définie"}
+                      {course?.matiere?.nom ||
+                        course?.matieres?.map((m) => m.nom).join(", ") ||
+                        "Matière non définie"}
                     </p>
                   </div>
 
