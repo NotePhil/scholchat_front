@@ -64,11 +64,19 @@ const LiveSession = ({
   const [sessionEnded, setSessionEnded] = useState(false);
   const [mobileTab, setMobileTab] = useState("video"); // "video" | "content" | "chat"
   const [chapterChanging, setChapterChanging] = useState(false);
-  // The mobile and desktop layouts below both render a <JitsiRoom>, with
-  // Tailwind's `lg:hidden`/`hidden lg:flex` only toggling CSS display - not
-  // unmounting. Left as-is, BOTH mount simultaneously and each opens its own
-  // independent Jitsi connection to the same room as the same user. Tracking
-  // the breakpoint in JS instead lets us render the single active one only.
+  // The mobile and desktop layouts below both have a slot for the video.
+  // Tailwind's `lg:hidden`/`hidden lg:flex` only toggles CSS display, so
+  // rendering a separate <JitsiRoom> in each slot mounted BOTH at once -
+  // two independent Jitsi connections to the same room as the same user.
+  // Conditionally mounting only one (based on viewport width) fixed that,
+  // but introduced a worse problem: every resize across the breakpoint
+  // unmounted the live connection and mounted a fresh one, forcing a full
+  // disconnect+rejoin (and racing React's state update against Tailwind's
+  // synchronous CSS breakpoint flip, which is what left the join button
+  // unresponsive). A single <JitsiRoom> is instead mounted once via a
+  // portal into whichever slot ref is currently active - React reparents
+  // the DOM node on layout change without unmounting the component, so
+  // the live connection is never touched by a resize.
   const [isDesktopLayout, setIsDesktopLayout] = useState(
     () => window.innerWidth >= 1024,
   );
@@ -76,6 +84,14 @@ const LiveSession = ({
     const onResize = () => setIsDesktopLayout(window.innerWidth >= 1024);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const mobileVideoSlotRef = useRef(null);
+  const desktopVideoSlotRef = useRef(null);
+  // Portal targets aren't available until after the first commit, so force
+  // one extra render once both slot divs exist.
+  const [videoSlotsReady, setVideoSlotsReady] = useState(false);
+  useEffect(() => {
+    setVideoSlotsReady(true);
   }, []);
   const sessionRef = useRef(null);
   const currentUserId = localStorage.getItem("userId");
@@ -567,18 +583,7 @@ const LiveSession = ({
           <div
             className={`w-full h-full ${mobileTab === "video" ? "block" : "hidden"}`}
           >
-            {!isDesktopLayout && (
-              <JitsiRoom
-                roomName={session?.roomName}
-                jitsiJwt={session?.jitsiJwt}
-                jitsiDomain={session?.jitsiDomain}
-                displayName={userName}
-                subject={coursTitle}
-                isModerator={isModerator}
-                mode={session?.mode}
-                onHangup={isModerator ? handleEndSession : onClose}
-              />
-            )}
+            <div ref={mobileVideoSlotRef} className="w-full h-full" />
           </div>
           {/* Content tab */}
           <div
@@ -645,18 +650,7 @@ const LiveSession = ({
           className={`flex flex-col transition-all duration-300 ${panelCollapsed ? "flex-1" : "flex-1 lg:w-0 lg:flex-none lg:basis-[55%]"}`}
         >
           <div className="flex-1 p-2">
-            {isDesktopLayout && (
-              <JitsiRoom
-                roomName={session?.roomName}
-                jitsiJwt={session?.jitsiJwt}
-                jitsiDomain={session?.jitsiDomain}
-                displayName={userName}
-                subject={coursTitle}
-                isModerator={isModerator}
-                mode={session?.mode}
-                onHangup={isModerator ? handleEndSession : onClose}
-              />
-            )}
+            <div ref={desktopVideoSlotRef} className="w-full h-full" />
           </div>
         </div>
         <div
@@ -723,6 +717,26 @@ const LiveSession = ({
           </div>
         </div>
       </div>
+      {/* Single JitsiRoom instance, portaled into whichever slot (mobile
+          tab or desktop column) is currently active - reparented on layout
+          change, never unmounted, so the live connection survives a resize
+          instead of forcing a disconnect+rejoin. */}
+      {videoSlotsReady &&
+        createPortal(
+          <JitsiRoom
+            roomName={session?.roomName}
+            jitsiJwt={session?.jitsiJwt}
+            jitsiDomain={session?.jitsiDomain}
+            displayName={userName}
+            subject={coursTitle}
+            isModerator={isModerator}
+            mode={session?.mode}
+            onHangup={isModerator ? handleEndSession : onClose}
+          />,
+          isDesktopLayout
+            ? desktopVideoSlotRef.current
+            : mobileVideoSlotRef.current,
+        )}
     </div>,
     document.body,
   );
