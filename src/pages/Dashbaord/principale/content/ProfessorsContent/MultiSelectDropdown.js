@@ -52,27 +52,35 @@ const MultiSelectDropdown = ({
 
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-          {filteredOptions.map((option) => (
-            <div
-              key={option.id}
-              onClick={() => handleSelect(option.id)}
-              className={`px-4 py-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between ${selected.includes(option.id) ? "bg-indigo-50 text-indigo-900" : "text-slate-700"}`}
-            >
-              <span>{option.nom}</span>
-              {selected.includes(option.id) && (
-                <FontAwesomeIcon
-                  icon={faCircleCheck}
-                  className="w-4 h-4 text-indigo-600"
-                />
+          {query.trim() === "" ? (
+            <div className="px-4 py-3 text-slate-400 text-center text-sm">
+              Tapez pour rechercher une matière...
+            </div>
+          ) : (
+            <>
+              {filteredOptions.map((option) => (
+                <div
+                  key={option.id}
+                  onClick={() => handleSelect(option.id)}
+                  className={`px-4 py-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between ${selected.includes(option.id) ? "bg-indigo-50 text-indigo-900" : "text-slate-700"}`}
+                >
+                  <span>{option.nom}</span>
+                  {selected.includes(option.id) && (
+                    <FontAwesomeIcon
+                      icon={faCircleCheck}
+                      className="w-4 h-4 text-indigo-600"
+                    />
+                  )}
+                </div>
+              ))}
+              {filteredOptions.length === 0 && (
+                <div className="px-4 py-3 text-slate-500 text-center">
+                  {options.length === 0
+                    ? "Aucune matière disponible"
+                    : "Aucun résultat"}
+                </div>
               )}
-            </div>
-          ))}
-          {filteredOptions.length === 0 && (
-            <div className="px-4 py-3 text-slate-500 text-center">
-              {options.length === 0
-                ? "Aucune matière disponible"
-                : "Aucun résultat"}
-            </div>
+            </>
           )}
         </div>
       )}
