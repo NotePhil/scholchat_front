@@ -7,6 +7,7 @@ import {
   faUserPlus,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { NIVEAUX } from "../../../../constants/niveaux";
 const AddChildModal = ({ isOpen, onClose, onChildAdded }) => {
   const [formData, setFormData] = useState({
     nom: "",
@@ -18,20 +19,7 @@ const AddChildModal = ({ isOpen, onClose, onChildAdded }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const niveaux = [
-    "CP",
-    "CE1",
-    "CE2",
-    "CM1",
-    "CM2",
-    "6eme",
-    "5eme",
-    "4eme",
-    "3eme",
-    "2nde",
-    "1ere",
-    "Terminale",
-  ];
+  const niveaux = NIVEAUX;
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nom.trim() || !formData.prenom.trim() || !formData.niveau) {

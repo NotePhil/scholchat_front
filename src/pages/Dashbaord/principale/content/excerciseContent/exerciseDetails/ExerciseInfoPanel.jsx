@@ -1,6 +1,7 @@
 import React from "react";
 import { Form, Input, Select, Tag } from "antd";
 import { statusTag, restrictionTag, fmtDate } from "./helpers";
+import { NIVEAUX } from "../../../../../../constants/niveaux";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBook,
@@ -11,25 +12,6 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 const { TextArea } = Input;
 const { Option } = Select;
-const NIVEAUX = [
-  "6ème",
-  "5ème",
-  "4ème",
-  "3ème",
-  "2nde",
-  "1ère",
-  "Terminale",
-  "Licence 1",
-  "Licence 2",
-  "Licence 3",
-  "Master 1",
-  "Master 2",
-  "CP",
-  "CE1",
-  "CE2",
-  "CM1",
-  "CM2",
-];
 const InfoRow = ({ label, children }) => (
   <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 py-3 border-b border-gray-100 last:border-0">
     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide sm:w-36 flex-shrink-0 pt-0.5">

@@ -5,6 +5,7 @@ import {
   DroitPublication,
 } from "../../../../services/ClassService";
 import { scholchatService } from "../../../../services/ScholchatService";
+import { NIVEAUX } from "../../../../constants/niveaux";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendarDays,
@@ -340,18 +341,11 @@ const ClassEditModal = ({
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.niveau ? "border-red-500" : "border-gray-300"}`}
                   >
                     <option value="">Sélectionner un niveau</option>
-                    <option value="CP">CP</option>
-                    <option value="CE1">CE1</option>
-                    <option value="CE2">CE2</option>
-                    <option value="CM1">CM1</option>
-                    <option value="CM2">CM2</option>
-                    <option value="6ème">6ème</option>
-                    <option value="5ème">5ème</option>
-                    <option value="4ème">4ème</option>
-                    <option value="3ème">3ème</option>
-                    <option value="2nde">2nde</option>
-                    <option value="1ère">1ère</option>
-                    <option value="Terminale">Terminale</option>
+                    {NIVEAUX.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
                   </select>
                   {validationErrors.niveau && (
                     <p className="mt-1 text-sm text-red-600">

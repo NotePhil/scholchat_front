@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Spin, Button, Tag, Select } from "antd";
 import { classService } from "../../../../services/ClassService";
+import { NIVEAUX } from "../../../../constants/niveaux";
 import { message, Modal, Input, Form } from "antd";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -570,20 +571,7 @@ const ManageClassList = ({
               style={{
                 borderRadius: 8,
               }}
-              options={[
-                "CP",
-                "CE1",
-                "CE2",
-                "CM1",
-                "CM2",
-                "6ème",
-                "5ème",
-                "4ème",
-                "3ème",
-                "2nde",
-                "1ère",
-                "Terminale",
-              ].map((n) => ({
+              options={NIVEAUX.map((n) => ({
                 value: n,
                 label: n,
               }))}

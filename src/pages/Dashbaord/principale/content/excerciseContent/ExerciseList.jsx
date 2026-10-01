@@ -16,6 +16,7 @@ import {
   Badge,
 } from "antd";
 import { participationExerciseService } from "../../../../../services/exerciseService";
+import { NIVEAUX } from "../../../../../constants/niveaux";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
@@ -278,48 +279,10 @@ const ExerciseList = ({
       key: "niveau",
       width: 110,
       responsive: ["sm"],
-      filters: [
-        {
-          text: "6ème",
-          value: "6ème",
-        },
-        {
-          text: "5ème",
-          value: "5ème",
-        },
-        {
-          text: "4ème",
-          value: "4ème",
-        },
-        {
-          text: "3ème",
-          value: "3ème",
-        },
-        {
-          text: "2nde",
-          value: "2nde",
-        },
-        {
-          text: "1ère",
-          value: "1ère",
-        },
-        {
-          text: "Terminale",
-          value: "Terminale",
-        },
-        {
-          text: "Licence 1",
-          value: "Licence 1",
-        },
-        {
-          text: "Licence 2",
-          value: "Licence 2",
-        },
-        {
-          text: "Licence 3",
-          value: "Licence 3",
-        },
-      ],
+      filters: NIVEAUX.map((n) => ({
+        text: n,
+        value: n,
+      })),
       onFilter: (value, record) => record.niveau === value,
       render: (niveau) => (
         <span
@@ -612,15 +575,7 @@ const ExerciseList = ({
                 minWidth: 100,
               }}
             >
-              {[
-                "6ème",
-                "5ème",
-                "4ème",
-                "3ème",
-                "2nde",
-                "1ère",
-                "Terminale",
-              ].map((n) => (
+              {NIVEAUX.map((n) => (
                 <Option key={n} value={n}>
                   {n}
                 </Option>
@@ -1015,18 +970,7 @@ const ExerciseList = ({
               minWidth: 90,
             }}
           >
-            {[
-              "6ème",
-              "5ème",
-              "4ème",
-              "3ème",
-              "2nde",
-              "1ère",
-              "Terminale",
-              "Licence 1",
-              "Licence 2",
-              "Licence 3",
-            ].map((n) => (
+            {NIVEAUX.map((n) => (
               <Option key={n} value={n}>
                 {n}
               </Option>

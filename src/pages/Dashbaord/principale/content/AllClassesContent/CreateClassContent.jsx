@@ -10,6 +10,7 @@ import { scholchatService } from "../../../../../services/ScholchatService";
 import { useNavigate } from "react-router-dom";
 import PublicationRightsService from "../../../../../services/PublicationRightsService";
 import { useTranslation } from "../../../../../hooks/useTranslation";
+import { NIVEAUX } from "../../../../../constants/niveaux";
 import { useAuth } from "../../../../../hooks/useAuth";
 import PaymentModal from "../../../../../components/modals/PaymentModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -458,19 +459,11 @@ const CreateClassContent = ({
                               "Sélectionner un niveau",
                             )}
                           </option>
-                          <option value="CP">CP (Cours Préparatoire)</option>
-                          <option value="CE1">CE1 (Cours Élémentaire 1)</option>
-                          <option value="CE2">CE2 (Cours Élémentaire 2)</option>
-                          <option value="CM1">CM1 (Cours Moyen 1)</option>
-                          <option value="CM2">CM2 (Cours Moyen 2)</option>
-                          <option value="6ème">6ème</option>
-                          <option value="5ème">5ème</option>
-                          <option value="4ème">4ème</option>
-                          <option value="3ème">3ème</option>
-                          <option value="2nde">2nde (Seconde)</option>
-                          <option value="1ère">1ère (Première)</option>
-                          <option value="Terminale">Terminale</option>
-                          <option value="AUTRE">Autre</option>
+                          {NIVEAUX.map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       {errors.niveau && (

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FiUser, FiMail, FiPhone, FiMapPin, FiUpload, FiX, FiCheck, FiArrowRight, FiArrowLeft } from "react-icons/fi";
 import axios from "axios";
 import { useTranslation } from "../hooks/useTranslation";
+import { NIVEAUX } from "../constants/niveaux";
 
 const SignUp = ({ theme }) => {
   const { t } = useTranslation();
@@ -21,6 +22,8 @@ const SignUp = ({ theme }) => {
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [token, setToken] = useState("");
   const [createdUserId, setCreatedUserId] = useState(null);
+  const [niveauQuery, setNiveauQuery] = useState("");
+  const [niveauOpen, setNiveauOpen] = useState(false);
 
   const [imagePreviews, setImagePreviews] = useState({
     cniRecto: null,
@@ -58,6 +61,15 @@ const SignUp = ({ theme }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: false }));
+    }
+  };
+
+  const handleNiveauSelect = (value) => {
+    setFormData((prev) => ({ ...prev, niveau: value }));
+    setNiveauQuery("");
+    setNiveauOpen(false);
+    if (errors.niveau) {
+      setErrors((prev) => ({ ...prev, niveau: false }));
     }
   };
 
@@ -796,18 +808,68 @@ const SignUp = ({ theme }) => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Niveau d'éducation
                     </label>
-                    <input
-                      type="text"
-                      name="niveau"
-                      value={formData.niveau}
-                      onChange={handleInputChange}
-                      className={`block w-full px-4 py-3 border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                        errors.niveau
-                          ? "border-red-500"
-                          : "border-gray-300 dark:border-gray-600"
-                      }`}
-                      placeholder="Ex: 6ème, 5ème..."
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={
+                          niveauOpen
+                            ? niveauQuery
+                            : formData.niveau || niveauQuery
+                        }
+                        onChange={(e) => {
+                          setNiveauQuery(e.target.value);
+                          setNiveauOpen(true);
+                          if (formData.niveau) {
+                            setFormData((prev) => ({ ...prev, niveau: "" }));
+                          }
+                          if (errors.niveau) {
+                            setErrors((prev) => ({ ...prev, niveau: false }));
+                          }
+                        }}
+                        onFocus={() => setNiveauOpen(true)}
+                        onBlur={() =>
+                          setTimeout(() => setNiveauOpen(false), 150)
+                        }
+                        className={`block w-full px-4 py-3 border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                          errors.niveau
+                            ? "border-red-500"
+                            : "border-gray-300 dark:border-gray-600"
+                        }`}
+                        placeholder="Tapez pour rechercher un niveau..."
+                      />
+                      {niveauOpen && (
+                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+                          {niveauQuery.trim() === "" ? (
+                            <div className="px-4 py-3 text-sm text-gray-400 text-center">
+                              Tapez pour rechercher un niveau...
+                            </div>
+                          ) : (
+                            (() => {
+                              const matches = NIVEAUX.filter((n) =>
+                                n
+                                  .toLowerCase()
+                                  .includes(niveauQuery.trim().toLowerCase()),
+                              );
+                              return matches.length > 0 ? (
+                                matches.map((n) => (
+                                  <div
+                                    key={n}
+                                    onMouseDown={() => handleNiveauSelect(n)}
+                                    className="px-4 py-2.5 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm"
+                                  >
+                                    {n}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-4 py-3 text-sm text-gray-400 text-center">
+                                  Aucun résultat
+                                </div>
+                              );
+                            })()
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 )}
               </motion.div>
