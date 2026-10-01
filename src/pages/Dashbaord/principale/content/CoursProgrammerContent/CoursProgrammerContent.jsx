@@ -48,6 +48,10 @@ const CoursProgrammerContent = () => {
   const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  // Past sessions (already over, not currently in progress) are hidden by
+  // default so the list leads with what's imminent/upcoming; this reveals
+  // them on demand instead.
+  const [showPast, setShowPast] = useState(false);
   const [viewMode, setViewMode] = useState("grid");
   const [pageSize, setPageSize] = useState(10);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -117,7 +121,7 @@ const CoursProgrammerContent = () => {
   }, [location.state, courses]);
   useEffect(() => {
     filterScheduledCourses();
-  }, [scheduledCourses, searchTerm, filterStatus, filterClassId]);
+  }, [scheduledCourses, searchTerm, filterStatus, filterClassId, showPast]);
   const loadData = async (profId, classIdFilter = null) => {
     try {
       setLoading(true);
@@ -185,9 +189,11 @@ const CoursProgrammerContent = () => {
       const sorted = [...enriched].sort((a, b) => {
         const oa = STATUS_ORDER[a.etatCoursProgramme] ?? 3;
         const ob = STATUS_ORDER[b.etatCoursProgramme] ?? 3;
+        // Within the same status, show the most imminent session first
+        // (soonest dateCoursPrevue), not the furthest out.
         return oa !== ob
           ? oa - ob
-          : new Date(b.dateCoursPrevue) - new Date(a.dateCoursPrevue);
+          : new Date(a.dateCoursPrevue) - new Date(b.dateCoursPrevue);
       });
       setScheduledCourses(sorted);
     } catch (err) {
@@ -199,6 +205,19 @@ const CoursProgrammerContent = () => {
   };
   const filterScheduledCourses = () => {
     let filtered = scheduledCourses;
+
+    // Hidden by default: sessions whose scheduled time has passed and
+    // aren't currently in progress. EN_COURS stays visible regardless of
+    // its scheduled date, since it's actively happening right now.
+    if (!showPast) {
+      const now = new Date();
+      filtered = filtered.filter(
+        (sc) =>
+          sc.etatCoursProgramme === "EN_COURS" ||
+          !sc.dateCoursPrevue ||
+          new Date(sc.dateCoursPrevue) >= now,
+      );
+    }
 
     // Class filter: keep only sessions that include this class in classesIds
     if (filterClassId) {
@@ -689,6 +708,17 @@ const CoursProgrammerContent = () => {
                 }}
               />
             </div>
+
+            {/* Past sessions toggle */}
+            <label className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 flex-shrink-0 text-xs text-slate-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showPast}
+                onChange={(e) => setShowPast(e.target.checked)}
+                className="accent-indigo-600"
+              />
+              Inclure les passés
+            </label>
 
             {/* Page size */}
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 flex-shrink-0">

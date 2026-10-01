@@ -1232,6 +1232,8 @@ const CourseContentView = ({ course, onBack }) => {
                         {course?.dateCreation
                           ? formatDate(course.dateCreation)
                           : "Date de création non disponible"}
+                        {(course?.redacteur?.nom || course?.redacteur?.prenom) &&
+                          ` · Par ${`${course.redacteur.prenom || ""} ${course.redacteur.nom || ""}`.trim()}`}
                       </p>
                     </div>
                   </div>
@@ -1306,6 +1308,13 @@ const CourseContentView = ({ course, onBack }) => {
                         </h4>
                         <p className="text-sm text-slate-600 mt-1">
                           Le cours a été publié et est maintenant accessible
+                        </p>
+                        <p className="text-xs text-slate-500 mt-2">
+                          {course?.datePublication
+                            ? formatDate(course.datePublication)
+                            : "Date de publication non disponible"}
+                          {(course?.redacteur?.nom || course?.redacteur?.prenom) &&
+                            ` · Par ${`${course.redacteur.prenom || ""} ${course.redacteur.nom || ""}`.trim()}`}
                         </p>
                       </div>
                     </div>

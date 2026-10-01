@@ -167,6 +167,10 @@ const ExerciseProgrammerContent = () => {
   const [filterClassId, setFilterClassId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState(""); // "" | "ACTIF" | "EXPIRE" | "BROUILLON" | "INACTIF"
+  // Past sessions (already over, not currently in progress) are hidden by
+  // default so the list leads with what's imminent/upcoming; this reveals
+  // them on demand instead.
+  const [showPast, setShowPast] = useState(false);
   const [filterType, setFilterType] = useState(""); // "" | "EXERCICE" | "DEVOIR"
 
   // ── Pagination ──
@@ -268,9 +272,11 @@ const ExerciseProgrammerContent = () => {
       const sorted = Array.from(merged.values()).sort((a, b) => {
         const oa = EXO_STATUS_ORDER[a.etatExoProgramme] ?? 3;
         const ob = EXO_STATUS_ORDER[b.etatExoProgramme] ?? 3;
+        // Within the same status, show the most imminent session first
+        // (soonest dateExoPrevue), not the furthest out.
         return oa !== ob
           ? oa - ob
-          : new Date(b.dateExoPrevue) - new Date(a.dateExoPrevue);
+          : new Date(a.dateExoPrevue) - new Date(b.dateExoPrevue);
       });
       setProgrammations(sorted);
     } catch {
@@ -345,6 +351,7 @@ const ExerciseProgrammerContent = () => {
   };
 
   // ── Filtered list ──
+  const now = new Date();
   const filtered = programmations.filter((prog) => {
     const matchClass =
       !filterClassId ||
@@ -358,7 +365,14 @@ const ExerciseProgrammerContent = () => {
     const effectiveEtat = getEffectiveEtat(prog);
     const matchStatus = !filterStatus || effectiveEtat === filterStatus;
     const matchType = !filterType || prog.typeAssignation === filterType;
-    return matchClass && matchSearch && matchStatus && matchType;
+    // Hidden by default: sessions whose scheduled time has passed and
+    // aren't currently in progress.
+    const matchTiming =
+      showPast ||
+      prog.etatExoProgramme === "EN_COURS" ||
+      !prog.dateExoPrevue ||
+      new Date(prog.dateExoPrevue) >= now;
+    return matchClass && matchSearch && matchStatus && matchType && matchTiming;
   });
 
   // Reset to page 1 when filters change
@@ -942,6 +956,17 @@ const ExerciseProgrammerContent = () => {
               }}
             />
           </div>
+
+          {/* Past sessions toggle */}
+          <label className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs text-slate-600 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showPast}
+              onChange={(e) => setShowPast(e.target.checked)}
+              className="accent-indigo-600"
+            />
+            Inclure les passés
+          </label>
 
           {/* Active filter chips */}
           {(filterStatus || filterType || filterClassId || searchTerm) && (

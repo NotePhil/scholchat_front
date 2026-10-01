@@ -565,11 +565,28 @@ const ManageClassList = ({
             />
           </Form.Item>
           <Form.Item name="niveau" label="Niveau">
-            <Input
-              placeholder="Ex: 3ème, Terminale..."
+            <Select
+              placeholder="Sélectionner un niveau"
               style={{
                 borderRadius: 8,
               }}
+              options={[
+                "CP",
+                "CE1",
+                "CE2",
+                "CM1",
+                "CM2",
+                "6ème",
+                "5ème",
+                "4ème",
+                "3ème",
+                "2nde",
+                "1ère",
+                "Terminale",
+              ].map((n) => ({
+                value: n,
+                label: n,
+              }))}
             />
           </Form.Item>
           <Form.Item name="description" label="Description">
