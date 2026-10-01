@@ -14,6 +14,18 @@
   z-index: 10050 !important;
 }
 
+/* The showTime date/time panel (calendar + time column side by side) is
+   wider than most phone screens, which was making the whole page scroll
+   horizontally since nothing capped the popup's own width. Cap it to the
+   viewport and let it scroll internally instead - a contained scroll on
+   the popup itself, not the page. */
+@media (max-width: 480px) {
+  .ant-picker-dropdown .ant-picker-datetime-panel {
+    max-width: 94vw;
+    overflow-x: auto;
+  }
+}
+
 /* Safe area padding for mobile devices with gesture bars */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-area-bottom {

@@ -8,6 +8,14 @@
   margin: 0;
   box-sizing: border-box;
 }
+html,
+body {
+  /* Transient overflow (e.g. a wide antd DatePicker showTime popup on a
+     narrow screen) shouldn't be able to make the whole page scroll
+     sideways - only an element that deliberately opts into its own
+     overflow-x (tables, etc.) should ever scroll horizontally. */
+  overflow-x: hidden;
+}
 body {
   font-family: "Poppins", sans-serif;
   background-color: #fff;

@@ -204,7 +204,7 @@ const PaymentModal = ({
             damping: 28,
             stiffness: 320,
           }}
-          className={`relative w-full sm:max-w-md max-h-[92vh] sm:max-h-[88vh] overflow-y-auto ${cardBg}
+          className={`relative w-full sm:max-w-md max-h-[92vh] max-h-[92dvh] sm:max-h-[88vh] sm:max-h-[88dvh] overflow-y-auto ${cardBg}
             rounded-t-3xl sm:rounded-3xl shadow-2xl border ${border}`}
         >
           {/* Drag handle (mobile) */}

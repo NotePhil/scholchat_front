@@ -559,13 +559,13 @@ const EditExerciseForm = ({
 
           {/* Action bar */}
           <div
-            className="flex items-center justify-end gap-3 px-5 py-4 rounded-xl"
+            className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 px-5 py-4 rounded-xl"
             style={{
               background: "#f8faff",
               border: "1px solid #e4eaf4",
             }}
           >
-            <Text className="text-xs text-gray-400 mr-auto hidden sm:block">
+            <Text className="text-xs text-gray-400 sm:mr-auto hidden sm:block">
               {questions.length} question{questions.length !== 1 ? "s" : ""}
               {removedIds.length > 0 && ` · ${removedIds.length} à supprimer`}
             </Text>
@@ -573,6 +573,7 @@ const EditExerciseForm = ({
               onClick={onCancel}
               disabled={saving}
               size="large"
+              className="w-full sm:w-auto"
               style={{
                 borderRadius: 10,
                 minWidth: 120,
@@ -586,6 +587,7 @@ const EditExerciseForm = ({
               loading={saving}
               icon={<FontAwesomeIcon icon={faFloppyDisk} />}
               size="large"
+              className="w-full sm:w-auto"
               style={{
                 borderRadius: 10,
                 minWidth: 180,
@@ -594,7 +596,10 @@ const EditExerciseForm = ({
                 fontWeight: 600,
               }}
             >
-              Enregistrer les modifications
+              <span className="sm:hidden">Enregistrer</span>
+              <span className="hidden sm:inline">
+                Enregistrer les modifications
+              </span>
             </Button>
           </div>
         </Form>
