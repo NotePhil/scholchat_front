@@ -155,5 +155,10 @@ const installFetch = () => {
   window.fetch = wrappedFetch;
 };
 
-installAxios();
-installFetch();
+// REACT_APP_SEND_TIMEZONE_HEADER=false turns the header off (set in .env.production while
+// the deployed backend predates X-Timezone and rejects it in CORS preflights). Dates are
+// still sent as ISO strings with their offset, so only naive date-times lose the zone.
+if (process.env.REACT_APP_SEND_TIMEZONE_HEADER !== "false") {
+  installAxios();
+  installFetch();
+}
