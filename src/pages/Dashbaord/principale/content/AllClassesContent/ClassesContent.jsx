@@ -25,6 +25,11 @@ import {
   faSpinner,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
+import { message } from "antd";
+import {
+  confirmClassAction,
+  getClassActionTexts,
+} from "../../../../../utils/classActionConfirm";
 const ClassesContentMobile = ({
   classes,
   searchTerm,
@@ -295,6 +300,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
   const [showEstablishmentModal, setShowEstablishmentModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectSubmitting, setRejectSubmitting] = useState(false);
   const [rejectReason, setRejectReason] = useState({
     motifRejet: "Classe",
     commentaire: "",
@@ -550,32 +556,44 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
   };
 
   // Handle class approval/rejection
-  const handleClassApproval = async (classId, approved) => {
-    try {
-      setLoading(true);
-      if (approved) {
-        const updatedClass = await classService.approveClass(classId);
-        setClasses(
-          classes.map((cls) => (cls.id === classId ? updatedClass : cls)),
-        );
-      } else {
-        setSelectedClass(classes.find((cls) => cls.id === classId));
-        setShowRejectModal(true);
-      }
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
+  const handleClassApproval = (classId, approved) => {
+    const target = classes.find((cls) => cls.id === classId);
+    if (!approved) {
+      setSelectedClass(target);
+      setShowRejectModal(true);
+      return;
     }
+    const texts = getClassActionTexts("approve", target?.nom);
+    confirmClassAction({
+      action: "approve",
+      className: target?.nom,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          const updatedClass = await classService.approuverClasse(classId);
+          setClasses((prev) =>
+            prev.map((cls) => (cls.id === classId ? updatedClass : cls)),
+          );
+          message.success(texts.success);
+        } catch (error) {
+          setError(error.message);
+          message.error(texts.error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   // Handle class rejection with reason
   const handleRejectClass = async () => {
+    if (rejectSubmitting) return;
     try {
+      setRejectSubmitting(true);
       setLoading(true);
-      const updatedClass = await classService.rejectClass(
+      const updatedClass = await classService.rejeterClasse(
         selectedClass.id,
-        rejectReason,
+        rejectReason.motifRejet,
       );
       setClasses(
         classes.map((cls) =>
@@ -587,9 +605,14 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
         motifRejet: "Classe",
         commentaire: "",
       });
+      if (selectedClass.statut === "EN_ATTENTE") {
+        message.success(getClassActionTexts("reject").success);
+      }
     } catch (error) {
       setError(error.message);
+      message.error(getClassActionTexts("reject").error);
     } finally {
+      setRejectSubmitting(false);
       setLoading(false);
     }
   };
@@ -1740,7 +1763,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
                 {selectedClass.statut === "EN_ATTENTE"
-                  ? "Rejeter la Classe"
+                  ? getClassActionTexts("reject").title
                   : "Désactiver la Classe"}
               </h2>
               <button
@@ -1763,13 +1786,16 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
               }}
             >
               <div className="mb-4">
-                <p className="text-gray-700 mb-2">
-                  Vous êtes sur le point de{" "}
-                  {selectedClass.statut === "EN_ATTENTE"
-                    ? "rejeter"
-                    : "désactiver"}{" "}
-                  : <strong>{selectedClass.nom}</strong>
-                </p>
+                {selectedClass.statut === "EN_ATTENTE" ? (
+                  <p className="text-gray-700 mb-2">
+                    {getClassActionTexts("reject", selectedClass.nom).message}
+                  </p>
+                ) : (
+                  <p className="text-gray-700 mb-2">
+                    Vous êtes sur le point de désactiver :{" "}
+                    <strong>{selectedClass.nom}</strong>
+                  </p>
+                )}
 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1814,18 +1840,22 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
               <div className="flex justify-end gap-2 mt-6">
                 <button
                   type="button"
-                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                  disabled={rejectSubmitting}
+                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-60"
                   onClick={() => setShowRejectModal(false)}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                  disabled={rejectSubmitting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {selectedClass.statut === "EN_ATTENTE"
-                    ? "Confirmer le Rejet"
-                    : "Confirmer la Désactivation"}
+                  {rejectSubmitting
+                    ? "En cours..."
+                    : selectedClass.statut === "EN_ATTENTE"
+                      ? "Confirmer"
+                      : "Confirmer la Désactivation"}
                 </button>
               </div>
             </form>

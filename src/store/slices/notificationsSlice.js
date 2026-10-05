@@ -115,9 +115,9 @@ const notificationsSlice = createSlice({
     pushNotification: (state, action) => {
       const incoming = action.payload;
       const exists = state.notifications.some((n) => n.id === incoming.id);
-      if (!exists) {
+      if (incoming && incoming.id && !exists) {
         state.notifications = [incoming, ...state.notifications];
-        if (!incoming.read) state.unreadCount += 1;
+        state.unreadCount = state.notifications.filter((n) => !n.read).length;
       }
     },
   },
@@ -156,7 +156,19 @@ const notificationsSlice = createSlice({
         state.unreadCount = action.payload || 0;
       })
 
-      // Mark as read
+      // Mark as read — optimistic, so the badge drops immediately on click
+      .addCase(markNotificationAsRead.pending, (state, action) => {
+        const id = action.meta.arg;
+        const item = state.notifications.find((n) => n.id === id);
+        if (item) item.read = true;
+        state.unreadCount = state.notifications.filter((n) => !n.read).length;
+      })
+      .addCase(markNotificationAsRead.rejected, (state, action) => {
+        const id = action.meta.arg;
+        const item = state.notifications.find((n) => n.id === id);
+        if (item) item.read = false;
+        state.unreadCount = state.notifications.filter((n) => !n.read).length;
+      })
       .addCase(markNotificationAsRead.fulfilled, (state, action) => {
         const updated = action.payload;
         if (updated) {

@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useReturnToPage } from "../../../hooks/useReturnToPage";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector, useStore } from "react-redux";
 import Modal from "react-modal";
 import {
   setLastLocation,
@@ -53,10 +53,24 @@ import MobileBottomNav from "../components/MobileBottomNav";
 import ParentChildrenList from "./ParentSidebar/ParentChildrenList";
 import GestionnairesManagement from "./content/GestionnaireContent/GestionnairesManagement";
 import RoleSelectorModal from "../../../components/modals/RoleSelectorModal";
+import AddRoleModal from "../../../components/modals/AddRoleModal";
+import { getStoredAddableRoles } from "../../../utils/roleRules";
 import ReAuthModal from "../../../components/modals/ReAuthModal";
 import ChildSelectorModal from "../../../components/modals/ChildSelectorModal";
-import CompleteProfileModal from "./modals/CompleteProfileModal";
+import ProfessorVerificationStatus from "./ProfessorVerificationStatus";
 import { scholchatService } from "../../../services/ScholchatService";
+import {
+  PROFESSOR_NOT_VALIDATED_EVENT,
+  PROFESSOR_STATUS,
+  checkFetchResponseForProfessorBlock,
+  getStoredProfessorStatus,
+  installProfessorVerificationNetworkHook,
+  storeProfessorStatus,
+} from "../../../utils/professorVerification";
+import {
+  dashboardNameForRole,
+  storeSwitchRoleResponse,
+} from "../../../utils/authSession";
 import { InstallButton } from "../../../components/PWAInstallPrompt";
 import "../../../CSS/Principal.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -139,10 +153,76 @@ const languages = {
     flag: "🇺🇸",
   },
 };
+// Tabs each (selected) role may open. Tabs are URL-driven
+// (/schoolchat/Principal/:dashboardType/:section), so the sidebar alone is not
+// enough: a student could type .../schedule-exercise and land on the
+// professor-only programmer. Anything not listed falls back to the role's home.
+const COMMON_TABS = ["dashboard", "activities", "messages", "settings"];
+const PROFESSOR_TABS = [
+  "courses",
+  "create-course",
+  "schedule-course",
+  "cours",
+  "matieres",
+  "manage-exercises",
+  "schedule-exercise",
+  "corrections-exercise",
+  "professors",
+  "parents",
+  "students",
+  "classes",
+  "create-class",
+  "manage-class",
+];
+const ROLE_TABS = {
+  admin: [
+    "admin",
+    "professors",
+    "parents",
+    "students",
+    "others",
+    "gestionnaires",
+    "matieres",
+    "motifs-de-rejet",
+    "classes",
+    "create-class",
+    "manage-class",
+    "create-establishment",
+    "manage-establishment",
+    "manage-offers",
+    // Admin keeps oversight of course/exercise screens (backend allows ADMIN
+    // on course sessions and the "cours" tab offers Programmer to admins).
+    "courses",
+    "create-course",
+    "schedule-course",
+    "cours",
+    "manage-exercises",
+    "schedule-exercise",
+    "corrections-exercise",
+  ],
+  professor: PROFESSOR_TABS,
+  tutor: PROFESSOR_TABS,
+  parent: ["manage-exercises", "devoirs", "classes", "cours", "my-children"],
+  student: ["manage-exercises", "devoirs", "classes", "cours"],
+  gestionnaire: [
+    "matieres",
+    "classes",
+    "create-class",
+    "manage-class",
+    // No "create-establishment": creating an établissement is admin-only.
+    "manage-establishment",
+  ],
+};
+const DEFAULT_ROLE_TABS = ["classes"];
+const isTabAllowedForRole = (tab, role) =>
+  COMMON_TABS.includes(tab) ||
+  (ROLE_TABS[role] || DEFAULT_ROLE_TABS).includes(tab);
+
 const Principal = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
+  const store = useStore();
   const { dashboardType, section } = useParams();
   const { storeCurrentPage, hasStoredPage } = useReturnToPage();
 
@@ -180,6 +260,9 @@ const Principal = () => {
   const [showReAuthModal, setShowReAuthModal] = useState(false);
   const [pendingRoleSwitch, setPendingRoleSwitch] = useState(null);
   const [roleSwitchLoading, setRoleSwitchLoading] = useState(false);
+  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  // Bumped when the profiles list changes (role added) so the header re-reads localStorage
+  const [, setRolesVersion] = useState(0);
   // Child switcher for parents
   const [parentChildren, setParentChildren] = useState([]);
   const [selectedChild, setSelectedChild] = useState(null);
@@ -187,38 +270,62 @@ const Principal = () => {
   const [pendingChildSwitch, setPendingChildSwitch] = useState(null);
   const [showChildAuthModal, setShowChildAuthModal] = useState(false);
   const [childAuthLoading, setChildAuthLoading] = useState(false);
-  // Professor "complete your profile" prompt — admin validation no longer
-  // requires all documents to be present (see UtilisateursBusiness.validerProfesseur),
-  // so a validated professor missing a document (e.g. an upload that failed
-  // mid-signup) is nudged to finish it here instead of being blocked earlier.
-  const [showCompleteProfileModal, setShowCompleteProfileModal] = useState(false);
-  const [missingProfessorDocs, setMissingProfessorDocs] = useState([]);
+  // Professor verification gate: until the admin validates the identity
+  // documents (statutVerification === VALIDE) the professor dashboard is not
+  // rendered at all — every professor API call would be refused with 403
+  // PROFIL_PROFESSEUR_NON_VALIDE. "CHECKING" = status unknown (legacy session
+  // without professeurStatutVerification, or a 403 just received): resolved
+  // with GET /utilisateurs/{id} before anything is shown.
+  const [professorGate, setProfessorGate] = useState(() => {
+    if (!isProfessor) return PROFESSOR_STATUS.VALIDE;
+    return getStoredProfessorStatus().status || "CHECKING";
+  });
+  const [professorMotif, setProfessorMotif] = useState(
+    () => getStoredProfessorStatus().motif,
+  );
 
   useEffect(() => {
-    if (!isProfessor) return;
+    if (!isProfessor || professorGate !== "CHECKING") return;
     const userId = localStorage.getItem("userId");
-    if (!userId) return;
+    if (!userId) {
+      setProfessorGate(PROFESSOR_STATUS.VALIDE);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
         const professor = await scholchatService.getUserById(userId);
-        if (cancelled || !professor) return;
-        const docFields = [
-          { field: "cniUrlRecto", docType: "CNI_RECTO", label: "CNI - Recto" },
-          { field: "cniUrlVerso", docType: "CNI_VERSO", label: "CNI - Verso" },
-          { field: "selfieUrl", docType: "PROFILE_PHOTO", label: "Photo de profil" },
-        ];
-        const missing = docFields.filter((doc) => !professor[doc.field]);
-        if (missing.length > 0) {
-          setMissingProfessorDocs(missing);
-          setShowCompleteProfileModal(true);
-        }
+        if (cancelled) return;
+        // Field absent (older backend): never lock the user out
+        const status = professor?.statutVerification || PROFESSOR_STATUS.VALIDE;
+        const motif = professor?.motifRejetVerification || null;
+        storeProfessorStatus(status, motif);
+        setProfessorMotif(motif);
+        setProfessorGate(status);
       } catch (e) {
-        console.warn("Could not check professor document completeness:", e);
+        console.warn("Could not check professor verification status:", e);
+        // Server enforcement + the 403 listener below still protect the data
+        if (!cancelled)
+          setProfessorGate((g) => (g === "CHECKING" ? PROFESSOR_STATUS.VALIDE : g));
       }
     })();
     return () => {
       cancelled = true;
+    };
+  }, [isProfessor, professorGate]);
+
+  // Any request refused with 403 PROFIL_PROFESSEUR_NON_VALIDE while acting as
+  // professor (e.g. validation revoked, stale stored status) → status screen.
+  useEffect(() => {
+    if (!isProfessor) return undefined;
+    const uninstall = installProfessorVerificationNetworkHook();
+    const onNotValidated = () => {
+      setProfessorGate((g) => (g === PROFESSOR_STATUS.VALIDE ? "CHECKING" : g));
+    };
+    window.addEventListener(PROFESSOR_NOT_VALIDATED_EVENT, onNotValidated);
+    return () => {
+      uninstall();
+      window.removeEventListener(PROFESSOR_NOT_VALIDATED_EVENT, onNotValidated);
     };
   }, [isProfessor]);
 
@@ -246,6 +353,13 @@ const Principal = () => {
         const found = kids.find((k) => k.id === storedId);
         const autoSelect = found || (kids.length > 0 ? kids[0] : null);
         setSelectedChild(autoSelect);
+        // Minor (no own account) → the parent answers homework for them; adult → read-only.
+        if (autoSelect) {
+          localStorage.setItem(
+            "selectedChildHasAccount",
+            autoSelect.email ? "true" : "false",
+          );
+        }
         if (!found && autoSelect) {
           localStorage.setItem("selectedChildId", autoSelect.id);
           localStorage.setItem(
@@ -292,6 +406,10 @@ const Principal = () => {
       `${child.prenom || ""} ${child.nom || ""}`,
     );
     localStorage.setItem("selectedChildNiveau", child.niveau || "");
+    localStorage.setItem(
+      "selectedChildHasAccount",
+      child.email ? "true" : "false",
+    );
     setShowChildDropdown(false);
     // Trigger full refresh of all child data
     window.dispatchEvent(new Event("childChanged"));
@@ -368,6 +486,7 @@ const Principal = () => {
       if (response.status === 401) {
         setShowTokenExpiredModal(true);
       }
+      checkFetchResponseForProfessorBlock(response);
       return response;
     };
     return () => {
@@ -427,12 +546,15 @@ const Principal = () => {
     hasStoredPage,
   ]);
 
-  // Set active tab based on URL section parameter
+  // Set active tab based on URL section parameter. Skip when the store is
+  // already on that tab: a notification click dispatches
+  // setActiveTab({ tab, data }) and then navigates, and re-dispatching the bare
+  // string here would wipe the tabData (classId / subTab) it just set.
   useEffect(() => {
-    if (section) {
+    if (section && section !== store.getState().ui.activeTab) {
       dispatch(setActiveTabAction(section));
     }
-  }, [section, dispatch]);
+  }, [section, dispatch, store]);
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".language-dropdown")) {
@@ -578,7 +700,10 @@ const Principal = () => {
     ],
   );
   const renderContent = () => {
-    switch (activeTab) {
+    const tab = isTabAllowedForRole(activeTab, normalizedUserRole)
+      ? activeTab
+      : "dashboard";
+    switch (tab) {
       case "dashboard":
         if (isParentOrStudent) {
           return <StudentParentStats {...contentProps} />;
@@ -690,6 +815,8 @@ const Principal = () => {
             setIsDark={(val) => handleThemeChange(val, currentTheme)}
             currentTheme={currentTheme}
             setCurrentTheme={(val) => handleThemeChange(isDark, val)}
+            onSwitchProfile={() => setShowRoleSwitchModal(true)}
+            onLogout={handleLogout}
           />
         );
       default:
@@ -751,6 +878,111 @@ const Principal = () => {
     root.style.setProperty("--hover-color", scheme.hover);
     root.style.setProperty("--light-color", scheme.light);
   }, [currentTheme]);
+  const sessionExpiredModal = (
+    <Modal
+      isOpen={showTokenExpiredModal}
+      onRequestClose={() => {}}
+      contentLabel="Session expirée"
+      className="session-expired-modal"
+      overlayClassName="session-expired-overlay"
+      shouldCloseOnOverlayClick={false}
+    >
+      <div className={`session-expired-content ${isDark ? "dark-mode" : ""}`}>
+        <div className="session-expired-icon">
+          <svg
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              fill="#fef3c7"
+            />
+            <path
+              d="M12 8v4l3 3"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <h2 className="session-expired-title">Session Expirée</h2>
+        <p className="session-expired-message">
+          Votre session a expiré. Veuillez vous reconnecter pour continuer à
+          utiliser l'application.
+        </p>
+        <div className="session-expired-actions">
+          <button onClick={handleLogout} className="reconnect-button">
+            Se reconnecter
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+
+  // Non-validated professor: dedicated status screen instead of the dashboard
+  if (isProfessor && professorGate !== PROFESSOR_STATUS.VALIDE) {
+    if (professorGate === "CHECKING") {
+      return (
+        <>
+          {sessionExpiredModal}
+          <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="flex flex-col items-center gap-3 text-slate-500">
+              <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+              <p className="text-sm">Vérification de votre profil...</p>
+            </div>
+          </div>
+        </>
+      );
+    }
+    const otherRoles = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("availableRoles") || "[]")
+          .map((r) => String(r).toUpperCase().replace(/^ROLE_/, ""))
+          .filter((r) => r !== "PROFESSOR");
+      } catch {
+        return [];
+      }
+    })();
+    return (
+      <>
+        {sessionExpiredModal}
+        <ProfessorVerificationStatus
+          status={professorGate}
+          motif={professorMotif}
+          userName={user?.name || localStorage.getItem("username")}
+          userEmail={user?.email || localStorage.getItem("userEmail")}
+          isDark={isDark}
+          otherRoles={otherRoles}
+          onStatusChange={(status, motif) => {
+            setProfessorMotif(motif);
+            setProfessorGate(status);
+          }}
+          onValidated={() => {
+            setProfessorMotif(null);
+            setProfessorGate(PROFESSOR_STATUS.VALIDE);
+          }}
+          onLogout={handleLogout}
+          renderSettings={() => (
+            <SettingsContent
+              isDark={isDark}
+              setIsDark={(val) => handleThemeChange(val, currentTheme)}
+              currentTheme={currentTheme}
+              setCurrentTheme={(val) => handleThemeChange(isDark, val)}
+            />
+          )}
+        />
+      </>
+    );
+  }
+
   return (
     <div
       className={`principal-container ${isDark ? "dark-mode" : ""}`}
@@ -774,76 +1006,54 @@ const Principal = () => {
         />
       )}
 
-      <Modal
-        isOpen={showTokenExpiredModal}
-        onRequestClose={() => {}}
-        contentLabel="Session expirée"
-        className="session-expired-modal"
-        overlayClassName="session-expired-overlay"
-        shouldCloseOnOverlayClick={false}
-      >
-        <div className={`session-expired-content ${isDark ? "dark-mode" : ""}`}>
-          <div className="session-expired-icon">
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="#f59e0b"
-                strokeWidth="2"
-                fill="#fef3c7"
-              />
-              <path
-                d="M12 8v4l3 3"
-                stroke="#f59e0b"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <h2 className="session-expired-title">Session Expirée</h2>
-          <p className="session-expired-message">
-            Votre session a expiré. Veuillez vous reconnecter pour continuer à
-            utiliser l'application.
-          </p>
-          <div className="session-expired-actions">
-            <button onClick={handleLogout} className="reconnect-button">
-              Se reconnecter
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      <CompleteProfileModal
-        isOpen={showCompleteProfileModal}
-        userId={localStorage.getItem("userId")}
-        missingDocs={missingProfessorDocs}
-        onClose={() => setShowCompleteProfileModal(false)}
-        onCompleted={() => {
-          setShowCompleteProfileModal(false);
-          setMissingProfessorDocs([]);
-        }}
-      />
+      {sessionExpiredModal}
 
       {/* Role Switch Flow */}
       <RoleSelectorModal
         isOpen={showRoleSwitchModal}
-        roles={JSON.parse(localStorage.getItem("availableRoles") || "[]")}
+        roles={(() => {
+          const stored = JSON.parse(localStorage.getItem("availableRoles") || "[]");
+          return stored.length > 0 ? stored : [normalizedUserRole ? normalizedUserRole.toUpperCase() : "USER"];
+        })()}
+        pendingRoles={(() => {
+          try {
+            return JSON.parse(localStorage.getItem("authResponse") || "{}").pendingRoles || [];
+          } catch {
+            return [];
+          }
+        })()}
+        currentRole={localStorage.getItem("userRole")}
         onSelect={(role) => {
           setShowRoleSwitchModal(false);
+          // Already in this profile: nothing to switch
+          if (
+            String(localStorage.getItem("userRole") || "").toUpperCase() ===
+            "ROLE_" + String(role).toUpperCase().replace(/^ROLE_/, "")
+          ) {
+            return;
+          }
           setPendingRoleSwitch(role);
           setShowReAuthModal(true);
         }}
+        // "Ajouter un profil" only while a combinable profile (parent/professeur) is missing —
+        // never for a student account (the student profile is exclusive).
+        onAddRole={
+          getStoredAddableRoles().length > 0
+            ? () => {
+                setShowRoleSwitchModal(false);
+                setShowAddRoleModal(true);
+              }
+            : null
+        }
         onClose={() => setShowRoleSwitchModal(false)}
         title="Changer de profil"
         subtitle="Choisissez le profil vers lequel vous souhaitez basculer."
+      />
+
+      <AddRoleModal
+        isOpen={showAddRoleModal}
+        onClose={() => setShowAddRoleModal(false)}
+        onRolesUpdated={() => setRolesVersion((v) => v + 1)}
       />
 
       <ReAuthModal
@@ -867,40 +1077,19 @@ const Principal = () => {
                 }),
               },
             );
-            if (!response.ok) throw new Error("Mot de passe incorrect");
+            if (!response.ok) {
+              // Wrong password, or e.g. professor profile awaiting validation / offer expired
+              const errData = await response.json().catch(() => ({}));
+              throw new Error(errData.message || "Mot de passe incorrect");
+            }
             const authData = await response.json();
-
-            // Update localStorage with new role
-            localStorage.setItem("accessToken", authData.accessToken);
-            localStorage.setItem("authToken", authData.accessToken);
-            localStorage.setItem(
-              "userRole",
-              "ROLE_" + pendingRoleSwitch.toUpperCase(),
-            );
-            localStorage.setItem("authResponse", JSON.stringify(authData));
-            localStorage.setItem(
-              "availableRoles",
-              JSON.stringify(authData.availableRoles || []),
-            );
-            if (authData.children)
-              localStorage.setItem(
-                "children",
-                JSON.stringify(authData.children),
-              );
+            // Update localStorage with the new session (token carries every active role)
+            const newRole = storeSwitchRoleResponse(authData, pendingRoleSwitch);
             setShowReAuthModal(false);
             setPendingRoleSwitch(null);
 
             // Map role to correct dashboard path
-            const dashboardMap = {
-              ADMIN: "AdminDashboard",
-              PROFESSOR: "ProfessorDashboard",
-              PARENT: "ParentDashboard",
-              STUDENT: "StudentDashboard",
-              TUTOR: "ProfessorDashboard",
-              GESTIONNAIRE: "GestionnaireDashboard",
-            };
-            const dashName =
-              dashboardMap[pendingRoleSwitch.toUpperCase()] || "AdminDashboard";
+            const dashName = dashboardNameForRole(newRole);
             window.location.href = `/schoolchat/Principal/${dashName}/activities`;
           } catch (err) {
             throw err;
@@ -1026,7 +1215,18 @@ const Principal = () => {
               const storedRoles = JSON.parse(
                 localStorage.getItem("availableRoles") || "[]",
               );
-              if (storedRoles.length <= 1) return null;
+              // Shown for every non-admin account with something to do: switching between
+              // several profiles, or "Ajouter un profil" (a professor who is also a parent, etc.).
+              // A single-profile student has neither (the student profile is exclusive).
+              if (storedRoles.length <= 1 && (isAdmin || storedRoles.includes("ADMIN"))) return null;
+              const hasPending = (() => {
+                try {
+                  return (JSON.parse(localStorage.getItem("authResponse") || "{}").pendingRoles || []).length > 0;
+                } catch {
+                  return false;
+                }
+              })();
+              if (storedRoles.length <= 1 && !hasPending && getStoredAddableRoles().length === 0) return null;
               const currentRole =
                 (normalizedUserRole || "").charAt(0).toUpperCase() +
                 (normalizedUserRole || "").slice(1);

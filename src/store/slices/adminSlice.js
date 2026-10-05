@@ -18,7 +18,9 @@ export const createAdmin = createAsyncThunk(
   "admin/createAdmin",
   async (adminData, { rejectWithValue }) => {
     try {
-      return await userService.createUser(adminData);
+      // The backend needs the "type" discriminator to deserialize the payload;
+      // "utilisateur" + admin:true is what grants the ADMIN role.
+      return await userService.createUser({ ...adminData, type: "utilisateur" });
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -29,7 +31,7 @@ export const updateAdmin = createAsyncThunk(
   "admin/updateAdmin",
   async ({ id, data }, { rejectWithValue }) => {
     try {
-      return await userService.updateUser(id, data);
+      return await userService.updateUser(id, { ...data, type: "utilisateur" });
     } catch (error) {
       return rejectWithValue(error.message);
     }

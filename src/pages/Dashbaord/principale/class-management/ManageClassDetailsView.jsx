@@ -41,6 +41,10 @@ import { activityFeedService } from "../../../../services/ActivityFeedService";
 import UserTables from "./components/UserTables";
 import StatisticsCards from "./components/StatisticsCards";
 import OffreInfoPanel from "../shared/OffreInfoPanel";
+import {
+  confirmClassAction,
+  getClassActionTexts,
+} from "../../../../utils/classActionConfirm";
 import "./ManageClassDetailsView.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -1132,11 +1136,11 @@ const ManageClassDetailsView = ({
 
   // Admin: confirm class rejection from modal
   const confirmClassReject = async () => {
-    if (!classRejectSelectedCode) return;
+    if (!classRejectSelectedCode || actionLoading === "admin-reject") return;
     try {
       setActionLoading("admin-reject");
       await classService.rejeterClasse(classId, classRejectSelectedCode);
-      message.success("Classe rejetée avec succès");
+      message.success(getClassActionTexts("reject").success);
       setClassRejectModalVisible(false);
       await loadClassDetails();
     } catch (error) {
@@ -1146,19 +1150,26 @@ const ManageClassDetailsView = ({
       setActionLoading(null);
     }
   };
-  const handleApprove = async () => {
-    if (!classId) return;
-    try {
-      setActionLoading("approve");
-      await classService.approuverClasse(classId);
-      message.success("Classe approuvée avec succès");
-      await loadClassDetails();
-    } catch (error) {
-      console.error("Error approving class:", error);
-      message.error("Erreur lors de l'approbation de la classe");
-    } finally {
-      setActionLoading(null);
-    }
+  const handleApprove = () => {
+    if (!classId || actionLoading) return;
+    const texts = getClassActionTexts("approve", classDetails?.nom);
+    confirmClassAction({
+      action: "approve",
+      className: classDetails?.nom,
+      onConfirm: async () => {
+        try {
+          setActionLoading("approve");
+          await classService.approuverClasse(classId);
+          message.success(texts.success);
+          await loadClassDetails();
+        } catch (error) {
+          console.error("Error approving class:", error);
+          message.error(texts.error);
+        } finally {
+          setActionLoading(null);
+        }
+      },
+    });
   };
   const handleApproveByEstablishment = async (classeId, etablissementId) => {
     try {
@@ -1241,12 +1252,19 @@ const ManageClassDetailsView = ({
     }
   };
   const showRejectConfirm = () => {
+    const isSelf = canSelfApproveReject();
+    const rejectTexts = getClassActionTexts("reject", classDetails?.nom);
     confirm({
-      title: "Confirmer le rejet de la classe",
+      title: isSelf ? "Confirmer le rejet de la classe" : rejectTexts.title,
       icon: <FontAwesomeIcon icon={faCircleExclamation} />,
+      centered: true,
       content: (
         <div>
-          <p>Êtes-vous sûr de vouloir rejeter cette classe ?</p>
+          <p>
+            {isSelf
+              ? "Êtes-vous sûr de vouloir rejeter cette classe ?"
+              : rejectTexts.message}
+          </p>
           <Form layout="vertical" form={form}>
             <Form.Item
               label="Motifs de rejet"
@@ -1333,15 +1351,11 @@ const ManageClassDetailsView = ({
     }
   };
   const showDeleteConfirm = () => {
-    confirm({
-      title: "Confirmer la suppression de la classe",
-      icon: <FontAwesomeIcon icon={faCircleExclamation} />,
-      content:
-        "Êtes-vous sûr de vouloir supprimer définitivement cette classe ? Cette action est irréversible.",
-      okText: "Supprimer",
-      okType: "danger",
-      cancelText: "Annuler",
-      onOk: handleDelete,
+    if (actionLoading) return;
+    confirmClassAction({
+      action: "delete",
+      className: classDetails?.nom,
+      onConfirm: handleDelete,
     });
   };
   const handleDelete = async () => {
@@ -1367,11 +1381,11 @@ const ManageClassDetailsView = ({
     try {
       setActionLoading("delete");
       await classService.supprimerClasse(classId);
-      message.success("Classe supprimée avec succès");
+      message.success(getClassActionTexts("delete").success);
       onBack();
     } catch (error) {
       console.error("Error deleting class:", error);
-      message.error("Erreur lors de la suppression de la classe");
+      message.error(getClassActionTexts("delete").error);
       setActionLoading(null);
     }
   };
@@ -3468,6 +3482,9 @@ const ManageClassDetailsView = ({
               </button>
             </div>
             <div className="px-5 py-4 space-y-4">
+              <p className="text-sm text-slate-700">
+                {getClassActionTexts("reject", classDetails?.nom).message}
+              </p>
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                   Motif de rejet <span className="text-red-500">*</span>
@@ -3530,7 +3547,8 @@ const ManageClassDetailsView = ({
             <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50/50">
               <button
                 onClick={() => setClassRejectModalVisible(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                disabled={actionLoading === "admin-reject"}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
               >
                 Annuler
               </button>
@@ -3554,7 +3572,7 @@ const ManageClassDetailsView = ({
                     }}
                   />
                 )}
-                Confirmer le rejet
+                Confirmer
               </button>
             </div>
           </div>

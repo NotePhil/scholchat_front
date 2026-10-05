@@ -8,6 +8,11 @@ import DocumentViewer from "../../../../../components/viewers/DocumentViewer";
 import { getDarkModeClasses } from "../../../../../utils/darkModeUtils";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useSelector } from "react-redux";
+import {
+  PROFESSOR_STATUS,
+  getProfessorStatusDisplay,
+} from "../../../../../utils/professorVerification";
+
 
 // Extracts relative storage key from full Wasabi/MinIO URL — never use raw URLs directly
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -37,6 +42,26 @@ import {
   faUsers,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+
+// Professeur dont les pièces attendent l'examen de l'administrateur : soit un
+// compte jamais activé (etat AWAITING_VALIDATION), soit un compte déjà actif
+// (activation partielle) dont les pièces ont été déposées.
+const isAwaitingReview = (prof) =>
+  prof?.etat === "AWAITING_VALIDATION" ||
+  prof?.statutVerification === PROFESSOR_STATUS.EN_ATTENTE_VALIDATION;
+
+const VerificationBadge = ({ status, className = "" }) => {
+  const display = getProfessorStatusDisplay(status);
+  if (!display) return null;
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${display.className} ${className}`}
+      title="Vérification des pièces"
+    >
+      {display.label}
+    </span>
+  );
+};
 const toRelativePath = (raw) => {
   if (!raw || !raw.startsWith("http")) return raw;
   try {
@@ -267,6 +292,24 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
       ) {
         // Admin/gestionnaire: see all professors
         allProfessors = await scholchatService.getAllProfessors();
+        // GET /professeurs does not carry statutVerification: merge it from the
+        // pending list (which also includes ACTIVE professors whose documents
+        // await review).
+        if (rawRole !== "GESTIONNAIRE" && Array.isArray(allProfessors)) {
+          try {
+            const pending = await scholchatService.getPendingProfessors();
+            const byId = new Map(
+              (Array.isArray(pending) ? pending : []).map((p) => [p.id, p]),
+            );
+            allProfessors = allProfessors.map((p) =>
+              byId.has(p.id) && byId.get(p.id).statutVerification
+                ? { ...p, statutVerification: byId.get(p.id).statutVerification }
+                : p,
+            );
+          } catch {
+            // the list stays usable without the verification status
+          }
+        }
       } else if (rawRole === "PROFESSOR" || rawRole === "PROFESSEUR") {
         // Professor: see only collaborators (professors with pub rights on their classes), excluding self
         try {
@@ -310,7 +353,9 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             .includes(searchTerm.toLowerCase()),
       );
     }
-    if (filterStatus !== "all") {
+    if (filterStatus === "AWAITING_VALIDATION") {
+      filtered = filtered.filter(isAwaitingReview);
+    } else if (filterStatus !== "all") {
       filtered = filtered.filter((prof) => prof.etat === filterStatus);
     }
     setFilteredProfessors(filtered);
@@ -403,10 +448,47 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const [selectedMotifCode, setSelectedMotifCode] = useState("");
   const [motifSupplementaire, setMotifSupplementaire] = useState("");
   const [motifsLoading, setMotifsLoading] = useState(false);
+  // GET /utilisateurs/{id} returns the verification status, rejection reason
+  // and documents, which GET /professeurs/{id} does not.
+  const loadProfessorDetails = async (professorId, base = null) => {
+    let merged = base;
+    try {
+      const details = await scholchatService.getProfessorById(professorId);
+      merged = { ...(merged || {}), ...(details || {}) };
+    } catch {
+      // keep what we have
+    }
+    try {
+      const user = await scholchatService.getUserById(professorId);
+      if (user) {
+        merged = {
+          ...(merged || {}),
+          statutVerification: user.statutVerification,
+          motifRejetVerification: user.motifRejetVerification,
+          hasUploaded: user.hasUploaded ?? merged?.hasUploaded,
+          cniUrlRecto: user.cniUrlRecto ?? merged?.cniUrlRecto,
+          cniUrlVerso: user.cniUrlVerso ?? merged?.cniUrlVerso,
+          selfieUrl: user.selfieUrl ?? merged?.selfieUrl,
+        };
+      }
+    } catch {
+      // verification status unavailable
+    }
+    return merged;
+  };
   const handleViewUser = (professor) => {
     setViewingProfessor(professor);
     setActionError("");
     setActionSuccess("");
+    const role = (localStorage.getItem("userRole") || "").toUpperCase();
+    if (role === "ADMIN" || role === "ROLE_ADMIN") {
+      loadProfessorDetails(professor.id, professor).then((merged) => {
+        if (merged)
+          setViewingProfessor((current) =>
+            current && current.id === professor.id ? merged : current,
+          );
+      });
+    }
   };
   const handleSuccess = () => {
     setIsViewModalOpen(false);
@@ -428,14 +510,18 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     try {
       setActionLoading(true);
       setActionError("");
-      await scholchatService.validateProfessor(prof.id);
-      setActionSuccess("Professeur validé avec succès.");
+      const result = await scholchatService.validateProfessor(prof.id);
+      setActionSuccess(
+        result?.statutVerification === PROFESSOR_STATUS.DOCUMENTS_MANQUANTS
+          ? "Compte activé partiellement : le professeur doit encore déposer ses pièces, qui devront être validées."
+          : "Professeur validé avec succès.",
+      );
       // Refresh the professor data
-      const updated = await scholchatService.getProfessorById(prof.id);
-      setViewingProfessor(updated);
+      const updated = await loadProfessorDetails(prof.id, prof);
+      if (updated) setViewingProfessor(updated);
       await loadData();
     } catch (err) {
-      setActionError("Erreur lors de la validation : " + err.message);
+      setActionError(err.message || "Erreur lors de la validation.");
     } finally {
       setActionLoading(false);
     }
@@ -466,13 +552,14 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
       );
       setShowRejectModal(false);
       setActionSuccess("Professeur rejeté.");
-      const updated = await scholchatService.getProfessorById(
+      const updated = await loadProfessorDetails(
         viewingProfessor.id,
+        viewingProfessor,
       );
-      setViewingProfessor(updated);
+      if (updated) setViewingProfessor(updated);
       await loadData();
     } catch (err) {
-      setActionError("Erreur lors du rejet : " + err.message);
+      setActionError(err.message || "Erreur lors du rejet.");
     } finally {
       setActionLoading(false);
     }
@@ -601,7 +688,20 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                       >
                         {sc.label}
                       </span>
+                      {isAdmin && (
+                        <VerificationBadge
+                          status={prof.statutVerification}
+                          className="font-bold"
+                        />
+                      )}
                     </div>
+                    {isAdmin &&
+                      prof.statutVerification === PROFESSOR_STATUS.REJETE &&
+                      prof.motifRejetVerification && (
+                        <p className="text-red-100 text-xs mb-1">
+                          Motif du refus : {prof.motifRejetVerification}
+                        </p>
+                      )}
                     <div className="flex items-center gap-3 flex-wrap">
                       {prof.email && (
                         <span className="text-blue-100 text-xs">
@@ -616,12 +716,11 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                     </div>
                   </div>
                 </div>
-                {/* Row 3: admin action buttons — centered, only for AWAITING_VALIDATION */}
+                {/* Row 3: admin action buttons — centered, only for professors awaiting review */}
                 {isAdmin &&
-                  (prof.etat === "AWAITING_VALIDATION" ||
-                    prof.etat === "PENDING") && (
+                  (isAwaitingReview(prof) || prof.etat === "PENDING") && (
                     <div className="flex items-center justify-center gap-3 pt-1 pb-1 flex-wrap">
-                      {prof.etat === "AWAITING_VALIDATION" && (
+                      {isAwaitingReview(prof) && (
                         <>
                           <button
                             onClick={() => handleValidateProfessor(prof)}
@@ -800,7 +899,8 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                             </div>
                           </div>
                         ))}
-                      {prof.hasUploaded && (
+                      {/* Identity documents are admin-only (used for validation) */}
+                      {isAdmin && prof.hasUploaded && (
                         <div className="pt-2 border-t border-slate-100">
                           <p className="text-xs text-slate-400 font-medium mb-1.5">
                             Documents uploadés
@@ -986,7 +1086,9 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   </div>
 
                   {/* Documents card — below Classes Modérées */}
-                  {prof.hasUploaded &&
+                  {/* Identity documents are admin-only (used for validation) */}
+                  {isAdmin &&
+                    prof.hasUploaded &&
                     (prof.cniUrlRecto ||
                       prof.cniUrlVerso ||
                       prof.selfieUrl) && (
@@ -1433,8 +1535,7 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                 </p>
                 <p className="text-lg sm:text-3xl font-bold text-amber-600 mt-1">
                   {
-                    professors.filter((p) => p.etat === "AWAITING_VALIDATION")
-                      .length
+                    professors.filter(isAwaitingReview).length
                   }
                 </p>
               </div>
@@ -1635,6 +1736,14 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                         >
                           {getStatusText(professor.etat)}
                         </span>
+                        {isAdmin &&
+                          professor.statutVerification &&
+                          professor.statutVerification !== PROFESSOR_STATUS.VALIDE && (
+                            <VerificationBadge
+                              status={professor.statutVerification}
+                              className="ml-1 mt-1"
+                            />
+                          )}
                       </div>
                     </div>
                     <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
@@ -1982,6 +2091,14 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                           ></div>
                           {getStatusText(professor.etat)}
                         </span>
+                        {isAdmin &&
+                          professor.statutVerification &&
+                          professor.statutVerification !== PROFESSOR_STATUS.VALIDE && (
+                            <VerificationBadge
+                              status={professor.statutVerification}
+                              className="ml-1"
+                            />
+                          )}
                       </td>
 
                       <td className="hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">

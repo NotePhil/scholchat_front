@@ -17,6 +17,7 @@ import {
   Area,
 } from "recharts";
 import { scholchatService } from "../../../services/ScholchatService";
+import { classService } from "../../../services/ClassService";
 import axios from "axios";
 
 // ─── Inline MatiereService ────────────────────────────────────────────────────
@@ -183,7 +184,16 @@ const ChartCard = ({ title, icon: Icon, children, isDark, className = "" }) => (
 );
 
 // ─── Main component ───────────────────────────────────────────────────────────
-const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
+const DashboardContent = ({
+  isDark,
+  currentTheme,
+  themes,
+  colorSchemes,
+  userRole,
+}) => {
+  // Platform-wide figures (all professors, pending validations, every class)
+  // are admin-only; professors/tutors only see their own classes.
+  const isAdminView = (userRole || "").toLowerCase() === "admin";
   const { t, changeLanguage } = useTranslation();
   const currentLanguage = useSelector((state) => state.ui.currentLanguage);
   useEffect(() => {
@@ -209,11 +219,18 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     setLoading(true);
     setError(null);
     try {
+      const userId = localStorage.getItem("userId");
       const [profRes, classRes, matRes, pendRes] = await Promise.allSettled([
-        scholchatService.getAllProfessors(),
-        scholchatService.getAllClasses(),
+        isAdminView ? scholchatService.getAllProfessors() : Promise.resolve([]),
+        isAdminView
+          ? scholchatService.getAllClasses()
+          : userId
+            ? classService.obtenirClassesUtilisateur(userId)
+            : Promise.resolve([]),
         matiereService.getAllMatieres(),
-        scholchatService.getPendingProfessors(),
+        isAdminView
+          ? scholchatService.getPendingProfessors()
+          : Promise.resolve([]),
       ]);
       const profs = profRes.status === "fulfilled" ? profRes.value || [] : [];
       const cls = classRes.status === "fulfilled" ? classRes.value || [] : [];
@@ -241,7 +258,8 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   };
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdminView]);
 
   // ── Chart data ──────────────────────────────────────────────────────────────
   const pieData = matieres.slice(0, 10).map((m, i) => ({
@@ -478,33 +496,51 @@ const DashboardContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
         </div>
 
         {/* ── Secondary KPIs ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5">
-          {[
-            {
-              label: "Professeurs",
-              value: stats.totalProfessors,
-              icon: GraduationCap,
-              color: "#3b82f6",
-            },
-            {
-              label: "En attente valid.",
-              value: stats.pendingProfessors,
-              icon: Clock,
-              color: "#f59e0b",
-            },
-            {
-              label: "Matières",
-              value: stats.totalMatieres,
-              icon: Layers,
-              color: "#8b5cf6",
-            },
-            {
-              label: "Établissements",
-              value: 0,
-              icon: School,
-              color: "#10b981",
-            },
-          ].map((item) => (
+        <div
+          className={`grid grid-cols-2 ${isAdminView ? "sm:grid-cols-4" : ""} gap-3 sm:gap-5`}
+        >
+          {(isAdminView
+            ? [
+                {
+                  label: "Professeurs",
+                  value: stats.totalProfessors,
+                  icon: GraduationCap,
+                  color: "#3b82f6",
+                },
+                {
+                  label: "En attente valid.",
+                  value: stats.pendingProfessors,
+                  icon: Clock,
+                  color: "#f59e0b",
+                },
+                {
+                  label: "Matières",
+                  value: stats.totalMatieres,
+                  icon: Layers,
+                  color: "#8b5cf6",
+                },
+                {
+                  label: "Établissements",
+                  value: 0,
+                  icon: School,
+                  color: "#10b981",
+                },
+              ]
+            : [
+                {
+                  label: "Mes classes",
+                  value: classes.length,
+                  icon: School,
+                  color: "#3b82f6",
+                },
+                {
+                  label: "Matières",
+                  value: stats.totalMatieres,
+                  icon: Layers,
+                  color: "#8b5cf6",
+                },
+              ]
+          ).map((item) => (
             <div
               key={item.label}
               className={`rounded-2xl border p-4 flex items-center gap-3 ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"} shadow-sm`}

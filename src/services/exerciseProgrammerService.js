@@ -1,5 +1,6 @@
 import axios from "axios";
 import { applyAuthInterceptors } from "../utils/axiosConfig";
+import { toServerDateTime } from "../utils/dateUtils";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -35,9 +36,9 @@ class ExerciseProgrammerService {
       const formattedData = {
         exerciseId: exerciseProgrammerData.exerciseId,
         programmeParId: exerciseProgrammerData.programmeParId,
-        dateExoPrevue: exerciseProgrammerData.dateExoPrevue,
-        dateDebutExoEffectif: exerciseProgrammerData.dateDebutExoEffectif,
-        dateFinExoEffectif: exerciseProgrammerData.dateFinExoEffectif,
+        dateExoPrevue: toServerDateTime(exerciseProgrammerData.dateExoPrevue),
+        dateDebutExoEffectif: toServerDateTime(exerciseProgrammerData.dateDebutExoEffectif),
+        dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat,
         classeIds: exerciseProgrammerData.classeIds || [],
       };
@@ -77,9 +78,9 @@ class ExerciseProgrammerService {
       const formattedData = {
         exerciseId: exerciseProgrammerData.exerciseId,
         programmeParId: exerciseProgrammerData.programmeParId,
-        dateExoPrevue: exerciseProgrammerData.dateExoPrevue,
-        dateDebutExoEffectif: exerciseProgrammerData.dateDebutExoEffectif,
-        dateFinExoEffectif: exerciseProgrammerData.dateFinExoEffectif,
+        dateExoPrevue: toServerDateTime(exerciseProgrammerData.dateExoPrevue),
+        dateDebutExoEffectif: toServerDateTime(exerciseProgrammerData.dateDebutExoEffectif),
+        dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat,
         classeIds: exerciseProgrammerData.classeIds || [],
       };
@@ -239,8 +240,9 @@ class ExerciseProgrammerService {
       const formattedData = {
         utilisateurId: participationData.utilisateurId,
         exerciseProgrammerId: participationData.exerciseProgrammerId,
-        dateDebut: participationData.dateDebut || new Date().toISOString(),
-        dateFin: participationData.dateFin,
+        dateDebut:
+          toServerDateTime(participationData.dateDebut) || new Date().toISOString(),
+        dateFin: toServerDateTime(participationData.dateFin),
       };
 
       const response = await exerciseProgrammerApi.post(
@@ -386,8 +388,7 @@ class ExerciseProgrammerService {
   formatDateTime(dateString) {
     if (!dateString) return null;
     try {
-      const date = new Date(dateString);
-      return date.toISOString();
+      return toServerDateTime(dateString);
     } catch (error) {
       console.error("Date formatting error:", error);
       return null;

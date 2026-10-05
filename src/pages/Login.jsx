@@ -264,7 +264,12 @@ export const Login = ({ theme }) => {
           selectedRole: role,
         }),
       });
-      if (!response.ok) throw new Error("Role switch failed");
+      if (!response.ok) {
+        // e.g. offer expired for the professor profile, or a profile awaiting validation
+        const errData = await response.json().catch(() => ({}));
+        if (errData.code === "ABONNEMENT_EXPIRE") setOffreExpireeBlocked(true);
+        throw new Error(errData.message || "Impossible de se connecter avec ce profil.");
+      }
       const newAuthData = await response.json();
 
       // Check if parent with multiple children
@@ -325,6 +330,7 @@ export const Login = ({ theme }) => {
     <RoleSelectorModal
       isOpen={showRoleSelector}
       roles={availableRoles}
+      pendingRoles={pendingAuthData?.pendingRoles || []}
       onSelect={handleRoleSelected}
       onClose={() => setShowRoleSelector(false)}
     />

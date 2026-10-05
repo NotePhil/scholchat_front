@@ -7,6 +7,14 @@ import {
   faTrashCan,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { parseMessageDate, toUtilisateurPayload } from "./messageUtils";
+import { messageService } from "../../../../services/MessageService";
+import { useMessageAttachments, MAX_ATTACHMENTS } from "./messageMedia";
+import {
+  AttachButton,
+  AttachmentPreviewList,
+  MessageAttachments,
+} from "./MessageAttachments";
 const QUOTE_SEPARATOR = "--- Message original ---";
 const MessageContent = ({ contenu, isDark }) => {
   if (!contenu) return null;
@@ -34,25 +42,27 @@ const MessageDetailPanel = ({
   getUserInitials,
   getUserDisplay,
   currentUser,
-  onRefreshMessages,
+  onMessageSent,
   handleMarkAsRead,
+  onDeleteMessage,
+  onDeleteConversation,
 }) => {
+  const attachments = useMessageAttachments();
   const [showReplyField, setShowReplyField] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [replySubject, setReplySubject] = useState("");
   const [isReplying, setIsReplying] = useState(false);
   const [replyError, setReplyError] = useState("");
 
-  // Auto-mark as read when message is opened
+  // Auto-mark every unread RECEIVED message of the open conversation as read
+  // (also covers replies that arrive while it is open).
   useEffect(() => {
-    if (
-      selectedMessage &&
-      !selectedMessage.read &&
-      selectedMessage.expediteur?.id !== currentUser?.id
-    ) {
-      handleMarkAsRead(selectedMessage.id, true);
-    }
-  }, [selectedMessage?.id]);
+    if (!selectedMessage) return;
+    const myId = currentUser?.id || localStorage.getItem("userId");
+    (selectedMessage.thread || [selectedMessage])
+      .filter((m) => !m.read && m.expediteur?.id !== myId)
+      .forEach((m) => handleMarkAsRead(m.id, true));
+  }, [selectedMessage?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const handleReplyClick = () => {
     setShowReplyField(true);
     const originalSubject = selectedMessage.objet || "Sans objet";
@@ -69,82 +79,43 @@ const MessageDetailPanel = ({
     const senderName = sender
       ? `${sender.prenom || ""} ${sender.nom || ""}`.trim()
       : "Inconnu";
-    const date = selectedMessage?.dateCreation
-      ? new Date(selectedMessage.dateCreation).toLocaleString("fr-FR")
-      : "";
+    const parsed = parseMessageDate(selectedMessage?.dateCreation);
+    const date = parsed ? parsed.toLocaleString("fr-FR") : "";
     const originalBody = selectedMessage?.contenu || "";
+    if (!replyContent.trim()) return "";
     return `${replyContent}\n\n--- Message original ---\nDe : ${senderName}\nDate : ${date}\n\n${originalBody}`;
   };
   const handleDiscardReply = () => {
+    attachments.clear();
     setShowReplyField(false);
     setReplyContent("");
     setReplySubject("");
     setReplyError("");
   };
   const handleSendReply = async () => {
-    if (!replyContent.trim()) {
-      setReplyError("Veuillez saisir un message");
+    if (!replyContent.trim() && attachments.medias.length === 0) {
+      setReplyError("Veuillez saisir un message ou joindre un fichier");
       return;
     }
     setIsReplying(true);
     setReplyError("");
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      const senderId = localStorage.getItem("userId");
-      const recipient = replyTarget;
-      const senderData = {
-        type: "utilisateur",
-        id: currentUser?.id || senderId,
-        nom: currentUser?.nom || localStorage.getItem("userName") || "",
-        prenom: currentUser?.prenom || "",
-        email: currentUser?.email || localStorage.getItem("userEmail") || "",
-        telephone: currentUser?.telephone || "",
-        adresse: currentUser?.adresse || "",
-        etat: "ACTIVE",
-        creationDate: currentUser?.creationDate || null,
-        admin: currentUser?.admin || false,
-      };
-      const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            objet: replySubject,
-            contenu: buildReplyBody(),
-            dateCreation: new Date().toISOString(),
-            etat: "envoyé",
-            expediteur: senderData,
-            destinataires: [
-              {
-                type: "utilisateur",
-                id: recipient.id,
-                nom: recipient.nom || "",
-                prenom: recipient.prenom || "",
-                email: recipient.email || "",
-                telephone: recipient.telephone || "",
-                adresse: recipient.adresse || "",
-                etat: "ACTIVE",
-                creationDate: recipient.creationDate || null,
-                admin: recipient.admin || false,
-              },
-            ],
-          }),
-        },
-      );
-      if (!response.ok) {
-        throw new Error("Failed to send reply");
-      }
-      console.log("Reply sent successfully");
+      const sent = await messageService.sendMessage({
+        objet: replySubject?.trim() || undefined,
+        contenu: buildReplyBody(),
+        // A broadcast you sent has no single partner: reply to all its recipients.
+        destinataires: (selectedMessage?.isBroadcast
+          ? selectedMessage.destinataires || []
+          : [replyTarget]
+        ).map(toUtilisateurPayload),
+        ...(attachments.medias.length > 0 && { medias: attachments.medias }),
+      });
       handleDiscardReply();
-      // No need to call onRefreshMessages — the WebSocket push will
-      // deliver the new message to allMessages automatically.
+      // The WebSocket NEW_MESSAGE push also delivers it (upsert dedupes by id).
+      onMessageSent?.(sent);
     } catch (error) {
       console.error("Error sending reply:", error);
-      setReplyError("Erreur lors de l'envoi de la réponse");
+      setReplyError(error?.message || "Erreur lors de l'envoi de la réponse");
     } finally {
       setIsReplying(false);
     }
@@ -153,7 +124,15 @@ const MessageDetailPanel = ({
   // The conversation partner (other person) — falls back to the latest
   // message's sender for broadcasts that have no single other party.
   const replyTarget = selectedMessage?.partner || selectedMessage?.expediteur;
-  const isNotSender = replyTarget?.id !== currentUser?.id;
+  const canSendReply =
+    !isReplying &&
+    !attachments.uploading &&
+    !attachments.hasErrors &&
+    (!!replyContent.trim() || attachments.medias.length > 0);
+  const isNotSender =
+    !!selectedMessage?.isBroadcast ||
+    (!!replyTarget?.id &&
+      replyTarget.id !== (currentUser?.id || localStorage.getItem("userId")));
   return (
     <div
       className={`flex flex-col h-full ${isDark ? "bg-gray-800" : "bg-white"}`}
@@ -221,6 +200,15 @@ const MessageDetailPanel = ({
             />
             Transférer
           </button>
+          {onDeleteConversation && (
+            <button
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-red-600 ${isDark ? "border-gray-600 hover:bg-gray-700" : "border-gray-300 hover:bg-red-50"}`}
+              onClick={() => onDeleteConversation(selectedMessage)}
+              title="Supprimer la conversation"
+            >
+              <FontAwesomeIcon icon={faTrashCan} style={{ fontSize: 16 }} />
+            </button>
+          )}
         </div>
       </div>
       <div
@@ -264,13 +252,34 @@ const MessageDetailPanel = ({
                       {formatDate(msg.dateCreation)}
                     </div>
                   </div>
+                  {onDeleteMessage && !String(msg.id).startsWith("temp-") && (
+                    <button
+                      className={`ml-auto p-2 rounded-full opacity-60 hover:opacity-100 hover:text-red-600 ${isDark ? "hover:bg-gray-600" : "hover:bg-gray-200"}`}
+                      onClick={() => onDeleteMessage(msg)}
+                      title="Supprimer ce message"
+                    >
+                      <FontAwesomeIcon icon={faTrashCan} style={{ fontSize: 13 }} />
+                    </button>
+                  )}
                 </div>
                 <MessageContent contenu={msg.contenu} isDark={isDark} />
+                <MessageAttachments
+                  medias={msg.medias}
+                  isDark={isDark}
+                  className="mt-3"
+                />
               </div>
             ))}
           </div>
         ) : (
-          <MessageContent contenu={selectedMessage?.contenu} isDark={isDark} />
+          <>
+            <MessageContent contenu={selectedMessage?.contenu} isDark={isDark} />
+            <MessageAttachments
+              medias={selectedMessage?.medias}
+              isDark={isDark}
+              className="mt-3"
+            />
+          </>
         )}
       </div>
       {showReplyField && (
@@ -331,6 +340,28 @@ const MessageDetailPanel = ({
               placeholder="Tapez votre réponse..."
             />
           </div>
+          <div className="mb-3 space-y-2">
+            <AttachButton
+              onFiles={(files) => {
+                if (attachments.addFiles(files) > 0) {
+                  setReplyError(
+                    `Maximum ${MAX_ATTACHMENTS} pièces jointes par message.`,
+                  );
+                }
+              }}
+              disabled={
+                isReplying || attachments.items.length >= MAX_ATTACHMENTS
+              }
+              isDark={isDark}
+              label="Joindre"
+            />
+            <AttachmentPreviewList
+              items={attachments.items}
+              onRemove={attachments.removeItem}
+              onRetry={attachments.retryItem}
+              isDark={isDark}
+            />
+          </div>
           <div className="flex gap-2 justify-end">
             <button
               className={`px-4 py-2 text-sm rounded border ${isDark ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
@@ -347,11 +378,11 @@ const MessageDetailPanel = ({
               Annuler
             </button>
             <button
-              className={`px-4 py-2 text-sm rounded text-white flex items-center gap-2 ${isReplying || !replyContent.trim() ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+              className={`px-4 py-2 text-sm rounded text-white flex items-center gap-2 ${!canSendReply ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
               onClick={handleSendReply}
-              disabled={isReplying || !replyContent.trim()}
+              disabled={!canSendReply}
             >
-              {isReplying ? (
+              {isReplying || attachments.uploading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   Envoi...

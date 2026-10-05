@@ -22,6 +22,7 @@ import {
   faGear,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../utils/faIconAdapter";
+import { useUnreadMessageCount } from "../../../hooks/useMessageSocket";
 const Activity = asIconComponent(faHeartPulse);
 const Book = asIconComponent(faBook);
 const BookOpen = asIconComponent(faBookOpen);
@@ -48,6 +49,8 @@ const Sidebar = ({
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  // Live unread-messages count (socket-driven, no polling).
+  const unreadMessages = useUnreadMessageCount();
   const [openDropdown, setOpenDropdown] = useState({
     users: false,
     classes: false,
@@ -317,21 +320,13 @@ const Sidebar = ({
         tab: "messages",
       });
     } else if (isGestionnaire) {
+      // Creating / deleting an établissement is admin-only: the gestionnaire
+      // only manages (views / edits) their own établissements.
       roleItems = [
         {
           name: t("sidebar.establishments"),
           icon: School,
-          dropdown: "establishments",
-          items: [
-            {
-              name: t("sidebar.createEstablishment"),
-              tab: "create-establishment",
-            },
-            {
-              name: t("sidebar.manageEstablishment"),
-              tab: "manage-establishment",
-            },
-          ],
+          tab: "manage-establishment",
         },
         {
           name: t("sidebar.classes"),
@@ -356,15 +351,12 @@ const Sidebar = ({
       ];
     } else {
       roleItems = [
+        // Motifs de rejet is admin-only on the backend (/motifsRejets/** →
+        // hasRole ADMIN), so it is not offered to unrecognised roles.
         {
           name: t("sidebar.classes"),
           icon: Building2,
           tab: "classes",
-        },
-        {
-          name: t("sidebar.rejectionReasons"),
-          icon: BookOpen,
-          tab: "motifs-de-rejet",
         },
         {
           name: t("sidebar.messaging"),
@@ -525,6 +517,14 @@ const Sidebar = ({
                         />
                       </span>
                       <span className="menu-text">{item.name}</span>
+                      {item.tab === "messages" && unreadMessages > 0 && (
+                        <span
+                          className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white min-w-[18px] text-center"
+                          aria-label={`${unreadMessages} message(s) non lu(s)`}
+                        >
+                          {unreadMessages > 99 ? "99+" : unreadMessages}
+                        </span>
+                      )}
                     </a>
                   </li>
                 )}

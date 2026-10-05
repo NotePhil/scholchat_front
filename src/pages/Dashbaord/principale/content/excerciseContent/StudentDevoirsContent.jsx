@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Empty, Tag, Spin } from "antd";
 import StudentExerciseView from "./StudentExerciseView";
+import StudentExerciseResultView from "./StudentExerciseResultView";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -11,6 +12,7 @@ import {
   faCircleCheck,
   faCirclePlay,
   faClock,
+  faEye,
   faFileLines,
   faTrophy,
 } from "@fortawesome/free-solid-svg-icons";
@@ -21,6 +23,24 @@ const getUserId = () => {
   return isParent
     ? localStorage.getItem("selectedChildId") || localStorage.getItem("userId")
     : localStorage.getItem("userId");
+};
+/**
+ * Who is looking: the student, or a parent following the selected child.
+ * A minor child has no account of their own, so the parent hands in the
+ * homework for them; an adult child answers from their own login and the
+ * parent only follows the copies and marks.
+ */
+const getViewer = () => {
+  const isParent = (localStorage.getItem("userRole") || "")
+    .toUpperCase()
+    .includes("PARENT");
+  const childId = localStorage.getItem("selectedChildId");
+  if (!isParent || !childId) {
+    return { isParentView: false, childName: "", canAnswer: true };
+  }
+  const childName = (localStorage.getItem("selectedChildName") || "").trim();
+  const hasAccount = localStorage.getItem("selectedChildHasAccount") === "true";
+  return { isParentView: true, childName, canAnswer: !hasAccount };
 };
 const getAuthHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("accessToken") || localStorage.getItem("authToken")}`,
@@ -116,7 +136,10 @@ const StudentDevoirsContent = () => {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedDevoir, setSelectedDevoir] = useState(null);
+  const [resultDevoir, setResultDevoir] = useState(null);
+  const [viewer, setViewer] = useState(getViewer);
   const load = useCallback(async () => {
+    setViewer(getViewer());
     const userId = getUserId();
     if (!userId) return;
     setLoading(true);
@@ -214,9 +237,24 @@ const StudentDevoirsContent = () => {
 
   // ── open devoir for submission ─────────────────────────────────────────────
 
+  if (resultDevoir) {
+    return (
+      <StudentExerciseResultView
+        exerciseId={resultDevoir.exerciseId}
+        exerciseName={resultDevoir.nom}
+        learnerId={getUserId()}
+        learnerName={viewer.isParentView ? viewer.childName : ""}
+        participation={resultDevoir.myParticipation}
+        onBack={() => setResultDevoir(null)}
+      />
+    );
+  }
+
   if (selectedDevoir) {
     return (
       <StudentExerciseView
+        learnerId={getUserId()}
+        learnerName={viewer.isParentView ? viewer.childName : ""}
         exerciseId={selectedDevoir.exerciseId}
         exerciseProgrammerId={selectedDevoir.exerciseProgrammerId}
         exerciseName={selectedDevoir.nom}
@@ -288,7 +326,11 @@ const StudentDevoirsContent = () => {
               fontSize: 22,
             }}
           />
-          <span className="text-base font-bold">Mes Devoirs</span>
+          <span className="text-base font-bold">
+            {viewer.isParentView
+              ? `Devoirs${viewer.childName ? ` de ${viewer.childName}` : ""}`
+              : "Mes Devoirs"}
+          </span>
           <button
             onClick={load}
             className="ml-auto p-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors"
@@ -302,7 +344,11 @@ const StudentDevoirsContent = () => {
           </button>
         </div>
         <p className="text-xs opacity-80 mb-3">
-          Retrouvez ici tous les devoirs assignés par vos professeurs.
+          {!viewer.isParentView
+            ? "Retrouvez ici tous les devoirs assignés par vos professeurs."
+            : viewer.canAnswer
+              ? "Votre enfant n'a pas de compte personnel : vous rendez ses devoirs à sa place et suivez ses notes et corrections."
+              : "Votre enfant a son propre compte et rend ses devoirs lui-même. Vous suivez ici ses notes et corrections."}
         </p>
         <div className="flex flex-wrap gap-2">
           {[
@@ -538,8 +584,36 @@ const StudentDevoirsContent = () => {
                           : ""}
                       </span>
 
+                      {/* Submitted: open the copy (per-question marks once corrected) */}
+                      {isSubmitted && (
+                        <button
+                          onClick={() =>
+                            setResultDevoir({
+                              exerciseId: ep.exerciseId,
+                              nom: ep.nom,
+                              myParticipation: ep.myParticipation,
+                            })
+                          }
+                          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors border border-blue-200 text-blue-700 bg-white hover:bg-blue-50"
+                        >
+                          <FontAwesomeIcon icon={faEye} />
+                          {isGraded
+                            ? "Voir la correction"
+                            : viewer.isParentView
+                              ? "Voir la copie"
+                              : "Voir ma copie"}
+                        </button>
+                      )}
+
+                      {/* Adult child: answers from their own account */}
+                      {!isSubmitted && !viewer.canAnswer && (
+                        <span className="text-xs text-gray-500 italic">
+                          À rendre par {viewer.childName || "l'élève"}
+                        </span>
+                      )}
+
                       {/* Only show button if not yet submitted */}
-                      {!isSubmitted && (
+                      {!isSubmitted && viewer.canAnswer && (
                         <button
                           onClick={() =>
                             setSelectedDevoir({
@@ -553,7 +627,9 @@ const StudentDevoirsContent = () => {
                           className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${overdue ? "bg-red-600 hover:bg-red-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
                         >
                           <FontAwesomeIcon icon={faCirclePlay} />
-                          Rendre le devoir
+                          {viewer.isParentView
+                            ? "Rendre pour l'enfant"
+                            : "Rendre le devoir"}
                         </button>
                       )}
                     </div>

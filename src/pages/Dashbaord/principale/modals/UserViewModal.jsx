@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { rejectionService } from "../../../../services/RejectionService";
+import {
+  PROFESSOR_STATUS,
+  getProfessorStatusDisplay,
+} from "../../../../utils/professorVerification";
 import { minioS3Service } from "../../../../services/minioS3";
 import { useTranslation } from "../../../../hooks/useTranslation";
 
@@ -265,8 +269,27 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
     </div>
   );
 };
-const UserViewModal = ({ user, onClose, onSuccess }) => {
+const UserViewModal = ({ user: userProp, onClose, onSuccess }) => {
   const { t } = useTranslation();
+  // Verification status / documents from GET /utilisateurs/{id} (the lists the
+  // modal is opened from do not always carry statutVerification).
+  const [verificationDetails, setVerificationDetails] = useState(null);
+  const user = useMemo(() => {
+    if (!userProp || !verificationDetails) return userProp;
+    const d = verificationDetails;
+    return {
+      ...userProp,
+      statutVerification: d.statutVerification ?? userProp.statutVerification,
+      motifRejetVerification:
+        d.motifRejetVerification ?? userProp.motifRejetVerification,
+      hasUploaded: d.hasUploaded ?? userProp.hasUploaded,
+      cniUrlRecto: d.cniUrlRecto ?? userProp.cniUrlRecto,
+      cniUrlVerso: d.cniUrlVerso ?? userProp.cniUrlVerso,
+      selfieUrl: d.selfieUrl ?? userProp.selfieUrl,
+      matriculeProfesseur:
+        d.matriculeProfesseur ?? userProp.matriculeProfesseur,
+    };
+  }, [userProp, verificationDetails]);
   const [showRejectionOptions, setShowRejectionOptions] = useState(false);
   const [rejectionMotifs, setRejectionMotifs] = useState([]);
   const [selectedMotifs, setSelectedMotifs] = useState([]);
@@ -283,20 +306,46 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // This modal is also opened by professors (class member lists); the
+  // validation workflow and identity documents must stay admin-only.
+  const isAdminViewer =
+    (localStorage.getItem("userRole") || "")
+      .toUpperCase()
+      .replace("ROLE_", "") === "ADMIN";
+
   // Updated function to handle all possible status combinations
   const shouldShowActions = () => {
-    // Show actions for users awaiting validation
+    // Validate/reject are admin-only on the backend (/utilisateurs/
+    // professeurs/*/rejet, /utilisateurs/validerProfesseur/** → ADMIN).
+    if (!isAdminViewer) return false;
+    // Show actions for users awaiting validation — including ACTIVE
+    // professors ("activation partielle") whose documents await review.
     return (
       user?.etat === "AWAITING_VALIDATION" ||
       user?.etat === "EN_ATTENTE" ||
-      user?.etat === "EN_ATTENTE"
+      user?.statutVerification === PROFESSOR_STATUS.EN_ATTENTE_VALIDATION
     );
   };
+  useEffect(() => {
+    setVerificationDetails(null);
+    if (!isAdminViewer || !userProp?.id) return undefined;
+    let cancelled = false;
+    rejectionService
+      .getUserById(userProp.id)
+      .then((details) => {
+        if (!cancelled && details) setVerificationDetails(details);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProp?.id]);
   useEffect(() => {
     if (shouldShowActions()) {
       fetchRejectionMotifs();
     }
-    fetchUserDocuments();
+    if (isAdminViewer) fetchUserDocuments();
   }, [user]);
   const fetchRejectionMotifs = async () => {
     try {
@@ -454,16 +503,12 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
       }, 2000);
     } catch (err) {
       console.error("Échec du rejet:", err);
-      if (err.response?.status === 409 || err.response?.status === 500) {
-        setError(
-          err.message || "Échec du rejet du professeur. Veuillez réessayer.",
-        );
-      } else {
-        setSuccessMessage("Opération réussie (veuillez actualiser la page)");
-        setTimeout(() => {
-          handleSuccess();
-        }, 2000);
-      }
+      // rejectionService rethrows Error(response.data.message)
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Échec du rejet du professeur. Veuillez réessayer.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -472,24 +517,23 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
     try {
       setIsProcessing(true);
       setError(null);
-      await rejectionService.validateProfessor(user.id);
-      setSuccessMessage("Professeur approuvé avec succès");
+      const result = await rejectionService.validateProfessor(user.id);
+      setSuccessMessage(
+        result?.statutVerification === PROFESSOR_STATUS.DOCUMENTS_MANQUANTS
+          ? "Compte activé partiellement : le professeur doit encore déposer ses pièces, qui devront être validées."
+          : "Professeur approuvé avec succès",
+      );
       setTimeout(() => {
         handleSuccess();
       }, 2000);
     } catch (err) {
       console.error("Échec de l'approbation:", err);
-      if (err.response?.status === 409 || err.response?.status === 500) {
-        setError(
-          err.message ||
-            "Échec de l'approbation du professeur. Veuillez réessayer.",
-        );
-      } else {
-        setSuccessMessage("Opération réussie (veuillez actualiser la page)");
-        setTimeout(() => {
-          handleSuccess();
-        }, 2000);
-      }
+      // rejectionService rethrows Error(response.data.message)
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Échec de l'approbation du professeur. Veuillez réessayer.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -497,6 +541,18 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
   // Updated function to handle all status combinations
   const getVerificationStatusBadge = () => {
+    // Professor identity-document verification takes precedence over etat
+    const professorStatus = getProfessorStatusDisplay(user?.statutVerification);
+    if (professorStatus) {
+      return (
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-medium border ${professorStatus.className}`}
+          title="Vérification des pièces"
+        >
+          {professorStatus.label}
+        </span>
+      );
+    }
     const verificationStatus = user?.verificationStatus;
     const userState = user?.etat;
     const hasRejectionMotif = user?.motif;
@@ -548,6 +604,36 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
 
   // Updated function to handle processing status messages
   const getProcessingStatusMessage = () => {
+    switch (user?.statutVerification) {
+      case PROFESSOR_STATUS.VALIDE:
+        return {
+          type: "success",
+          message: "Les pièces de ce professeur ont été validées.",
+        };
+      case PROFESSOR_STATUS.EN_ATTENTE_VALIDATION:
+        return user?.etat === "ACTIVE"
+          ? {
+              type: "info",
+              message:
+                "Compte activé partiellement : les pièces déposées par ce professeur attendent votre validation.",
+            }
+          : null;
+      case PROFESSOR_STATUS.DOCUMENTS_MANQUANTS:
+        return {
+          type: "info",
+          message:
+            user?.etat === "ACTIVE"
+              ? "Compte activé partiellement : le professeur doit encore déposer ses pièces (CNI recto/verso et selfie), qui devront être validées."
+              : "Pièces manquantes : le professeur n'a pas encore déposé toutes ses pièces.",
+        };
+      case PROFESSOR_STATUS.REJETE:
+        return {
+          type: "error",
+          message: `Les pièces de ce professeur ont été refusées${user?.motifRejetVerification ? ` pour le motif suivant : ${user.motifRejetVerification}` : "."}`,
+        };
+      default:
+        break;
+    }
     const verificationStatus = user?.verificationStatus;
     const userState = user?.etat;
     const hasRejectionMotif = user?.motif;
@@ -844,7 +930,9 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                   </div>
                 </div>
 
-                {/* Documents Section */}
+                {/* Documents Section — identity documents (CNI, selfie) are
+                    admin-only: they exist for professor validation. */}
+                {isAdminViewer && (
                 <div className="bg-blue-50 rounded-xl p-4 sm:p-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
                     <FontAwesomeIcon
@@ -1075,6 +1163,7 @@ const UserViewModal = ({ user, onClose, onSuccess }) => {
                     </div>
                   )}
                 </div>
+                )}
               </div>
 
               {/* Actions Section - Responsive sidebar */}

@@ -41,6 +41,7 @@ import {
   faHouse,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../../utils/faIconAdapter";
+import { toLocalInputValue } from "../../../../../utils/dateUtils";
 const Calendar = asIconComponent(faCalendarDays);
 const Clock = asIconComponent(faClock);
 const Home = asIconComponent(faHouse);
@@ -1431,12 +1432,8 @@ const ActivitiesContent = () => {
       titre: activity.titre || "",
       description: activity.description || "",
       lieu: activity.eventDetails?.location || "",
-      heureDebut: activity.eventDetails?.startTime
-        ? activity.eventDetails.startTime.slice(0, 16)
-        : "",
-      heureFin: activity.eventDetails?.endTime
-        ? activity.eventDetails.endTime.slice(0, 16)
-        : "",
+      heureDebut: toLocalInputValue(activity.eventDetails?.startTime),
+      heureFin: toLocalInputValue(activity.eventDetails?.endTime),
       visibility: activity.visibility || "PUBLIC",
       classesIds: activity.selectedClasses || [],
       existingMedias: activity.medias || [],

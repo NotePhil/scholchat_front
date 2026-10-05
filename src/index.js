@@ -1,3 +1,6 @@
+// Must stay the first import: installs the X-Timezone header on axios/fetch
+// before any service module creates its axios instance.
+import './utils/timezone';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';

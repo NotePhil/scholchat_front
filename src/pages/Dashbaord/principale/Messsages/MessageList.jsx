@@ -13,6 +13,7 @@ import {
   faUsers,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { MessagePreviewText } from "./MessageAttachments";
 const MessageList = ({
   isDark,
   messages,
@@ -23,6 +24,7 @@ const MessageList = ({
   toggleMessageSelection,
   toggleStarMessage,
   handleMarkAsRead,
+  handleMarkConversationRead,
   markReadLocally,
   handleDeleteMessage,
   handleBulkDelete,
@@ -66,12 +68,15 @@ const MessageList = ({
               </span>
               <button
                 className={`p-2 rounded-full text-red-600 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
-                onClick={
-                  filterType === "trash" ? handleEmptyTrash : handleBulkDelete
+                onClick={handleBulkDelete}
+                title={
+                  filterType === "trash"
+                    ? "Restaurer la sélection"
+                    : "Supprimer la sélection"
                 }
               >
                 <FontAwesomeIcon
-                  icon={faTrashCan}
+                  icon={filterType === "trash" ? faRotateLeft : faTrashCan}
                   style={{
                     fontSize: 16,
                   }}
@@ -172,9 +177,9 @@ const MessageList = ({
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex items-center px-6 py-4 hover:shadow-md transition-all cursor-pointer group ${selectedMessage?.id === message.id ? (isDark ? "bg-blue-900" : "bg-blue-50") : isDark ? "hover:bg-gray-800" : "hover:bg-gray-50"} ${
+                className={`flex items-center px-6 py-4 hover:shadow-md transition-all cursor-pointer group ${selectedMessage?.conversationKey === message.conversationKey ? (isDark ? "bg-blue-900" : "bg-blue-50") : isDark ? "hover:bg-gray-800" : "hover:bg-gray-50"} ${
                   // Only show unread indicator when current user is a recipient (not sender)
-                  !message.read && message.expediteur?.id !== userId
+                  !message.read
                     ? "border-l-4 border-blue-500"
                     : ""
                 }`}
@@ -242,26 +247,19 @@ const MessageList = ({
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`font-medium truncate ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}
+                        className={`font-medium truncate ${!message.read ? "font-bold" : ""} ${isDark ? "text-white" : "text-gray-900"}`}
                       >
                         {getUserDisplay(message.partner || message.expediteur)}
                       </span>
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
-                      >
-                        {(message.partner || message.expediteur)?.role}
-                      </span>
+                      {(message.partner || message.expediteur)?.role && (
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
+                        >
+                          {(message.partner || message.expediteur)?.role}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Blue dot for sent messages not yet read by recipient — disappears when selected */}
-                      {message.expediteur?.id === userId &&
-                        !message.read &&
-                        selectedMessage?.id !== message.id && (
-                          <span
-                            className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0"
-                            title="Non lu par le destinataire"
-                          />
-                        )}
                       <span
                         className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}
                       >
@@ -271,7 +269,7 @@ const MessageList = ({
                   </div>
                   <div className="flex items-center justify-between mb-1">
                     <span
-                      className={`font-medium text-sm ${!message.read && message.expediteur?.id !== userId ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"} truncate`}
+                      className={`font-medium text-sm ${!message.read ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"} truncate`}
                     >
                       {message.objet || "Sans objet"}
                     </span>
@@ -286,9 +284,10 @@ const MessageList = ({
                   <p
                     className={`text-sm truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}
                   >
-                    {(message.contenu || "")
-                      .split("--- Message original ---")[0]
-                      .trim()}
+                    <MessagePreviewText
+                      contenu={message.contenu}
+                      medias={message.medias}
+                    />
                   </p>
                   {message.destinataires &&
                     message.destinataires.length > 0 && (
@@ -318,8 +317,15 @@ const MessageList = ({
                     className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleMarkAsRead(message.id, !message.read);
+                      if (handleMarkConversationRead) {
+                        handleMarkConversationRead(message, !message.read);
+                      } else {
+                        handleMarkAsRead(message.id, !message.read);
+                      }
                     }}
+                    title={
+                      message.read ? "Marquer comme non lu" : "Marquer comme lu"
+                    }
                   >
                     {message.read ? (
                       <FontAwesomeIcon
@@ -342,7 +348,7 @@ const MessageList = ({
                       className={`p-2 rounded-full text-green-600 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleRestoreMessage(message.id);
+                        handleRestoreMessage(message);
                       }}
                       title="Restaurer le message"
                     >
@@ -358,8 +364,9 @@ const MessageList = ({
                       className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteMessage(message.id);
+                        handleDeleteMessage(message);
                       }}
+                      title="Supprimer la conversation"
                     >
                       <FontAwesomeIcon
                         icon={faTrashCan}

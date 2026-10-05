@@ -3,8 +3,12 @@ import EstablishmentService from "../../../../../services/EstablishmentService";
 import ManageEstablishmentList from "../../establishment-management/ManageEstablishmentList";
 import ManageEstablishmentDetailsView from "../../establishment-management/ManageEstablishmentDetailsView";
 import CreateEstablishmentContent from "./CreateEstablishmentContent";
+import { useAuth } from "../../../../../hooks/useAuth";
 
 const ManageEstablishmentContent = ({ onBack, setActiveTab }) => {
+  // Creating / deleting an établissement is admin-only (backend enforces it too):
+  // the gestionnaire only views and edits their own établissements.
+  const { isAdmin } = useAuth();
   const [establishments, setEstablishments] = useState([]);
   const [selectedEstablishmentId, setSelectedEstablishmentId] = useState(null);
   const [editingEstablishment, setEditingEstablishment] = useState(null);
@@ -132,9 +136,9 @@ const ManageEstablishmentContent = ({ onBack, setActiveTab }) => {
             onSelectEstablishment={handleSelectEstablishment}
             onEditEstablishment={handleEditEstablishment}
             onRefresh={handleRefresh}
-            onDelete={handleDeleteEstablishment}
+            onDelete={isAdmin ? handleDeleteEstablishment : undefined}
             onBack={onBack}
-            onNavigateToCreate={setActiveTab ? () => setActiveTab("create-establishment") : undefined}
+            onNavigateToCreate={isAdmin && setActiveTab ? () => setActiveTab("create-establishment") : undefined}
           />
         ) : editingEstablishment ? (
           <CreateEstablishmentContent
@@ -150,7 +154,7 @@ const ManageEstablishmentContent = ({ onBack, setActiveTab }) => {
             onError={setError}
             onSuccess={setSuccessMessage}
             onUpdate={handleUpdateEstablishment}
-            onDelete={handleDeleteEstablishment}
+            onDelete={isAdmin ? handleDeleteEstablishment : undefined}
             onEdit={handleEditEstablishment}
           />
         )}

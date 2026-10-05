@@ -149,6 +149,18 @@ const processStorageUrls = async (html, redacteurId) => {
 };
 const CourseDetailsView = ({ courseId, onBack }) => {
   const { user } = useAuth();
+  // A parent follows the selected child's progress (read-only: only the
+  // learner can tick a chapter as done — the backend enforces it).
+  const childViewId = (localStorage.getItem("userRole") || "")
+    .toUpperCase()
+    .includes("PARENT")
+    ? localStorage.getItem("selectedChildId")
+    : null;
+  const childViewName = childViewId
+    ? (localStorage.getItem("selectedChildName") || "").trim()
+    : "";
+  const learnerId = childViewId || user?.id;
+  const canMark = !childViewId;
   const [course, setCourse] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [processedContents, setProcessedContents] = useState({});
@@ -181,11 +193,11 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     };
   }, [courseId]);
   const fetchProgression = async () => {
-    if (!user?.id) return;
+    if (!learnerId) return;
     try {
       const { coursService } =
         await import("../../../../../services/CoursService");
-      const data = await coursService.getProgression(courseId, user.id);
+      const data = await coursService.getProgression(courseId, learnerId);
       setProgression(data);
     } catch (e) {
       console.warn("Could not fetch progression:", e.message);
@@ -638,7 +650,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     setExpandedChapters(newExpanded);
   };
   const toggleItemCompletion = async (chapterId) => {
-    if (!user?.id) return;
+    if (!user?.id || !canMark) return;
     try {
       const { coursService } =
         await import("../../../../../services/CoursService");
@@ -759,7 +771,9 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                     />
                   </div>
                   <span className="text-sm font-bold text-gray-700">
-                    Progression du cours
+                    {childViewId
+                      ? `Progression${childViewName ? ` de ${childViewName}` : " de l'enfant"}`
+                      : "Progression du cours"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -879,38 +893,40 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
-                          {/* Completion Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleItemCompletion(chapter.id);
-                            }}
-                            className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
-                            title={
-                              progression.chapitresCompletesIds?.includes(
+                          {/* Completion Button (learner only) */}
+                          {canMark && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleItemCompletion(chapter.id);
+                              }}
+                              className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+                              title={
+                                progression.chapitresCompletesIds?.includes(
+                                  chapter.id,
+                                )
+                                  ? "Chapitre terminé"
+                                  : "Marquer comme terminé"
+                              }
+                            >
+                              {progression.chapitresCompletesIds?.includes(
                                 chapter.id,
-                              )
-                                ? "Chapitre terminé"
-                                : "Marquer comme terminé"
-                            }
-                          >
-                            {progression.chapitresCompletesIds?.includes(
-                              chapter.id,
-                            ) ? (
-                              <div className="relative">
+                              ) ? (
+                                <div className="relative">
+                                  <FontAwesomeIcon
+                                    icon={faCircleCheck}
+                                    className="w-8 h-8 text-emerald-500 fill-emerald-50 drop-shadow-sm transition-transform duration-300 group-hover:rotate-12"
+                                  />
+                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
+                                </div>
+                              ) : (
                                 <FontAwesomeIcon
-                                  icon={faCircleCheck}
-                                  className="w-8 h-8 text-emerald-500 fill-emerald-50 drop-shadow-sm transition-transform duration-300 group-hover:rotate-12"
+                                  icon={faCircle}
+                                  className="w-8 h-8 text-gray-300 hover:text-blue-400 transition-colors duration-300"
                                 />
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
-                              </div>
-                            ) : (
-                              <FontAwesomeIcon
-                                icon={faCircle}
-                                className="w-8 h-8 text-gray-300 hover:text-blue-400 transition-colors duration-300"
-                              />
-                            )}
-                          </button>
+                              )}
+                            </button>
+                          )}
 
                           {!chapter.locked && (
                             <div className="flex items-center space-x-2">
@@ -1272,7 +1288,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                   icon={faAward}
                   className="w-5 h-5 mr-2 text-yellow-500"
                 />
-                Votre progression
+                {childViewId ? "Progression de l'enfant" : "Votre progression"}
               </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">

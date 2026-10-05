@@ -475,7 +475,9 @@ const ManageEstablishmentList = ({
               <p className="text-slate-600 text-sm sm:text-base mb-4 sm:mb-6 max-w-md mx-auto">
                 {searchTerm || countryFilter !== "TOUS"
                   ? "Essayez avec d'autres critères de recherche"
-                  : "Commencez par créer votre premier établissement"}
+                  : onNavigateToCreate
+                    ? "Commencez par créer votre premier établissement"
+                    : "Aucun établissement ne vous est encore attribué"}
               </p>
               {!searchTerm &&
                 countryFilter === "TOUS" &&
@@ -617,7 +619,8 @@ const ManageEstablishmentList = ({
                       />
                     </button>
 
-                    {/* Delete Button */}
+                    {/* Delete Button (admin only: onDelete is omitted otherwise) */}
+                    {onDelete && (
                     <button
                       onClick={() => setShowDeleteModal(establishment)}
                       disabled={actionLoading === establishment.id}
@@ -635,6 +638,7 @@ const ManageEstablishmentList = ({
                         />
                       )}
                     </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -740,7 +744,7 @@ const ManageEstablishmentList = ({
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
+      {showDeleteModal && onDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 max-w-md w-full">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">

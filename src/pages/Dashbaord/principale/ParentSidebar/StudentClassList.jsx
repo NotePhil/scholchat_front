@@ -336,7 +336,7 @@ const StudentClassList = ({ isParentView = false }) => {
             }}
           />
           <p className="text-base font-semibold text-gray-700 mb-1">
-            Aucun élève mineur trouvé
+            Aucun enfant associé
           </p>
           <p className="text-sm text-gray-400 mb-4">
             Vous n'avez pas encore d'enfant associé à votre compte. Ajoutez un
@@ -415,7 +415,9 @@ const StudentClassList = ({ isParentView = false }) => {
               </div>
               <div className="min-w-0">
                 <h1 className="text-base font-bold leading-tight">
-                  Mes Classes
+                  {isParentView
+                    ? `Classes de ${(localStorage.getItem("selectedChildName") || "").trim() || "votre enfant"}`
+                    : "Mes Classes"}
                 </h1>
                 <p className="text-xs opacity-80">
                   {userClasses.length} classe

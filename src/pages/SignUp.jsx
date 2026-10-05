@@ -47,13 +47,24 @@ const SignUp = ({ theme }) => {
     hasUploaded: false,
   });
 
-  const showAlert = (message, type = "error") => {
+  const showAlert = (message, type = "error", duration = 5000) => {
     setAlertMessage(message);
     setAlertType(type);
     setTimeout(() => {
       setAlertMessage("");
       setAlertType("");
-    }, 5000);
+    }, duration);
+  };
+
+  // Backend refusal shown as-is. ROLE_INCOMPATIBLE (409): the e-mail belongs to an account whose
+  // profiles can't be combined with the requested one (a student account is exclusive) — longer display.
+  const showBackendError = (err, fallback) => {
+    const data = err.response?.data;
+    showAlert(
+      data?.message || fallback,
+      "error",
+      data?.code === "ROLE_INCOMPATIBLE" ? 12000 : 5000
+    );
   };
 
   const handleInputChange = (e) => {
@@ -312,16 +323,25 @@ const SignUp = ({ theme }) => {
       setCreatedUserId(newUserId);
       localStorage.setItem("createdUserId", newUserId);
 
-      // If existing active user adding a new role, show message and navigate to login
-      const userData = response.data;
-      if (userData.etat === "ACTIVE" || userData.etat === "AWAITING_VALIDATION") {
+      // Email already registered: the backend ADDED the role to that account
+      // (UtilisateursBusiness.ajouterRoleACompteExistant) — inscriptionStatut says how.
+      const statut = response.data?.inscriptionStatut;
+      if (statut === "ROLE_ADDED") {
+        localStorage.removeItem("createdUserId");
+        showAlert("Rôle ajouté avec succès! Vous pouvez vous connecter.", "success");
+        setTimeout(() => navigate("/schoolchat/login"), 2000);
+        return;
+      }
+      if (statut === "ACTIVATION_REQUIRED") {
+        localStorage.removeItem("createdUserId");
         showAlert(
-          formData.type === "professeur" 
-            ? "Demande de profil professeur reçue. Elle sera active après validation par l'administration." 
-            : "Rôle ajouté avec succès! Vous pouvez vous connecter.", 
+          "Rôle ajouté à votre compte. Activez votre compte via le lien reçu par email pour vous connecter.",
           "success"
         );
-        setTimeout(() => navigate("/schoolchat/login"), 2000);
+        setTimeout(
+          () => navigate(`/schoolchat/verify-email?email=${encodeURIComponent(formData.email)}`),
+          2000
+        );
         return;
       }
 
@@ -334,7 +354,7 @@ const SignUp = ({ theme }) => {
       }
     } catch (err) {
       console.error("Erreur lors de la création du profil:", err);
-      showAlert(err.response?.data?.message || "Erreur lors de la création du profil");
+      showBackendError(err, "Erreur lors de la création du profil");
     } finally {
       setIsSubmitting(false);
     }
@@ -348,25 +368,13 @@ const SignUp = ({ theme }) => {
 
       let userId = isUpdateMode ? formData.id : createdUserId;
 
-      // A user record created earlier in this same signup attempt (step 1)
-      // may no longer exist server-side by the time step 3 runs (e.g. this
-      // browser tab was left open across a database reset) — the id is
-      // still sitting in state/localStorage from before, but is now stale.
-      // Verify it's still real before trying to attach uploads to it;
-      // otherwise silently recreate the user instead of failing with a
-      // confusing "User not found" error from the upload endpoint.
-      if (!isUpdateMode && userId) {
-        try {
-          await axios.get(`${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${userId}`);
-        } catch (checkError) {
-          console.warn("Previously created user no longer exists, recreating:", checkError);
-          userId = null;
-          setCreatedUserId(null);
-          localStorage.removeItem("createdUserId");
-        }
-      }
-
-      if (!isUpdateMode && !userId) {
+      // (Re)post the profile even if an id from an earlier attempt is stored: the call is
+      // idempotent for an unfinished professor request (the backend resumes it and returns the
+      // same id), and its inscriptionStatut tells a brand-new account apart from an existing
+      // account that is requesting the professor role (ROLE_PENDING_VALIDATION). A stale id
+      // (e.g. after a database reset) can't be checked anonymously anyway (GET is 401).
+      let inscriptionStatut = null;
+      if (!isUpdateMode) {
         const payloadData = {
           type: formData.type,
           nom: formData.nom.trim(),
@@ -383,6 +391,7 @@ const SignUp = ({ theme }) => {
         );
 
         userId = response.data.id;
+        inscriptionStatut = response.data?.inscriptionStatut || null;
         setCreatedUserId(userId);
         localStorage.setItem("createdUserId", userId);
       }
@@ -432,11 +441,24 @@ const SignUp = ({ theme }) => {
           `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/${userId}`,
           updatePayload
         );
+        if (inscriptionStatut === "ROLE_PENDING_VALIDATION") {
+          // Existing account (parent, élève…) asking for the professor role: no new activation,
+          // the profile becomes available after admin validation.
+          localStorage.removeItem("signupFormData");
+          localStorage.removeItem("imagePreviews");
+          localStorage.removeItem("createdUserId");
+          showAlert(
+            "Demande de profil professeur reçue. Elle sera active après validation par l'administration.",
+            "success"
+          );
+          setTimeout(() => navigate("/schoolchat/login"), 2500);
+          return;
+        }
         completeRegistration();
       }
     } catch (err) {
       console.error("Erreur lors du traitement des documents:", err);
-      showAlert(err.response?.data?.message || "Erreur lors du traitement des documents");
+      showBackendError(err, "Erreur lors du traitement des documents");
     } finally {
       setIsSubmitting(false);
     }

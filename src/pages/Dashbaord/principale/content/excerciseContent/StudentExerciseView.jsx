@@ -177,9 +177,13 @@ const StudentExerciseView = ({
   exerciseDescription,
   existingParticipation,
   // participation record from the list (null = none yet)
+  learnerId,
+  // whose copy — defaults to the signed-in user; a parent passes their minor child
+  learnerName,
   onBack,
   onComplete,
 }) => {
+  const answeringUserId = learnerId || localStorage.getItem("userId");
   const [questions, setQuestions] = useState([]);
   const [currentAnswers, setCurrentAnswers] = useState({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -213,7 +217,7 @@ const StudentExerciseView = ({
   // Register or update participation when questions are loaded
   useEffect(() => {
     if (!exerciseProgrammerId || loading || questions.length === 0) return;
-    const userId = localStorage.getItem("userId");
+    const userId = answeringUserId;
     if (!userId) return;
     const payload = {
       utilisateurId: userId,
@@ -255,7 +259,7 @@ const StudentExerciseView = ({
     }
     setSubmitting(true);
     setError("");
-    const userId = localStorage.getItem("userId");
+    const userId = answeringUserId;
     try {
       // Submit each answer to POST /reponses
       for (const question of questions) {
@@ -357,6 +361,13 @@ const StudentExerciseView = ({
           {answeredCount}/{questions.length} rép.
         </div>
       </div>
+
+      {learnerName && (
+        <div className="mb-3 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+          Vous répondez pour <strong>{learnerName}</strong> : la copie sera
+          enregistrée à son nom et envoyée au professeur.
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="mb-4 px-1">

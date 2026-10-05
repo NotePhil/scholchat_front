@@ -25,6 +25,7 @@ import {
   faBell,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../utils/faIconAdapter";
+import { useUnreadMessageCount } from "../../../hooks/useMessageSocket";
 const Activity = asIconComponent(faHeartPulse);
 const AlertCircle = asIconComponent(faCircleExclamation);
 const Bell = asIconComponent(faBell);
@@ -52,6 +53,8 @@ const MobileBottomNav = ({
   onLogout,
 }) => {
   const [showQuickActions, setShowQuickActions] = useState(false);
+  // Live unread-messages count (socket-driven, no polling).
+  const unreadMessages = useUnreadMessageCount();
   const { t } = useTranslation();
   const {
     isAdmin,
@@ -81,14 +84,18 @@ const MobileBottomNav = ({
           color: "bg-blue-500",
           tab: "activities",
         },
-        {
+      ];
+      // Event creation mirrors ActivitiesContent's canCreateEvent: students
+      // and parents can read activities but not publish events.
+      if (isAdmin || isProfessor || isTutor || isGestionnaire) {
+        items.push({
           icon: PlusCircle,
           label: "Événement",
           color: "bg-pink-500",
           tab: "activities",
           action: "create-event",
-        },
-      ];
+        });
+      }
       if (isAdmin) {
         items.push(
           {
@@ -211,10 +218,11 @@ const MobileBottomNav = ({
       } else if (isGestionnaire) {
         items.push(
           {
+            // No create-établissement for the gestionnaire (admin-only): open the list directly.
             icon: School,
             label: "Écoles",
             color: "bg-teal-500",
-            isToggle: "establishments",
+            tab: "manage-establishment",
           },
           {
             icon: Building2,
@@ -551,8 +559,10 @@ const MobileBottomNav = ({
                   color={active ? primaryColor : undefined}
                 />
 
-                {item.hasIndicator && (
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm animate-pulse" />
+                {item.hasIndicator && unreadMessages > 0 && (
+                  <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold leading-[14px] text-center rounded-full border-2 border-white dark:border-slate-900 shadow-sm">
+                    {unreadMessages > 99 ? "99+" : unreadMessages}
+                  </span>
                 )}
               </div>
 

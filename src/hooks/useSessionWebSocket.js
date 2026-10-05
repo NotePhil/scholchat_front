@@ -15,12 +15,18 @@ export const useSessionWebSocket = (coursId, onEvent) => {
   useEffect(() => {
     if (!coursId) return;
 
-    const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
-
     const client = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
-      connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 3000,
+      // CONNECT must carry the JWT; re-read it on every (re)connect.
+      beforeConnect: () => {
+        const token =
+          localStorage.getItem("accessToken") ||
+          localStorage.getItem("authToken");
+        client.connectHeaders = token
+          ? { Authorization: `Bearer ${token}` }
+          : {};
+      },
       onConnect: () => {
         // Subscribe to session events (SESSION_STARTED, SESSION_ENDED, CHAPTER_CHANGED,
         // PARTICIPANT_JOINED, PARTICIPANT_LEFT, HAND_RAISED, PONG)

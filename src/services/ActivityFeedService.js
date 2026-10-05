@@ -1,5 +1,6 @@
 import axios from "axios";
 import { applyAuthInterceptors } from "../utils/axiosConfig";
+import { toServerDateTime } from "../utils/dateUtils";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -174,8 +175,8 @@ class ActivityFeedService {
         titre: eventData.titre,
         description: eventData.description,
         lieu: eventData.lieu,
-        heureDebut: eventData.heureDebut,
-        heureFin: eventData.heureFin,
+        heureDebut: toServerDateTime(eventData.heureDebut),
+        heureFin: toServerDateTime(eventData.heureFin),
         etat: "PLANIFIE",
         createurId: createurId,
         participantsIds: eventData.participantsIds || [],
@@ -242,8 +243,8 @@ class ActivityFeedService {
         titre: eventData.titre,
         description: eventData.description,
         lieu: eventData.lieu,
-        heureDebut: eventData.heureDebut,
-        heureFin: eventData.heureFin,
+        heureDebut: toServerDateTime(eventData.heureDebut),
+        heureFin: toServerDateTime(eventData.heureFin),
         etat: "PLANIFIE",
         createurId: createurId,
         participantsIds: eventData.participantsIds || [],

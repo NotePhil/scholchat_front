@@ -2,7 +2,6 @@ import { useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchNotifications,
-  fetchUnreadCount,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
@@ -65,12 +64,13 @@ export const useNotifications = () => {
   }, [dispatch]);
 
   const handleTogglePanel = useCallback(() => {
-    dispatch(toggleNotificationPanel());
-    // Only fetch from server on first open — WebSocket keeps data current after that
-    if (!notifications.length) {
+    // Refresh on every open: cheap, and covers a WebSocket that failed to
+    // connect (the list only shows the spinner when it is still empty).
+    if (!isOpen) {
       dispatch(fetchNotifications());
     }
-  }, [dispatch, notifications.length]);
+    dispatch(toggleNotificationPanel());
+  }, [dispatch, isOpen]);
 
   const handleClosePanel = useCallback(() => {
     dispatch(setNotificationPanelOpen(false));
@@ -83,21 +83,11 @@ export const useNotifications = () => {
     [dispatch]
   );
 
-  // Filter notifications based on selected role
-  const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase().replace("ROLE_", "");
-
-  // Define which notification types each role can see
-  const roleAllowedTypes = {
-    PARENT: ["ACTIVITY_CREATED", "NEW_ACTIVITY", "CLASS_VALIDATED", "CLASS_REJECTED", "CLASS_JOIN", "EVENT_UPDATED", "MESSAGE_SENT"],
-    STUDENT: ["ACTIVITY_CREATED", "NEW_ACTIVITY", "ASSIGNMENT_GIVEN", "CLASS_VALIDATED", "CLASS_REJECTED", "CLASS_JOIN", "COURSE_SCHEDULED", "NEW_COURSE", "EXERCISE_CREATED", "EVENT_UPDATED", "MESSAGE_SENT"],
-    PROFESSOR: ["ACCESS_REQUEST", "DEMANDE_ACCES", "CLASS_CREATED", "CLASS_VALIDATED", "CLASS_REJECTED", "COURSE_SCHEDULED", "NEW_COURSE", "EXERCISE_CREATED", "ACTIVITY_CREATED", "NEW_ACTIVITY", "MESSAGE_SENT", "EVENT_UPDATED"],
-  };
-
-  const roleFilteredNotifications = notifications.filter((n) => {
-    const allowed = roleAllowedTypes[selectedRole];
-    if (!allowed) return true; // admin sees all
-    return allowed.includes(n.type);
-  });
+  // No client-side role allow-list: the backend only ever returns the
+  // logged-in user's own notifications, and the former per-role whitelist hid
+  // real types (CORRECTION_DISPONIBLE, DEVOIR_SOUMIS, CLASSE_ADHESION_DEMANDE,
+  // OFFRE_*, the student's own ACCESS_REQUEST confirmations…).
+  const roleFilteredNotifications = notifications;
 
   const filteredNotifications =
     filter === "unread"
@@ -133,7 +123,20 @@ export const useNotifications = () => {
       case "COURSE_SCHEDULED":
         return { icon: "BookOpen", color: "indigo", category: "course" };
       case "EXERCISE_CREATED":
+      case "EXERCISE_ASSIGNED":
         return { icon: "BookOpen", color: "orange", category: "exercise" };
+      case "DEVOIR_SOUMIS":
+        return { icon: "BookOpen", color: "purple", category: "exercise" };
+      case "CORRECTION_DISPONIBLE":
+        return { icon: "CheckCircle", color: "emerald", category: "exercise" };
+      case "CLASSE_ADHESION_DEMANDE":
+        return { icon: "UserPlus", color: "blue", category: "class" };
+      case "ETABLISSEMENT_CREATED":
+        return { icon: "CheckCircle", color: "green", category: "establishment" };
+      case "OFFRE_EXPIRATION_BIENTOT":
+      case "OFFRE_EXPIREE":
+      case "SUPPRESSION_IMMINENTE":
+        return { icon: "RefreshCw", color: "orange", category: "offer" };
       case "MESSAGE_SENT":
         return { icon: "MessageSquare", color: "indigo", category: "message" };
       case "EVENT_UPDATED":

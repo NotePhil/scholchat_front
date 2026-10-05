@@ -7,15 +7,21 @@ import {
   faSpinner,
   faIdCard,
 } from "@fortawesome/free-solid-svg-icons";
-import { scholchatService } from "../../../../services/ScholchatService";
-import { minioS3Service } from "../../../../services/minioS3";
+import {
+  PROFESSOR_DOCUMENTS,
+  submitProfessorDocuments,
+} from "../../../../utils/professorDocuments";
 
-// Shown after login when a validated professor's account is missing one or
-// more of the identity documents normally collected at signup (e.g. an
-// upload failed partway through registration). Admin validation no longer
-// blocks on document completeness — see UtilisateursBusiness.validerProfesseur
-// — so this prompt is the recovery path instead.
-const CompleteProfileModal = ({ isOpen, userId, missingDocs, onClose, onCompleted }) => {
+// Generic "complete your identity documents" modal. The professor
+// verification flow itself is handled by ProfessorVerificationStatus (full
+// page); this modal shares the same upload logic (utils/professorDocuments).
+const CompleteProfileModal = ({
+  isOpen,
+  userId,
+  missingDocs = PROFESSOR_DOCUMENTS,
+  onClose,
+  onCompleted,
+}) => {
   const [files, setFiles] = useState({});
   const [previews, setPreviews] = useState({});
   const [saving, setSaving] = useState(false);
@@ -30,21 +36,6 @@ const CompleteProfileModal = ({ isOpen, userId, missingDocs, onClose, onComplete
     setPreviews((prev) => ({ ...prev, [field]: URL.createObjectURL(file) }));
   };
 
-  const uploadDocument = async (file, docType) => {
-    const timestamp = Date.now();
-    const fileExtension = file.name.split(".").pop().toLowerCase();
-    const uniqueFileName = `${userId}_${docType}_${timestamp}.${fileExtension}`;
-    const renamedFile = new File([file], uniqueFileName, { type: file.type });
-    const result = await minioS3Service.uploadFile(
-      renamedFile,
-      "IMAGE",
-      docType,
-      null,
-      userId,
-    );
-    return result.fileName;
-  };
-
   const handleSave = async () => {
     const selectedFields = missingDocs.filter((doc) => files[doc.field]);
     if (selectedFields.length === 0) {
@@ -54,11 +45,9 @@ const CompleteProfileModal = ({ isOpen, userId, missingDocs, onClose, onComplete
     setSaving(true);
     setError("");
     try {
-      const payload = {};
-      for (const doc of selectedFields) {
-        payload[doc.field] = await uploadDocument(files[doc.field], doc.docType);
-      }
-      const updatedUser = await scholchatService.updateUser(userId, payload);
+      const updatedUser = await submitProfessorDocuments(userId, files, {
+        docs: selectedFields,
+      });
       onCompleted(updatedUser);
     } catch (err) {
       console.error("Error completing profile:", err);

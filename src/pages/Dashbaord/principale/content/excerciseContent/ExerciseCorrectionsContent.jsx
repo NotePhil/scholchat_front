@@ -8,6 +8,7 @@ import {
 } from "../../../../../services/exerciseService";
 import { classService } from "../../../../../services/ClassService";
 import { userService } from "../../../../../services/userService";
+import { questionEarned } from "./StudentExerciseResultView";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
@@ -169,14 +170,15 @@ const ProgrammationCorrections = ({ prog }) => {
   });
   const students = Object.values(studentMap);
   const maxPoints = questions.reduce((s, q) => s + (q.points || 1), 0);
-  const getScore = (student) =>
-    student.answers.reduce((s, a) => {
-      if (a.estCorrecte === true) {
-        const q = questions.find((q) => q.id === a.questionId);
-        return s + (q?.points || 1);
-      }
-      return s;
+  // Awarded points per question (partial credit "1.5/2" counts), else full/zero from the verdict —
+  // same rule as the student/parent copy view.
+  const getScore = (student) => {
+    const total = student.answers.reduce((s, a) => {
+      const q = questions.find((q) => q.id === a.questionId);
+      return q ? s + (questionEarned(q, a) || 0) : s;
     }, 0);
+    return Math.round(total * 100) / 100;
+  };
   const setInput = (key, field, value) =>
     setGradeInputs((prev) => ({
       ...prev,
@@ -189,12 +191,27 @@ const ProgrammationCorrections = ({ prog }) => {
     const key = `${studentId}-${questionId}`;
     const input = gradeInputs[key];
     if (!input) return;
+    const max = questions.find((q) => q.id === questionId)?.points || 1;
+    // Store the per-question mark as "earned/max"; a bare verdict gives full or zero points.
+    let note = (input.note || "").toString().trim().replace(",", ".");
+    if (note && !note.includes("/")) note = `${note}/${max}`;
+    if (!note && input.estCorrecte !== undefined)
+      note = `${input.estCorrecte ? max : 0}/${max}`;
+    const earned = note ? parseFloat(note.split("/")[0]) : NaN;
+    const estCorrecte =
+      input.estCorrecte !== undefined
+        ? input.estCorrecte
+        : Number.isNaN(earned)
+          ? undefined
+          : earned > 0;
     setSaving(key);
     try {
       await repondreService.updateReponse({
         utilisateurId: studentId,
         questionId,
         ...input,
+        note: note || null,
+        estCorrecte,
       });
       setSaved((prev) => new Set([...prev, key]));
       await loadData();
@@ -247,8 +264,10 @@ const ProgrammationCorrections = ({ prog }) => {
       </div>
     );
   }
-  const pending = students.filter(
-    (s) => s.participation?.etatSoumission === "EN_ATTENTE_CORRECTION",
+  const pending = students.filter((s) =>
+    ["SOUMIS", "EN_ATTENTE_CORRECTION"].includes(
+      s.participation?.etatSoumission,
+    ),
   ).length;
   const totalStudentPages = Math.ceil(students.length / STUDENT_PAGE_SIZE);
   const paginatedStudents = students.slice(
@@ -491,7 +510,9 @@ const ProgrammationCorrections = ({ prog }) => {
                         ? correctChoices.map((c) => c.texte).join(" / ")
                         : q.reponse || null;
                     const needsGrading =
-                      !isAutoType && answer && answer.estCorrecte === null;
+                      answer &&
+                      (answer.estCorrecte === null ||
+                        answer.estCorrecte === undefined);
                     const alreadyGraded = answer && answer.estCorrecte !== null;
                     let borderColor = "#e5e7eb";
                     if (answer?.estCorrecte === true) borderColor = "#86efac";
@@ -623,13 +644,15 @@ const ProgrammationCorrections = ({ prog }) => {
                             </div>
                           )}
 
-                          {/* Manual grading panel — open questions only */}
-                          {!isAutoType && answer && (
+                          {/* Manual grading panel — QCM / Vrai-Faux are auto-graded on submission but can be overridden */}
+                          {answer && (
                             <div className="pt-1 border-t border-dashed border-gray-200">
                               <p className="text-xs font-semibold text-orange-700 mb-1.5">
                                 {needsGrading
                                   ? "⚠ Correction manuelle requise"
-                                  : "✎ Modifier la correction"}
+                                  : isAutoType
+                                    ? "✎ Corrigé automatiquement — modifier"
+                                    : "✎ Modifier la correction"}
                               </p>
                               <div className="flex flex-wrap items-center gap-2">
                                 {/* Correct / Incorrect buttons */}

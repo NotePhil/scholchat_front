@@ -1,4 +1,25 @@
 import axios from "axios";
+import {
+  isProfessorNotValidatedPayload,
+  notifyProfessorNotValidated,
+} from "./professorVerification";
+
+// Codes d'erreur signifiant réellement une session invalide.
+const SESSION_ERROR_CODES = ["TOKEN_EXPIRED", "INVALID_TOKEN", "UNAUTHORIZED"];
+
+/**
+ * Une réponse 401/403 ne vaut "session expirée" que pour 401, ou pour un 403
+ * sans code métier (ou avec un code de session). Un 403 portant un code métier
+ * (PROFIL_PROFESSEUR_NON_VALIDE, INVALID_STATE, OPERATION_INTERDITE…) est une
+ * règle de gestion refusée : l'utilisateur ne doit pas être déconnecté.
+ */
+export const isSessionError = (response) => {
+  if (!response) return false;
+  if (response.status === 401) return true;
+  if (response.status !== 403) return false;
+  const code = response.data && typeof response.data === "object" ? response.data.code : null;
+  return !code || SESSION_ERROR_CODES.includes(code);
+};
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -41,7 +62,10 @@ export const applyAuthInterceptors = (instance) => {
   instance.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response?.status === 401 || error.response?.status === 403) {
+      if (isProfessorNotValidatedPayload(error.response?.data)) {
+        // Profil professeur non validé : écran de statut, pas de déconnexion
+        notifyProfessorNotValidated(error.response.data.message);
+      } else if (isSessionError(error.response)) {
         handleAuthenticationError();
       }
       return Promise.reject(error);
@@ -103,7 +127,7 @@ export const handleServiceError = (error, serviceName = "Service") => {
   
   if (error.response) {
     // Handle authentication errors specifically
-    if (error.response.status === 401 || error.response.status === 403) {
+    if (isSessionError(error.response)) {
       throw new Error("Session expirée. Veuillez vous reconnecter.");
     }
     

@@ -66,6 +66,10 @@ const ROLE_CONFIG = {
     borderColor: "border-teal-200",
   },
 };
+const normalizeRole = (role) =>
+  String(role || "")
+    .toUpperCase()
+    .replace(/^ROLE_/, "");
 const RoleSelectorModal = ({
   isOpen,
   roles = [],
@@ -73,8 +77,18 @@ const RoleSelectorModal = ({
   onClose,
   title,
   subtitle,
+  // Multi-role: requested profiles not usable yet (e.g. PROFESSOR awaiting admin validation)
+  pendingRoles = [],
+  currentRole = null,
+  // Optional "Ajouter un profil" action (in-app role addition)
+  onAddRole = null,
 }) => {
   if (!isOpen || roles.length === 0) return null;
+  const activeKeys = roles.map(normalizeRole);
+  const pendingOnly = (pendingRoles || []).filter(
+    (r) => !activeKeys.includes(normalizeRole(r)),
+  );
+  const current = currentRole ? normalizeRole(currentRole) : null;
   return (
     <AnimatePresence>
       <motion.div
@@ -134,13 +148,14 @@ const RoleSelectorModal = ({
           <div className="px-6 pb-6 space-y-3">
             {roles.map((role) => {
               const config =
-                ROLE_CONFIG[role.toUpperCase()] || ROLE_CONFIG.ADMIN;
+                ROLE_CONFIG[normalizeRole(role)] || ROLE_CONFIG.ADMIN;
               const Icon = config.icon;
+              const isCurrent = current === normalizeRole(role);
               return (
                 <button
                   key={role}
                   onClick={() => onSelect(role)}
-                  className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 ${config.borderColor} ${config.lightBg} hover:shadow-md transition-all active:scale-[0.98]`}
+                  className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 ${isCurrent ? "border-indigo-500" : config.borderColor} ${config.lightBg} hover:shadow-md transition-all active:scale-[0.98]`}
                 >
                   <div
                     className={`w-12 h-12 ${config.color} rounded-xl flex items-center justify-center shadow-lg`}
@@ -152,7 +167,9 @@ const RoleSelectorModal = ({
                       {config.label}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Se connecter en tant que {config.label.toLowerCase()}
+                      {isCurrent
+                        ? "Profil actuel"
+                        : `Se connecter en tant que ${config.label.toLowerCase()}`}
                     </p>
                   </div>
                   <svg
@@ -172,6 +189,45 @@ const RoleSelectorModal = ({
               );
             })}
           </div>
+
+          {pendingOnly.length > 0 && (
+            <div className="px-6 pb-4 space-y-2">
+              {pendingOnly.map((role) => {
+                const config =
+                  ROLE_CONFIG[normalizeRole(role)] || ROLE_CONFIG.ADMIN;
+                const Icon = config.icon;
+                return (
+                  <div
+                    key={`pending-${role}`}
+                    className="w-full flex items-center gap-4 p-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 opacity-80"
+                  >
+                    <div className="w-10 h-10 bg-gray-400 rounded-xl flex items-center justify-center">
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="font-semibold text-gray-600">
+                        {config.label}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        En attente de validation par l'administration
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {onAddRole && (
+            <div className="px-6 pb-2">
+              <button
+                onClick={onAddRole}
+                className="w-full py-3 text-sm font-semibold text-indigo-600 border-2 border-dashed border-indigo-300 rounded-xl hover:bg-indigo-50 transition-colors"
+              >
+                + Ajouter un profil
+              </button>
+            </div>
+          )}
 
           {/* Close */}
           {onClose && (

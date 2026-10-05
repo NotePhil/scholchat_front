@@ -28,6 +28,10 @@ import gestionnaireService from "../../../../services/GestionnaireService";
 import { classService } from "../../../../services/ClassService";
 import { scholchatService } from "../../../../services/ScholchatService";
 import OffreInfoPanel from "../shared/OffreInfoPanel";
+import {
+  confirmClassAction,
+  getClassActionTexts,
+} from "../../../../utils/classActionConfirm";
 import UserViewModal from "../modals/UserViewModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -45,6 +49,7 @@ import {
   faLocationDot,
   faPenToSquare,
   faPhone,
+  faSchool,
   faStop,
   faTrash,
   faUser,
@@ -304,49 +309,65 @@ const ManageEstablishmentDetailsView = ({
     });
   };
 
-  // Class actions
-  const handleApproveClass = async (classId) => {
-    try {
-      setActionLoading(`approve-${classId}`);
-      await classService.approuverClasse(classId);
-      message.success("Classe approuvée avec succès");
-      fetchEstablishmentClasses();
-    } catch (error) {
-      console.error("Error approving class:", error);
-      message.error("Erreur lors de l'approbation de la classe");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-  const handleRejectClass = async (classId) => {
-    try {
-      setActionLoading(`reject-${classId}`);
-      await classService.rejeterClasse(classId, "Rejetée par l'établissement");
-      message.success("Classe rejetée avec succès");
-      fetchEstablishmentClasses();
-    } catch (error) {
-      console.error("Error rejecting class:", error);
-      message.error("Erreur lors du rejet de la classe");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-  const handleDeleteClass = async (classId) => {
-    confirm({
-      title: "Supprimer la classe",
-      content: "Êtes-vous sûr de vouloir supprimer cette classe ?",
-      okText: "Supprimer",
-      okType: "danger",
-      cancelText: "Annuler",
-      onOk: async () => {
+  // Class actions — each one asks for confirmation first (shared wording
+  // with mobile, see utils/classActionConfirm).
+  const handleApproveClass = (cls) => {
+    const texts = getClassActionTexts("approve", cls.nom);
+    confirmClassAction({
+      action: "approve",
+      className: cls.nom,
+      onConfirm: async () => {
         try {
-          setActionLoading(`delete-${classId}`);
-          await classService.supprimerClasse(classId);
-          message.success("Classe supprimée avec succès");
+          setActionLoading(`approve-${cls.id}`);
+          await classService.approuverClasse(cls.id);
+          message.success(texts.success);
+          fetchEstablishmentClasses();
+        } catch (error) {
+          console.error("Error approving class:", error);
+          message.error(texts.error);
+        } finally {
+          setActionLoading(null);
+        }
+      },
+    });
+  };
+  const handleRejectClass = (cls) => {
+    const texts = getClassActionTexts("reject", cls.nom);
+    confirmClassAction({
+      action: "reject",
+      className: cls.nom,
+      onConfirm: async () => {
+        try {
+          setActionLoading(`reject-${cls.id}`);
+          await classService.rejeterClasse(
+            cls.id,
+            "Rejetée par l'établissement",
+          );
+          message.success(texts.success);
+          fetchEstablishmentClasses();
+        } catch (error) {
+          console.error("Error rejecting class:", error);
+          message.error(texts.error);
+        } finally {
+          setActionLoading(null);
+        }
+      },
+    });
+  };
+  const handleDeleteClass = (cls) => {
+    const texts = getClassActionTexts("delete", cls.nom);
+    confirmClassAction({
+      action: "delete",
+      className: cls.nom,
+      onConfirm: async () => {
+        try {
+          setActionLoading(`delete-${cls.id}`);
+          await classService.supprimerClasse(cls.id);
+          message.success(texts.success);
           fetchEstablishmentClasses();
         } catch (error) {
           console.error("Error deleting class:", error);
-          message.error("Erreur lors de la suppression de la classe");
+          message.error(texts.error);
         } finally {
           setActionLoading(null);
         }
@@ -501,7 +522,8 @@ const ManageEstablishmentDetailsView = ({
                   size="small"
                   icon={<FontAwesomeIcon icon={faCheck} />}
                   loading={actionLoading === `approve-${record.id}`}
-                  onClick={() => handleApproveClass(record.id)}
+                  disabled={!!actionLoading}
+                  onClick={() => handleApproveClass(record)}
                   style={{
                     color: "#52c41a",
                   }}
@@ -513,7 +535,8 @@ const ManageEstablishmentDetailsView = ({
                   size="small"
                   icon={<FontAwesomeIcon icon={faStop} />}
                   loading={actionLoading === `reject-${record.id}`}
-                  onClick={() => handleRejectClass(record.id)}
+                  disabled={!!actionLoading}
+                  onClick={() => handleRejectClass(record)}
                   style={{
                     color: "#ff4d4f",
                   }}
@@ -522,21 +545,15 @@ const ManageEstablishmentDetailsView = ({
             </>
           )}
           <Tooltip title="Supprimer">
-            <Popconfirm
-              title="Supprimer la classe"
-              description="Êtes-vous sûr de vouloir supprimer cette classe ?"
-              onConfirm={() => handleDeleteClass(record.id)}
-              okText="Oui"
-              cancelText="Non"
-            >
-              <Button
-                type="text"
-                size="small"
-                icon={<FontAwesomeIcon icon={faTrash} />}
-                loading={actionLoading === `delete-${record.id}`}
-                danger
-              />
-            </Popconfirm>
+            <Button
+              type="text"
+              size="small"
+              icon={<FontAwesomeIcon icon={faTrash} />}
+              loading={actionLoading === `delete-${record.id}`}
+              disabled={!!actionLoading}
+              onClick={() => handleDeleteClass(record)}
+              danger
+            />
           </Tooltip>
         </Space>
       ),
@@ -712,6 +729,8 @@ const ManageEstablishmentDetailsView = ({
                 >
                   Modifier
                 </Button>
+                {/* Admin only: onDelete is omitted for the gestionnaire. */}
+                {onDelete && (
                 <Popconfirm
                   title="Êtes-vous sûr de vouloir supprimer cet établissement ?"
                   description="Cette action est irréversible."
@@ -730,6 +749,7 @@ const ManageEstablishmentDetailsView = ({
                     Supprimer
                   </Button>
                 </Popconfirm>
+                )}
               </>
             )}
           </div>

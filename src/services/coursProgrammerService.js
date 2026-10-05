@@ -1,5 +1,6 @@
 import axios from "axios";
 import { createAuthenticatedAxios, handleServiceError } from "../utils/axiosConfig";
+import { toServerDateTime } from "../utils/dateUtils";
 
 const coursProgrammerApi = createAuthenticatedAxios();
 
@@ -375,7 +376,7 @@ class CoursProgrammerService {
 
       const updates = {
         etatCoursProgramme: "EN_COURS",
-        dateDebutEffectif: this.formatDateToBackend(new Date().toISOString()),
+        dateDebutEffectif: new Date().toISOString(),
         dateFinEffectif: null, // Ensure end date is null when starting
       };
 
@@ -407,7 +408,7 @@ class CoursProgrammerService {
 
       const updates = {
         etatCoursProgramme: "TERMINE",
-        dateFinEffectif: this.formatDateToBackend(new Date().toISOString()),
+        dateFinEffectif: new Date().toISOString(),
       };
 
       console.log(
@@ -463,29 +464,16 @@ class CoursProgrammerService {
     }
   }
 
-  // Utility method to format dates exactly as expected by backend
+  // Format a date-time for the backend: ISO-8601 UTC instant with offset
+  // (e.g. "2026-10-05T11:00:00.000Z"). Accepts datetime-local values (local time),
+  // Date objects and server strings.
   formatDateToBackend(dateValue) {
     if (!dateValue) return null;
-
-    try {
-      const date = new Date(dateValue);
-      if (isNaN(date.getTime())) {
-        throw new Error("Date invalide");
-      }
-
-      // Format as: YYYY-MM-DDTHH:mm:ss (matching Postman examples)
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      const hours = String(date.getHours()).padStart(2, "0");
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-      const seconds = String(date.getSeconds()).padStart(2, "0");
-
-      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-    } catch (error) {
-      console.error("Erreur lors du formatage de la date:", error);
-      return null;
+    const iso = toServerDateTime(dateValue);
+    if (!iso) {
+      console.error("Erreur lors du formatage de la date:", dateValue);
     }
+    return iso;
   }
 
   // Legacy method for backward compatibility

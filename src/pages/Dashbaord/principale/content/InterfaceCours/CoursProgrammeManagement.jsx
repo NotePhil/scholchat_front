@@ -156,6 +156,12 @@ const CoursProgrammeManagement = ({
     message: "",
   });
   const PAGE_SIZE = 6;
+  const childViewName =
+    (localStorage.getItem("userRole") || "").toUpperCase().includes("PARENT") &&
+    localStorage.getItem("selectedChildId")
+      ? (localStorage.getItem("selectedChildName") || "").trim() ||
+        "votre enfant"
+      : "";
   const userId = (() => {
     const isParent = (localStorage.getItem("userRole") || "")
       .toUpperCase()
@@ -346,7 +352,12 @@ const CoursProgrammeManagement = ({
                       className="w-4 h-4 mr-2 flex-shrink-0"
                     />
                     <span className="truncate">
-                      {selectedClass?.nom || "Gestion des Cours"}
+                      {selectedClass?.nom ||
+                        (childViewName
+                          ? `Cours de ${childViewName}`
+                          : onScheduleCourse
+                            ? "Gestion des Cours"
+                            : "Mes cours")}
                     </span>
                   </h1>
                   {onScheduleCourse && (
@@ -362,7 +373,9 @@ const CoursProgrammeManagement = ({
                 <p className="text-blue-100 text-xs truncate">
                   {selectedClass
                     ? `${selectedClass.niveau} · ${selectedClass.description || "Espace de classe"}`
-                    : "Tous mes cours"}
+                    : childViewName
+                      ? "Cours programmés dans ses classes"
+                      : "Tous mes cours"}
                 </p>
               </div>
             </div>
@@ -442,7 +455,9 @@ const CoursProgrammeManagement = ({
           </h3>
           <p className="text-sm text-gray-600">
             {courses.length === 0
-              ? "Aucun cours n'a encore été programmé pour vous."
+              ? childViewName
+                ? `Aucun cours n'a encore été programmé pour ${childViewName}.`
+                : "Aucun cours n'a encore été programmé pour vous."
               : "Aucun cours ne correspond à vos critères de recherche."}
           </p>
         </div>

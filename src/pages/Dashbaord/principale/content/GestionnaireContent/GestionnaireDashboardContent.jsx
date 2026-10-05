@@ -644,8 +644,9 @@ const GestionnaireDashboardContent = ({
             <div
               className={`grid grid-cols-2 ${isMobile ? "gap-2" : "sm:grid-cols-2 gap-4"}`}
             >
+              {/* Creating an établissement is admin-only: the gestionnaire manages theirs. */}
               <button
-                onClick={() => setActiveTab("create-establishment")}
+                onClick={() => setActiveTab("manage-establishment")}
                 className={`group ${isMobile ? "p-3" : "p-5"} bg-blue-50 hover:bg-blue-600 rounded-2xl transition-all duration-300 text-left`}
               >
                 <div
@@ -659,11 +660,11 @@ const GestionnaireDashboardContent = ({
                 <span
                   className={`text-blue-900 group-hover:text-white font-bold block ${isMobile ? "text-xs" : ""}`}
                 >
-                  Nouvel Établissement
+                  Mes Établissements
                 </span>
                 {!isMobile && (
                   <span className="text-blue-600 group-hover:text-blue-100 text-xs mt-1 block">
-                    Ajouter une structure
+                    Consulter et modifier
                   </span>
                 )}
               </button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
@@ -6,17 +6,19 @@ import {
   faPaperPlane,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { toUtilisateurPayload } from "./messageUtils";
+import { messageService } from "../../../../services/MessageService";
+import { useMessageAttachments, MAX_ATTACHMENTS } from "./messageMedia";
+import { AttachButton, AttachmentPreviewList } from "./MessageAttachments";
+import { ContactAutocomplete } from "./RecipientSelectorModal";
+
+
 const ComposeModal = ({
   isDark,
   themeColors,
   newMessage,
   setNewMessage,
-  loading,
-  recipientSearch,
   setRecipientSearch,
-  addRecipient,
-  removeRecipient,
-  handleEmailInput,
   setShowCompose,
   selectedClasses,
   setSelectedClasses,
@@ -25,240 +27,134 @@ const ComposeModal = ({
   currentUser,
   ccRecipients,
   setCcRecipients,
-  setShowRecipientSelector,
   onMessageSent,
-  setError,
-  setLoading,
-  fetchMessages,
 }) => {
+  const [contacts, setContacts] = useState([]);
   const [classesList, setClassesList] = useState([]);
-  const [classUsers, setClassUsers] = useState({});
+  const [loadingContacts, setLoadingContacts] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [showCcField, setShowCcField] = useState(false);
-  const [ccSearch, setCcSearch] = useState("");
+  const [sending, setSending] = useState(false);
+  const attachments = useMessageAttachments();
+
+  // Group messaging is offered whenever GET /messages/contacts/classes returns
+  // classes — the server decides (member/moderator/creator/publication rights).
+  const canGroupMessage = true;
+
+  // Who the caller may message (server-enforced: anything else is a 403).
   useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        const parentId = localStorage.getItem("userId");
-        const selectedRole = (
-          localStorage.getItem("userRole") || ""
-        ).toUpperCase();
-        const isParentRole = selectedRole.includes("PARENT");
-        const isAdmin = selectedRole.includes("ADMIN");
-        const userId = isParentRole
-          ? localStorage.getItem("selectedChildId") || parentId
-          : parentId;
-        if (!userId || !accessToken) return;
-        let allClasses = [];
-        try {
-          if (isAdmin) {
-            // Admin sees ALL classes
-            const resp = await fetch(
-              `${process.env.REACT_APP_API_BASE_URL}/classes`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              },
-            );
-            if (resp.ok) allClasses = await resp.json();
-          } else {
-            // Others see classes they have access to
-            const resp = await fetch(
-              `${process.env.REACT_APP_API_BASE_URL}/acceder/utilisateurs/${userId}/classes`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              },
-            );
-            if (resp.ok) allClasses = await resp.json();
-          }
-        } catch (e) {
-          console.warn("Error fetching classes:", e);
-        }
-        setClassesList(allClasses);
-      } catch (error) {
-        console.error("Error fetching classes:", error);
-      }
+    let cancelled = false;
+    setLoadingContacts(true);
+    Promise.all([
+      messageService.getContacts().catch((e) => {
+        if (!cancelled) setErrorMessage(e.message);
+        return [];
+      }),
+      messageService.getContactClasses().catch(() => []),
+    ]).then(([people, classes]) => {
+      if (cancelled) return;
+      const me = localStorage.getItem("userId");
+      setContacts(people.filter((u) => u?.id && u.id !== me));
+      setClassesList(classes.filter((c) => c?.id));
+      setLoadingContacts(false);
+    });
+    return () => {
+      cancelled = true;
     };
-    fetchClasses();
   }, [currentUser]);
-  useEffect(() => {
-    const fetchUsersForClasses = async () => {
-      if (selectedClasses.length === 0) {
-        setClassUsers({});
-        return;
-      }
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        const users = {};
-        for (const classeId of selectedClasses) {
-          const response = await fetch(
-            `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/${classeId}/utilisateurs`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            },
-          );
-          if (!response.ok) {
-            throw new Error("Failed to fetch users for class");
-          }
-          const data = await response.json();
-          users[classeId] = data;
-        }
-        setClassUsers(users);
-      } catch (error) {
-        console.error("Error fetching users for classes:", error);
-      }
-    };
-    fetchUsersForClasses();
-  }, [selectedClasses]);
+
   const toggleClassSelection = (classeId) => {
     if (selectedClasses.includes(classeId)) {
-      const newSelectedClasses = selectedClasses.filter(
-        (id) => id !== classeId,
-      );
-      setSelectedClasses(newSelectedClasses);
-
-      // Collect user IDs that still belong to at least one remaining selected class
-      const remainingUserIds = new Set(
-        newSelectedClasses.flatMap((id) =>
-          (classUsers[id] || []).map((u) => u.id),
-        ),
-      );
-
-      // Remove recipients that no longer belong to any selected class
-      setNewMessage((prev) => ({
-        ...prev,
-        destinataires: prev.destinataires.filter((dest) =>
-          remainingUserIds.has(dest.id),
-        ),
-      }));
-
-      // Remove CC recipients that no longer belong to any selected class
-      setCcRecipients((prev) =>
-        prev.filter((cc) => remainingUserIds.has(cc.id)),
-      );
+      const next = selectedClasses.filter((id) => id !== classeId);
+      setSelectedClasses(next);
+      if (next.length === 0) setIsGeneralMessage(false);
     } else {
       setSelectedClasses([...selectedClasses, classeId]);
     }
   };
-  const toggleGeneralMessage = () => {
-    setIsGeneralMessage(!isGeneralMessage);
-    if (!isGeneralMessage) {
-      setNewMessage((prev) => ({
-        ...prev,
-        destinataires: [],
-      }));
+
+  const setMode = (general) => {
+    setIsGeneralMessage(general);
+    setErrorMessage("");
+    if (general) {
+      setNewMessage((prev) => ({ ...prev, destinataires: [] }));
+    } else {
+      setSelectedClasses([]);
     }
   };
+
+  // Anyone already in À or CC is never suggested again in either field.
+  const selectedIds = useMemo(
+    () => [...newMessage.destinataires, ...ccRecipients].map((u) => u.id),
+    [newMessage.destinataires, ccRecipients],
+  );
+
+  const handleAddRecipient = (user) => {
+    setNewMessage((prev) =>
+      prev.destinataires.some((dest) => dest.id === user.id)
+        ? prev
+        : { ...prev, destinataires: [...prev.destinataires, user] },
+    );
+    setRecipientSearch?.("");
+  };
+  const handleRemoveRecipient = (user) => {
+    setNewMessage((prev) => ({
+      ...prev,
+      destinataires: prev.destinataires.filter((dest) => dest.id !== user.id),
+    }));
+  };
+  const handleAddCcRecipient = (user) => {
+    setCcRecipients((prev) =>
+      prev.some((cc) => cc.id === user.id) ? prev : [...prev, user],
+    );
+  };
+  const handleRemoveCcRecipient = (user) => {
+    setCcRecipients((prev) => prev.filter((cc) => cc.id !== user.id));
+  };
+
+  const hasText = !!newMessage.contenu?.trim();
+  const hasMedia = attachments.medias.length > 0;
+  const hasRecipients = isGeneralMessage
+    ? selectedClasses.length > 0
+    : newMessage.destinataires.length > 0 || ccRecipients.length > 0;
+  const canSend =
+    !sending &&
+    !attachments.uploading &&
+    !attachments.hasErrors &&
+    (hasText || hasMedia) &&
+    hasRecipients;
+
   const handleSendMessage = async () => {
     setErrorMessage("");
-    setLoading(true);
+    if (!canSend) return;
+    setSending(true);
     try {
+      const objet = newMessage.objet?.trim() || undefined;
+      const medias = attachments.medias.length ? attachments.medias : undefined;
+      let sent;
       if (isGeneralMessage) {
-        const accessToken = localStorage.getItem("accessToken");
-        const senderId = localStorage.getItem("userId");
-
-        // For general messages, include CC recipients in the request
-        const requestBody = {
-          objet: newMessage.objet,
-          content: newMessage.contenu,
-          senderId: senderId,
+        sent = await messageService.sendGroupMessage({
           classIds: selectedClasses,
-        };
-
-        // Add CC recipients if any
-        if (ccRecipients.length > 0) {
-          requestBody.ccRecipients = ccRecipients.map((cc) => cc.id);
-        }
-        const response = await fetch(
-          `${process.env.REACT_APP_API_BASE_URL}/messages/group`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify(requestBody),
-          },
-        );
-        if (!response.ok) {
-          throw new Error("Failed to send message");
-        }
-      } else {
-        const accessToken = localStorage.getItem("accessToken");
-        const senderId = localStorage.getItem("userId");
-
-        // Combine regular recipients and CC recipients
-        const allRecipients = [...newMessage.destinataires];
-
-        // Add CC recipients to the recipients list with a CC flag
-        ccRecipients.forEach((ccRecipient) => {
-          if (
-            !allRecipients.some((recipient) => recipient.id === ccRecipient.id)
-          ) {
-            allRecipients.push({
-              ...ccRecipient,
-              isCC: true,
-            });
-          }
+          objet,
+          content: newMessage.contenu || "",
+          ...(ccRecipients.length > 0 && {
+            copieRecipientIds: ccRecipients.map((cc) => cc.id),
+          }),
+          ...(medias && { medias }),
         });
-        const response = await fetch(
-          `${process.env.REACT_APP_API_BASE_URL}/messages`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              objet: newMessage.objet,
-              contenu: newMessage.contenu,
-              dateCreation: new Date().toISOString(),
-              etat: "envoyé",
-              expediteur: {
-                type: "utilisateur",
-                id: senderId,
-                nom:
-                  currentUser?.nom ||
-                  localStorage.getItem("userName") ||
-                  currentUser?.username ||
-                  "",
-                prenom: currentUser?.prenom || "",
-                email:
-                  currentUser?.email || localStorage.getItem("userEmail") || "",
-                telephone: currentUser?.telephone || "",
-                adresse: currentUser?.adresse || "",
-                etat: "ACTIVE",
-                creationDate: currentUser?.creationDate || null,
-                admin: currentUser?.admin || false,
-              },
-              destinataires: allRecipients.map((dest) => ({
-                type: "utilisateur",
-                id: dest.id,
-                nom: dest.nom,
-                prenom: dest.prenom,
-                email: dest.email,
-                telephone: dest.telephone,
-                adresse: dest.adresse,
-                etat: "ACTIVE",
-                creationDate: dest.creationDate,
-                admin: dest.admin,
-                isCC: dest.isCC || false,
-              })),
-            }),
-          },
-        );
-        if (!response.ok) {
-          throw new Error("Failed to send message");
-        }
+      } else {
+        const allRecipients = [...newMessage.destinataires];
+        ccRecipients.forEach((cc) => {
+          if (!allRecipients.some((r) => r.id === cc.id)) allRecipients.push(cc);
+        });
+        sent = await messageService.sendMessage({
+          objet,
+          contenu: newMessage.contenu || "",
+          // nom/prenom must never be null (@NonNull on Utilisateurs).
+          destinataires: allRecipients.map(toUtilisateurPayload),
+          ...(medias && { medias }),
+        });
       }
 
-      // Reset form
       setNewMessage({
         destinataires: [],
         contenu: "",
@@ -268,88 +164,30 @@ const ComposeModal = ({
       setSelectedClasses([]);
       setIsGeneralMessage(false);
       setCcRecipients([]);
-      setShowCcField(false);
-      setCcSearch("");
+      attachments.clear();
       setShowCompose(false);
-      if (onMessageSent) {
-        onMessageSent();
-      }
+      onMessageSent?.(sent);
     } catch (error) {
       console.error("Error sending message:", error);
-      setError("Failed to send message.");
-    } finally {
-      setLoading(false);
-    }
-  };
-  const filteredUsers = Object.values(classUsers)
-    .flat()
-    .filter(
-      (user, index, self) => self.findIndex((u) => u.id === user.id) === index,
-    ) // deduplicate
-    .filter((user) => {
-      if (user.id === localStorage.getItem("userId")) return false;
-      if (!recipientSearch) return true;
-      const search = recipientSearch.toLowerCase();
-      const fullName = `${user.prenom || ""} ${user.nom || ""}`.toLowerCase();
-      return (
-        fullName.includes(search) ||
-        (user.email || "").toLowerCase().includes(search) ||
-        (user.nom || "").toLowerCase().includes(search) ||
-        (user.prenom || "").toLowerCase().includes(search)
+      // 403/400 carry a French message from the server.
+      setErrorMessage(
+        error?.message || "Échec de l'envoi du message. Veuillez réessayer.",
       );
-    });
-  const handleAddRecipient = (user) => {
-    if (!newMessage.destinataires.some((dest) => dest.id === user.id)) {
-      setNewMessage((prev) => ({
-        ...prev,
-        destinataires: [...prev.destinataires, user],
-      }));
+    } finally {
+      setSending(false);
     }
-    setRecipientSearch("");
   };
 
-  // Filter users for CC field from class users
-  const filteredCcUsers = Object.values(classUsers)
-    .flat()
-    .filter(
-      (user, index, self) => self.findIndex((u) => u.id === user.id) === index,
-    )
-    .filter((user) => {
-      const search = ccSearch.toLowerCase();
-      const fullName = `${user.prenom || ""} ${user.nom || ""}`.toLowerCase();
-      return (
-        (fullName.includes(search) ||
-          (user.email || "").toLowerCase().includes(search) ||
-          (user.nom || "").toLowerCase().includes(search) ||
-          (user.prenom || "").toLowerCase().includes(search)) &&
-        !ccRecipients.some((cc) => cc.id === user.id) &&
-        !newMessage.destinataires.some((dest) => dest.id === user.id) &&
-        user.id !== localStorage.getItem("userId")
-      );
-    });
-  const handleAddCcRecipient = (user) => {
-    setCcRecipients((prev) => [...prev, user]);
-    setCcSearch("");
-  };
-  const handleRemoveCcRecipient = (userId) => {
-    setCcRecipients((prev) => prev.filter((cc) => cc.id !== userId));
-  };
-  const handleCcEmailInput = (email) => {
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      const emailUser = {
-        id: `email_cc_${Date.now()}`,
-        nom: email.split("@")[0],
-        prenom: "",
-        email: email,
-        role: "EXTERNAL",
-        type: "external",
-      };
-      setCcRecipients((prev) => [...prev, emailUser]);
-      setCcSearch("");
-      return true;
+  const onFiles = (files) => {
+    const rejected = attachments.addFiles(files);
+    if (rejected > 0) {
+      setErrorMessage(`Maximum ${MAX_ATTACHMENTS} pièces jointes par message.`);
     }
-    return false;
   };
+
+  const fieldBox = `border rounded-lg p-3 ${isDark ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-gray-50"}`;
+  const labelCls = `block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 pt-20">
       <div
@@ -367,300 +205,153 @@ const ComposeModal = ({
             className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
             onClick={() => setShowCompose(false)}
           >
-            <FontAwesomeIcon
-              icon={faXmark}
-              style={{
-                fontSize: 20,
-              }}
-            />
+            <FontAwesomeIcon icon={faXmark} style={{ fontSize: 20 }} />
           </button>
         </div>
 
         {errorMessage && (
-          <div className="p-4 text-red-500 text-sm bg-red-100 border border-red-400">
+          <div className="p-4 text-red-600 text-sm bg-red-100 border border-red-300">
             {errorMessage}
           </div>
         )}
 
         <div className="p-4 space-y-4">
-          {/* Classes Selection */}
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
-            >
-              Classes
-            </label>
-            <div
-              className={`border rounded-lg p-3 ${isDark ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-gray-50"}`}
-            >
-              <div className="flex flex-wrap gap-2 mb-3">
-                {classesList.map((classe) => (
-                  <button
-                    key={classe.id}
-                    onClick={() => toggleClassSelection(classe.id)}
-                    className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm border ${selectedClasses.includes(classe.id) ? "bg-blue-100 text-blue-800 border-blue-300" : isDark ? "border-gray-500 text-gray-300 hover:bg-gray-600" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
-                  >
-                    {selectedClasses.includes(classe.id) && (
-                      <FontAwesomeIcon
-                        icon={faCheck}
-                        style={{
-                          fontSize: 14,
-                        }}
-                      />
-                    )}
-                    {classe.nom} ({classe.niveau})
-                  </button>
-                ))}
-              </div>
-              {/* Hide general message option for parents and students */}
-              {(() => {
-                const userRole = (
-                  localStorage.getItem("userRole") || ""
-                ).toUpperCase();
-                const isParentOrStudent =
-                  userRole.includes("PARENT") ||
-                  userRole.includes("ELEVE") ||
-                  userRole.includes("STUDENT");
-                if (isParentOrStudent) return null;
-                return (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="generalMessage"
-                      checked={isGeneralMessage}
-                      onChange={toggleGeneralMessage}
-                      disabled={selectedClasses.length === 0}
-                      className="rounded"
-                    />
-                    <label
-                      htmlFor="generalMessage"
-                      className={`text-sm ${selectedClasses.length === 0 ? "opacity-50" : ""} ${isDark ? "text-gray-300" : "text-gray-700"}`}
-                    >
-                      Message général (envoyé à tous les membres de la classe)
-                    </label>
-                  </div>
-                );
-              })()}
+          {/* Individual vs class (group) message */}
+          {canGroupMessage && classesList.length > 0 && (
+            <div className="flex gap-2">
+              {[
+                { general: false, label: "Message individuel" },
+                { general: true, label: "Message à une classe" },
+              ].map((opt) => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => setMode(opt.general)}
+                  className={`px-3 py-1.5 rounded-full text-sm border ${isGeneralMessage === opt.general ? "bg-blue-100 text-blue-800 border-blue-300" : isDark ? "border-gray-500 text-gray-300 hover:bg-gray-600" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
-          </div>
+          )}
+
+          {isGeneralMessage && (
+            <div>
+              <label className={labelCls}>Classes</label>
+              <div className={fieldBox}>
+                <div className="flex flex-wrap gap-2">
+                  {classesList.map((classe) => (
+                    <button
+                      key={classe.id}
+                      onClick={() => toggleClassSelection(classe.id)}
+                      className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm border ${selectedClasses.includes(classe.id) ? "bg-blue-100 text-blue-800 border-blue-300" : isDark ? "border-gray-500 text-gray-300 hover:bg-gray-600" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
+                    >
+                      {selectedClasses.includes(classe.id) && (
+                        <FontAwesomeIcon icon={faCheck} style={{ fontSize: 14 }} />
+                      )}
+                      {classe.nom}
+                      {classe.niveau ? ` (${classe.niveau})` : ""}
+                    </button>
+                  ))}
+                </div>
+                <p className={`text-xs mt-2 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  Le message sera envoyé à tous les membres des classes
+                  sélectionnées.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Main Recipients */}
           {!isGeneralMessage && (
             <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
-              >
+              <label className={labelCls} htmlFor="compose-to">
                 À
               </label>
-              <div
-                className={`border rounded-lg p-3 ${isDark ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-gray-50"}`}
-              >
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {newMessage.destinataires.map((dest, index) => (
-                    <span
-                      key={index}
-                      className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                    >
-                      {dest.email || dest.nom}
-                      <button onClick={() => removeRecipient(index)}>
-                        <FontAwesomeIcon
-                          icon={faXmark}
-                          style={{
-                            fontSize: 14,
-                          }}
-                        />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Rechercher ou entrer une adresse email"
-                    value={recipientSearch}
-                    onChange={(e) => setRecipientSearch(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && recipientSearch.includes("@")) {
-                        handleEmailInput(recipientSearch);
-                        setRecipientSearch("");
-                      }
-                    }}
-                    className={`w-full px-3 py-2 rounded border ${isDark ? "bg-gray-600 border-gray-500 text-white" : "bg-white border-gray-300"}`}
-                  />
-                  {recipientSearch && (
-                    <div
-                      className={`absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto z-10 ${isDark ? "bg-gray-700" : "bg-white"} shadow-lg rounded-md border ${isDark ? "border-gray-600" : "border-gray-300"}`}
-                    >
-                      {filteredUsers.length > 0 ? (
-                        filteredUsers.map((user) => (
-                          <div
-                            key={user.id}
-                            className={`p-2 hover:bg-blue-100 cursor-pointer ${isDark ? "hover:bg-gray-600" : ""}`}
-                            onClick={() => handleAddRecipient(user)}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${isDark ? "bg-gray-600 text-gray-300" : "bg-gray-200 text-gray-700"}`}
-                              >
-                                {user.nom
-                                  .split(" ")
-                                  .map((name) => name[0])
-                                  .join("")
-                                  .substring(0, 2)
-                                  .toUpperCase()}
-                              </div>
-                              <div>
-                                <div className="text-sm">
-                                  {user.nom} {user.prenom}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {user.email}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="p-2 text-sm text-gray-500">
-                          Aucun utilisateur trouvé
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+              <div className={fieldBox}>
+                <ContactAutocomplete
+                  inputId="compose-to"
+                  contacts={contacts}
+                  selected={newMessage.destinataires}
+                  excludeIds={selectedIds}
+                  onAdd={handleAddRecipient}
+                  onRemove={handleRemoveRecipient}
+                  isDark={isDark}
+                  loading={loadingContacts}
+                  placeholder="Tapez un nom ou un e-mail"
+                />
               </div>
             </div>
           )}
 
           {/* CC Recipients */}
           <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
-            >
+            <label className={labelCls} htmlFor="compose-cc">
               Copie (CC)
             </label>
-
-            <div
-              className={`border rounded-lg p-3 ${isDark ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-gray-50"}`}
-            >
-              <div className="flex flex-wrap gap-2 mb-2">
-                {ccRecipients.map((ccRecipient) => (
-                  <span
-                    key={ccRecipient.id}
-                    className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
-                  >
-                    {ccRecipient.email ||
-                      `${ccRecipient.prenom} ${ccRecipient.nom}`}
-                    <button
-                      onClick={() => handleRemoveCcRecipient(ccRecipient.id)}
-                    >
-                      <FontAwesomeIcon
-                        icon={faXmark}
-                        style={{
-                          fontSize: 14,
-                        }}
-                      />
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Rechercher ou entrer une adresse email pour CC"
-                  value={ccSearch}
-                  onChange={(e) => setCcSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && ccSearch.includes("@")) {
-                      handleCcEmailInput(ccSearch);
-                    }
-                  }}
-                  className={`w-full px-3 py-2 rounded border ${isDark ? "bg-gray-600 border-gray-500 text-white placeholder-gray-400" : "bg-white border-gray-300 placeholder-gray-500"}`}
-                />
-                {ccSearch && (
-                  <div
-                    className={`absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto z-10 ${isDark ? "bg-gray-700" : "bg-white"} shadow-lg rounded-md border ${isDark ? "border-gray-600" : "border-gray-300"}`}
-                  >
-                    {filteredCcUsers.length > 0 ? (
-                      filteredCcUsers.map((user) => (
-                        <div
-                          key={user.id}
-                          className={`p-2 hover:bg-purple-100 cursor-pointer ${isDark ? "hover:bg-gray-600" : ""}`}
-                          onClick={() => handleAddCcRecipient(user)}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${isDark ? "bg-gray-600 text-gray-300" : "bg-gray-200 text-gray-700"}`}
-                            >
-                              {user.nom
-                                .split(" ")
-                                .map((name) => name[0])
-                                .join("")
-                                .substring(0, 2)
-                                .toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="text-sm">
-                                {user.nom} {user.prenom}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {user.email}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-2 text-sm text-gray-500">
-                        Aucun utilisateur trouvé
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+            <div className={fieldBox}>
+              <ContactAutocomplete
+                inputId="compose-cc"
+                contacts={contacts}
+                selected={ccRecipients}
+                excludeIds={selectedIds}
+                onAdd={handleAddCcRecipient}
+                onRemove={handleRemoveCcRecipient}
+                isDark={isDark}
+                loading={loadingContacts}
+                accent="purple"
+                placeholder="Ajouter en copie : nom ou e-mail"
+              />
             </div>
           </div>
 
-          {/* Subject */}
+          {/* Subject (optional) */}
           <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
-            >
-              Objet
-            </label>
+            <label className={labelCls}>Objet (facultatif)</label>
             <input
               type="text"
               placeholder="Saisissez l'objet du message"
               className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
               value={newMessage.objet}
               onChange={(e) =>
-                setNewMessage((prev) => ({
-                  ...prev,
-                  objet: e.target.value,
-                }))
+                setNewMessage((prev) => ({ ...prev, objet: e.target.value }))
               }
             />
           </div>
 
           {/* Message Content */}
           <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
-            >
-              Message
-            </label>
+            <label className={labelCls}>Message</label>
             <textarea
               placeholder="Tapez votre message ici..."
               rows={6}
               className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
               value={newMessage.contenu}
               onChange={(e) =>
-                setNewMessage((prev) => ({
-                  ...prev,
-                  contenu: e.target.value,
-                }))
+                setNewMessage((prev) => ({ ...prev, contenu: e.target.value }))
               }
+            />
+          </div>
+
+          {/* Attachments */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <AttachButton
+                onFiles={onFiles}
+                disabled={sending || attachments.items.length >= MAX_ATTACHMENTS}
+                isDark={isDark}
+                label="Joindre"
+              />
+              <span className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                Images, vidéos, PDF et documents
+                {attachments.uploading && " — téléversement en cours..."}
+              </span>
+            </div>
+            <AttachmentPreviewList
+              items={attachments.items}
+              onRemove={attachments.removeItem}
+              onRetry={attachments.retryItem}
+              isDark={isDark}
             />
           </div>
         </div>
@@ -672,52 +363,30 @@ const ComposeModal = ({
           <button
             className={`px-4 py-2 rounded-lg border transition-colors mb-2 sm:mb-0 w-full sm:w-auto ${isDark ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
             onClick={() => setShowCompose(false)}
-            disabled={loading}
+            disabled={sending}
           >
             Annuler
           </button>
           <button
-            className={`px-4 py-2 rounded-lg text-white transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${loading || !newMessage.contenu.trim() || selectedClasses.length === 0 || (isGeneralMessage ? selectedClasses.length === 0 : newMessage.destinataires.length === 0) ? "bg-gray-400 cursor-not-allowed" : "hover:shadow-lg"}`}
+            className={`px-4 py-2 rounded-lg text-white transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${canSend ? "hover:shadow-lg" : "bg-gray-400 cursor-not-allowed"}`}
             style={{
-              backgroundColor:
-                loading ||
-                !newMessage.contenu.trim() ||
-                selectedClasses.length === 0 ||
-                (isGeneralMessage
-                  ? selectedClasses.length === 0
-                  : newMessage.destinataires.length === 0)
-                  ? undefined
-                  : themeColors.primary,
+              backgroundColor: canSend ? themeColors.primary : undefined,
             }}
             onClick={handleSendMessage}
-            disabled={
-              loading ||
-              !newMessage.contenu.trim() ||
-              selectedClasses.length === 0 ||
-              (isGeneralMessage
-                ? selectedClasses.length === 0
-                : newMessage.destinataires.length === 0)
-            }
+            disabled={!canSend}
           >
-            {loading ? (
+            {sending || attachments.uploading ? (
               <>
                 <FontAwesomeIcon
                   icon={faArrowsRotate}
                   className="animate-spin"
-                  style={{
-                    fontSize: 16,
-                  }}
+                  style={{ fontSize: 16 }}
                 />
-                Envoi...
+                {sending ? "Envoi..." : "Téléversement..."}
               </>
             ) : (
               <>
-                <FontAwesomeIcon
-                  icon={faPaperPlane}
-                  style={{
-                    fontSize: 16,
-                  }}
-                />
+                <FontAwesomeIcon icon={faPaperPlane} style={{ fontSize: 16 }} />
                 Envoyer
               </>
             )}
@@ -728,5 +397,3 @@ const ComposeModal = ({
   );
 };
 export default ComposeModal;
-
-// make it such that when we click on the class, in the same way as the request to find the utilisateurs having access to the class, we should also fetch the professeurs who have droit de publication to a class through the link http://localhost:8486/scholchat/droits-publication/classes/{classeId}/utilisateurs and for the add in copy, it should be only the professeur data gotten from this link that can be displaying in autocompilation.

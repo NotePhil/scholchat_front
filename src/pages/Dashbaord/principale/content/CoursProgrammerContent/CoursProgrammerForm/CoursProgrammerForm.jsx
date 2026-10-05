@@ -19,6 +19,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../../../utils/faIconAdapter";
+import { toLocalInputValue, toServerDateTime } from "../../../../../../utils/dateUtils";
 const Activity = asIconComponent(faHeartPulse);
 const BookOpen = asIconComponent(faBookOpen);
 const Calendar = asIconComponent(faCalendarDays);
@@ -216,16 +217,7 @@ const CoursProgrammerForm = ({
     if (isOpen) {
       setSubmitError("");
       if (selectedScheduledCourse) {
-        const formatDateForInput = (dateString) => {
-          if (!dateString) return "";
-          const date = new Date(dateString);
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, "0");
-          const day = String(date.getDate()).padStart(2, "0");
-          const hours = String(date.getHours()).padStart(2, "0");
-          const minutes = String(date.getMinutes()).padStart(2, "0");
-          return `${year}-${month}-${day}T${hours}:${minutes}`;
-        };
+        const formatDateForInput = toLocalInputValue;
         const initialValues = {
           coursId:
             selectedScheduledCourse.coursId ||
@@ -302,15 +294,7 @@ const CoursProgrammerForm = ({
       shouldValidate: true,
     });
   };
-  const getCurrentDateTime = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
+  const getCurrentDateTime = () => toLocalInputValue(new Date());
   const getMinDateDebutEffectif = () => {
     if (watchedDatePrevue) {
       return watchedDatePrevue;
@@ -355,10 +339,7 @@ const CoursProgrammerForm = ({
           return;
         }
       }
-      const formatDate = (dateString) => {
-        if (!dateString) return null;
-        return new Date(dateString).toISOString();
-      };
+      const formatDate = (dateString) => toServerDateTime(dateString) || null;
       const calculateEndDate = (startDate, hoursToAdd = 2) => {
         if (!startDate) return null;
         const date = new Date(startDate);

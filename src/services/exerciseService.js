@@ -1,5 +1,6 @@
 import axios from "axios";
 import { applyAuthInterceptors } from "../utils/axiosConfig";
+import { toServerDateTime } from "../utils/dateUtils";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -286,20 +287,13 @@ class ExerciseProgrammerService {
       const formattedData = {
         exerciseId: exerciseProgrammerData.exerciseId,
         programmeParId: exerciseProgrammerData.programmeParId,
-        dateExoPrevue:
-          typeof exerciseProgrammerData.dateExoPrevue === "string"
-            ? exerciseProgrammerData.dateExoPrevue
-            : new Date(exerciseProgrammerData.dateExoPrevue).toISOString(),
-        dateDebutExoEffectif:
-          typeof exerciseProgrammerData.dateDebutExoEffectif === "string"
-            ? exerciseProgrammerData.dateDebutExoEffectif
-            : new Date(
-                exerciseProgrammerData.dateDebutExoEffectif
-              ).toISOString(),
-        dateFinExoEffectif:
-          typeof exerciseProgrammerData.dateFinExoEffectif === "string"
-            ? exerciseProgrammerData.dateFinExoEffectif
-            : new Date(exerciseProgrammerData.dateFinExoEffectif).toISOString(),
+        dateExoPrevue: toServerDateTime(exerciseProgrammerData.dateExoPrevue),
+        dateDebutExoEffectif: toServerDateTime(
+          exerciseProgrammerData.dateDebutExoEffectif
+        ),
+        dateFinExoEffectif: toServerDateTime(
+          exerciseProgrammerData.dateFinExoEffectif
+        ),
         etat: exerciseProgrammerData.etat || "BROUILLON",
         classeIds: exerciseProgrammerData.classeIds || [],
       };
@@ -343,11 +337,12 @@ class ExerciseProgrammerService {
       const formattedData = {
         exerciseId: exerciseProgrammerData.exerciseId,
         programmeParId: exerciseProgrammerData.programmeParId,
-        dateExoPrevue: exerciseProgrammerData.dateExoPrevue,
-        dateDebutExoEffectif: exerciseProgrammerData.dateDebutExoEffectif,
-        dateFinExoEffectif: exerciseProgrammerData.dateFinExoEffectif,
+        dateExoPrevue: toServerDateTime(exerciseProgrammerData.dateExoPrevue),
+        dateDebutExoEffectif: toServerDateTime(exerciseProgrammerData.dateDebutExoEffectif),
+        dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat || "ACTIF",
         classeIds: exerciseProgrammerData.classeIds || [],
+        typeAssignation: exerciseProgrammerData.typeAssignation,
       };
 
       console.log(
@@ -521,6 +516,9 @@ class QuestionReponseService {
         typeQuestion: questionData.typeQuestion,
         points: questionData.points,
         choixReponses: questionData.choixReponses,
+        // Full current list: the backend keeps medias sent with an id, adds
+        // those without one and deletes the rest. Omitted → left unchanged.
+        ...(questionData.medias !== undefined && { medias: questionData.medias }),
       };
 
       const response = await this.api.put(
@@ -685,8 +683,9 @@ class ParticipationExerciseService {
       const formattedData = {
         utilisateurId: participationData.utilisateurId,
         exerciseProgrammerId: participationData.exerciseProgrammerId,
-        dateDebut: participationData.dateDebut || new Date().toISOString(),
-        dateFin: participationData.dateFin,
+        dateDebut:
+          toServerDateTime(participationData.dateDebut) || new Date().toISOString(),
+        dateFin: toServerDateTime(participationData.dateFin),
         note: participationData.note,
         appreciation: participationData.appreciation,
       };
@@ -719,8 +718,8 @@ class ParticipationExerciseService {
       const formattedData = {
         utilisateurId: participationData.utilisateurId,
         exerciseProgrammerId: participationData.exerciseProgrammerId,
-        dateDebut: participationData.dateDebut,
-        dateFin: participationData.dateFin,
+        dateDebut: toServerDateTime(participationData.dateDebut),
+        dateFin: toServerDateTime(participationData.dateFin),
         note: participationData.note,
         appreciation: participationData.appreciation,
         etatSoumission: participationData.etatSoumission,
@@ -788,8 +787,7 @@ class ParticipationExerciseService {
 const formatDateTime = (dateString) => {
   if (!dateString) return null;
   try {
-    const date = new Date(dateString);
-    return date.toISOString();
+    return toServerDateTime(dateString);
   } catch (error) {
     console.error("Date formatting error:", error);
     return null;

@@ -29,6 +29,7 @@ import {
   faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../utils/faIconAdapter";
+import CourseProgressPanel from "./CourseProgressPanel";
 const Bell = asIconComponent(faBell);
 const BookOpen = asIconComponent(faBookOpen);
 const Calendar = asIconComponent(faCalendarDays);
@@ -384,6 +385,16 @@ const StudentParentStats = ({
                     setShowStudentDropdown(false);
                     // Sync to localStorage so other pages (exercises, devoirs, etc.) pick up the selected child
                     localStorage.setItem("selectedChildId", child.id);
+                    localStorage.setItem(
+                      "selectedChildName",
+                      `${child.prenom || ""} ${child.nom || ""}`,
+                    );
+                    if (child.email !== undefined) {
+                      localStorage.setItem(
+                        "selectedChildHasAccount",
+                        child.email ? "true" : "false",
+                      );
+                    }
                     window.dispatchEvent(new Event("childChanged"));
                   }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors first:rounded-t-lg last:rounded-b-lg ${selectedChild?.id === child.id ? (isDark ? "bg-gray-700" : "bg-blue-50") : isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}
@@ -877,6 +888,22 @@ const StudentParentStats = ({
                 />
               )}
             </div>
+
+            {/* Progression per course + homework (own, or the selected child's) */}
+            <CourseProgressPanel
+              key={userRole === "parent" ? selectedChild?.id : userId}
+              learnerId={userRole === "parent" ? selectedChild?.id : userId}
+              learnerName={
+                userRole === "parent" ? selectedChild?.prenom || "" : ""
+              }
+              themeColors={themeColors}
+              onOpenCourses={
+                setActiveTab ? () => setActiveTab("cours") : undefined
+              }
+              onOpenDevoirs={
+                setActiveTab ? () => setActiveTab("devoirs") : undefined
+              }
+            />
 
             {/* Charts Row */}
             {currentCourses.length > 0 && (
