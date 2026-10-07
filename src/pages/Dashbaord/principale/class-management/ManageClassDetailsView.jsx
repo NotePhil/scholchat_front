@@ -218,6 +218,7 @@ const ManageClassDetailsView = ({
   // switch to the requested tab and reload its data
   useEffect(() => {
     if (initialTab && initialTab !== activeTab) {
+      if (initialTab === "access-requests" && !canManageRef.current) return;
       setActiveTab(initialTab);
       if (initialTab === "access-requests") {
         loadAccessRequests();
@@ -299,6 +300,65 @@ const ManageClassDetailsView = ({
     [],
   );
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Permissions on THIS class, mirroring the backend AccessControlService:
+  // - canManageClass  = isClassManager (admin, moderator, creator, gestionnaire of the class's
+  //   établissement, co-moderator, or publication right with peutModerer=true)
+  // - canPublishInClass = manager or holder of a publication right (peutPublier)
+  // Access requests, member management, edit/delete and the offer/contract panel are for managers
+  // only; publishers can view the class and publish courses/exercises.
+  const [canManageClass, setCanManageClass] = useState(false);
+  const [canPublishInClass, setCanPublishInClass] = useState(false);
+  const canManageRef = useRef(false);
+
+  const resolveClassPermissions = async (details) => {
+    const me = localStorage.getItem("userId") || "";
+    const role = (localStorage.getItem("userRole") || "").toUpperCase();
+    if (role.includes("ADMIN")) return { canManage: true, canPublish: true };
+    if (
+      !me ||
+      role.includes("ELEVE") ||
+      role.includes("STUDENT") ||
+      role.includes("PARENT")
+    ) {
+      return { canManage: false, canPublish: false };
+    }
+    const etab = details?.etablissement;
+    if (
+      details?.moderatorId === me ||
+      details?.moderator?.id === me ||
+      details?.creatorId === me ||
+      details?.createurId === me ||
+      (etab && (etab.gestionnaireId === me || etab.gestionnaire?.id === me))
+    ) {
+      return { canManage: true, canPublish: true };
+    }
+    const [modsResult, rightsResult] = await Promise.allSettled([
+      classService.axiosRequest(`/classes/${classId}/moderators`, {
+        method: "get",
+      }),
+      classService.axiosRequest(
+        `/droits-publication/utilisateurs/${me}/classes-avec-droits`,
+        { method: "get" },
+      ),
+    ]);
+    const coModerators =
+      modsResult.status === "fulfilled" && Array.isArray(modsResult.value)
+        ? modsResult.value
+        : [];
+    const myRight = (
+      rightsResult.status === "fulfilled" && Array.isArray(rightsResult.value)
+        ? rightsResult.value
+        : []
+    ).find((d) => (d.classe?.id || d.classeId) === classId);
+    const canManage =
+      coModerators.some((m) => m?.id === me) || myRight?.peutModerer === true;
+    return {
+      canManage,
+      canPublish: canManage || !!myRight?.peutPublier,
+    };
+  };
+
   useEffect(() => {
     // Get user role and ID from localStorage
     const role = localStorage.getItem("userRole");
@@ -414,9 +474,20 @@ const ManageClassDetailsView = ({
         details.droitPublication || "PROFESSEURS_SEULEMENT",
       );
 
+      const perms = await resolveClassPermissions(enrichedDetails);
+      canManageRef.current = perms.canManage;
+      setCanManageClass(perms.canManage);
+      setCanPublishInClass(perms.canPublish);
+      if (!perms.canManage) {
+        // Not a manager: no access-requests tab (the server answers 403 anyway)
+        setActiveTab((tab) => (tab === "access-requests" ? "overview" : tab));
+      }
+
       // Load all user data in sequence to avoid race conditions
-      const accessResult = await loadUsersWithAccess();
-      await loadAccessRequests();
+      await loadUsersWithAccess();
+      if (perms.canManage) {
+        await loadAccessRequests();
+      }
       await loadModeratorsAndRights();
 
       // Load additional modules
@@ -813,7 +884,11 @@ const ManageClassDetailsView = ({
       }));
     } catch (error) {
       console.error("Error loading access requests:", error);
-      message.error("Erreur lors du chargement des demandes d'accès");
+      // 403/404: not a manager of this class — nothing to show, not an error for the user
+      const status = error?.response?.status || error?.status;
+      if (status !== 403 && status !== 404) {
+        message.error("Erreur lors du chargement des demandes d'accès");
+      }
     }
   };
   const loadCourses = async () => {
@@ -886,27 +961,6 @@ const ManageClassDetailsView = ({
     } catch (error) {
       console.error("Error loading events:", error);
     }
-  };
-  const isUserModerator = () => {
-    // Students and parents are never moderators
-    const role = (userRole || "").toUpperCase();
-    if (
-      role.includes("ELEVE") ||
-      role.includes("STUDENT") ||
-      role.includes("PARENT")
-    )
-      return false;
-    if (role === "ADMIN" || role === "ROLE_ADMIN" || role === "ADMINISTRATEUR")
-      return true;
-    if (!currentUserId) return false;
-
-    // Check if user is assigned moderator (check both object and flat field)
-    if (classDetails?.moderatorId === currentUserId) return true;
-    if (classDetails?.moderator?.id === currentUserId) return true;
-    if (classDetails?.createurId === currentUserId) return true;
-
-    // Check if user is in moderatorsWithRights (professors only)
-    return moderatorsWithRights.some((m) => m.id === currentUserId);
   };
   const fetchProfessors = async () => {
     try {
@@ -1569,6 +1623,7 @@ const ManageClassDetailsView = ({
     }
   };
   const handleTabChange = (key) => {
+    if (key === "access-requests" && !canManageClass) return;
     setActiveTab(key);
     // Reload access requests fresh each time the tab is opened
     if (key === "access-requests") {
@@ -2024,7 +2079,8 @@ const ManageClassDetailsView = ({
                       classDetails?.creator_id === currentUserId;
                     const isMod =
                       classDetails?.moderator?.id === currentUserId ||
-                      classDetails?.moderatorId === currentUserId;
+                      classDetails?.moderatorId === currentUserId ||
+                      (canManageClass && !userRole.includes("ADMIN"));
                     const hasPubRight = usersWithPublicationRights?.some(
                       (u) => u.id === currentUserId,
                     );
@@ -2103,10 +2159,7 @@ const ManageClassDetailsView = ({
                 />
                 Actualiser
               </button>
-              {(userRole === "ROLE_ADMIN" ||
-                userRole === "ADMIN" ||
-                classDetails?.createurId === currentUserId ||
-                classDetails?.moderatorId === currentUserId) && (
+              {canManageClass && (
                 <button
                   onClick={() => setModeratorModalVisible(true)}
                   disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
@@ -2125,9 +2178,7 @@ const ManageClassDetailsView = ({
                   Modérateur
                 </button>
               )}
-              {(userRole === "ROLE_ADMIN" ||
-                userRole === "ADMIN" ||
-                isUserModerator()) && (
+              {canManageClass && (
                 <button
                   onClick={() => setPublicationRightsModalVisible(true)}
                   disabled={classDetails?.etat === "EN_ATTENTE_APPROBATION"}
@@ -2365,11 +2416,15 @@ const ManageClassDetailsView = ({
               label: `Utilisateurs (${users.utilisateurs.length})`,
               icon: <FontAwesomeIcon icon={faUser} />,
             },
-            {
-              key: "access-requests",
-              label: `Demandes (${users.accessRequests.length})`,
-              icon: <FontAwesomeIcon icon={faClock} />,
-            },
+            ...(canManageClass
+              ? [
+                  {
+                    key: "access-requests",
+                    label: `Demandes (${users.accessRequests.length})`,
+                    icon: <FontAwesomeIcon icon={faClock} />,
+                  },
+                ]
+              : []),
             ...(!["ROLE_ADMIN", "ADMIN", "ADMINISTRATEUR"].includes(
               (userRole || "").toUpperCase(),
             )
@@ -2539,14 +2594,16 @@ const ManageClassDetailsView = ({
                   </div>
                 </div>
 
-                {/* Offre / Forfait */}
-                <div className="mt-4">
-                  <OffreInfoPanel
-                    type="CLASSE"
-                    entityId={classId}
-                    isDark={false}
-                  />
-                </div>
+                {/* Offre / Forfait — réservé aux gestionnaires de la classe */}
+                {canManageClass && (
+                  <div className="mt-4">
+                    <OffreInfoPanel
+                      type="CLASSE"
+                      entityId={classId}
+                      isDark={false}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Right: moderator */}
@@ -2584,12 +2641,12 @@ const ManageClassDetailsView = ({
               onViewUser={handleViewUser}
               onRemoveAccess={handleRemoveAccess}
               onTogglePublicationRights={
-                isUserModerator() ? handleTogglePublicationRights : undefined
+                canManageClass ? handleTogglePublicationRights : undefined
               }
               publicationRightsMap={publicationRightsMap}
               currentTab={activeTab}
               userRole={userRole}
-              isModerator={isUserModerator()}
+              isModerator={canManageClass}
               currentUserId={currentUserId}
               classCreatorId={classDetails?.createurId}
             />
@@ -2598,7 +2655,7 @@ const ManageClassDetailsView = ({
           {/* Élèves */}
           {activeTab === "eleves" && (
             <div>
-              {classDetails?.accesMajeur && (
+              {classDetails?.accesMajeur && canManageClass && (
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                   <p className="text-sm font-semibold text-blue-700 mb-2">
                     🔑 Classe Majeure — Ajouter un élève par email
@@ -2704,7 +2761,7 @@ const ManageClassDetailsView = ({
                 onRemoveAccess={handleRemoveAccess}
                 currentTab={activeTab}
                 userRole={userRole}
-                isModerator={isUserModerator()}
+                isModerator={canManageClass}
                 currentUserId={currentUserId}
               />
             </div>
@@ -2720,7 +2777,7 @@ const ManageClassDetailsView = ({
               onRemoveAccess={handleRemoveAccess}
               currentTab={activeTab}
               userRole={userRole}
-              isModerator={isUserModerator()}
+              isModerator={canManageClass}
               currentUserId={currentUserId}
             />
           )}
@@ -2736,13 +2793,13 @@ const ManageClassDetailsView = ({
               onDeleteUser={handleDeleteUser}
               currentTab={activeTab}
               userRole={userRole}
-              isModerator={isUserModerator()}
+              isModerator={canManageClass}
               currentUserId={currentUserId}
             />
           )}
 
           {/* Demandes d'accès */}
-          {activeTab === "access-requests" && (
+          {activeTab === "access-requests" && canManageClass && (
             <UserTables
               users={users.accessRequests}
               loading={loading}
@@ -2752,7 +2809,7 @@ const ManageClassDetailsView = ({
               onRejectRequest={handleRejectRequest}
               currentTab={activeTab}
               userRole={userRole}
-              isModerator={isUserModerator()}
+              isModerator={canManageClass}
             />
           )}
 
@@ -2779,7 +2836,7 @@ const ManageClassDetailsView = ({
                       Voir tout
                     </Button>
                   )}
-                  {isUserModerator() && onNavigateToCourseCreation && (
+                  {canPublishInClass && onNavigateToCourseCreation && (
                     <Button
                       type="primary"
                       size="small"
@@ -2863,7 +2920,7 @@ const ManageClassDetailsView = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Tag color="purple">{exercises.length} exercices</Tag>
-                  {isUserModerator() && onNavigateToExerciseManagement && (
+                  {canPublishInClass && onNavigateToExerciseManagement && (
                     <Button
                       type="primary"
                       size="small"

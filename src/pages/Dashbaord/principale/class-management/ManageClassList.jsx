@@ -60,11 +60,33 @@ const RoleBadge = ({ role }) => {
     </span>
   );
 };
-const ClassCard = ({ cls, role, onSelectClass, onEdit, canEdit }) => {
-  const grantedBy =
-    (role === "publication" || role === "moderator") && cls.moderator
+const ClassCard = ({
+  cls,
+  role,
+  onSelectClass,
+  onEdit,
+  canEdit,
+  currentUserId = "",
+}) => {
+  const moderatorName =
+    cls._moderateurNom ||
+    (cls.moderator
       ? `${cls.moderator.prenom || ""} ${cls.moderator.nom || ""}`.trim()
+      : "") ||
+    null;
+  // "Par :" = créateur de la classe (pas le modérateur) ; repli sur le modérateur
+  // pour un ancien backend qui ne renvoie pas creatorNom.
+  const grantedBy =
+    role === "publication" || role === "moderator"
+      ? cls._creatorNom || (!cls.creatorId ? moderatorName : null)
       : null;
+  // Modérateur affiché séparément quand il diffère du créateur et de moi
+  const moderatorId = cls.moderator?.id;
+  const showModerator =
+    (role === "created" || role === "moderator" || role === "publication") &&
+    moderatorName &&
+    moderatorId !== currentUserId &&
+    moderatorId !== cls.creatorId;
   return (
     <div className="bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3">
       {/* Header */}
@@ -143,6 +165,11 @@ const ClassCard = ({ cls, role, onSelectClass, onEdit, canEdit }) => {
       <div className="space-y-0.5">
         {grantedBy && (
           <p className="text-xs text-slate-400 truncate">Par : {grantedBy}</p>
+        )}
+        {showModerator && (
+          <p className="text-xs text-slate-400 truncate">
+            Modérateur : {moderatorName}
+          </p>
         )}
         {cls.etablissement?.nom && (
           <p className="text-xs text-slate-400 truncate">
@@ -493,6 +520,7 @@ const ManageClassList = ({
               onSelectClass={onSelectClass}
               onEdit={handleEdit}
               canEdit={isCreatorOrAdmin(cls)}
+              currentUserId={currentUserId}
             />
           ))}
         </div>

@@ -156,28 +156,33 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
             ? accResult.value
             : [];
 
-        // Split publication-rights classes into 3 buckets:
-        // 1. Created by user (estCreateur=true, peutModerer=true)
-        // 2. Moderated but not created (peutModerer=true, estCreateur=false)
-        // 3. Publication rights only (peutModerer=false)
+        // Split into 3 buckets from the backend role (strongest role, deduplicated):
+        // CREATEUR (created by me, even if someone else moderates now),
+        // MODERATEUR (main moderator or co-moderator), PUBLICATION (granted right).
+        // Fallback on the legacy flags when "role" is absent (older backend).
+        const roleOf = (d) =>
+          d.role ||
+          (d.peutModerer && d.estCreateur
+            ? "CREATEUR"
+            : d.peutModerer
+              ? "MODERATEUR"
+              : "PUBLICATION");
+        const withMeta = (d, classRole) => ({
+          ...d.classe,
+          _classRole: classRole,
+          _creatorNom: d.creatorNom || null,
+          _moderateurNom: d.moderateurNom || null,
+          _peutModerer: !!d.peutModerer,
+        });
         const moderated = detailList
-          .filter((d) => d.peutModerer && d.estCreateur)
-          .map((d) => ({
-            ...d.classe,
-            _classRole: "created",
-          }));
+          .filter((d) => roleOf(d) === "CREATEUR")
+          .map((d) => withMeta(d, "created"));
         const assignedModerator = detailList
-          .filter((d) => d.peutModerer && !d.estCreateur)
-          .map((d) => ({
-            ...d.classe,
-            _classRole: "assigned-moderator",
-          }));
+          .filter((d) => roleOf(d) === "MODERATEUR")
+          .map((d) => withMeta(d, "assigned-moderator"));
         const granted = detailList
-          .filter((d) => !d.peutModerer)
-          .map((d) => ({
-            ...d.classe,
-            _classRole: "publication",
-          }));
+          .filter((d) => roleOf(d) === "PUBLICATION")
+          .map((d) => withMeta(d, "publication"));
 
         // Build set of all IDs that have publication rights
         const pubIds = new Set(

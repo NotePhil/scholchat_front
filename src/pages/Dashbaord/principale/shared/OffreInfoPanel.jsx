@@ -60,7 +60,14 @@ const OffreInfoPanel = ({ type, entityId, isDark }) => {
           : await contratService.obtenirContratClasse(entityId);
       setContrat(data);
     } catch (err) {
-      if (err.response?.status === 404) {
+      // "Pas encore de contrat" est un état normal (404 ; anciens serveurs : 500 CONTRAT_INTROUVABLE).
+      // 403 : pas gestionnaire de cette classe → rien à afficher non plus.
+      const status = err.response?.status;
+      if (
+        status === 404 ||
+        status === 403 ||
+        err.response?.data?.code === "CONTRAT_INTROUVABLE"
+      ) {
         setContrat(null);
       } else {
         setError("Impossible de charger les informations de l'offre.");
