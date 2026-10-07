@@ -387,12 +387,14 @@ const ManageClassDetailsView = ({
         ...details,
         // Map database field names to frontend expected names
         dateCreation: details.dateCreation || details.date_creation || null,
+        // Backend field is `creatorId` (Classes.java). No fallback to the viewer: that made every
+        // visitor look like the creator (management tabs shown, then refused by the server).
         createurId:
+          details.creatorId ||
           details.createurId ||
           details.createur_id ||
           details.cree_par ||
-          details.utilisateur_id ||
-          currentUserId,
+          null,
         droitPublication:
           details.droitPublication ||
           details.droit_publication ||
