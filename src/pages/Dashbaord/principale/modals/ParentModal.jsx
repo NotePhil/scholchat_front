@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { scholchatService } from "../../../../services/ScholchatService";
 import axios from "axios";
-import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
+import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import CountrySelect from "../../../../components/common/CountrySelectSearchable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,6 +15,7 @@ import {
   faUser,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { isAcceptedPhoneNumber } from "../../../../utils/phone";
 const ParentModal = ({
   showModal,
   setShowModal,
@@ -117,7 +118,7 @@ const ParentModal = ({
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.telephone && !isValidPhoneNumber(formData.telephone)) {
+    if (formData.telephone && !isAcceptedPhoneNumber(formData.telephone)) {
       setSubmitError("Le numéro de téléphone est incomplet ou invalide");
       return;
     }

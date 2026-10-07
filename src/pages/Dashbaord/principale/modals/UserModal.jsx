@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
+import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import CountrySelect from "../../../../components/common/CountrySelectSearchable";
 import { scholchatService } from "../../../../services/ScholchatService";
@@ -15,6 +15,7 @@ import {
   faUser,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { isAcceptedPhoneNumber } from "../../../../utils/phone";
 const UserModal = ({ user, type, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     type: "student",
@@ -218,7 +219,7 @@ const UserModal = ({ user, type, onClose, onSubmit }) => {
     }
     if (!formData.telephone) {
       newErrors.telephone = "Le numéro de téléphone est requis";
-    } else if (!isValidPhoneNumber(formData.telephone)) {
+    } else if (!isAcceptedPhoneNumber(formData.telephone)) {
       // Selecting a country without typing any digits leaves formData.telephone
       // as just "+237" etc. — truthy, so it needs its own completeness check
       // (this also replaces the old CM/FR-only regexes, which silently

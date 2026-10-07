@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
+import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +32,7 @@ import community from "../assets/illustrations/community.png";
 import onboarding1 from "../assets/illustrations/onboarding-1.png";
 import onboarding4 from "../assets/illustrations/onboarding-4.png";
 import loginHero from "../assets/illustrations/login-hero.png";
+import { isAcceptedPhoneNumber } from "../utils/phone";
 
 const API = process.env.REACT_APP_API_BASE_URL;
 
@@ -306,7 +307,7 @@ const SignUp = ({ theme }) => {
     else if (!isValidEmail(formData.email)) e.email = INVALID_EMAIL_MESSAGE;
     if (!formData.telephone) e.telephone = "Le numéro de téléphone est requis";
     // A country picked but no (or an incomplete) number: formData.telephone is just "+237"…
-    else if (!isValidPhoneNumber(formData.telephone)) e.telephone = "Le numéro de téléphone est incomplet ou invalide";
+    else if (!isAcceptedPhoneNumber(formData.telephone)) e.telephone = "Le numéro de téléphone est incomplet ou invalide";
     if (!formData.adresse.trim()) e.adresse = "L'adresse est requise";
     return applyErrors(e);
     // eslint-disable-next-line react-hooks/exhaustive-deps
