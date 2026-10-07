@@ -365,7 +365,12 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
         classes.map(async (classe) => {
           try {
             const response = await fetch(
-              `${process.env.REACT_APP_API_BASE_URL}/acceder/demandes/classe/${classe.id}`,
+              `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/${classe.id}/demandes`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                },
+              },
             );
             if (response.ok) {
               const requests = await response.json();

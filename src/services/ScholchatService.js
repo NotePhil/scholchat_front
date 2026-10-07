@@ -582,9 +582,8 @@ class ScholchatService {
         dateCreation: classData.date_creation || new Date().toISOString(),
         codeActivation: classData.code_activation || null,
         etat: classData.etat || "ACTIF",
-        etablissement: {
-          id: classData.etablissement_id || null,
-        },
+        // No establishment: send null (an empty {id: null} object is meaningless to the backend)
+        etablissement: classData.etablissement_id ? { id: classData.etablissement_id } : null,
       };
 
       const response = await api.post("/classes", payload);
@@ -604,9 +603,8 @@ class ScholchatService {
         dateCreation: classData.date_creation,
         codeActivation: classData.code_activation || null,
         etat: classData.etat,
-        etablissement: {
-          id: classData.etablissement_id || null,
-        },
+        // No establishment: send null (an empty {id: null} object is meaningless to the backend)
+        etablissement: classData.etablissement_id ? { id: classData.etablissement_id } : null,
       };
 
       const response = await api.put(`/classes/${id}`, payload);

@@ -8,7 +8,7 @@ import ClassLinkDecision from "./ClassLinkDecision";
  * before approving. The backend only exposes this endpoint as POST (the old
  * page sent a GET, which the API never accepted).
  */
-const ClassApprovalConfirmation = () => {
+const ClassApprovalConfirmation = ({ theme }) => {
   const { establishmentId, classId } = useParams();
   const [searchParams] = useSearchParams();
   const className =
@@ -22,6 +22,7 @@ const ClassApprovalConfirmation = () => {
       : null;
   return (
     <ClassLinkDecision
+      theme={theme}
       action="approve"
       requestUrl={requestUrl}
       method="post"

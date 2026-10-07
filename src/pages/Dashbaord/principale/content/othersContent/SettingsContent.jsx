@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import { useAuth } from "../../../../../hooks/useAuth";
 import { useTranslation } from "../../../../../hooks/useTranslation";
@@ -9,6 +9,7 @@ import {
   faCircle,
   faCircleCheck,
   faCircleExclamation,
+  faCircleInfo,
   faCheckDouble,
   faEnvelope,
   faEye,
@@ -38,10 +39,14 @@ import {
 import AddRoleModal from "../../../../../components/modals/AddRoleModal";
 import { ROLE_CONFIG } from "../../../../../components/modals/RoleSelectorModal";
 import {
+  STUDENT_SWITCH_HINT,
+  accountHasOtherRoles,
   getStoredAddableRoles,
-  getStoredHeldRoles,
+  isStudentSession,
   normalizeRoleName,
 } from "../../../../../utils/roleRules";
+import { ROLE_STATUS, ROLE_STATUS_META, buildRoleStatuses } from "../../../../../utils/roleStatus";
+import { refreshSessionRoles } from "../../../../../utils/authSession";
 import ProfessorDocumentsPanel, {
   getVerificationLabel,
   useResolvedMediaUrl,
@@ -98,25 +103,20 @@ const isValidPhone = (v) => {
 
 const readStoredRoles = () => {
   let available = [];
-  let pending = [];
+  let authResponse = {};
   try {
     available = JSON.parse(localStorage.getItem("availableRoles") || "[]") || [];
   } catch {
     available = [];
   }
   try {
-    pending = JSON.parse(localStorage.getItem("authResponse") || "{}").pendingRoles || [];
+    authResponse = JSON.parse(localStorage.getItem("authResponse") || "{}") || {};
   } catch {
-    pending = [];
+    authResponse = {};
   }
   const current = normalizeRoleName(localStorage.getItem("userRole"));
   const roles = available.length > 0 ? available : current ? [current] : [];
-  const activeKeys = roles.map(normalizeRoleName);
-  return {
-    roles,
-    pending: pending.filter((r) => !activeKeys.includes(normalizeRoleName(r))),
-    current,
-  };
+  return { roles, available, authResponse, current };
 };
 
 const SettingsThemeContext = createContext(false);
@@ -248,23 +248,56 @@ const StatusRow = ({ label, tone, icon }) => {
   );
 };
 
-const ProfileRow = ({ role, state }) => {
-  const { isDark, textClass } = useThemeClasses();
-  const cfg = ROLE_CONFIG[normalizeRoleName(role)];
+const STATUS_PILLS = {
+  success: { light: "bg-emerald-100 text-emerald-800", dark: "bg-emerald-900/40 text-emerald-300" },
+  warning: { light: "bg-amber-100 text-amber-800", dark: "bg-amber-900/40 text-amber-300" },
+  neutral: { light: "bg-slate-200 text-slate-700", dark: "bg-slate-700 text-slate-200" },
+  danger: { light: "bg-red-100 text-red-700", dark: "bg-red-900/40 text-red-300" },
+};
+
+// One profile of the account with its status ("Mes profils").
+const ProfileRow = ({ entry, isCurrent, action }) => {
+  const { isDark, textClass, mutedClass } = useThemeClasses();
+  const cfg = ROLE_CONFIG[normalizeRoleName(entry.role)];
   const Icon = cfg?.icon;
-  const pill =
-    state === "current"
-      ? { text: "Profil actuel", cls: `${cfg?.lightBg || "bg-blue-50"} ${cfg?.textColor || "text-blue-700"}` }
-      : state === "pending"
-        ? { text: "En attente", cls: "bg-amber-100 text-amber-700" }
-        : { text: "Disponible", cls: isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600" };
+  const meta = ROLE_STATUS_META[entry.status] || ROLE_STATUS_META.PENDING;
+  const pill = STATUS_PILLS[meta.tone] || STATUS_PILLS.neutral;
+  const active = entry.status === ROLE_STATUS.ACTIVE;
+  const pendingHint =
+    entry.status === ROLE_STATUS.PENDING
+      ? normalizeRoleName(entry.role) === "STUDENT"
+        ? `En attente de l'approbation du professeur de la classe${entry.classeNom ? ` « ${entry.classeNom} »` : ""}.`
+        : normalizeRoleName(entry.role) === "PROFESSOR"
+          ? "Vos documents sont en cours de vérification par l'administration."
+          : null
+      : entry.status === ROLE_STATUS.DOCS_MISSING
+        ? "Ajoutez vos pièces d'identité pour que la demande soit examinée."
+        : null;
   return (
-    <div className="flex items-center gap-3 py-1.5">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${state === "pending" ? "bg-gray-400" : cfg?.color || "bg-blue-500"}`}>
-        {Icon ? <Icon className="w-4 h-4 text-white" /> : <FontAwesomeIcon icon={faUser} className="w-4 h-4 text-white" />}
+    <div className="py-2.5">
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center ${active ? cfg?.color || "bg-blue-500" : "bg-gray-400"}`}>
+          {Icon ? <Icon className="w-4 h-4 text-white" /> : <FontAwesomeIcon icon={faUser} className="w-4 h-4 text-white" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`truncate font-semibold ${textClass}`}>
+            {cfg?.label || entry.role}
+            {isCurrent && <span className={`ml-2 text-xs font-medium ${mutedClass}`}>(profil actuel)</span>}
+          </p>
+        </div>
+        <span className={`px-2 py-0.5 rounded-md text-xs font-bold whitespace-nowrap ${isDark ? pill.dark : pill.light}`}>{meta.label}</span>
       </div>
-      <span className={`flex-1 min-w-0 truncate font-semibold ${textClass}`}>{cfg?.label || role}</span>
-      <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${pill.cls}`}>{pill.text}</span>
+      {(pendingHint || (entry.status === ROLE_STATUS.REJECTED && entry.motif) || action) && (
+        <div className="pl-12 mt-1 space-y-1">
+          {pendingHint && <p className={`text-xs ${mutedClass}`}>{pendingHint}</p>}
+          {entry.status === ROLE_STATUS.REJECTED && (
+            <p className="text-xs text-red-600 dark:text-red-400">
+              Motif : {entry.motif || "non précisé"}
+            </p>
+          )}
+          {action}
+        </div>
+      )}
     </div>
   );
 };
@@ -284,6 +317,7 @@ const SettingsContent = ({
   setCurrentTheme,
   onSwitchProfile,
   onLogout,
+  focusSection,
 }) => {
   const { updateProfile, normalizedUserRole } = useAuth();
   const { language, changeLanguage } = useTranslation();
@@ -298,7 +332,10 @@ const SettingsContent = ({
   const [changingPassword, setChangingPassword] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [showAddRole, setShowAddRole] = useState(false);
+  const [addRoleMode, setAddRoleMode] = useState(null); // null | "docs" (re-send professor documents)
   const [, setRolesVersion] = useState(0);
+  const profilesRef = useRef(null);
+  const studentSession = isStudentSession();
   const [profileData, setProfileData] = useState({ nom: "", prenom: "", telephone: "", adresse: "" });
   const [passwordData, setPasswordData] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
 
@@ -348,8 +385,21 @@ const SettingsContent = ({
   useEffect(() => {
     setLoading(true);
     loadUserProfile().finally(() => setLoading(false));
+    // Up-to-date profiles list (e.g. professor profile just validated). Not in a STUDENT
+    // session: the backend refuses switch-role there.
+    if (!isStudentSession()) {
+      refreshSessionRoles().then((data) => data && setRolesVersion((v) => v + 1));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Opened from a role notification / "Voir mes profils": show the "Mes profils" card.
+  useEffect(() => {
+    if (focusSection !== "profils" || loading) return;
+    setActiveTab("profile");
+    const t = setTimeout(() => profilesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+    return () => clearTimeout(t);
+  }, [focusSection, loading]);
 
   const startEdit = () => {
     setMessage({ text: "", type: "" });
@@ -439,10 +489,11 @@ const SettingsContent = ({
     );
   }
 
-  const { roles, pending, current } = readStoredRoles();
-  const canSwitch = !!onSwitchProfile && roles.length > 1;
-  const canAdd = normalizedUserRole !== "admin" && getStoredAddableRoles().length > 0;
-  const heldStudent = getStoredHeldRoles().map(normalizeRoleName).includes("STUDENT");
+  const { roles, available, authResponse, current } = readStoredRoles();
+  const roleStatuses = buildRoleStatuses({ profile: userProfile, authResponse, availableRoles: available, sessionRole: current });
+  const canSwitch = !studentSession && !!onSwitchProfile && roles.length > 1;
+  const canAdd = normalizedUserRole !== "admin" && !studentSession && getStoredAddableRoles().length > 0;
+  const showStudentHint = studentSession && accountHasOtherRoles();
 
   const TABS = [
     { id: "profile", label: "Mon Profil", icon: faUser },
@@ -585,16 +636,40 @@ const SettingsContent = ({
               </SectionCard>
 
               {normalizedUserRole !== "admin" && (
+                <div ref={profilesRef} id="mes-profils">
                 <SectionCard icon={faUsersGear} title="Mes profils">
-                  {roles.map((r) => (
-                    <ProfileRow key={`a-${r}`} role={r} state={normalizeRoleName(r) === current ? "current" : "active"} />
-                  ))}
-                  {pending.map((r) => (
-                    <ProfileRow key={`p-${r}`} role={r} state="pending" />
-                  ))}
-                  {heldStudent && (
-                    <p className={`text-xs mt-2 ${mutedClass}`}>
-                      Un compte élève ne peut pas avoir d'autre profil.
+                  <div className={`divide-y ${dividerClass}`}>
+                    {roleStatuses.map((entry) => {
+                      const needsDocs =
+                        normalizeRoleName(entry.role) === "PROFESSOR" &&
+                        (entry.status === ROLE_STATUS.DOCS_MISSING || entry.status === ROLE_STATUS.REJECTED);
+                      return (
+                        <ProfileRow
+                          key={entry.role}
+                          entry={entry}
+                          isCurrent={normalizeRoleName(entry.role) === current}
+                          action={
+                            needsDocs && !studentSession ? (
+                              <button
+                                onClick={() => {
+                                  setAddRoleMode("docs");
+                                  setShowAddRole(true);
+                                }}
+                                className="inline-flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700"
+                              >
+                                <FontAwesomeIcon icon={faIdCard} className="w-3 h-3" />
+                                {entry.status === ROLE_STATUS.REJECTED ? "Renvoyer mes documents" : "Ajouter mes documents"}
+                              </button>
+                            ) : null
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                  {showStudentHint && (
+                    <p className={`flex items-start gap-2 text-xs mt-3 p-3 rounded-xl ${isDark ? "bg-indigo-900/30 text-indigo-200" : "bg-indigo-50 text-indigo-800"}`}>
+                      <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5" />
+                      <span>{STUDENT_SWITCH_HINT}</span>
                     </p>
                   )}
                   {(canSwitch || canAdd) && (
@@ -610,7 +685,10 @@ const SettingsContent = ({
                       )}
                       {canAdd && (
                         <button
-                          onClick={() => setShowAddRole(true)}
+                          onClick={() => {
+                            setAddRoleMode(null);
+                            setShowAddRole(true);
+                          }}
                           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-500 text-blue-600 text-sm font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20"
                         >
                           <FontAwesomeIcon icon={faPlus} className="w-3 h-3" />
@@ -620,6 +698,7 @@ const SettingsContent = ({
                     </div>
                   )}
                 </SectionCard>
+                </div>
               )}
             </div>
 
@@ -785,11 +864,17 @@ const SettingsContent = ({
         )}
       </div>
 
-      {canAdd && (
+      {!studentSession && (
         <AddRoleModal
           isOpen={showAddRole}
           onClose={() => setShowAddRole(false)}
           onRolesUpdated={() => setRolesVersion((v) => v + 1)}
+          initialType={addRoleMode === "docs" ? "professeur" : null}
+          docsOnly={addRoleMode === "docs"}
+          onOpenProfile={async () => {
+            await loadUserProfile();
+            profilesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
         />
       )}
     </div>

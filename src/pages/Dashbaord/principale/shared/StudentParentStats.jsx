@@ -27,6 +27,7 @@ import {
   faCircleExclamation,
   faUsers,
   faClock,
+  faRightToBracket,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../utils/faIconAdapter";
 import CourseProgressPanel from "./CourseProgressPanel";
@@ -787,6 +788,16 @@ const StudentParentStats = ({
               {/* Child selector for parents */}
               {userRole === "parent" && children.length > 0 && (
                 <StudentSelector />
+              )}
+              {/* Call-to-action: same join flow as the Classes page (…/classes?join=1) */}
+              {setActiveTab && (
+                <button
+                  onClick={() => setActiveTab("classes", { join: "1" })}
+                  className={`inline-flex items-center gap-2 ${isMobile ? "px-3 py-2 text-xs flex-1 justify-center" : "px-4 py-2.5 text-sm"} rounded-lg font-semibold text-white bg-gradient-to-r from-[#4F46E5] to-[#8C52FF] shadow hover:shadow-md transition-all`}
+                >
+                  <FontAwesomeIcon icon={faRightToBracket} />
+                  Rejoindre une classe
+                </button>
               )}
               <button
                 onClick={handleRefresh}

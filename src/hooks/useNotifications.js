@@ -113,6 +113,23 @@ export const useNotifications = () => {
         return { icon: "UserPlus", color: "emerald", category: "class" };
       case "PROFESSOR_CREATED":
         return { icon: "UserPlus", color: "green", category: "professor" };
+      case "PROFESSOR_ROLE_VALIDATED":
+      case "PROFESSOR_VERIFICATION_VALIDATED":
+      case "STUDENT_ROLE_APPROVED":
+      case "STUDENT_ROLE_VALIDATED":
+      case "ELEVE_ROLE_APPROUVE":
+      case "ROLE_ELEVE_APPROUVE":
+      case "ROLE_VALIDATED":
+      case "ROLE_APPROVED":
+        return { icon: "CheckCircle", color: "emerald", category: "profile" };
+      case "PROFESSOR_ROLE_REJECTED":
+      case "PROFESSOR_ROLE_DOCUMENTS_REQUIRED":
+      case "PROFESSOR_VERIFICATION_REJECTED":
+      case "PROFESSOR_VERIFICATION_DOCUMENTS_REQUIRED":
+      case "STUDENT_ROLE_REJECTED":
+      case "ROLE_ELEVE_REFUSE":
+      case "ROLE_REJECTED":
+        return { icon: "RefreshCw", color: "orange", category: "profile" };
       case "STUDENT_CREATED":
         return { icon: "UserPlus", color: "blue", category: "student" };
       case "PARENT_CREATED":

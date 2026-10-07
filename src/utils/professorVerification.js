@@ -23,6 +23,9 @@ export const PROFESSOR_STATUS_NOTIFICATION_TYPES = [
   "PROFESSOR_VERIFICATION_DOCUMENTS_REQUIRED",
   "ROLE_VALIDATED",
   "ROLE_REJECTED",
+  // Professor profile requested from an existing (parent / student) account
+  "PROFESSOR_ROLE_VALIDATED",
+  "PROFESSOR_ROLE_REJECTED",
 ];
 
 const STATUS_DISPLAY = {

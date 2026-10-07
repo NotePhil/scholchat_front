@@ -192,9 +192,11 @@ const ParentClassManagementModal = ({
                   </ListItemIcon>
                   <ListItemText
                     primary="Date de création"
-                    secondary={new Date(
+                    secondary={
                       classe.dateCreation
-                    ).toLocaleDateString()}
+                        ? new Date(classe.dateCreation).toLocaleDateString()
+                        : "Non spécifiée"
+                    }
                     secondaryTypographyProps={{
                       color: "text.primary",
                       fontWeight: 500,
@@ -275,8 +277,11 @@ const ParentClassManagementModal = ({
                   <ListItemText
                     primary="Localisation"
                     secondary={
-                      classe.etablissement
-                        ? `${classe.etablissement.localisation}, ${classe.etablissement.pays}`
+                      classe.etablissement &&
+                      (classe.etablissement.localisation || classe.etablissement.pays)
+                        ? [classe.etablissement.localisation, classe.etablissement.pays]
+                            .filter(Boolean)
+                            .join(", ")
                         : "Non spécifié"
                     }
                     secondaryTypographyProps={{

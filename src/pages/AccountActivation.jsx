@@ -1,410 +1,227 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-import { useTranslation } from "../hooks/useTranslation";
-import logoImage from "../components/assets/images/logo.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCheck,
+  faArrowLeft,
+  faArrowRight,
+  faCircleCheck,
   faEnvelope,
+  faKey,
+  faPaperPlane,
   faSpinner,
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
-const AccountActivation = () => {
-  const { t } = useTranslation();
+import { Alert, AuthShell, BrandLogo, Button, StatusIcon, TextField } from "../components/frontoffice/ui";
+
+/**
+ * Activation link (/schoolchat/account-activation?activationToken=…), process unchanged:
+ * POST /auth/activate?activationToken=… → set-password page (PasswordPage) with the token.
+ * Expired / invalid link: a new link can be requested (POST /utilisateurs/regenerate-activation?email=…)
+ * or the account verified with an e-mailed code (/schoolchat/verifier-compte).
+ */
+const AccountActivation = ({ theme }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const queryParams = new URLSearchParams(location.search);
-  const urlActivationToken = queryParams.get("activationToken");
-  const [activationStatus, setActivationStatus] = useState("loading");
-  const [errorMessage, setErrorMessage] = useState("");
+  const urlActivationToken = new URLSearchParams(location.search).get("activationToken");
+  const [activationStatus, setActivationStatus] = useState(urlActivationToken ? "loading" : "error");
+  const [errorMessage, setErrorMessage] = useState(urlActivationToken ? "" : "Aucun jeton d'activation fourni : le lien est incomplet.");
   const [countdown, setCountdown] = useState(5);
   const [userEmail, setUserEmail] = useState("");
   const [activationToken, setActivationToken] = useState("");
-  const [isTokenExpired, setIsTokenExpired] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [inputEmail, setInputEmail] = useState("");
+  const [regenerating, setRegenerating] = useState(false);
   const [regenerationStatus, setRegenerationStatus] = useState("");
-  const regenerateActivationToken = async () => {
-    if (!inputEmail) {
+  const timerRef = useRef(null);
+
+  const goToPasswordPage = (token, email) =>
+    navigate("/schoolchat/PasswordPage", { state: { activationToken: token, email } });
+
+  const regenerateActivationToken = async (e) => {
+    e?.preventDefault();
+    if (!inputEmail.trim()) {
       setShowEmailInput(true);
       return;
     }
+    setRegenerating(true);
+    setRegenerationStatus("");
     try {
-      setActivationStatus("loading");
-      setErrorMessage("");
-      setRegenerationStatus("");
+      // The API reads the address from the "email" query parameter (@RequestParam), not a JSON body.
       const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/regenerate-activation`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: inputEmail,
-          }),
-        },
+        `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/regenerate-activation?email=${encodeURIComponent(inputEmail.trim())}`,
+        { method: "POST", headers: { Accept: "application/json" } },
       );
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData?.message || "Échec de la régénération du token",
-        );
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || "Échec de l'envoi d'un nouveau lien d'activation.");
       }
-      const data = await response.json();
       setRegenerationStatus("success");
-      setTimeout(() => {
-        navigate("/schoolchat/verify-email");
-      }, 2000);
+      setTimeout(() => navigate(`/schoolchat/verify-email?email=${encodeURIComponent(inputEmail.trim())}`), 2000);
     } catch (error) {
-      console.error("Erreur de régénération du token:", error);
-      setActivationStatus("error");
       setRegenerationStatus("error");
-      setErrorMessage(
-        error.message || "Impossible de régénérer le token d'activation",
-      );
+      setErrorMessage(error.message || "Impossible d'envoyer un nouveau lien d'activation.");
+    } finally {
+      setRegenerating(false);
     }
   };
-  const activateAccount = async (token = urlActivationToken) => {
-    if (!token) {
-      setActivationStatus("error");
-      setErrorMessage("Aucun token d'activation fourni");
-      return;
-    }
-    try {
-      const decodedToken = jwtDecode(token);
-      const email = decodedToken.sub || decodedToken.email;
-      if (!email) {
-        throw new Error("Aucun email trouvé dans le token");
-      }
-      setUserEmail(email);
-      setActivationToken(token);
-      const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/auth/activate?activationToken=${token}`;
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        // If already activated (ACTIVE state), go straight to password page
-        if (
-          errorData?.message?.includes("PENDING") ||
-          errorData?.message?.includes("ACTIVE")
-        ) {
-          setActivationStatus("success");
-          navigate("/schoolchat/PasswordPage", {
-            state: {
-              activationToken: token,
-              email,
-            },
-          });
-          return;
+
+  useEffect(() => {
+    if (!urlActivationToken) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const decodedToken = jwtDecode(urlActivationToken);
+        const email = decodedToken.sub || decodedToken.email;
+        if (!email) throw new Error("Lien d'activation invalide (aucune adresse e-mail).");
+        setUserEmail(email);
+        setInputEmail(email);
+        setActivationToken(urlActivationToken);
+        const response = await fetch(
+          `${process.env.REACT_APP_API_BASE_URL}/auth/activate?activationToken=${urlActivationToken}`,
+          { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include" },
+        );
+        if (cancelled) return;
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          // Already activated (PENDING / ACTIVE): go straight to the password page
+          if (errorData?.message?.includes("PENDING") || errorData?.message?.includes("ACTIVE")) {
+            setActivationStatus("success");
+            goToPasswordPage(urlActivationToken, email);
+            return;
+          }
+          throw new Error(errorData?.message || "L'activation a échoué. Veuillez réessayer.");
         }
-        throw new Error(
-          errorData?.message || "L'activation a échoué. Veuillez réessayer.",
+        setActivationStatus("success");
+        timerRef.current = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timerRef.current);
+              goToPasswordPage(urlActivationToken, email);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } catch (error) {
+        if (cancelled) return;
+        setActivationStatus("error");
+        setErrorMessage(
+          error?.name === "InvalidTokenError"
+            ? "Ce lien d'activation est invalide ou incomplet."
+            : error.message || "Une erreur s'est produite lors de l'activation du compte.",
         );
       }
-      setActivationStatus("success");
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            navigate("/schoolchat/PasswordPage", {
-              state: {
-                activationToken: token,
-                email: email,
-              },
-            });
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    } catch (error) {
-      console.error("Erreur d'activation:", error);
-      setActivationStatus("error");
-      setErrorMessage(
-        error.message ||
-          "Une erreur s'est produite lors de l'activation du compte.",
-      );
-    }
-  };
-  useEffect(() => {
-    if (urlActivationToken) {
-      activateAccount(urlActivationToken);
-    }
+    })();
+    return () => {
+      cancelled = true;
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlActivationToken]);
+
   return (
-    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden">
-      {/* Dynamic Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse delay-1000" />
-        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-purple-600/10 rounded-full blur-[80px]" />
-      </div>
+    <AuthShell theme={theme}>
+      <div className="max-w-md mx-auto text-center">
+        <BrandLogo className="mb-8" />
 
-      <div className="w-full max-w-md relative z-10">
-        <div className="bg-white/[0.03] backdrop-blur-2xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden animate-fade-in-up">
-          {/* Header Section */}
-          <div className="p-10 pb-0 text-center relative">
-            <div className="relative inline-block mb-8">
-              <div className="absolute -inset-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full blur-2xl opacity-20 animate-pulse"></div>
-              <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-5 border border-white/20 shadow-2xl">
-                <img src={logoImage} alt="ScholChat" className="h-16 w-auto" />
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight mb-2">
-              {activationStatus === "loading"
-                ? "Vérification en cours"
-                : t("pages.accountActivation.title")}
-            </h1>
-            <div className="h-1 w-20 bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto rounded-full mb-8"></div>
-          </div>
+        {activationStatus === "loading" && (
+          <>
+            <StatusIcon icon={faSpinner} spin />
+            <h1 className="mt-6 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Activation en cours…</h1>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">Nous vérifions votre lien d'activation, un instant.</p>
+          </>
+        )}
 
-          <div className="p-10 pt-0">
-            {/* Loading Status */}
-            {activationStatus === "loading" && (
-              <div className="text-center py-12 space-y-8 animate-fade-in">
-                <div className="flex justify-center">
-                  <div className="relative w-24 h-24">
-                    <div className="absolute inset-0 border-4 border-blue-500/10 rounded-full"></div>
-                    <div className="absolute inset-0 border-4 border-t-blue-500 border-r-indigo-500 rounded-full animate-spin"></div>
-                    <div className="absolute inset-6 bg-blue-500/20 rounded-full animate-pulse flex items-center justify-center">
-                      <FontAwesomeIcon
-                        icon={faSpinner}
-                        className="text-blue-400 animate-pulse"
-                        style={{
-                          fontSize: 24,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl font-semibold text-white/90">
-                    Protocoles de sécurité
-                  </h3>
-                  <p className="text-white/50 text-sm leading-relaxed max-w-[240px] mx-auto italic">
-                    {t("pages.accountActivation.loading")}
-                  </p>
-                </div>
-              </div>
+        {activationStatus === "success" && (
+          <>
+            <StatusIcon icon={faCircleCheck} tone="success" />
+            <h1 className="mt-6 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Compte activé !</h1>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">
+              Il ne reste plus qu'à choisir votre mot de passe
+              {userEmail ? (
+                <>
+                  {" "}
+                  pour <strong className="text-slate-700 dark:text-slate-200">{userEmail}</strong>
+                </>
+              ) : null}
+              .
+            </p>
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-4 py-1.5 text-sm font-medium text-[#4F46E5] dark:text-indigo-300">
+              <span className="w-2 h-2 rounded-full bg-[#4F46E5] animate-ping" />
+              Redirection dans {countdown} s…
+            </p>
+            <Button className="w-full mt-6" icon={faKey} onClick={() => goToPasswordPage(activationToken, userEmail)}>
+              Définir mon mot de passe
+            </Button>
+          </>
+        )}
+
+        {activationStatus === "error" && (
+          <>
+            <StatusIcon icon={faTriangleExclamation} tone="error" />
+            <h1 className="mt-6 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Lien expiré ou invalide</h1>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">
+              Ce lien d'activation ne peut pas être utilisé. Demandez un nouveau lien ou vérifiez votre compte avec un code
+              reçu par e-mail.
+            </p>
+            {errorMessage && regenerationStatus !== "success" && (
+              <Alert type="error" className="mt-6 text-left">
+                {errorMessage}
+              </Alert>
             )}
 
-            {/* Success Status */}
-            {activationStatus === "success" && (
-              <div className="text-center py-8 space-y-8 animate-scale-in">
-                <div className="relative inline-block">
-                  <div className="absolute inset-0 bg-emerald-500 blur-3xl opacity-20 animate-pulse"></div>
-                  <div className="relative w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
-                    <FontAwesomeIcon
-                      icon={faCheck}
-                      className="text-emerald-400"
-                      style={{
-                        fontSize: 48,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <h2 className="text-3xl font-bold text-white leading-tight">
-                      Succès !
-                    </h2>
-                    <p className="text-white/60 text-lg font-medium">
-                      {t("pages.accountActivation.success.message")}
-                    </p>
-                  </div>
-
-                  <div className="bg-white/5 border border-white/10 rounded-2xl py-3 px-6 inline-flex items-center gap-3">
-                    <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-ping"></span>
-                    <p className="text-blue-400 font-medium text-sm">
-                      {t("pages.accountActivation.success.redirect", {
-                        countdown,
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-2xl font-bold text-lg hover:from-blue-500 hover:to-indigo-500 transition-all duration-300 shadow-[0_20px_40px_-15px_rgba(37,99,235,0.4)] hover:-translate-y-1 active:translate-y-0"
-                  onClick={() =>
-                    navigate("/schoolchat/PasswordPage", {
-                      state: {
-                        activationToken: activationToken,
-                        email: userEmail,
-                      },
-                    })
-                  }
-                >
-                  {t("pages.accountActivation.success.setPassword")}
-                </button>
-              </div>
-            )}
-
-            {/* Error Status */}
-            {activationStatus === "error" && (
-              <div className="py-8 space-y-8 animate-fade-in">
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/30">
-                    <FontAwesomeIcon
-                      icon={faTriangleExclamation}
-                      className="text-rose-400"
-                      style={{
-                        fontSize: 44,
-                      }}
-                    />
-                  </div>
-                  <h2 className="text-2xl font-bold text-white mb-2 underline decoration-rose-500/30 underline-offset-8 decoration-4">
-                    {t("pages.accountActivation.error.title")}
-                  </h2>
-                </div>
-
-                {isTokenExpired || showEmailInput ? (
-                  <div className="space-y-6">
-                    <div className="bg-amber-500/10 border-l-4 border-amber-500 p-5 rounded-xl">
-                      <p className="text-amber-200 text-sm font-medium leading-relaxed">
-                        {t("pages.accountActivation.error.regeneratePrompt")}
-                      </p>
-                    </div>
-                    <div className="relative group">
-                      <div className="absolute left-5 top-1/2 transform -translate-y-1/2 text-white/30 group-focus-within:text-blue-400 transition-colors">
-                        <FontAwesomeIcon
-                          icon={faEnvelope}
-                          style={{
-                            fontSize: 22,
-                          }}
-                        />
-                      </div>
-                      <input
-                        type="email"
-                        value={inputEmail}
-                        onChange={(e) => setInputEmail(e.target.value)}
-                        placeholder={t(
-                          "pages.accountActivation.error.emailPlaceholder",
-                        )}
-                        className="w-full pl-14 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500/50 focus:bg-white/10 transition-all outline-none text-white font-medium placeholder:text-white/20"
-                        required
-                      />
-                    </div>
-                    <button
-                      className="w-full bg-white text-slate-900 py-4 px-8 rounded-2xl font-bold text-lg hover:bg-gray-100 transition-all duration-300 shadow-xl disabled:opacity-50 disabled:grayscale"
-                      onClick={regenerateActivationToken}
-                      disabled={!inputEmail}
-                    >
-                      {t("pages.accountActivation.error.send")}
-                    </button>
-
-                    {regenerationStatus === "success" && (
-                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3 animate-bounce">
-                        <FontAwesomeIcon
-                          icon={faCheck}
-                          className="text-emerald-400 flex-shrink-0"
-                          style={{
-                            fontSize: 20,
-                          }}
-                        />
-                        <p className="text-emerald-200 text-sm font-semibold">
-                          {t("pages.accountActivation.error.regenerateSuccess")}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+            {showEmailInput ? (
+              <form onSubmit={regenerateActivationToken} className="mt-6 space-y-4 text-left" noValidate>
+                {regenerationStatus === "success" ? (
+                  <Alert type="success">Un nouveau lien d'activation vient de vous être envoyé. Redirection…</Alert>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="bg-rose-500/10 p-6 rounded-2xl border border-rose-500/20">
-                      <p className="text-rose-200 text-center font-medium leading-relaxed">
-                        {errorMessage}
-                      </p>
-                    </div>
-                    <div className="grid gap-4">
-                      <button
-                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-2xl font-bold text-lg hover:from-blue-500 hover:to-indigo-500 transition-all duration-300"
-                        onClick={() => navigate("/schoolchat/login")}
-                      >
-                        {t("pages.accountActivation.error.goToLogin")}
-                      </button>
-                      <button
-                        className="w-full bg-white/5 border border-white/10 text-white/70 py-4 px-8 rounded-2xl font-bold text-lg hover:bg-white/10 transition-all duration-300"
-                        onClick={() => navigate("/schoolchat/contact")}
-                      >
-                        {t("pages.accountActivation.error.contactSupport")}
-                      </button>
-                    </div>
-                  </div>
+                  <>
+                    <TextField
+                      label="Votre adresse e-mail"
+                      type="email"
+                      name="email"
+                      icon={faEnvelope}
+                      value={inputEmail}
+                      onChange={(e) => setInputEmail(e.target.value)}
+                      placeholder="exemple@email.com"
+                      autoComplete="email"
+                      required
+                    />
+                    <Button type="submit" className="w-full" icon={faPaperPlane} loading={regenerating} loadingLabel="Envoi…" disabled={!inputEmail.trim()}>
+                      Recevoir un nouveau lien
+                    </Button>
+                  </>
                 )}
+              </form>
+            ) : (
+              <div className="mt-6 grid gap-3">
+                <Button icon={faPaperPlane} onClick={() => setShowEmailInput(true)}>
+                  Recevoir un nouveau lien
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={faArrowRight}
+                  to={`/schoolchat/verifier-compte${inputEmail ? `?email=${encodeURIComponent(inputEmail)}` : ""}`}
+                >
+                  Vérifier mon compte avec un code
+                </Button>
               </div>
             )}
-          </div>
-        </div>
+          </>
+        )}
 
-        <footer className="mt-12 text-center">
-          <div className="flex justify-center items-center space-x-6 text-white/40 text-sm font-medium">
-            <a href="/terms" className="hover:text-white transition-colors">
-              {t("pages.accountActivation.footer.terms")}
-            </a>
-            <span className="w-1.5 h-1.5 bg-white/10 rounded-full"></span>
-            <a href="/privacy" className="hover:text-white transition-colors">
-              {t("pages.accountActivation.footer.privacy")}
-            </a>
-            <span className="w-1.5 h-1.5 bg-white/10 rounded-full"></span>
-            <a href="/contact" className="hover:text-white transition-colors">
-              {t("pages.accountActivation.footer.contact")}
-            </a>
-          </div>
-          <p className="text-white/20 text-[10px] mt-6 font-bold tracking-[0.2em] uppercase">
-            &copy; {new Date().getFullYear()} ScholChat &bull; Advanced Learning
-            Platform
-          </p>
-        </footer>
+        <p className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
+          <Link to="/schoolchat/login" className="inline-flex items-center gap-2 font-medium text-[#4F46E5] dark:text-indigo-300 hover:underline">
+            <FontAwesomeIcon icon={faArrowLeft} /> Retour à la connexion
+          </Link>
+          <Link to="/schoolchat/contact" className="font-medium text-slate-500 dark:text-slate-400 hover:underline">
+            Contacter le support
+          </Link>
+        </p>
       </div>
-
-      <style jsx>{`
-        @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @keyframes scale-in {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .animate-scale-in {
-          animation: scale-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out forwards;
-        }
-      `}</style>
-    </div>
+    </AuthShell>
   );
 };
+
 export default AccountActivation;

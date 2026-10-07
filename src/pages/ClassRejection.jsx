@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import ClassLinkDecision from "./ClassLinkDecision";
 
 /** Emailed class-rejection link: asks for confirmation before rejecting. */
-const ClassRejection = () => {
+const ClassRejection = ({ theme }) => {
   const { classeId: pathClasseId, etablissementId: pathEtablissementId } =
     useParams();
   const [searchParams] = useSearchParams();
@@ -21,6 +21,7 @@ const ClassRejection = () => {
       : null;
   return (
     <ClassLinkDecision
+      theme={theme}
       action="reject"
       requestUrl={requestUrl}
       className={className}

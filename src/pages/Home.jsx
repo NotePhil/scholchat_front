@@ -1,339 +1,342 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import heroImg from "../components/assets/images/heronew.png";
-import { About } from "./About";
-import { Courses } from "./Courses";
-import { Instructor } from "./Instructor";
-import { Blog } from "./Blog";
-import FunctionalitiesSection from "./FunctionalitiesSection";
+import React, { useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useTranslation } from "../hooks/useTranslation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCirclePlay, faRocket } from "@fortawesome/free-solid-svg-icons";
-export const HomeContent = ({ theme }) => {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-  const getThemeClasses = () => {
-    switch (theme) {
-      case "dark":
-        return {
-          bg: "bg-gray-900",
-          text: "text-gray-200",
-          itemBg: "bg-gray-800/50",
-          badgeBg: "bg-blue-900/30",
-          badgeText: "text-blue-400",
-        };
-      case "light":
-        return {
-          bg: "bg-gray-50",
-          text: "text-gray-800",
-          itemBg: "bg-white/60",
-          badgeBg: "bg-blue-50",
-          badgeText: "text-blue-600",
-        };
-      default:
-        return {
-          bg: "bg-gray-900",
-          text: "text-gray-200",
-          itemBg: "bg-gray-800/50",
-          badgeBg: "bg-blue-900/30",
-          badgeText: "text-blue-400",
-        };
-    }
-  };
-  const themeClasses = getThemeClasses();
-  const containerVariants = {
-    hidden: {
-      opacity: 0,
-    },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-      },
-    },
-  };
-  const itemVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut",
-      },
-    },
-  };
+import {
+  faArrowRight,
+  faBell,
+  faBookOpen,
+  faChalkboardUser,
+  faCheck,
+  faClipboardList,
+  faComments,
+  faEnvelopeOpenText,
+  faKey,
+  faLayerGroup,
+  faPeopleRoof,
+  faSchool,
+  faShieldHalved,
+  faUserCheck,
+  faUserGraduate,
+  faUserGroup,
+  faUsers,
+  faVideo,
+} from "@fortawesome/free-solid-svg-icons";
+import { Button } from "../components/frontoffice/ui";
+import { StoreBadges } from "../components/frontoffice/StoreBadges";
+import { scrollToSection } from "../components/common/Header";
+import community from "../assets/illustrations/community.png";
+import onboarding1 from "../assets/illustrations/onboarding-1.png";
+import onboarding2 from "../assets/illustrations/onboarding-2.png";
+import onboarding3 from "../assets/illustrations/onboarding-3.png";
+import onboarding4 from "../assets/illustrations/onboarding-4.png";
+
+const FEATURES = [
+  { icon: faSchool, color: "#8C52FF", title: "Classes", text: "Créez ou rejoignez une classe avec un code. Demandes approuvées par le professeur." },
+  { icon: faBookOpen, color: "#3B82F6", title: "Cours", text: "Cours riches avec chapitres, images, vidéos et documents. Planification des leçons." },
+  { icon: faVideo, color: "#10B981", title: "Sessions en direct", text: "Visioconférence en temps réel avec chapitres et présence." },
+  { icon: faClipboardList, color: "#F59E0B", title: "Exercices & devoirs", text: "QCM, vrai/faux, questions ouvertes, pièces jointes. Corrections et notes." },
+  { icon: faComments, color: "#4F46E5", title: "Messagerie", text: "Chat en temps réel avec photos, vidéos et fichiers." },
+  { icon: faBell, color: "#EF4444", title: "Fil d'actualité & notifications", text: "Événements, sorties, annonces. Notifications instantanées." },
+  { icon: faUserGroup, color: "#8C52FF", title: "Parents", text: "Suivez plusieurs enfants, depuis un seul compte." },
+  { icon: faLayerGroup, color: "#3B82F6", title: "Multi-profil", text: "Un compte, plusieurs rôles. Changez à tout moment." },
+];
+
+const SHOWCASE = [
+  { img: onboarding1, title: "Vos classes et cours au même endroit" },
+  { img: onboarding2, title: "Sessions en direct et devoirs" },
+  { img: onboarding3, title: "Messagerie et notifications en temps réel" },
+  { img: onboarding4, title: "Parents : suivez tous vos enfants" },
+];
+
+const ROLES = [
+  {
+    role: "professeur",
+    icon: faChalkboardUser,
+    color: "#8C52FF",
+    title: "Professeur",
+    text: "Enseignez, partagez et suivez vos élèves. Créez vos classes, vos cours et vos devoirs.",
+  },
+  {
+    role: "eleve",
+    icon: faUserGraduate,
+    color: "#3B82F6",
+    title: "Élève",
+    text: "Apprenez, progressez et réussissez. Rejoignez votre classe avec le code de votre professeur.",
+  },
+  {
+    role: "parent",
+    icon: faUsers,
+    color: "#10B981",
+    title: "Parent",
+    text: "Suivez vos enfants et communiquez avec les enseignants, depuis un seul compte.",
+  },
+];
+
+const STEPS = [
+  { icon: faKey, title: "Obtenez le code de classe", text: "Il vous est fourni par le professeur ou l'établissement." },
+  { icon: faUserCheck, title: "Créez votre compte", text: "Vos informations, le code de la classe, puis confirmation." },
+  { icon: faShieldHalved, title: "Validation du professeur", text: "Le professeur de la classe approuve votre demande." },
+  { icon: faEnvelopeOpenText, title: "Connectez-vous", text: "Vous recevez vos identifiants par e-mail, sur le web comme sur mobile." },
+];
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.45 } }),
+};
+
+const SectionTitle = ({ eyebrow, title, text }) => (
+  <div className="text-center max-w-2xl mx-auto mb-12">
+    {eyebrow && (
+      <span className="inline-block text-xs font-semibold uppercase tracking-widest text-[#8C52FF] mb-3">{eyebrow}</span>
+    )}
+    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white">{title}</h2>
+    {text && <p className="mt-4 text-slate-500 dark:text-slate-400">{text}</p>}
+  </div>
+);
+
+export const Home = ({ theme }) => {
+  const location = useLocation();
+
+  // Header links point to "/#section": scroll there once the page is rendered.
+  useEffect(() => {
+    const id = location.hash ? location.hash.slice(1) : null;
+    if (!id) return undefined;
+    const timer = setTimeout(() => scrollToSection(id), 350);
+    return () => clearTimeout(timer);
+  }, [location.hash, location.key]);
+
   return (
-    <section
-      className={`min-h-screen relative overflow-hidden ${themeClasses.bg}`}
-    >
-      {/* Background Decor */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
-        <motion.div
-          className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24"
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-        >
-          {/* Text Content */}
-          <div className="w-full lg:w-1/2 text-center lg:text-left">
-            <motion.div variants={itemVariants}>
-              <div
-                className={`inline-flex items-center gap-2 ${themeClasses.badgeBg} backdrop-blur-sm border border-blue-200/20 rounded-full px-6 py-2 mb-8 shadow-sm`}
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                <span
-                  className={`${themeClasses.badgeText} font-semibold text-sm tracking-wide uppercase`}
-                >
-                  {t("pages.home.badge")}
-                </span>
-              </div>
-            </motion.div>
-
-            <motion.h1
-              className="text-3xl sm:text-5xl lg:text-7xl font-bold mb-6 sm:mb-8 leading-[1.1] tracking-tight break-words hyphens-auto"
-              variants={itemVariants}
-            >
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 animate-gradient-x">
-                {t("pages.home.animatedTexts.text1")}
+    <div className={theme === "dark" ? "dark" : ""}>
+      <div className="bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-300">
+        {/* ───────── Hero ───────── */}
+        <section className="relative overflow-hidden pt-28 pb-16 lg:pt-36 lg:pb-24">
+          <div className="absolute -top-32 -right-32 w-[520px] h-[520px] rounded-full bg-[#8C52FF]/10 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-40 -left-32 w-[480px] h-[480px] rounded-full bg-[#3B82F6]/10 blur-3xl pointer-events-none" />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 items-center">
+            <motion.div initial="hidden" animate="visible" variants={fadeUp}>
+              <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-[#4F46E5] dark:text-indigo-300 px-3 py-1 text-xs font-semibold mb-5">
+                <FontAwesomeIcon icon={faPeopleRoof} /> L'école connectée, partout.
               </span>
-            </motion.h1>
-
-            <motion.p
-              className={`text-base sm:text-xl ${themeClasses.text} opacity-90 max-w-2xl mx-auto lg:mx-0 leading-relaxed mb-8 sm:mb-10`}
-              variants={itemVariants}
-            >
-              {t("pages.home.subtitle")}
-            </motion.p>
-
-            <motion.div
-              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5 mb-16"
-              variants={itemVariants}
-            >
-              <motion.button
-                whileHover={{
-                  scale: 1.05,
-                  boxShadow: "0 20px 25px -5px rgb(59 130 246 / 0.5)",
-                }}
-                whileTap={{
-                  scale: 0.95,
-                }}
-                onClick={() => navigate("/schoolchat/login")}
-                className="group relative w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-500 -translate-x-full skew-x-12"></div>
-                <FontAwesomeIcon
-                  icon={faRocket}
-                  className="w-5 h-5 group-hover:rotate-12 transition-transform"
-                />
-                <span>{t("pages.home.cta")}</span>
-              </motion.button>
-
-              <motion.button
-                whileHover={{
-                  scale: 1.05,
-                  backgroundColor: theme === "dark" ? "#1f2937" : "#f9fafb",
-                }}
-                whileTap={{
-                  scale: 0.95,
-                }}
-                className={`group w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 ${theme === "dark" ? "bg-gray-800 text-white hover:bg-gray-700" : "bg-white text-gray-700 hover:bg-gray-50"} border-2 border-gray-200 dark:border-gray-700 rounded-2xl font-bold text-lg shadow-md transition-all`}
-              >
-                <FontAwesomeIcon
-                  icon={faCirclePlay}
-                  className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform"
-                />
-                <span>
-                  {t("pages.home.cta") === "Découvrir"
-                    ? "Voir Démo"
-                    : "Watch Demo"}
-                </span>
-              </motion.button>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-slate-900 dark:text-white">
+                Connectez votre école, vos élèves et vos{" "}
+                <span className="bg-gradient-to-r from-[#4F46E5] to-[#8C52FF] bg-clip-text text-transparent">familles</span>
+              </h1>
+              <p className="mt-5 text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-xl">
+                ScholChat simplifie la communication, l'apprentissage et la gestion scolaire. Une seule plateforme pour tous.
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Button to="/schoolchat/signup" icon={faArrowRight}>
+                  Créer un compte
+                </Button>
+                <Button to="/schoolchat/login" variant="secondary">
+                  Se connecter
+                </Button>
+              </div>
+              <StoreBadges className="mt-8" />
             </motion.div>
-
             <motion.div
-              className="grid grid-cols-3 gap-6 sm:gap-10 border-t border-gray-200/10 pt-10"
-              variants={itemVariants}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="relative"
             >
-              {[
-                {
-                  number: "98%",
-                  label: t("pages.home.stats.success"),
-                  icon: "🏆",
-                  color: "text-amber-500",
-                },
-                {
-                  number: "5k+",
-                  label: t("pages.home.stats.families"),
-                  icon: "👨👩👧",
-                  color: "text-blue-500",
-                },
-                {
-                  number: "24/7",
-                  label: t("pages.home.stats.support"),
-                  icon: "💬",
-                  color: "text-purple-500",
-                },
-              ].map((stat, i) => (
-                <div key={i} className="text-center lg:text-left">
-                  <div
-                    className={`text-2xl sm:text-3xl font-bold mb-1 ${stat.color}`}
-                  >
-                    {stat.number}
-                  </div>
-                  <div
-                    className={`text-sm sm:text-base ${themeClasses.text} opacity-70`}
-                  >
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
+              <div className="absolute inset-6 rounded-[2.5rem] bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/40 dark:to-violet-900/30" />
+              <img src={community} alt="Professeur, élèves et parents réunis autour de ScholChat" className="relative w-full max-w-xl mx-auto" />
             </motion.div>
           </div>
+        </section>
 
-          {/* Hero Image */}
-          <motion.div
-            className="w-full lg:w-1/2 relative"
-            variants={itemVariants}
-          >
-            <div className="relative z-10">
-              <motion.div
-                animate={{
-                  y: [-10, 10, -10],
-                }}
-                transition={{
-                  duration: 6,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              >
-                <img
-                  src={heroImg}
-                  alt="SchoolChat Hero"
-                  className="w-full h-auto rounded-3xl shadow-2xl ring-1 ring-black/5"
-                />
-              </motion.div>
-
-              {/* Floating Badge 1 */}
-              <motion.div
-                animate={{
-                  y: [10, -10, 10],
-                }}
-                transition={{
-                  duration: 5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: 1,
-                }}
-                className={`absolute -left-16 top-16 ${themeClasses.itemBg} backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/20 hidden lg:block`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-xl">
-                    🚀
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm">
-                      {t("pages.home.floatingBadges.innovation")}
-                    </div>
-                    <div className="text-xs opacity-70">
-                      {t("pages.home.floatingBadges.technological")}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Floating Badge 2 */}
-              <motion.div
-                animate={{
-                  y: [-15, 15, -15],
-                }}
-                transition={{
-                  duration: 7,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: 0.5,
-                }}
-                className={`absolute -right-16 bottom-16 ${themeClasses.itemBg} backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/20 hidden lg:block`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">
-                    🎓
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm">
-                      {t("pages.home.floatingBadges.excellence")}
-                    </div>
-                    <div className="text-xs opacity-70">
-                      {t("pages.home.floatingBadges.guaranteed")}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+        {/* ───────── Fonctionnalités ───────── */}
+        <section id="fonctionnalites" className="py-16 lg:py-24 bg-slate-50 dark:bg-slate-900/60 scroll-mt-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionTitle
+              eyebrow="Fonctionnalités"
+              title="Une plateforme complète, pour tous les acteurs"
+              text="Professeurs, élèves et parents partagent le même espace : classes, cours, sessions en direct, devoirs et messagerie."
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+              {FEATURES.map((f, i) => (
+                <motion.div
+                  key={f.title}
+                  custom={i}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: "-40px" }}
+                  variants={fadeUp}
+                  className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5 transition-all"
+                >
+                  <span
+                    className="w-11 h-11 rounded-xl flex items-center justify-center text-white text-lg mb-4"
+                    style={{ background: f.color }}
+                  >
+                    <FontAwesomeIcon icon={f.icon} />
+                  </span>
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-1.5">{f.title}</h3>
+                  <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">{f.text}</p>
+                </motion.div>
+              ))}
             </div>
 
-            {/* Background Glow behind image */}
-            <div className="absolute inset-0 bg-blue-500/20 blur-[80px] rounded-full -z-10 transform scale-90" />
-          </motion.div>
-        </motion.div>
-      </div>
+            <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {SHOWCASE.map((s, i) => (
+                <motion.figure
+                  key={s.title}
+                  custom={i}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: "-40px" }}
+                  variants={fadeUp}
+                  className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 text-center"
+                >
+                  <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-slate-800 dark:to-indigo-950/60 p-3 mb-3">
+                    <img src={s.img} alt="" className="w-full h-40 object-contain" loading="lazy" />
+                  </div>
+                  <figcaption className="text-sm font-semibold text-slate-800 dark:text-slate-100">{s.title}</figcaption>
+                </motion.figure>
+              ))}
+            </div>
+          </div>
+        </section>
 
-      {/* Badges Slider (simplified as static for now but styled) */}
-      <motion.div
-        className="w-full py-6 bg-gradient-to-r from-transparent via-gray-50/50 to-transparent dark:via-gray-800/50 backdrop-blur-sm border-y border-gray-100/10"
-        initial={{
-          opacity: 0,
-        }}
-        animate={{
-          opacity: 1,
-        }}
-        transition={{
-          delay: 1,
-          duration: 1,
-        }}
-      >
-        <div className="flex flex-wrap justify-center gap-4 sm:gap-12">
-          {[
-            t("pages.home.floatingBadges.innovation"),
-            t("pages.home.floatingBadges.technological"),
-            t("pages.home.floatingBadges.excellence"),
-            t("pages.home.floatingBadges.guaranteed"),
-            t("pages.home.floatingBadges.innovation"),
-            t("pages.home.floatingBadges.excellence"),
-          ].map((badge, i) => (
-            <span
-              key={i}
-              className="text-gray-400 dark:text-gray-500 text-sm font-semibold uppercase tracking-widest hover:text-blue-500 transition-colors cursor-default"
-            >
-              {badge}
-            </span>
-          ))}
-        </div>
-      </motion.div>
-    </section>
-  );
-};
-const Home = ({ theme }) => {
-  return (
-    <div
-      className={`transition-colors duration-300 ${theme === "dark" ? "bg-gray-900" : "bg-white"}`}
-    >
-      <HomeContent theme={theme} />
-      <div className="relative z-10">
-        <About theme={theme} />
-        <FunctionalitiesSection theme={theme} />
-        <Instructor theme={theme} />
-        <Courses theme={theme} />
-        <Blog theme={theme} />
+        {/* ───────── Pour qui ───────── */}
+        <section className="py-16 lg:py-24">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionTitle eyebrow="Je suis…" title="Un espace adapté à chaque profil" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {ROLES.map((r) => (
+                <Link
+                  key={r.role}
+                  to={`/schoolchat/signup?role=${r.role}`}
+                  className="group rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center hover:border-[#8C52FF]/50 hover:shadow-lg transition-all"
+                >
+                  <span
+                    className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl mb-4"
+                    style={{ background: r.color }}
+                  >
+                    <FontAwesomeIcon icon={r.icon} />
+                  </span>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{r.title}</h3>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{r.text}</p>
+                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#4F46E5] dark:text-indigo-300">
+                    Créer mon compte <FontAwesomeIcon icon={faArrowRight} className="group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── Comment ça marche (élèves / parents) ───────── */}
+        <section className="py-16 lg:py-20 bg-gradient-to-br from-[#4F46E5] to-[#8C52FF] text-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto mb-12">
+              <h2 className="text-2xl sm:text-3xl font-bold">Élèves et parents : rejoignez votre classe en 4 étapes</h2>
+              <p className="mt-3 text-indigo-100">Votre inscription est rattachée à une classe grâce à son code.</p>
+            </div>
+            <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {STEPS.map((s, i) => (
+                <li key={s.title} className="rounded-2xl bg-white/10 backdrop-blur p-5 border border-white/15">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="w-9 h-9 rounded-full bg-white text-[#4F46E5] font-bold flex items-center justify-center">{i + 1}</span>
+                    <FontAwesomeIcon icon={s.icon} className="text-xl text-indigo-100" />
+                  </div>
+                  <h3 className="font-semibold">{s.title}</h3>
+                  <p className="mt-1 text-sm text-indigo-100">{s.text}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ───────── Tarifs ───────── */}
+        <section id="tarifs" className="py-16 lg:py-24 scroll-mt-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionTitle
+              eyebrow="Tarifs"
+              title="Des offres adaptées à chaque classe"
+              text="Les professeurs et les établissements choisissent l'offre de leurs classes ; élèves et parents en profitent directement."
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Élèves et parents</h3>
+                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Inclus avec la classe</p>
+                <ul className="mt-5 space-y-2 text-sm">
+                  {["Accès aux classes approuvées", "Cours, devoirs et sessions en direct", "Messagerie et notifications", "Suivi de plusieurs enfants"].map((x) => (
+                    <li key={x} className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCheck} className="text-[#10B981]" /> {x}
+                    </li>
+                  ))}
+                </ul>
+                <Button to="/schoolchat/signup" variant="secondary" className="mt-6 w-full">
+                  Créer un compte
+                </Button>
+              </div>
+              <div className="rounded-2xl p-6 text-white bg-gradient-to-br from-[#4F46E5] to-[#8C52FF] shadow-xl shadow-indigo-500/20">
+                <h3 className="text-lg font-semibold">Professeurs et établissements</h3>
+                <p className="mt-1 text-2xl font-bold">Mensuel ou annuel</p>
+                <ul className="mt-5 space-y-2 text-sm text-indigo-50">
+                  {["Création de classes et de cours", "Sessions en direct et exercices", "Gestion des demandes d'accès", "Offres renouvelables"].map((x) => (
+                    <li key={x} className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCheck} /> {x}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to="/schoolchat/functionalities"
+                  className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white text-[#4F46E5] px-6 py-3 font-semibold hover:bg-indigo-50"
+                >
+                  Voir les offres <FontAwesomeIcon icon={faArrowRight} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── À propos ───────── */}
+        <section id="a-propos" className="py-16 lg:py-24 bg-slate-50 dark:bg-slate-900/60 scroll-mt-20">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-10 items-center">
+            <img src={onboarding4} alt="Une famille suit la scolarité de ses enfants sur ScholChat" className="w-full max-w-md mx-auto" loading="lazy" />
+            <div>
+              <span className="inline-block text-xs font-semibold uppercase tracking-widest text-[#8C52FF] mb-3">À propos</span>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Rapprocher l'école et les familles</h2>
+              <p className="mt-4 text-slate-500 dark:text-slate-400 leading-relaxed">
+                ScholChat réunit professeurs, élèves et parents dans un espace sécurisé : chaque inscription à une classe est
+                validée par son professeur, et chaque parent suit la scolarité de ses enfants en temps réel, sur le web comme
+                sur mobile.
+              </p>
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <Button to="/schoolchat/about" variant="secondary">
+                  En savoir plus
+                </Button>
+                <Button to="/schoolchat/contact" variant="ghost">
+                  Nous contacter
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── CTA ───────── */}
+        <section className="py-16">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="rounded-3xl bg-slate-900 dark:bg-slate-900 border border-slate-800 p-8 sm:p-12 flex flex-col lg:flex-row items-center justify-between gap-8">
+              <div className="text-center lg:text-left">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white">Prêt à connecter votre classe ?</h2>
+                <p className="mt-2 text-slate-400">Créez votre compte gratuitement, puis retrouvez ScholChat sur mobile.</p>
+              </div>
+              <div className="flex flex-col items-center lg:items-end gap-4">
+                <Button to="/schoolchat/signup" icon={faArrowRight}>
+                  Créer un compte
+                </Button>
+                <StoreBadges compact />
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
 };
-export { Home };
+
 export default Home;

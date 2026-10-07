@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Empty, Spin, Button, Input, Tag, message, Modal, Alert } from "antd";
+import { Spin, Button, Input, message } from "antd";
+import { useLocation, useNavigate } from "react-router-dom";
 import { classService } from "../../../../services/ClassService";
 import { coursProgrammerService } from "../../../../services/coursProgrammerService";
 import AccederService from "../../../../services/accederService";
 import CoursProgrammeManagement from "../content/InterfaceCours/CoursProgrammeManagement";
 import ParentClassManagementModal from "./ParentClassManagementModal";
 import AddChildModal from "./AddChildModal";
+import JoinClassModal from "../../../../components/common/JoinClassModal";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -20,6 +22,7 @@ import {
   faLock,
   faMagnifyingGlass,
   faPlus,
+  faRightToBracket,
   faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
 const LEVEL_CONFIG = {
@@ -102,6 +105,8 @@ const ACCESS = {
 // ── main component ─────────────────────────────────────────────────────────────
 
 const StudentClassList = ({ isParentView = false }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const parentId = localStorage.getItem("userId");
   const userRole = (localStorage.getItem("userRole") || "").toUpperCase();
   const isParent = userRole.includes("PARENT");
@@ -125,9 +130,18 @@ const StudentClassList = ({ isParentView = false }) => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
   const [searchCode, setSearchCode] = useState("");
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchDone, setSearchDone] = useState(false);
   const [pendingMsg, setPendingMsg] = useState(null);
+
+  // "Rejoindre une classe" call-to-action from the dashboard: …/classes?join=1 opens the join flow.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("join") === "1") {
+      setShowSearchModal(true);
+      params.delete("join");
+      const rest = params.toString();
+      navigate(`${location.pathname}${rest ? `?${rest}` : ""}`, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate]);
 
   // ── child switch listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -242,36 +256,27 @@ const StudentClassList = ({ isParentView = false }) => {
   // ── search & join ──────────────────────────────────────────────────────────
   const handleClearSearch = () => {
     setSearchCode("");
-    setSearchDone(false);
     setSelectedClass(null);
   };
   const handleCloseSearchModal = () => {
     setShowSearchModal(false);
     handleClearSearch();
   };
-  const handleSearchJoin = async () => {
-    const code = searchCode.trim();
-    if (!code) {
-      message.warning("Entrez le code d'activation de la classe");
-      return;
-    }
-    try {
-      setSearchLoading(true);
-      setSearchDone(false);
-      setSelectedClass(null);
-      // Exact match on activation code only
-      const found = allClasses.find((c) => c.codeActivation === code);
-      setSearchDone(true);
-      if (found) {
-        setSelectedClass(found);
-        setShowSearchModal(false);
-        setShowRequestModal(true);
-      }
-    } catch (e) {
-      message.error("Erreur lors de la recherche");
-    } finally {
-      setSearchLoading(false);
-    }
+  // The class was found by its code (public preview): open the access-request confirmation
+  // (child choice for a parent) with the code pre-filled.
+  const handlePreviewConfirmed = (preview) => {
+    const known = allClasses.find((c) => c.id === preview.id);
+    const classe = known || {
+      id: preview.id,
+      nom: preview.nom,
+      niveau: preview.niveau,
+      etablissement: preview.etablissementNom ? { nom: preview.etablissementNom } : null,
+      codeActivation: preview.code,
+    };
+    setSearchCode(preview.code);
+    setSelectedClass(classe);
+    setShowSearchModal(false);
+    setShowRequestModal(true);
   };
   const handleRequestAccess = async (classe, code, childId = null) => {
     try {
@@ -403,7 +408,7 @@ const StudentClassList = ({ isParentView = false }) => {
         }}
       >
         <div className="px-4 py-4 text-white">
-          <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
                 <FontAwesomeIcon
@@ -441,17 +446,13 @@ const StudentClassList = ({ isParentView = false }) => {
                   <span className="hidden sm:inline">Enfant</span>
                 </button>
               )}
+              {/* Primary action, always labelled and visible without scrolling (desktop and mobile) */}
               <button
                 onClick={() => setShowSearchModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-colors border border-white/30"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white text-[#1d3557] hover:bg-indigo-50 text-xs sm:text-sm font-bold shadow-md transition-colors"
               >
-                <FontAwesomeIcon
-                  icon={faMagnifyingGlass}
-                  style={{
-                    fontSize: 11,
-                  }}
-                />
-                <span className="hidden sm:inline">Rejoindre</span>
+                <FontAwesomeIcon icon={faRightToBracket} />
+                <span>Rejoindre une classe</span>
               </button>
               <button
                 onClick={handleRefresh}
@@ -583,7 +584,7 @@ const StudentClassList = ({ isParentView = false }) => {
           </p>
           <Button
             type="primary"
-            icon={<FontAwesomeIcon icon={faMagnifyingGlass} />}
+            icon={<FontAwesomeIcon icon={faRightToBracket} />}
             onClick={() => setShowSearchModal(true)}
             style={{
               borderRadius: 8,
@@ -780,186 +781,14 @@ const StudentClassList = ({ isParentView = false }) => {
         </div>
       )}
 
-      {/* ── Search / Join modal (Ant Design, same as professor side) ── */}
-      <Modal
-        title={
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: "#ede9fe",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <FontAwesomeIcon
-                icon={faUserGroup}
-                style={{
-                  color: "#4f46e5",
-                  fontSize: 16,
-                }}
-              />
-            </div>
-            <div>
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: 15,
-                  color: "#1e293b",
-                }}
-              >
-                Rejoindre une classe
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#94a3b8",
-                  fontWeight: 400,
-                }}
-              >
-                Entrez le code exact de la classe
-              </div>
-            </div>
-          </div>
-        }
+      {/* ── Join modal: code → class preview → confirmation ── */}
+      <JoinClassModal
         open={showSearchModal}
-        onCancel={handleCloseSearchModal}
-        footer={null}
-        width={480}
-        centered
-        styles={{
-          body: {
-            paddingTop: 8,
-          },
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: 16,
-          }}
-        >
-          <Input
-            size="large"
-            placeholder="Code d'activation de la classe..."
-            value={searchCode}
-            onChange={(e) => {
-              setSearchCode(e.target.value);
-              if (!e.target.value) handleClearSearch();
-            }}
-            onPressEnter={handleSearchJoin}
-            prefix={
-              <FontAwesomeIcon
-                icon={faLock}
-                style={{
-                  color: "#94a3b8",
-                }}
-              />
-            }
-            suffix={
-              searchCode ? (
-                <span
-                  onClick={handleClearSearch}
-                  style={{
-                    cursor: "pointer",
-                    color: "#94a3b8",
-                    fontSize: 13,
-                  }}
-                >
-                  ✕
-                </span>
-              ) : null
-            }
-            style={{
-              borderRadius: 10,
-            }}
-            autoFocus
-          />
-          <Button
-            type="primary"
-            size="large"
-            icon={<FontAwesomeIcon icon={faMagnifyingGlass} />}
-            loading={searchLoading}
-            onClick={handleSearchJoin}
-            style={{
-              borderRadius: 10,
-              background: "#4f46e5",
-              borderColor: "#4f46e5",
-              flexShrink: 0,
-            }}
-          >
-            Rechercher
-          </Button>
-        </div>
-
-        {searchLoading && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "32px 0",
-            }}
-          >
-            <Spin size="large" />
-            <p
-              style={{
-                marginTop: 12,
-                color: "#94a3b8",
-                fontSize: 13,
-              }}
-            >
-              Recherche en cours…
-            </p>
-          </div>
-        )}
-
-        {!searchLoading && searchDone && !selectedClass && (
-          <Alert
-            style={{
-              borderRadius: 8,
-            }}
-            type="error"
-            showIcon
-            message="Aucune classe trouvée avec ce code. Vérifiez le code et réessayez."
-          />
-        )}
-
-        {!searchLoading && !searchDone && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "24px 0 8px",
-              color: "#94a3b8",
-            }}
-          >
-            <FontAwesomeIcon
-              icon={faLock}
-              style={{
-                fontSize: 36,
-                marginBottom: 10,
-                opacity: 0.4,
-              }}
-            />
-            <p
-              style={{
-                margin: 0,
-                fontSize: 13,
-              }}
-            >
-              Entrez le code exact fourni par le modérateur de la classe.
-            </p>
-          </div>
-        )}
-      </Modal>
+        onClose={handleCloseSearchModal}
+        type={isParentView ? "parent" : "eleve"}
+        onContinue={handlePreviewConfirmed}
+        initialCode={searchCode}
+      />
 
       {/* ── Request access modal — code pre-filled and locked ── */}
       {selectedClass && (

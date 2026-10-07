@@ -1,95 +1,106 @@
 import React from "react";
-import { BsFacebook, BsTwitter, BsInstagram, BsLinkedin } from "react-icons/bs";
-import { NavLink } from "react-router-dom";
-import { useTranslation } from "../../hooks/useTranslation";
+import { Link } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFacebookF, faInstagram, faLinkedinIn, faXTwitter } from "@fortawesome/free-brands-svg-icons";
+import { BrandLogo } from "../frontoffice/ui";
+import { StoreBadges } from "../frontoffice/StoreBadges";
 
-export const Footer = () => {
-  const { t } = useTranslation();
-  return (
-    <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          {/* About Section */}
-          <div>
-            <h4 className="text-white font-semibold text-lg mb-4">ScholChat</h4>
-            <p className="text-gray-400 text-sm leading-relaxed mb-5">
-              {t("footer.about.description")}
+const COLUMNS = [
+  {
+    title: "Produit",
+    links: [
+      { label: "Fonctionnalités", to: "/#fonctionnalites" },
+      { label: "Tarifs", to: "/#tarifs" },
+      { label: "Offres et formules", to: "/schoolchat/functionalities" },
+      { label: "Cours", to: "/schoolchat/courses" },
+    ],
+  },
+  {
+    title: "Niveaux",
+    links: [
+      { label: "Crèches", to: "/schoolchat/nursery" },
+      { label: "Maternelles", to: "/schoolchat/kindergarten" },
+      { label: "Écoles primaires", to: "/schoolchat/primary-school" },
+      { label: "Lycées et collèges", to: "/schoolchat/high-school" },
+      { label: "Universités", to: "/schoolchat/university" },
+    ],
+  },
+  {
+    title: "Ressources",
+    links: [
+      { label: "À propos", to: "/schoolchat/about" },
+      { label: "FAQ", to: "/schoolchat/blog" },
+      { label: "Contact", to: "/schoolchat/contact" },
+      { label: "Renouveler mon offre", to: "/schoolchat/renouveler-offre" },
+    ],
+  },
+  {
+    title: "Compte",
+    links: [
+      { label: "Se connecter", to: "/schoolchat/login" },
+      { label: "Créer un compte", to: "/schoolchat/signup" },
+      { label: "Mot de passe oublié", to: "/schoolchat/forgot-password" },
+    ],
+  },
+];
+
+const SOCIALS = [
+  { icon: faFacebookF, href: "https://facebook.com", label: "Facebook" },
+  { icon: faXTwitter, href: "https://twitter.com", label: "X" },
+  { icon: faInstagram, href: "https://instagram.com", label: "Instagram" },
+  { icon: faLinkedinIn, href: "https://linkedin.com", label: "LinkedIn" },
+];
+
+export const Footer = ({ theme }) => (
+  <footer className={theme === "dark" ? "dark" : ""}>
+    <div className="bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+          <div className="space-y-4">
+            <BrandLogo tagline />
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
+              ScholChat simplifie la communication, l'apprentissage et la gestion scolaire. Une seule plateforme pour tous.
             </p>
-            <div className="flex gap-3">
-              <a href="https://facebook.com" className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-blue-600 rounded-full transition-all duration-300 hover:scale-110">
-                <BsFacebook size={18} />
-              </a>
-              <a href="https://twitter.com" className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-blue-400 rounded-full transition-all duration-300 hover:scale-110">
-                <BsTwitter size={18} />
-              </a>
-              <a href="https://instagram.com" className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-pink-600 rounded-full transition-all duration-300 hover:scale-110">
-                <BsInstagram size={18} />
-              </a>
-              <a href="https://linkedin.com" className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-blue-700 rounded-full transition-all duration-300 hover:scale-110">
-                <BsLinkedin size={18} />
-              </a>
+            <StoreBadges compact />
+            <div className="flex gap-2 pt-1">
+              {SOCIALS.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={s.label}
+                  className="w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-white hover:bg-[#4F46E5] hover:border-[#4F46E5] transition-colors"
+                >
+                  <FontAwesomeIcon icon={s.icon} />
+                </a>
+              ))}
             </div>
           </div>
-
-          {/* Contact */}
-          <div>
-            <h4 className="text-white font-semibold text-base mb-4">{t("footer.contact.title")}</h4>
-            <div className="space-y-2.5">
-              <NavLink to="#" className="block text-gray-400 hover:text-blue-400 text-sm transition-colors">
-                {t("footer.contact.contactUs")}
-              </NavLink>
-              <NavLink to="#" className="block text-gray-400 hover:text-blue-400 text-sm transition-colors">
-                {t("footer.contact.support")}
-              </NavLink>
-              <NavLink to="#" className="block text-gray-400 hover:text-blue-400 text-sm transition-colors">
-                {t("footer.contact.helpCenter")}
-              </NavLink>
-            </div>
-          </div>
-
-          {/* Legal */}
-          <div>
-            <h4 className="text-white font-semibold text-base mb-4">{t("footer.legal.title")}</h4>
-            <div className="space-y-2.5">
-              <NavLink to="#" className="block text-gray-400 hover:text-blue-400 text-sm transition-colors">
-                {t("footer.legal.privacy")}
-              </NavLink>
-              <NavLink to="#" className="block text-gray-400 hover:text-blue-400 text-sm transition-colors">
-                {t("footer.legal.terms")}
-              </NavLink>
-              <NavLink to="#" className="block text-gray-400 hover:text-blue-400 text-sm transition-colors">
-                {t("footer.legal.legalNotice")}
-              </NavLink>
-            </div>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <h4 className="text-white font-semibold text-base mb-4">{t("footer.resources.title")}</h4>
-            <div className="space-y-2.5">
-              <NavLink to="#" className="block text-gray-400 hover:text-blue-400 text-sm transition-colors">
-                {t("footer.resources.userGuide")}
-              </NavLink>
-              <NavLink to="#" className="block text-gray-400 hover:text-blue-400 text-sm transition-colors">
-                {t("footer.resources.blog")}
-              </NavLink>
-              <NavLink to="#" className="block text-gray-400 hover:text-blue-400 text-sm transition-colors">
-                {t("footer.resources.faq")}
-              </NavLink>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:contents gap-8">
+            {COLUMNS.map((col) => (
+              <div key={col.title}>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{col.title}</h4>
+                <ul className="space-y-2">
+                  {col.links.map((l) => (
+                    <li key={l.label}>
+                      <Link to={l.to} className="text-sm text-slate-500 dark:text-slate-400 hover:text-[#4F46E5] dark:hover:text-indigo-300">
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
-
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-700 pt-6 text-center">
-          <p className="text-gray-500 text-sm">
-            © {new Date().getFullYear()} ScholChat. {t("footer.copyright")}
-          </p>
+        <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <p>© {new Date().getFullYear()} ScholChat. Tous droits réservés.</p>
+          <p>L'école connectée, partout.</p>
         </div>
       </div>
-    </footer>
-  );
-};
+    </div>
+  </footer>
+);
 
 export default Footer;
-

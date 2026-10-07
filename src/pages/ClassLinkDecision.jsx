@@ -1,17 +1,19 @@
 import React, { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowLeft,
   faCircleCheck,
   faCircleExclamation,
   faCircleXmark,
-  faSpinner,
+  faLinkSlash,
+  faRotateLeft,
+  faSchool,
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
-import {
-  CLASS_CONFIRM_LABELS,
-  getClassActionTexts,
-} from "../utils/classActionConfirm";
+import { AuthShell, BrandLogo, Button, StatusIcon } from "../components/frontoffice/ui";
+import { CLASS_CONFIRM_LABELS, getClassActionTexts } from "../utils/classActionConfirm";
 
 /**
  * Shared body of the emailed class approval / rejection link pages
@@ -26,6 +28,7 @@ import {
  * - method: HTTP method (default "post")
  * - className: optional class name (from the link's ?nom= / ?className=)
  * - successTitle / successMessage / successHint, errorTitle / errorMessage
+ * - theme: front-office theme ("dark" | other)
  */
 const ClassLinkDecision = ({
   action,
@@ -37,6 +40,7 @@ const ClassLinkDecision = ({
   successHint,
   errorTitle,
   errorMessage,
+  theme,
 }) => {
   const isApprove = action === "approve";
   const texts = getClassActionTexts(action, className);
@@ -56,9 +60,7 @@ const ClassLinkDecision = ({
       console.error(`Class ${action} error:`, error);
       setStatus("error");
       if (error.response?.status === 404) {
-        setMessage(
-          "Classe introuvable. Vérifiez que l'ID de la classe est correct.",
-        );
+        setMessage("Classe introuvable. Vérifiez que l'ID de la classe est correct.");
       } else {
         setMessage(error.response?.data?.message || errorMessage);
       }
@@ -67,142 +69,91 @@ const ClassLinkDecision = ({
     }
   };
 
-  const gradient = isApprove
-    ? "from-blue-50 to-indigo-100"
-    : "from-red-50 to-pink-100";
+  const decisionBtn = isApprove
+    ? ""
+    : "!bg-none !bg-[#EF4444] hover:!bg-red-600 !shadow-red-500/25";
 
   return (
-    <div
-      className={`min-h-screen bg-gradient-to-br ${gradient} flex items-center justify-center p-4`}
-    >
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+    <AuthShell theme={theme}>
+      <div className="max-w-md mx-auto text-center">
+        <BrandLogo className="mb-8" />
+
         {status === "invalid" && (
           <>
-            <FontAwesomeIcon
-              icon={faCircleExclamation}
-              className="w-16 h-16 text-red-600 mx-auto mb-4"
-            />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              Lien invalide
-            </h2>
-            <p className="text-gray-600">
-              Ce lien est incomplet. Vérifiez l'adresse reçue par email.
-            </p>
+            <StatusIcon icon={faLinkSlash} tone="error" />
+            <h1 className="mt-6 text-2xl font-bold text-slate-900 dark:text-white">Lien invalide</h1>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">Ce lien est incomplet. Vérifiez l'adresse reçue par e-mail.</p>
           </>
         )}
 
-        {status === "confirm" && (
+        {(status === "confirm" || status === "loading") && (
           <>
-            <FontAwesomeIcon
-              icon={isApprove ? faCircleCheck : faTriangleExclamation}
-              className={`w-16 h-16 mx-auto mb-4 ${isApprove ? "text-green-600" : "text-red-600"}`}
-            />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              {texts.title}
-            </h2>
-            <p className="text-gray-600 mb-6">{texts.message}</p>
-            <div className="flex flex-col-reverse sm:flex-row gap-3 justify-center">
-              <button
-                type="button"
-                onClick={() => setStatus("cancelled")}
-                className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition"
-              >
+            <StatusIcon icon={isApprove ? faCircleCheck : faTriangleExclamation} tone={isApprove ? "success" : "error"} />
+            <h1 className="mt-6 text-2xl font-bold text-slate-900 dark:text-white">
+              {status === "loading" ? (isApprove ? "Validation en cours…" : "Rejet en cours…") : texts.title}
+            </h1>
+            {className && (
+              <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-4 py-1.5 text-sm font-semibold text-[#4F46E5] dark:text-indigo-300">
+                <FontAwesomeIcon icon={faSchool} /> {className}
+              </p>
+            )}
+            <p className="mt-3 text-slate-500 dark:text-slate-400">{status === "loading" ? "Veuillez patienter." : texts.message}</p>
+            <div className="mt-8 flex flex-col-reverse sm:flex-row gap-3">
+              <Button type="button" variant="subtle" className="sm:flex-1" onClick={() => setStatus("cancelled")} disabled={status === "loading"}>
                 {CLASS_CONFIRM_LABELS.cancel}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                className={`sm:flex-1 ${decisionBtn}`}
                 onClick={handleConfirm}
-                className={`px-5 py-2 rounded-lg text-white font-semibold transition ${isApprove ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}
+                loading={status === "loading"}
+                loadingLabel={CLASS_CONFIRM_LABELS.confirm}
               >
                 {CLASS_CONFIRM_LABELS.confirm}
-              </button>
+              </Button>
             </div>
-          </>
-        )}
-
-        {status === "loading" && (
-          <>
-            <FontAwesomeIcon
-              icon={faSpinner}
-              className={`w-16 h-16 animate-spin mx-auto mb-4 ${isApprove ? "text-blue-600" : "text-red-600"}`}
-            />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              {isApprove ? "Validation en cours..." : "Rejet en cours..."}
-            </h2>
-            <p className="text-gray-600 mb-6">Veuillez patienter.</p>
-            <button
-              type="button"
-              disabled
-              className={`px-5 py-2 rounded-lg text-white font-semibold opacity-60 cursor-not-allowed inline-flex items-center gap-2 ${isApprove ? "bg-green-600" : "bg-red-600"}`}
-            >
-              <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-              {CLASS_CONFIRM_LABELS.confirm}
-            </button>
           </>
         )}
 
         {status === "cancelled" && (
           <>
-            <FontAwesomeIcon
-              icon={faCircleExclamation}
-              className="w-16 h-16 text-gray-400 mx-auto mb-4"
-            />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              Action annulée
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Aucune modification n'a été apportée à la classe.
-            </p>
-            <button
-              type="button"
-              onClick={() => setStatus("confirm")}
-              className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition"
-            >
-              Revenir
-            </button>
+            <StatusIcon icon={faCircleExclamation} tone="neutral" />
+            <h1 className="mt-6 text-2xl font-bold text-slate-900 dark:text-white">Action annulée</h1>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">Aucune modification n'a été apportée à la classe.</p>
+            <Button type="button" variant="secondary" className="mt-6" onClick={() => setStatus("confirm")}>
+              <FontAwesomeIcon icon={faRotateLeft} /> Revenir
+            </Button>
           </>
         )}
 
         {status === "success" && (
           <>
-            <FontAwesomeIcon
-              icon={isApprove ? faCircleCheck : faCircleXmark}
-              className={`w-16 h-16 mx-auto mb-4 ${isApprove ? "text-green-600" : "text-red-600"}`}
-            />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              {successTitle}
-            </h2>
-            <p className="text-gray-600 mb-4">{message}</p>
-            {successHint && (
-              <p className="text-sm text-gray-500">{successHint}</p>
-            )}
+            <StatusIcon icon={isApprove ? faCircleCheck : faCircleXmark} tone={isApprove ? "success" : "error"} />
+            <h1 className="mt-6 text-2xl font-bold text-slate-900 dark:text-white">{successTitle}</h1>
+            <p className="mt-2 text-slate-600 dark:text-slate-300">{message}</p>
+            {successHint && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{successHint}</p>}
           </>
         )}
 
         {status === "error" && (
           <>
-            <FontAwesomeIcon
-              icon={faCircleExclamation}
-              className="w-16 h-16 text-red-600 mx-auto mb-4"
-            />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              {errorTitle}
-            </h2>
-            <p className="text-gray-600 mb-4">{message}</p>
-            <p className="text-sm text-gray-500 mb-4">
-              Veuillez contacter l'administrateur si le problème persiste.
-            </p>
-            <button
-              type="button"
-              onClick={() => setStatus("confirm")}
-              className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition"
-            >
-              Réessayer
-            </button>
+            <StatusIcon icon={faCircleExclamation} tone="error" />
+            <h1 className="mt-6 text-2xl font-bold text-slate-900 dark:text-white">{errorTitle}</h1>
+            <p className="mt-2 text-slate-600 dark:text-slate-300">{message}</p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Contactez l'administrateur si le problème persiste.</p>
+            <Button type="button" variant="secondary" className="mt-6" onClick={() => setStatus("confirm")}>
+              <FontAwesomeIcon icon={faRotateLeft} /> Réessayer
+            </Button>
           </>
         )}
+
+        <p className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-[#4F46E5] dark:text-indigo-300 hover:underline">
+            <FontAwesomeIcon icon={faArrowLeft} /> Retour à l'accueil
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 };
 

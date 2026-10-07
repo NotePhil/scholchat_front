@@ -64,9 +64,30 @@ export const switchRoleWithToken = async (selectedRole) => {
   });
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.message || "Impossible de changer de profil.");
+    const err = new Error(errData.message || "Impossible de changer de profil.");
+    err.code = errData.code; // e.g. CHANGEMENT_PROFIL_INTERDIT_ELEVE (403, student session)
+    err.status = response.status;
+    throw err;
   }
   const authData = await response.json();
   storeSwitchRoleResponse(authData, selectedRole);
   return authData;
+};
+
+/**
+ * Silent refresh of the session payload (active / pending roles, professor status) with the
+ * current token — e.g. on the profile page after a PROFESSOR_ROLE_VALIDATED notification.
+ * Never called from a STUDENT session (the backend refuses switch-role there). Resolves the new
+ * auth payload or null (errors are ignored).
+ */
+export const refreshSessionRoles = async () => {
+  const current = String(localStorage.getItem("userRole") || "")
+    .toUpperCase()
+    .replace(/^ROLE_/, "");
+  if (!current || current === "STUDENT") return null;
+  try {
+    return await switchRoleWithToken(current);
+  } catch {
+    return null;
+  }
 };

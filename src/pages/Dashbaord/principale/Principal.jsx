@@ -51,10 +51,21 @@ import MatiereContent from "./content/MatiereContent/MatiereContent";
 import GestionnaireDashboardContent from "./content/GestionnaireContent/GestionnaireDashboardContent";
 import MobileBottomNav from "../components/MobileBottomNav";
 import ParentChildrenList from "./ParentSidebar/ParentChildrenList";
+import ParentAddChildPrompt from "../../../components/frontoffice/ParentAddChildPrompt";
 import GestionnairesManagement from "./content/GestionnaireContent/GestionnairesManagement";
 import RoleSelectorModal from "../../../components/modals/RoleSelectorModal";
 import AddRoleModal from "../../../components/modals/AddRoleModal";
-import { getStoredAddableRoles } from "../../../utils/roleRules";
+import {
+  STUDENT_SWITCH_HINT,
+  accountHasOtherRoles,
+  getStoredAddableRoles,
+  isStudentSwitchForbidden,
+} from "../../../utils/roleRules";
+import HelpButton from "../../../components/help/HelpButton";
+import {
+  helpPageFromTab,
+  helpRoleFromSession,
+} from "../../../help/helpContent";
 import ReAuthModal from "../../../components/modals/ReAuthModal";
 import ChildSelectorModal from "../../../components/modals/ChildSelectorModal";
 import ProfessorVerificationStatus from "./ProfessorVerificationStatus";
@@ -78,6 +89,7 @@ import {
   faArrowsRotate,
   faBars,
   faChevronDown,
+  faCircleInfo,
   faEnvelope,
   faGear,
   faPhone,
@@ -625,6 +637,15 @@ const Principal = () => {
       activeTab,
     ],
   );
+  // Profile page focused on "Mes profils" (after adding a profile, role notifications…)
+  const openProfiles = useCallback(() => {
+    dispatch(
+      setActiveTabAction({ tab: "settings", data: { section: "profils" } }),
+    );
+    navigate(
+      `/schoolchat/Principal/${dashboardType || dashboardNameForRole(normalizedUserRole)}/settings`,
+    );
+  }, [dispatch, navigate, dashboardType, normalizedUserRole]);
   const handleManageClass = useCallback(() => {
     setShowManageClass(true);
   }, []);
@@ -815,8 +836,11 @@ const Principal = () => {
             setIsDark={(val) => handleThemeChange(val, currentTheme)}
             currentTheme={currentTheme}
             setCurrentTheme={(val) => handleThemeChange(isDark, val)}
-            onSwitchProfile={() => setShowRoleSwitchModal(true)}
+            onSwitchProfile={
+              isStudent ? undefined : () => setShowRoleSwitchModal(true)
+            }
             onLogout={handleLogout}
+            focusSection={tabData?.section}
           />
         );
       default:
@@ -1010,7 +1034,7 @@ const Principal = () => {
 
       {/* Role Switch Flow */}
       <RoleSelectorModal
-        isOpen={showRoleSwitchModal}
+        isOpen={showRoleSwitchModal && !isStudent}
         roles={(() => {
           const stored = JSON.parse(localStorage.getItem("availableRoles") || "[]");
           return stored.length > 0 ? stored : [normalizedUserRole ? normalizedUserRole.toUpperCase() : "USER"];
@@ -1054,6 +1078,7 @@ const Principal = () => {
         isOpen={showAddRoleModal}
         onClose={() => setShowAddRoleModal(false)}
         onRolesUpdated={() => setRolesVersion((v) => v + 1)}
+        onOpenProfile={openProfiles}
       />
 
       <ReAuthModal
@@ -1080,6 +1105,12 @@ const Principal = () => {
             if (!response.ok) {
               // Wrong password, or e.g. professor profile awaiting validation / offer expired
               const errData = await response.json().catch(() => ({}));
+              // Student session: switching is forbidden (log out, then pick the profile at login)
+              if (isStudentSwitchForbidden(errData)) {
+                throw new Error(
+                  `${errData.message || "Changement de profil impossible depuis le profil élève."} ${STUDENT_SWITCH_HINT}`,
+                );
+              }
               throw new Error(errData.message || "Mot de passe incorrect");
             }
             const authData = await response.json();
@@ -1208,10 +1239,22 @@ const Principal = () => {
               />
             </button>
 
+            {/* Contextual help for the current page (texts: src/help/helpContent.js) */}
+            <HelpButton
+              role={helpRoleFromSession(normalizedUserRole)}
+              page={helpPageFromTab(
+                isTabAllowedForRole(activeTab, normalizedUserRole)
+                  ? activeTab
+                  : "dashboard",
+              )}
+              isDark={isDark}
+            />
+
             <NotificationIcon />
 
-            {/* Role Switcher - only show if user has multiple roles */}
-            {(() => {
+            {/* Role Switcher - only show if user has multiple roles.
+                Never in a STUDENT session: the student logs out and picks the profile at login. */}
+            {!isStudent && (() => {
               const storedRoles = JSON.parse(
                 localStorage.getItem("availableRoles") || "[]",
               );
@@ -1672,6 +1715,24 @@ const Principal = () => {
                         </div>
                       )}
                     </div>
+                    {isStudent && accountHasOtherRoles() && (
+                      <div
+                        className="flex items-start gap-2 text-xs"
+                        style={{
+                          padding: "8px 12px",
+                          margin: "0 8px 8px",
+                          borderRadius: 10,
+                          background: "#eef2ff",
+                          color: "#3730a3",
+                        }}
+                      >
+                        <FontAwesomeIcon
+                          icon={faCircleInfo}
+                          style={{ marginTop: 2 }}
+                        />
+                        <span>{STUDENT_SWITCH_HINT}</span>
+                      </div>
+                    )}
                     <div className="user-profile-actions">
                       <button
                         className="profile-action-btn"
@@ -1750,6 +1811,9 @@ const Principal = () => {
           onLogout={handleLogout}
         />
       )}
+
+      {/* Parent without any child yet: invite him to add one (first connection) */}
+      {isParent && <ParentAddChildPrompt isDark={isDark} />}
 
       {showMessaging && activeTab !== "messages" && !isMobile && (
         <div className="messaging-sidebar">

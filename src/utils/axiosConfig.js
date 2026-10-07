@@ -3,6 +3,7 @@ import {
   isProfessorNotValidatedPayload,
   notifyProfessorNotValidated,
 } from "./professorVerification";
+import { isMustChangePasswordPayload, redirectToForcedPasswordChange } from "./loginSession";
 
 // Codes d'erreur signifiant réellement une session invalide.
 const SESSION_ERROR_CODES = ["TOKEN_EXPIRED", "INVALID_TOKEN", "UNAUTHORIZED"];
@@ -62,7 +63,10 @@ export const applyAuthInterceptors = (instance) => {
   instance.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (isProfessorNotValidatedPayload(error.response?.data)) {
+      if (error.response?.status === 403 && isMustChangePasswordPayload(error.response.data)) {
+        // Mot de passe temporaire pas encore changé : page "Nouveau mot de passe", pas de déconnexion
+        redirectToForcedPasswordChange();
+      } else if (isProfessorNotValidatedPayload(error.response?.data)) {
         // Profil professeur non validé : écran de statut, pas de déconnexion
         notifyProfessorNotValidated(error.response.data.message);
       } else if (isSessionError(error.response)) {

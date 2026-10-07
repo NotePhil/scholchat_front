@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import ClassLinkDecision from "./ClassLinkDecision";
 
 /** Emailed class-approval link: asks for confirmation before approving. */
-const ClassApproval = () => {
+const ClassApproval = ({ theme }) => {
   const { classeId: pathClasseId, etablissementId: pathEtablissementId } =
     useParams();
   const [searchParams] = useSearchParams();
@@ -21,6 +21,7 @@ const ClassApproval = () => {
       : null;
   return (
     <ClassLinkDecision
+      theme={theme}
       action="approve"
       requestUrl={requestUrl}
       className={className}

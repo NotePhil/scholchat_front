@@ -34,7 +34,7 @@ const ROLE_CONFIG = {
     borderColor: "border-blue-200",
   },
   STUDENT: {
-    label: "Eleve",
+    label: "Élève",
     icon: GraduationCap,
     color: "bg-green-500",
     lightBg: "bg-green-50",
@@ -50,7 +50,7 @@ const ROLE_CONFIG = {
     borderColor: "border-purple-200",
   },
   TUTOR: {
-    label: "Repetiteur",
+    label: "Répétiteur",
     icon: UserCheck,
     color: "bg-amber-500",
     lightBg: "bg-amber-50",
@@ -209,7 +209,9 @@ const RoleSelectorModal = ({
                         {config.label}
                       </p>
                       <p className="text-xs text-gray-500">
-                        En attente de validation par l'administration
+                        {normalizeRole(role) === "STUDENT"
+                          ? "En attente de l'approbation du professeur"
+                          : "En attente de validation par l'administration"}
                       </p>
                     </div>
                   </div>

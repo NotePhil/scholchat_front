@@ -27,6 +27,10 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import PasswordPage from "./pages/PasswordPage";
 import ResetPassword from "./pages/ResetPassword";
+import ForcePasswordChange from "./pages/ForcePasswordChange";
+import AccountCreated from "./pages/AccountCreated";
+import VerifyAccount from "./pages/VerifyAccount";
+import NotFound from "./pages/NotFound";
 import Principal from "./pages/Dashbaord/principale/Principal";
 import ManageClass from "./pages/Dashbaord/principale/ManageClass/ManageClass";
 import ClassApprovalConfirmation from "./pages/ClassApprovalConfirmation";
@@ -234,39 +238,138 @@ function AnimatedRoutes({ theme, setTheme }) {
                 </Layout>
               }
             />
-            <Route path="/schoolchat/PasswordPage" element={<PasswordPage />} />
+            <Route
+              path="/schoolchat/PasswordPage"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <PasswordPage theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
             <Route
               path="/schoolchat/account-activation"
-              element={<AccountActivation />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <AccountActivation theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
-            <Route path="/schoolchat/verify-email" element={<VerifyEmail />} />
+            <Route
+              path="/schoolchat/verify-email"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <VerifyEmail theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            {/* Account activation with an e-mailed 6-digit code (alternative to the activation link) */}
+            <Route
+              path="/schoolchat/verifier-compte"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <VerifyAccount theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
             <Route
               path="/schoolchat/forgot-password"
-              element={<ForgotPassword />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ForgotPassword theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
             <Route
               path="/schoolchat/reset-password"
-              element={<ResetPassword />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ResetPassword theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            {/* First login with a temporary password (mustChangePassword / 403 MOT_DE_PASSE_A_CHANGER) */}
+            <Route
+              path="/schoolchat/nouveau-mot-de-passe"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ForcePasswordChange theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            {/* Parent / élève sign-up with a class code: pending teacher approval */}
+            <Route
+              path="/schoolchat/compte-cree"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <AccountCreated theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
             <Route
               path="/scholchat/etablissements/approve-class/:establishmentId/:classId"
-              element={<ClassApprovalConfirmation />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassApprovalConfirmation theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
             <Route
               path="/schoolchat/class-approval"
-              element={<ClassApproval />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassApproval theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
             <Route
               path="/schoolchat/class-approval/:classeId/:etablissementId"
-              element={<ClassApproval />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassApproval theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
             <Route
               path="/schoolchat/class-rejection"
-              element={<ClassRejection />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassRejection theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
             <Route
               path="/schoolchat/class-rejection/:classeId/:etablissementId"
-              element={<ClassRejection />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassRejection theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
 
             <Route element={<ProtectedRoute />}>
@@ -290,6 +393,18 @@ function AnimatedRoutes({ theme, setTheme }) {
                 element={<Principal />}
               />
             </Route>
+
+            {/* 404 */}
+            <Route
+              path="*"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <NotFound theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
           </Routes>
         </AnimatePresence>
   );

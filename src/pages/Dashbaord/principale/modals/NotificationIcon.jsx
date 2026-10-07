@@ -326,6 +326,24 @@ const getNotificationTarget = (notification, role) => {
     case "CORRECTION_DISPONIBLE":
       return isLearner ? { tab: "devoirs" } : { tab: "corrections-exercise" };
 
+    // Profile (role) validation / approval / refusal → profile page, "Mes profils" card.
+    case "PROFESSOR_ROLE_VALIDATED":
+    case "PROFESSOR_ROLE_REJECTED":
+    case "PROFESSOR_ROLE_DOCUMENTS_REQUIRED":
+    case "PROFESSOR_VERIFICATION_VALIDATED":
+    case "PROFESSOR_VERIFICATION_REJECTED":
+    case "PROFESSOR_VERIFICATION_DOCUMENTS_REQUIRED":
+    case "STUDENT_ROLE_APPROVED":
+    case "STUDENT_ROLE_VALIDATED":
+    case "STUDENT_ROLE_REJECTED":
+    case "ELEVE_ROLE_APPROUVE":
+    case "ROLE_ELEVE_APPROUVE":
+    case "ROLE_ELEVE_REFUSE":
+    case "ROLE_VALIDATED":
+    case "ROLE_APPROVED":
+    case "ROLE_REJECTED":
+      return { tab: "settings", data: { section: "profils" } };
+
     case "PROFESSOR_CREATED":
       return isAdmin ? { tab: "professors" } : null;
     case "STUDENT_CREATED":
