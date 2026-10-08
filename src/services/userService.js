@@ -1,6 +1,7 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Create axios instance with common configuration
 const userApi = axios.create({
@@ -11,6 +12,8 @@ const userApi = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+applyAuthInterceptors(userApi);
 
 class UserService {
   // Error Handler
@@ -24,6 +27,16 @@ class UserService {
     } else {
       console.error("Request Error:", error.message);
       throw new Error("Error setting up request");
+    }
+  }
+
+  // Get all admin users
+  async getAdmins() {
+    try {
+      const response = await userApi.get("/utilisateurs/admins");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
     }
   }
 

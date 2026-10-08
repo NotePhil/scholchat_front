@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { Card, Space, Typography, Alert, Button, message, Spin } from "antd";
-import { BuildOutlined } from "@ant-design/icons"; // This is correct
+import React, { useState, useEffect, useCallback } from "react";
 import EstablishmentService from "../../../../../services/EstablishmentService";
 import ManageEstablishmentList from "../../establishment-management/ManageEstablishmentList";
 import ManageEstablishmentDetailsView from "../../establishment-management/ManageEstablishmentDetailsView";
+import CreateEstablishmentContent from "./CreateEstablishmentContent";
+import { useAuth } from "../../../../../hooks/useAuth";
 
-const { Text, Title } = Typography;
-
-const ManageEstablishmentContent = ({ onBack }) => {
+const ManageEstablishmentContent = ({ onBack, setActiveTab, tabData }) => {
+  // Creating / deleting an établissement is admin-only (backend enforces it too):
+  // the gestionnaire only views and edits their own établissements.
+  const { isAdmin } = useAuth();
   const [establishments, setEstablishments] = useState([]);
   const [selectedEstablishmentId, setSelectedEstablishmentId] = useState(null);
+  const [editingEstablishment, setEditingEstablishment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -30,6 +32,15 @@ const ManageEstablishmentContent = ({ onBack }) => {
     }
   }, [error]);
 
+  // Opened from a notification: that établissement's detail (the detail view
+  // loads it by id and shows "not found" when it is gone / not accessible).
+  useEffect(() => {
+    if (tabData?.establishmentId) {
+      setEditingEstablishment(null);
+      setSelectedEstablishmentId(tabData.establishmentId);
+    }
+  }, [tabData]);
+
   // Load all data on mount
   useEffect(() => {
     fetchEstablishments();
@@ -46,7 +57,19 @@ const ManageEstablishmentContent = ({ onBack }) => {
         return;
       }
 
-      const data = await EstablishmentService.getAllEstablishments();
+      let data = await EstablishmentService.getAllEstablishments();
+
+      // Gestionnaires only see their own establishments
+      const selectedRole = (localStorage.getItem("userRole") || "").toUpperCase();
+      if (selectedRole.includes("GESTIONNAIRE")) {
+        const userId = localStorage.getItem("userId");
+        data = (data || []).filter(e =>
+          e.gestionnaireId === userId ||
+          (e.gestionnaire && e.gestionnaire.id === userId) ||
+          e.gestionnaire_id === userId
+        );
+      }
+
       setEstablishments(data || []);
 
       console.log("Fetched establishments:", data);
@@ -71,11 +94,19 @@ const ManageEstablishmentContent = ({ onBack }) => {
     setSuccessMessage("");
   };
 
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
+    setSelectedEstablishmentId(null);
+    setEditingEstablishment(null);
+    setError("");
+    setSuccessMessage("");
+  }, []);
+
+  const handleEditEstablishment = useCallback((establishment) => {
+    setEditingEstablishment(establishment);
     setSelectedEstablishmentId(null);
     setError("");
     setSuccessMessage("");
-  };
+  }, []);
 
   const handleDeleteEstablishment = async (establishmentId) => {
     try {
@@ -103,70 +134,27 @@ const ManageEstablishmentContent = ({ onBack }) => {
   };
 
   return (
-    <div
-      style={{
-        background: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)",
-        minHeight: "100vh",
-        padding: "24px",
-      }}
-    >
-      <Card
-        style={{
-          background: "white",
-          borderRadius: "16px",
-          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.08)",
-          border: "1px solid #e1e4e8",
-          overflow: "hidden",
-        }}
-      >
-        {!selectedEstablishmentId ? (
-          <div style={{ padding: "24px" }}>
-            <div style={{ marginBottom: "24px" }}>
-              <Space align="center" style={{ marginBottom: "16px" }}>
-                <BuildOutlined style={{ fontSize: "24px", color: "#4a6da7" }} />
-                <Title level={2} style={{ margin: 0, color: "#2c3e50" }}>
-                  Gérer les Établissements
-                </Title>
-              </Space>
-              <Text type="secondary" style={{ fontSize: "16px" }}>
-                Gérez et supervisez tous les établissements du système
-              </Text>
-            </div>
-
-            {error && (
-              <Alert
-                message={error}
-                type="error"
-                showIcon
-                closable
-                style={{ marginBottom: "16px", borderRadius: "8px" }}
-                onClose={() => setError("")}
-              />
-            )}
-
-            {successMessage && (
-              <Alert
-                message={successMessage}
-                type="success"
-                showIcon
-                closable
-                style={{ marginBottom: "16px", borderRadius: "8px" }}
-                onClose={() => setSuccessMessage("")}
-              />
-            )}
-
-            <ManageEstablishmentList
-              establishments={establishments}
-              loading={loading}
-              error={error}
-              successMessage={successMessage}
-              refreshing={refreshing}
-              onSelectEstablishment={handleSelectEstablishment}
-              onRefresh={handleRefresh}
-              onDelete={handleDeleteEstablishment}
-              onBack={onBack}
-            />
-          </div>
+    <>
+      {!selectedEstablishmentId && !editingEstablishment ? (
+        <ManageEstablishmentList
+            establishments={establishments}
+            loading={loading}
+            error={error}
+            successMessage={successMessage}
+            refreshing={refreshing}
+            onSelectEstablishment={handleSelectEstablishment}
+            onEditEstablishment={handleEditEstablishment}
+            onRefresh={handleRefresh}
+            onDelete={isAdmin ? handleDeleteEstablishment : undefined}
+            onBack={onBack}
+            onNavigateToCreate={isAdmin && setActiveTab ? () => setActiveTab("create-establishment") : undefined}
+          />
+        ) : editingEstablishment ? (
+          <CreateEstablishmentContent
+            editingEstablishment={editingEstablishment}
+            onNavigateToManage={handleBackToList}
+            setActiveTab={handleBackToList}
+          />
         ) : (
           <ManageEstablishmentDetailsView
             establishmentId={selectedEstablishmentId}
@@ -175,11 +163,11 @@ const ManageEstablishmentContent = ({ onBack }) => {
             onError={setError}
             onSuccess={setSuccessMessage}
             onUpdate={handleUpdateEstablishment}
-            onDelete={handleDeleteEstablishment}
+            onDelete={isAdmin ? handleDeleteEstablishment : undefined}
+            onEdit={handleEditEstablishment}
           />
         )}
-      </Card>
-    </div>
+    </>
   );
 };
 

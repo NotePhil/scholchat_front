@@ -1,51 +1,8 @@
 import axios from "axios";
+import { createAuthenticatedAxios, handleServiceError } from "../utils/axiosConfig";
+import { toServerDateTime } from "../utils/dateUtils";
 
-const BASE_URL = "http://localhost:8486/scholchat";
-
-const coursProgrammerApi = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
-
-coursProgrammerApi.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("cmr.notep.business.business.token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-coursProgrammerApi.interceptors.response.use(
-  (response) => {
-    console.log("API Response:", {
-      url: response.config.url,
-      method: response.config.method,
-      status: response.status,
-      data: response.data,
-    });
-    return response;
-  },
-  (error) => {
-    console.error("API Error:", {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
-    return Promise.reject(error);
-  }
-);
+const coursProgrammerApi = createAuthenticatedAxios();
 
 class CoursProgrammerService {
   async programmerCours(coursProgrammerData) {
@@ -68,12 +25,6 @@ class CoursProgrammerService {
       if (!coursProgrammerData.lieu) {
         throw new Error("Le lieu est requis");
       }
-      if (!coursProgrammerData.dateDebutEffectif) {
-        throw new Error("La date de début effective est requise");
-      }
-      if (!coursProgrammerData.dateFinEffectif) {
-        throw new Error("La date de fin effective est requise");
-      }
 
       const token =
         localStorage.getItem("authToken") ||
@@ -89,12 +40,12 @@ class CoursProgrammerService {
         dateCoursPrevue: this.formatDateToBackend(
           coursProgrammerData.dateCoursPrevue
         ),
-        dateDebutEffectif: this.formatDateToBackend(
-          coursProgrammerData.dateDebutEffectif
-        ),
-        dateFinEffectif: this.formatDateToBackend(
-          coursProgrammerData.dateFinEffectif
-        ),
+        dateDebutEffectif: coursProgrammerData.dateDebutEffectif
+          ? this.formatDateToBackend(coursProgrammerData.dateDebutEffectif)
+          : null,
+        dateFinEffectif: coursProgrammerData.dateFinEffectif
+          ? this.formatDateToBackend(coursProgrammerData.dateFinEffectif)
+          : null,
         lieu: coursProgrammerData.lieu.trim(),
         description: coursProgrammerData.description?.trim() || null,
         etatCoursProgramme:
@@ -120,34 +71,21 @@ class CoursProgrammerService {
         JSON.stringify(cleanedData, null, 2)
       );
 
-      // Validation des formats UUID
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-      if (!uuidRegex.test(cleanedData.coursId)) {
-        throw new Error(
-          `Format d'ID de cours invalide: ${cleanedData.coursId}`
-        );
+      // Basic validation - ensure IDs are not empty
+      if (!cleanedData.coursId || !cleanedData.coursId.trim()) {
+        throw new Error("L'ID du cours est requis");
       }
 
-      if (!uuidRegex.test(cleanedData.professeurId)) {
-        throw new Error(
-          `Format d'ID de professeur invalide: ${cleanedData.professeurId}`
-        );
+      if (!cleanedData.professeurId || !cleanedData.professeurId.trim()) {
+        throw new Error("L'ID du professeur est requis");
       }
 
-      for (const classeId of cleanedData.classesIds) {
-        if (!uuidRegex.test(classeId)) {
-          throw new Error(`Format d'ID de classe invalide: ${classeId}`);
-        }
+      if (cleanedData.classesIds.some(id => !id || !id.trim())) {
+        throw new Error("Tous les IDs de classe doivent être valides");
       }
 
-      for (const participantId of cleanedData.participantsIds) {
-        if (!uuidRegex.test(participantId)) {
-          throw new Error(
-            `Format d'ID de participant invalide: ${participantId}`
-          );
-        }
+      if (cleanedData.participantsIds.some(id => !id || !id.trim())) {
+        throw new Error("Tous les IDs de participant doivent être valides");
       }
 
       console.log("Envoi de la requête vers:", `/cours-programmes`);
@@ -438,7 +376,7 @@ class CoursProgrammerService {
 
       const updates = {
         etatCoursProgramme: "EN_COURS",
-        dateDebutEffectif: this.formatDateToBackend(new Date().toISOString()),
+        dateDebutEffectif: new Date().toISOString(),
         dateFinEffectif: null, // Ensure end date is null when starting
       };
 
@@ -470,7 +408,7 @@ class CoursProgrammerService {
 
       const updates = {
         etatCoursProgramme: "TERMINE",
-        dateFinEffectif: this.formatDateToBackend(new Date().toISOString()),
+        dateFinEffectif: new Date().toISOString(),
       };
 
       console.log(
@@ -526,29 +464,16 @@ class CoursProgrammerService {
     }
   }
 
-  // Utility method to format dates exactly as expected by backend
+  // Format a date-time for the backend: ISO-8601 UTC instant with offset
+  // (e.g. "2026-10-05T11:00:00.000Z"). Accepts datetime-local values (local time),
+  // Date objects and server strings.
   formatDateToBackend(dateValue) {
     if (!dateValue) return null;
-
-    try {
-      const date = new Date(dateValue);
-      if (isNaN(date.getTime())) {
-        throw new Error("Date invalide");
-      }
-
-      // Format as: YYYY-MM-DDTHH:mm:ss (matching Postman examples)
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      const hours = String(date.getHours()).padStart(2, "0");
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-      const seconds = String(date.getSeconds()).padStart(2, "0");
-
-      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-    } catch (error) {
-      console.error("Erreur lors du formatage de la date:", error);
-      return null;
+    const iso = toServerDateTime(dateValue);
+    if (!iso) {
+      console.error("Erreur lors du formatage de la date:", dateValue);
     }
+    return iso;
   }
 
   // Legacy method for backward compatibility
@@ -557,22 +482,7 @@ class CoursProgrammerService {
   }
 
   handleError(error) {
-    console.error("Gestion de l'erreur:", error);
-
-    if (error.response) {
-      const errorMessage =
-        error.response.data?.message ||
-        error.response.data?.error ||
-        error.response.data?.details ||
-        `Erreur serveur (${error.response.status})`;
-      throw new Error(errorMessage);
-    } else if (error.request) {
-      throw new Error("Erreur réseau. Veuillez vérifier votre connexion.");
-    } else {
-      throw new Error(
-        "Erreur de configuration de la requête: " + error.message
-      );
-    }
+    return handleServiceError(error, "CoursProgrammerService");
   }
 }
 

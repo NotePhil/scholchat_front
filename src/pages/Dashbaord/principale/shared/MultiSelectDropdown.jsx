@@ -1,7 +1,10 @@
 // MultiSelectDropdown.jsx
 import React, { useState } from "react";
-import { Search, ChevronDown } from "lucide-react";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronDown,
+  faMagnifyingGlass,
+} from "@fortawesome/free-solid-svg-icons";
 const MultiSelectDropdown = ({
   options,
   selected,
@@ -13,27 +16,22 @@ const MultiSelectDropdown = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
   const filteredOptions = options.filter((option) =>
     (option.name || option.id)
       .toString()
       .toLowerCase()
-      .includes(searchTerm.toLowerCase())
+      .includes(searchTerm.toLowerCase()),
   );
-
   const toggleOption = (optionId) => {
     const newSelected = selected.includes(optionId)
       ? selected.filter((id) => id !== optionId)
       : [...selected, optionId];
     onChange(newSelected);
   };
-
   return (
     <div className="relative">
       <div
-        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 cursor-pointer ${
-          error ? "border-red-300" : "border-slate-200"
-        }`}
+        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 cursor-pointer ${error ? "border-red-300" : "border-slate-200"}`}
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center justify-between">
@@ -42,10 +40,9 @@ const MultiSelectDropdown = ({
               ? `${selected.length} sélectionné(s)`
               : placeholder}
           </span>
-          <ChevronDown
-            className={`w-4 h-4 text-slate-400 transition-transform ${
-              isOpen ? "transform rotate-180" : ""
-            }`}
+          <FontAwesomeIcon
+            icon={faChevronDown}
+            className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "transform rotate-180" : ""}`}
           />
         </div>
       </div>
@@ -54,7 +51,10 @@ const MultiSelectDropdown = ({
         <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
           <div className="p-2 border-b border-slate-100">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+              <FontAwesomeIcon
+                icon={faMagnifyingGlass}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+              />
               <input
                 type="text"
                 placeholder="Rechercher..."
@@ -110,5 +110,4 @@ const MultiSelectDropdown = ({
     </div>
   );
 };
-
 export default MultiSelectDropdown;

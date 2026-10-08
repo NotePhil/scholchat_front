@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from "react";
 import {
-  GraduationCap,
-  Save,
-  X,
-  AlertCircle,
-  Loader,
-  School,
-  Users,
-  Calendar,
-  FileText,
-  Settings,
-  CheckCircle,
-  User,
-} from "lucide-react";
-import {
   classService,
   EtatClasse,
   DroitPublication,
 } from "../../../../services/ClassService";
 import { scholchatService } from "../../../../services/ScholchatService";
-
+import { NIVEAUX } from "../../../../constants/niveaux";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCalendarDays,
+  faCircleCheck,
+  faCircleExclamation,
+  faFileLines,
+  faFloppyDisk,
+  faGear,
+  faGraduationCap,
+  faSpinner,
+  faUser,
+  faUsers,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const ClassEditModal = ({
   classe,
   onClose,
@@ -35,12 +35,12 @@ const ClassEditModal = ({
     codeActivation: "",
     etat: EtatClasse.EN_ATTENTE_APPROBATION,
     etablissement: null,
-    moderator: null, // This will store the moderator ID
+    moderator: null,
+    // This will store the moderator ID
     parents: [],
     eleves: [],
-    droitPublication: DroitPublication.PARENTS_ET_MODERATEUR,
+    droitPublication: DroitPublication.MODERATEUR_SEULEMENT,
   });
-
   const [originalData, setOriginalData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,7 +57,6 @@ const ClassEditModal = ({
       loadEtablissements();
     }
   }, [classe]);
-
   useEffect(() => {
     if (originalData) {
       const changes =
@@ -65,12 +64,10 @@ const ClassEditModal = ({
       setHasChanges(changes);
     }
   }, [classData, originalData]);
-
   const loadClassData = async () => {
     try {
       setLoading(true);
       const data = await classService.obtenirClasseParId(classe.id);
-
       const completeData = {
         id: data.id,
         nom: data.nom || "",
@@ -84,9 +81,8 @@ const ClassEditModal = ({
         parents: data.parents || [],
         eleves: data.eleves || [],
         droitPublication:
-          data.droitPublication || DroitPublication.PARENTS_ET_MODERATEUR,
+          data.droitPublication || DroitPublication.MODERATEUR_SEULEMENT,
       };
-
       setClassData(completeData);
       setOriginalData(completeData);
       setError("");
@@ -97,7 +93,6 @@ const ClassEditModal = ({
       setLoading(false);
     }
   };
-
   const loadModerators = async () => {
     try {
       // Fetch actual professors from the backend
@@ -109,7 +104,6 @@ const ClassEditModal = ({
       setAvailableModerators([]);
     }
   };
-
   const loadEtablissements = async () => {
     try {
       // Fetch actual establishments from the backend
@@ -121,30 +115,24 @@ const ClassEditModal = ({
       setAvailableEtablissements([]);
     }
   };
-
   const validateForm = () => {
     const errors = {};
-
     if (!classData.nom.trim()) {
       errors.nom = "Le nom de la classe est requis";
     } else if (classData.nom.length < 2) {
       errors.nom = "Le nom doit contenir au moins 2 caractères";
     }
-
     if (!classData.niveau.trim()) {
       errors.niveau = "Le niveau est requis";
     }
-
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
   const handleInputChange = (field, value) => {
     setClassData((prev) => ({
       ...prev,
       [field]: value,
     }));
-
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({
         ...prev,
@@ -152,50 +140,70 @@ const ClassEditModal = ({
       }));
     }
   };
-
   const handleModeratorChange = (moderatorId) => {
     // Only store the moderator ID
     handleInputChange("moderator", moderatorId || null);
   };
-
   const handleEtablissementChange = (etablissementId) => {
     const selectedEtablissement = availableEtablissements.find(
-      (e) => e.id === etablissementId
+      (e) => e.id === etablissementId,
     );
     handleInputChange("etablissement", selectedEtablissement || null);
   };
-
   const handleSave = async () => {
     if (!validateForm()) {
       return;
     }
-
     try {
       setSaving(true);
       setError("");
       setSuccess("");
+
+      // Find the selected moderator to get their type
+      const selectedModerator = availableModerators.find(
+        (mod) => mod.id === classData.moderator,
+      );
+
+      // Prepare moderator object with type before id
+      let moderatorObj = null;
+      if (classData.moderator && selectedModerator) {
+        moderatorObj = {
+          type: selectedModerator.type,
+          id: classData.moderator,
+        };
+        // Validate moderator has type property
+        if (!moderatorObj.type) {
+          console.error("Moderator type is missing");
+          throw new Error("Moderator type is required");
+        }
+      }
 
       // Prepare the data to send to the backend
       const dataToSend = {
         ...classData,
         // Send only the ID for relationships
         etablissement: classData.etablissement
-          ? { id: classData.etablissement.id }
+          ? {
+              id: classData.etablissement.id,
+            }
           : null,
-        // Send moderator as just the ID string (not an object)
-        moderator: classData.moderator,
-        parents: classData.parents.map((p) => ({ id: p.id })),
-        eleves: classData.eleves.map((e) => ({ id: e.id })),
+        // Send moderator as an object with type and id
+        moderator: moderatorObj,
+        parents: classData.parents.map((p) => ({
+          id: p.id,
+        })),
+        eleves: classData.eleves.map((e) => ({
+          id: e.id,
+        })),
       };
-
       const savedClass = await classService.modifierClasse(
         classe.id,
-        dataToSend
+        dataToSend,
       );
 
       // Success message with refresh recommendation
       setSuccess(
-        "Classe modifiée avec succès ! Veuillez rafraîchir la page pour voir les changements."
+        "Classe modifiée avec succès ! Veuillez rafraîchir la page pour voir les changements.",
       );
       onSave(savedClass);
 
@@ -210,12 +218,11 @@ const ClassEditModal = ({
       setSaving(false);
     }
   };
-
   const handleCancel = () => {
     if (hasChanges) {
       if (
         window.confirm(
-          "Vous avez des modifications non sauvegardées. Voulez-vous vraiment quitter ?"
+          "Vous avez des modifications non sauvegardées. Voulez-vous vraiment quitter ?",
         )
       ) {
         onClose();
@@ -224,18 +231,19 @@ const ClassEditModal = ({
       onClose();
     }
   };
-
   if (!classe) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-white" />
+                <FontAwesomeIcon
+                  icon={faGraduationCap}
+                  className="w-5 h-5 text-white"
+                />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white">
@@ -250,7 +258,7 @@ const ClassEditModal = ({
               onClick={handleCancel}
               className="text-white hover:text-blue-100 transition-colors"
             >
-              <X className="w-6 h-6" />
+              <FontAwesomeIcon icon={faXmark} className="w-6 h-6" />
             </button>
           </div>
         </div>
@@ -258,7 +266,10 @@ const ClassEditModal = ({
         {/* Loading state */}
         {loading && (
           <div className="p-8 flex items-center justify-center">
-            <Loader className="w-8 h-8 animate-spin text-blue-600" />
+            <FontAwesomeIcon
+              icon={faSpinner}
+              className="w-8 h-8 animate-spin text-blue-600"
+            />
           </div>
         )}
 
@@ -268,13 +279,19 @@ const ClassEditModal = ({
             {/* Error Message */}
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-600" />
+                <FontAwesomeIcon
+                  icon={faCircleExclamation}
+                  className="w-5 h-5 text-red-600"
+                />
                 <p className="text-red-700">{error}</p>
               </div>
             )}
             {success && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
+                <FontAwesomeIcon
+                  icon={faCircleCheck}
+                  className="w-5 h-5 text-green-600"
+                />
                 <p className="text-green-700">{success}</p>
               </div>
             )}
@@ -283,7 +300,10 @@ const ClassEditModal = ({
               {/* Basic Information */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-5 h-5 text-blue-600" />
+                  <FontAwesomeIcon
+                    icon={faFileLines}
+                    className="w-5 h-5 text-blue-600"
+                  />
                   <h3 className="text-lg font-semibold text-gray-900">
                     Informations de base
                   </h3>
@@ -298,11 +318,7 @@ const ClassEditModal = ({
                     type="text"
                     value={classData.nom}
                     onChange={(e) => handleInputChange("nom", e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      validationErrors.nom
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.nom ? "border-red-500" : "border-gray-300"}`}
                     placeholder="Ex: 6ème A, CM2 B..."
                   />
                   {validationErrors.nom && (
@@ -322,25 +338,14 @@ const ClassEditModal = ({
                     onChange={(e) =>
                       handleInputChange("niveau", e.target.value)
                     }
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      validationErrors.niveau
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.niveau ? "border-red-500" : "border-gray-300"}`}
                   >
                     <option value="">Sélectionner un niveau</option>
-                    <option value="CP">CP</option>
-                    <option value="CE1">CE1</option>
-                    <option value="CE2">CE2</option>
-                    <option value="CM1">CM1</option>
-                    <option value="CM2">CM2</option>
-                    <option value="6ème">6ème</option>
-                    <option value="5ème">5ème</option>
-                    <option value="4ème">4ème</option>
-                    <option value="3ème">3ème</option>
-                    <option value="2nde">2nde</option>
-                    <option value="1ère">1ère</option>
-                    <option value="Terminale">Terminale</option>
+                    {NIVEAUX.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
                   </select>
                   {validationErrors.niveau && (
                     <p className="mt-1 text-sm text-red-600">
@@ -388,7 +393,10 @@ const ClassEditModal = ({
               {/* Settings */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Settings className="w-5 h-5 text-blue-600" />
+                  <FontAwesomeIcon
+                    icon={faGear}
+                    className="w-5 h-5 text-blue-600"
+                  />
                   <h3 className="text-lg font-semibold text-gray-900">
                     Paramètres
                   </h3>
@@ -425,19 +433,19 @@ const ClassEditModal = ({
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value={DroitPublication.TOUS}>
+                    <option value={DroitPublication.PROFESSEUR_UNIQUE}>
                       {classService.getDroitPublicationDisplayName(
-                        DroitPublication.TOUS
+                        DroitPublication.PROFESSEUR_UNIQUE,
                       )}
                     </option>
-                    <option value={DroitPublication.PARENTS_ET_MODERATEUR}>
+                    <option value={DroitPublication.TOUS_LES_PROFESSEURS}>
                       {classService.getDroitPublicationDisplayName(
-                        DroitPublication.PARENTS_ET_MODERATEUR
+                        DroitPublication.TOUS_LES_PROFESSEURS,
                       )}
                     </option>
                     <option value={DroitPublication.MODERATEUR_SEULEMENT}>
                       {classService.getDroitPublicationDisplayName(
-                        DroitPublication.MODERATEUR_SEULEMENT
+                        DroitPublication.MODERATEUR_SEULEMENT,
                       )}
                     </option>
                   </select>
@@ -459,7 +467,7 @@ const ClassEditModal = ({
                     >
                       <option value={EtatClasse.EN_ATTENTE_APPROBATION}>
                         {classService.getEtatDisplayName(
-                          EtatClasse.EN_ATTENTE_APPROBATION
+                          EtatClasse.EN_ATTENTE_APPROBATION,
                         )}
                       </option>
                       <option value={EtatClasse.ACTIF}>
@@ -478,7 +486,10 @@ const ClassEditModal = ({
                     Date de création
                   </label>
                   <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <FontAwesomeIcon
+                      icon={faCalendarDays}
+                      className="w-4 h-4 text-gray-500"
+                    />
                     <span className="text-gray-700">
                       {new Date(classData.dateCreation).toLocaleDateString(
                         "fr-FR",
@@ -488,7 +499,7 @@ const ClassEditModal = ({
                           day: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
-                        }
+                        },
                       )}
                     </span>
                   </div>
@@ -501,7 +512,10 @@ const ClassEditModal = ({
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-blue-600" />
+                      <FontAwesomeIcon
+                        icon={faUsers}
+                        className="w-4 h-4 text-blue-600"
+                      />
                       <div>
                         <p className="text-xs text-gray-600">Élèves</p>
                         <p className="font-semibold">
@@ -510,7 +524,10 @@ const ClassEditModal = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-green-600" />
+                      <FontAwesomeIcon
+                        icon={faUser}
+                        className="w-4 h-4 text-green-600"
+                      />
                       <div>
                         <p className="text-xs text-gray-600">Parents</p>
                         <p className="font-semibold">
@@ -538,9 +555,12 @@ const ClassEditModal = ({
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {saving ? (
-                  <Loader className="w-4 h-4 animate-spin" />
+                  <FontAwesomeIcon
+                    icon={faSpinner}
+                    className="w-4 h-4 animate-spin"
+                  />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4" />
                 )}
                 Enregistrer
               </button>
@@ -551,5 +571,4 @@ const ClassEditModal = ({
     </div>
   );
 };
-
 export default ClassEditModal;

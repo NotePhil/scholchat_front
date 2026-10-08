@@ -1,38 +1,53 @@
-// components/UserTables.jsx - UPDATED WITH DATE DE CRÉATION FOR ALL USER TYPES
 import React, { useState, useEffect } from "react";
-import { Table, Tag, Button, Space, Popconfirm, Tooltip, message } from "antd";
 import {
-  EyeOutlined,
-  UserDeleteOutlined,
-  CheckOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+  Table,
+  Tag,
+  Button,
+  Space,
+  Popconfirm,
+  Tooltip,
+  Switch,
+  message,
+} from "antd";
 import { scholchatService } from "../../../../../services/ScholchatService";
-
+import {
+  accessRequestLabel,
+  isChildAccessRequest,
+} from "../../../../../utils/accessRequestLabel";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCheck,
+  faEye,
+  faTrash,
+  faUserXmark,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const UserTables = ({
   users,
   loading,
   userType,
   onViewUser,
   onRemoveAccess,
-  onDeleteUser, // Handler for deleting users from system
+  onDeleteUser,
   onApproveRequest,
   onRejectRequest,
+  onTogglePublicationRights,
+  publicationRightsMap,
   currentTab,
   classId,
+  userRole,
+  isModerator,
+  currentUserId,
+  classCreatorId,
 }) => {
   useEffect(() => {
     console.log(`UserTables - ${userType}:`, users);
     console.log(`Nombre d'${userType}:`, users.length);
   }, [users, userType]);
-
   const [tableLoading, setTableLoading] = useState(false);
-
   const handleDeleteUser = async (userId, userType) => {
     try {
       setTableLoading(true);
-
       switch (userType) {
         case "professeurs":
           await scholchatService.deleteProfessor(userId);
@@ -49,11 +64,14 @@ const UserTables = ({
         case "utilisateurs":
           // For utilisateurs, we'll use the onDeleteUser prop since they may need special handling
           if (onDeleteUser) {
-            await onDeleteUser({ id: userId, type: "utilisateur" });
+            await onDeleteUser({
+              id: userId,
+              type: "utilisateur",
+            });
           } else {
             // Fallback - try to delete as a general user (you may need to implement this endpoint)
             message.warning(
-              "Suppression non implémentée pour ce type d'utilisateur"
+              "Suppression non implémentée pour ce type d'utilisateur",
             );
           }
           break;
@@ -72,14 +90,12 @@ const UserTables = ({
       setTableLoading(false);
     }
   };
-
   const getColumns = (type) => {
     // Vérifier si les données sont valides
     if (!users || !Array.isArray(users)) {
       console.warn(`Aucune donnée valide pour ${type}`);
       return [];
     }
-
     const baseColumns = [
       {
         title: "Nom",
@@ -88,6 +104,10 @@ const UserTables = ({
         render: (text, record) => {
           // Gérer les cas où les données pourraient être incomplètes
           if (!record) return "N/A";
+          // Parent's request for a child: "<Parent> pour l'enfant <Enfant>"
+          if (type === "access-requests" && isChildAccessRequest(record)) {
+            return accessRequestLabel(record);
+          }
           return (
             `${record.prenom || ""} ${text || ""}`.trim() || "Non renseigné"
           );
@@ -125,6 +145,40 @@ const UserTables = ({
           key: "matriculeProfesseur",
         },
         {
+          title: "Droit de publication",
+          key: "droitPublication",
+          render: (_, record) => {
+            if (!isModerator) return null;
+            // A professor cannot toggle their own publication rights
+            const isSelf = currentUserId && record.id === currentUserId;
+            const hasRight = publicationRightsMap?.[record.id] ?? false;
+            if (isSelf) {
+              return (
+                <Tooltip title="Vous ne pouvez pas modifier vos propres droits de publication">
+                  <Switch
+                    size="small"
+                    checked={hasRight}
+                    checkedChildren="Oui"
+                    unCheckedChildren="Non"
+                    disabled
+                  />
+                </Tooltip>
+              );
+            }
+            return (
+              <Switch
+                size="small"
+                checked={hasRight}
+                checkedChildren="Oui"
+                unCheckedChildren="Non"
+                onChange={(checked) =>
+                  onTogglePublicationRights?.(record, checked)
+                }
+              />
+            );
+          },
+        },
+        {
           title: "Date de création",
           dataIndex: "creationDate",
           key: "creationDate",
@@ -154,7 +208,7 @@ const UserTables = ({
             if (!dateB) return -1;
             return new Date(dateA) - new Date(dateB);
           },
-        }
+        },
       );
     } else if (type === "eleves") {
       baseColumns.push(
@@ -193,7 +247,7 @@ const UserTables = ({
             if (!dateB) return -1;
             return new Date(dateA) - new Date(dateB);
           },
-        }
+        },
       );
     } else if (type === "parents") {
       baseColumns.push(
@@ -232,7 +286,7 @@ const UserTables = ({
             if (!dateB) return -1;
             return new Date(dateA) - new Date(dateB);
           },
-        }
+        },
       );
     } else if (type === "utilisateurs") {
       // Columns specific to utilisateurs (unchanged from your original code)
@@ -244,23 +298,31 @@ const UserTables = ({
         },
         {
           title: "Type",
-          dataIndex: "type",
+          dataIndex: "typeUtilisateur",
           key: "type",
-          render: (type) => (
-            <Tag color="purple">
-              {type === "utilisateur" ? "Utilisateur" : type}
-            </Tag>
-          ),
+          // GET /acceder/classes/{id}/utilisateurs returns typeUtilisateur (UTILISATEUR here)
+          render: (typeUtilisateur, record) => {
+            const t = String(typeUtilisateur || record?.type || "").toUpperCase();
+            return (
+              <Tag color="purple">
+                {!t || t === "UTILISATEUR" ? "Utilisateur" : t}
+              </Tag>
+            );
+          },
         },
         {
           title: "Admin",
           dataIndex: "admin",
           key: "admin",
-          render: (isAdmin) => (
-            <Tag color={isAdmin ? "gold" : "default"}>
-              {isAdmin ? "Oui" : "Non"}
-            </Tag>
-          ),
+          // Only admin user pools carry this flag: unknown → "—" rather than a wrong "Non"
+          render: (isAdmin) =>
+            typeof isAdmin === "boolean" ? (
+              <Tag color={isAdmin ? "gold" : "default"}>
+                {isAdmin ? "Oui" : "Non"}
+              </Tag>
+            ) : (
+              "—"
+            ),
         },
         {
           title: "Date de création",
@@ -292,7 +354,7 @@ const UserTables = ({
             if (!dateB) return -1;
             return new Date(dateA) - new Date(dateB);
           },
-        }
+        },
       );
     }
 
@@ -303,6 +365,8 @@ const UserTables = ({
         dataIndex: "etat",
         key: "etat",
         render: (etat) => {
+          // Unknown state (field not returned) is never shown as "Inactif"
+          if (!etat) return "—";
           const isActive = etat === "ACTIVE" || etat === "ACTIF";
           return (
             <Tag color={isActive ? "green" : "red"}>
@@ -311,16 +375,21 @@ const UserTables = ({
           );
         },
         filters: [
-          { text: "Actif", value: "ACTIVE" },
-          { text: "Inactif", value: "INACTIVE" },
+          {
+            text: "Actif",
+            value: "ACTIVE",
+          },
+          {
+            text: "Inactif",
+            value: "INACTIVE",
+          },
         ],
         onFilter: (value, record) => {
           const isActive = record.etat === "ACTIVE" || record.etat === "ACTIF";
-          return value === "ACTIVE" ? isActive : !isActive;
+          return value === "ACTIVE" ? isActive : !!record.etat && !isActive;
         },
       });
     }
-
     const actionColumn = {
       title: "Actions",
       key: "actions",
@@ -329,7 +398,7 @@ const UserTables = ({
         <Space size="small">
           <Tooltip title="Voir les détails">
             <Button
-              icon={<EyeOutlined />}
+              icon={<FontAwesomeIcon icon={faEye} />}
               size="small"
               onClick={() => onViewUser(record)}
             />
@@ -337,55 +406,74 @@ const UserTables = ({
 
           {type === "access-requests" ? (
             <>
-              <Tooltip title="Approuver la demande">
-                <Button
-                  icon={<CheckOutlined />}
-                  size="small"
-                  type="primary"
-                  onClick={() => onApproveRequest(record)}
-                />
-              </Tooltip>
-              <Tooltip title="Rejeter la demande">
-                <Button
-                  icon={<CloseOutlined />}
-                  size="small"
-                  danger
-                  onClick={() => onRejectRequest(record)}
-                />
-              </Tooltip>
+              {isModerator && (
+                <>
+                  <Tooltip title="Approuver la demande">
+                    <Button
+                      icon={<FontAwesomeIcon icon={faCheck} />}
+                      size="small"
+                      type="primary"
+                      onClick={() => onApproveRequest(record)}
+                    />
+                  </Tooltip>
+                  <Tooltip title="Rejeter la demande">
+                    <Button
+                      icon={<FontAwesomeIcon icon={faXmark} />}
+                      size="small"
+                      danger
+                      onClick={() => onRejectRequest(record)}
+                    />
+                  </Tooltip>
+                </>
+              )}
             </>
           ) : (
             <>
-              <Popconfirm
-                title={`Retirer l'accès de cet utilisateur ?`}
-                description="Cette action retirera l'accès de l'utilisateur à cette classe."
-                onConfirm={() => onRemoveAccess(record)}
-                okText="Oui"
-                cancelText="Non"
-              >
-                <Tooltip title="Retirer l'accès à la classe">
-                  <Button icon={<UserDeleteOutlined />} size="small" danger />
-                </Tooltip>
-              </Popconfirm>
+              {isModerator && (
+                <>
+                  {/* Hide remove button for the connected user's own row */}
+                  {!(currentUserId && record.id === currentUserId) && (
+                    <Popconfirm
+                      title={`Retirer l'accès de cet utilisateur ?`}
+                      description="Cette action retirera l'accès de l'utilisateur à cette classe."
+                      onConfirm={() => onRemoveAccess(record)}
+                      okText="Oui"
+                      cancelText="Non"
+                    >
+                      <Tooltip title="Retirer l'accès à la classe">
+                        <Button
+                          icon={<FontAwesomeIcon icon={faUserXmark} />}
+                          size="small"
+                          danger
+                        />
+                      </Tooltip>
+                    </Popconfirm>
+                  )}
+                </>
+              )}
 
-              {/* Show delete button for all user types including utilisateurs */}
-              <Popconfirm
-                title={`Supprimer définitivement cet utilisateur ?`}
-                description="Cette action supprimera complètement l'utilisateur du système. Cette action est irréversible."
-                onConfirm={() => handleDeleteUser(record.id, type)}
-                okText="Supprimer"
-                cancelText="Annuler"
-                okType="danger"
-              >
-                <Tooltip title="Supprimer l'utilisateur du système">
-                  <Button
-                    icon={<DeleteOutlined />}
-                    size="small"
-                    danger
-                    type="primary"
-                  />
-                </Tooltip>
-              </Popconfirm>
+              {/* Show delete button only for administrators */}
+              {(userRole === "ADMIN" ||
+                userRole === "ROLE_ADMIN" ||
+                userRole === "administrateur") && (
+                <Popconfirm
+                  title={`Supprimer définitivement cet utilisateur ?`}
+                  description="Cette action supprimera complètement l'utilisateur du système. Cette action est irréversible."
+                  onConfirm={() => handleDeleteUser(record.id, type)}
+                  okText="Supprimer"
+                  cancelText="Annuler"
+                  okType="danger"
+                >
+                  <Tooltip title="Supprimer l'utilisateur du système">
+                    <Button
+                      icon={<FontAwesomeIcon icon={faTrash} />}
+                      size="small"
+                      danger
+                      type="primary"
+                    />
+                  </Tooltip>
+                </Popconfirm>
+              )}
             </>
           )}
         </Space>
@@ -412,28 +500,40 @@ const UserTables = ({
                 type === "PROFESSEUR"
                   ? "blue"
                   : type === "ELEVE"
-                  ? "green"
-                  : type === "PARENT"
-                  ? "orange"
-                  : "purple" // Color for general utilisateur
+                    ? "green"
+                    : type === "PARENT"
+                      ? "orange"
+                      : "purple" // Color for general utilisateur
               }
             >
               {type === "PROFESSEUR"
                 ? "Professeur"
                 : type === "ELEVE"
-                ? "Élève"
-                : type === "PARENT"
-                ? "Parent"
-                : type === "UTILISATEUR"
-                ? "Utilisateur"
-                : type}
+                  ? "Élève"
+                  : type === "PARENT"
+                    ? "Parent"
+                    : type === "UTILISATEUR"
+                      ? "Utilisateur"
+                      : type}
             </Tag>
           ),
           filters: [
-            { text: "Professeur", value: "PROFESSEUR" },
-            { text: "Élève", value: "ELEVE" },
-            { text: "Parent", value: "PARENT" },
-            { text: "Utilisateur", value: "UTILISATEUR" },
+            {
+              text: "Professeur",
+              value: "PROFESSEUR",
+            },
+            {
+              text: "Élève",
+              value: "ELEVE",
+            },
+            {
+              text: "Parent",
+              value: "PARENT",
+            },
+            {
+              text: "Utilisateur",
+              value: "UTILISATEUR",
+            },
           ],
           onFilter: (value, record) => record.typeUtilisateur === value,
         },
@@ -446,13 +546,11 @@ const UserTables = ({
               {etat === "EN_ATTENTE" ? "En attente" : etat}
             </Tag>
           ),
-        }
+        },
       );
     }
-
     return [...baseColumns, actionColumn];
   };
-
   const getTableTitle = () => {
     const titles = {
       professeurs: "Professeurs ayant accès à la classe",
@@ -463,7 +561,6 @@ const UserTables = ({
     };
     return titles[userType] || "Utilisateurs";
   };
-
   const getEmptyText = () => {
     const emptyTexts = {
       professeurs: "Aucun professeur n'a accès à cette classe",
@@ -474,7 +571,6 @@ const UserTables = ({
     };
     return emptyTexts[userType] || `Aucun ${userType} trouvé`;
   };
-
   return (
     <div className="user-table-container">
       <Table
@@ -486,10 +582,20 @@ const UserTables = ({
               alignItems: "center",
             }}
           >
-            <span style={{ fontWeight: "bold", fontSize: "16px" }}>
+            <span
+              style={{
+                fontWeight: "bold",
+                fontSize: "16px",
+              }}
+            >
               {getTableTitle()}
             </span>
-            <Tag color="blue" style={{ fontSize: "12px" }}>
+            <Tag
+              color="blue"
+              style={{
+                fontSize: "12px",
+              }}
+            >
               {users.length}{" "}
               {userType === "access-requests" ? "demande(s)" : "utilisateur(s)"}
             </Tag>
@@ -503,12 +609,12 @@ const UserTables = ({
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) =>
-            `${range[0]}-${range[1]} sur ${total} ${
-              userType === "access-requests" ? "demandes" : "utilisateurs"
-            }`,
+            `${range[0]}-${range[1]} sur ${total} ${userType === "access-requests" ? "demandes" : "utilisateurs"}`,
           pageSizeOptions: ["10", "20", "50", "100"],
         }}
-        scroll={{ x: 800 }}
+        scroll={{
+          x: 800,
+        }}
         rowKey="id"
         locale={{
           emptyText: getEmptyText(),
@@ -524,5 +630,4 @@ const UserTables = ({
     </div>
   );
 };
-
 export default UserTables;

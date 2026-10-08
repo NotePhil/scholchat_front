@@ -1,136 +1,103 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "../CSS/ForgotPassword.css";
+import { Link, useLocation } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faEnvelope, faEnvelopeCircleCheck, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import ForgotPasswordService from "../services/forgotPassword";
+import { Alert, AuthShell, BrandLogo, BRAND_GRADIENT, Button, TextField } from "../components/frontoffice/ui";
 
-const ForgotPassword = () => {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState({ text: "", type: "" });
+/**
+ * Mot de passe oublié — process unchanged: e-mail → lien de réinitialisation reçu par e-mail →
+ * page /schoolchat/reset-password?token=…  (POST /auth/reset-password-request?email=…).
+ */
+const ForgotPassword = ({ theme }) => {
+  const location = useLocation();
+  // Prefilled from the sign-up ("Mot de passe oublié ?" under an already used e-mail).
+  const [email, setEmail] = useState(() => new URLSearchParams(location.search).get("email") || location.state?.email || "");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState("request"); // "request" or "confirmation"
-
-  const handleChange = (e) => {
-    setEmail(e.target.value);
-    // Clear message when user starts typing
-    if (message.text) setMessage({ text: "", type: "" });
-  };
+  const [step, setStep] = useState("request"); // "request" | "confirmation"
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!/\S+@\S+\.\S+/.test(email.trim())) {
+      setError("Veuillez saisir une adresse e-mail valide.");
+      return;
+    }
     setLoading(true);
-    setMessage({ text: "", type: "" });
-
+    setError("");
     try {
-      // Call the service with just the email parameter
-      await ForgotPasswordService.requestPasswordReset(email);
-
-      // Si la requête réussit, montrer le message de confirmation
+      await ForgotPasswordService.requestPasswordReset(email.trim());
       setStep("confirmation");
-      setMessage({
-        text: "Instructions envoyées! Vérifiez votre boîte de réception.",
-        type: "success",
-      });
-    } catch (error) {
-      console.error("Erreur lors de la demande:", error);
-
-      // Afficher le message d'erreur
-      setMessage({
-        text: "Erreur lors de l'envoi des instructions. Veuillez réessayer plus tard.",
-        type: "error",
-      });
-
-      // Ne pas passer à l'étape de confirmation en cas d'erreur
-      // setStep reste à "request"
+    } catch (err) {
+      console.error("Erreur lors de la demande:", err);
+      setError(
+        err?.response?.data?.message || "Erreur lors de l'envoi des instructions. Veuillez réessayer plus tard.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="forgot-password-page">
-      <div className="forgot-password-container">
-        <h2 className="forgot-password-title">
-          {step === "request" ? "Mot de passe oublié" : "Vérifiez votre email"}
-        </h2>
-        <p className="forgot-password-subtitle">
-          {step === "request"
-            ? "Entrez votre adresse e-mail pour recevoir un lien de réinitialisation"
-            : "Nous avons envoyé les instructions de réinitialisation à votre adresse e-mail"}
-        </p>
-
-        <div className="forgot-password-form">
-          {step === "request" ? (
-            <form onSubmit={handleSubmit}>
-              {message.text && (
-                <div
-                  className={`message-box ${
-                    message.type === "error"
-                      ? "error-message"
-                      : "success-message"
-                  }`}
-                >
-                  {message.text}
-                </div>
-              )}
-
-              <div className="input-group">
-                <label htmlFor="email" className="forgot-password-label">
-                  Adresse e-mail
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={email}
-                  onChange={handleChange}
-                  placeholder="Entrez votre adresse e-mail"
-                  className="forgot-password-input"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="forgot-password-button"
-                disabled={loading}
-              >
-                {loading ? (
-                  <span className="loading-text">
-                    <span className="loading-spinner"></span>
-                    Envoi en cours...
-                  </span>
-                ) : (
-                  "Envoyer les instructions"
-                )}
-              </button>
-            </form>
-          ) : (
-            <div className="confirmation-content">
-              <div className="success-icon">✓</div>
-              <p className="confirmation-message">
-                Si un compte existe avec l'adresse <strong>{email}</strong>,
-                vous recevrez un email avec les instructions pour réinitialiser
-                votre mot de passe.
-              </p>
-              <p className="confirmation-note">
-                Vérifiez également votre dossier spam si vous ne trouvez pas
-                l'email.
-              </p>
-            </div>
-          )}
-
-          <div className="forgot-password-footer">
-            <button
-              onClick={() => navigate("/schoolchat/login")}
-              className="back-to-login-button"
-            >
-              Retour à la connexion
-            </button>
-          </div>
+    <AuthShell theme={theme}>
+      <div className="max-w-md mx-auto">
+        <BrandLogo className="mb-8" />
+        <div className="flex justify-center mb-6">
+          <span className={`w-20 h-20 rounded-full ${BRAND_GRADIENT} text-white flex items-center justify-center text-3xl shadow-xl shadow-indigo-500/30`}>
+            <FontAwesomeIcon icon={step === "request" ? faEnvelope : faEnvelopeCircleCheck} />
+          </span>
         </div>
+
+        {step === "request" ? (
+          <>
+            <h1 className="text-2xl sm:text-3xl font-bold text-center text-slate-900 dark:text-white">Mot de passe oublié ?</h1>
+            <p className="mt-2 text-center text-slate-500 dark:text-slate-400">
+              Entrez votre adresse e-mail pour recevoir un lien de réinitialisation.
+            </p>
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
+              {error && <Alert type="error">{error}</Alert>}
+              <TextField
+                label="Adresse e-mail"
+                type="email"
+                name="email"
+                icon={faEnvelope}
+                autoComplete="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError("");
+                }}
+                placeholder="exemple@email.com"
+                required
+              />
+              <Button type="submit" className="w-full" loading={loading} loadingLabel="Envoi en cours…" icon={faPaperPlane}>
+                Envoyer le lien
+              </Button>
+            </form>
+          </>
+        ) : (
+          <div className="text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Vérifiez votre e-mail</h1>
+            <p className="mt-3 text-slate-500 dark:text-slate-400">
+              Si un compte existe avec l'adresse <span className="font-semibold text-slate-800 dark:text-slate-100">{email}</span>, vous
+              recevrez très prochainement un e-mail contenant un lien pour choisir un nouveau mot de passe.
+            </p>
+            <Alert type="warning" className="mt-6 text-left">
+              Pensez à vérifier votre dossier <strong>Spam</strong> si vous ne recevez rien d'ici quelques minutes.
+            </Alert>
+            <Button variant="ghost" className="mt-6" onClick={() => setStep("request")}>
+              Réessayer avec une autre adresse
+            </Button>
+          </div>
+        )}
+
+        <p className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
+          <Link to="/schoolchat/login" className="inline-flex items-center gap-2 text-sm font-medium text-[#4F46E5] dark:text-indigo-300 hover:underline">
+            <FontAwesomeIcon icon={faArrowLeft} /> Retour à la connexion
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 };
 

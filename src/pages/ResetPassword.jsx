@@ -1,102 +1,78 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import "../CSS/ResetPassword.css";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faCircleCheck, faLock, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
 import ForgotPasswordService from "../services/forgotPassword";
+import { useTranslation } from "../hooks/useTranslation";
+import {
+  Alert,
+  AuthShell,
+  BrandLogo,
+  BRAND_GRADIENT,
+  Button,
+  PasswordChecklist,
+  PasswordField,
+  passwordIsValid,
+} from "../components/frontoffice/ui";
 
-const ResetPassword = () => {
+/**
+ * Réinitialisation du mot de passe depuis le lien reçu par e-mail
+ * (/schoolchat/reset-password?token=…) — process unchanged: POST /auth/reset-password {token, newPassword}.
+ */
+const ResetPassword = ({ theme }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const [formData, setFormData] = useState({
-    token: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [token, setToken] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  // Extract token from URL query parameters on component mount
   useEffect(() => {
-    // Clear any authentication data to ensure fresh login
     localStorage.clear();
-
-    const searchParams = new URLSearchParams(location.search);
-    const token = searchParams.get("token");
-
-    if (token) {
-      setFormData((prev) => ({ ...prev, token }));
+    const tokenParam = new URLSearchParams(location.search).get("token");
+    if (tokenParam) {
+      setToken(tokenParam);
     } else {
       setMessage({
-        text: "Lien de réinitialisation invalide (token manquant).",
+        text: t("forgot_password.invalid_link", "Lien de réinitialisation invalide ou expiré."),
         type: "error",
       });
     }
-  }, [location.search]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear message when user starts typing
-    if (message.text) setMessage({ text: "", type: "" });
-  };
-
-  const validateForm = () => {
-    if (!formData.token) {
-      setMessage({
-        text: "Lien de réinitialisation invalide (token manquant).",
-        type: "error",
-      });
-      return false;
-    }
-    if (formData.password.length < 8) {
-      setMessage({
-        text: "Le mot de passe doit contenir au moins 8 caractères.",
-        type: "error",
-      });
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setMessage({
-        text: "Les mots de passe ne correspondent pas.",
-        type: "error",
-      });
-      return false;
-    }
-    return true;
-  };
+  }, [location.search, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) return;
-
+    if (!token) {
+      setMessage({ text: t("forgot_password.invalid_token", "Lien de réinitialisation invalide."), type: "error" });
+      return;
+    }
+    if (!passwordIsValid(password)) {
+      setMessage({
+        text: t("forgot_password.password_weak", "Le mot de passe ne respecte pas les critères de sécurité."),
+        type: "error",
+      });
+      return;
+    }
+    if (password !== confirmPassword) {
+      setMessage({ text: t("forgot_password.password_mismatch", "Les mots de passe ne correspondent pas."), type: "error" });
+      return;
+    }
     setLoading(true);
     setMessage({ text: "", type: "" });
-
     try {
-      const success = await ForgotPasswordService.resetPassword(formData);
-
-      if (success) {
-        // Success - clear all stored data and redirect immediately
-        localStorage.clear();
-
-        setMessage({
-          text: "Mot de passe réinitialisé avec succès! Redirection vers la page de connexion...",
-          type: "success",
-        });
-
-        // Redirect to login immediately after successful password reset
-        setTimeout(() => {
-          navigate("/schoolchat/login", { replace: true });
-        }, 2000);
-      } else {
-        throw new Error("Échec de la réinitialisation du mot de passe");
-      }
+      const result = await ForgotPasswordService.resetPassword({ token, password });
+      if (!result) throw new Error("Échec de la réinitialisation.");
+      localStorage.clear();
+      setSuccess(true);
+      setTimeout(() => navigate("/schoolchat/login", { replace: true }), 3000);
     } catch (err) {
-      console.error("Erreur lors de la réinitialisation:", err);
       setMessage({
         text:
-          err.message ||
-          "Une erreur s'est produite. Veuillez réessayer ou demander un nouveau lien.",
+          err?.response?.data?.message ||
+          t("forgot_password.reset_error", "Une erreur s'est produite. Veuillez réessayer."),
         type: "error",
       });
     } finally {
@@ -104,117 +80,86 @@ const ResetPassword = () => {
     }
   };
 
-  const handleBackToLogin = () => {
-    // Clear all stored data before navigating to login
-    localStorage.clear();
-    navigate("/schoolchat/login", { replace: true });
-  };
-
-  const handleRequestNewLink = () => {
-    // Clear all stored data before navigating to forgot password
-    localStorage.clear();
-    navigate("/schoolchat/forgot-password", { replace: true });
-  };
-
   return (
-    <div className="reset-password-page">
-      <div className="reset-password-container">
-        <h2 className="reset-password-title">
-          Réinitialisation du mot de passe
-        </h2>
-
-        {!formData.token ? (
-          <div className="invalid-token-message">
-            <p>
-              {message.text ||
-                "Lien de réinitialisation invalide (token manquant)."}
+    <AuthShell theme={theme}>
+      <div className="max-w-md mx-auto">
+        <BrandLogo className="mb-8" />
+        {success ? (
+          <div className="text-center">
+            <span className="mx-auto mb-6 w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-[#10B981] flex items-center justify-center text-4xl">
+              <FontAwesomeIcon icon={faCircleCheck} />
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Mot de passe réinitialisé</h1>
+            <p className="mt-3 text-slate-500 dark:text-slate-400">
+              {t("forgot_password.reset_success", "Votre mot de passe a été réinitialisé avec succès !")} Redirection vers la
+              connexion…
             </p>
-            <button
-              onClick={handleRequestNewLink}
-              className="request-new-link-button"
-            >
-              Demander un nouveau lien
-            </button>
+            <Button to="/schoolchat/login" className="mt-6">
+              Se connecter
+            </Button>
           </div>
         ) : (
-          <div className="reset-password-form">
-            <form onSubmit={handleSubmit}>
-              {message.text && (
-                <div
-                  className={`message-box ${
-                    message.type === "error"
-                      ? "error-message"
-                      : "success-message"
-                  }`}
-                >
-                  {message.text}
-                </div>
-              )}
-
-              <div className="input-group">
-                <label htmlFor="password" className="reset-password-label">
-                  Nouveau mot de passe
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Entrez votre nouveau mot de passe"
-                  className="reset-password-input"
-                  required
-                  minLength="8"
-                />
-              </div>
-
-              <div className="input-group">
-                <label
-                  htmlFor="confirmPassword"
-                  className="reset-password-label"
-                >
-                  Confirmer le mot de passe
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirmez votre nouveau mot de passe"
-                  className="reset-password-input"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="reset-password-button"
-                disabled={loading}
-              >
-                {loading ? (
-                  <span className="loading-text">
-                    <span className="loading-spinner"></span>
-                    Réinitialisation en cours...
-                  </span>
-                ) : (
-                  "Réinitialiser le mot de passe"
-                )}
-              </button>
-            </form>
-
-            <div className="reset-password-footer">
-              <button
-                onClick={handleBackToLogin}
-                className="back-to-login-button"
-              >
-                Retour à la connexion
-              </button>
+          <>
+            <div className="flex justify-center mb-6">
+              <span className={`w-20 h-20 rounded-full ${BRAND_GRADIENT} text-white flex items-center justify-center text-3xl shadow-xl shadow-indigo-500/30`}>
+                <FontAwesomeIcon icon={faLock} />
+              </span>
             </div>
-          </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-center text-slate-900 dark:text-white">Nouveau mot de passe</h1>
+            <p className="mt-2 text-center text-slate-500 dark:text-slate-400">Choisissez un mot de passe sécurisé.</p>
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
+              {message.text && <Alert type={message.type || "error"}>{message.text}</Alert>}
+              <PasswordField
+                label="Nouveau mot de passe"
+                name="password"
+                icon={faLock}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (message.type === "error" && token) setMessage({ text: "", type: "" });
+                }}
+                placeholder="Minimum 8 caractères"
+                required
+              />
+              <PasswordField
+                label="Confirmer le mot de passe"
+                name="confirmPassword"
+                icon={faShieldHalved}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirmez votre mot de passe"
+                error={confirmPassword && password !== confirmPassword ? "Les mots de passe ne correspondent pas." : ""}
+                required
+              />
+              <PasswordChecklist password={password} />
+              <Button
+                type="submit"
+                className="w-full"
+                loading={loading}
+                loadingLabel="Réinitialisation…"
+                disabled={!token || !passwordIsValid(password) || password !== confirmPassword}
+              >
+                Réinitialiser le mot de passe
+              </Button>
+            </form>
+            {!token && (
+              <p className="mt-4 text-center text-sm">
+                <Link to="/schoolchat/forgot-password" className="font-medium text-[#4F46E5] dark:text-indigo-300 hover:underline">
+                  Demander un nouveau lien
+                </Link>
+              </p>
+            )}
+          </>
         )}
+        <p className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
+          <Link to="/schoolchat/login" className="inline-flex items-center gap-2 text-sm font-medium text-[#4F46E5] dark:text-indigo-300 hover:underline">
+            <FontAwesomeIcon icon={faArrowLeft} /> Retour à la connexion
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 };
 

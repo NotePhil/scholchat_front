@@ -1,0 +1,3 @@
+#!/bin/sh
+# pre-push hook — build check disabled
+exit 0

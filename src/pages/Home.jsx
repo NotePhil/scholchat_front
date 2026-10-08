@@ -1,639 +1,341 @@
-import React, { useState, useEffect, useRef } from "react";
-import heroImg from "../components/assets/images/heronew.png";
-import { About } from "./About";
-import { Courses } from "./Courses";
-import { Instructor } from "./Instructor";
-import { Blog } from "./Blog";
-import FunctionalitiesSection from "./FunctionalitiesSection";
-import "../CSS/animations.css";
+import React, { useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowRight,
+  faBell,
+  faBookOpen,
+  faChalkboardUser,
+  faCheck,
+  faClipboardList,
+  faComments,
+  faEnvelopeOpenText,
+  faKey,
+  faLayerGroup,
+  faPeopleRoof,
+  faSchool,
+  faShieldHalved,
+  faUserCheck,
+  faUserGraduate,
+  faUserGroup,
+  faUsers,
+  faVideo,
+} from "@fortawesome/free-solid-svg-icons";
+import { Button } from "../components/frontoffice/ui";
+import { StoreBadges } from "../components/frontoffice/StoreBadges";
+import { scrollToSection } from "../components/common/Header";
+import community from "../assets/illustrations/community.png";
+import onboarding1 from "../assets/illustrations/onboarding-1.png";
+import onboarding2 from "../assets/illustrations/onboarding-2.png";
+import onboarding3 from "../assets/illustrations/onboarding-3.png";
+import onboarding4 from "../assets/illustrations/onboarding-4.png";
 
-const AnimatedText = ({ texts, theme }) => {
-  const [currentTextIndex, setCurrentTextIndex] = useState(0);
-  const [displayText, setDisplayText] = useState("");
-  const [isWriting, setIsWriting] = useState(true);
+const FEATURES = [
+  { icon: faSchool, color: "#8C52FF", title: "Classes", text: "Créez ou rejoignez une classe avec un code. Demandes approuvées par le professeur." },
+  { icon: faBookOpen, color: "#3B82F6", title: "Cours", text: "Cours riches avec chapitres, images, vidéos et documents. Planification des leçons." },
+  { icon: faVideo, color: "#10B981", title: "Sessions en direct", text: "Visioconférence en temps réel avec chapitres et présence." },
+  { icon: faClipboardList, color: "#F59E0B", title: "Exercices & devoirs", text: "QCM, vrai/faux, questions ouvertes, pièces jointes. Corrections et notes." },
+  { icon: faComments, color: "#4F46E5", title: "Messagerie", text: "Chat en temps réel avec photos, vidéos et fichiers." },
+  { icon: faBell, color: "#EF4444", title: "Fil d'actualité & notifications", text: "Événements, sorties, annonces. Notifications instantanées." },
+  { icon: faUserGroup, color: "#8C52FF", title: "Parents", text: "Suivez plusieurs enfants, depuis un seul compte." },
+  { icon: faLayerGroup, color: "#3B82F6", title: "Multi-profil", text: "Un compte, plusieurs rôles. Changez à tout moment." },
+];
 
-  useEffect(() => {
-    const currentFullText = texts[currentTextIndex];
-    let timer;
+const SHOWCASE = [
+  { img: onboarding1, title: "Vos classes et cours au même endroit" },
+  { img: onboarding2, title: "Sessions en direct et devoirs" },
+  { img: onboarding3, title: "Messagerie et notifications en temps réel" },
+  { img: onboarding4, title: "Parents : suivez tous vos enfants" },
+];
 
-    if (isWriting) {
-      if (displayText.length < currentFullText.length) {
-        timer = setTimeout(() => {
-          setDisplayText(currentFullText.slice(0, displayText.length + 1));
-        }, 150);
-      } else {
-        setIsWriting(false);
-        timer = setTimeout(() => {
-          setIsWriting(false);
-        }, 2000);
-      }
-    } else {
-      if (displayText.length > 0) {
-        timer = setTimeout(() => {
-          setDisplayText(displayText.slice(0, -1));
-        }, 75);
-      } else {
-        setIsWriting(true);
-        setCurrentTextIndex((prevIndex) => (prevIndex + 1) % texts.length);
-      }
-    }
-    return () => clearTimeout(timer);
-  }, [displayText, isWriting, currentTextIndex, texts]);
+const ROLES = [
+  {
+    role: "professeur",
+    icon: faChalkboardUser,
+    color: "#8C52FF",
+    title: "Professeur",
+    text: "Enseignez, partagez et suivez vos élèves. Créez vos classes, vos cours et vos devoirs.",
+  },
+  {
+    role: "eleve",
+    icon: faUserGraduate,
+    color: "#3B82F6",
+    title: "Élève",
+    text: "Apprenez, progressez et réussissez. Rejoignez votre classe avec le code de votre professeur.",
+  },
+  {
+    role: "parent",
+    icon: faUsers,
+    color: "#10B981",
+    title: "Parent",
+    text: "Suivez vos enfants et communiquez avec les enseignants, depuis un seul compte.",
+  },
+];
 
-  const getTextGradient = () => {
-    switch (theme) {
-      case "dark":
-        return "from-cyan-300 via-blue-400 to-purple-400";
-      case "light":
-        return "from-blue-600 via-purple-600 to-pink-600";
-      default:
-        return "from-cyan-300 via-blue-400 to-purple-400";
-    }
-  };
+const STEPS = [
+  { icon: faKey, title: "Obtenez le code de classe", text: "Il vous est fourni par le professeur ou l'établissement." },
+  { icon: faUserCheck, title: "Créez votre compte", text: "Vos informations, le code de la classe, puis confirmation." },
+  { icon: faShieldHalved, title: "Validation du professeur", text: "Le professeur de la classe approuve votre demande." },
+  { icon: faEnvelopeOpenText, title: "Connectez-vous", text: "Vous recevez vos identifiants par e-mail, sur le web comme sur mobile." },
+];
 
-  return (
-    <h1
-      className={`text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold min-h-[30px] sm:min-h-[40px] md:min-h-[50px] lg:min-h-[60px] xl:min-h-[80px] leading-tight bg-gradient-to-r ${getTextGradient()} bg-clip-text text-transparent drop-shadow-2xl transform hover:scale-105 transition-transform duration-700`}
-    >
-      {displayText}
-      <span className="animate-blink text-cyan-400">|</span>
-    </h1>
-  );
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.45 } }),
 };
 
-export const HomeContent = ({ theme }) => {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isVisible, setIsVisible] = useState(false);
-  const sectionRef = useRef(null);
+const SectionTitle = ({ eyebrow, title, text }) => (
+  <div className="text-center max-w-2xl mx-auto mb-12">
+    {eyebrow && (
+      <span className="inline-block text-xs font-semibold uppercase tracking-widest text-[#8C52FF] mb-3">{eyebrow}</span>
+    )}
+    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white">{title}</h2>
+    {text && <p className="mt-4 text-slate-500 dark:text-slate-400">{text}</p>}
+  </div>
+);
 
-  const texts = [
-    "La réussite scolaire commence par une bonne communication",
-    "Simplifier les échanges pour la réussite de vos enfants",
-    "Un lien direct pour mieux accompagner vos enfants",
-  ];
+export const Home = ({ theme }) => {
+  const location = useLocation();
 
+  // Header links point to "/#section": scroll there once the page is rendered.
   useEffect(() => {
-    setIsVisible(true);
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (sectionRef.current) {
-        const rect = sectionRef.current.getBoundingClientRect();
-        setMousePosition({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        });
-      }
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    return () => document.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  const getBackground = () => {
-    switch (theme) {
-      case "dark":
-        return `
-        radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-        linear-gradient(135deg, #0a0a18 0%, #12092b 25%, #1e3a8a 50%, #5b21b6 75%, #0a0a18 100%),
-        radial-gradient(ellipse at top, #1e1b4b 0%, transparent 70%),
-        radial-gradient(ellipse at bottom, #312e81 0%, transparent 70%)
-      `;
-      case "light":
-        return `
-          radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-          linear-gradient(135deg, #f8fafc 0%, #f1f5f9 25%, #f8fafc 50%, #eef2ff 75%, #f8fafc 100%),
-          radial-gradient(ellipse at top, #bfdbfe 0%, transparent 70%),
-          radial-gradient(ellipse at bottom, #c7d2fe 0%, transparent 70%)
-        `;
-      default:
-        return `
-          radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-          linear-gradient(135deg, #0f0f23 0%, #1a0b3d 25%, #2563eb 50%, #7c3aed 75%, #0f0f23 100%),
-          radial-gradient(ellipse at top, #1e1b4b 0%, transparent 70%),
-          radial-gradient(ellipse at bottom, #312e81 0%, transparent 70%)
-        `;
-    }
-  };
-
-  const getBadgeGradient = () => {
-    switch (theme) {
-      case "dark":
-        return "from-cyan-500/20 via-blue-500/20 to-purple-500/20";
-      case "light":
-        return "from-cyan-400/20 via-blue-400/20 to-purple-400/20";
-      default:
-        return "from-cyan-500/20 via-blue-500/20 to-purple-500/20";
-    }
-  };
-
-  const getTextColor = () => {
-    switch (theme) {
-      case "dark":
-        return "text-gray-200";
-      case "light":
-        return "text-gray-800";
-      default:
-        return "text-gray-200";
-    }
-  };
+    const id = location.hash ? location.hash.slice(1) : null;
+    if (!id) return undefined;
+    const timer = setTimeout(() => scrollToSection(id), 350);
+    return () => clearTimeout(timer);
+  }, [location.hash, location.key]);
 
   return (
-    <section
-      ref={sectionRef}
-      className="min-h-screen relative overflow-hidden"
-      style={{
-        background: getBackground(),
-      }}
-    >
-      {/* Animated Particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(30)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${3 + Math.random() * 4}s`,
-            }}
-          >
-            <div
-              className={`w-2 h-2 rounded-full opacity-60 ${
-                theme === "dark"
-                  ? "bg-gradient-to-r from-cyan-400 to-purple-500"
-                  : theme === "light"
-                  ? "bg-gradient-to-r from-blue-400 to-purple-400"
-                  : "bg-gradient-to-r from-cyan-400 to-purple-500"
-              }`}
-            ></div>
-          </div>
-        ))}
-      </div>
-
-      {/* Floating Geometric Shapes */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className={`absolute top-20 left-10 w-32 h-32 rounded-full blur-xl animate-bounce ${
-            theme === "dark"
-              ? "bg-gradient-to-br from-blue-500/10 to-purple-500/10"
-              : theme === "light"
-              ? "bg-gradient-to-br from-blue-200/30 to-purple-200/30"
-              : "bg-gradient-to-br from-blue-500/10 to-purple-500/10"
-          }`}
-          style={{ animationDuration: "6s" }}
-        ></div>
-        <div
-          className={`absolute top-40 right-20 w-24 h-24 rounded-lg blur-xl animate-spin ${
-            theme === "dark"
-              ? "bg-gradient-to-br from-pink-500/10 to-red-500/10"
-              : theme === "light"
-              ? "bg-gradient-to-br from-pink-200/30 to-red-200/30"
-              : "bg-gradient-to-br from-pink-500/10 to-red-500/10"
-          }`}
-          style={{ animationDuration: "20s" }}
-        ></div>
-        <div
-          className={`absolute bottom-40 left-1/4 w-40 h-40 rounded-full blur-xl animate-pulse ${
-            theme === "dark"
-              ? "bg-gradient-to-br from-emerald-500/10 to-cyan-500/10"
-              : theme === "light"
-              ? "bg-gradient-to-br from-emerald-200/30 to-cyan-200/30"
-              : "bg-gradient-to-br from-emerald-500/10 to-cyan-500/10"
-          }`}
-          style={{ animationDuration: "8s" }}
-        ></div>
-        <div
-          className={`absolute top-1/3 right-1/3 w-28 h-28 rounded-full blur-xl animate-pulse ${
-            theme === "dark"
-              ? "bg-gradient-to-br from-purple-500/10 to-pink-500/10"
-              : theme === "light"
-              ? "bg-gradient-to-br from-purple-200/30 to-pink-200/30"
-              : "bg-gradient-to-br from-purple-500/10 to-pink-500/10"
-          }`}
-          style={{ animationDuration: "7s" }}
-        ></div>
-      </div>
-
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16 lg:py-20">
-        <div className="flex flex-col items-center space-y-6 sm:space-y-8 md:space-y-12 lg:space-y-16">
-          {/* Enhanced Text Content */}
-          <div
-            className={`w-full text-center max-w-6xl mx-auto transform transition-all duration-1000 ${
-              isVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-10 opacity-0"
-            }`}
-          >
-            {/* Magical Badge */}
-            <div
-              className={`inline-flex items-center gap-1 sm:gap-2 backdrop-blur-xl border rounded-full px-2 sm:px-4 md:px-6 py-1 sm:py-2 mb-3 sm:mb-6 hover:scale-105 transition-all duration-500 shadow-lg sm:shadow-xl ${
-                theme === "dark"
-                  ? `bg-gradient-to-r ${getBadgeGradient()} border-white/20 shadow-blue-500/25`
-                  : theme === "light"
-                  ? `bg-gradient-to-r ${getBadgeGradient()} border-gray-300/20 shadow-blue-400/25`
-                  : `bg-gradient-to-r ${getBadgeGradient()} border-white/20 shadow-blue-500/25`
-              }`}
-            >
-              <div
-                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full animate-pulse ${
-                  theme === "dark"
-                    ? "bg-gradient-to-r from-cyan-400 to-purple-400"
-                    : theme === "light"
-                    ? "bg-gradient-to-r from-blue-500 to-purple-500"
-                    : "bg-gradient-to-r from-cyan-400 to-purple-400"
-                }`}
-              ></div>
-              <span
-                className={`font-semibold text-xs sm:text-sm md:text-base ${
-                  theme === "dark"
-                    ? "text-white"
-                    : theme === "light"
-                    ? "text-gray-800"
-                    : "text-white"
-                }`}
-              >
-                🌟 Plateforme Éducative
+    <div className={theme === "dark" ? "dark" : ""}>
+      <div className="bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-300">
+        {/* ───────── Hero ───────── */}
+        <section className="relative overflow-hidden pt-28 pb-16 lg:pt-36 lg:pb-24">
+          <div className="absolute -top-32 -right-32 w-[520px] h-[520px] rounded-full bg-[#8C52FF]/10 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-40 -left-32 w-[480px] h-[480px] rounded-full bg-[#3B82F6]/10 blur-3xl pointer-events-none" />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 items-center">
+            <motion.div initial="hidden" animate="visible" variants={fadeUp}>
+              <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-[#4F46E5] dark:text-indigo-300 px-3 py-1 text-xs font-semibold mb-5">
+                <FontAwesomeIcon icon={faPeopleRoof} /> L'école connectée, partout.
               </span>
-              <div
-                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full animate-pulse ${
-                  theme === "dark"
-                    ? "bg-gradient-to-r from-purple-400 to-pink-400"
-                    : theme === "light"
-                    ? "bg-gradient-to-r from-purple-500 to-pink-500"
-                    : "bg-gradient-to-r from-purple-400 to-pink-400"
-                }`}
-              ></div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-slate-900 dark:text-white">
+                Connectez votre école, vos élèves et vos{" "}
+                <span className="bg-gradient-to-r from-[#4F46E5] to-[#8C52FF] bg-clip-text text-transparent">familles</span>
+              </h1>
+              <p className="mt-5 text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-xl">
+                ScholChat simplifie la communication, l'apprentissage et la gestion scolaire. Une seule plateforme pour tous.
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Button to="/schoolchat/signup" icon={faArrowRight}>
+                  Créer un compte
+                </Button>
+                <Button to="/schoolchat/login" variant="secondary">
+                  Se connecter
+                </Button>
+              </div>
+              <StoreBadges className="mt-8" />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="relative"
+            >
+              <div className="absolute inset-6 rounded-[2.5rem] bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/40 dark:to-violet-900/30" />
+              <img src={community} alt="Professeur, élèves et parents réunis autour de ScholChat" className="relative w-full max-w-xl mx-auto" />
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ───────── Fonctionnalités ───────── */}
+        <section id="fonctionnalites" className="py-16 lg:py-24 bg-slate-50 dark:bg-slate-900/60 scroll-mt-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionTitle
+              eyebrow="Fonctionnalités"
+              title="Une plateforme complète, pour tous les acteurs"
+              text="Professeurs, élèves et parents partagent le même espace : classes, cours, sessions en direct, devoirs et messagerie."
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+              {FEATURES.map((f, i) => (
+                <motion.div
+                  key={f.title}
+                  custom={i}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: "-40px" }}
+                  variants={fadeUp}
+                  className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5 transition-all"
+                >
+                  <span
+                    className="w-11 h-11 rounded-xl flex items-center justify-center text-white text-lg mb-4"
+                    style={{ background: f.color }}
+                  >
+                    <FontAwesomeIcon icon={f.icon} />
+                  </span>
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-1.5">{f.title}</h3>
+                  <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">{f.text}</p>
+                </motion.div>
+              ))}
             </div>
 
-            <AnimatedText texts={texts} theme={theme} />
-
-            <p
-              className={`text-xs sm:text-sm md:text-base lg:text-lg mt-3 sm:mt-6 leading-relaxed font-light max-w-4xl mx-auto px-2 sm:px-4 ${
-                theme === "dark"
-                  ? "text-gray-200"
-                  : theme === "light"
-                  ? "text-gray-700"
-                  : "text-gray-200"
-              }`}
-            >
-              ✨ Facilitez la communication pour un meilleur accompagnement
-              éducatif ⚡
-            </p>
-
-            {/* Animated Stats */}
-            <div className="flex justify-center gap-2 sm:gap-4 md:gap-6 lg:gap-8 mt-4 sm:mt-8">
-              {[
-                { number: "98%", label: "Réussite", icon: "🏆" },
-                { number: "10K+", label: "Familles", icon: "👨‍👩‍👧‍👦" },
-                { number: "24/7", label: "Support", icon: "💬" },
-              ].map((stat, i) => (
-                <div
-                  key={i}
-                  className="text-center group cursor-pointer transform hover:scale-110 transition-all duration-300"
-                  style={{ animationDelay: `${i * 0.2}s` }}
+            <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {SHOWCASE.map((s, i) => (
+                <motion.figure
+                  key={s.title}
+                  custom={i}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: "-40px" }}
+                  variants={fadeUp}
+                  className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 text-center"
                 >
-                  <div className="text-sm sm:text-xl md:text-2xl mb-1 sm:mb-2 group-hover:scale-125 transition-transform duration-300">
-                    {stat.icon}
+                  <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-slate-800 dark:to-indigo-950/60 p-3 mb-3">
+                    <img src={s.img} alt="" className="w-full h-40 object-contain" loading="lazy" />
                   </div>
-                  <div
-                    className={`text-sm sm:text-lg md:text-xl lg:text-2xl font-bold bg-clip-text text-transparent group-hover:from-purple-400 group-hover:to-pink-400 transition-all duration-300 ${
-                      theme === "dark"
-                        ? "bg-gradient-to-r from-cyan-400 to-purple-400"
-                        : theme === "light"
-                        ? "bg-gradient-to-r from-blue-500 to-purple-500"
-                        : "bg-gradient-to-r from-cyan-400 to-purple-400"
-                    }`}
-                  >
-                    {stat.number}
-                  </div>
-                  <div
-                    className={`text-2xs sm:text-xs font-medium ${
-                      theme === "dark"
-                        ? "text-gray-300"
-                        : theme === "light"
-                        ? "text-gray-600"
-                        : "text-gray-300"
-                    }`}
-                  >
-                    {stat.label}
-                  </div>
-                </div>
+                  <figcaption className="text-sm font-semibold text-slate-800 dark:text-slate-100">{s.title}</figcaption>
+                </motion.figure>
               ))}
             </div>
           </div>
+        </section>
 
-          {/* Enhanced Image Content */}
-          <div
-            className={`relative w-full flex justify-center transform transition-all duration-1000 delay-300 ${
-              isVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-10 opacity-0"
-            }`}
-          >
-            <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl group">
-              {/* Multiple Glow Effects */}
-              <div
-                className={`absolute -inset-2 sm:-inset-4 rounded-xl sm:rounded-2xl blur-lg sm:blur-xl group-hover:blur-2xl transition-all duration-700 animate-pulse ${
-                  theme === "dark"
-                    ? "bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20"
-                    : theme === "light"
-                    ? "bg-gradient-to-r from-cyan-400/20 via-purple-400/20 to-pink-400/20"
-                    : "bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20"
-                }`}
-              ></div>
-              <div
-                className={`absolute -inset-1 sm:-inset-2 rounded-xl sm:rounded-2xl blur-md sm:blur-lg group-hover:blur-xl transition-all duration-700 ${
-                  theme === "dark"
-                    ? "bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-emerald-500/15"
-                    : theme === "light"
-                    ? "bg-gradient-to-r from-blue-400/15 via-purple-400/15 to-emerald-400/15"
-                    : "bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-emerald-500/15"
-                }`}
-              ></div>
-
-              {/* Main Container */}
-              <div
-                className={`relative z-20 backdrop-blur-md sm:backdrop-blur-lg border rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl p-2 sm:p-4 md:p-6 group-hover:scale-105 group-hover:-translate-y-1 sm:group-hover:-translate-y-2 transition-all duration-700 ${
-                  theme === "dark"
-                    ? "bg-black/20 border-white/20 shadow-cyan-500/25"
-                    : theme === "light"
-                    ? "bg-white/90 border-gray-200/30 shadow-cyan-400/25"
-                    : "bg-black/20 border-white/20 shadow-cyan-500/25"
-                }`}
-              >
-                {/* Background Pattern */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br rounded-xl sm:rounded-2xl ${
-                    theme === "dark"
-                      ? "from-white/5 to-transparent"
-                      : theme === "light"
-                      ? "from-black/5 to-transparent"
-                      : "from-white/5 to-transparent"
-                  }`}
-                ></div>
-
-                {/* Floating Elements Around Image */}
-                <div
-                  className={`absolute -top-1 -left-1 sm:-top-2 sm:-left-2 w-3 h-3 sm:w-4 sm:h-4 rounded-full opacity-20 group-hover:opacity-40 transition-opacity duration-500 animate-bounce ${
-                    theme === "dark"
-                      ? "bg-gradient-to-r from-cyan-400 to-blue-500"
-                      : theme === "light"
-                      ? "bg-gradient-to-r from-cyan-500 to-blue-600"
-                      : "bg-gradient-to-r from-cyan-400 to-blue-500"
-                  }`}
-                ></div>
-                <div
-                  className={`absolute -top-1 -right-1 sm:-top-1 sm:-right-3 w-2 h-2 sm:w-3 sm:h-3 rounded-full opacity-30 group-hover:opacity-50 transition-opacity duration-500 animate-pulse ${
-                    theme === "dark"
-                      ? "bg-gradient-to-r from-purple-400 to-pink-500"
-                      : theme === "light"
-                      ? "bg-gradient-to-r from-purple-500 to-pink-600"
-                      : "bg-gradient-to-r from-purple-400 to-pink-500"
-                  }`}
-                ></div>
-                <div
-                  className={`absolute -bottom-1 -left-1 sm:-bottom-2 sm:-left-2 w-3 h-3 sm:w-4 sm:h-4 rounded-full opacity-15 group-hover:opacity-35 transition-opacity duration-500 animate-bounce ${
-                    theme === "dark"
-                      ? "bg-gradient-to-r from-emerald-400 to-cyan-500"
-                      : theme === "light"
-                      ? "bg-gradient-to-r from-emerald-500 to-cyan-600"
-                      : "bg-gradient-to-r from-emerald-400 to-cyan-500"
-                  }`}
-                  style={{ animationDelay: "1s" }}
-                ></div>
-                <div
-                  className={`absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-2 h-2 sm:w-3 sm:h-3 rounded-full opacity-25 group-hover:opacity-45 transition-opacity duration-500 animate-pulse ${
-                    theme === "dark"
-                      ? "bg-gradient-to-r from-pink-400 to-red-500"
-                      : theme === "light"
-                      ? "bg-gradient-to-r from-pink-500 to-red-600"
-                      : "bg-gradient-to-r from-pink-400 to-red-500"
-                  }`}
-                  style={{ animationDelay: "0.5s" }}
-                ></div>
-
-                {/* Image with Enhanced Effects */}
-                <div className="relative">
-                  <img
-                    src={heroImg}
-                    alt="Hero"
-                    className="w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto object-contain smooth-float filter group-hover:brightness-110 transition-all duration-500"
-                  />
-
-                  {/* Image Overlay Effects */}
-                  <div
-                    className={`absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
-                      theme === "dark"
-                        ? "bg-gradient-to-t from-purple-600/10 via-transparent to-cyan-600/10"
-                        : theme === "light"
-                        ? "bg-gradient-to-t from-purple-400/10 via-transparent to-cyan-400/10"
-                        : "bg-gradient-to-t from-purple-600/10 via-transparent to-cyan-600/10"
-                    }`}
-                  ></div>
-                </div>
-              </div>
-
-              {/* Floating Achievement Badges */}
-              <div
-                className={`absolute -bottom-2 sm:-bottom-4 -left-2 sm:-left-4 backdrop-blur-md sm:backdrop-blur-lg border rounded-lg sm:rounded-xl p-1 sm:p-2 group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-500 shadow-md sm:shadow-lg ${
-                  theme === "dark"
-                    ? "bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border-white/20 shadow-emerald-500/25"
-                    : theme === "light"
-                    ? "bg-gradient-to-br from-emerald-400/20 to-cyan-400/20 border-gray-200/30 shadow-emerald-400/25"
-                    : "bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border-white/20 shadow-emerald-500/25"
-                }`}
-              >
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <div
-                    className={`w-5 h-5 sm:w-8 sm:h-8 rounded-md sm:rounded-lg flex items-center justify-center shadow-sm sm:shadow-md ${
-                      theme === "dark"
-                        ? "bg-gradient-to-br from-emerald-400 to-cyan-500"
-                        : theme === "light"
-                        ? "bg-gradient-to-br from-emerald-500 to-cyan-600"
-                        : "bg-gradient-to-br from-emerald-400 to-cyan-500"
-                    }`}
+        {/* ───────── Pour qui ───────── */}
+        <section className="py-16 lg:py-24">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionTitle eyebrow="Je suis…" title="Un espace adapté à chaque profil" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {ROLES.map((r) => (
+                <Link
+                  key={r.role}
+                  to={`/schoolchat/signup?role=${r.role}`}
+                  className="group rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center hover:border-[#8C52FF]/50 hover:shadow-lg transition-all"
+                >
+                  <span
+                    className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl mb-4"
+                    style={{ background: r.color }}
                   >
-                    <span className="text-white text-xs sm:text-sm">🚀</span>
-                  </div>
-                  <div>
-                    <div
-                      className={`font-bold text-xs sm:text-sm bg-clip-text text-transparent ${
-                        theme === "dark"
-                          ? "bg-gradient-to-r from-emerald-400 to-cyan-400"
-                          : theme === "light"
-                          ? "bg-gradient-to-r from-emerald-500 to-cyan-500"
-                          : "bg-gradient-to-r from-emerald-400 to-cyan-400"
-                      }`}
-                    >
-                      Innovation
-                    </div>
-                    <div
-                      className={`text-2xs sm:text-xs font-medium ${
-                        theme === "dark"
-                          ? "text-gray-300"
-                          : theme === "light"
-                          ? "text-gray-600"
-                          : "text-gray-300"
-                      }`}
-                    >
-                      Technologique
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    <FontAwesomeIcon icon={r.icon} />
+                  </span>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{r.title}</h3>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{r.text}</p>
+                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#4F46E5] dark:text-indigo-300">
+                    Créer mon compte <FontAwesomeIcon icon={faArrowRight} className="group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
 
-              <div
-                className={`absolute -top-2 sm:-top-4 -right-2 sm:-right-4 backdrop-blur-md sm:backdrop-blur-lg border rounded-lg sm:rounded-xl p-1 sm:p-2 group-hover:scale-110 group-hover:translate-y-1 transition-all duration-500 shadow-md sm:shadow-lg ${
-                  theme === "dark"
-                    ? "bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-white/20 shadow-purple-500/25"
-                    : theme === "light"
-                    ? "bg-gradient-to-br from-purple-400/20 to-pink-400/20 border-gray-200/30 shadow-purple-400/25"
-                    : "bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-white/20 shadow-purple-500/25"
-                }`}
-              >
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <div
-                    className={`w-5 h-5 sm:w-8 sm:h-8 rounded-md sm:rounded-lg flex items-center justify-center shadow-sm sm:shadow-md ${
-                      theme === "dark"
-                        ? "bg-gradient-to-br from-purple-400 to-pink-500"
-                        : theme === "light"
-                        ? "bg-gradient-to-br from-purple-500 to-pink-600"
-                        : "bg-gradient-to-br from-purple-400 to-pink-500"
-                    }`}
-                  >
-                    <span className="text-white text-xs sm:text-sm">⭐</span>
+        {/* ───────── Comment ça marche (élèves / parents) ───────── */}
+        <section className="py-16 lg:py-20 bg-gradient-to-br from-[#4F46E5] to-[#8C52FF] text-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto mb-12">
+              <h2 className="text-2xl sm:text-3xl font-bold">Élèves et parents : rejoignez votre classe en 4 étapes</h2>
+              <p className="mt-3 text-indigo-100">Votre inscription est rattachée à une classe grâce à son code.</p>
+            </div>
+            <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {STEPS.map((s, i) => (
+                <li key={s.title} className="rounded-2xl bg-white/10 backdrop-blur p-5 border border-white/15">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="w-9 h-9 rounded-full bg-white text-[#4F46E5] font-bold flex items-center justify-center">{i + 1}</span>
+                    <FontAwesomeIcon icon={s.icon} className="text-xl text-indigo-100" />
                   </div>
-                  <div>
-                    <div
-                      className={`font-bold text-xs sm:text-sm bg-clip-text text-transparent ${
-                        theme === "dark"
-                          ? "bg-gradient-to-r from-purple-400 to-pink-400"
-                          : theme === "light"
-                          ? "bg-gradient-to-r from-purple-500 to-pink-500"
-                          : "bg-gradient-to-r from-purple-400 to-pink-400"
-                      }`}
-                    >
-                      Excellence
-                    </div>
-                    <div
-                      className={`text-2xs sm:text-xs font-medium ${
-                        theme === "dark"
-                          ? "text-gray-300"
-                          : theme === "light"
-                          ? "text-gray-600"
-                          : "text-gray-300"
-                      }`}
-                    >
-                      Garantie
-                    </div>
-                  </div>
-                </div>
+                  <h3 className="font-semibold">{s.title}</h3>
+                  <p className="mt-1 text-sm text-indigo-100">{s.text}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ───────── Tarifs ───────── */}
+        <section id="tarifs" className="py-16 lg:py-24 scroll-mt-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionTitle
+              eyebrow="Tarifs"
+              title="Des offres adaptées à chaque classe"
+              text="Les professeurs et les établissements choisissent l'offre de leurs classes ; élèves et parents en profitent directement."
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Élèves et parents</h3>
+                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Inclus avec la classe</p>
+                <ul className="mt-5 space-y-2 text-sm">
+                  {["Accès aux classes approuvées", "Cours, devoirs et sessions en direct", "Messagerie et notifications", "Suivi de plusieurs enfants"].map((x) => (
+                    <li key={x} className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCheck} className="text-[#10B981]" /> {x}
+                    </li>
+                  ))}
+                </ul>
+                <Button to="/schoolchat/signup" variant="secondary" className="mt-6 w-full">
+                  Créer un compte
+                </Button>
+              </div>
+              <div className="rounded-2xl p-6 text-white bg-gradient-to-br from-[#4F46E5] to-[#8C52FF] shadow-xl shadow-indigo-500/20">
+                <h3 className="text-lg font-semibold">Professeurs et établissements</h3>
+                <p className="mt-1 text-2xl font-bold">Mensuel ou annuel</p>
+                <ul className="mt-5 space-y-2 text-sm text-indigo-50">
+                  {["Création de classes et de cours", "Sessions en direct et exercices", "Gestion des demandes d'accès", "Offres renouvelables"].map((x) => (
+                    <li key={x} className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCheck} /> {x}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to="/schoolchat/functionalities"
+                  className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white text-[#4F46E5] px-6 py-3 font-semibold hover:bg-indigo-50"
+                >
+                  Voir les offres <FontAwesomeIcon icon={faArrowRight} />
+                </Link>
               </div>
             </div>
           </div>
+        </section>
 
-          {/* Call-to-Action Button */}
-          <div
-            className={`transform transition-all duration-1000 delay-500 ${
-              isVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-10 opacity-0"
-            }`}
-          >
-            <button
-              className={`group relative text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm md:text-base hover:scale-105 hover:-translate-y-1 transition-all duration-500 shadow-md sm:shadow-lg overflow-hidden ${
-                theme === "dark"
-                  ? "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 hover:shadow-cyan-500/50"
-                  : theme === "light"
-                  ? "bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:shadow-cyan-400/50"
-                  : "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 hover:shadow-cyan-500/50"
-              }`}
-            >
-              <div
-                className={`absolute inset-0 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ${
-                  theme === "dark"
-                    ? "bg-gradient-to-r from-purple-600 via-pink-600 to-red-600"
-                    : theme === "light"
-                    ? "bg-gradient-to-r from-purple-700 via-pink-700 to-red-700"
-                    : "bg-gradient-to-r from-purple-600 via-pink-600 to-red-600"
-                }`}
-              ></div>
-              <span className="relative flex items-center gap-1 sm:gap-2">
-                🌟 Découvrir
-                <span className="group-hover:translate-x-1 sm:group-hover:translate-x-2 group-hover:scale-110 sm:group-hover:scale-125 transition-all duration-300">
-                  →
-                </span>
-              </span>
-              <div
-                className={`absolute -inset-1 rounded-lg sm:rounded-xl blur-sm sm:blur-md opacity-50 group-hover:opacity-75 transition-opacity duration-500 -z-10 ${
-                  theme === "dark"
-                    ? "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500"
-                    : theme === "light"
-                    ? "bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600"
-                    : "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500"
-                }`}
-              ></div>
-            </button>
+        {/* ───────── À propos ───────── */}
+        <section id="a-propos" className="py-16 lg:py-24 bg-slate-50 dark:bg-slate-900/60 scroll-mt-20">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-10 items-center">
+            <img src={onboarding4} alt="Une famille suit la scolarité de ses enfants sur ScholChat" className="w-full max-w-md mx-auto" loading="lazy" />
+            <div>
+              <span className="inline-block text-xs font-semibold uppercase tracking-widest text-[#8C52FF] mb-3">À propos</span>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Rapprocher l'école et les familles</h2>
+              <p className="mt-4 text-slate-500 dark:text-slate-400 leading-relaxed">
+                ScholChat réunit professeurs, élèves et parents dans un espace sécurisé : chaque inscription à une classe est
+                validée par son professeur, et chaque parent suit la scolarité de ses enfants en temps réel, sur le web comme
+                sur mobile.
+              </p>
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <Button to="/schoolchat/about" variant="secondary">
+                  En savoir plus
+                </Button>
+                <Button to="/schoolchat/contact" variant="ghost">
+                  Nous contacter
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Additional Floating Elements */}
-      <div
-        className={`absolute top-20 right-10 w-2 h-2 rounded-full animate-pulse hidden lg:block ${
-          theme === "dark"
-            ? "bg-cyan-400"
-            : theme === "light"
-            ? "bg-cyan-500"
-            : "bg-cyan-400"
-        }`}
-      ></div>
-      <div
-        className={`absolute bottom-32 left-20 w-3 h-3 rounded-full animate-pulse hidden lg:block ${
-          theme === "dark"
-            ? "bg-purple-400"
-            : theme === "light"
-            ? "bg-purple-500"
-            : "bg-purple-400"
-        }`}
-      ></div>
-      <div
-        className={`absolute top-1/3 right-1/4 w-1 h-1 rounded-full animate-pulse hidden lg:block ${
-          theme === "dark"
-            ? "bg-emerald-400"
-            : theme === "light"
-            ? "bg-emerald-500"
-            : "bg-emerald-400"
-        }`}
-      ></div>
-      <div
-        className={`absolute top-2/3 left-10 w-2 h-2 rounded-full animate-pulse hidden lg:block ${
-          theme === "dark"
-            ? "bg-rose-400"
-            : theme === "light"
-            ? "bg-rose-500"
-            : "bg-rose-400"
-        }`}
-      ></div>
-    </section>
-  );
-};
-
-export const Home = ({ theme }) => {
-  return (
-    <>
-      <div className={theme === "dark" ? "bg-gray-900" : "bg-white"}>
-        <HomeContent theme={theme} />
-        <FunctionalitiesSection theme={theme} />
-        <About theme={theme} />
-        <Courses theme={theme} />
-        <Instructor theme={theme} />
-        <Blog theme={theme} />
+        {/* ───────── CTA ───────── */}
+        <section className="py-16">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="rounded-3xl bg-slate-900 dark:bg-slate-900 border border-slate-800 p-8 sm:p-12 flex flex-col lg:flex-row items-center justify-between gap-8">
+              <div className="text-center lg:text-left">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white">Prêt à connecter votre classe ?</h2>
+                <p className="mt-2 text-slate-400">Créez votre compte gratuitement, puis retrouvez ScholChat sur mobile.</p>
+              </div>
+              <div className="flex flex-col items-center lg:items-end gap-4">
+                <Button to="/schoolchat/signup" icon={faArrowRight}>
+                  Créer un compte
+                </Button>
+                <StoreBadges compact />
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
-    </>
+    </div>
   );
 };
 

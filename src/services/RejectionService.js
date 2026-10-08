@@ -1,5 +1,5 @@
 import axios from "axios";
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Create axios instance with default config
 const rejectionApi = axios.create({
@@ -90,7 +90,7 @@ class RejectionService {
   // ============ Authentication & Token Management ============
   async refreshToken() {
     try {
-      const response = await axios.post(`${BASE_URL}/auth/refresh-token`, {
+      const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/auth/refresh-token`, {
         refreshToken: localStorage.getItem("refreshToken"),
       });
 
@@ -164,7 +164,7 @@ class RejectionService {
   async getPendingProfessors(page = 1, limit = 10) {
     try {
       const response = await rejectionApi.get(
-        "/utilisateurs/professeurs/pending",
+        "/utilisateurs/professors/pending",
         {
           params: { page, limit },
         }

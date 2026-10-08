@@ -1,26 +1,297 @@
 import React, { useState, useEffect } from "react";
-import {
-  Search,
-  Plus,
-  Users,
-  BookOpen,
-  Calendar,
-  CheckCircle,
-  XCircle,
-  Building,
-  Key,
-  Info,
-  Edit,
-  AlertCircle,
-  Clock,
-  Loader2,
-  Mail,
-} from "lucide-react";
-import classService from "../../../../../services/ClassService";
+import { classService } from "../../../../../services/ClassService";
 import establishmentService from "../../../../../services/EstablishmentService";
+import accederService from "../../../../../services/accederService";
 import { useAuth } from "../../../../../context/AuthContext";
+import { useSelector } from "react-redux";
+import { motion, AnimatePresence } from "framer-motion";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBookOpen,
+  faBuilding,
+  faCalendarDays,
+  faCircleCheck,
+  faCircleExclamation,
+  faCircleInfo,
+  faCircleXmark,
+  faClock,
+  faEllipsisVertical,
+  faGraduationCap,
+  faKey,
+  faMagnifyingGlass,
+  faPenToSquare,
+  faPlus,
+  faRightToBracket,
+  faSpinner,
+  faUsers,
+} from "@fortawesome/free-solid-svg-icons";
+import { message } from "antd";
+import {
+  confirmClassAction,
+  getClassActionTexts,
+} from "../../../../../utils/classActionConfirm";
+const ClassesContentMobile = ({
+  classes,
+  searchTerm,
+  setSearchTerm,
+  currentTab,
+  setCurrentTab,
+  onManageClass,
+  onJoinByToken,
+  onCreateClass,
+  accessToken,
+  setAccessToken,
+  userRole,
+  accessRequestCounts,
+  programmationCounts,
+}) => {
+  const tabs = [
+    {
+      id: "all",
+      label: "All",
+    },
+    {
+      id: "active",
+      label: "Active",
+    },
+    {
+      id: "pending",
+      label: "Pending",
+    },
+  ];
+  const filteredClasses = classes.filter((cls) => {
+    const matchesSearch =
+      (cls.nom || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cls.codeActivation || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (cls.niveau || "").toLowerCase().includes(searchTerm.toLowerCase());
+    if (currentTab === "all") return matchesSearch;
+    if (currentTab === "active")
+      return matchesSearch && (cls.etat === "ACTIF" || cls.statut === "ACTIF");
+    if (currentTab === "pending")
+      return (
+        matchesSearch &&
+        (cls.etat === "EN_ATTENTE_APPROBATION" ||
+          cls.statut === "EN_ATTENTE_APPROBATION")
+      );
+    return matchesSearch;
+  });
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-slate-950 pb-32">
+      <header className="px-6 pt-8 pb-4">
+        <h1 className="text-3xl font-black dark:text-white mb-6">Classes</h1>
+        <div className="relative mb-6">
+          <FontAwesomeIcon
+            icon={faMagnifyingGlass}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            style={{
+              fontSize: 20,
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Search classes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white dark:bg-slate-800 py-4 pl-12 pr-4 rounded-3xl shadow-xl shadow-blue-500/5 border border-gray-100 dark:border-white/5 outline-none focus:border-blue-500 transition-all dark:text-white"
+          />
+        </div>
+        <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-6 rounded-[32px] text-white shadow-2xl shadow-blue-500/30 mb-8 relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 opacity-10">
+            <FontAwesomeIcon
+              icon={faKey}
+              style={{
+                fontSize: 120,
+              }}
+            />
+          </div>
+          <h3 className="text-lg font-black mb-1">Access a Class</h3>
+          <p className="text-blue-100/80 text-[10px] font-bold uppercase tracking-widest mb-4">
+            Enter your access token
+          </p>
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              placeholder="Token Code..."
+              value={accessToken}
+              onChange={(e) => setAccessToken(e.target.value)}
+              className="flex-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl px-4 py-3 placeholder:text-blue-200 outline-none focus:bg-white/30 transition-all text-sm font-bold"
+            />
+            <button
+              onClick={onJoinByToken}
+              className="bg-white text-blue-600 px-6 py-3 rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all"
+            >
+              JOIN
+            </button>
+          </div>
+        </div>
+        <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setCurrentTab(tab.id)}
+              className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${currentTab === tab.id ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "bg-white dark:bg-slate-800 text-gray-500 border border-gray-100 dark:border-white/5"}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </header>
 
-const ClassesContent = ({ onManageClass }) => {
+      <div className="px-4 space-y-4">
+        {filteredClasses.map((cls, idx) => (
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 10,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              delay: idx * 0.05,
+            }}
+            key={cls.id}
+            className="bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-xl border border-gray-100 dark:border-white/5 relative overflow-hidden"
+          >
+            {accessRequestCounts[cls.id] > 0 && (
+              <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full animate-pulse shadow-lg shadow-red-500/20">
+                {accessRequestCounts[cls.id]} NEW
+              </div>
+            )}
+            <div className="flex items-center space-x-4 mb-5">
+              <div className="p-4 bg-gray-50 dark:bg-slate-700/50 text-blue-600 rounded-3xl border border-blue-500/10">
+                <FontAwesomeIcon
+                  icon={faGraduationCap}
+                  style={{
+                    fontSize: 24,
+                  }}
+                />
+              </div>
+              <div>
+                <h3 className="text-lg font-black dark:text-white leading-tight">
+                  {cls.nom}
+                </h3>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  {cls.matiere}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center space-x-2">
+                <FontAwesomeIcon
+                  icon={faUsers}
+                  className="text-blue-500"
+                  style={{
+                    fontSize: 14,
+                  }}
+                />
+                <div>
+                  <p className="text-[8px] font-black text-gray-400 uppercase">
+                    Students
+                  </p>
+                  <p className="text-xs font-bold dark:text-white">
+                    {cls.eleves?.length || 0}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center space-x-2">
+                <FontAwesomeIcon
+                  icon={faBookOpen}
+                  className="text-blue-500"
+                  style={{
+                    fontSize: 14,
+                  }}
+                />
+                <div>
+                  <p className="text-[8px] font-black text-gray-400 uppercase">
+                    Cours programmés
+                  </p>
+                  <p className="text-xs font-bold dark:text-white">3</p>
+                </div>
+              </div>
+            </div>
+            {cls.etablissement && (
+              <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 dark:bg-slate-900/50 rounded-xl mb-6 border border-gray-100 dark:border-white/5">
+                <FontAwesomeIcon
+                  icon={faBuilding}
+                  className="text-gray-400"
+                  style={{
+                    fontSize: 14,
+                  }}
+                />
+                <span className="text-[10px] font-bold text-gray-500 truncate">
+                  {cls.etablissement.nom}
+                </span>
+              </div>
+            )}
+            <div className="flex space-x-2">
+              <button
+                onClick={() => onManageClass(cls.id)}
+                className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2"
+              >
+                <FontAwesomeIcon
+                  icon={faRightToBracket}
+                  style={{
+                    fontSize: 18,
+                  }}
+                />
+                ENTRER DANS LA CLASSE
+              </button>
+              <button className="p-4 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-2xl font-black text-xs transition-all active:scale-95">
+                <FontAwesomeIcon
+                  icon={faEllipsisVertical}
+                  style={{
+                    fontSize: 18,
+                  }}
+                />
+              </button>
+            </div>
+          </motion.div>
+        ))}
+
+        {filteredClasses.length === 0 && (
+          <div className="py-20 text-center">
+            <div className="p-6 bg-gray-100 dark:bg-slate-800 rounded-full w-fit mx-auto mb-4">
+              <FontAwesomeIcon
+                icon={faGraduationCap}
+                className="text-gray-400"
+                style={{
+                  fontSize: 40,
+                }}
+              />
+            </div>
+            <h4 className="font-bold dark:text-white">No classes match</h4>
+            <p className="text-xs text-gray-500">
+              Try adjusting your filters or search
+            </p>
+          </div>
+        )}
+      </div>
+
+      {(userRole === "PROFESSEUR" ||
+        userRole === "ADMINISTRATEUR" ||
+        userRole === "ADMIN") && (
+        <button
+          onClick={onCreateClass}
+          className="fixed bottom-28 right-6 w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 z-[30] active:scale-95 transition-transform"
+        >
+          <FontAwesomeIcon
+            icon={faPlus}
+            style={{
+              fontSize: 32,
+            }}
+          />
+        </button>
+      )}
+    </div>
+  );
+};
+const ClassesContent = ({ onManageClass, setActiveTab }) => {
+  // Before any early return (rules of hooks).
+  const isMobile = useSelector((state) => state.ui.isMobile);
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTab, setCurrentTab] = useState("active");
@@ -31,6 +302,7 @@ const ClassesContent = ({ onManageClass }) => {
   const [showEstablishmentModal, setShowEstablishmentModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectSubmitting, setRejectSubmitting] = useState(false);
   const [rejectReason, setRejectReason] = useState({
     motifRejet: "Classe",
     commentaire: "",
@@ -41,7 +313,8 @@ const ClassesContent = ({ onManageClass }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [requestRole, setRequestRole] = useState("eleve");
-
+  const [accessRequestCounts, setAccessRequestCounts] = useState({});
+  const [programmationCounts, setProgrammationCounts] = useState({});
   const [newClass, setNewClass] = useState({
     nom: "",
     matiere: "",
@@ -51,8 +324,8 @@ const ClassesContent = ({ onManageClass }) => {
     salle: "",
     etablissementId: "",
     codeUnique: "",
+    accesMajeur: false,
   });
-
   const [newEstablishment, setNewEstablishment] = useState({
     nom: "",
     optionEnvoiMailNewClasse: false,
@@ -77,34 +350,156 @@ const ClassesContent = ({ onManageClass }) => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
+  // Load access request counts and programmation counts
+  useEffect(() => {
+    if (classes.length > 0) {
+      loadAccessRequestCounts();
+      loadProgrammationCounts();
+    }
+  }, [classes]);
+  const loadAccessRequestCounts = async () => {
+    try {
+      const counts = {};
+      await Promise.all(
+        classes.map(async (classe) => {
+          try {
+            const response = await fetch(
+              `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/${classe.id}/demandes`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                },
+              },
+            );
+            if (response.ok) {
+              const requests = await response.json();
+              const pendingCount = requests.filter(
+                (req) => req.etat === "EN_ATTENTE",
+              ).length;
+              counts[classe.id] = pendingCount;
+            }
+          } catch (error) {
+            counts[classe.id] = 0;
+          }
+        }),
+      );
+      setAccessRequestCounts(counts);
+    } catch (error) {
+      console.error("Error loading access request counts:", error);
+    }
+  };
+  const loadProgrammationCounts = async () => {
+    try {
+      console.log(
+        "Loading programmation counts for classes:",
+        classes.map((c) => c.id),
+      );
+      const counts = {};
+
+      // Get auth token
+      const token =
+        localStorage.getItem("authToken") ||
+        localStorage.getItem("accessToken");
+      if (!token) {
+        console.warn("No auth token found for programmation counts");
+        return;
+      }
+
+      // Get current user ID
+      const currentUserId = user?.id;
+      if (!currentUserId) {
+        console.warn("No current user ID found");
+        return;
+      }
+      try {
+        console.log(
+          `Fetching accessible programmations for user ${currentUserId}`,
+        );
+
+        // Get all accessible programmations for the current user
+        const response = await fetch(
+          `${process.env.REACT_APP_API_BASE_URL}/cours-programmes/accessible/${currentUserId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+        if (response.ok) {
+          const accessibleProgrammations = await response.json();
+          console.log(
+            `Accessible programmations for user ${currentUserId}:`,
+            accessibleProgrammations,
+          );
+
+          // Count programmations by class
+          classes.forEach((classe) => {
+            const classeProgrammations = accessibleProgrammations.filter(
+              (prog) => prog.classesIds && prog.classesIds.includes(classe.id),
+            );
+            counts[classe.id] = classeProgrammations.length;
+            console.log(
+              `Count for class ${classe.id} (${classe.nom}): ${counts[classe.id]}`,
+            );
+          });
+        } else {
+          console.warn(
+            `API call failed for accessible programmations:`,
+            response.status,
+            response.statusText,
+          );
+          // Set all counts to 0 if API fails
+          classes.forEach((classe) => {
+            counts[classe.id] = 0;
+          });
+        }
+      } catch (error) {
+        console.warn(`Could not load accessible programmations:`, error);
+        // Set all counts to 0 if there's an error
+        classes.forEach((classe) => {
+          counts[classe.id] = 0;
+        });
+      }
+      console.log("Final programmation counts:", counts);
+      setProgrammationCounts(counts);
+    } catch (error) {
+      console.error("Error loading programmation counts:", error);
+    }
+  };
+
   // Filter classes based on search term, tab, and user role
   const filteredClasses = classes.filter((cls) => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
-      cls.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cls.matiere.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (cls.professeur &&
-        cls.professeur.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (cls.etablissement &&
-        cls.etablissement.nom.toLowerCase().includes(searchTerm.toLowerCase()));
-
+      (cls.nom || "").toLowerCase().includes(searchLower) ||
+      (cls.matiere || "").toLowerCase().includes(searchLower) ||
+      (cls.codeActivation || "").toLowerCase().includes(searchLower) ||
+      (cls.niveau || "").toLowerCase().includes(searchLower) ||
+      (cls.professeur?.nom || "").toLowerCase().includes(searchLower) ||
+      (cls.etablissement?.nom || "").toLowerCase().includes(searchLower);
     let statusMatch = false;
+    const currentStatus = cls.etat || cls.statut;
     if (currentTab === "all") statusMatch = true;
-    else if (currentTab === "active") statusMatch = cls.statut === "ACTIF";
-    else if (currentTab === "inactive") statusMatch = cls.statut === "INACTIF";
+    else if (currentTab === "active") statusMatch = currentStatus === "ACTIF";
+    else if (currentTab === "inactive")
+      statusMatch = currentStatus === "INACTIF";
     else if (currentTab === "pending")
-      statusMatch = cls.statut === "EN_ATTENTE";
-
+      statusMatch =
+        currentStatus === "EN_ATTENTE_APPROBATION" ||
+        currentStatus === "EN_ATTENTE";
     let roleMatch = true;
     if (user.role === "PROFESSEUR") {
-      roleMatch = cls.professeur?.id === user.id;
+      roleMatch =
+        cls.professeur?.id === user.id ||
+        cls.moderator?.id === user.id ||
+        cls.moderatorId === user.id;
     } else if (user.role === "ETABLISSEMENT") {
       roleMatch = cls.etablissement?.id === user.etablissementId;
     }
-
     return matchesSearch && statusMatch && roleMatch;
   });
 
@@ -114,14 +509,12 @@ const ClassesContent = ({ onManageClass }) => {
     try {
       setLoading(true);
       const selectedEstablishment = establishments.find(
-        (est) => est.id === newClass.etablissementId
+        (est) => est.id === newClass.etablissementId,
       );
-
       if (selectedEstablishment) {
         if (selectedEstablishment.optionTokenGeneral && !newClass.codeUnique) {
           throw new Error("Cet établissement requiert un code unique !");
         }
-
         if (
           selectedEstablishment.optionTokenGeneral &&
           newClass.codeUnique !== selectedEstablishment.codeUnique
@@ -129,7 +522,6 @@ const ClassesContent = ({ onManageClass }) => {
           throw new Error("Code unique incorrect !");
         }
       }
-
       const classData = {
         nom: newClass.nom,
         matiere: newClass.matiere,
@@ -138,14 +530,12 @@ const ClassesContent = ({ onManageClass }) => {
         emploiDuTemps: newClass.emploiDuTemps,
         salle: newClass.salle,
         etablissementId: newClass.etablissementId || null,
+        accesMajeur: newClass.accesMajeur || false,
       };
-
       const createdClass = await classService.createClass(classData);
       setClasses([...classes, createdClass]);
-
       setShowCreateModal(false);
       setShowTokenModal(true);
-
       if (selectedEstablishment?.optionEnvoiMailNewClasse) {
         console.log("Email sent to establishment for approval");
       }
@@ -173,41 +563,63 @@ const ClassesContent = ({ onManageClass }) => {
   };
 
   // Handle class approval/rejection
-  const handleClassApproval = async (classId, approved) => {
-    try {
-      setLoading(true);
-      if (approved) {
-        const updatedClass = await classService.approveClass(classId);
-        setClasses(
-          classes.map((cls) => (cls.id === classId ? updatedClass : cls))
-        );
-      } else {
-        setSelectedClass(classes.find((cls) => cls.id === classId));
-        setShowRejectModal(true);
-      }
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
+  const handleClassApproval = (classId, approved) => {
+    const target = classes.find((cls) => cls.id === classId);
+    if (!approved) {
+      setSelectedClass(target);
+      setShowRejectModal(true);
+      return;
     }
+    const texts = getClassActionTexts("approve", target?.nom);
+    confirmClassAction({
+      action: "approve",
+      className: target?.nom,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          const updatedClass = await classService.approuverClasse(classId);
+          setClasses((prev) =>
+            prev.map((cls) => (cls.id === classId ? updatedClass : cls)),
+          );
+          message.success(texts.success);
+        } catch (error) {
+          setError(error.message);
+          message.error(texts.error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   // Handle class rejection with reason
   const handleRejectClass = async () => {
+    if (rejectSubmitting) return;
     try {
+      setRejectSubmitting(true);
       setLoading(true);
-      const updatedClass = await classService.rejectClass(
+      const updatedClass = await classService.rejeterClasse(
         selectedClass.id,
-        rejectReason
+        rejectReason.motifRejet,
       );
       setClasses(
-        classes.map((cls) => (cls.id === selectedClass.id ? updatedClass : cls))
+        classes.map((cls) =>
+          cls.id === selectedClass.id ? updatedClass : cls,
+        ),
       );
       setShowRejectModal(false);
-      setRejectReason({ motifRejet: "Classe", commentaire: "" });
+      setRejectReason({
+        motifRejet: "Classe",
+        commentaire: "",
+      });
+      if (selectedClass.statut === "EN_ATTENTE") {
+        message.success(getClassActionTexts("reject").success);
+      }
     } catch (error) {
       setError(error.message);
+      message.error(getClassActionTexts("reject").error);
     } finally {
+      setRejectSubmitting(false);
       setLoading(false);
     }
   };
@@ -222,7 +634,7 @@ const ClassesContent = ({ onManageClass }) => {
       } else {
         const updatedClass = await classService.activateClass(classId);
         setClasses(
-          classes.map((cls) => (cls.id === classId ? updatedClass : cls))
+          classes.map((cls) => (cls.id === classId ? updatedClass : cls)),
         );
       }
     } catch (error) {
@@ -238,23 +650,14 @@ const ClassesContent = ({ onManageClass }) => {
       if (!accessToken.trim()) {
         throw new Error("Veuillez entrer un token valide");
       }
-
-      const foundClass = await classService.getClassByToken(accessToken);
+      setLoading(true);
+      setError("");
+      const foundClass = await classService.obtenirClasseParCode(accessToken);
+      if (!foundClass) {
+        throw new Error("Aucune classe trouvée avec ce code");
+      }
       setSelectedClass(foundClass);
       setShowAccessModal(true);
-    } catch (error) {
-      setError(error.message);
-    }
-  };
-
-  // Submit class access request
-  const submitAccessRequest = async () => {
-    try {
-      setLoading(true);
-      await classService.requestClassAccess(accessToken, requestRole);
-      alert("Demande d'accès envoyée avec succès");
-      setShowAccessModal(false);
-      setAccessToken("");
     } catch (error) {
       setError(error.message);
     } finally {
@@ -262,23 +665,70 @@ const ClassesContent = ({ onManageClass }) => {
     }
   };
 
+  // Submit class access request
+  const submitAccessRequest = async () => {
+    try {
+      setLoading(true);
+      const currentUserId = localStorage.getItem("userId");
+      await accederService.demanderAcces({
+        utilisateurId: currentUserId,
+        classeId: selectedClass.id,
+        codeActivation: accessToken,
+        estParent: user.role === "PARENT",
+      });
+      alert("Demande d'accès envoyée avec succès au modérateur de la classe");
+      setShowAccessModal(false);
+      setAccessToken("");
+
+      // Optionally refresh the class list
+      const updatedClasses =
+        await classService.obtenirClassesUtilisateur(currentUserId);
+      setClasses(updatedClasses);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   if (loading && classes.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="animate-spin h-12 w-12 text-blue-500" />
+        <FontAwesomeIcon
+          icon={faSpinner}
+          className="animate-spin h-12 w-12 text-blue-500"
+        />
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-        <AlertCircle className="inline mr-2" />
+        <FontAwesomeIcon icon={faCircleExclamation} className="inline mr-2" />
         {error}
       </div>
     );
   }
-
+  if (isMobile) {
+    return (
+      <ClassesContentMobile
+        classes={classes}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        onManageClass={onManageClass}
+        onJoinByToken={handleTokenAccess}
+        onCreateClass={() =>
+          setActiveTab ? setActiveTab("create-class") : setShowCreateModal(true)
+        }
+        accessToken={accessToken}
+        setAccessToken={setAccessToken}
+        userRole={user.role}
+        accessRequestCounts={accessRequestCounts}
+        programmationCounts={programmationCounts}
+      />
+    );
+  }
   return (
     <div className="p-4 md:p-6">
       {/* Header with action buttons */}
@@ -295,7 +745,13 @@ const ClassesContent = ({ onManageClass }) => {
             className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition w-full md:w-auto justify-center"
             onClick={() => setAccessToken("")}
           >
-            <Key size={18} className="mr-2" />
+            <FontAwesomeIcon
+              icon={faKey}
+              className="mr-2"
+              style={{
+                fontSize: 18,
+              }}
+            />
             Accéder à une Classe
           </button>
 
@@ -304,7 +760,13 @@ const ClassesContent = ({ onManageClass }) => {
               className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition w-full md:w-auto justify-center"
               onClick={() => setShowCreateModal(true)}
             >
-              <Plus size={18} className="mr-2" />
+              <FontAwesomeIcon
+                icon={faPlus}
+                className="mr-2"
+                style={{
+                  fontSize: 18,
+                }}
+              />
               Créer une Classe
             </button>
           )}
@@ -314,7 +776,13 @@ const ClassesContent = ({ onManageClass }) => {
               className="flex items-center bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition w-full md:w-auto justify-center"
               onClick={() => setShowEstablishmentModal(true)}
             >
-              <Building size={18} className="mr-2" />
+              <FontAwesomeIcon
+                icon={faBuilding}
+                className="mr-2"
+                style={{
+                  fontSize: 18,
+                }}
+              />
               Créer un Établissement
             </button>
           )}
@@ -348,7 +816,13 @@ const ClassesContent = ({ onManageClass }) => {
         </div>
         <div className="hidden md:block ml-4">
           <div className="bg-green-200 rounded-full p-3">
-            <Key size={24} className="text-green-700" />
+            <FontAwesomeIcon
+              icon={faKey}
+              className="text-green-700"
+              style={{
+                fontSize: 24,
+              }}
+            />
           </div>
         </div>
       </div>
@@ -357,31 +831,19 @@ const ClassesContent = ({ onManageClass }) => {
       <div className="border-b mb-6">
         <div className="flex flex-wrap gap-2">
           <button
-            className={`px-4 py-2 font-medium ${
-              currentTab === "all"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
+            className={`px-4 py-2 font-medium ${currentTab === "all" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-800"}`}
             onClick={() => setCurrentTab("all")}
           >
             Toutes les Classes
           </button>
           <button
-            className={`px-4 py-2 font-medium ${
-              currentTab === "active"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
+            className={`px-4 py-2 font-medium ${currentTab === "active" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-800"}`}
             onClick={() => setCurrentTab("active")}
           >
             Actives
           </button>
           <button
-            className={`px-4 py-2 font-medium ${
-              currentTab === "inactive"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
+            className={`px-4 py-2 font-medium ${currentTab === "inactive" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-800"}`}
             onClick={() => setCurrentTab("inactive")}
           >
             Inactives
@@ -390,11 +852,7 @@ const ClassesContent = ({ onManageClass }) => {
           {(user.role === "ETABLISSEMENT" ||
             user.role === "ADMINISTRATEUR") && (
             <button
-              className={`px-4 py-2 font-medium ${
-                currentTab === "pending"
-                  ? "border-b-2 border-blue-600 text-blue-600"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
+              className={`px-4 py-2 font-medium ${currentTab === "pending" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-800"}`}
               onClick={() => setCurrentTab("pending")}
             >
               En Attente
@@ -406,9 +864,12 @@ const ClassesContent = ({ onManageClass }) => {
       {/* Search bar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div className="relative w-full md:w-64">
-          <Search
+          <FontAwesomeIcon
+            icon={faMagnifyingGlass}
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={18}
+            style={{
+              fontSize: 18,
+            }}
           />
           <input
             type="text"
@@ -430,35 +891,28 @@ const ClassesContent = ({ onManageClass }) => {
           filteredClasses.map((cls) => (
             <div
               key={cls.id}
-              className={`border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition ${
-                cls.statut === "EN_ATTENTE" ? "border-yellow-300" : ""
-              }`}
+              className={`border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition ${cls.statut === "EN_ATTENTE" ? "border-yellow-300" : ""}`}
             >
               <div
-                className={`p-4 ${
-                  cls.statut === "ACTIF"
-                    ? "bg-blue-50"
-                    : cls.statut === "EN_ATTENTE"
-                    ? "bg-yellow-50"
-                    : "bg-gray-50"
-                }`}
+                className={`p-4 ${cls.statut === "ACTIF" ? "bg-blue-50" : cls.statut === "EN_ATTENTE" ? "bg-yellow-50" : "bg-gray-50"}`}
               >
                 <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-semibold">{cls.nom}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold">{cls.nom}</h3>
+                    {accessRequestCounts[cls.id] > 0 && (
+                      <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse shadow-lg">
+                        {accessRequestCounts[cls.id]}
+                      </span>
+                    )}
+                  </div>
                   <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      cls.statut === "ACTIF"
-                        ? "bg-green-100 text-green-800"
-                        : cls.statut === "EN_ATTENTE"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
+                    className={`px-2 py-1 text-xs rounded-full ${cls.statut === "ACTIF" ? "bg-green-100 text-green-800" : cls.statut === "EN_ATTENTE" ? "bg-yellow-100 text-yellow-800" : "bg-gray-100 text-gray-800"}`}
                   >
                     {cls.statut === "ACTIF"
                       ? "Active"
                       : cls.statut === "EN_ATTENTE"
-                      ? "En Attente"
-                      : "Inactive"}
+                        ? "En Attente"
+                        : "Inactive"}
                   </span>
                 </div>
 
@@ -472,21 +926,33 @@ const ClassesContent = ({ onManageClass }) => {
 
                 {cls.etablissement && (
                   <div className="flex items-center mt-1 text-sm text-gray-500">
-                    <Building size={14} className="mr-1" />
+                    <FontAwesomeIcon
+                      icon={faBuilding}
+                      className="mr-1"
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                     <span>{cls.etablissement.nom}</span>
                   </div>
                 )}
 
                 {cls.historiqueActivations?.some(
-                  (h) => h.action === "DESACTIVATION"
+                  (h) => h.action === "DESACTIVATION",
                 ) && (
                   <div className="mt-2 text-xs text-red-600 flex items-center">
-                    <AlertCircle size={14} className="mr-1" />
+                    <FontAwesomeIcon
+                      icon={faCircleExclamation}
+                      className="mr-1"
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                     <span>
                       Désactivée:{" "}
                       {
                         cls.historiqueActivations.find(
-                          (h) => h.action === "DESACTIVATION"
+                          (h) => h.action === "DESACTIVATION",
                         )?.motifRejet
                       }
                     </span>
@@ -497,22 +963,48 @@ const ClassesContent = ({ onManageClass }) => {
               <div className="p-4 border-t">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center text-gray-600">
-                    <Users size={16} className="mr-1" />
+                    <FontAwesomeIcon
+                      icon={faUsers}
+                      className="mr-1"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
                     <span>{cls.eleves?.length || 0} élèves</span>
                   </div>
                   <div className="flex items-center text-gray-600">
-                    <BookOpen size={16} className="mr-1" />
-                    <span>{cls.salle}</span>
+                    <FontAwesomeIcon
+                      icon={faBookOpen}
+                      className="mr-1"
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
+                    <span>
+                      {programmationCounts[cls.id] || 0} cours programmés
+                    </span>
                   </div>
                 </div>
 
                 <div className="mt-3 flex items-center text-sm text-gray-600">
-                  <Calendar size={16} className="mr-1" />
+                  <FontAwesomeIcon
+                    icon={faCalendarDays}
+                    className="mr-1"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   <span>{cls.emploiDuTemps}</span>
                 </div>
 
                 <div className="mt-3 flex items-center text-sm text-gray-600">
-                  <Clock size={16} className="mr-1" />
+                  <FontAwesomeIcon
+                    icon={faClock}
+                    className="mr-1"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   <span>
                     Créée le: {new Date(cls.dateCreation).toLocaleDateString()}
                   </span>
@@ -527,9 +1019,15 @@ const ClassesContent = ({ onManageClass }) => {
                       {cls.statut === "ACTIF" && (
                         <button
                           onClick={() => onManageClass(cls.id)}
-                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center gap-1"
                         >
-                          Gérer
+                          <FontAwesomeIcon
+                            icon={faRightToBracket}
+                            style={{
+                              fontSize: 14,
+                            }}
+                          />
+                          Entrer
                         </button>
                       )}
                     </>
@@ -557,15 +1055,11 @@ const ClassesContent = ({ onManageClass }) => {
                     user.role === "ADMINISTRATEUR") &&
                     cls.statut !== "EN_ATTENTE" && (
                       <button
-                        className={`px-3 py-1 text-sm rounded transition ${
-                          cls.statut === "ACTIF"
-                            ? "border border-red-600 text-red-600 hover:bg-red-50"
-                            : "bg-green-600 text-white hover:bg-green-700"
-                        }`}
+                        className={`px-3 py-1 text-sm rounded transition ${cls.statut === "ACTIF" ? "border border-red-600 text-red-600 hover:bg-red-50" : "bg-green-600 text-white hover:bg-green-700"}`}
                         onClick={() =>
                           handleToggleClassStatus(
                             cls.id,
-                            cls.statut === "ACTIF" ? "deactivate" : "activate"
+                            cls.statut === "ACTIF" ? "deactivate" : "activate",
                           )
                         }
                       >
@@ -576,7 +1070,12 @@ const ClassesContent = ({ onManageClass }) => {
                   {user.role === "ADMINISTRATEUR" && (
                     <>
                       <button className="px-3 py-1 text-sm border rounded hover:bg-gray-50 transition">
-                        <Edit size={14} />
+                        <FontAwesomeIcon
+                          icon={faPenToSquare}
+                          style={{
+                            fontSize: 14,
+                          }}
+                        />
                       </button>
                       {cls.statut === "EN_ATTENTE" && (
                         <>
@@ -623,11 +1122,7 @@ const ClassesContent = ({ onManageClass }) => {
                         >
                           <div>
                             <span
-                              className={`inline-block px-1.5 py-0.5 rounded ${
-                                item.action === "ACTIVATION"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
+                              className={`inline-block px-1.5 py-0.5 rounded ${item.action === "ACTIVATION" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
                             >
                               {item.action === "ACTIVATION"
                                 ? "Activée"
@@ -663,7 +1158,12 @@ const ClassesContent = ({ onManageClass }) => {
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowCreateModal(false)}
               >
-                <XCircle size={20} />
+                <FontAwesomeIcon
+                  icon={faCircleXmark}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
               </button>
             </div>
 
@@ -679,7 +1179,10 @@ const ClassesContent = ({ onManageClass }) => {
                     placeholder="ex: 10A - Mathématiques"
                     value={newClass.nom}
                     onChange={(e) =>
-                      setNewClass({ ...newClass, nom: e.target.value })
+                      setNewClass({
+                        ...newClass,
+                        nom: e.target.value,
+                      })
                     }
                     required
                   />
@@ -695,10 +1198,38 @@ const ClassesContent = ({ onManageClass }) => {
                     placeholder="ex: Mathématiques"
                     value={newClass.matiere}
                     onChange={(e) =>
-                      setNewClass({ ...newClass, matiere: e.target.value })
+                      setNewClass({
+                        ...newClass,
+                        matiere: e.target.value,
+                      })
                     }
                     required
                   />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="flex items-center space-x-2 cursor-pointer p-3 bg-purple-50 border border-purple-100 rounded-lg">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                      checked={newClass.accesMajeur}
+                      onChange={(e) =>
+                        setNewClass({
+                          ...newClass,
+                          accesMajeur: e.target.checked,
+                        })
+                      }
+                    />
+                    <div>
+                      <span className="text-sm font-bold text-purple-900">
+                        Activer l'Accès Majeur (Étudiant Adulte)
+                      </span>
+                      <p className="text-[10px] text-purple-600">
+                        L'ajout se fait uniquement par email (pas de demande
+                        d'accès standard)
+                      </p>
+                    </div>
+                  </label>
                 </div>
 
                 <div>
@@ -712,7 +1243,10 @@ const ClassesContent = ({ onManageClass }) => {
                       placeholder="Niveau"
                       value={newClass.niveau}
                       onChange={(e) =>
-                        setNewClass({ ...newClass, niveau: e.target.value })
+                        setNewClass({
+                          ...newClass,
+                          niveau: e.target.value,
+                        })
                       }
                       required
                     />
@@ -722,7 +1256,10 @@ const ClassesContent = ({ onManageClass }) => {
                       placeholder="Section"
                       value={newClass.section}
                       onChange={(e) =>
-                        setNewClass({ ...newClass, section: e.target.value })
+                        setNewClass({
+                          ...newClass,
+                          section: e.target.value,
+                        })
                       }
                       required
                     />
@@ -758,7 +1295,10 @@ const ClassesContent = ({ onManageClass }) => {
                     placeholder="ex: B-103"
                     value={newClass.salle}
                     onChange={(e) =>
-                      setNewClass({ ...newClass, salle: e.target.value })
+                      setNewClass({
+                        ...newClass,
+                        salle: e.target.value,
+                      })
                     }
                     required
                   />
@@ -788,7 +1328,13 @@ const ClassesContent = ({ onManageClass }) => {
                   </select>
 
                   <div className="mt-2 text-xs text-gray-500 flex items-center">
-                    <Info size={14} className="mr-1" />
+                    <FontAwesomeIcon
+                      icon={faCircleInfo}
+                      className="mr-1"
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />
                     <span>
                       {newClass.etablissementId
                         ? "Cette classe nécessitera l'approbation de l'établissement"
@@ -801,7 +1347,7 @@ const ClassesContent = ({ onManageClass }) => {
                   establishments.find(
                     (est) =>
                       est.id === newClass.etablissementId &&
-                      est.optionTokenGeneral
+                      est.optionTokenGeneral,
                   ) && (
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -837,7 +1383,12 @@ const ClassesContent = ({ onManageClass }) => {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center"
                   disabled={loading}
                 >
-                  {loading && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
+                  {loading && (
+                    <FontAwesomeIcon
+                      icon={faSpinner}
+                      className="animate-spin mr-2 h-4 w-4"
+                    />
+                  )}
                   Créer la Classe
                 </button>
               </div>
@@ -856,7 +1407,12 @@ const ClassesContent = ({ onManageClass }) => {
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowEstablishmentModal(false)}
               >
-                <XCircle size={20} />
+                <FontAwesomeIcon
+                  icon={faCircleXmark}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
               </button>
             </div>
 
@@ -916,7 +1472,7 @@ const ClassesContent = ({ onManageClass }) => {
                     htmlFor="optionEnvoiMail"
                     className="text-sm text-gray-700"
                   >
-                    Envoyer un email pour les nouvelles classes
+                    Validation nouvelle classe
                   </label>
                 </div>
 
@@ -955,7 +1511,12 @@ const ClassesContent = ({ onManageClass }) => {
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center"
                   disabled={loading}
                 >
-                  {loading && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
+                  {loading && (
+                    <FontAwesomeIcon
+                      icon={faSpinner}
+                      className="animate-spin mr-2 h-4 w-4"
+                    />
+                  )}
                   Créer l'Établissement
                 </button>
               </div>
@@ -974,13 +1535,24 @@ const ClassesContent = ({ onManageClass }) => {
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowTokenModal(false)}
               >
-                <XCircle size={20} />
+                <FontAwesomeIcon
+                  icon={faCircleXmark}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
               </button>
             </div>
 
             <div className="text-center py-6">
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle size={32} className="text-green-600" />
+                <FontAwesomeIcon
+                  icon={faCircleCheck}
+                  className="text-green-600"
+                  style={{
+                    fontSize: 32,
+                  }}
+                />
               </div>
 
               <h3 className="text-lg font-medium mb-2">
@@ -1020,7 +1592,12 @@ const ClassesContent = ({ onManageClass }) => {
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowPaymentModal(false)}
               >
-                <XCircle size={20} />
+                <FontAwesomeIcon
+                  icon={faCircleXmark}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
               </button>
             </div>
 
@@ -1112,7 +1689,12 @@ const ClassesContent = ({ onManageClass }) => {
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowAccessModal(false)}
               >
-                <XCircle size={20} />
+                <FontAwesomeIcon
+                  icon={faCircleXmark}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
               </button>
             </div>
 
@@ -1122,12 +1704,24 @@ const ClassesContent = ({ onManageClass }) => {
               </p>
               <p className="text-gray-500 text-sm mt-1">
                 <span className="flex items-center">
-                  <Users size={14} className="mr-1" />{" "}
+                  <FontAwesomeIcon
+                    icon={faUsers}
+                    className="mr-1"
+                    style={{
+                      fontSize: 14,
+                    }}
+                  />{" "}
                   {selectedClass.professeur?.nom || "Professeur non spécifié"}
                 </span>
                 {selectedClass.etablissement && (
                   <span className="flex items-center mt-1">
-                    <Building size={14} className="mr-1" />{" "}
+                    <FontAwesomeIcon
+                      icon={faBuilding}
+                      className="mr-1"
+                      style={{
+                        fontSize: 14,
+                      }}
+                    />{" "}
                     {selectedClass.etablissement.nom}
                   </span>
                 )}
@@ -1175,14 +1769,19 @@ const ClassesContent = ({ onManageClass }) => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
                 {selectedClass.statut === "EN_ATTENTE"
-                  ? "Rejeter la Classe"
+                  ? getClassActionTexts("reject").title
                   : "Désactiver la Classe"}
               </h2>
               <button
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowRejectModal(false)}
               >
-                <XCircle size={20} />
+                <FontAwesomeIcon
+                  icon={faCircleXmark}
+                  style={{
+                    fontSize: 20,
+                  }}
+                />
               </button>
             </div>
 
@@ -1193,13 +1792,16 @@ const ClassesContent = ({ onManageClass }) => {
               }}
             >
               <div className="mb-4">
-                <p className="text-gray-700 mb-2">
-                  Vous êtes sur le point de{" "}
-                  {selectedClass.statut === "EN_ATTENTE"
-                    ? "rejeter"
-                    : "désactiver"}{" "}
-                  : <strong>{selectedClass.nom}</strong>
-                </p>
+                {selectedClass.statut === "EN_ATTENTE" ? (
+                  <p className="text-gray-700 mb-2">
+                    {getClassActionTexts("reject", selectedClass.nom).message}
+                  </p>
+                ) : (
+                  <p className="text-gray-700 mb-2">
+                    Vous êtes sur le point de désactiver :{" "}
+                    <strong>{selectedClass.nom}</strong>
+                  </p>
+                )}
 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1244,18 +1846,22 @@ const ClassesContent = ({ onManageClass }) => {
               <div className="flex justify-end gap-2 mt-6">
                 <button
                   type="button"
-                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                  disabled={rejectSubmitting}
+                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-60"
                   onClick={() => setShowRejectModal(false)}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                  disabled={rejectSubmitting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {selectedClass.statut === "EN_ATTENTE"
-                    ? "Confirmer le Rejet"
-                    : "Confirmer la Désactivation"}
+                  {rejectSubmitting
+                    ? "En cours..."
+                    : selectedClass.statut === "EN_ATTENTE"
+                      ? "Confirmer"
+                      : "Confirmer la Désactivation"}
                 </button>
               </div>
             </form>
@@ -1265,5 +1871,4 @@ const ClassesContent = ({ onManageClass }) => {
     </div>
   );
 };
-
 export default ClassesContent;

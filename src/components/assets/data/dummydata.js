@@ -28,7 +28,6 @@ export const LinkData = [
   },
 ];
 
-// Updated product categories for the courses section
 export const courses = [
   {
     id: 1,
@@ -54,5 +53,28 @@ export const courses = [
     id: 5,
     cover: "../images/lycees.jpg",
     title: "Lycées",
+  },
+];
+
+export const coursesCard = courses;
+
+export const team = [
+  {
+    id: 1,
+    cover: "../images/instructor-1.jpg",
+    name: "Instructor 1",
+    role: "Teacher",
+  },
+  {
+    id: 2,
+    cover: "../images/instructor-2.jpg",
+    name: "Instructor 2",
+    role: "Teacher",
+  },
+  {
+    id: 3,
+    cover: "../images/instructor-3.jpg",
+    name: "Instructor 3",
+    role: "Teacher",
   },
 ];

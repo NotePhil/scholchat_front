@@ -9,22 +9,23 @@ import {
   Tabs,
   Typography,
 } from "antd";
-import {
-  CheckOutlined,
-  CloseOutlined,
-  ExclamationCircleOutlined,
-  TeamOutlined,
-  DeleteOutlined,
-  UserOutlined,
-  SolutionOutlined,
-  SafetyCertificateOutlined,
-  ClockCircleOutlined,
-} from "@ant-design/icons";
 import AccederService from "../../../../services/accederService";
-
+import AccessRequestDecisionModal from "../../../../components/common/AccessRequestDecisionModal";
+import { accessRequestLabel } from "../../../../utils/accessRequestLabel";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCertificate,
+  faCheck,
+  faCircleExclamation,
+  faClock,
+  faLightbulb,
+  faTrash,
+  faUser,
+  faUserGroup,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const { TabPane } = Tabs;
 const { Text } = Typography;
-
 const ClassAccessRequests = ({
   classId,
   onError,
@@ -37,31 +38,26 @@ const ClassAccessRequests = ({
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("pending");
-
+  // Approve / reject confirmation: { mode, request }
+  const [decision, setDecision] = useState(null);
   useEffect(() => {
     if (classId) {
       fetchAccessData();
     }
   }, [classId]);
-
   const fetchAccessData = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const requests = await AccederService.obtenirDemandesAccesPourClasse(
-        classId
-      );
+      const requests =
+        await AccederService.obtenirDemandesAccesPourClasse(classId);
       const membersResponse = await fetch(
-        `http://localhost:8486/scholchat/acceder/classes/utilisateurs?classeIds=${classId}`
+        `${process.env.REACT_APP_API_BASE_URL}/acceder/classes/utilisateurs?classeIds=${classId}`,
       );
-
       if (!membersResponse.ok) {
         throw new Error("Failed to fetch approved members");
       }
-
       const members = await membersResponse.json();
-
       const processedRequests = (requests || [])
         .filter((request) => request.etat === "EN_ATTENTE")
         .map((request) => ({
@@ -70,12 +66,16 @@ const ClassAccessRequests = ({
           nom: request.utilisateurNom || "",
           prenom: request.utilisateurPrenom || "",
           email: request.utilisateurEmail || "",
+          telephone: request.utilisateurTelephone || "",
           codeActivation: request.codeActivation || "",
           etat: request.etat || "EN_ATTENTE",
           dateDemande: request.dateDemande || "",
           type: request.type || "REQUESTER",
+          estParent: request.estParent || false,
+          eleveAssocieId: request.eleveAssocieId || "",
+          eleveAssocieNom: request.eleveAssocieNom || "",
+          eleveAssociePrenom: request.eleveAssociePrenom || "",
         }));
-
       const processedMembers = (members || []).map((member) => ({
         id: member.id || member.utilisateurId || "",
         nom: member.nom || member.utilisateurNom || "",
@@ -85,7 +85,6 @@ const ClassAccessRequests = ({
         etat: "APPROUVEE",
         dateApproval: member.dateApproval || member.dateDemande || "",
       }));
-
       setPendingRequests(processedRequests);
       setApprovedMembers(processedMembers);
     } catch (err) {
@@ -100,52 +99,28 @@ const ClassAccessRequests = ({
   };
 
   // Handler functions moved before they're used in column definitions
-  const handleApproveAccessRequest = async (requestId) => {
+  // Called from the decision modal: the API error is rethrown so the modal shows it inside itself;
+  // the success message is emitted by the caller only once the modal is closed.
+  const decideAccessRequest = async (mode, requestId, reason) => {
+    setActionLoading(`${mode}-${requestId}`);
     try {
-      setActionLoading(`approve-${requestId}`);
-      await AccederService.validerDemandeAcces(requestId);
-      message.success("Access request approved successfully");
-      if (onSuccess) {
-        onSuccess("Access request approved successfully");
-      }
-      await fetchAccessData();
-      if (onRefreshMembers) {
-        await onRefreshMembers();
-      }
+      if (mode === "approve") await AccederService.validerDemandeAcces(requestId);
+      else await AccederService.rejeterDemandeAcces(requestId, reason);
     } catch (err) {
-      console.error("Error approving access request:", err);
-      message.error(err.message || "Failed to approve access request");
-      if (onError) {
-        onError(err.message || "Failed to approve access request");
-      }
+      console.error(`Error on access request ${mode}:`, err);
+      throw err;
     } finally {
       setActionLoading(null);
     }
   };
-
-  const handleRejectAccessRequest = async (requestId) => {
+  const refreshAfterDecision = async (mode) => {
     try {
-      setActionLoading(`reject-${requestId}`);
-      await AccederService.rejeterDemandeAcces(
-        requestId,
-        "Rejected by administrator"
-      );
-      message.success("Access request rejected successfully");
-      if (onSuccess) {
-        onSuccess("Access request rejected successfully");
-      }
       await fetchAccessData();
+      if (mode === "approve" && onRefreshMembers) await onRefreshMembers();
     } catch (err) {
-      console.error("Error rejecting access request:", err);
-      message.error(err.message || "Failed to reject access request");
-      if (onError) {
-        onError(err.message || "Failed to reject access request");
-      }
-    } finally {
-      setActionLoading(null);
+      console.error("Refresh after access decision failed:", err);
     }
   };
-
   const handleRemoveMember = async (userId) => {
     try {
       setActionLoading(`remove-${userId}`);
@@ -168,30 +143,28 @@ const ClassAccessRequests = ({
       setActionLoading(null);
     }
   };
-
   const renderStatusTag = (etat) => {
     let color, icon, text;
     switch (etat) {
       case "APPROUVEE":
         color = "#52c41a";
-        icon = <CheckOutlined />;
+        icon = <FontAwesomeIcon icon={faCheck} />;
         text = "Approved";
         break;
       case "EN_ATTENTE":
         color = "#faad14";
-        icon = <ClockCircleOutlined />;
+        icon = <FontAwesomeIcon icon={faClock} />;
         text = "Pending";
         break;
       case "REJETEE":
         color = "#f5222d";
-        icon = <CloseOutlined />;
+        icon = <FontAwesomeIcon icon={faXmark} />;
         text = "Rejected";
         break;
       default:
         color = "#d9d9d9";
         text = etat || "Unknown";
     }
-
     return (
       <Tag
         icon={icon}
@@ -208,45 +181,43 @@ const ClassAccessRequests = ({
       </Tag>
     );
   };
-
   const renderRoleTag = (type) => {
     let color, icon, text;
     switch ((type || "").toLowerCase()) {
       case "admin":
       case "administrator":
         color = "red";
-        icon = <TeamOutlined />;
+        icon = <FontAwesomeIcon icon={faUserGroup} />;
         text = "Admin";
         break;
       case "enseignant":
       case "teacher":
       case "professor":
         color = "blue";
-        icon = <UserOutlined />;
+        icon = <FontAwesomeIcon icon={faUser} />;
         text = "Teacher";
         break;
       case "eleve":
       case "student":
         color = "green";
-        icon = <SolutionOutlined />;
+        icon = <FontAwesomeIcon icon={faLightbulb} />;
         text = "Student";
         break;
       case "parent":
         color = "orange";
-        icon = <SafetyCertificateOutlined />;
+        icon = <FontAwesomeIcon icon={faCertificate} />;
         text = "Parent";
         break;
       case "utilisateur":
         color = "gray";
-        icon = <UserOutlined />;
+        icon = <FontAwesomeIcon icon={faUser} />;
         text = "User";
         break;
       default:
         color = "gray";
-        icon = <UserOutlined />;
+        icon = <FontAwesomeIcon icon={faUser} />;
         text = type || "Member";
     }
-
     return (
       <Tag
         icon={icon}
@@ -263,15 +234,14 @@ const ClassAccessRequests = ({
       </Tag>
     );
   };
-
   const pendingRequestColumns = [
     {
       title: "Name",
       dataIndex: "nom",
       key: "name",
       render: (text, record) => {
-        const name = `${record.nom || ""} ${record.prenom || ""}`.trim();
-        return name || <Text type="secondary">N/A</Text>;
+        const name = `${record.prenom || ""} ${record.nom || ""}`.trim();
+        return name ? accessRequestLabel(record) : <Text type="secondary">N/A</Text>;
       },
     },
     {
@@ -287,13 +257,29 @@ const ClassAccessRequests = ({
       render: (type) => renderRoleTag(type),
     },
     {
+      title: "Élève associé",
+      key: "eleveAssocie",
+      render: (_, record) => {
+        if (!record.estParent && !record.eleveAssocieId) {
+          return <Text type="secondary">-</Text>;
+        }
+        const eleveName =
+          `${record.eleveAssociePrenom || ""} ${record.eleveAssocieNom || ""}`.trim();
+        return (
+          eleveName ||
+          record.eleveAssocieId || <Text type="secondary">Non renseigné</Text>
+        );
+      },
+      responsive: ["xs", "sm", "md", "lg", "xl"],
+    },
+    {
       title: "Status",
       dataIndex: "etat",
       key: "status",
       render: (etat) => renderStatusTag(etat),
     },
     {
-      title: "Activation Code",
+      title: "Code",
       dataIndex: "codeActivation",
       key: "code",
       render: (code) => code || <Text type="secondary">N/A</Text>,
@@ -316,31 +302,32 @@ const ClassAccessRequests = ({
         <Space>
           <Button
             type="primary"
-            onClick={() => handleApproveAccessRequest(record.id)}
+            onClick={() => setDecision({ mode: "approve", request: record })}
             loading={actionLoading === `approve-${record.id}`}
             style={{
               borderRadius: "8px",
               background: "#52c41a",
               borderColor: "#52c41a",
             }}
-            icon={<CheckOutlined />}
+            icon={<FontAwesomeIcon icon={faCheck} />}
           >
-            Approve
+            Accepter
           </Button>
           <Button
             danger
-            onClick={() => handleRejectAccessRequest(record.id)}
+            onClick={() => setDecision({ mode: "reject", request: record })}
             loading={actionLoading === `reject-${record.id}`}
-            style={{ borderRadius: "8px" }}
-            icon={<CloseOutlined />}
+            style={{
+              borderRadius: "8px",
+            }}
+            icon={<FontAwesomeIcon icon={faXmark} />}
           >
-            Reject
+            Refuser
           </Button>
         </Space>
       ),
     },
   ];
-
   const memberColumns = [
     {
       title: "Name",
@@ -380,40 +367,67 @@ const ClassAccessRequests = ({
       render: (_, record) => (
         <Button
           danger
-          icon={<DeleteOutlined />}
+          icon={<FontAwesomeIcon icon={faTrash} />}
           onClick={() => handleRemoveMember(record.id)}
           loading={actionLoading === `remove-${record.id}`}
-          style={{ borderRadius: "8px" }}
+          style={{
+            borderRadius: "8px",
+          }}
         >
           Remove
         </Button>
       ),
     },
   ];
-
   if (error) {
     return (
       <Empty
         description={
-          <span style={{ color: "#ff4d4f" }}>
+          <span
+            style={{
+              color: "#ff4d4f",
+            }}
+          >
             Error loading access data: {error}
           </span>
         }
       />
     );
   }
-
+  const decisionLoading =
+    !!decision && actionLoading === `${decision.mode}-${decision.request?.id}`;
   return (
+    <>
+    <AccessRequestDecisionModal
+      open={!!decision}
+      mode={decision?.mode}
+      request={decision?.request}
+      loading={decisionLoading}
+      onCancel={() => setDecision(null)}
+      onConfirm={async (reason) => {
+        const { mode, request } = decision;
+        await decideAccessRequest(mode, request.id, reason);
+        setDecision(null);
+        const text = mode === "approve" ? "Demande d'accès approuvée" : "Demande d'accès rejetée";
+        if (onSuccess) onSuccess(text);
+        else message.success(text);
+        refreshAfterDecision(mode);
+      }}
+    />
     <Tabs
       defaultActiveKey="pending"
       activeKey={activeTab}
       onChange={setActiveTab}
-      style={{ background: "#fff", padding: "16px", borderRadius: "8px" }}
+      style={{
+        background: "#fff",
+        padding: "16px",
+        borderRadius: "8px",
+      }}
     >
       <TabPane
         tab={
           <span>
-            <ExclamationCircleOutlined />
+            <FontAwesomeIcon icon={faCircleExclamation} />
             Pending Requests ({pendingRequests.length})
           </span>
         }
@@ -432,7 +446,9 @@ const ClassAccessRequests = ({
               />
             ),
           }}
-          scroll={{ x: 1200 }}
+          scroll={{
+            x: 1200,
+          }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -443,7 +459,7 @@ const ClassAccessRequests = ({
       <TabPane
         tab={
           <span>
-            <TeamOutlined />
+            <FontAwesomeIcon icon={faUserGroup} />
             Approved Members ({approvedMembers.length})
           </span>
         }
@@ -462,7 +478,9 @@ const ClassAccessRequests = ({
               />
             ),
           }}
-          scroll={{ x: 1000 }}
+          scroll={{
+            x: 1000,
+          }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -471,7 +489,7 @@ const ClassAccessRequests = ({
         />
       </TabPane>
     </Tabs>
+    </>
   );
 };
-
 export default ClassAccessRequests;

@@ -3,6 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   showSidebar: true,
   activeTab: "dashboard",
+  tabData: null,
   isDark: false,
   currentTheme: "blue",
   currentLanguage: "fr",
@@ -23,8 +24,15 @@ const uiSlice = createSlice({
       state.showSidebar = action.payload;
     },
     setActiveTab: (state, action) => {
-      state.activeTab = action.payload;
-      if (action.payload === "messages") {
+      if (typeof action.payload === 'string') {
+        state.activeTab = action.payload;
+        state.tabData = null;
+      } else {
+        state.activeTab = action.payload.tab;
+        state.tabData = action.payload.data || null;
+      }
+      
+      if (state.activeTab === "messages") {
         state.showMessaging = true;
       } else {
         state.showMessaging = false;

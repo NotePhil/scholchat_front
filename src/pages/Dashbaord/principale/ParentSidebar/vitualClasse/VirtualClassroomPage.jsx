@@ -1,35 +1,32 @@
 import React, { useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  Camera,
-  CameraOff,
-  Mic,
-  MicOff,
-  Users,
-  MessageCircle,
-  Share2,
-  Settings,
-  Phone,
-  PhoneOff,
-  Monitor,
-  Hand,
-  Grid3X3,
-  User,
-  Send,
-  Smile,
-  Paperclip,
-  MoreVertical,
-  Volume2,
-  VolumeX,
-  Maximize,
-  Minimize,
-  X,
-  BookOpen,
-  FileText,
-  Download,
-  Edit3,
-  Video,
-} from "lucide-react";
-
+  faCamera,
+  faComment,
+  faCompress,
+  faDesktop,
+  faDownload,
+  faEllipsisVertical,
+  faExpand,
+  faFaceSmile,
+  faFileLines,
+  faGear,
+  faHand,
+  faMicrophone,
+  faMicrophoneSlash,
+  faPaperPlane,
+  faPaperclip,
+  faPhoneSlash,
+  faShareNodes,
+  faTableCellsLarge,
+  faUser,
+  faUsers,
+  faVideo,
+  faVideoSlash,
+  faVolumeHigh,
+  faVolumeXmark,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 const VirtualClassroomModal = ({
   isOpen,
   onClose,
@@ -71,7 +68,6 @@ const VirtualClassroomModal = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [notes, setNotes] = useState("");
   const [screenShare, setScreenShare] = useState(false);
-
   const participants = [
     {
       name: "Prof. Martin",
@@ -130,7 +126,6 @@ const VirtualClassroomModal = ({
       isVideoOn: false,
     },
   ];
-
   const sendMessage = () => {
     if (chatMessage.trim()) {
       const newMessage = {
@@ -147,27 +142,22 @@ const VirtualClassroomModal = ({
       setChatMessage("");
     }
   };
-
   const downloadNotes = () => {
     const element = document.createElement("a");
-    const file = new Blob([notes], { type: "text/plain" });
+    const file = new Blob([notes], {
+      type: "text/plain",
+    });
     element.href = URL.createObjectURL(file);
-    element.download = `notes-${className}-${new Date().toLocaleDateString(
-      "fr-FR"
-    )}.txt`;
+    element.download = `notes-${className}-${new Date().toLocaleDateString("fr-FR")}.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
   };
-
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center p-4">
       <div
-        className={`bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-3xl shadow-2xl transition-all duration-500 ${
-          isFullscreen ? "w-full h-full" : "w-full max-w-7xl h-[90vh]"
-        } overflow-hidden border border-purple-500/20 flex flex-col`}
+        className={`bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-3xl shadow-2xl transition-all duration-500 ${isFullscreen ? "w-full h-full" : "w-full max-w-7xl h-[90vh]"} overflow-hidden border border-purple-500/20 flex flex-col`}
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 p-4 flex items-center justify-between">
@@ -192,21 +182,45 @@ const VirtualClassroomModal = ({
               className="p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all duration-200"
               title="Notes"
             >
-              <FileText size={18} />
+              <FontAwesomeIcon
+                icon={faFileLines}
+                style={{
+                  fontSize: 18,
+                }}
+              />
             </button>
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all duration-200"
               title={isFullscreen ? "Réduire" : "Plein écran"}
             >
-              {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+              {isFullscreen ? (
+                <FontAwesomeIcon
+                  icon={faCompress}
+                  style={{
+                    fontSize: 18,
+                  }}
+                />
+              ) : (
+                <FontAwesomeIcon
+                  icon={faExpand}
+                  style={{
+                    fontSize: 18,
+                  }}
+                />
+              )}
             </button>
             <button
               onClick={onClose}
               className="p-2 bg-red-500/80 hover:bg-red-500 rounded-full text-white transition-all duration-200"
               title="Quitter"
             >
-              <X size={18} />
+              <FontAwesomeIcon
+                icon={faXmark}
+                style={{
+                  fontSize: 18,
+                }}
+              />
             </button>
           </div>
         </div>
@@ -219,36 +233,39 @@ const VirtualClassroomModal = ({
               <div className="flex space-x-1 bg-slate-700/50 rounded-lg p-1">
                 <button
                   onClick={() => setActiveView("grid")}
-                  className={`p-2 rounded-md text-sm transition-all ${
-                    activeView === "grid"
-                      ? "bg-purple-500 text-white"
-                      : "text-slate-300 hover:bg-slate-600"
-                  }`}
+                  className={`p-2 rounded-md text-sm transition-all ${activeView === "grid" ? "bg-purple-500 text-white" : "text-slate-300 hover:bg-slate-600"}`}
                   title="Vue en grille"
                 >
-                  <Grid3X3 size={16} />
+                  <FontAwesomeIcon
+                    icon={faTableCellsLarge}
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                 </button>
                 <button
                   onClick={() => setActiveView("speaker")}
-                  className={`p-2 rounded-md text-sm transition-all ${
-                    activeView === "speaker"
-                      ? "bg-purple-500 text-white"
-                      : "text-slate-300 hover:bg-slate-600"
-                  }`}
+                  className={`p-2 rounded-md text-sm transition-all ${activeView === "speaker" ? "bg-purple-500 text-white" : "text-slate-300 hover:bg-slate-600"}`}
                   title="Vue présentateur"
                 >
-                  <User size={16} />
+                  <FontAwesomeIcon
+                    icon={faUser}
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                 </button>
                 <button
                   onClick={() => setActiveView("gallery")}
-                  className={`p-2 rounded-md text-sm transition-all ${
-                    activeView === "gallery"
-                      ? "bg-purple-500 text-white"
-                      : "text-slate-300 hover:bg-slate-600"
-                  }`}
+                  className={`p-2 rounded-md text-sm transition-all ${activeView === "gallery" ? "bg-purple-500 text-white" : "text-slate-300 hover:bg-slate-600"}`}
                   title="Galerie"
                 >
-                  <Video size={16} />
+                  <FontAwesomeIcon
+                    icon={faVideo}
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                 </button>
               </div>
             </div>
@@ -262,7 +279,13 @@ const VirtualClassroomModal = ({
                 {screenShare ? (
                   <div className="h-full flex flex-col items-center justify-center bg-black">
                     <div className="text-center p-4">
-                      <Monitor size={48} className="text-white mx-auto mb-4" />
+                      <FontAwesomeIcon
+                        icon={faDesktop}
+                        className="text-white mx-auto mb-4"
+                        style={{
+                          fontSize: 48,
+                        }}
+                      />
                       <h3 className="text-white text-xl font-bold">
                         Partage d'écran
                       </h3>
@@ -275,7 +298,13 @@ const VirtualClassroomModal = ({
                   <div className="h-full flex items-center justify-center">
                     <div className="text-center">
                       <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-4 mx-auto shadow-lg">
-                        <User size={48} className="text-white" />
+                        <FontAwesomeIcon
+                          icon={faUser}
+                          className="text-white"
+                          style={{
+                            fontSize: 48,
+                          }}
+                        />
                       </div>
                       <h3 className="text-white text-2xl font-bold mb-2">
                         Prof. Martin
@@ -317,11 +346,23 @@ const VirtualClassroomModal = ({
                         <div className="relative h-full flex flex-col items-center justify-center p-2">
                           {participant.isVideoOn ? (
                             <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center mb-2">
-                              <User size={20} className="text-white" />
+                              <FontAwesomeIcon
+                                icon={faUser}
+                                className="text-white"
+                                style={{
+                                  fontSize: 20,
+                                }}
+                              />
                             </div>
                           ) : (
                             <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center mb-2">
-                              <User size={20} className="text-slate-400" />
+                              <FontAwesomeIcon
+                                icon={faUser}
+                                className="text-slate-400"
+                                style={{
+                                  fontSize: 20,
+                                }}
+                              />
                             </div>
                           )}
                           <span className="text-white text-xs font-medium text-center truncate w-full px-1">
@@ -343,80 +384,127 @@ const VirtualClassroomModal = ({
               <div className="flex items-center justify-center space-x-3">
                 <button
                   onClick={() => setIsMicOn(!isMicOn)}
-                  className={`p-3 rounded-xl transition-all duration-200 ${
-                    isMicOn
-                      ? "bg-green-500 hover:bg-green-600 text-white"
-                      : "bg-red-500 hover:bg-red-600 text-white"
-                  }`}
+                  className={`p-3 rounded-xl transition-all duration-200 ${isMicOn ? "bg-green-500 hover:bg-green-600 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
                   title={isMicOn ? "Désactiver le micro" : "Activer le micro"}
                 >
-                  {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
+                  {isMicOn ? (
+                    <FontAwesomeIcon
+                      icon={faMicrophone}
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  ) : (
+                    <FontAwesomeIcon
+                      icon={faMicrophoneSlash}
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  )}
                 </button>
 
                 <button
                   onClick={() => setIsCameraOn(!isCameraOn)}
-                  className={`p-3 rounded-xl transition-all duration-200 ${
-                    isCameraOn
-                      ? "bg-green-500 hover:bg-green-600 text-white"
-                      : "bg-red-500 hover:bg-red-600 text-white"
-                  }`}
+                  className={`p-3 rounded-xl transition-all duration-200 ${isCameraOn ? "bg-green-500 hover:bg-green-600 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
                   title={
                     isCameraOn ? "Désactiver la caméra" : "Activer la caméra"
                   }
                 >
-                  {isCameraOn ? <Camera size={20} /> : <CameraOff size={20} />}
+                  {isCameraOn ? (
+                    <FontAwesomeIcon
+                      icon={faCamera}
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  ) : (
+                    <FontAwesomeIcon
+                      icon={faVideoSlash}
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  )}
                 </button>
 
                 <button
                   onClick={() => setIsSpeakerOn(!isSpeakerOn)}
-                  className={`p-3 rounded-xl transition-all duration-200 ${
-                    isSpeakerOn
-                      ? "bg-blue-500 hover:bg-blue-600 text-white"
-                      : "bg-slate-600 hover:bg-slate-500 text-white"
-                  }`}
+                  className={`p-3 rounded-xl transition-all duration-200 ${isSpeakerOn ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-slate-600 hover:bg-slate-500 text-white"}`}
                   title={isSpeakerOn ? "Désactiver le son" : "Activer le son"}
                 >
-                  {isSpeakerOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                  {isSpeakerOn ? (
+                    <FontAwesomeIcon
+                      icon={faVolumeHigh}
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  ) : (
+                    <FontAwesomeIcon
+                      icon={faVolumeXmark}
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  )}
                 </button>
 
                 <button
                   onClick={() => setIsHandRaised(!isHandRaised)}
-                  className={`p-3 rounded-xl transition-all duration-200 ${
-                    isHandRaised
-                      ? "bg-yellow-500 hover:bg-yellow-600 text-white animate-bounce"
-                      : "bg-slate-600 hover:bg-slate-500 text-white"
-                  }`}
+                  className={`p-3 rounded-xl transition-all duration-200 ${isHandRaised ? "bg-yellow-500 hover:bg-yellow-600 text-white animate-bounce" : "bg-slate-600 hover:bg-slate-500 text-white"}`}
                   title={isHandRaised ? "Baisser la main" : "Lever la main"}
                 >
-                  <Hand size={20} />
+                  <FontAwesomeIcon
+                    icon={faHand}
+                    style={{
+                      fontSize: 20,
+                    }}
+                  />
                 </button>
 
                 <div className="w-px h-8 bg-slate-600"></div>
 
                 <button
                   onClick={() => setScreenShare(!screenShare)}
-                  className={`p-3 rounded-xl transition-all duration-200 ${
-                    screenShare
-                      ? "bg-purple-600 hover:bg-purple-700 text-white"
-                      : "bg-slate-600 hover:bg-slate-500 text-white"
-                  }`}
+                  className={`p-3 rounded-xl transition-all duration-200 ${screenShare ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-slate-600 hover:bg-slate-500 text-white"}`}
                   title="Partager l'écran"
                 >
-                  <Share2 size={20} />
+                  <FontAwesomeIcon
+                    icon={faShareNodes}
+                    style={{
+                      fontSize: 20,
+                    }}
+                  />
                 </button>
 
                 <button className="p-3 bg-slate-600 hover:bg-slate-500 rounded-xl text-white transition-all duration-200">
-                  <Monitor size={20} />
+                  <FontAwesomeIcon
+                    icon={faDesktop}
+                    style={{
+                      fontSize: 20,
+                    }}
+                  />
                 </button>
 
                 <button className="p-3 bg-slate-600 hover:bg-slate-500 rounded-xl text-white transition-all duration-200">
-                  <Settings size={20} />
+                  <FontAwesomeIcon
+                    icon={faGear}
+                    style={{
+                      fontSize: 20,
+                    }}
+                  />
                 </button>
 
                 <div className="w-px h-8 bg-slate-600"></div>
 
                 <button className="p-3 bg-red-500 hover:bg-red-600 rounded-xl text-white transition-all duration-200">
-                  <PhoneOff size={20} />
+                  <FontAwesomeIcon
+                    icon={faPhoneSlash}
+                    style={{
+                      fontSize: 20,
+                    }}
+                  />
                 </button>
               </div>
             </div>
@@ -433,13 +521,15 @@ const VirtualClassroomModal = ({
                     setShowParticipants(false);
                     setShowNotes(false);
                   }}
-                  className={`flex-1 p-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    showChat
-                      ? "bg-purple-500 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
+                  className={`flex-1 p-2 rounded-lg text-sm font-medium transition-all duration-200 ${showChat ? "bg-purple-500 text-white" : "bg-slate-700 text-slate-300 hover:bg-slate-600"}`}
                 >
-                  <MessageCircle size={16} className="inline mr-2" />
+                  <FontAwesomeIcon
+                    icon={faComment}
+                    className="inline mr-2"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   Chat ({messages.length})
                 </button>
                 <button
@@ -448,13 +538,15 @@ const VirtualClassroomModal = ({
                     setShowChat(false);
                     setShowNotes(false);
                   }}
-                  className={`flex-1 p-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    showParticipants
-                      ? "bg-purple-500 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
+                  className={`flex-1 p-2 rounded-lg text-sm font-medium transition-all duration-200 ${showParticipants ? "bg-purple-500 text-white" : "bg-slate-700 text-slate-300 hover:bg-slate-600"}`}
                 >
-                  <Users size={16} className="inline mr-2" />
+                  <FontAwesomeIcon
+                    icon={faUsers}
+                    className="inline mr-2"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   Participants ({participants.length})
                 </button>
                 <button
@@ -463,13 +555,15 @@ const VirtualClassroomModal = ({
                     setShowChat(false);
                     setShowParticipants(false);
                   }}
-                  className={`flex-1 p-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    showNotes
-                      ? "bg-purple-500 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
+                  className={`flex-1 p-2 rounded-lg text-sm font-medium transition-all duration-200 ${showNotes ? "bg-purple-500 text-white" : "bg-slate-700 text-slate-300 hover:bg-slate-600"}`}
                 >
-                  <FileText size={16} className="inline mr-2" />
+                  <FontAwesomeIcon
+                    icon={faFileLines}
+                    className="inline mr-2"
+                    style={{
+                      fontSize: 16,
+                    }}
+                  />
                   Notes
                 </button>
               </div>
@@ -482,23 +576,11 @@ const VirtualClassroomModal = ({
                   {messages.map((message) => (
                     <div key={message.id} className="group">
                       <div
-                        className={`p-3 rounded-2xl ${
-                          message.isTeacher
-                            ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30"
-                            : message.user === "Vous"
-                            ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-400/30 ml-4"
-                            : "bg-slate-700/50 border border-slate-600/30"
-                        }`}
+                        className={`p-3 rounded-2xl ${message.isTeacher ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30" : message.user === "Vous" ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-400/30 ml-4" : "bg-slate-700/50 border border-slate-600/30"}`}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span
-                            className={`text-sm font-semibold ${
-                              message.isTeacher
-                                ? "text-purple-300"
-                                : message.user === "Vous"
-                                ? "text-blue-300"
-                                : "text-slate-300"
-                            }`}
+                            className={`text-sm font-semibold ${message.isTeacher ? "text-purple-300" : message.user === "Vous" ? "text-blue-300" : "text-slate-300"}`}
                           >
                             {message.user}
                             {message.isTeacher && (
@@ -531,10 +613,20 @@ const VirtualClassroomModal = ({
                       />
                       <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex space-x-1">
                         <button className="p-1.5 text-slate-400 hover:text-purple-400 transition-colors">
-                          <Smile size={16} />
+                          <FontAwesomeIcon
+                            icon={faFaceSmile}
+                            style={{
+                              fontSize: 16,
+                            }}
+                          />
                         </button>
                         <button className="p-1.5 text-slate-400 hover:text-purple-400 transition-colors">
-                          <Paperclip size={16} />
+                          <FontAwesomeIcon
+                            icon={faPaperclip}
+                            style={{
+                              fontSize: 16,
+                            }}
+                          />
                         </button>
                       </div>
                     </div>
@@ -542,7 +634,12 @@ const VirtualClassroomModal = ({
                       onClick={sendMessage}
                       className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl text-white transition-all duration-200 transform hover:scale-105"
                     >
-                      <Send size={16} />
+                      <FontAwesomeIcon
+                        icon={faPaperPlane}
+                        style={{
+                          fontSize: 16,
+                        }}
+                      />
                     </button>
                   </div>
                 </div>
@@ -561,13 +658,15 @@ const VirtualClassroomModal = ({
                       <div className="flex items-center space-x-3">
                         <div className="relative">
                           <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              participant.isHost
-                                ? "bg-gradient-to-br from-yellow-400 to-orange-500"
-                                : "bg-gradient-to-br from-blue-400 to-purple-500"
-                            }`}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center ${participant.isHost ? "bg-gradient-to-br from-yellow-400 to-orange-500" : "bg-gradient-to-br from-blue-400 to-purple-500"}`}
                           >
-                            <User size={16} className="text-white" />
+                            <FontAwesomeIcon
+                              icon={faUser}
+                              className="text-white"
+                              style={{
+                                fontSize: 16,
+                              }}
+                            />
                           </div>
                           {participant.isSpeaking && (
                             <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
@@ -584,12 +683,29 @@ const VirtualClassroomModal = ({
                       </div>
                       <div className="flex items-center space-x-1">
                         {participant.isVideoOn ? (
-                          <Camera size={14} className="text-green-400" />
+                          <FontAwesomeIcon
+                            icon={faCamera}
+                            className="text-green-400"
+                            style={{
+                              fontSize: 14,
+                            }}
+                          />
                         ) : (
-                          <CameraOff size={14} className="text-slate-500" />
+                          <FontAwesomeIcon
+                            icon={faVideoSlash}
+                            className="text-slate-500"
+                            style={{
+                              fontSize: 14,
+                            }}
+                          />
                         )}
                         <button className="p-1.5 text-slate-400 hover:text-white transition-colors">
-                          <MoreVertical size={16} />
+                          <FontAwesomeIcon
+                            icon={faEllipsisVertical}
+                            style={{
+                              fontSize: 16,
+                            }}
+                          />
                         </button>
                       </div>
                     </div>
@@ -608,7 +724,12 @@ const VirtualClassroomModal = ({
                     className="p-2 text-slate-400 hover:text-white transition-colors"
                     title="Télécharger les notes"
                   >
-                    <Download size={16} />
+                    <FontAwesomeIcon
+                      icon={faDownload}
+                      style={{
+                        fontSize: 16,
+                      }}
+                    />
                   </button>
                 </div>
                 <div className="flex-1 p-4">
@@ -627,5 +748,4 @@ const VirtualClassroomModal = ({
     </div>
   );
 };
-
 export default VirtualClassroomModal;

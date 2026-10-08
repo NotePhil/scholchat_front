@@ -1,0 +1,141 @@
+.PhoneInputCountry.PhoneInputCountry--searchable {
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  margin-right: 0.5rem;
+}
+
+.CountrySelectSearchable-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 100%;
+  padding: 0 0.25rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.CountrySelectSearchable-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.CountrySelectSearchable-flag {
+  font-size: 1.3em;
+  line-height: 1;
+}
+
+.CountrySelectSearchable-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  width: 280px;
+  max-width: 90vw;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Flip upward when there isn't enough room below the trigger. */
+.CountrySelectSearchable-dropdown--up {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.CountrySelectSearchable-search {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  border-bottom: 1px solid #eee;
+  outline: none;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.CountrySelectSearchable-search:focus {
+  border-bottom-color: #4caf50;
+}
+
+.CountrySelectSearchable-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.CountrySelectSearchable-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #222;
+}
+
+.CountrySelectSearchable-option:hover,
+.CountrySelectSearchable-option--selected {
+  background: #f0f6ff;
+}
+
+.CountrySelectSearchable-optionLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.CountrySelectSearchable-optionCode {
+  flex-shrink: 0;
+  color: #777;
+  font-variant-numeric: tabular-nums;
+}
+
+.CountrySelectSearchable-empty {
+  padding: 0.75rem;
+  text-align: center;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+/* Dark mode support, mirroring the app's data-theme convention. */
+[data-theme="dark"] .CountrySelectSearchable-dropdown,
+.dark-mode .CountrySelectSearchable-dropdown {
+  background: #1f2430;
+  border-color: #333a4d;
+}
+
+[data-theme="dark"] .CountrySelectSearchable-search,
+.dark-mode .CountrySelectSearchable-search {
+  background: #1f2430;
+  color: #eee;
+  border-bottom-color: #333a4d;
+}
+
+[data-theme="dark"] .CountrySelectSearchable-option,
+.dark-mode .CountrySelectSearchable-option {
+  color: #eee;
+}
+
+[data-theme="dark"] .CountrySelectSearchable-option:hover,
+[data-theme="dark"] .CountrySelectSearchable-option--selected,
+.dark-mode .CountrySelectSearchable-option:hover,
+.dark-mode .CountrySelectSearchable-option--selected {
+  background: #2a3142;
+}
