@@ -131,8 +131,7 @@ const ClassStatisticsTab = ({ classId, eleves = [] }) => {
     return <Empty description="Statistiques indisponibles pour le moment" />;
   }
 
-  const realCourses = stats.cours.filter((c) => c.coursId);
-  const progressionData = realCourses.map((c) => ({ name: c.titre, value: c.progressionMoyenne }));
+  const progressionData = stats.cours.map((c) => ({ name: c.titre, value: c.progressionMoyenne }));
   const moyenneData = stats.cours.map((c) => ({ name: c.titre, value: average(c.exercices.map((e) => e.moyenne)) }));
 
   const exerciseColumns = [
@@ -265,7 +264,7 @@ const ClassStatisticsTab = ({ classId, eleves = [] }) => {
 
       {stats.cours.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {realCourses.length > 0 && (
+          {stats.cours.length > 0 && (
             <SimpleBarChart title="Progression moyenne par cours (%)" data={progressionData} unit="%" max={100} />
           )}
           <SimpleBarChart title="Moyenne des exercices par cours (/20)" data={moyenneData} unit="/20" max={20} />
@@ -278,19 +277,17 @@ const ClassStatisticsTab = ({ classId, eleves = [] }) => {
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Aucun cours programmé" />
         ) : (
           <Collapse
-            defaultActiveKey={stats.cours.slice(0, 1).map((c) => String(c.coursId ?? "__general__"))}
+            defaultActiveKey={stats.cours.slice(0, 1).map((c) => String(c.coursId))}
             items={stats.cours.map((c) => {
               const aCorriger = c.exercices.reduce((n, e) => n + (e.enAttenteCorrection || 0), 0);
               return {
-                key: String(c.coursId ?? "__general__"),
+                key: String(c.coursId),
                 label: (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="font-semibold text-slate-800">{c.titre}</span>
-                    {c.coursId && (
-                      <span className="text-xs text-slate-500">
-                        Progression <strong style={{ color: INK }}>{fmtPct(c.progressionMoyenne)}</strong>
-                      </span>
-                    )}
+                    <span className="text-xs text-slate-500">
+                      Progression <strong style={{ color: INK }}>{fmtPct(c.progressionMoyenne)}</strong>
+                    </span>
                     <span className="text-xs text-slate-500">
                       {c.exercices.length} exercice{c.exercices.length > 1 ? "s" : ""}
                     </span>

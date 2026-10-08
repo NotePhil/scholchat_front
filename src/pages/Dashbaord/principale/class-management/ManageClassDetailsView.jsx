@@ -939,7 +939,8 @@ const ManageClassDetailsView = ({
       const data =
         await coursProgrammerService.obtenirProgrammationParClasse(classId);
       // Sort by status: EN_COURS (0), PLANIFIE (1), ANNULE (2), TERMINE (3)
-      const sorted = (data || []).sort((a, b) => {
+      // Every programmed exercise belongs to a course: legacy rows without one are ignored
+      const sorted = (data || []).filter((e) => e?.coursId).sort((a, b) => {
         const order = {
           EN_COURS: 0,
           PLANIFIE: 1,
@@ -963,7 +964,8 @@ const ManageClassDetailsView = ({
           classId,
         );
       // Sort by status: ACTIF/PUBLIE (0), BROUILLON (1), EN_ATTENTE_CORRECTION (2), CORRIGE (3), ANNULE (4)
-      const sorted = (data || []).sort((a, b) => {
+      // Every programmed exercise belongs to a course: legacy rows without one are ignored
+      const sorted = (data || []).filter((e) => e?.coursId).sort((a, b) => {
         const order = {
           ACTIF: 0,
           PUBLIE: 0,
@@ -2987,12 +2989,9 @@ const ManageClassDetailsView = ({
                   {
                     title: "Cours",
                     key: "cours",
-                    render: (_, record) =>
-                      record.coursId ? (
-                        <Tag color="green">{record.coursTitre || "Cours"}</Tag>
-                      ) : (
-                        <Tag>Exercices généraux</Tag>
-                      ),
+                    render: (_, record) => (
+                      <Tag color="green">{record.coursTitre || "Cours"}</Tag>
+                    ),
                   },
                   {
                     title: "Date Prévue",

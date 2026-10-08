@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Form, Select } from "antd";
-import {
-  GENERAL_COURSE_KEY,
-  loadClassCourseOptions,
-} from "../../../../../utils/scolarite";
+import { loadClassCourseOptions } from "../../../../../utils/scolarite";
 import NoCourseNotice from "./NoCourseNotice";
 
 /**
@@ -18,7 +15,7 @@ import NoCourseNotice from "./NoCourseNotice";
  * (backend field `coursParClasse`). Classes mapped to different courses
  * produce one programmation per course.
  */
-export const toCoursId = (value) => (!value || value === GENERAL_COURSE_KEY ? null : value);
+export const toCoursId = (value) => value || null;
 
 /** Message to show for a failed programming request (maps 400 COURS_REQUIS). */
 export const programmingErrorMessage = (e, fallback = "Erreur lors de la programmation") => {

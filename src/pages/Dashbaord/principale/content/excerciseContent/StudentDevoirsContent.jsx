@@ -29,8 +29,6 @@ import {
   faTrophy,
 } from "@fortawesome/free-solid-svg-icons";
 
-// Devoirs (DEVOIR) without a course; EXERCICE-type programmations only appear inside the courses
-const GENERAL_DEVOIRS_LABEL = "Devoirs généraux (sans cours)";
 const getUserId = () => {
   const isParent = (localStorage.getItem("userRole") || "")
     .toUpperCase()
@@ -201,6 +199,8 @@ const StudentDevoirsContent = ({ tabData = null }) => {
             for (const prog of records) {
               if (seen.has(prog.id)) continue;
               if (prog.typeAssignation !== "DEVOIR") continue;
+              // every devoir belongs to a course: legacy rows without one are ignored
+              if (!prog.coursId) continue;
               seen.add(prog.id);
               if (!prog.exerciseId) {
                 console.error(
@@ -429,29 +429,22 @@ const StudentDevoirsContent = ({ tabData = null }) => {
     corriges: inClass.filter((c) => c.isGraded).length,
   };
 
-  // Class → course sections (courses sorted by title, "Devoirs généraux (sans cours)" last)
+  // Class → course sections (courses sorted by title)
   const sections = (() => {
     const byClass = new Map();
     filtered.forEach((item) => {
       const cls = item.ep._classe || { id: "_", nom: "Classe" };
       if (!byClass.has(cls.id)) byClass.set(cls.id, { ...cls, courses: new Map() });
       const courses = byClass.get(cls.id).courses;
-      const ck = item.ep.coursId ? String(item.ep.coursId) : "_general";
-      if (!courses.has(ck))
-        courses.set(ck, {
-          key: ck,
-          titre: item.ep.coursId ? item.ep.coursTitre || "Cours" : GENERAL_DEVOIRS_LABEL,
-          items: [],
-        });
+      const ck = String(item.ep.coursId);
+      if (!courses.has(ck)) courses.set(ck, { key: ck, titre: item.ep.coursTitre || "Cours", items: [] });
       courses.get(ck).items.push(item);
     });
     return Array.from(byClass.values())
       .sort((a, b) => String(a.nom).localeCompare(String(b.nom)))
       .map((c) => ({
         ...c,
-        courses: Array.from(c.courses.values()).sort((a, b) =>
-          a.key === "_general" ? 1 : b.key === "_general" ? -1 : a.titre.localeCompare(b.titre),
-        ),
+        courses: Array.from(c.courses.values()).sort((a, b) => a.titre.localeCompare(b.titre)),
       }));
   })();
 
@@ -846,7 +839,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
                             className="w-full flex items-center gap-2 py-1.5 text-left"
                           >
                             <FontAwesomeIcon icon={collapsed[key] ? faChevronRight : faChevronDown} className="text-gray-300" style={{ fontSize: 10 }} />
-                            <FontAwesomeIcon icon={faBook} className={course.key === "_general" ? "text-slate-400" : "text-indigo-500"} style={{ fontSize: 12 }} />
+                            <FontAwesomeIcon icon={faBook} className="text-indigo-500" style={{ fontSize: 12 }} />
                             <span className="text-sm font-semibold text-gray-700 truncate">{course.titre}</span>
                             <span className="text-xs text-gray-400">({course.items.length})</span>
                           </button>

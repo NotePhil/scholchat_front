@@ -86,8 +86,7 @@ const scolariteService = {
   },
 
   /**
-   * Set / change the course of a programmed exercise (also for legacy rows
-   * without a course). The course is required (400 COURS_REQUIS) and must be
+   * Change the course of a programmed exercise. The course is required (400 COURS_REQUIS) and must be
    * programmed in the exercise's class (400 COURS_NON_PROGRAMME_DANS_CLASSE).
    */
   async changerCoursExerciseProgramme(exerciseProgrammerId, coursId) {

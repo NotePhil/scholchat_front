@@ -10,7 +10,6 @@ import {
   faCirclePlay,
   faClock,
   faEye,
-  faLayerGroup,
   faPenToSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import CourseDetailsView from "../../content/InterfaceCours/CourseDetailsView";
@@ -21,7 +20,6 @@ import scolariteService from "../../../../../services/scolariteService";
 import { exerciseProgrammerService } from "../../../../../services/exerciseProgrammerService";
 import { useOpenTab } from "../../../../../hooks/useOpenTab";
 import {
-  GENERAL_COURSE_LABEL,
   STATUS_META,
   TYPE_META,
   exerciseFigures,
@@ -55,8 +53,7 @@ const LEARNER_FILTERS = [
 ];
 
 /**
- * A course of a class (or the "Exercices généraux" group when course.coursId is null):
- * its content and the programmed exercises / devoirs linked to it.
+ * A course of a class: its content and the programmed exercises / devoirs linked to it.
  *  - learner (or parent): status, note, Faire / Voir la copie (inline)
  *  - professor: rendus/attendus, à corriger, moyenne, link to corrections, change course
  */
@@ -84,7 +81,7 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
         coursId ? scolariteService.getCoursExercices(classeId, coursId, learnerId) : Promise.resolve(null),
         mode === "professor" ? scolariteService.getStatistiquesClasse(classeId) : Promise.resolve(null),
       ]);
-      const own = classList.filter((e) => (coursId ? String(e.coursId) === String(coursId) : !e.coursId));
+      const own = classList.filter((e) => String(e.coursId) === String(coursId));
       let merged = own;
       if (apiList) {
         const byId = new Map(own.map((e) => [String(e.id), e]));
@@ -124,7 +121,7 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
         const effectif = num(stats?.effectif) ?? (eleves.length || null);
         const fromApi = {};
         (stats?.cours || [])
-          .filter((c) => (coursId ? String(c.coursId) === String(coursId) : !c.coursId))
+          .filter((c) => c.coursId && String(c.coursId) === String(coursId))
           .forEach((c) =>
             (c.exercices || []).forEach((e) => {
               fromApi[String(e.exerciseProgrammerId ?? e.id)] = e;
@@ -254,9 +251,9 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
         >
           Corrections
         </Button>
-        <Tooltip title={coursId ? "Rattacher à un autre cours" : "Ranger cet exercice dans un cours de la classe"}>
-          <Button size="small" type={coursId ? "text" : "default"} onClick={() => setCourseProg(e)}>
-            {coursId ? "Changer de cours" : "Associer à un cours"}
+        <Tooltip title="Rattacher à un autre cours">
+          <Button size="small" type="text" onClick={() => setCourseProg(e)}>
+            Changer de cours
           </Button>
         </Tooltip>
       </div>
@@ -311,11 +308,10 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
           <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-white/20" aria-label="Retour">
             <FontAwesomeIcon icon={faArrowLeft} />
           </button>
-          <FontAwesomeIcon icon={coursId ? faBookOpen : faLayerGroup} />
+          <FontAwesomeIcon icon={faBookOpen} />
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold truncate">{coursId ? course?.titre || "Cours" : GENERAL_COURSE_LABEL}</h2>
+            <h2 className="text-base font-bold truncate">{course?.titre || "Cours"}</h2>
             <p className="text-xs text-blue-100 truncate">
-              {!coursId ? "Exercices programmés sans cours associé · " : ""}
               {classe?.nom}
               {course?.matiere ? ` · ${course.matiere}` : ""}
               {course?.prochaineSession ? ` · prochaine session ${fmtDate(course.prochaineSession, true)}` : ""}
@@ -363,11 +359,7 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={
-              items.length === 0
-                ? coursId
-                  ? "Aucun exercice ni devoir lié à ce cours"
-                  : "Aucun exercice général"
-                : "Rien dans cette catégorie"
+              items.length === 0 ? "Aucun exercice ni devoir lié à ce cours" : "Rien dans cette catégorie"
             }
           />
         </div>

@@ -23,7 +23,6 @@ import CoursSelectField, {
   toCoursParClasse,
 } from "../../shared/scolarite/CoursSelectField";
 import ChangeCourseModal from "../../shared/scolarite/ChangeCourseModal";
-import { GENERAL_COURSE_LABEL } from "../../../../../utils/scolarite";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -245,8 +244,9 @@ const ExerciseProgrammerContent = () => {
 
       // Merge by programmer record ID — class items first so other professors' entries are included
       const merged = new Map();
+      // Every programmed exercise belongs to a course: legacy rows without one are ignored
       [...classItems, ...ownItems].forEach((p) => {
-        if (p?.id)
+        if (p?.id && p.coursId)
           merged.set(String(p.id), {
             ...p,
             // Flag: true if this professor programmed it
@@ -530,10 +530,10 @@ const ExerciseProgrammerContent = () => {
                         </div>
                         <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-xs">
                           <span
-                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${prog.coursId ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-200"}`}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100"
                           >
                             <FontAwesomeIcon icon={faBookOpen} style={{ fontSize: 10 }} />
-                            {prog.coursId ? prog.coursTitre || "Cours" : GENERAL_COURSE_LABEL}
+                            {prog.coursTitre || "Cours"}
                           </span>
                           {prog.isOwn && (
                             <button
@@ -626,9 +626,8 @@ const ExerciseProgrammerContent = () => {
         .forEach((c) => {
           if (!byClass.has(c.id)) byClass.set(c.id, { id: c.id, nom: c.nom || "Classe", courses: new Map() });
           const courses = byClass.get(c.id).courses;
-          const ck = prog.coursId ? String(prog.coursId) : "__general__";
-          if (!courses.has(ck))
-            courses.set(ck, { key: ck, titre: prog.coursId ? prog.coursTitre || "Cours" : GENERAL_COURSE_LABEL, items: [] });
+          const ck = String(prog.coursId);
+          if (!courses.has(ck)) courses.set(ck, { key: ck, titre: prog.coursTitre || "Cours", items: [] });
           courses.get(ck).items.push(prog);
         });
     });
@@ -636,9 +635,7 @@ const ExerciseProgrammerContent = () => {
       .sort((a, b) => a.nom.localeCompare(b.nom))
       .map((c) => ({
         ...c,
-        courses: Array.from(c.courses.values()).sort((a, b) =>
-          a.key === "__general__" ? 1 : b.key === "__general__" ? -1 : a.titre.localeCompare(b.titre),
-        ),
+        courses: Array.from(c.courses.values()).sort((a, b) => a.titre.localeCompare(b.titre)),
       }));
   })();
   const renderGrouped = () =>
@@ -680,7 +677,7 @@ const ExerciseProgrammerContent = () => {
                     />
                     <FontAwesomeIcon
                       icon={faBookOpen}
-                      className={course.key === "__general__" ? "text-slate-400" : "text-emerald-600"}
+                      className="text-emerald-600"
                       style={{ fontSize: 12 }}
                     />
                     <span className="text-xs font-semibold text-gray-700 truncate">{course.titre}</span>
@@ -1513,9 +1510,7 @@ const ExerciseProgrammerContent = () => {
               },
               {
                 label: "Cours",
-                value: detailProg.coursId
-                  ? detailProg.coursTitre || "Cours"
-                  : GENERAL_COURSE_LABEL,
+                value: detailProg.coursTitre || "Cours",
               },
               {
                 label: "Classes",

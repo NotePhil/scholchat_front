@@ -9,9 +9,6 @@ import { coursService } from "../services/CoursService";
 import scolariteService from "../services/scolariteService";
 import AccederService from "../services/accederService";
 
-export const GENERAL_COURSE_KEY = "__GENERAL__";
-export const GENERAL_COURSE_LABEL = "Exercices généraux";
-
 // ── formatting ────────────────────────────────────────────────────────────────
 
 export const num = (v) => {
@@ -165,15 +162,16 @@ export const exerciseFigures = (prog, attendus) => {
   };
 };
 
-export const courseKey = (coursId) => (coursId ? String(coursId) : GENERAL_COURSE_KEY);
-
 // ── loaders with fallbacks ───────────────────────────────────────────────────
 
-/** Programmed exercises of a class, normalised (empty list on error). */
+/**
+ * Programmed exercises of a class, normalised (empty list on error). Every
+ * programmed exercise belongs to a course: legacy rows without one are ignored.
+ */
 export const loadClassExercises = async (classeId, learnerId) => {
   try {
     const list = await exerciseProgrammerService.getExercisesProgrammesParClasse(classeId);
-    return (list || []).map((p) => normalizeProg(p, learnerId)).filter(Boolean);
+    return (list || []).map((p) => normalizeProg(p, learnerId)).filter((e) => e && e.coursId);
   } catch {
     return [];
   }
@@ -269,7 +267,7 @@ export const loadLearnerProgression = async (eleveId, classeId) => {
         enRetard: num(g.enRetard ?? g.devoirsEnRetard) ?? (data.devoirsEnRetard || []).length,
         derniereActivite: g.derniereActivite || g.dernierActivite || null,
       },
-      cours: (data.cours || []).map((c) => ({
+      cours: (data.cours || []).filter((c) => c.coursId).map((c) => ({
         coursId: c.coursId,
         titre: c.titre || "Cours",
         classeNom: c.classeNom || null,
@@ -281,7 +279,9 @@ export const loadLearnerProgression = async (eleveId, classeId) => {
         moyenne: num(c.moyenne),
         derniereActivite: c.derniereActivite || null,
       })),
-      devoirsEnRetard: (data.devoirsEnRetard || []).map((d) => normalizeProg(d, eleveId)),
+      devoirsEnRetard: (data.devoirsEnRetard || [])
+        .map((d) => normalizeProg(d, eleveId))
+        .filter((d) => d && d.coursId),
     };
   }
   return buildProgressionFallback(eleveId, classeId);
@@ -354,9 +354,9 @@ export const loadClassStatistics = async (classeId, eleves = []) => {
     return {
       fromApi: true,
       effectif: num(data.effectif) ?? eleves.length,
-      cours: (data.cours || []).map((c) => ({
-        coursId: c.coursId ?? null,
-        titre: c.titre || (c.coursId ? "Cours" : GENERAL_COURSE_LABEL),
+      cours: (data.cours || []).filter((c) => c.coursId).map((c) => ({
+        coursId: c.coursId,
+        titre: c.titre || "Cours",
         progressionMoyenne: num(c.progressionMoyenne),
         exercices: (c.exercices || []).map((e) => ({
           exerciseProgrammerId: e.exerciseProgrammerId ?? e.id,
@@ -383,20 +383,14 @@ export const loadClassStatistics = async (classeId, eleves = []) => {
   }
   const { courses, exercises } = await loadClassCourses(classeId);
   const effectif = eleves.length;
-  const groups = [
-    ...courses.map((c) => ({ coursId: c.coursId, titre: c.titre })),
-    { coursId: null, titre: GENERAL_COURSE_LABEL },
-  ];
-  const cours = groups
-    .map((g) => ({
-      coursId: g.coursId,
-      titre: g.titre,
-      progressionMoyenne: null,
-      exercices: exercises
-        .filter((e) => (g.coursId ? String(e.coursId) === String(g.coursId) : !e.coursId))
-        .map((e) => exerciseFigures(e, effectif || null)),
-    }))
-    .filter((g) => g.coursId || g.exercices.length);
+  const cours = courses.map((g) => ({
+    coursId: g.coursId,
+    titre: g.titre,
+    progressionMoyenne: null,
+    exercices: exercises
+      .filter((e) => String(e.coursId) === String(g.coursId))
+      .map((e) => exerciseFigures(e, effectif || null)),
+  }));
   const now = new Date();
   const devoirs = exercises.filter((e) => e.type === "DEVOIR");
   const stats = eleves.map((s) => {

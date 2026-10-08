@@ -5,8 +5,7 @@ import { loadCommonCourseOptions } from "../../../../../utils/scolarite";
 import NoCourseNotice from "./NoCourseNotice";
 
 /**
- * Change the course of a programmed exercise — or attach a legacy « Exercices
- * généraux » row (no course) to one. A course is required: there is no
+ * Change the course of a programmed exercise. A course is required: there is no
  * "without course" option (the backend answers 400 COURS_REQUIS).
  * prog: { id, titre|nom, coursId, classes|classesDiffusees:[{id}] }; classIds overrides the classes.
  * The spinner stays until the PATCH settles; errors stay inside the modal.
@@ -65,7 +64,7 @@ const ChangeCourseModal = ({ open, prog, classIds, onClose, onChanged }) => {
   return (
     <Modal
       open={open}
-      title={prog?.coursId ? "Changer le cours de l'exercice" : "Associer l'exercice à un cours"}
+      title="Changer le cours de l'exercice"
       okText="Enregistrer"
       cancelText="Annuler"
       onOk={handleOk}

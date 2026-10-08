@@ -108,11 +108,7 @@ const LearnerProgressionView = ({
             icon={faBookOpen}
             label="Progression des cours"
             value={g.progressionCours === null ? "—" : `${Math.round(g.progressionCours)}%`}
-            hint={(() => {
-              // the "Exercices généraux" row (coursId null) is not a course
-              const n = data.cours.filter((c) => c.coursId).length;
-              return `${n} cours suivi${n > 1 ? "s" : ""}`;
-            })()}
+            hint={`${data.cours.length} cours suivi${data.cours.length > 1 ? "s" : ""}`}
             tone={{ box: "bg-blue-50 border-blue-100", icon: "text-blue-600" }}
           />
           <GlobalCard
@@ -163,7 +159,7 @@ const LearnerProgressionView = ({
                 .map((c, i) => {
                   const exPct = c.exercicesTotal ? (c.exercicesFaits / c.exercicesTotal) * 100 : 0;
                   return (
-                    <li key={`${c.coursId ?? "general"}-${c.classeNom ?? ""}-${i}`}>
+                    <li key={`${c.coursId}-${c.classeNom ?? ""}-${i}`}>
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className={`text-sm font-medium ${text} truncate`}>{c.titre}</span>
                         <span className="text-xs text-gray-500 flex-shrink-0">
@@ -171,7 +167,6 @@ const LearnerProgressionView = ({
                         </span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
-                        {c.coursId ? (
                         <div>
                           <div className="flex justify-between text-xs text-gray-500 mb-0.5">
                             <span>Chapitres lus</span>
@@ -182,9 +177,6 @@ const LearnerProgressionView = ({
                           </div>
                           <Bar pct={c.pourcentage} />
                         </div>
-                        ) : (
-                          <div className="text-xs text-gray-400 self-center">Exercices sans cours rattaché</div>
-                        )}
                         <div>
                           <div className="flex justify-between text-xs text-gray-500 mb-0.5">
                             <span>Exercices faits</span>
