@@ -318,6 +318,7 @@ const SettingsContent = ({
   onSwitchProfile,
   onLogout,
   focusSection,
+  focusKey,
 }) => {
   const { updateProfile, normalizedUserRole } = useAuth();
   const { language, changeLanguage } = useTranslation();
@@ -399,7 +400,7 @@ const SettingsContent = ({
     setActiveTab("profile");
     const t = setTimeout(() => profilesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
     return () => clearTimeout(t);
-  }, [focusSection, loading]);
+  }, [focusSection, focusKey, loading]); // focusKey: a new click while already on Settings
 
   const startEdit = () => {
     setMessage({ text: "", type: "" });

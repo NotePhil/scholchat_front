@@ -10,6 +10,8 @@ import {
   Typography,
 } from "antd";
 import AccederService from "../../../../services/accederService";
+import AccessRequestDecisionModal from "../../../../components/common/AccessRequestDecisionModal";
+import { accessRequestLabel } from "../../../../utils/accessRequestLabel";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCertificate,
@@ -36,6 +38,8 @@ const ClassAccessRequests = ({
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("pending");
+  // Approve / reject confirmation: { mode, request }
+  const [decision, setDecision] = useState(null);
   useEffect(() => {
     if (classId) {
       fetchAccessData();
@@ -62,6 +66,7 @@ const ClassAccessRequests = ({
           nom: request.utilisateurNom || "",
           prenom: request.utilisateurPrenom || "",
           email: request.utilisateurEmail || "",
+          telephone: request.utilisateurTelephone || "",
           codeActivation: request.codeActivation || "",
           etat: request.etat || "EN_ATTENTE",
           dateDemande: request.dateDemande || "",
@@ -116,13 +121,10 @@ const ClassAccessRequests = ({
       setActionLoading(null);
     }
   };
-  const handleRejectAccessRequest = async (requestId) => {
+  const handleRejectAccessRequest = async (requestId, reason) => {
     try {
       setActionLoading(`reject-${requestId}`);
-      await AccederService.rejeterDemandeAcces(
-        requestId,
-        "Rejected by administrator",
-      );
+      await AccederService.rejeterDemandeAcces(requestId, reason);
       message.success("Access request rejected successfully");
       if (onSuccess) {
         onSuccess("Access request rejected successfully");
@@ -257,8 +259,8 @@ const ClassAccessRequests = ({
       dataIndex: "nom",
       key: "name",
       render: (text, record) => {
-        const name = `${record.nom || ""} ${record.prenom || ""}`.trim();
-        return name || <Text type="secondary">N/A</Text>;
+        const name = `${record.prenom || ""} ${record.nom || ""}`.trim();
+        return name ? accessRequestLabel(record) : <Text type="secondary">N/A</Text>;
       },
     },
     {
@@ -319,7 +321,7 @@ const ClassAccessRequests = ({
         <Space>
           <Button
             type="primary"
-            onClick={() => handleApproveAccessRequest(record.id)}
+            onClick={() => setDecision({ mode: "approve", request: record })}
             loading={actionLoading === `approve-${record.id}`}
             style={{
               borderRadius: "8px",
@@ -328,18 +330,18 @@ const ClassAccessRequests = ({
             }}
             icon={<FontAwesomeIcon icon={faCheck} />}
           >
-            Approve
+            Accepter
           </Button>
           <Button
             danger
-            onClick={() => handleRejectAccessRequest(record.id)}
+            onClick={() => setDecision({ mode: "reject", request: record })}
             loading={actionLoading === `reject-${record.id}`}
             style={{
               borderRadius: "8px",
             }}
             icon={<FontAwesomeIcon icon={faXmark} />}
           >
-            Reject
+            Refuser
           </Button>
         </Space>
       ),
@@ -411,7 +413,23 @@ const ClassAccessRequests = ({
       />
     );
   }
+  const decisionLoading =
+    !!decision && actionLoading === `${decision.mode}-${decision.request?.id}`;
   return (
+    <>
+    <AccessRequestDecisionModal
+      open={!!decision}
+      mode={decision?.mode}
+      request={decision?.request}
+      loading={decisionLoading}
+      onCancel={() => setDecision(null)}
+      onConfirm={async (reason) => {
+        const { mode, request } = decision;
+        if (mode === "approve") await handleApproveAccessRequest(request.id);
+        else await handleRejectAccessRequest(request.id, reason);
+        setDecision(null);
+      }}
+    />
     <Tabs
       defaultActiveKey="pending"
       activeKey={activeTab}
@@ -487,6 +505,7 @@ const ClassAccessRequests = ({
         />
       </TabPane>
     </Tabs>
+    </>
   );
 };
 export default ClassAccessRequests;

@@ -1,3 +1,7 @@
 import React from "react";
 import StudentClassList from "./StudentClassList";
-export default () => <StudentClassList isParentView={true} />;
+// tabData (classId from a notification) is forwarded so the class opens directly
+const ParentClassManagementClass = ({ tabData }) => (
+  <StudentClassList isParentView={true} tabData={tabData} />
+);
+export default ParentClassManagementClass;

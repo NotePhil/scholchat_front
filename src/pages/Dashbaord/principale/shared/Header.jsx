@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { markNotificationAsRead } from "../../../../store/slices/notificationsSlice";
+import { useSelector } from "react-redux";
+import { useNotificationNavigation } from "../../../../hooks/useNotificationNavigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBell,
@@ -19,7 +19,7 @@ const Header = ({
   const [userName, setUserName] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const dispatch = useDispatch();
+  const openNotification = useNotificationNavigation();
 
   // Read notifications from the shared Redux store — populated by useNotifications hook
   // which already fires on mount + listens via WebSocket. No extra HTTP calls needed here.
@@ -97,11 +97,10 @@ const Header = ({
     }
     return getRoleDisplayName(userRole);
   };
+  // Same routing as modals/NotificationIcon: mark read + open the item's page
   const handleNotificationClick = (notification) => {
-    if (!notification.read) {
-      dispatch(markNotificationAsRead(notification.id));
-    }
     setShowNotifications(false);
+    openNotification(notification);
   };
   return (
     <header

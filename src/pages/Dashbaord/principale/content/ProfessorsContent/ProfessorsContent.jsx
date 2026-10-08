@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { scholchatService } from "../../../../../services/ScholchatService";
 import { minioS3Service } from "../../../../../services/minioS3";
 import ProfessorModal from "../../modals/ProfessorModal";
@@ -8,6 +8,12 @@ import DocumentViewer from "../../../../../components/viewers/DocumentViewer";
 import { getDarkModeClasses } from "../../../../../utils/darkModeUtils";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useSelector } from "react-redux";
+import {
+  openingDone,
+  openingFailed,
+  openingStart,
+  useMountedRef,
+} from "../../../../../utils/notificationNavigation";
 import {
   PROFESSOR_STATUS,
   getProfessorStatusDisplay,
@@ -246,7 +252,13 @@ const DocumentCard = ({ path, label, icon, onView }) => {
     </div>
   );
 };
-const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
+const ProfessorsContent = ({
+  isDark,
+  currentTheme,
+  themes,
+  colorSchemes,
+  tabData,
+}) => {
   const { t } = useTranslation();
   const language = useSelector(
     (state) => state.language?.currentLanguage || "fr",
@@ -476,6 +488,38 @@ const ProfessorsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
     }
     return merged;
   };
+  // Opened from a PROFESSOR_CREATED notification: that professor's detail
+  // (validation documents, approve / reject). Fetched by id; a request id
+  // (not an effect cleanup) lets only the latest click win.
+  const navRidRef = useRef(0);
+  const mountedRef = useMountedRef();
+  useEffect(() => {
+    const professorId = tabData?.professorId;
+    if (!professorId) return;
+    const rid = ++navRidRef.current;
+    setActionError("");
+    setActionSuccess("");
+    openingStart("Ouverture du profil professeur…");
+    loadProfessorDetails(professorId, null)
+      .then((prof) => {
+        if (!mountedRef.current || rid !== navRidRef.current) return;
+        if (!prof?.id || !(prof.nom || prof.prenom || prof.email)) {
+          openingFailed(
+            "Ce professeur n'existe plus ou ne vous est plus accessible.",
+          );
+          return;
+        }
+        openingDone();
+        setViewingProfessor(prof);
+      })
+      .catch(() => {
+        if (!mountedRef.current || rid !== navRidRef.current) return;
+        openingFailed(
+          "Ce professeur n'existe plus ou ne vous est plus accessible.",
+        );
+      });
+  }, [tabData]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleViewUser = (professor) => {
     setViewingProfessor(professor);
     setActionError("");

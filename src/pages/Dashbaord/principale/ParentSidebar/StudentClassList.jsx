@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Spin, Button, Input, message } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import { classService } from "../../../../services/ClassService";
@@ -8,6 +8,14 @@ import CoursProgrammeManagement from "../content/InterfaceCours/CoursProgrammeMa
 import ParentClassManagementModal from "./ParentClassManagementModal";
 import AddChildModal from "./AddChildModal";
 import JoinClassModal from "../../../../components/common/JoinClassModal";
+import {
+  openingDone,
+  openingFailed,
+  openingInfo,
+  openingStart,
+  selectParentChildForClasses,
+  useMountedRef,
+} from "../../../../utils/notificationNavigation";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -104,7 +112,7 @@ const ACCESS = {
 
 // ── main component ─────────────────────────────────────────────────────────────
 
-const StudentClassList = ({ isParentView = false }) => {
+const StudentClassList = ({ isParentView = false, tabData = null }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const parentId = localStorage.getItem("userId");
@@ -131,6 +139,12 @@ const StudentClassList = ({ isParentView = false }) => {
   const [showAddChild, setShowAddChild] = useState(false);
   const [searchCode, setSearchCode] = useState("");
   const [pendingMsg, setPendingMsg] = useState(null);
+  // User whose classes are currently loaded (a notification may switch child)
+  const [loadedUserId, setLoadedUserId] = useState(null);
+  // Class to open from a notification: { classId, access, rid, expectedUser, refetched }
+  const [navRequest, setNavRequest] = useState(null);
+  const navRidRef = useRef(0);
+  const mountedRef = useMountedRef();
 
   // "Rejoindre une classe" call-to-action from the dashboard: …/classes?join=1 opens the join flow.
   useEffect(() => {
@@ -241,11 +255,82 @@ const StudentClassList = ({ isParentView = false }) => {
       message.error("Erreur lors du chargement des classes");
     } finally {
       setLoading(false);
+      setLoadedUserId(userId);
     }
   }, [userId]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+  // ── open a class from a notification (tabData.classId) ────────────────────
+  // A parent first switches to the child concerned. The request carries an id:
+  // only a newer click supersedes it (no effect-cleanup flag, so re-renders
+  // never cancel the in-flight child lookup).
+  useEffect(() => {
+    const classId = tabData?.classId;
+    if (!classId) return;
+    const rid = ++navRidRef.current;
+    setShowCourses(false);
+    setSelectedClass(null);
+    openingStart("Ouverture de la classe…");
+    (async () => {
+      let expectedUser = null;
+      if (isParent) {
+        try {
+          expectedUser = await selectParentChildForClasses([classId]);
+        } catch {
+          expectedUser = null;
+        }
+      }
+      if (!mountedRef.current || rid !== navRidRef.current) return;
+      setNavRequest({
+        classId,
+        access: tabData.access || null,
+        rid,
+        expectedUser,
+        refetched: false,
+      });
+    })();
+  }, [tabData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!navRequest || loading) return;
+    if (navRequest.rid !== navRidRef.current) return;
+    const forUser = navRequest.expectedUser || userId;
+    // Wait for the (new) child's classes to be loaded
+    if (forUser !== userId || loadedUserId !== userId) return;
+    const classe =
+      userClasses.find((c) => String(c.id) === String(navRequest.classId)) ||
+      null;
+    const status = classe ? accessMap[classe.id] : null;
+    if (!classe && !navRequest.refetched) {
+      // List may predate the notification (access just approved): reload once
+      setNavRequest({ ...navRequest, refetched: true });
+      fetchData();
+      return;
+    }
+    setNavRequest(null);
+    if (!classe) {
+      openingFailed(
+        navRequest.access === "rejected"
+          ? "Votre demande d'accès à cette classe a été refusée."
+          : "Cette classe n'existe plus ou ne vous est plus accessible.",
+      );
+      return;
+    }
+    if (status === "APPROVED") {
+      openingDone();
+      setSelectedClass(classe);
+      setShowCourses(true);
+    } else if (status === "PENDING") {
+      openingDone();
+      setPendingMsg(classe.nom);
+    } else {
+      openingInfo(
+        `La demande d'accès à « ${classe.nom} » a été refusée.`,
+      );
+    }
+  }, [navRequest, loading, loadedUserId, userId, userClasses, accessMap]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchData();

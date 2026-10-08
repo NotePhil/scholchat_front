@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import { messageService } from "../services/MessageService";
+import { isParentLimited } from "../utils/parentAccess";
 
 // SockJS endpoint registered under the servlet context path
 // (REACT_APP_API_BASE_URL already ends with /scholchat).
@@ -32,6 +33,8 @@ export const refreshUnreadMessageCount = (
   userId = localStorage.getItem("userId"),
 ) => {
   if (!userId) return Promise.resolve(unreadCount);
+  // Limited parent (no child accepted yet): /messages/** answers 403 PARENT_SANS_ENFANT_VALIDE.
+  if (isParentLimited()) return Promise.resolve(unreadCount);
   if (unreadInflight) return unreadInflight;
   unreadInflight = messageService
     .compterNonLus(userId)

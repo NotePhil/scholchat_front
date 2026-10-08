@@ -159,7 +159,13 @@ export const Login = ({ theme }) => {
         return;
       }
       // Parent with several children
-      if (role === "PARENT" && newAuthData.children && newAuthData.children.length > 1) {
+      // (not while no child is accepted yet: the parent lands on « Mes enfants »)
+      if (
+        role === "PARENT" &&
+        newAuthData.parentAEnfantValide !== false &&
+        newAuthData.children &&
+        newAuthData.children.length > 1
+      ) {
         setPendingAuthData(newAuthData);
         setAvailableChildren(newAuthData.children);
         setShowChildSelector(true);

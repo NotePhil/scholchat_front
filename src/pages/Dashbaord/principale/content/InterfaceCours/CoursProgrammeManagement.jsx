@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import CourseDetailsView from "./CourseDetailsView";
 import LiveSession from "../CoursProgrammerContent/LiveSession/LiveSession";
+import {
+  openingDone,
+  openingInfo,
+  openingStart,
+  useMountedRef,
+} from "../../../../../utils/notificationNavigation";
 
 // ── Pagination ────────────────────────────────────────────────────────────────
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -227,6 +233,58 @@ const CoursProgrammeManagement = ({
       cancelled = true;
     };
   }, [selectedClass, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Open a course from a notification (tabData.courseId [+ live]) ─────────
+  // Reacts to every click (tabData carries a fresh _nav), even when this tab
+  // is already shown. A request id (not an effect-cleanup flag) discards a
+  // superseded live-session check.
+  const navRidRef = useRef(0);
+  const mountedRef = useMountedRef();
+  useEffect(() => {
+    const courseId = tabData?.courseId;
+    if (!courseId) return;
+    const rid = ++navRidRef.current;
+    if (!tabData.live) {
+      setLiveSession(null);
+      setSelectedCourse({ coursId: courseId });
+      return;
+    }
+    setSelectedCourse(null);
+    openingStart("Connexion à la session en direct…");
+    (async () => {
+      let session = null;
+      let titre = null;
+      try {
+        const { default: liveSessionService } =
+          await import("../../../../../services/LiveSessionService");
+        session = await liveSessionService.getActiveSession(courseId);
+        if (session) {
+          const { coursService } =
+            await import("../../../../../services/CoursService");
+          const cours = await coursService
+            .getCoursById(courseId)
+            .catch(() => null);
+          titre = cours?.titre || null;
+        }
+      } catch {
+        session = null;
+      }
+      if (!mountedRef.current || rid !== navRidRef.current) return;
+      if (session) {
+        openingDone();
+        setLiveSession({
+          scheduledCourse: null,
+          cours: { id: courseId, titre: titre || "Cours" },
+          isModerator: false,
+        });
+      } else {
+        // Session already over: show the course itself
+        openingInfo("La session en direct est terminée. Voici le cours.");
+        setLiveSession(null);
+        setSelectedCourse({ coursId: courseId });
+      }
+    })();
+  }, [tabData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset page on filter/search change
   useEffect(() => {

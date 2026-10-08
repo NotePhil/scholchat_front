@@ -1,7 +1,16 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Empty, Tag, Spin } from "antd";
 import StudentExerciseView from "./StudentExerciseView";
 import StudentExerciseResultView from "./StudentExerciseResultView";
+import { exerciseProgrammerService } from "../../../../../services/exerciseProgrammerService";
+import {
+  openingDone,
+  openingFailed,
+  openingInfo,
+  openingStart,
+  selectParentChildForClasses,
+  useMountedRef,
+} from "../../../../../utils/notificationNavigation";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -130,7 +139,7 @@ const TABS = [
 
 // ── main component ─────────────────────────────────────────────────────────────
 
-const StudentDevoirsContent = () => {
+const StudentDevoirsContent = ({ tabData = null }) => {
   // Each item: ExerciseProgrammerResponseDTO enriched with myParticipation
   const [devoirs, setDevoirs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,6 +147,8 @@ const StudentDevoirsContent = () => {
   const [selectedDevoir, setSelectedDevoir] = useState(null);
   const [resultDevoir, setResultDevoir] = useState(null);
   const [viewer, setViewer] = useState(getViewer);
+  // Legacy notification (ASSIGNMENT / classeId): list filtered to that class
+  const [classFilter, setClassFilter] = useState(null); // { id, nom }
   const load = useCallback(async () => {
     setViewer(getViewer());
     const userId = getUserId();
@@ -193,6 +204,12 @@ const StudentDevoirsContent = () => {
                 ) || null;
               all.push({
                 ...prog,
+                _classIds: [
+                  ...new Set([
+                    cls.id,
+                    ...(prog.classesDiffusees || []).map((c) => c.id),
+                  ]),
+                ],
                 myParticipation,
                 exerciseId: prog.exerciseId,
                 // prog.id is the programmer record ID — StudentExerciseView needs it
@@ -234,6 +251,89 @@ const StudentDevoirsContent = () => {
     window.addEventListener("childChanged", onChildChanged);
     return () => window.removeEventListener("childChanged", onChildChanged);
   }, [load]);
+
+  // ── open a devoir from a notification ─────────────────────────────────────
+  // tabData.exerciseProgrammerId: fetched by id, then the attempt page when not
+  // yet handed in, else the copy / correction (view "result" forces the copy).
+  // A parent is first switched to the child of the devoir's classes.
+  // Request id + mounted ref: re-renders never cancel the in-flight load.
+  const navRidRef = useRef(0);
+  const mountedRef = useMountedRef();
+  useEffect(() => {
+    if (!tabData) return;
+    const progId = tabData.exerciseProgrammerId;
+    if (!progId) {
+      if (tabData.classId) {
+        setSelectedDevoir(null);
+        setResultDevoir(null);
+        setActiveFilter("all");
+        setClassFilter({ id: tabData.classId, nom: null });
+        // Parent: show the child of that class (reloads on switch)
+        selectParentChildForClasses([tabData.classId]).catch(() => null);
+      }
+      return;
+    }
+    const rid = ++navRidRef.current;
+    setClassFilter(null);
+    openingStart("Ouverture du devoir…");
+    (async () => {
+      let prog = null;
+      try {
+        prog = await exerciseProgrammerService.getExerciseProgrammeById(progId);
+      } catch {
+        prog = null;
+      }
+      if (!mountedRef.current || rid !== navRidRef.current) return;
+      if (!prog || !prog.exerciseId) {
+        openingFailed("Ce devoir n'existe plus ou ne vous est plus accessible.");
+        return;
+      }
+      await selectParentChildForClasses(
+        (prog.classesDiffusees || []).map((c) => c.id),
+      ).catch(() => null);
+      if (!mountedRef.current || rid !== navRidRef.current) return;
+      const learnerId = getUserId();
+      const currentViewer = getViewer();
+      setViewer(currentViewer);
+      const myParticipation =
+        (prog.participations || []).find(
+          (p) => p.utilisateurId === learnerId,
+        ) || null;
+      const etat = myParticipation?.etatSoumission || null;
+      const submitted = !!etat && etat !== "EN_COURS";
+      if (submitted) {
+        openingDone();
+        setSelectedDevoir(null);
+        setResultDevoir({
+          exerciseId: prog.exerciseId,
+          nom: prog.nom,
+          myParticipation,
+        });
+        return;
+      }
+      if (!currentViewer.canAnswer) {
+        openingInfo(
+          `Ce devoir est à rendre par ${currentViewer.childName || "l'élève"} depuis son compte.`,
+        );
+        setSelectedDevoir(null);
+        setResultDevoir(null);
+        return;
+      }
+      if (tabData.view === "result") {
+        openingInfo("Ce devoir n'a pas encore été rendu.");
+      } else {
+        openingDone();
+      }
+      setResultDevoir(null);
+      setSelectedDevoir({
+        exerciseId: prog.exerciseId,
+        exerciseProgrammerId: prog.id,
+        nom: prog.nom,
+        description: prog.description,
+        myParticipation,
+      });
+    })();
+  }, [tabData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── open devoir for submission ─────────────────────────────────────────────
 
@@ -294,17 +394,22 @@ const StudentDevoirsContent = () => {
       overdue,
     };
   });
-  const filtered = categorised.filter(({ isSubmitted, isGraded }) => {
+  const inClass = classFilter
+    ? categorised.filter(({ ep }) =>
+        (ep._classIds || []).some((id) => String(id) === String(classFilter.id)),
+      )
+    : categorised;
+  const filtered = inClass.filter(({ isSubmitted, isGraded }) => {
     if (activeFilter === "todo") return !isSubmitted;
     if (activeFilter === "soumis") return isSubmitted && !isGraded;
     if (activeFilter === "corriges") return isGraded;
     return true;
   });
   const counts = {
-    all: categorised.length,
-    todo: categorised.filter((c) => !c.isSubmitted).length,
-    soumis: categorised.filter((c) => c.isSubmitted && !c.isGraded).length,
-    corriges: categorised.filter((c) => c.isGraded).length,
+    all: inClass.length,
+    todo: inClass.filter((c) => !c.isSubmitted).length,
+    soumis: inClass.filter((c) => c.isSubmitted && !c.isGraded).length,
+    corriges: inClass.filter((c) => c.isGraded).length,
   };
 
   // ── render ─────────────────────────────────────────────────────────────────
@@ -384,6 +489,27 @@ const StudentDevoirsContent = () => {
           ))}
         </div>
       </div>
+
+      {/* Class filter (opened from a homework notification) */}
+      {classFilter && (
+        <div className="mb-3 px-4 py-2.5 rounded-xl flex items-center justify-between gap-3 bg-blue-50 border border-blue-100">
+          <span className="text-sm text-blue-800">
+            Devoirs de la classe{" "}
+            <strong>
+              {devoirs
+                .flatMap((d) => d.classesDiffusees || [])
+                .find((c) => String(c.id) === String(classFilter.id))?.nom ||
+                "sélectionnée"}
+            </strong>
+          </span>
+          <button
+            onClick={() => setClassFilter(null)}
+            className="text-xs font-medium text-blue-600 hover:text-blue-800"
+          >
+            Tous les devoirs
+          </button>
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div

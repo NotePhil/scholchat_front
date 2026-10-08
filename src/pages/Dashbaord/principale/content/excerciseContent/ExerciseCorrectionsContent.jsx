@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Select, Spin, Button, Input, message, Badge } from "antd";
 import {
   exerciseProgrammerService,
@@ -9,6 +9,12 @@ import {
 import { classService } from "../../../../../services/ClassService";
 import { userService } from "../../../../../services/userService";
 import { questionEarned } from "./StudentExerciseResultView";
+import {
+  openingDone,
+  openingFailed,
+  openingStart,
+  useMountedRef,
+} from "../../../../../utils/notificationNavigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
@@ -75,7 +81,7 @@ const EtatBadge = ({ etat }) => {
 };
 
 // ── Single programmation correction view ──────────────────────────────────────
-const ProgrammationCorrections = ({ prog }) => {
+const ProgrammationCorrections = ({ prog, focusStudentId = null }) => {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState([]);
   const [participations, setParticipations] = useState([]);
@@ -242,6 +248,25 @@ const ProgrammationCorrections = ({ prog }) => {
       setSaving(null);
     }
   };
+  // Opened from a "devoir soumis" notification: unfold that student's copy
+  // (on the right page) once the submissions are loaded.
+  const focusedRef = useRef(null);
+  const focusIndex = focusStudentId
+    ? students.findIndex((st) => st.id === focusStudentId)
+    : -1;
+  useEffect(() => {
+    if (loading || !focusStudentId || focusedRef.current === focusStudentId)
+      return;
+    focusedRef.current = focusStudentId;
+    if (focusIndex === -1) return;
+    setExpandedStudent(focusStudentId);
+    setStudentPage(Math.floor(focusIndex / STUDENT_PAGE_SIZE) + 1);
+    setTimeout(() => {
+      document
+        .getElementById(`correction-student-${focusStudentId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+  }, [loading, focusStudentId, focusIndex]);
   if (loading)
     return (
       <div className="flex justify-center py-8">
@@ -346,6 +371,7 @@ const ProgrammationCorrections = ({ prog }) => {
           return (
             <div
               key={student.id}
+              id={`correction-student-${student.id}`}
               className="rounded-xl border overflow-hidden bg-white"
               style={{
                 borderColor: "#e8edf5",
@@ -946,12 +972,18 @@ const ProgList = ({
 };
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-const ExerciseCorrectionsContent = () => {
+const ExerciseCorrectionsContent = ({ tabData = null }) => {
   const [programmations, setProgrammations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProgId, setSelectedProgId] = useState(null);
   const [filterType, setFilterType] = useState("all");
   const [professorName, setProfessorName] = useState(null);
+  // Student whose copy to unfold (from a DEVOIR_SOUMIS notification)
+  const [focusStudent, setFocusStudent] = useState(null); // { progId, studentId }
+  // Programmation to open from a notification: { progId, studentId, rid }
+  const [navRequest, setNavRequest] = useState(null);
+  const navRidRef = useRef(0);
+  const mountedRef = useMountedRef();
   const userId = getUserId();
   const load = useCallback(async () => {
     if (!userId) return;
@@ -1003,8 +1035,8 @@ const ExerciseCorrectionsContent = () => {
       );
       const filtered = withSubmissions.filter(Boolean);
       setProgrammations(filtered);
-      if (filtered.length > 0 && !selectedProgId)
-        setSelectedProgId(filtered[0].id);
+      if (filtered.length > 0)
+        setSelectedProgId((current) => current || filtered[0].id);
     } catch {
       message.error("Erreur lors du chargement");
     } finally {
@@ -1014,6 +1046,58 @@ const ExerciseCorrectionsContent = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // ── Open a programmation from a notification ──────────────────────────────
+  useEffect(() => {
+    const progId = tabData?.exerciseProgrammerId;
+    if (!progId) return;
+    const rid = ++navRidRef.current;
+    openingStart("Ouverture des corrections…");
+    setNavRequest({ progId, studentId: tabData.studentId || null, rid });
+  }, [tabData]);
+
+  useEffect(() => {
+    if (!navRequest || loading) return;
+    const { progId, studentId, rid } = navRequest;
+    if (rid !== navRidRef.current) return;
+    setNavRequest(null);
+    const select = () => {
+      setFilterType("all");
+      setSelectedProgId(progId);
+      setFocusStudent(studentId ? { progId, studentId } : null);
+      openingDone();
+    };
+    if (programmations.some((p) => String(p.id) === String(progId))) {
+      select();
+      return;
+    }
+    // Not in the list (no submission loaded yet, other class…): fetch it.
+    // Guarded by the request id, never by an effect cleanup.
+    exerciseProgrammerService
+      .getExerciseProgrammeById(progId)
+      .then((prog) => {
+        if (!mountedRef.current || rid !== navRidRef.current) return;
+        if (!prog?.id) throw new Error("not found");
+        setProgrammations((prev) =>
+          prev.some((p) => String(p.id) === String(prog.id))
+            ? prev
+            : [
+                {
+                  ...prog,
+                  isOwn: String(prog.programmeParId) === String(userId),
+                },
+                ...prev,
+              ],
+        );
+        select();
+      })
+      .catch(() => {
+        if (!mountedRef.current || rid !== navRidRef.current) return;
+        openingFailed(
+          "Cet exercice programmé n'existe plus ou ne vous est plus accessible.",
+        );
+      });
+  }, [navRequest, loading, programmations, userId, mountedRef]);
 
   // Resolve professor name when a non-own programmation is selected
   const selectedProg = programmations.find((p) => p.id === selectedProgId);
@@ -1208,6 +1292,11 @@ const ExerciseCorrectionsContent = () => {
                   <ProgrammationCorrections
                     key={selectedProg.id}
                     prog={selectedProg}
+                    focusStudentId={
+                      focusStudent?.progId === selectedProg.id
+                        ? focusStudent.studentId
+                        : null
+                    }
                   />
                 ) : (
                   <div className="text-center py-10">

@@ -45,6 +45,8 @@ const Sidebar = ({
   colorSchemes,
   onShowMessaging,
   toggleSidebar,
+  // Limited parent (no child accepted yet): only these tabs are shown
+  restrictTabs = null,
 }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -374,7 +376,20 @@ const Sidebar = ({
     ];
     return [...baseItems, ...roleItems, ...bottomItems];
   };
-  const menuItems = getMenuItems();
+  const menuItems = restrictTabs
+    ? [
+        {
+          name: "Mes enfants",
+          icon: Users,
+          tab: "my-children",
+        },
+        {
+          name: t("sidebar.settings"),
+          icon: Settings,
+          tab: "settings",
+        },
+      ].filter((item) => restrictTabs.includes(item.tab))
+    : getMenuItems();
   const handleTabChange = (tab) => {
     setActiveTab(tab);
   };

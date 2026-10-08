@@ -418,7 +418,10 @@ const ManageClassContent = ({ onBack, tabData, setActiveTab }) => {
           <ManageClassDetailsView
             classId={selectedClassId}
             onBack={handleBackToList}
-            initialTab={tabData?.subTab}
+            initialTab={
+              selectedClassId === tabData?.classId ? tabData?.subTab : undefined
+            }
+            navKey={tabData?._nav}
             onRefresh={handleRefresh}
             onError={setError}
             onSuccess={setSuccessMessage}

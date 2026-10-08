@@ -5,7 +5,7 @@ import ManageEstablishmentDetailsView from "../../establishment-management/Manag
 import CreateEstablishmentContent from "./CreateEstablishmentContent";
 import { useAuth } from "../../../../../hooks/useAuth";
 
-const ManageEstablishmentContent = ({ onBack, setActiveTab }) => {
+const ManageEstablishmentContent = ({ onBack, setActiveTab, tabData }) => {
   // Creating / deleting an établissement is admin-only (backend enforces it too):
   // the gestionnaire only views and edits their own établissements.
   const { isAdmin } = useAuth();
@@ -31,6 +31,15 @@ const ManageEstablishmentContent = ({ onBack, setActiveTab }) => {
       return () => clearTimeout(timer);
     }
   }, [error]);
+
+  // Opened from a notification: that établissement's detail (the detail view
+  // loads it by id and shows "not found" when it is gone / not accessible).
+  useEffect(() => {
+    if (tabData?.establishmentId) {
+      setEditingEstablishment(null);
+      setSelectedEstablishmentId(tabData.establishmentId);
+    }
+  }, [tabData]);
 
   // Load all data on mount
   useEffect(() => {

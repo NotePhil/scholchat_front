@@ -39,6 +39,8 @@ import { activityFeedService } from "../../../../services/ActivityFeedService";
 
 // Import separated components
 import UserTables from "./components/UserTables";
+import AccessRequestDecisionModal from "../../../../components/common/AccessRequestDecisionModal";
+import { accessRequestLabel } from "../../../../utils/accessRequestLabel";
 import StatisticsCards from "./components/StatisticsCards";
 import OffreInfoPanel from "../shared/OffreInfoPanel";
 import {
@@ -202,6 +204,7 @@ const ManageClassDetailsView = ({
   classId,
   onBack,
   initialTab,
+  navKey,
   onNavigateToCourseCreation,
   onNavigateToExerciseManagement,
   onNavigateToCoursManagement,
@@ -214,17 +217,21 @@ const ManageClassDetailsView = ({
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
 
-  // When initialTab changes (e.g. from notification click while already viewing this class),
-  // switch to the requested tab and reload its data
+  // When initialTab / navKey change (a notification clicked while this view is
+  // already mounted — same class or another one), switch to the requested tab.
+  // For another class, loadClassDetails() (classId effect) reloads everything
+  // and falls back to "overview" when the user cannot manage it.
+  const tabClassIdRef = useRef(classId);
   useEffect(() => {
-    if (initialTab && initialTab !== activeTab) {
-      if (initialTab === "access-requests" && !canManageRef.current) return;
-      setActiveTab(initialTab);
-      if (initialTab === "access-requests") {
-        loadAccessRequests();
-      }
+    const sameClass = tabClassIdRef.current === classId;
+    tabClassIdRef.current = classId;
+    if (!initialTab) return;
+    if (initialTab === "access-requests" && sameClass) {
+      if (!canManageRef.current) return;
+      loadAccessRequests();
     }
-  }, [initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
+    setActiveTab(initialTab);
+  }, [initialTab, navKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Users data from new approach - UPDATED to include utilisateurs
   const [users, setUsers] = useState({
@@ -249,9 +256,11 @@ const ManageClassDetailsView = ({
   // Modal states
   const [userViewModalVisible, setUserViewModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [rejectModalVisible, setRejectModalVisible] = useState(false);
-  const [rejectingUser, setRejectingUser] = useState(null);
+  // Class rejection form values (legacy fallback of handleReject)
   const [rejectReason, setRejectReason] = useState("");
+  // Access request approve / reject confirmation: { mode: "approve" | "reject", request }
+  const [requestDecision, setRequestDecision] = useState(null);
+  const [requestDecisionLoading, setRequestDecisionLoading] = useState(false);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [moderatorModalVisible, setModeratorModalVisible] = useState(false);
   const [publicationRightsModalVisible, setPublicationRightsModalVisible] =
@@ -310,6 +319,7 @@ const ManageClassDetailsView = ({
   const [canManageClass, setCanManageClass] = useState(false);
   const [canPublishInClass, setCanPublishInClass] = useState(false);
   const canManageRef = useRef(false);
+  const loadRidRef = useRef(0);
 
   const resolveClassPermissions = async (details) => {
     const me = localStorage.getItem("userId") || "";
@@ -432,9 +442,15 @@ const ManageClassDetailsView = ({
     );
   };
   const loadClassDetails = async () => {
+    // Latest class wins when classId changes quickly (two notifications)
+    const rid = ++loadRidRef.current;
+    let detailsLoaded = false;
     try {
       setLoading(true);
       const details = await classService.obtenirClasseParId(classId);
+      if (rid !== loadRidRef.current) return;
+      if (!details) throw new Error("Classe introuvable");
+      detailsLoaded = true;
       console.log("Class details loaded:", details);
       console.log("All class detail fields:", Object.keys(details));
       console.log(
@@ -475,6 +491,7 @@ const ManageClassDetailsView = ({
       );
 
       const perms = await resolveClassPermissions(enrichedDetails);
+      if (rid !== loadRidRef.current) return;
       canManageRef.current = perms.canManage;
       setCanManageClass(perms.canManage);
       setCanPublishInClass(perms.canPublish);
@@ -485,18 +502,33 @@ const ManageClassDetailsView = ({
 
       // Load all user data in sequence to avoid race conditions
       await loadUsersWithAccess();
+      if (rid !== loadRidRef.current) return;
       if (perms.canManage) {
         await loadAccessRequests();
       }
+      if (rid !== loadRidRef.current) return;
       await loadModeratorsAndRights();
+      if (rid !== loadRidRef.current) return;
 
       // Load additional modules
       await Promise.all([loadCourses(), loadExercises(), loadEvents()]);
     } catch (error) {
-      message.error("Erreur lors du chargement des détails de la classe");
+      if (rid !== loadRidRef.current) return;
+      if (!detailsLoaded) {
+        // 403 / 404 / empty: friendly notice, the "Classe non trouvée" panel shows
+        const status = error?.response?.status || error?.status;
+        message.warning(
+          status && status !== 403 && status !== 404
+            ? "Erreur lors du chargement de la classe"
+            : "Cette classe n'existe plus ou ne vous est plus accessible.",
+        );
+        setClassDetails(null);
+      } else {
+        message.error("Erreur lors du chargement des détails de la classe");
+      }
       console.error("Error loading class details:", error);
     } finally {
-      setLoading(false);
+      if (rid === loadRidRef.current) setLoading(false);
     }
   };
 
@@ -826,9 +858,10 @@ const ManageClassDetailsView = ({
                 fullUserData?.email ||
                 request.utilisateurEmail ||
                 "Non disponible",
-              telephone: fullUserData?.telephone || "Non disponible",
+              telephone:
+                fullUserData?.telephone || request.utilisateurTelephone || "Non disponible",
               // Determine user type
-              typeUtilisateur: userType || "INCONNU",
+              typeUtilisateur: userType || request.typeUtilisateur || "INCONNU",
               // Format date properly
               dateDemande: request.dateDemande,
               etat: request.etat,
@@ -865,8 +898,8 @@ const ManageClassDetailsView = ({
               nom: request.utilisateurNom || "Non disponible",
               prenom: request.utilisateurPrenom || "Non disponible",
               email: request.utilisateurEmail || "Non disponible",
-              telephone: "Non disponible",
-              typeUtilisateur: "INCONNU",
+              telephone: request.utilisateurTelephone || "Non disponible",
+              typeUtilisateur: request.typeUtilisateur || "INCONNU",
               dateDemande: request.dateDemande,
               etat: request.etat,
             };
@@ -1073,7 +1106,27 @@ const ManageClassDetailsView = ({
       console.error("Error deleting user:", error);
     }
   };
-  const handleApproveRequest = async (request) => {
+  // Approve / Reject each open a confirmation modal (the reject reason is typed inside it).
+  const handleApproveRequest = (request) => {
+    setRequestDecision({ mode: "approve", request });
+  };
+  const confirmRequestDecision = async (reason) => {
+    if (!requestDecision || requestDecisionLoading) return;
+    setRequestDecisionLoading(true);
+    try {
+      if (requestDecision.mode === "approve") {
+        await approveRequest(requestDecision.request);
+      } else {
+        await confirmRejectRequest(requestDecision.request, reason);
+      }
+      setRequestDecision(null);
+    } catch {
+      // error already shown; keep the modal open
+    } finally {
+      setRequestDecisionLoading(false);
+    }
+  };
+  const approveRequest = async (request) => {
     try {
       // First approve the request
       await AccederService.validerDemandeAcces(request.id);
@@ -1133,9 +1186,11 @@ const ManageClassDetailsView = ({
             break;
         }
         message.success(
-          approvedUser
-            ? `Demande approuvée. ${approvedUser.prenom || ""} ${approvedUser.nom || ""} a été ajouté(e).`
-            : "Demande approuvée avec succès",
+          request.eleveAssocieId || request.eleveAssociePrenom
+            ? `Demande approuvée : ${accessRequestLabel(request)}.`
+            : approvedUser
+              ? `Demande approuvée. ${approvedUser.prenom || ""} ${approvedUser.nom || ""} a été ajouté(e).`
+              : "Demande approuvée avec succès",
         );
       } catch (userFetchError) {
         console.warn(
@@ -1148,29 +1203,23 @@ const ManageClassDetailsView = ({
       await loadAccessRequests();
       await loadClassDetails();
     } catch (error) {
-      message.error("Erreur lors de l'approbation de la demande");
+      message.error(error?.message || "Erreur lors de l'approbation de la demande");
       console.error("Error approving request:", error);
+      throw error;
     }
   };
   const handleRejectRequest = (request) => {
-    setRejectingUser(request);
-    setRejectModalVisible(true);
+    setRequestDecision({ mode: "reject", request });
   };
-  const confirmRejectRequest = async () => {
-    if (!rejectReason.trim()) {
-      message.error("Veuillez saisir un motif de rejet");
-      return;
-    }
+  const confirmRejectRequest = async (request, reason) => {
     try {
-      await AccederService.rejeterDemandeAcces(rejectingUser.id, rejectReason);
+      await AccederService.rejeterDemandeAcces(request.id, reason);
       message.success("Demande rejetée avec succès");
-      setRejectModalVisible(false);
-      setRejectReason("");
-      setRejectingUser(null);
       await loadAccessRequests();
     } catch (error) {
-      message.error("Erreur lors du rejet de la demande");
+      message.error(error?.message || "Erreur lors du rejet de la demande");
       console.error("Error rejecting request:", error);
+      throw error;
     }
   };
 
@@ -3073,40 +3122,16 @@ const ManageClassDetailsView = ({
         />
       )}
 
-      {/* Reject Modal */}
-      <Modal
-        title="Rejeter la demande d'accès"
-        open={rejectModalVisible}
-        onCancel={() => {
-          setRejectModalVisible(false);
-          setRejectReason("");
-          setRejectingUser(null);
-        }}
-        footer={[
-          <Button key="cancel" onClick={() => setRejectModalVisible(false)}>
-            Annuler
-          </Button>,
-          <Button
-            key="reject"
-            type="primary"
-            danger
-            onClick={confirmRejectRequest}
-          >
-            Rejeter
-          </Button>,
-        ]}
-      >
-        <p>
-          Veuillez saisir le motif du rejet pour {rejectingUser?.prenom}{" "}
-          {rejectingUser?.nom}:
-        </p>
-        <Input.TextArea
-          rows={4}
-          value={rejectReason}
-          onChange={(e) => setRejectReason(e.target.value)}
-          placeholder="Motif du rejet..."
-        />
-      </Modal>
+      {/* Access request: approve / reject confirmation */}
+      <AccessRequestDecisionModal
+        open={!!requestDecision}
+        mode={requestDecision?.mode}
+        request={requestDecision?.request}
+        classeNom={classDetails?.nom}
+        loading={requestDecisionLoading}
+        onConfirm={confirmRequestDecision}
+        onCancel={() => setRequestDecision(null)}
+      />
 
       {/* History Modal */}
       <Modal

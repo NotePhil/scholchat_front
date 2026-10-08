@@ -1,9 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useNotifications } from "../../../../hooks/useNotifications";
 import { useTranslation } from "../../../../hooks/useTranslation";
-import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { setActiveTab as setActiveTabAction } from "../../../../store/slices/uiSlice";
+import { useNotificationNavigation } from "../../../../hooks/useNotificationNavigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
@@ -237,138 +235,6 @@ const EmptyState = ({ filter, language }) => {
     </div>
   );
 };
-/**
- * Maps a backend notification (NotificationService.java) to the dashboard tab
- * (+ optional tabData) most relevant for the current role. Tab keys are the
- * Principal.jsx renderContent keys allowed for that role (ROLE_TABS).
- *
- * Types and their relatedEntityType / relatedEntityId:
- *  MESSAGE_SENT MESSAGE(null) · ACCESS_REQUEST CLASS(classeId) ·
- *  ACTIVITY_CREATED EVENT(eventId) or COURSE(classeId, course scheduled) ·
- *  NEW_COURSE COURSE(coursId) · ASSIGNMENT_GIVEN ASSIGNMENT(classeId) ·
- *  EXERCISE_CREATED EXERCISE(exerciseId) · DEVOIR_SOUMIS / CORRECTION_DISPONIBLE
- *  EXERCISE(exerciseProgrammerId) · CLASS_VALIDATED / CLASS_CREATED /
- *  CLASSE_ADHESION_DEMANDE CLASS(classeId) · ETABLISSEMENT_CREATED
- *  ETABLISSEMENT(id) · PROFESSOR_CREATED PROFESSOR(professorId) ·
- *  OFFRE_EXPIRATION_BIENTOT / OFFRE_EXPIREE / SUPPRESSION_IMMINENTE
- *  CLASSE | ETABLISSEMENT(id).
- * Returns null when there is no sensible destination.
- */
-const getNotificationTarget = (notification, role) => {
-  const type = (notification.type || "").toUpperCase();
-  const entity = (notification.relatedEntityType || "").toUpperCase();
-  const id = notification.relatedEntityId || null;
-  const isLearner = role === "student" || role === "parent";
-  const isAdmin = role === "admin";
-  const isGest = role === "gestionnaire";
-  const isProf = role === "professor" || role === "tutor";
-  const classTarget = (subTab = "overview") =>
-    isLearner
-      ? { tab: "classes" }
-      : id
-        ? { tab: "manage-class", data: { classId: id, subTab } }
-        : { tab: "manage-class" };
-
-  switch (type) {
-    case "MESSAGE_SENT":
-    case "NEW_MESSAGE":
-      return { tab: "messages" };
-
-    case "ACCESS_REQUEST":
-    case "DEMANDE_ACCES":
-      // Moderators/admins: open the class straight on its access-requests tab.
-      // Students/parents: their own sent/approved/rejected confirmation.
-      return classTarget("access-requests");
-
-    case "CLASS_VALIDATED":
-    case "CLASS_REJECTED":
-    case "CLASS_JOIN":
-    case "CLASS_CREATED":
-      return classTarget("overview");
-
-    case "CLASSE_ADHESION_DEMANDE":
-      return isGest ? { tab: "manage-establishment" } : classTarget("overview");
-
-    case "ETABLISSEMENT_CREATED":
-      return isGest || isAdmin ? { tab: "manage-establishment" } : null;
-
-    case "ACTIVITY_CREATED":
-    case "NEW_ACTIVITY":
-    case "EVENT_UPDATED":
-      // Course scheduling is sent as ACTIVITY_CREATED with relatedEntityType COURSE.
-      if (entity === "COURSE") return { tab: "cours" };
-      return { tab: "activities", data: id ? { activityId: id } : null };
-
-    case "NEW_COURSE":
-    case "COURSE_SCHEDULED":
-    case "COURS_PROGRAMME":
-    case "NOUVEAU_COURS":
-    case "LIVE_SESSION_STARTED":
-    case "SESSION_STARTED":
-      // List only: for scheduled courses relatedEntityId is a class id, not a course id.
-      return isGest ? null : { tab: "cours" };
-
-    case "ASSIGNMENT_GIVEN":
-    case "EXERCISE_ASSIGNED":
-    case "NOUVEL_EXERCICE":
-    case "EXERCISE_CREATED":
-      return isGest ? null : { tab: "manage-exercises" };
-
-    case "DEVOIR_ASSIGNED":
-    case "NOUVEAU_DEVOIR":
-      return isLearner ? { tab: "devoirs" } : { tab: "manage-exercises" };
-
-    case "DEVOIR_SOUMIS":
-      // Professor: a submission waiting for correction. Student: confirmation.
-      if (isLearner) return { tab: "devoirs" };
-      return isProf || isAdmin ? { tab: "corrections-exercise" } : null;
-
-    case "CORRECTION_DISPONIBLE":
-      return isLearner ? { tab: "devoirs" } : { tab: "corrections-exercise" };
-
-    // Profile (role) validation / approval / refusal → profile page, "Mes profils" card.
-    case "PROFESSOR_ROLE_VALIDATED":
-    case "PROFESSOR_ROLE_REJECTED":
-    case "PROFESSOR_ROLE_DOCUMENTS_REQUIRED":
-    case "PROFESSOR_VERIFICATION_VALIDATED":
-    case "PROFESSOR_VERIFICATION_REJECTED":
-    case "PROFESSOR_VERIFICATION_DOCUMENTS_REQUIRED":
-    case "STUDENT_ROLE_APPROVED":
-    case "STUDENT_ROLE_VALIDATED":
-    case "STUDENT_ROLE_REJECTED":
-    case "ELEVE_ROLE_APPROUVE":
-    case "ROLE_ELEVE_APPROUVE":
-    case "ROLE_ELEVE_REFUSE":
-    case "ROLE_VALIDATED":
-    case "ROLE_APPROVED":
-    case "ROLE_REJECTED":
-      return { tab: "settings", data: { section: "profils" } };
-
-    case "PROFESSOR_CREATED":
-      return isAdmin ? { tab: "professors" } : null;
-    case "STUDENT_CREATED":
-      return isAdmin ? { tab: "students" } : null;
-    case "PARENT_CREATED":
-      return isAdmin ? { tab: "parents" } : null;
-
-    case "OFFRE_EXPIRATION_BIENTOT":
-    case "OFFRE_EXPIREE":
-    case "SUPPRESSION_IMMINENTE":
-      if (isAdmin) return { tab: "manage-offers" };
-      if (entity === "ETABLISSEMENT") return isGest ? { tab: "manage-establishment" } : null;
-      return classTarget("overview");
-
-    default:
-      if (entity === "MESSAGE") return { tab: "messages" };
-      if (entity === "CLASS" || entity === "CLASSE") return classTarget("overview");
-      if (entity === "EVENT") return { tab: "activities" };
-      if (entity === "COURSE") return isGest ? null : { tab: "cours" };
-      if (entity === "EXERCISE" || entity === "ASSIGNMENT")
-        return isGest ? null : { tab: isLearner ? "devoirs" : "manage-exercises" };
-      return null;
-  }
-};
-
 const NotificationIcon = () => {
   const {
     notifications,
@@ -422,42 +288,17 @@ const NotificationIcon = () => {
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, closePanel]);
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const openNotification = useNotificationNavigation();
 
   // Use filtered unread count (notifications list is already role-filtered by useNotifications)
   const unreadCount = notifications.filter((n) => !n.read).length;
+  // Marks read + opens the item's dedicated page (shared with shared/Header)
   const handleNotificationClick = useCallback(
     (notification) => {
-      if (!notification.read) {
-        markAsRead(notification.id);
-      }
       closePanel();
-
-      // Determine dashboard path robustly
-      const dashboardMatch = window.location.pathname.match(
-        /\/schoolchat\/Principal\/([\w]+Dashboard)/,
-      );
-      let dashboard = dashboardMatch ? dashboardMatch[1] : null;
-      if (!dashboard) {
-        if (userRole === "student") dashboard = "StudentDashboard";
-        else if (userRole === "parent") dashboard = "ParentDashboard";
-        else if (userRole === "admin") dashboard = "AdminDashboard";
-        else if (userRole === "gestionnaire")
-          dashboard = "GestionnaireDashboard";
-        else dashboard = "ProfessorDashboard";
-      }
-
-      const target = getNotificationTarget(notification, userRole);
-      if (!target) return; // unknown type: marking read is all we can do
-      dispatch(
-        setActiveTabAction(
-          target.data ? { tab: target.tab, data: target.data } : target.tab,
-        ),
-      );
-      navigate(`/schoolchat/Principal/${dashboard}/${target.tab}`);
+      openNotification(notification);
     },
-    [markAsRead, closePanel, dispatch, navigate, userRole],
+    [closePanel, openNotification],
   );
 
   // Role-based header subtitle

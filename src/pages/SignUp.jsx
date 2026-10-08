@@ -18,6 +18,7 @@ import {
   faLocationDot,
   faMagnifyingGlass,
   faPaperPlane,
+  faPlus,
   faUser,
   faUserGraduate,
   faUsers,
@@ -27,6 +28,7 @@ import CountrySelectSearchable from "../components/common/CountrySelectSearchabl
 import { Alert, AuthShell, BrandLogo, Button, Stepper, TextField } from "../components/frontoffice/ui";
 import { ClassPreviewCard, ClassPreviewStatus } from "../components/common/ClassPreviewCard";
 import { useClassPreview } from "../hooks/useClassPreview";
+import ChildCodeCard from "../components/frontoffice/ChildCodeCard";
 import { INVALID_EMAIL_MESSAGE, isValidEmail, mapSignupFieldError } from "../utils/signupErrors";
 import community from "../assets/illustrations/community.png";
 import onboarding1 from "../assets/illustrations/onboarding-1.png";
@@ -42,9 +44,13 @@ const API = process.env.REACT_APP_API_BASE_URL;
  *  Professeur (unchanged process): 1 infos perso → 2 détails enseignant (matricule, CNI recto/verso,
  *    selfie, uploaded with the X-Upload-Token returned by POST /utilisateurs) → 3 vérification → envoi ;
  *    the account is validated by the administration, activation link by e-mail (verify-email page).
- *  Élève / Parent (class-code process): 1 infos perso → 2 classe / code → 3 confirmation →
- *    POST /utilisateurs {…, codeClasse} → "Compte créé / en attente d'approbation" page; the class's
- *    teacher approves, then the user receives login + temporary password by e-mail.
+ *  Élève (class-code process): 1 infos perso → 2 classe / code → 3 confirmation →
+ *    POST /utilisateurs {…, codeClasse} → "Compte créé / en attente d'approbation" page; an acknowledgement
+ *    e-mail is sent at once, the class's teacher approves, then login + temporary password by e-mail.
+ *  Parent: 1 infos perso → 2 « Vos enfants » (how many, then one card per child: prénom, nom, class code
+ *    checked with « Vérifier le code ») → 3 récapitulatif → POST /utilisateurs {type:"parent", …,
+ *    enfants:[{prenom, nom, codeClasse}]}. The parent account is created at once (login + temporary
+ *    password by e-mail); each child's class request waits for the teacher (« Mes enfants »).
  *  Update mode (?email=…&token=…): a professor completes / fixes his documents.
  */
 const ROLES = {
@@ -72,7 +78,7 @@ const ROLES = {
     icon: faUsers,
     color: "#10B981",
     text: "Suivez vos enfants, communiquez avec les enseignants.",
-    steps: ["Infos perso", "Classe / Code", "Confirmation"],
+    steps: ["Infos perso", "Vos enfants", "Récapitulatif"],
     illustration: onboarding4,
   },
 };
@@ -83,6 +89,19 @@ const DOCS = [
   { name: "selfie", label: "Photo de profil (selfie)", icon: faCamera },
 ];
 const FILE_FIELDS = DOCS.map((d) => d.name);
+const MAX_CHILDREN = 10;
+const CHILD_CODE_ERRORS = ["CODE_CLASSE_INVALIDE", "CLASSE_NON_ACTIVE", "CODE_CLASSE_REQUIS", "CLASSE_RESERVEE_MINEURS"];
+
+let childKeySeq = 0;
+const newChild = (data = {}) => ({
+  key: `c${Date.now()}-${++childKeySeq}`,
+  prenom: data.prenom || "",
+  nom: data.nom || "",
+  codeClasse: data.codeClasse || "",
+  preview: null,
+  errors: {},
+  resetKey: 0,
+});
 
 const EMPTY_FORM = {
   type: "",
@@ -98,6 +117,7 @@ const EMPTY_FORM = {
   selfie: "",
   matriculeProfesseur: "",
   hasUploaded: false,
+  enfants: [],
 };
 
 // Files can't be serialized: anything that is not a non-empty string (an already uploaded URL) is reset.
@@ -106,6 +126,8 @@ const sanitizeStored = (data) => {
   FILE_FIELDS.forEach((f) => {
     if (typeof clean[f] !== "string") clean[f] = "";
   });
+  // Children: names and codes only (each code is verified again).
+  clean.enfants = Array.isArray(clean.enfants) ? clean.enfants.slice(0, MAX_CHILDREN).map((c) => newChild(c || {})) : [];
   return clean;
 };
 
@@ -140,10 +162,14 @@ const SignUp = ({ theme }) => {
   const role = isUpdateMode ? "professeur" : ROLE_KEYS.includes(roleParam) ? roleParam : null;
   const roleConf = role ? ROLES[role] : null;
   const isProfessor = role === "professeur";
-  // Class code lookup (GET /public/classes/apercu), run only by the "Vérifier le code" button.
-  const classPreview = useClassPreview(formData.codeClasse, role === "parent" ? "parent" : "eleve", {
-    enabled: !!role && !isProfessor,
+  const isParentRole = role === "parent";
+  // Élève: class code lookup (GET /public/classes/apercu), run only by the "Vérifier le code" button.
+  // Parent: one lookup per child card (ChildCodeCard).
+  const classPreview = useClassPreview(formData.codeClasse, "eleve", {
+    enabled: role === "eleve",
   });
+  const [childCountChoice, setChildCountChoice] = useState(1);
+  const enfants = formData.enfants || [];
 
   const showAlert = (message, type = "error", duration = 6000) => {
     if (alertTimer.current) clearTimeout(alertTimer.current);
@@ -213,7 +239,8 @@ const SignUp = ({ theme }) => {
 
   useEffect(() => {
     if (isUpdateMode) return;
-    const { cniRecto, cniVerso, selfie, ...serializable } = formData;
+    const { cniRecto, cniVerso, selfie, enfants: kids, ...serializable } = formData;
+    serializable.enfants = (kids || []).map(({ prenom, nom, codeClasse }) => ({ prenom, nom, codeClasse }));
     localStorage.setItem("signupFormData", JSON.stringify(serializable));
   }, [formData, isUpdateMode]);
 
@@ -543,6 +570,134 @@ const SignUp = ({ theme }) => {
     }
   };
 
+  /* ---------- Parent: children (« Vos enfants ») ---------- */
+  const updateChildren = useCallback(
+    (updater) => setFormData((prev) => ({ ...prev, enfants: updater(prev.enfants || []) })),
+    [],
+  );
+  const setChildCount = (count) => {
+    const n = Math.max(1, Math.min(MAX_CHILDREN, Number(count) || 1));
+    updateChildren((list) =>
+      n > list.length ? [...list, ...Array.from({ length: n - list.length }, () => newChild())] : list.slice(0, n),
+    );
+  };
+  const addChild = () => updateChildren((list) => (list.length >= MAX_CHILDREN ? list : [...list, newChild()]));
+  const removeChild = (key) => updateChildren((list) => (list.length <= 1 ? list : list.filter((c) => c.key !== key)));
+  const changeChild = (key, field, value) =>
+    updateChildren((list) =>
+      list.map((c) => (c.key === key ? { ...c, [field]: value, errors: { ...c.errors, [field]: undefined, general: undefined } } : c)),
+    );
+  const setChildPreview = useCallback(
+    (key, preview) =>
+      updateChildren((list) =>
+        list.map((c) =>
+          c.key !== key || c.preview === preview
+            ? c
+            : { ...c, preview, errors: preview ? { ...c.errors, codeClasse: undefined, general: undefined } : c.errors },
+        ),
+      ),
+    [updateChildren],
+  );
+  const allChildrenVerified = enfants.length > 0 && enfants.every((c) => !!c.preview);
+
+  // Names required, every code verified, no child twice in the same class.
+  const validateChildren = () => {
+    if (enfants.length === 0) {
+      showAlert("Indiquez combien d'enfants vous souhaitez inscrire.");
+      return false;
+    }
+    const seen = new Set();
+    let firstError = "";
+    const checked = enfants.map((c) => {
+      const e = {};
+      if (!c.prenom.trim()) e.prenom = "Le prénom est requis";
+      if (!c.nom.trim()) e.nom = "Le nom est requis";
+      if (!c.preview) e.codeClasse = c.codeClasse.trim() ? "Cliquez sur « Vérifier le code »" : "Le code de la classe est requis";
+      const id = `${c.prenom.trim().toLowerCase()}|${c.nom.trim().toLowerCase()}|${c.preview?.id || c.codeClasse.trim()}`;
+      if (!e.prenom && !e.nom && seen.has(id)) e.general = "Cet enfant figure déjà dans la liste pour cette classe.";
+      seen.add(id);
+      if (!firstError) firstError = Object.values(e)[0] || "";
+      return Object.keys(e).length ? { ...c, errors: { ...c.errors, ...e } } : c;
+    });
+    if (!firstError) return true;
+    updateChildren(() => checked);
+    showAlert(firstError);
+    return false;
+  };
+
+  const submitParent = async () => {
+    if (!validateStep1()) {
+      setCurrentStep(1);
+      return;
+    }
+    if (!validateChildren()) {
+      setCurrentStep(2);
+      return;
+    }
+    setIsSubmitting(true);
+    const email = formData.email.trim();
+    try {
+      const payload = {
+        type: "parent",
+        nom: formData.nom.trim(),
+        prenom: formData.prenom.trim(),
+        email,
+        telephone: formData.telephone,
+        adresse: formData.adresse.trim(),
+        enfants: enfants.map((c) => ({ prenom: c.prenom.trim(), nom: c.nom.trim(), codeClasse: c.codeClasse.trim() })),
+      };
+      const response = await axios.post(`${API}/utilisateurs`, payload);
+      const data = response.data || {};
+      const statut = data.statutInscription || data.inscriptionStatut || null;
+      clearSignupStorage();
+
+      if (statut === "ROLE_ADDED" || statut === "ROLE_PENDING_VALIDATION") {
+        // E-mail already registered: the parent profile (and the children's requests) went to that account.
+        navigate("/schoolchat/login", {
+          state: {
+            email,
+            message:
+              "Un compte existe déjà avec cette adresse e-mail : le profil parent y a été ajouté. Connectez-vous avec votre mot de passe habituel ; vos enfants apparaissent dans « Mes enfants ».",
+          },
+        });
+        return;
+      }
+      const returned = Array.isArray(data.enfants) && data.enfants.length > 0 ? data.enfants : null;
+      const recap = returned
+        ? returned.map((e) => ({ prenom: e.prenom, nom: e.nom, classeNom: e.classeNom || null }))
+        : enfants.map((c) => ({ prenom: c.prenom.trim(), nom: c.nom.trim(), classeNom: c.preview?.nom || null }));
+      navigate("/schoolchat/compte-cree", {
+        replace: true,
+        state: { email, role: "parent", statut, enfants: recap },
+      });
+    } catch (err) {
+      console.error("Erreur lors de l'inscription parent:", err);
+      if (showFieldError(err)) return;
+      const data = err.response?.data || {};
+      const code = String(data.code || "").toUpperCase();
+      const rawIndex = data.enfantIndex;
+      const idx =
+        typeof rawIndex === "number" ? rawIndex : /^\d+$/.test(String(rawIndex ?? "")) ? Number(rawIndex) : null;
+      const msg = showBackendError(err, "Erreur lors de la création du compte");
+      if (idx !== null && idx >= 0 && idx < enfants.length) {
+        const aboutCode = CHILD_CODE_ERRORS.includes(code) || /CODE|CLASSE/.test(code);
+        updateChildren((list) =>
+          list.map((c, i) => {
+            if (i !== idx) return c;
+            return aboutCode
+              ? { ...c, preview: null, resetKey: c.resetKey + 1, errors: { codeClasse: msg } }
+              : { ...c, errors: { general: msg } };
+          }),
+        );
+        setCurrentStep(2);
+      } else if (code.includes("ENFANT")) {
+        setCurrentStep(2);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   /* ---------- Navigation ---------- */
   const handleNextStep = async () => {
     if (isSubmitting) return;
@@ -550,6 +705,11 @@ const SignUp = ({ theme }) => {
       if (validateStep1()) setCurrentStep(2);
     } else if (currentStep === 2 && isProfessor) {
       if (validateDocuments()) setCurrentStep(3);
+    } else if (currentStep === 2 && isParentRole) {
+      if (validateChildren()) {
+        setErrors({});
+        setCurrentStep(3);
+      }
     } else if (currentStep === 2) {
       // Single button: "Vérifier le code" runs the lookup (card or error under the field); once the class
       // is found it becomes "Suivant".
@@ -561,6 +721,7 @@ const SignUp = ({ theme }) => {
       setCurrentStep(3);
     } else if (currentStep === 3) {
       if (isProfessor) await handleDocumentSubmission();
+      else if (isParentRole) await submitParent();
       else await submitWithClassCode();
     }
   };
@@ -654,13 +815,15 @@ const SignUp = ({ theme }) => {
   );
 
   const isLastStep = currentStep === 3;
-  const verifyingCode = !isProfessor && currentStep === 2 && !classPreview.isValid;
+  const verifyingCode = role === "eleve" && currentStep === 2 && !classPreview.isValid;
   const nextLabel = isLastStep
     ? isUpdateMode
       ? "Mettre à jour"
       : isProfessor
         ? "Envoyer ma demande"
-        : "Créer mon compte"
+        : isParentRole
+          ? "Confirmer"
+          : "Créer mon compte"
     : verifyingCode
       ? "Vérifier le code"
       : "Suivant";
@@ -837,15 +1000,104 @@ const SignUp = ({ theme }) => {
             </motion.div>
           )}
 
-          {/* Step 2 — parent / élève: class code */}
-          {currentStep === 2 && !isProfessor && (
+          {/* Step 2 — parent: children */}
+          {currentStep === 2 && isParentRole && (
+            <motion.div key="step2-children" variants={stepVariants} initial="hidden" animate="visible" exit="exit" transition={{ duration: 0.25 }}>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Vos enfants</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                Pour chaque enfant, renseignez son prénom, son nom et le code de sa classe, puis vérifiez le code.
+              </p>
+              {enfants.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 p-5">
+                  <label htmlFor="childCount" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Combien d'enfants ? <span className="text-[#EF4444]">*</span>
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <select
+                      id="childCount"
+                      value={childCountChoice}
+                      onChange={(e) => setChildCountChoice(Number(e.target.value))}
+                      className="sc-input block w-full sm:w-40 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-3 text-sm sm:text-base focus:outline-none focus:ring-4 focus:ring-indigo-500/15 focus:border-[#4F46E5]"
+                    >
+                      {Array.from({ length: MAX_CHILDREN }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>
+                          {n} {n > 1 ? "enfants" : "enfant"}
+                        </option>
+                      ))}
+                    </select>
+                    <Button type="button" icon={faArrowRight} onClick={() => setChildCount(childCountChoice)}>
+                      Continuer
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    Vous pourrez en ajouter ou en retirer ensuite (10 au maximum).
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <label htmlFor="childCountEdit" className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      Combien d'enfants ?
+                      <select
+                        id="childCountEdit"
+                        value={enfants.length}
+                        onChange={(e) => setChildCount(e.target.value)}
+                        className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm"
+                      >
+                        {Array.from({ length: MAX_CHILDREN }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {enfants.filter((c) => c.preview).length} / {enfants.length} code(s) vérifié(s)
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    {enfants.map((c, i) => (
+                      <ChildCodeCard
+                        key={c.key}
+                        index={i}
+                        idPrefix="signup-enfant"
+                        title={`Enfant ${i + 1}${c.prenom.trim() ? ` — ${c.prenom.trim()}` : ""}`}
+                        value={c}
+                        errors={c.errors}
+                        resetKey={c.resetKey}
+                        verifiedPreview={c.preview}
+                        onChange={(field, value) => changeChild(c.key, field, value)}
+                        onPreviewChange={(preview) => setChildPreview(c.key, preview)}
+                        onRemove={enfants.length > 1 ? () => removeChild(c.key) : undefined}
+                        disabled={isSubmitting}
+                      />
+                    ))}
+                  </div>
+                  {enfants.length < MAX_CHILDREN && (
+                    <Button type="button" variant="ghost" className="mt-4 w-full border-2 border-dashed border-indigo-200 dark:border-indigo-500/30" onClick={addChild}>
+                      <FontAwesomeIcon icon={faPlus} /> Ajouter un enfant
+                    </Button>
+                  )}
+                  {!allChildrenVerified && (
+                    <p className="mt-4 text-xs text-slate-500 dark:text-slate-400 flex items-start gap-2">
+                      <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 text-[#4F46E5]" />
+                      Vérifiez le code de la classe de chaque enfant pour continuer.
+                    </p>
+                  )}
+                </>
+              )}
+              <Alert type="info" className="mt-6">
+                Votre compte parent sera créé immédiatement. Chaque demande d'inscription sera ensuite validée par le
+                professeur de la classe de l'enfant.
+              </Alert>
+            </motion.div>
+          )}
+
+          {/* Step 2 — élève: class code */}
+          {currentStep === 2 && role === "eleve" && (
             <motion.div key="step2-code" variants={stepVariants} initial="hidden" animate="visible" exit="exit" transition={{ duration: 0.25 }}>
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Classe / Code d'inscription</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                {role === "parent"
-                  ? "Renseignez le code de la classe de votre enfant."
-                  : "Renseignez le code de votre classe."}
-              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Renseignez le code de votre classe.</p>
               <TextField
                 label="Code de la classe"
                 required
@@ -869,13 +1121,11 @@ const SignUp = ({ theme }) => {
               {classPreview.status === "loading" && <ClassPreviewStatus status="loading" />}
               {classPreview.isValid && <ClassPreviewCard preview={classPreview.preview} className="mt-4" />}
               <Alert type="info" className="mt-6">
-                Votre demande sera envoyée au professeur de la classe. Après son approbation, vous recevrez par e-mail votre
-                identifiant et un mot de passe temporaire.
-                {role === "eleve" && (
-                  <span className="block mt-1">
-                    Vous êtes mineur ? Demandez à votre parent de créer son compte : il vous ajoutera ensuite comme enfant.
-                  </span>
-                )}
+                Votre demande sera envoyée au professeur de la classe : vous recevrez tout de suite un e-mail d'accusé de
+                réception, puis, après son approbation, votre identifiant et un mot de passe temporaire.
+                <span className="block mt-1">
+                  Vous êtes mineur ? Demandez à votre parent de créer son compte : il vous inscrira comme enfant.
+                </span>
               </Alert>
             </motion.div>
           )}
@@ -893,15 +1143,29 @@ const SignUp = ({ theme }) => {
                 <SummaryRow label="E-mail" value={formData.email} />
                 <SummaryRow label="Téléphone" value={formData.telephone} />
                 <SummaryRow label="Adresse" value={formData.adresse} />
-                {!isProfessor && <SummaryRow label="Code de la classe" value={formData.codeClasse.trim()} />}
+                {role === "eleve" && <SummaryRow label="Code de la classe" value={formData.codeClasse.trim()} />}
                 {isProfessor && formData.matriculeProfesseur && <SummaryRow label="Matricule" value={formData.matriculeProfesseur} />}
               </dl>
-              {!isProfessor && classPreview.isValid && (
-                <ClassPreviewCard
-                  preview={classPreview.preview}
-                  title={role === "parent" ? "Votre enfant rejoint" : "Vous rejoignez"}
-                  className="mt-4"
-                />
+              {role === "eleve" && classPreview.isValid && (
+                <ClassPreviewCard preview={classPreview.preview} title="Vous rejoignez" className="mt-4" />
+              )}
+              {isParentRole && (
+                <div className="mt-5">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
+                    {enfants.length > 1 ? `Vos ${enfants.length} enfants` : "Votre enfant"}
+                  </h3>
+                  <ul className="space-y-3">
+                    {enfants.map((c, i) => (
+                      <li key={c.key}>
+                        <ClassPreviewCard
+                          compact
+                          preview={c.preview}
+                          title={`Enfant ${i + 1} — ${`${c.prenom.trim()} ${c.nom.trim()}`.trim()} rejoint`}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {isProfessor && (
                 <div className="mt-4 grid grid-cols-3 gap-3">
@@ -923,7 +1187,9 @@ const SignUp = ({ theme }) => {
                 <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 text-[#4F46E5]" />
                 {isProfessor
                   ? "Votre profil sera vérifié par l'administration. Un lien d'activation vous sera envoyé par e-mail."
-                  : "Le professeur de la classe doit approuver votre demande avant votre première connexion."}
+                  : isParentRole
+                    ? "Votre compte sera créé dès la confirmation : vous recevrez par e-mail votre identifiant et un mot de passe temporaire. Le professeur de chaque classe validera la demande de votre enfant."
+                    : "Vous recevrez un e-mail d'accusé de réception. Le professeur de la classe doit approuver votre demande avant votre première connexion."}
               </p>
             </motion.div>
           )}
@@ -938,7 +1204,10 @@ const SignUp = ({ theme }) => {
           <Button
             type="submit"
             className="flex-1"
-            disabled={!isProfessor && currentStep === 2 && !formData.codeClasse.trim()}
+            disabled={
+              currentStep === 2 &&
+              ((role === "eleve" && !formData.codeClasse.trim()) || (isParentRole && !allChildrenVerified))
+            }
             loading={isSubmitting || (verifyingCode && classPreview.status === "loading")}
             loadingLabel={verifyingCode ? "Vérification…" : "Traitement…"}
             icon={isLastStep ? faPaperPlane : verifyingCode ? faMagnifyingGlass : faArrowRight}

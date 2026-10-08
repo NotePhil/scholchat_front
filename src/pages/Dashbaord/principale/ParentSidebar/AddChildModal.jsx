@@ -1,291 +1,185 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCircleCheck,
-  faCircleExclamation,
-  faSpinner,
-  faUserPlus,
-  faXmark,
-} from "@fortawesome/free-solid-svg-icons";
-import { NIVEAUX } from "../../../../constants/niveaux";
-const AddChildModal = ({ isOpen, onClose, onChildAdded }) => {
-  const [formData, setFormData] = useState({
-    nom: "",
-    prenom: "",
-    niveau: "",
-    email: "",
-    telephone: "",
-  });
+import { faPaperPlane, faSchool, faUserPlus, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { Alert, Button } from "../../../../components/frontoffice/ui";
+import ChildCodeCard from "../../../../components/frontoffice/ChildCodeCard";
+import { registerChild, requestClassForChild } from "../../../../services/parentChildrenService";
+
+const EMPTY = { prenom: "", nom: "", codeClasse: "" };
+const CODE_ERRORS = ["CODE_CLASSE_INVALIDE", "CLASSE_NON_ACTIVE", "CODE_CLASSE_REQUIS", "CLASSE_RESERVEE_MINEURS"];
+
+/**
+ * Parent: « Ajouter un enfant » (prénom, nom, class code verified → POST /parents/{id}/enfants/inscription)
+ * or, with `child`, « Rejoindre une autre classe » for that existing child (class code verified →
+ * POST /acceder/demandes with estParent=true + eleveAssocieId). The request then waits for the teacher.
+ * onChildAdded(entry) is called after a success (the "childrenUpdated" window event is also emitted).
+ */
+const AddChildModal = ({ isOpen, onClose, onChildAdded, child = null }) => {
+  const joinMode = !!child;
+  const [value, setValue] = useState(EMPTY);
+  const [preview, setPreview] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [resetKey, setResetKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const niveaux = NIVEAUX;
-  const handleSubmit = async (e) => {
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setValue(EMPTY);
+    setPreview(null);
+    setErrors({});
+    setError("");
+    setSuccess("");
+    setLoading(false);
+  }, [isOpen, child]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape" && !loading) onClose?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, loading, onClose]);
+
+  if (!isOpen) return null;
+
+  const change = (field, v) => {
+    setValue((prev) => ({ ...prev, [field]: v }));
+    setErrors((prev) => ({ ...prev, [field]: undefined, general: undefined }));
+    setError("");
+  };
+
+  const childName = child ? `${child.prenom || ""} ${child.nom || ""}`.trim() : "";
+
+  const submit = async (e) => {
     e.preventDefault();
-    if (!formData.nom.trim() || !formData.prenom.trim() || !formData.niveau) {
-      setError("Nom, prenom et niveau sont obligatoires");
+    if (loading || success) return;
+    const errs = {};
+    if (!joinMode) {
+      if (!value.prenom.trim()) errs.prenom = "Le prénom est requis";
+      if (!value.nom.trim()) errs.nom = "Le nom est requis";
+    }
+    if (!preview) errs.codeClasse = value.codeClasse.trim() ? "Cliquez sur « Vérifier le code »" : "Le code de la classe est requis";
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
+    if (joinMode && (child.classes || []).some((c) => String(c.classeId) === String(preview.id) && c.statut !== "REJETEE")) {
+      setError(`${childName || "Cet enfant"} est déjà inscrit ou a déjà une demande en cours pour cette classe.`);
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const parentId = localStorage.getItem("userId");
-      const token =
-        localStorage.getItem("accessToken") ||
-        localStorage.getItem("authToken");
-
-      // Generate UUID for the student
-      const genId = () =>
-        "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-          const r = (Math.random() * 16) | 0;
-          return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-        });
-
-      // 1. Create the student
-      const eleveResponse = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/profil-eleves`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            id: genId(),
-            type: "eleve",
-            nom: formData.nom.trim(),
-            prenom: formData.prenom.trim(),
-            niveau: formData.niveau,
-            email: formData.email.trim() || null,
-            telephone: formData.telephone.trim() || null,
-            etat: "ACTIVE",
-          }),
-        },
-      );
-      if (!eleveResponse.ok) {
-        const errData = await eleveResponse.json();
-        throw new Error(
-          errData.message || "Erreur lors de la creation de l'eleve",
+      let entry;
+      if (joinMode) {
+        await requestClassForChild(child.id, preview);
+        entry = child;
+        setSuccess(`Demande envoyée pour ${childName || "votre enfant"} dans la classe « ${preview.nom} ». Elle attend la validation du professeur.`);
+      } else {
+        entry = await registerChild(value);
+        setSuccess(
+          `${value.prenom.trim()} ${value.nom.trim()} a été ajouté(e). La demande d'inscription dans la classe « ${preview.nom} » attend la validation du professeur.`,
         );
       }
-      const newEleve = await eleveResponse.json();
-
-      // 2. Link parent to child via parent_eleve
-      const linkResponse = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/parents/${parentId}/enfants/${newEleve.id}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-      if (!linkResponse.ok) {
-        const linkErr = await linkResponse.json().catch(() => ({}));
-        throw new Error(
-          linkErr.message || "Erreur lors de l'association de l'enfant",
-        );
-      }
-      setSuccess(
-        `${formData.prenom} ${formData.nom} a ete ajoute avec succes !`,
-      );
-      setFormData({
-        nom: "",
-        prenom: "",
-        niveau: "",
-        email: "",
-        telephone: "",
-      });
-
-      // Notify all listeners (Principal header, StudentClassList, etc.)
-      window.dispatchEvent(
-        new CustomEvent("childrenUpdated", {
-          detail: newEleve,
-        }),
-      );
-      if (onChildAdded) onChildAdded(newEleve);
-      setTimeout(() => {
-        setSuccess("");
-        onClose();
-      }, 2000);
+      window.dispatchEvent(new CustomEvent("childrenUpdated", { detail: entry }));
+      onChildAdded?.(entry);
+      setTimeout(() => onClose?.(), 2200);
     } catch (err) {
-      setError(err.message || "Erreur lors de l'ajout de l'enfant");
+      const code = String(err?.code || "").toUpperCase();
+      const msg = err?.message || "Une erreur est survenue.";
+      if (CODE_ERRORS.includes(code)) {
+        setPreview(null);
+        setResetKey((k) => k + 1);
+        setErrors({ codeClasse: msg });
+      } else if (code === "ENFANT_INVALIDE") {
+        setErrors({ general: msg });
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
   };
-  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-              <FontAwesomeIcon
-                icon={faUserPlus}
-                className="w-5 h-5 text-green-600"
-              />
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="child-class-modal-title"
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-[#10B981] shrink-0">
+              <FontAwesomeIcon icon={joinMode ? faSchool : faUserPlus} />
             </div>
-            <h2 className="text-lg font-bold text-gray-900">
-              Ajouter un enfant
-            </h2>
+            <div className="min-w-0">
+              <h2 id="child-class-modal-title" className="text-lg font-bold text-slate-900">
+                {joinMode ? "Rejoindre une autre classe" : "Ajouter un enfant"}
+              </h2>
+              {joinMode && childName && <p className="text-sm text-slate-500 truncate">Pour {childName}</p>}
+            </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            disabled={loading}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100"
+            aria-label="Fermer"
           >
-            <FontAwesomeIcon icon={faXmark} className="w-5 h-5" />
+            <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-              <FontAwesomeIcon
-                icon={faCircleExclamation}
-                className="w-4 h-4 flex-shrink-0"
+        <form onSubmit={submit} className="p-5 space-y-4" noValidate>
+          {error && <Alert type="error">{error}</Alert>}
+          {success ? (
+            <Alert type="success">{success}</Alert>
+          ) : (
+            <>
+              <p className="text-sm text-slate-500">
+                {joinMode
+                  ? "Saisissez le code de la nouvelle classe et vérifiez-le. La demande sera envoyée au professeur."
+                  : "Renseignez le prénom, le nom et le code de la classe de votre enfant, puis vérifiez le code. La demande sera envoyée au professeur de la classe."}
+              </p>
+              <ChildCodeCard
+                idPrefix={joinMode ? "join-class" : "add-child"}
+                value={value}
+                errors={errors}
+                resetKey={resetKey}
+                verifiedPreview={preview}
+                showNames={!joinMode}
+                onChange={change}
+                onPreviewChange={setPreview}
+                disabled={loading}
               />
-              {error}
-            </div>
+            </>
           )}
-          {success && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-              <FontAwesomeIcon
-                icon={faCircleCheck}
-                className="w-4 h-4 flex-shrink-0"
-              />
-              {success}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prenom *
-              </label>
-              <input
-                type="text"
-                value={formData.prenom}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    prenom: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-                placeholder="Prenom"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nom *
-              </label>
-              <input
-                type="text"
-                value={formData.nom}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    nom: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-                placeholder="Nom"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Niveau *
-            </label>
-            <select
-              value={formData.niveau}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  niveau: e.target.value,
-                })
-              }
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-            >
-              <option value="">Choisir le niveau</option>
-              {niveaux.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email (optionnel)
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  email: e.target.value,
-                })
-              }
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-              placeholder="email@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Telephone (optionnel)
-            </label>
-            <input
-              type="tel"
-              value={formData.telephone}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  telephone: e.target.value,
-                })
-              }
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-              placeholder="6XXXXXXXX"
-            />
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 text-gray-600 border border-gray-300 rounded-lg font-medium text-sm hover:bg-gray-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <FontAwesomeIcon
-                    icon={faSpinner}
-                    className="w-4 h-4 animate-spin"
-                  />
-                  Ajout...
-                </>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faUserPlus} className="w-4 h-4" />
-                  Ajouter
-                </>
-              )}
-            </button>
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+            <Button type="button" variant="subtle" className="sm:flex-1" onClick={onClose} disabled={loading}>
+              {success ? "Fermer" : "Annuler"}
+            </Button>
+            {!success && (
+              <Button
+                type="submit"
+                className="sm:flex-1"
+                loading={loading}
+                loadingLabel="Envoi…"
+                disabled={!preview || (!joinMode && (!value.prenom.trim() || !value.nom.trim()))}
+                icon={joinMode ? faPaperPlane : faUserPlus}
+              >
+                {joinMode ? "Envoyer la demande" : "Ajouter l'enfant"}
+              </Button>
+            )}
           </div>
         </form>
       </div>
     </div>
   );
 };
+
 export default AddChildModal;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "antd";
+import { openingFailed } from "../../../../../utils/notificationNavigation";
 import DocumentViewer from "../../../../../components/viewers/DocumentViewer";
 import { motion } from "framer-motion";
 import { useAuth } from "../../../../../context/AuthContext";
@@ -186,6 +187,8 @@ const CourseDetailsView = ({ courseId, onBack }) => {
   const [docViewerFile, setDocViewerFile] = useState(null);
   const [instructeurNom] = useState("Professeur");
   const [totalStudents] = useState(0);
+  // Latest load wins when courseId changes quickly (e.g. two notifications)
+  const loadRidRef = React.useRef(0);
   useEffect(() => {
     fetchCourseDetails();
     return () => {
@@ -220,11 +223,14 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     );
   };
   const fetchCourseDetails = async () => {
+    const rid = ++loadRidRef.current;
     try {
       setLoading(true);
       const { coursService } =
         await import("../../../../../services/CoursService");
       const courseData = await coursService.getCoursWithChapitres(courseId);
+      if (rid !== loadRidRef.current) return;
+      if (!courseData) throw new Error("Cours introuvable");
       console.log("Course data loaded:", courseData);
       const formattedCourse = {
         id: courseData.id,
@@ -301,7 +307,9 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       // Fetch uploaded files from MinIO filtered by course
       fetchMinioFiles(courseId);
     } catch (error) {
+      if (rid !== loadRidRef.current) return;
       console.error("Erreur lors du chargement du cours:", error);
+      openingFailed("Ce cours n'existe plus ou ne vous est plus accessible.");
       setCourse({
         id: courseId,
         titre: "Cours non trouvé",
@@ -315,7 +323,7 @@ const CourseDetailsView = ({ courseId, onBack }) => {
       });
       setChapters([]);
     } finally {
-      setLoading(false);
+      if (rid === loadRidRef.current) setLoading(false);
     }
   };
 

@@ -114,7 +114,7 @@ const ExerciseDetailsView = ({
         etat: data.etat || "BROUILLON",
       });
     } catch {
-      message.error("Impossible de charger l'exercice");
+      message.error("Impossible de charger l'exercice : il n'existe plus ou ne vous est plus accessible.");
     } finally {
       setLoading(false);
     }

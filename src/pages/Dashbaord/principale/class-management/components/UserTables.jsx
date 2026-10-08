@@ -10,6 +10,10 @@ import {
   message,
 } from "antd";
 import { scholchatService } from "../../../../../services/ScholchatService";
+import {
+  accessRequestLabel,
+  isChildAccessRequest,
+} from "../../../../../utils/accessRequestLabel";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
@@ -100,6 +104,10 @@ const UserTables = ({
         render: (text, record) => {
           // Gérer les cas où les données pourraient être incomplètes
           if (!record) return "N/A";
+          // Parent's request for a child: "<Parent> pour l'enfant <Enfant>"
+          if (type === "access-requests" && isChildAccessRequest(record)) {
+            return accessRequestLabel(record);
+          }
           return (
             `${record.prenom || ""} ${text || ""}`.trim() || "Non renseigné"
           );

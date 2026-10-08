@@ -6,6 +6,12 @@ import React, {
   useMemo,
 } from "react";
 import Sidebar from "./Sidebar";
+import {
+  openingDone,
+  openingFailed,
+  openingStart,
+  useMountedRef,
+} from "../../../../utils/notificationNavigation";
 import MessageList from "./MessageList";
 import MessageDetailPanel from "./MessageDetailPanel";
 import ComposeModal from "./ComposeModal";
@@ -132,8 +138,13 @@ const MobileMessagingInterface = ({
   handleEmptyTrash,
   onMessageSent,
   markLiveArrivalsRead,
+  openRequest,
 }) => {
   const [selectedThread, setSelectedThread] = useState(null);
+  // Conversation opened from a notification (new object on every click)
+  useEffect(() => {
+    if (openRequest?.conversation) setSelectedThread(openRequest.conversation);
+  }, [openRequest]);
   const attachments = useMessageAttachments();
   const [searchTerm, setSearchTerm] = useState("");
   const [replyText, setReplyText] = useState("");
@@ -700,6 +711,7 @@ const MessagingInterface = ({
   onClose,
   selectedConversation,
   userRole = "ADMIN",
+  tabData = null,
 }) => {
   const { user: currentUser } = useAuth(); // Use the useAuth hook to retrieve the current user
   const [allMessages, setAllMessages] = useState([]);
@@ -1449,6 +1461,61 @@ const MessagingInterface = ({
       setSelectedMessage(null);
     }
   }, [conversations]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ── Open a conversation from a notification ─────────────────────────────
+  // tabData: { messageId, partnerId (= sender) }. Waits for the first load,
+  // refetches once when the message is not there yet (WebSocket missed), then
+  // opens the thread grouped by partner. A request id — never an effect
+  // cleanup — discards a superseded click, so re-renders can't cancel it.
+  const [navRequest, setNavRequest] = useState(null);
+  const [mobileOpenRequest, setMobileOpenRequest] = useState(null);
+  const navRidRef = useRef(0);
+  const mountedRef = useMountedRef();
+  useEffect(() => {
+    if (!tabData || (!tabData.partnerId && !tabData.messageId)) return;
+    const rid = ++navRidRef.current;
+    openingStart("Ouverture de la conversation…");
+    setNavRequest({
+      partnerId: tabData.partnerId || null,
+      messageId: tabData.messageId || null,
+      rid,
+      phase: "initial", // initial → refetching → refetched
+    });
+  }, [tabData]);
+  useEffect(() => {
+    if (!navRequest || loading || navRequest.phase === "refetching") return;
+    const { partnerId, messageId, rid, phase } = navRequest;
+    if (rid !== navRidRef.current) return;
+    const grouped = groupMessagesByConversation(allMessages);
+    const conversation =
+      (messageId &&
+        grouped.find((c) => (c.thread || [c]).some((m) => m.id === messageId))) ||
+      (partnerId && grouped.find((c) => c.conversationKey === partnerId)) ||
+      null;
+    if (!conversation && phase === "initial") {
+      setNavRequest({ ...navRequest, phase: "refetching" });
+      Promise.resolve(fetchMessages(true)).finally(() => {
+        if (!mountedRef.current || rid !== navRidRef.current) return;
+        setNavRequest((r) =>
+          r && r.rid === rid ? { ...r, phase: "refetched" } : r,
+        );
+      });
+      return;
+    }
+    setNavRequest(null);
+    if (!conversation) {
+      openingFailed(
+        "Ce message n'existe plus ou ne vous est plus accessible.",
+      );
+      return;
+    }
+    openingDone();
+    setSearchTerm("");
+    setFilterType("all");
+    setSelectedMessage(conversation);
+    if (!conversation.read) handleMarkConversationRead(conversation, true);
+    if (isMobile) setMobileOpenRequest({ conversation, rid });
+  }, [navRequest, loading, allMessages]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const deleteDialog = deleteRequest && (
     <DeleteMessageDialog
       isDark={isDark}
@@ -1508,6 +1575,7 @@ const MessagingInterface = ({
         handleEmptyTrash={handleEmptyTrash}
         onMessageSent={onMessageSent}
         markLiveArrivalsRead={markLiveArrivalsRead}
+        openRequest={mobileOpenRequest}
       />
       {deleteDialog}
       </>

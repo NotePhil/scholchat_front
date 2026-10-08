@@ -33,7 +33,7 @@ import {
   faTrophy,
 } from "@fortawesome/free-solid-svg-icons";
 const { Title, Text } = Typography;
-const ManageExercisesContent = ({ onBack, setActiveTab }) => {
+const ManageExercisesContent = ({ onBack, setActiveTab, tabData }) => {
   const initClassId = localStorage.getItem("selectedClassId") || null;
   const [filterClassId, setFilterClassId] = useState(initClassId);
   const [filterClassName, setFilterClassName] = useState("");
@@ -81,6 +81,18 @@ const ManageExercisesContent = ({ onBack, setActiveTab }) => {
     window.addEventListener("childChanged", onChildChanged);
     return () => window.removeEventListener("childChanged", onChildChanged);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Opened from a notification (EXERCISE_CREATED): exercise detail. The
+  // detail view fetches it by id and reports a missing / forbidden one.
+  useEffect(() => {
+    const exerciseId = tabData?.exerciseId;
+    if (!exerciseId) return;
+    setSelectedExerciseId(exerciseId);
+    setSelectedExerciseProgrammerId(null);
+    setSelectedExerciseData(null);
+    setEditingExerciseId(null);
+    setCurrentView("details");
+  }, [tabData]);
 
   // Load all data on mount
   useEffect(() => {

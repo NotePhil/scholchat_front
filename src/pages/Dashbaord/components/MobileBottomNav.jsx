@@ -51,6 +51,8 @@ const MobileBottomNav = ({
   currentTheme,
   colorSchemes,
   onLogout,
+  // Limited parent (no child accepted yet): only these tabs are offered
+  restrictTabs = null,
 }) => {
   const [showQuickActions, setShowQuickActions] = useState(false);
   // Live unread-messages count (socket-driven, no polling).
@@ -69,6 +71,22 @@ const MobileBottomNav = ({
   const [showMore, setShowMore] = useState(false);
   const getQuickActions = () => {
     let items = [];
+    if (restrictTabs) {
+      return [
+        {
+          icon: Users,
+          label: "Enfants",
+          color: "bg-purple-500",
+          tab: "my-children",
+        },
+        {
+          icon: Settings,
+          label: "Paramètres",
+          color: "bg-slate-500",
+          tab: "settings",
+        },
+      ].filter((item) => restrictTabs.includes(item.tab));
+    }
     if (!showMore) {
       // Main menu — matches Sidebar exactly
       items = [
@@ -389,6 +407,17 @@ const MobileBottomNav = ({
     },
   ];
   const quickActions = getQuickActions();
+  const visibleNavItems = restrictTabs
+    ? [
+        {
+          icon: Users,
+          label: "Enfants",
+          tab: "my-children",
+        },
+        navItems.find((item) => item.isCenter),
+        navItems.find((item) => item.tab === "settings"),
+      ].filter(Boolean)
+    : navItems;
   return (
     <>
       {/* Quick Actions Overlay */}
@@ -504,7 +533,7 @@ const MobileBottomNav = ({
           paddingBottom: "env(safe-area-inset-bottom, 16px)",
         }}
       >
-        {navItems.map((item, index) => {
+        {visibleNavItems.map((item, index) => {
           if (item.isCenter) {
             return (
               <div key={index} className="relative -top-6">

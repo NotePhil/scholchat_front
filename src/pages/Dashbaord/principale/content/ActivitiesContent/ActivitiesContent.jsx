@@ -4,6 +4,12 @@ import { minioS3Service } from "../../../../../services/minioS3";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { useSelector } from "react-redux";
 import { motion } from "framer-motion";
+import {
+  openingDone,
+  openingFailed,
+  openingStart,
+  useMountedRef,
+} from "../../../../../utils/notificationNavigation";
 
 /**
  * ActivitiesContent - Professional Facebook-like Activity Feed
@@ -598,7 +604,7 @@ const _cache = {
 };
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 const PAGE_SIZE = 10;
-const ActivitiesContent = () => {
+const ActivitiesContent = ({ tabData = null }) => {
   const { t } = useTranslation();
   const language = useSelector(
     (state) => state.language?.currentLanguage || "fr",
@@ -753,6 +759,68 @@ const ActivitiesContent = () => {
     return null;
   });
   const [classFilterName, setClassFilterName] = useState("");
+
+  // ── Open an activity from a notification (tabData.activityId) ─────────────
+  // The feed is paginated: reload page 0 once (the cached feed may predate the
+  // event), then fetch further pages until the event shows up; it is then
+  // scrolled to and highlighted. Request id + mounted ref (no effect-cleanup
+  // flag) so re-renders never cancel a page load in flight.
+  const [highlightedActivityId, setHighlightedActivityId] = useState(null);
+  const [activityNav, setActivityNav] = useState(null); // { activityId, rid, phase, pages, busy }
+  const activityNavRidRef = useRef(0);
+  const mountedRef = useMountedRef();
+  useEffect(() => {
+    const activityId = tabData?.activityId;
+    if (!activityId) return;
+    const rid = ++activityNavRidRef.current;
+    openingStart("Ouverture de l'activité…");
+    setActiveTab("all");
+    setClassFilterId(null);
+    setClassFilterName("");
+    setActivityNav({ activityId, rid, phase: "initial", pages: 0, busy: false });
+  }, [tabData]);
+  useEffect(() => {
+    if (!activityNav || activityNav.busy || loadingActivities || loadingMore)
+      return;
+    const { activityId, rid, phase, pages } = activityNav;
+    if (rid !== activityNavRidRef.current) return;
+    const found = activities.find((a) => String(a.id) === String(activityId));
+    if (found) {
+      setActivityNav(null);
+      openingDone();
+      setHighlightedActivityId(found.id);
+      setTimeout(() => {
+        document
+          .getElementById(`activity-${found.id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 200);
+      setTimeout(() => {
+        if (mountedRef.current)
+          setHighlightedActivityId((cur) => (cur === found.id ? null : cur));
+      }, 5000);
+      return;
+    }
+    const fresh = phase === "initial";
+    if (!fresh && (!hasMore || pages >= 10)) {
+      setActivityNav(null);
+      openingFailed(
+        "Cette activité n'existe plus ou ne vous est plus accessible.",
+      );
+      return;
+    }
+    setActivityNav({ ...activityNav, busy: true });
+    const load = fresh
+      ? loadEvents(0, false, true)
+      : loadEvents(currentPage + 1, false);
+    Promise.resolve(load).finally(() => {
+      if (!mountedRef.current || rid !== activityNavRidRef.current) return;
+      setActivityNav((r) =>
+        r && r.rid === rid
+          ? { ...r, busy: false, phase: "paging", pages: fresh ? 0 : r.pages + 1 }
+          : r,
+      );
+    });
+  }, [activityNav, loadingActivities, loadingMore, activities, hasMore, currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Module-level cache for classes — shared between publication rights and the create/edit forms.
   // Avoids fetching /classes twice on mount (once for publication rights, once for the form).
@@ -2372,6 +2440,7 @@ const ActivitiesContent = () => {
                       {filteredActivities.map((activity) => (
                         <motion.div
                           key={activity.id}
+                          id={`activity-${activity.id}`}
                           initial={{
                             opacity: 0,
                             y: 20,
@@ -2380,7 +2449,7 @@ const ActivitiesContent = () => {
                             opacity: 1,
                             y: 0,
                           }}
-                          className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-sm overflow-hidden"
+                          className={`bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-sm overflow-hidden transition-shadow ${highlightedActivityId === activity.id ? "ring-2 ring-blue-500 shadow-lg" : ""}`}
                         >
                           {/* Post Header */}
                           <div className={`${isMobile ? "p-3" : "p-4"}`}>

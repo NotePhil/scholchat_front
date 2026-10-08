@@ -106,12 +106,17 @@ const ManageEstablishmentDetailsView = ({
       fetchUsers();
     }
   }, [establishmentId]);
+  const detailsRidRef = React.useRef(0);
   const fetchEstablishmentDetails = async () => {
+    // Latest établissement wins when establishmentId changes quickly
+    const rid = ++detailsRidRef.current;
     try {
       setLoading(true);
       setError(null);
       const data =
         await EstablishmentService.getEstablishmentById(establishmentId);
+      if (rid !== detailsRidRef.current) return;
+      if (!data) throw new Error("not found");
       setEstablishment(data);
 
       // Set form values
@@ -125,10 +130,14 @@ const ManageEstablishmentDetailsView = ({
         optionTokenGeneral: data.optionTokenGeneral || false,
       });
     } catch (error) {
+      if (rid !== detailsRidRef.current) return;
       console.error("Error fetching establishment details:", error);
-      setError("Erreur lors du chargement des détails de l'établissement");
+      setEstablishment(null);
+      setError(
+        "Cet établissement n'existe plus ou ne vous est plus accessible.",
+      );
     } finally {
-      setLoading(false);
+      if (rid === detailsRidRef.current) setLoading(false);
     }
   };
   const fetchEstablishmentGestionnaire = async () => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import classService from "../../../../../services/ClassService";
+import { classService } from "../../../../../services/ClassService";
 import establishmentService from "../../../../../services/EstablishmentService";
 import accederService from "../../../../../services/accederService";
 import { useAuth } from "../../../../../context/AuthContext";
@@ -290,6 +290,8 @@ const ClassesContentMobile = ({
   );
 };
 const ClassesContent = ({ onManageClass, setActiveTab }) => {
+  // Before any early return (rules of hooks).
+  const isMobile = useSelector((state) => state.ui.isMobile);
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTab, setCurrentTab] = useState("active");
@@ -706,7 +708,6 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
       </div>
     );
   }
-  const isMobile = useSelector((state) => state.ui.isMobile);
   if (isMobile) {
     return (
       <ClassesContentMobile

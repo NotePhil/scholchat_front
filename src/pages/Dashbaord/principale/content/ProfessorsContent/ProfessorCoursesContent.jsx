@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { coursService } from "../../../../../services/CoursService";
 import { matiereService } from "../../../../../services/MatiereService";
 import { classService } from "../../../../../services/ClassService";
@@ -28,13 +28,19 @@ import {
   faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../../utils/faIconAdapter";
+import {
+  openingDone,
+  openingFailed,
+  openingStart,
+  useMountedRef,
+} from "../../../../../utils/notificationNavigation";
 const Activity = asIconComponent(faHeartPulse);
 const BookOpen = asIconComponent(faBookOpen);
 const CheckCircle = asIconComponent(faCircleCheck);
 const FileText = asIconComponent(faFileLines);
 const Star = asIconComponent(faStar);
 const TrendingUp = asIconComponent(faArrowTrendUp);
-const ProfessorCoursesContent = ({ setActiveTab }) => {
+const ProfessorCoursesContent = ({ setActiveTab, tabData }) => {
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +72,33 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
   useEffect(() => {
     filterCourses();
   }, [courses, searchTerm, filterStatus]);
+
+  // Open a course from a notification (tabData.courseId), fetched by id so it
+  // works for courses of other professors (admin) and when the list is stale.
+  // A request id (not an effect-cleanup flag) lets only the latest click win.
+  const navRidRef = useRef(0);
+  const mountedRef = useMountedRef();
+  useEffect(() => {
+    const courseId = tabData?.courseId;
+    if (!courseId) return;
+    const rid = ++navRidRef.current;
+    setShowEditForm(false);
+    setEditingCourse(null);
+    openingStart("Ouverture du cours…");
+    coursService
+      .getCoursWithChapitres(courseId)
+      .then((course) => {
+        if (!mountedRef.current || rid !== navRidRef.current) return;
+        if (!course) throw new Error("not found");
+        openingDone();
+        setViewingCourse(course);
+        setShowCourseContent(true);
+      })
+      .catch(() => {
+        if (!mountedRef.current || rid !== navRidRef.current) return;
+        openingFailed("Ce cours n'existe plus ou ne vous est plus accessible.");
+      });
+  }, [tabData]); // eslint-disable-line react-hooks/exhaustive-deps
   const loadProfessorClasses = async (preselectedClassId) => {
     try {
       const userId = localStorage.getItem("userId");
@@ -206,6 +239,15 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
       return () => clearTimeout(timer);
     }
   }, [error]);
+  if (showCourseContent && viewingCourse) {
+    return (
+      <CourseContentView
+        key={viewingCourse.id}
+        course={viewingCourse}
+        onBack={handleBackFromCourseContent}
+      />
+    );
+  }
   if (loading && courses.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -237,14 +279,6 @@ const ProfessorCoursesContent = ({ setActiveTab }) => {
         setLoading={setLoading}
         editMode={true}
         courseToEdit={editingCourse}
-      />
-    );
-  }
-  if (showCourseContent && viewingCourse) {
-    return (
-      <CourseContentView
-        course={viewingCourse}
-        onBack={handleBackFromCourseContent}
       />
     );
   }

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useState } from "react";
+import React, { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useReturnToPage } from "../../../hooks/useReturnToPage";
 import { useDispatch, useSelector, useStore } from "react-redux";
@@ -51,7 +51,19 @@ import MatiereContent from "./content/MatiereContent/MatiereContent";
 import GestionnaireDashboardContent from "./content/GestionnaireContent/GestionnaireDashboardContent";
 import MobileBottomNav from "../components/MobileBottomNav";
 import ParentChildrenList from "./ParentSidebar/ParentChildrenList";
-import ParentAddChildPrompt from "../../../components/frontoffice/ParentAddChildPrompt";
+import {
+  PARENT_ACCESS_CHANGED_EVENT,
+  PARENT_LIMITED_EVENT,
+  PARENT_LIMITED_TABS,
+  checkFetchResponseForParentLimit,
+  installParentLimitNetworkHook,
+  isParentLimited,
+  refreshParentAccessFlag,
+} from "../../../utils/parentAccess";
+import {
+  childHasApprovedClass,
+  fetchChildrenStatuses,
+} from "../../../services/parentChildrenService";
 import GestionnairesManagement from "./content/GestionnaireContent/GestionnairesManagement";
 import RoleSelectorModal from "../../../components/modals/RoleSelectorModal";
 import AddRoleModal from "../../../components/modals/AddRoleModal";
@@ -91,6 +103,7 @@ import {
   faChevronDown,
   faCircleInfo,
   faEnvelope,
+  faHourglassHalf,
   faGear,
   faPhone,
   faRightFromBracket,
@@ -282,6 +295,12 @@ const Principal = () => {
   const [pendingChildSwitch, setPendingChildSwitch] = useState(null);
   const [showChildAuthModal, setShowChildAuthModal] = useState(false);
   const [childAuthLoading, setChildAuthLoading] = useState(false);
+  // Parent "limited mode" (parentAEnfantValide === false): until one of the
+  // children is accepted in a class, only « Mes enfants », Profil/Paramètres
+  // and the notifications are available.
+  const [parentLimited, setParentLimited] = useState(
+    () => isParent && isParentLimited(),
+  );
   // Professor verification gate: until the admin validates the identity
   // documents (statutVerification === VALIDE) the professor dashboard is not
   // rendered at all — every professor API call would be refused with 403
@@ -341,7 +360,9 @@ const Principal = () => {
     };
   }, [isProfessor]);
 
-  // Fetch children for parent role
+  // Fetch children for parent role. The child selector only lists the
+  // children accepted in at least one class (GET /parents/{id}/enfants/statuts);
+  // « Mes enfants » still lists all of them with the state of each request.
   const fetchParentChildren = useCallback(async () => {
     if (!isParent) return;
     try {
@@ -350,36 +371,39 @@ const Principal = () => {
         localStorage.getItem("accessToken") ||
         localStorage.getItem("authToken");
       if (!pid || !token) return;
-      const resp = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/parents/${pid}/enfants`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-      if (resp.ok) {
-        const kids = await resp.json();
-        setParentChildren(kids || []);
-        const storedId = localStorage.getItem("selectedChildId");
-        const found = kids.find((k) => k.id === storedId);
-        const autoSelect = found || (kids.length > 0 ? kids[0] : null);
-        setSelectedChild(autoSelect);
-        // Minor (no own account) → the parent answers homework for them; adult → read-only.
-        if (autoSelect) {
-          localStorage.setItem(
-            "selectedChildHasAccount",
-            autoSelect.email ? "true" : "false",
-          );
-        }
-        if (!found && autoSelect) {
-          localStorage.setItem("selectedChildId", autoSelect.id);
-          localStorage.setItem(
-            "selectedChildName",
-            `${autoSelect.prenom || ""} ${autoSelect.nom || ""}`,
+      const { children, withStatuses } = await fetchChildrenStatuses(pid);
+      const kids = withStatuses
+        ? children.filter(childHasApprovedClass)
+        : children;
+      setParentChildren(kids);
+      if (kids.length === 0) {
+        setSelectedChild(null);
+        if (localStorage.getItem("selectedChildId")) {
+          ["selectedChildId", "selectedChildName", "selectedChildNiveau", "selectedChildHasAccount"].forEach(
+            (k) => localStorage.removeItem(k),
           );
           window.dispatchEvent(new Event("childChanged"));
         }
+        return;
+      }
+      const storedId = localStorage.getItem("selectedChildId");
+      const found = kids.find((k) => String(k.id) === String(storedId));
+      // Auto-select the first approved child when none (or a non-approved one) is selected.
+      const autoSelect = found || kids[0];
+      setSelectedChild(autoSelect);
+      // Minor (no own account) → the parent answers homework for them; adult → read-only.
+      localStorage.setItem(
+        "selectedChildHasAccount",
+        autoSelect.email ? "true" : "false",
+      );
+      if (!found) {
+        localStorage.setItem("selectedChildId", autoSelect.id);
+        localStorage.setItem(
+          "selectedChildName",
+          `${autoSelect.prenom || ""} ${autoSelect.nom || ""}`,
+        );
+        localStorage.setItem("selectedChildNiveau", autoSelect.niveau || "");
+        window.dispatchEvent(new Event("childChanged"));
       }
     } catch (e) {
       console.warn("Could not fetch parent children:", e);
@@ -388,6 +412,22 @@ const Principal = () => {
   useEffect(() => {
     fetchParentChildren();
   }, [fetchParentChildren]);
+
+  // Child switched elsewhere (e.g. a notification about another child's
+  // class or homework): keep the header's child selector in sync.
+  useEffect(() => {
+    if (!isParent) return undefined;
+    const syncSelectedChild = () => {
+      const id = localStorage.getItem("selectedChildId");
+      setSelectedChild((current) =>
+        current?.id === id
+          ? current
+          : parentChildren.find((k) => k.id === id) || current,
+      );
+    };
+    window.addEventListener("childChanged", syncSelectedChild);
+    return () => window.removeEventListener("childChanged", syncSelectedChild);
+  }, [isParent, parentChildren]);
 
   // Re-fetch when a child is added from anywhere in the app
   useEffect(() => {
@@ -499,6 +539,7 @@ const Principal = () => {
         setShowTokenExpiredModal(true);
       }
       checkFetchResponseForProfessorBlock(response);
+      checkFetchResponseForParentLimit(response);
       return response;
     };
     return () => {
@@ -592,7 +633,12 @@ const Principal = () => {
     };
   }, []);
   const handleTabChange = useCallback(
-    (tab, queryParams = null) => {
+    (requestedTab, queryParams = null) => {
+      // Limited parent: everything but « Mes enfants » / Paramètres leads to « Mes enfants »
+      const tab =
+        parentLimited && !PARENT_LIMITED_TABS.includes(requestedTab)
+          ? "my-children"
+          : requestedTab;
       // Skip if already on this tab, unless query params are provided (e.g. pre-filtering)
       if (tab === activeTab && !queryParams) return;
       setShowManageClass(false);
@@ -635,8 +681,75 @@ const Principal = () => {
       normalizedUserRole,
       isAdmin,
       activeTab,
+      parentLimited,
     ],
   );
+
+  /* ---------- Parent limited mode ---------- */
+  // Flag changes (login payload, GET /utilisateurs/{id}, a 403
+  // PARENT_SANS_ENFANT_VALIDE, a child accepted…) lock / unlock the UI.
+  useEffect(() => {
+    if (!isParent) return undefined;
+    setParentLimited(isParentLimited());
+    refreshParentAccessFlag();
+    const uninstall = installParentLimitNetworkHook();
+    const onChanged = (e) => {
+      const valid = e?.detail?.valid;
+      if (typeof valid !== "boolean") return;
+      setParentLimited(!valid);
+      // Unlocked: reload the (approved) children → first approved child selected
+      if (valid) fetchParentChildren();
+    };
+    window.addEventListener(PARENT_ACCESS_CHANGED_EVENT, onChanged);
+    return () => {
+      uninstall();
+      window.removeEventListener(PARENT_ACCESS_CHANGED_EVENT, onChanged);
+    };
+  }, [isParent, fetchParentChildren]);
+
+  // While limited, any other page (URL typed, login landing, 403
+  // PARENT_SANS_ENFANT_VALIDE) goes to « Mes enfants ».
+  const goToMyChildren = useCallback(() => {
+    dispatch(setActiveTabAction("my-children"));
+    navigate("/schoolchat/Principal/ParentDashboard/my-children", {
+      replace: true,
+    });
+  }, [dispatch, navigate]);
+  useEffect(() => {
+    if (!isParent || !parentLimited) return;
+    if (!PARENT_LIMITED_TABS.includes(activeTab)) goToMyChildren();
+  }, [isParent, parentLimited, activeTab, goToMyChildren]);
+  useEffect(() => {
+    if (!isParent) return undefined;
+    const onLimited = () => {
+      setParentLimited(true);
+      if (!PARENT_LIMITED_TABS.includes(store.getState().ui.activeTab)) {
+        goToMyChildren();
+      }
+    };
+    window.addEventListener(PARENT_LIMITED_EVENT, onLimited);
+    return () => window.removeEventListener(PARENT_LIMITED_EVENT, onLimited);
+  }, [isParent, goToMyChildren, store]);
+
+  // A child's request decided (CHILD_ACCESS_APPROVED / REJECTED notification
+  // received): refresh the flag and the children.
+  const latestChildAccessNotif = useSelector((state) => {
+    const list = state.notifications?.notifications || [];
+    const n = list.find((x) =>
+      /^CHILD_ACCESS_/.test(String(x?.type || "").toUpperCase()),
+    );
+    return n ? n.id : null;
+  });
+  const seenChildAccessNotif = useRef(undefined);
+  useEffect(() => {
+    if (!isParent) return;
+    if (seenChildAccessNotif.current === latestChildAccessNotif) return;
+    const first = seenChildAccessNotif.current === undefined;
+    seenChildAccessNotif.current = latestChildAccessNotif;
+    if (first || !latestChildAccessNotif) return;
+    refreshParentAccessFlag();
+    window.dispatchEvent(new CustomEvent("childrenUpdated"));
+  }, [isParent, latestChildAccessNotif]);
   // Profile page focused on "Mes profils" (after adding a profile, role notifications…)
   const openProfiles = useCallback(() => {
     dispatch(
@@ -721,9 +834,12 @@ const Principal = () => {
     ],
   );
   const renderContent = () => {
-    const tab = isTabAllowedForRole(activeTab, normalizedUserRole)
+    let tab = isTabAllowedForRole(activeTab, normalizedUserRole)
       ? activeTab
       : "dashboard";
+    if (isParent && parentLimited && !PARENT_LIMITED_TABS.includes(tab)) {
+      tab = "my-children";
+    }
     switch (tab) {
       case "dashboard":
         if (isParentOrStudent) {
@@ -768,7 +884,7 @@ const Principal = () => {
       case "manage-exercises":
         return <ManageExercisesContent {...contentProps} />;
       case "devoirs":
-        return <StudentDevoirsContent />;
+        return <StudentDevoirsContent tabData={tabData} />;
       case "schedule-exercise":
         return <ExerciseProgrammerContent {...contentProps} />;
       case "corrections-exercise":
@@ -820,7 +936,7 @@ const Principal = () => {
       case "manage-offers":
         return <OfferAdminContent {...contentProps} />;
       case "my-children":
-        return <ParentChildrenList />;
+        return <ParentChildrenList tabData={tabData} />;
       case "gestionnaires":
         return <GestionnairesManagement />;
       case "messages":
@@ -841,6 +957,7 @@ const Principal = () => {
             }
             onLogout={handleLogout}
             focusSection={tabData?.section}
+            focusKey={tabData?._nav}
           />
         );
       default:
@@ -883,6 +1000,7 @@ const Principal = () => {
       "create-establishment": "Créer un Établissement",
       "manage-establishment": "Gérer un Établissement",
       cours: "Cours Programmés",
+      "my-children": "Mes enfants",
     };
     return (
       tabNames[activeTab] ||
@@ -1186,6 +1304,7 @@ const Principal = () => {
         colorSchemes={colorSchemes}
         onShowMessaging={handleShowMessaging}
         toggleSidebar={toggleSidebar}
+        restrictTabs={isParent && parentLimited ? PARENT_LIMITED_TABS : null}
       />
 
       <div
@@ -1294,7 +1413,7 @@ const Principal = () => {
             })()}
 
             {/* Child Switcher - only for parents with children */}
-            {isParent && parentChildren.length > 0 && (
+            {isParent && !parentLimited && parentChildren.length > 0 && (
               <div
                 style={{
                   position: "relative",
@@ -1796,6 +1915,18 @@ const Principal = () => {
               : undefined,
           }}
         >
+          {isParent && parentLimited && (
+            <div
+              className="mx-2 sm:mx-6 mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+              role="status"
+            >
+              <FontAwesomeIcon icon={faHourglassHalf} className="mt-0.5" />
+              <span>
+                Votre compte sera pleinement accessible dès qu'un de vos enfants
+                sera accepté dans une classe.
+              </span>
+            </div>
+          )}
           {renderContent()}
         </div>
       </div>
@@ -1809,13 +1940,11 @@ const Principal = () => {
           currentTheme={currentTheme}
           colorSchemes={colorSchemes}
           onLogout={handleLogout}
+          restrictTabs={isParent && parentLimited ? PARENT_LIMITED_TABS : null}
         />
       )}
 
-      {/* Parent without any child yet: invite him to add one (first connection) */}
-      {isParent && <ParentAddChildPrompt isDark={isDark} />}
-
-      {showMessaging && activeTab !== "messages" && !isMobile && (
+      {showMessaging && activeTab !== "messages" && !isMobile && !(isParent && parentLimited) && (
         <div className="messaging-sidebar">
           <MessagingInterface
             onClose={handleCloseMessaging}
