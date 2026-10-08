@@ -43,6 +43,9 @@ import AccessRequestDecisionModal from "../../../../components/common/AccessRequ
 import { accessRequestLabel } from "../../../../utils/accessRequestLabel";
 import StatisticsCards from "./components/StatisticsCards";
 import OffreInfoPanel from "../shared/OffreInfoPanel";
+import ClassCoursesBoard from "../shared/scolarite/ClassCoursesBoard";
+import ClassCourseDetail from "../shared/scolarite/ClassCourseDetail";
+import ClassStatisticsTab from "../shared/scolarite/ClassStatisticsTab";
 import {
   confirmClassAction,
   getClassActionTexts,
@@ -55,6 +58,7 @@ import {
   faBook,
   faCalendarDays,
   faCertificate,
+  faChartColumn,
   faCheck,
   faChevronLeft,
   faChevronRight,
@@ -213,6 +217,12 @@ const ManageClassDetailsView = ({
   const [classDetails, setClassDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(initialTab || "overview");
+  // "Cours" tab: course opened from the class courses board (null = board)
+  const [openedCourse, setOpenedCourse] = useState(null);
+  const [showSessions, setShowSessions] = useState(false);
+  useEffect(() => {
+    setOpenedCourse(null);
+  }, [classId]);
   const [actionLoading, setActionLoading] = useState(null);
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
@@ -1110,117 +1120,38 @@ const ManageClassDetailsView = ({
   const handleApproveRequest = (request) => {
     setRequestDecision({ mode: "approve", request });
   };
+  // The modal keeps its spinner until the API call settles. On success we close the modal first,
+  // THEN show a single success message and refresh in the background. On error we rethrow so the
+  // modal shows the error inside itself (no toast behind the modal).
   const confirmRequestDecision = async (reason) => {
     if (!requestDecision || requestDecisionLoading) return;
+    const { mode, request } = requestDecision;
     setRequestDecisionLoading(true);
     try {
-      if (requestDecision.mode === "approve") {
-        await approveRequest(requestDecision.request);
+      if (mode === "approve") {
+        await AccederService.validerDemandeAcces(request.id);
       } else {
-        await confirmRejectRequest(requestDecision.request, reason);
+        await AccederService.rejeterDemandeAcces(request.id, reason);
       }
-      setRequestDecision(null);
-    } catch {
-      // error already shown; keep the modal open
     } finally {
       setRequestDecisionLoading(false);
     }
-  };
-  const approveRequest = async (request) => {
-    try {
-      // First approve the request
-      await AccederService.validerDemandeAcces(request.id);
-
-      // After approval, we need to force proper categorization
-      // Get the user's full details and determine their correct type
-      let approvedUser = null;
-      let userCategory = null;
-
-      // Try to get full user data based on the request's user type
-      const userType = request.typeUtilisateur?.toUpperCase();
-      console.log(
-        "Approving request for user type:",
-        userType,
-        "User ID:",
-        request.utilisateurId,
-      );
-      try {
-        switch (userType) {
-          case "PROFESSEUR":
-          case "PROFESSOR":
-            const allProfessors = await scholchatService.getAllProfessors();
-            approvedUser = allProfessors.find(
-              (p) => p.id === request.utilisateurId,
-            );
-            userCategory = "professeurs";
-            break;
-          case "ELEVE":
-          case "ÉLÈVE":
-          case "STUDENT":
-            const allStudents = await scholchatService.getAllStudents();
-            approvedUser = allStudents.find(
-              (s) => s.id === request.utilisateurId,
-            );
-            userCategory = "eleves";
-            break;
-          case "PARENT":
-            const allParents = await scholchatService.getAllParents();
-            approvedUser = allParents.find(
-              (p) => p.id === request.utilisateurId,
-            );
-            userCategory = "parents";
-            break;
-          case "UTILISATEUR":
-          default:
-            // For general users, we'll use the request data and mark as utilisateur
-            approvedUser = {
-              id: request.utilisateurId,
-              nom: request.nom,
-              prenom: request.prenom,
-              email: request.email,
-              telephone: request.telephone,
-              type: "utilisateur",
-              etat: "ACTIF",
-            };
-            userCategory = "utilisateurs";
-            break;
-        }
-        message.success(
-          request.eleveAssocieId || request.eleveAssociePrenom
-            ? `Demande approuvée : ${accessRequestLabel(request)}.`
-            : approvedUser
-              ? `Demande approuvée. ${approvedUser.prenom || ""} ${approvedUser.nom || ""} a été ajouté(e).`
-              : "Demande approuvée avec succès",
-        );
-      } catch (userFetchError) {
-        console.warn(
-          "Could not fetch user details after approval:",
-          userFetchError,
-        );
-        message.success("Demande approuvée avec succès");
-      }
-      // Always reload class data to reflect the approval
-      await loadAccessRequests();
-      await loadClassDetails();
-    } catch (error) {
-      message.error(error?.message || "Erreur lors de l'approbation de la demande");
-      console.error("Error approving request:", error);
-      throw error;
-    }
+    setRequestDecision(null);
+    message.success(
+      mode === "approve"
+        ? request?.eleveAssocieId || request?.eleveAssociePrenom || request?.prenom || request?.nom
+          ? `Demande approuvée : ${accessRequestLabel(request)}.`
+          : "Demande approuvée avec succès"
+        : "Demande rejetée avec succès",
+    );
+    // Refresh lists without blocking the UI (errors there are reported by the loaders).
+    Promise.resolve()
+      .then(() => loadAccessRequests())
+      .then(() => (mode === "approve" ? loadClassDetails() : null))
+      .catch((err) => console.error("Refresh after access decision failed:", err));
   };
   const handleRejectRequest = (request) => {
     setRequestDecision({ mode: "reject", request });
-  };
-  const confirmRejectRequest = async (request, reason) => {
-    try {
-      await AccederService.rejeterDemandeAcces(request.id, reason);
-      message.success("Demande rejetée avec succès");
-      await loadAccessRequests();
-    } catch (error) {
-      message.error(error?.message || "Erreur lors du rejet de la demande");
-      console.error("Error rejecting request:", error);
-      throw error;
-    }
   };
 
   // Admin: open class rejection modal and load motifs
@@ -2488,6 +2419,11 @@ const ManageClassDetailsView = ({
                     label: `Exercices (${exercises.length})`,
                     icon: <FontAwesomeIcon icon={faFileLines} />,
                   },
+                  {
+                    key: "statistics",
+                    label: "Statistiques",
+                    icon: <FontAwesomeIcon icon={faChartColumn} />,
+                  },
                 ]
               : []),
             {
@@ -2862,20 +2798,60 @@ const ManageClassDetailsView = ({
             />
           )}
 
-          {/* Cours */}
-          {activeTab === "courses" && (
+          {/* Cours: programmed courses → course (content + exercises) */}
+          {activeTab === "courses" &&
+            (openedCourse ? (
+              <ClassCourseDetail
+                classe={{ id: classId, nom: classDetails?.nom }}
+                course={openedCourse}
+                mode="professor"
+                eleves={users.eleves}
+                onBack={() => setOpenedCourse(null)}
+              />
+            ) : (
+              <div className="space-y-4">
+                <ClassCoursesBoard
+                  classe={{ id: classId, nom: classDetails?.nom }}
+                  mode="professor"
+                  onOpenCourse={setOpenedCourse}
+                  headerAction={
+                    canPublishInClass && onNavigateToCourseCreation ? (
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<FontAwesomeIcon icon={faPlus} />}
+                        onClick={() => onNavigateToCourseCreation(classId)}
+                      >
+                        Programmer
+                      </Button>
+                    ) : null
+                  }
+                />
+                <div>
+                  <Button
+                    size="small"
+                    type="link"
+                    onClick={() => setShowSessions((v) => !v)}
+                    icon={<FontAwesomeIcon icon={faCalendarDays} />}
+                  >
+                    {showSessions
+                      ? "Masquer les séances"
+                      : `Voir les séances programmées (${courses.length})`}
+                  </Button>
+                </div>
+                {showSessions && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex flex-col">
                   <h3 className="text-sm font-bold text-slate-800">
-                    Cours programmés
+                    Séances programmées
                   </h3>
                   <Text type="secondary" className="text-xs">
-                    Cours de la classe (visibles par tous les membres)
+                    Toutes les sessions des cours de la classe
                   </Text>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Tag color="blue">{courses.length} cours</Tag>
+                  <Tag color="blue">{courses.length} séance{courses.length > 1 ? "s" : ""}</Tag>
                   {onNavigateToCoursManagement && (
                     <Button
                       size="small"
@@ -2953,6 +2929,13 @@ const ManageClassDetailsView = ({
                 }}
               />
             </div>
+                )}
+              </div>
+            ))}
+
+          {/* Statistiques */}
+          {activeTab === "statistics" && (
+            <ClassStatisticsTab classId={classId} eleves={users.eleves} />
           )}
 
           {/* Exercices */}
@@ -3000,6 +2983,16 @@ const ManageClassDetailsView = ({
                           "—"}
                       </span>
                     ),
+                  },
+                  {
+                    title: "Cours",
+                    key: "cours",
+                    render: (_, record) =>
+                      record.coursId ? (
+                        <Tag color="green">{record.coursTitre || "Cours"}</Tag>
+                      ) : (
+                        <Tag>Exercices généraux</Tag>
+                      ),
                   },
                   {
                     title: "Date Prévue",

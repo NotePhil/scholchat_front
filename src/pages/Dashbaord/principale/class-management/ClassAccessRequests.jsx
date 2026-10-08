@@ -99,45 +99,26 @@ const ClassAccessRequests = ({
   };
 
   // Handler functions moved before they're used in column definitions
-  const handleApproveAccessRequest = async (requestId) => {
+  // Called from the decision modal: the API error is rethrown so the modal shows it inside itself;
+  // the success message is emitted by the caller only once the modal is closed.
+  const decideAccessRequest = async (mode, requestId, reason) => {
+    setActionLoading(`${mode}-${requestId}`);
     try {
-      setActionLoading(`approve-${requestId}`);
-      await AccederService.validerDemandeAcces(requestId);
-      message.success("Access request approved successfully");
-      if (onSuccess) {
-        onSuccess("Access request approved successfully");
-      }
-      await fetchAccessData();
-      if (onRefreshMembers) {
-        await onRefreshMembers();
-      }
+      if (mode === "approve") await AccederService.validerDemandeAcces(requestId);
+      else await AccederService.rejeterDemandeAcces(requestId, reason);
     } catch (err) {
-      console.error("Error approving access request:", err);
-      message.error(err.message || "Failed to approve access request");
-      if (onError) {
-        onError(err.message || "Failed to approve access request");
-      }
+      console.error(`Error on access request ${mode}:`, err);
+      throw err;
     } finally {
       setActionLoading(null);
     }
   };
-  const handleRejectAccessRequest = async (requestId, reason) => {
+  const refreshAfterDecision = async (mode) => {
     try {
-      setActionLoading(`reject-${requestId}`);
-      await AccederService.rejeterDemandeAcces(requestId, reason);
-      message.success("Access request rejected successfully");
-      if (onSuccess) {
-        onSuccess("Access request rejected successfully");
-      }
       await fetchAccessData();
+      if (mode === "approve" && onRefreshMembers) await onRefreshMembers();
     } catch (err) {
-      console.error("Error rejecting access request:", err);
-      message.error(err.message || "Failed to reject access request");
-      if (onError) {
-        onError(err.message || "Failed to reject access request");
-      }
-    } finally {
-      setActionLoading(null);
+      console.error("Refresh after access decision failed:", err);
     }
   };
   const handleRemoveMember = async (userId) => {
@@ -425,9 +406,12 @@ const ClassAccessRequests = ({
       onCancel={() => setDecision(null)}
       onConfirm={async (reason) => {
         const { mode, request } = decision;
-        if (mode === "approve") await handleApproveAccessRequest(request.id);
-        else await handleRejectAccessRequest(request.id, reason);
+        await decideAccessRequest(mode, request.id, reason);
         setDecision(null);
+        const text = mode === "approve" ? "Demande d'accès approuvée" : "Demande d'accès rejetée";
+        if (onSuccess) onSuccess(text);
+        else message.success(text);
+        refreshAfterDecision(mode);
       }}
     />
     <Tabs

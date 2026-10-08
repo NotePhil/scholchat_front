@@ -145,6 +145,22 @@ class AccederService {
   }
 
   /**
+   * A user's own access requests (all states): the user, their parent or an admin.
+   * (The per-class endpoint is reserved to the class managers.)
+   */
+  async obtenirDemandesAccesUtilisateur(utilisateurId) {
+    try {
+      const actualUserId = utilisateurId || this.getUserId();
+      const response = await accederAxios.get(
+        `${this.apiUrl}/utilisateurs/${actualUserId}/demandes`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
    * Get pending access requests for a specific class
    */
   async obtenirDemandesAccesEnAttentePourClasse(classeId) {

@@ -40,7 +40,17 @@ class ExerciseProgrammerService {
         dateDebutExoEffectif: toServerDateTime(exerciseProgrammerData.dateDebutExoEffectif),
         dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat,
+        ...(exerciseProgrammerData.typeAssignation
+          ? { typeAssignation: exerciseProgrammerData.typeAssignation }
+          : {}),
         classeIds: exerciseProgrammerData.classeIds || [],
+        // Course programmed in the class (null = "Exercices généraux")
+        coursId: exerciseProgrammerData.coursId || null,
+        // One course per class {classeId: coursId|null}; classes mapped to different
+        // courses get one programmation each (response.programmations / nombreProgrammations).
+        ...(exerciseProgrammerData.coursParClasse
+          ? { coursParClasse: exerciseProgrammerData.coursParClasse }
+          : {}),
       };
 
       console.log(
@@ -82,7 +92,17 @@ class ExerciseProgrammerService {
         dateDebutExoEffectif: toServerDateTime(exerciseProgrammerData.dateDebutExoEffectif),
         dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat,
+        ...(exerciseProgrammerData.typeAssignation
+          ? { typeAssignation: exerciseProgrammerData.typeAssignation }
+          : {}),
         classeIds: exerciseProgrammerData.classeIds || [],
+        // Course programmed in the class (null = "Exercices généraux")
+        coursId: exerciseProgrammerData.coursId || null,
+        // One course per class {classeId: coursId|null}; classes mapped to different
+        // courses get one programmation each (response.programmations / nombreProgrammations).
+        ...(exerciseProgrammerData.coursParClasse
+          ? { coursParClasse: exerciseProgrammerData.coursParClasse }
+          : {}),
       };
 
       console.log(

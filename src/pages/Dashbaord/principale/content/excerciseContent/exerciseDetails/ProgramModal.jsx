@@ -19,6 +19,7 @@ import {
   faPaperPlane,
   faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
+import CoursSelectField from "../../../shared/scolarite/CoursSelectField";
 const { Option } = Select;
 const { Text } = Typography;
 const ProgramModal = ({
@@ -204,6 +205,9 @@ const ProgramModal = ({
             ))}
           </Select>
         </Form.Item>
+
+        {/* Course of the class(es) — required (or "Exercice général") */}
+        <CoursSelectField form={form} classes={classes} classesField="classeIds" />
 
         {/* Diffuse immediately toggle */}
         <Form.Item

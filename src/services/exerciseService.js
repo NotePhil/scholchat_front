@@ -296,6 +296,13 @@ class ExerciseProgrammerService {
         ),
         etat: exerciseProgrammerData.etat || "BROUILLON",
         classeIds: exerciseProgrammerData.classeIds || [],
+        // Course programmed in the class (null = "Exercices généraux")
+        coursId: exerciseProgrammerData.coursId || null,
+        // One course per class {classeId: coursId|null}; classes mapped to different
+        // courses get one programmation each (response.programmations / nombreProgrammations).
+        ...(exerciseProgrammerData.coursParClasse
+          ? { coursParClasse: exerciseProgrammerData.coursParClasse }
+          : {}),
       };
 
       console.log(
@@ -342,6 +349,13 @@ class ExerciseProgrammerService {
         dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat || "ACTIF",
         classeIds: exerciseProgrammerData.classeIds || [],
+        // Course programmed in the class (null = "Exercices généraux")
+        coursId: exerciseProgrammerData.coursId || null,
+        // One course per class {classeId: coursId|null}; classes mapped to different
+        // courses get one programmation each (response.programmations / nombreProgrammations).
+        ...(exerciseProgrammerData.coursParClasse
+          ? { coursParClasse: exerciseProgrammerData.coursParClasse }
+          : {}),
         typeAssignation: exerciseProgrammerData.typeAssignation,
       };
 

@@ -3,6 +3,7 @@ import { Empty, Tag, Spin } from "antd";
 import StudentExerciseView from "./StudentExerciseView";
 import StudentExerciseResultView from "./StudentExerciseResultView";
 import { exerciseProgrammerService } from "../../../../../services/exerciseProgrammerService";
+import { GENERAL_COURSE_LABEL } from "../../../../../utils/scolarite";
 import {
   openingDone,
   openingFailed,
@@ -18,7 +19,10 @@ import {
   faArrowsRotate,
   faBook,
   faCalendarDays,
+  faChevronDown,
+  faChevronRight,
   faCircleCheck,
+  faCircleExclamation,
   faCirclePlay,
   faClock,
   faEye,
@@ -125,15 +129,19 @@ const TABS = [
   },
   {
     key: "todo",
-    label: "À rendre",
+    label: "À faire",
   },
   {
     key: "soumis",
-    label: "Soumis",
+    label: "Rendus",
   },
   {
     key: "corriges",
     label: "Corrigés",
+  },
+  {
+    key: "retard",
+    label: "En retard",
   },
 ];
 
@@ -149,6 +157,9 @@ const StudentDevoirsContent = ({ tabData = null }) => {
   const [viewer, setViewer] = useState(getViewer);
   // Legacy notification (ASSIGNMENT / classeId): list filtered to that class
   const [classFilter, setClassFilter] = useState(null); // { id, nom }
+  // Folded sections: "c:<classId>" / "c:<classId>:<coursKey>" -> true
+  const [collapsed, setCollapsed] = useState({});
+  const toggle = (key) => setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
   const load = useCallback(async () => {
     setViewer(getViewer());
     const userId = getUserId();
@@ -204,6 +215,8 @@ const StudentDevoirsContent = ({ tabData = null }) => {
                 ) || null;
               all.push({
                 ...prog,
+                // Grouping: the learner's class it was found in, then its course
+                _classe: { id: cls.id, nom: cls.nom || "Classe" },
                 _classIds: [
                   ...new Set([
                     cls.id,
@@ -399,161 +412,49 @@ const StudentDevoirsContent = ({ tabData = null }) => {
         (ep._classIds || []).some((id) => String(id) === String(classFilter.id)),
       )
     : categorised;
-  const filtered = inClass.filter(({ isSubmitted, isGraded }) => {
-    if (activeFilter === "todo") return !isSubmitted;
+  const filtered = inClass.filter(({ isSubmitted, isGraded, overdue }) => {
+    if (activeFilter === "todo") return !isSubmitted && !overdue;
+    if (activeFilter === "retard") return overdue;
     if (activeFilter === "soumis") return isSubmitted && !isGraded;
     if (activeFilter === "corriges") return isGraded;
     return true;
   });
   const counts = {
     all: inClass.length,
-    todo: inClass.filter((c) => !c.isSubmitted).length,
+    todo: inClass.filter((c) => !c.isSubmitted && !c.overdue).length,
+    retard: inClass.filter((c) => c.overdue).length,
     soumis: inClass.filter((c) => c.isSubmitted && !c.isGraded).length,
     corriges: inClass.filter((c) => c.isGraded).length,
   };
 
-  // ── render ─────────────────────────────────────────────────────────────────
+  // Class → course sections (courses sorted by title, "Exercices généraux" last)
+  const sections = (() => {
+    const byClass = new Map();
+    filtered.forEach((item) => {
+      const cls = item.ep._classe || { id: "_", nom: "Classe" };
+      if (!byClass.has(cls.id)) byClass.set(cls.id, { ...cls, courses: new Map() });
+      const courses = byClass.get(cls.id).courses;
+      const ck = item.ep.coursId ? String(item.ep.coursId) : "_general";
+      if (!courses.has(ck))
+        courses.set(ck, {
+          key: ck,
+          titre: item.ep.coursId ? item.ep.coursTitre || "Cours" : GENERAL_COURSE_LABEL,
+          items: [],
+        });
+      courses.get(ck).items.push(item);
+    });
+    return Array.from(byClass.values())
+      .sort((a, b) => String(a.nom).localeCompare(String(b.nom)))
+      .map((c) => ({
+        ...c,
+        courses: Array.from(c.courses.values()).sort((a, b) =>
+          a.key === "_general" ? 1 : b.key === "_general" ? -1 : a.titre.localeCompare(b.titre),
+        ),
+      }));
+  })();
 
-  return (
-    <div className="w-full px-2 py-3">
-      {/* Header */}
-      <div
-        className="mb-4 rounded-xl p-4"
-        style={{
-          background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%)",
-          color: "#fff",
-        }}
-      >
-        <div className="flex items-center gap-3 mb-1.5">
-          <FontAwesomeIcon
-            icon={faFileLines}
-            style={{
-              fontSize: 22,
-            }}
-          />
-          <span className="text-base font-bold">
-            {viewer.isParentView
-              ? `Devoirs${viewer.childName ? ` de ${viewer.childName}` : ""}`
-              : "Mes Devoirs"}
-          </span>
-          <button
-            onClick={load}
-            className="ml-auto p-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors"
-          >
-            <FontAwesomeIcon
-              icon={faArrowsRotate}
-              style={{
-                fontSize: 13,
-              }}
-            />
-          </button>
-        </div>
-        <p className="text-xs opacity-80 mb-3">
-          {!viewer.isParentView
-            ? "Retrouvez ici tous les devoirs assignés par vos professeurs."
-            : viewer.canAnswer
-              ? "Votre enfant n'a pas de compte personnel : vous rendez ses devoirs à sa place et suivez ses notes et corrections."
-              : "Votre enfant a son propre compte et rend ses devoirs lui-même. Vous suivez ici ses notes et corrections."}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {[
-            {
-              icon: <FontAwesomeIcon icon={faBook} />,
-              val: counts.all,
-              label: `devoir${counts.all !== 1 ? "s" : ""}`,
-            },
-            {
-              icon: <FontAwesomeIcon icon={faClock} />,
-              val: counts.todo,
-              label: "à rendre",
-            },
-            {
-              icon: <FontAwesomeIcon icon={faCircleCheck} />,
-              val: counts.soumis,
-              label: "soumis",
-            },
-            {
-              icon: <FontAwesomeIcon icon={faTrophy} />,
-              val: counts.corriges,
-              label: `corrigé${counts.corriges !== 1 ? "s" : ""}`,
-            },
-          ].map(({ icon, val, label }) => (
-            <div
-              key={label}
-              className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5"
-            >
-              {icon}
-              <span className="text-sm font-semibold">{val}</span>
-              <span className="text-xs opacity-80">{label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Class filter (opened from a homework notification) */}
-      {classFilter && (
-        <div className="mb-3 px-4 py-2.5 rounded-xl flex items-center justify-between gap-3 bg-blue-50 border border-blue-100">
-          <span className="text-sm text-blue-800">
-            Devoirs de la classe{" "}
-            <strong>
-              {devoirs
-                .flatMap((d) => d.classesDiffusees || [])
-                .find((c) => String(c.id) === String(classFilter.id))?.nom ||
-                "sélectionnée"}
-            </strong>
-          </span>
-          <button
-            onClick={() => setClassFilter(null)}
-            className="text-xs font-medium text-blue-600 hover:text-blue-800"
-          >
-            Tous les devoirs
-          </button>
-        </div>
-      )}
-
-      {/* Filter tabs */}
-      <div
-        className="mb-4 rounded-xl overflow-hidden"
-        style={{
-          border: "1px solid #e4eaf4",
-        }}
-      >
-        <div className="flex border-b border-gray-100 bg-white overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveFilter(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${activeFilter === tab.key ? "border-blue-600 text-blue-700 bg-blue-50/60" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
-            >
-              {tab.label}
-              <span
-                className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold ${activeFilter === tab.key ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500"}`}
-              >
-                {counts[tab.key]}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content */}
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <Spin size="large" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <Empty
-          description={
-            activeFilter === "all"
-              ? "Aucun devoir assigné"
-              : "Aucun devoir dans cette catégorie"
-          }
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-        />
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(
-            ({ ep, etat, isSubmitted, isGraded, isPending, overdue }) => {
+  // ── one devoir card ──
+  const renderCard = ({ ep, etat, isSubmitted, isGraded, isPending, overdue }) => {
               const questionCount = (ep.questions || []).length;
               return (
                 <div
@@ -762,8 +663,202 @@ const StudentDevoirsContent = ({ tabData = null }) => {
                   </div>
                 </div>
               );
+  };
+
+  // ── render ─────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="w-full px-2 py-3">
+      {/* Header */}
+      <div
+        className="mb-4 rounded-xl p-4"
+        style={{
+          background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%)",
+          color: "#fff",
+        }}
+      >
+        <div className="flex items-center gap-3 mb-1.5">
+          <FontAwesomeIcon
+            icon={faFileLines}
+            style={{
+              fontSize: 22,
+            }}
+          />
+          <span className="text-base font-bold">
+            {viewer.isParentView
+              ? `Devoirs${viewer.childName ? ` de ${viewer.childName}` : ""}`
+              : "Mes Devoirs"}
+          </span>
+          <button
+            onClick={load}
+            className="ml-auto p-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors"
+          >
+            <FontAwesomeIcon
+              icon={faArrowsRotate}
+              style={{
+                fontSize: 13,
+              }}
+            />
+          </button>
+        </div>
+        <p className="text-xs opacity-80 mb-3">
+          {!viewer.isParentView
+            ? "Retrouvez ici tous les devoirs assignés par vos professeurs."
+            : viewer.canAnswer
+              ? "Votre enfant n'a pas de compte personnel : vous rendez ses devoirs à sa place et suivez ses notes et corrections."
+              : "Votre enfant a son propre compte et rend ses devoirs lui-même. Vous suivez ici ses notes et corrections."}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            {
+              icon: <FontAwesomeIcon icon={faBook} />,
+              val: counts.all,
+              label: `devoir${counts.all !== 1 ? "s" : ""}`,
             },
-          )}
+            {
+              icon: <FontAwesomeIcon icon={faClock} />,
+              val: counts.todo,
+              label: "à faire",
+            },
+            {
+              icon: <FontAwesomeIcon icon={faCircleExclamation} />,
+              val: counts.retard,
+              label: "en retard",
+            },
+            {
+              icon: <FontAwesomeIcon icon={faCircleCheck} />,
+              val: counts.soumis,
+              label: `rendu${counts.soumis !== 1 ? "s" : ""}`,
+            },
+            {
+              icon: <FontAwesomeIcon icon={faTrophy} />,
+              val: counts.corriges,
+              label: `corrigé${counts.corriges !== 1 ? "s" : ""}`,
+            },
+          ].map(({ icon, val, label }) => (
+            <div
+              key={label}
+              className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5"
+            >
+              {icon}
+              <span className="text-sm font-semibold">{val}</span>
+              <span className="text-xs opacity-80">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Class filter (opened from a homework notification) */}
+      {classFilter && (
+        <div className="mb-3 px-4 py-2.5 rounded-xl flex items-center justify-between gap-3 bg-blue-50 border border-blue-100">
+          <span className="text-sm text-blue-800">
+            Devoirs de la classe{" "}
+            <strong>
+              {devoirs
+                .flatMap((d) => d.classesDiffusees || [])
+                .find((c) => String(c.id) === String(classFilter.id))?.nom ||
+                "sélectionnée"}
+            </strong>
+          </span>
+          <button
+            onClick={() => setClassFilter(null)}
+            className="text-xs font-medium text-blue-600 hover:text-blue-800"
+          >
+            Tous les devoirs
+          </button>
+        </div>
+      )}
+
+      {/* Filter tabs */}
+      <div
+        className="mb-4 rounded-xl overflow-hidden"
+        style={{
+          border: "1px solid #e4eaf4",
+        }}
+      >
+        <div className="flex border-b border-gray-100 bg-white overflow-x-auto">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveFilter(tab.key)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${activeFilter === tab.key ? "border-blue-600 text-blue-700 bg-blue-50/60" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
+            >
+              {tab.label}
+              <span
+                className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold ${activeFilter === tab.key ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500"}`}
+              >
+                {counts[tab.key]}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Spin size="large" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <Empty
+          description={
+            activeFilter === "all"
+              ? "Aucun devoir assigné"
+              : "Aucun devoir dans cette catégorie"
+          }
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        />
+      ) : (
+        <div className="space-y-3">
+          {sections.map((cls) => {
+            const ck = `c:${cls.id}`;
+            const total = cls.courses.reduce((n, c) => n + c.items.length, 0);
+            const late = cls.courses.reduce((n, c) => n + c.items.filter((i) => i.overdue).length, 0);
+            return (
+              <div key={ck} className="rounded-xl overflow-hidden bg-white" style={{ border: "1px solid #e4eaf4" }}>
+                <button
+                  type="button"
+                  onClick={() => toggle(ck)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left bg-slate-50 hover:bg-slate-100 transition-colors"
+                >
+                  <FontAwesomeIcon icon={collapsed[ck] ? faChevronRight : faChevronDown} className="text-slate-400" style={{ fontSize: 11 }} />
+                  <span className="font-bold text-sm text-slate-800 truncate">{cls.nom}</span>
+                  <span className="ml-auto flex items-center gap-2 text-xs text-slate-500 flex-shrink-0">
+                    {late > 0 && (
+                      <span className="text-red-600 font-semibold">
+                        <FontAwesomeIcon icon={faCircleExclamation} /> {late} en retard
+                      </span>
+                    )}
+                    {total} élément{total > 1 ? "s" : ""}
+                  </span>
+                </button>
+                {!collapsed[ck] && (
+                  <div className="p-3 space-y-3">
+                    {cls.courses.map((course) => {
+                      const key = `${ck}:${course.key}`;
+                      return (
+                        <div key={key}>
+                          <button
+                            type="button"
+                            onClick={() => toggle(key)}
+                            className="w-full flex items-center gap-2 py-1.5 text-left"
+                          >
+                            <FontAwesomeIcon icon={collapsed[key] ? faChevronRight : faChevronDown} className="text-gray-300" style={{ fontSize: 10 }} />
+                            <FontAwesomeIcon icon={faBook} className={course.key === "_general" ? "text-slate-400" : "text-indigo-500"} style={{ fontSize: 12 }} />
+                            <span className="text-sm font-semibold text-gray-700 truncate">{course.titre}</span>
+                            <span className="text-xs text-gray-400">({course.items.length})</span>
+                          </button>
+                          {!collapsed[key] && (
+                            <div className="space-y-3 mt-2">{course.items.map((item) => renderCard(item))}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

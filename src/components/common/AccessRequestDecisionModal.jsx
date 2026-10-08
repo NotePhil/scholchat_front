@@ -1,21 +1,31 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Input } from "antd";
+import { Modal, Input, Alert } from "antd";
 import { accessRequestLabel, isChildAccessRequest } from "../../utils/accessRequestLabel";
 
 /**
  * Confirmation before approving / rejecting a class access request.
  * mode "approve" | "reject"; the reject mode keeps the reason input inside the modal
- * (required). onConfirm(reason) may return a promise: the modal stays open (loading) until it settles.
+ * (required). onConfirm(reason) may return a promise: the modal stays open (button spinner) until
+ * it settles. On rejection the error message is shown inside the modal and the modal stays open;
+ * on success the caller closes the modal (and only then shows its success message).
  */
+const errorText = (err) =>
+  err?.response?.data?.message || err?.message || "Une erreur est survenue. Veuillez réessayer.";
+
 const AccessRequestDecisionModal = ({ open, mode, request, classeNom, loading = false, onConfirm, onCancel }) => {
   const [reason, setReason] = useState("");
   const [touched, setTouched] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
   const isReject = mode === "reject";
+  const busy = loading || submitting;
 
   useEffect(() => {
     if (open) {
       setReason("");
       setTouched(false);
+      setError(null);
+      setSubmitting(false);
     }
   }, [open, mode, request]);
 
@@ -23,12 +33,21 @@ const AccessRequestDecisionModal = ({ open, mode, request, classeNom, loading = 
   const forChild = isChildAccessRequest(request);
   const reasonMissing = isReject && !reason.trim();
 
-  const handleOk = () => {
+  const handleOk = async () => {
+    if (busy) return;
     if (reasonMissing) {
       setTouched(true);
       return;
     }
-    onConfirm?.(isReject ? reason.trim() : undefined);
+    setError(null);
+    setSubmitting(true);
+    try {
+      await onConfirm?.(isReject ? reason.trim() : undefined);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -37,11 +56,12 @@ const AccessRequestDecisionModal = ({ open, mode, request, classeNom, loading = 
       title={isReject ? "Refuser la demande d'accès" : "Accepter la demande d'accès"}
       okText={isReject ? "Refuser" : "Accepter"}
       cancelText="Annuler"
-      okButtonProps={{ danger: isReject, loading }}
-      cancelButtonProps={{ disabled: loading }}
+      okButtonProps={{ danger: isReject, loading: busy }}
+      cancelButtonProps={{ disabled: busy }}
       onOk={handleOk}
-      onCancel={loading ? undefined : onCancel}
-      maskClosable={!loading}
+      onCancel={busy ? undefined : onCancel}
+      maskClosable={!busy}
+      closable={!busy}
       destroyOnClose
     >
       <p style={{ marginBottom: 12 }}>
@@ -74,7 +94,7 @@ const AccessRequestDecisionModal = ({ open, mode, request, classeNom, loading = 
             onBlur={() => setTouched(true)}
             placeholder="Expliquez la raison du refus…"
             status={touched && reasonMissing ? "error" : undefined}
-            disabled={loading}
+            disabled={busy}
             maxLength={500}
             showCount
           />
@@ -82,6 +102,14 @@ const AccessRequestDecisionModal = ({ open, mode, request, classeNom, loading = 
             <p style={{ color: "#EF4444", fontSize: 12, marginTop: 4 }}>Le motif du refus est requis.</p>
           )}
         </>
+      )}
+      {error && (
+        <Alert
+          type="error"
+          showIcon
+          title={error}
+          style={{ marginTop: 12 }}
+        />
       )}
     </Modal>
   );

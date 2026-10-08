@@ -17,13 +17,22 @@ import {
 } from "../../../../../services/exerciseService";
 import { classService } from "../../../../../services/ClassService";
 import { userService } from "../../../../../services/userService";
+import CoursSelectField, {
+  countProgrammations,
+  toCoursParClasse,
+} from "../../shared/scolarite/CoursSelectField";
+import ChangeCourseModal from "../../shared/scolarite/ChangeCourseModal";
+import { GENERAL_COURSE_LABEL } from "../../../../../utils/scolarite";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
   faArrowsRotate,
   faBookOpen,
   faCalendarDays,
+  faChevronDown,
   faChevronRight,
+  faLayerGroup,
+  faList,
   faCircleCheck,
   faCircleExclamation,
   faClipboardList,
@@ -172,6 +181,10 @@ const ExerciseProgrammerContent = () => {
   // them on demand instead.
   const [showPast, setShowPast] = useState(false);
   const [filterType, setFilterType] = useState(""); // "" | "EXERCICE" | "DEVOIR"
+  // "grouped": class → course collapsible sections; "list": flat paginated list
+  const [listMode, setListMode] = useState("grouped");
+  const [collapsed, setCollapsed] = useState({}); // section key -> true when folded
+  const [courseProg, setCourseProg] = useState(null); // prog whose course is being changed
 
   // ── Pagination ──
   const PAGE_SIZE = 8;
@@ -322,10 +335,16 @@ const ExerciseProgrammerContent = () => {
         dateDebutExoEffectif: values.dateDebutExoEffectif.toISOString(),
         dateFinExoEffectif: values.dateFinExoEffectif.toISOString(),
         classeIds: values.classeIds || [],
+        coursParClasse: toCoursParClasse(values.coursParClasse, values.classeIds),
         etat: "ACTIF",
       };
-      await exerciseProgrammerService.programmerEtDiffuserExercise(payload);
-      message.success("Exercice programmé et diffusé avec succès !");
+      const created = await exerciseProgrammerService.programmerEtDiffuserExercise(payload);
+      const n = countProgrammations(created);
+      message.success(
+        n > 1
+          ? `Exercice programmé et diffusé : ${n} programmations créées (une par cours).`
+          : "Exercice programmé et diffusé avec succès !",
+      );
       form.resetFields();
       await loadProgs();
       setView("list");
@@ -370,6 +389,11 @@ const ExerciseProgrammerContent = () => {
     const matchTiming =
       showPast ||
       prog.etatExoProgramme === "EN_COURS" ||
+      // The API has no "EN_COURS" state: in progress = between effective start and end.
+      (prog.dateDebutExoEffectif &&
+        prog.dateFinExoEffectif &&
+        new Date(prog.dateDebutExoEffectif) <= now &&
+        new Date(prog.dateFinExoEffectif) >= now) ||
       !prog.dateExoPrevue ||
       new Date(prog.dateExoPrevue) >= now;
     return matchClass && matchSearch && matchStatus && matchType && matchTiming;
@@ -402,6 +426,267 @@ const ExerciseProgrammerContent = () => {
   const selectedClassName = filterClassId
     ? classes.find((c) => String(c.id) === String(filterClassId))?.nom || ""
     : "";
+  // ── One programmation row (flat list and grouped sections) ──
+  const renderRow = (prog, keyPrefix = "") => {
+              const exo = exercises.find((e) => e.id === prog.exerciseId) || {};
+              const now = new Date();
+              const fin = prog.dateFinExoEffectif
+                ? new Date(prog.dateFinExoEffectif)
+                : null;
+              const isExpired = fin && fin < now;
+              return (
+                <div
+                  key={`${keyPrefix}${prog.id}`}
+                  className="px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                        style={{
+                          background:
+                            prog.typeAssignation === "DEVOIR"
+                              ? "#f5f3ff"
+                              : "#eff6ff",
+                        }}
+                      >
+                        {prog.typeAssignation === "DEVOIR" ? (
+                          <FontAwesomeIcon
+                            icon={faFileLines}
+                            style={{
+                              color: "#7c3aed",
+                              fontSize: 18,
+                            }}
+                          />
+                        ) : (
+                          <FontAwesomeIcon
+                            icon={faBookOpen}
+                            style={{
+                              color: "#2563eb",
+                              fontSize: 18,
+                            }}
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="font-semibold text-gray-900 text-sm truncate">
+                            {prog.nom || exo.nom || "Exercice"}
+                          </span>
+                          <TypeBadge type={prog.typeAssignation} />
+                          <EtatBadge etat={getEffectiveEtat(prog)} />
+                          {/* Ownership banner */}
+                          {prog.isOwn ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                              <FontAwesomeIcon
+                                icon={faCircleCheck}
+                                style={{
+                                  fontSize: 10,
+                                }}
+                              />{" "}
+                              Votre programmation
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                              <FontAwesomeIcon
+                                icon={faUsers}
+                                style={{
+                                  fontSize: 10,
+                                }}
+                              />{" "}
+                              Autre professeur
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <FontAwesomeIcon
+                              icon={faClock}
+                              style={{
+                                fontSize: 11,
+                              }}
+                            />{" "}
+                            {fmtDateTime(prog.dateDebutExoEffectif)}
+                          </span>
+                          <FontAwesomeIcon
+                            icon={faChevronRight}
+                            className="text-gray-300"
+                            style={{
+                              fontSize: 11,
+                            }}
+                          />
+                          <span>{fmtDateTime(prog.dateFinExoEffectif)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-xs">
+                          <span
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${prog.coursId ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-200"}`}
+                          >
+                            <FontAwesomeIcon icon={faBookOpen} style={{ fontSize: 10 }} />
+                            {prog.coursId ? prog.coursTitre || "Cours" : GENERAL_COURSE_LABEL}
+                          </span>
+                          {prog.isOwn && (
+                            <button
+                              type="button"
+                              onClick={() => setCourseProg(prog)}
+                              className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium"
+                            >
+                              Changer de cours
+                            </button>
+                          )}
+                        </div>
+                        {prog.classesDiffusees?.length > 0 && (
+                          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                            <FontAwesomeIcon
+                              icon={faUsers}
+                              className="text-gray-400"
+                              style={{
+                                fontSize: 11,
+                              }}
+                            />
+                            {prog.classesDiffusees.map((c) => (
+                              <span
+                                key={c.id}
+                                className="px-1.5 py-0.5 rounded text-xs bg-cyan-50 text-cyan-700 border border-cyan-100"
+                              >
+                                {c.nom}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => setDetailProg(prog)}
+                        className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+                      >
+                        <FontAwesomeIcon
+                          icon={faEye}
+                          style={{
+                            fontSize: 15,
+                          }}
+                        />
+                      </button>
+                      {/* Delete only for own programmations */}
+                      {prog.isOwn && (
+                        <Popconfirm
+                          title="Supprimer cette programmation ?"
+                          onConfirm={() => handleDelete(prog.id)}
+                          okText="Supprimer"
+                          cancelText="Annuler"
+                          okButtonProps={{
+                            danger: true,
+                          }}
+                        >
+                          <button
+                            className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                            disabled={deletingId === prog.id}
+                          >
+                            {deletingId === prog.id ? (
+                              <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <FontAwesomeIcon
+                                icon={faTrashCan}
+                                style={{
+                                  fontSize: 15,
+                                }}
+                              />
+                            )}
+                          </button>
+                        </Popconfirm>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+  };
+
+  // ── Grouped view: class → course (collapsible) ──
+  const toggleSection = (key) =>
+    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  const groupedSections = (() => {
+    const byClass = new Map();
+    filtered.forEach((prog) => {
+      const cls = prog.classesDiffusees?.length
+        ? prog.classesDiffusees
+        : [{ id: "__none__", nom: "Sans classe" }];
+      cls
+        .filter((c) => !filterClassId || String(c.id) === String(filterClassId) || c.id === "__none__")
+        .forEach((c) => {
+          if (!byClass.has(c.id)) byClass.set(c.id, { id: c.id, nom: c.nom || "Classe", courses: new Map() });
+          const courses = byClass.get(c.id).courses;
+          const ck = prog.coursId ? String(prog.coursId) : "__general__";
+          if (!courses.has(ck))
+            courses.set(ck, { key: ck, titre: prog.coursId ? prog.coursTitre || "Cours" : GENERAL_COURSE_LABEL, items: [] });
+          courses.get(ck).items.push(prog);
+        });
+    });
+    return Array.from(byClass.values())
+      .sort((a, b) => a.nom.localeCompare(b.nom))
+      .map((c) => ({
+        ...c,
+        courses: Array.from(c.courses.values()).sort((a, b) =>
+          a.key === "__general__" ? 1 : b.key === "__general__" ? -1 : a.titre.localeCompare(b.titre),
+        ),
+      }));
+  })();
+  const renderGrouped = () =>
+    groupedSections.map((cls) => {
+      const clsKey = `c-${cls.id}`;
+      const total = cls.courses.reduce((n, c) => n + c.items.length, 0);
+      return (
+        <div key={clsKey} className="border-b border-gray-100 last:border-0">
+          <button
+            type="button"
+            onClick={() => toggleSection(clsKey)}
+            className="w-full flex items-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-left"
+          >
+            <FontAwesomeIcon
+              icon={collapsed[clsKey] ? faChevronRight : faChevronDown}
+              className="text-slate-400"
+              style={{ fontSize: 11 }}
+            />
+            <FontAwesomeIcon icon={faUsers} className="text-cyan-600" style={{ fontSize: 13 }} />
+            <span className="font-semibold text-sm text-slate-800 truncate">{cls.nom}</span>
+            <span className="ml-auto text-xs text-slate-500">
+              {total} programmation{total > 1 ? "s" : ""}
+            </span>
+          </button>
+          {!collapsed[clsKey] &&
+            cls.courses.map((course) => {
+              const cKey = `${clsKey}-${course.key}`;
+              return (
+                <div key={cKey}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(cKey)}
+                    className="w-full flex items-center gap-2 pl-8 pr-4 py-2 border-t border-gray-50 hover:bg-gray-50 text-left"
+                  >
+                    <FontAwesomeIcon
+                      icon={collapsed[cKey] ? faChevronRight : faChevronDown}
+                      className="text-gray-300"
+                      style={{ fontSize: 10 }}
+                    />
+                    <FontAwesomeIcon
+                      icon={faBookOpen}
+                      className={course.key === "__general__" ? "text-slate-400" : "text-emerald-600"}
+                      style={{ fontSize: 12 }}
+                    />
+                    <span className="text-xs font-semibold text-gray-700 truncate">{course.titre}</span>
+                    <span className="ml-auto text-xs text-gray-400">{course.items.length}</span>
+                  </button>
+                  {!collapsed[cKey] && (
+                    <div className="pl-4 divide-y divide-gray-50">
+                      {course.items.map((prog) => renderRow(prog, `${cKey}-`))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+        </div>
+      );
+    });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -599,6 +884,8 @@ const ExerciseProgrammerContent = () => {
                     ))}
                   </Select>
                 </Form.Item>
+
+                <CoursSelectField form={form} classes={classes} classesField="classeIds" />
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <Form.Item
@@ -1028,6 +1315,23 @@ const ExerciseProgrammerContent = () => {
             {filterStatus && <EtatBadge etat={filterStatus} />}
             {filterType && <TypeBadge type={filterType} />}
           </div>
+          <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden flex-shrink-0">
+            {[
+              { key: "grouped", icon: faLayerGroup, label: "Par classe / cours" },
+              { key: "list", icon: faList, label: "Liste" },
+            ].map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setListMode(m.key)}
+                title={m.label}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium ${listMode === m.key ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                <FontAwesomeIcon icon={m.icon} style={{ fontSize: 11 }} />
+                <span className="hidden sm:inline">{m.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {progsLoading ? (
@@ -1054,167 +1358,14 @@ const ExerciseProgrammerContent = () => {
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
-            {paged.map((prog) => {
-              const exo = exercises.find((e) => e.id === prog.exerciseId) || {};
-              const now = new Date();
-              const fin = prog.dateFinExoEffectif
-                ? new Date(prog.dateFinExoEffectif)
-                : null;
-              const isExpired = fin && fin < now;
-              return (
-                <div
-                  key={prog.id}
-                  className="px-4 py-3 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{
-                          background:
-                            prog.typeAssignation === "DEVOIR"
-                              ? "#f5f3ff"
-                              : "#eff6ff",
-                        }}
-                      >
-                        {prog.typeAssignation === "DEVOIR" ? (
-                          <FontAwesomeIcon
-                            icon={faFileLines}
-                            style={{
-                              color: "#7c3aed",
-                              fontSize: 18,
-                            }}
-                          />
-                        ) : (
-                          <FontAwesomeIcon
-                            icon={faBookOpen}
-                            style={{
-                              color: "#2563eb",
-                              fontSize: 18,
-                            }}
-                          />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-semibold text-gray-900 text-sm truncate">
-                            {prog.nom || exo.nom || "Exercice"}
-                          </span>
-                          <TypeBadge type={prog.typeAssignation} />
-                          <EtatBadge etat={getEffectiveEtat(prog)} />
-                          {/* Ownership banner */}
-                          {prog.isOwn ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                              <FontAwesomeIcon
-                                icon={faCircleCheck}
-                                style={{
-                                  fontSize: 10,
-                                }}
-                              />{" "}
-                              Votre programmation
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
-                              <FontAwesomeIcon
-                                icon={faUsers}
-                                style={{
-                                  fontSize: 10,
-                                }}
-                              />{" "}
-                              Autre professeur
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <FontAwesomeIcon
-                              icon={faClock}
-                              style={{
-                                fontSize: 11,
-                              }}
-                            />{" "}
-                            {fmtDateTime(prog.dateDebutExoEffectif)}
-                          </span>
-                          <FontAwesomeIcon
-                            icon={faChevronRight}
-                            className="text-gray-300"
-                            style={{
-                              fontSize: 11,
-                            }}
-                          />
-                          <span>{fmtDateTime(prog.dateFinExoEffectif)}</span>
-                        </div>
-                        {prog.classesDiffusees?.length > 0 && (
-                          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                            <FontAwesomeIcon
-                              icon={faUsers}
-                              className="text-gray-400"
-                              style={{
-                                fontSize: 11,
-                              }}
-                            />
-                            {prog.classesDiffusees.map((c) => (
-                              <span
-                                key={c.id}
-                                className="px-1.5 py-0.5 rounded text-xs bg-cyan-50 text-cyan-700 border border-cyan-100"
-                              >
-                                {c.nom}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => setDetailProg(prog)}
-                        className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
-                      >
-                        <FontAwesomeIcon
-                          icon={faEye}
-                          style={{
-                            fontSize: 15,
-                          }}
-                        />
-                      </button>
-                      {/* Delete only for own programmations */}
-                      {prog.isOwn && (
-                        <Popconfirm
-                          title="Supprimer cette programmation ?"
-                          onConfirm={() => handleDelete(prog.id)}
-                          okText="Supprimer"
-                          cancelText="Annuler"
-                          okButtonProps={{
-                            danger: true,
-                          }}
-                        >
-                          <button
-                            className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                            disabled={deletingId === prog.id}
-                          >
-                            {deletingId === prog.id ? (
-                              <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <FontAwesomeIcon
-                                icon={faTrashCan}
-                                style={{
-                                  fontSize: 15,
-                                }}
-                              />
-                            )}
-                          </button>
-                        </Popconfirm>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {listMode === "grouped"
+              ? renderGrouped()
+              : paged.map((prog) => renderRow(prog))}
           </div>
         )}
 
         {/* ── Pagination ── */}
-        {!progsLoading && filtered.length > PAGE_SIZE && (
+        {!progsLoading && listMode === "list" && filtered.length > PAGE_SIZE && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50">
             <span className="text-xs text-gray-500">
               {filtered.length} résultat{filtered.length !== 1 ? "s" : ""} ·
@@ -1275,6 +1426,22 @@ const ExerciseProgrammerContent = () => {
         )}
       </div>
 
+      {/* ── Change the course of a programmation ── */}
+      <ChangeCourseModal
+        open={!!courseProg}
+        prog={courseProg}
+        onClose={() => setCourseProg(null)}
+        onChanged={(updated) =>
+          setProgrammations((prev) =>
+            prev.map((p) =>
+              p.id === updated.id
+                ? { ...p, coursId: updated.coursId, coursTitre: updated.coursTitre }
+                : p,
+            ),
+          )
+        }
+      />
+
       {/* ── Detail modal ── */}
       <Modal
         open={!!detailProg}
@@ -1320,6 +1487,12 @@ const ExerciseProgrammerContent = () => {
               {
                 label: "Fin effective",
                 value: fmtDateTime(detailProg.dateFinExoEffectif),
+              },
+              {
+                label: "Cours",
+                value: detailProg.coursId
+                  ? detailProg.coursTitre || "Cours"
+                  : GENERAL_COURSE_LABEL,
               },
               {
                 label: "Classes",

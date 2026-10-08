@@ -8,6 +8,10 @@ import { classService } from "../../../../../services/ClassService";
 import { getUserId } from "./exerciseDetails/helpers";
 import ExerciseInfoPanel from "./exerciseDetails/ExerciseInfoPanel";
 import ProgramModal from "./exerciseDetails/ProgramModal";
+import {
+  countProgrammations,
+  toCoursParClasse,
+} from "../../shared/scolarite/CoursSelectField";
 
 /* ── Question type label map ─────────────────────────────────────────────── */
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -191,15 +195,16 @@ const ExerciseDetailsView = ({
         dateDebutExoEffectif: values.dateDebutExoEffectif.toISOString(),
         dateFinExoEffectif: values.dateFinExoEffectif.toISOString(),
         classeIds: values.classeIds || [],
+        coursParClasse: toCoursParClasse(values.coursParClasse, values.classeIds),
         etat: "ACTIF",
       };
-      if (values.diffuseImmediately !== false) {
-        await exerciseProgrammerService.programmerEtDiffuserExercise(payload);
-        message.success("Exercice programmé et diffusé !");
-      } else {
-        await exerciseProgrammerService.programmerExercise(payload);
-        message.success("Exercice programmé");
-      }
+      const diffuse = values.diffuseImmediately !== false;
+      const created = diffuse
+        ? await exerciseProgrammerService.programmerEtDiffuserExercise(payload)
+        : await exerciseProgrammerService.programmerExercise(payload);
+      const n = countProgrammations(created);
+      const base = diffuse ? "Exercice programmé et diffusé" : "Exercice programmé";
+      message.success(n > 1 ? `${base} : ${n} programmations créées (une par cours).` : `${base} !`);
       setShowProgramModal(false);
       programForm.resetFields();
     } catch (e) {

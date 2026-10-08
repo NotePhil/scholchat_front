@@ -4,7 +4,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { classService } from "../../../../services/ClassService";
 import { coursProgrammerService } from "../../../../services/coursProgrammerService";
 import AccederService from "../../../../services/accederService";
-import CoursProgrammeManagement from "../content/InterfaceCours/CoursProgrammeManagement";
+import LearnerClassSpace from "../shared/scolarite/LearnerClassSpace";
+import scolariteService from "../../../../services/scolariteService";
+import { fmtNote20, loadClassExercises } from "../../../../utils/scolarite";
 import ParentClassManagementModal from "./ParentClassManagementModal";
 import AddChildModal from "./AddChildModal";
 import JoinClassModal from "../../../../components/common/JoinClassModal";
@@ -20,13 +22,13 @@ import {
 // ── helpers ────────────────────────────────────────────────────────────────────
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowRight,
   faArrowsRotate,
   faBook,
   faBuildingColumns,
   faCalendarDays,
   faCircleCheck,
   faClock,
+  faFileLines,
   faLock,
   faMagnifyingGlass,
   faPlus,
@@ -126,6 +128,8 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
   const [allClasses, setAllClasses] = useState([]);
   const [accessMap, setAccessMap] = useState({}); // classId -> APPROVED|PENDING|REJECTED
   const [courseCounts, setCourseCounts] = useState({}); // classId -> number
+  const [devoirCounts, setDevoirCounts] = useState({}); // classId -> devoirs à faire
+  const [moyennes, setMoyennes] = useState({}); // classId -> moyenne /20
   const [memberCounts, setMemberCounts] = useState({}); // classId -> number
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -192,21 +196,21 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
         map[c.id] = "APPROVED";
       });
 
-      // 3. Pending/rejected requests — fetch per class (only for classes not already approved)
+      // 3. Pending/rejected requests — the user's own requests (one call), for classes not already approved
       const nonApproved = active.filter((c) => !map[c.id]);
-      const reqResults = await Promise.allSettled(
-        nonApproved.map((c) =>
-          AccederService.obtenirDemandesAccesPourClasse(c.id),
-        ),
-      );
-      reqResults.forEach((r, i) => {
-        if (r.status !== "fulfilled") return;
-        const reqs = (r.value || []).filter(
-          (req) => req.utilisateurId === userId,
+      let myRequests = [];
+      try {
+        myRequests = (await AccederService.obtenirDemandesAccesUtilisateur(userId)) || [];
+      } catch {
+        myRequests = [];
+      }
+      nonApproved.forEach((c) => {
+        const reqs = myRequests.filter(
+          (req) => req.utilisateurId === userId && String(req.classeId) === String(c.id),
         );
         if (reqs.length === 0) return;
         const latest = reqs[reqs.length - 1];
-        const classId = nonApproved[i].id;
+        const classId = c.id;
         if (!map[classId]) {
           const etat = latest.etat || "";
           if (etat === "EN_ATTENTE") map[classId] = "PENDING";
@@ -221,20 +225,47 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
       const myClasses = active.filter((c) => map[c.id]);
       setUserClasses(myClasses);
 
-      // 5. Course counts per class using the class endpoint
+      // 5. Courses / devoirs à faire / moyenne per class: one call
+      //    (/utilisateurs/{id}/classes/resume), else the per-class endpoints.
       const countMap = {};
+      const devoirMap = {};
+      const moyenneMap = {};
+      const resume = await scolariteService.getClassesResume(userId);
+      (resume || []).forEach((r) => {
+        const id = r.classeId ?? r.id;
+        if (!id) return;
+        if (r.nbCours !== undefined && r.nbCours !== null) countMap[id] = r.nbCours;
+        if (r.nbDevoirsAFaire !== undefined && r.nbDevoirsAFaire !== null)
+          devoirMap[id] = r.nbDevoirsAFaire;
+        if (r.moyenne !== undefined && r.moyenne !== null) moyenneMap[id] = r.moyenne;
+      });
       await Promise.all(
         myClasses.map(async (c) => {
-          try {
-            const progs =
-              await coursProgrammerService.obtenirProgrammationParClasse(c.id);
-            countMap[c.id] = (progs || []).length;
-          } catch {
-            countMap[c.id] = 0;
+          if (countMap[c.id] === undefined) {
+            try {
+              const progs =
+                await coursProgrammerService.obtenirProgrammationParClasse(c.id);
+              // distinct courses (a course may have several sessions)
+              countMap[c.id] = new Set(
+                (progs || []).map((p) => p.coursId || p.id),
+              ).size;
+            } catch {
+              countMap[c.id] = 0;
+            }
+          }
+          if (devoirMap[c.id] === undefined && map[c.id] === "APPROVED") {
+            const exos = await loadClassExercises(c.id, userId);
+            devoirMap[c.id] = exos.filter(
+              (e) =>
+                e.type === "DEVOIR" &&
+                (e.statut === "A_FAIRE" || e.statut === "EN_RETARD"),
+            ).length;
           }
         }),
       );
       setCourseCounts(countMap);
+      setDevoirCounts(devoirMap);
+      setMoyennes(moyenneMap);
 
       // 6. Member counts
       const memberMap = {};
@@ -458,8 +489,9 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
   // ── if showing courses ─────────────────────────────────────────────────────
   if (showCourses && selectedClass) {
     return (
-      <CoursProgrammeManagement
-        selectedClass={selectedClass}
+      <LearnerClassSpace
+        key={`${selectedClass.id}-${userId}`}
+        classe={selectedClass}
         onBack={() => {
           setShowCourses(false);
           setSelectedClass(null);
@@ -688,6 +720,8 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
             const levelCfg = LEVEL_CONFIG[levelKey];
             const accessCfg = ACCESS[status];
             const courseCount = courseCounts[classe.id] ?? "—";
+            const devoirCount = devoirCounts[classe.id];
+            const moyenne = moyennes[classe.id];
             const memberCount =
               memberCounts[classe.id] ?? (classe.eleves?.length || 0);
             return (
@@ -741,7 +775,7 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
                   </div>
 
                   {/* Stats row */}
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
                     <div className="flex items-center gap-1.5 text-xs text-gray-500">
                       <div
                         className="w-6 h-6 rounded-lg flex items-center justify-center"
@@ -782,6 +816,30 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
                         membres
                       </span>
                     </div>
+                    {isApproved && devoirCount !== undefined && (
+                      <div
+                        className={`flex items-center gap-1.5 text-xs ${devoirCount > 0 ? "text-purple-700" : "text-gray-500"}`}
+                      >
+                        <div
+                          className="w-6 h-6 rounded-lg flex items-center justify-center"
+                          style={{
+                            background: "#f5f3ff",
+                          }}
+                        >
+                          <FontAwesomeIcon
+                            icon={faFileLines}
+                            style={{
+                              fontSize: 11,
+                              color: "#7c3aed",
+                            }}
+                          />
+                        </div>
+                        <span>
+                          <strong>{devoirCount}</strong> devoir
+                          {devoirCount > 1 ? "s" : ""} à faire
+                        </span>
+                      </div>
+                    )}
                     {classe.dateCreation && (
                       <div className="flex items-center gap-1 text-xs text-gray-400 ml-auto">
                         <FontAwesomeIcon
@@ -800,6 +858,13 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
                       </div>
                     )}
                   </div>
+
+                  {isApproved && moyenne !== undefined && (
+                    <p className="text-xs text-gray-500 mb-2">
+                      Moyenne :{" "}
+                      <strong className="text-gray-800">{fmtNote20(moyenne)}</strong>
+                    </p>
+                  )}
 
                   {/* Access badge */}
                   {accessCfg && (
@@ -825,13 +890,13 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
                           background: "linear-gradient(135deg,#2563eb,#4f46e5)",
                         }}
                       >
-                        Entrer dans la classe{" "}
                         <FontAwesomeIcon
-                          icon={faArrowRight}
+                          icon={faRightToBracket}
                           style={{
-                            fontSize: 12,
+                            fontSize: 13,
                           }}
                         />
+                        Entrer
                       </button>
                     ) : isPending ? (
                       <button
