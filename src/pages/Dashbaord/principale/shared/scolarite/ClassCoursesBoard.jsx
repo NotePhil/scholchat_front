@@ -20,7 +20,8 @@ import {
 /**
  * Courses programmed in a class, as cards with their counts (chapitres,
  * exercices / devoirs, prochaine session) + an "Exercices généraux" card for
- * the exercises not linked to a course. Clicking a card calls
+ * legacy exercises not linked to a course (shown only when there are some:
+ * every new exercise / homework must belong to a course). Clicking a card calls
  * onOpenCourse({ coursId|null, titre, ... }).
  *
  * mode "learner": also shows how many items are still to do (learnerId).
@@ -114,7 +115,7 @@ const ClassCoursesBoard = ({ classe, mode = "learner", learnerId, onOpenCourse, 
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-sm text-gray-900 leading-snug break-words">{c.titre}</p>
             <p className="text-xs text-gray-500 truncate">
-              {isGeneral ? "Exercices sans cours rattaché" : c.matiere || "Cours programmé"}
+              {isGeneral ? "Exercices programmés sans cours associé" : c.matiere || "Cours programmé"}
             </p>
           </div>
           <FontAwesomeIcon icon={faChevronRight} className="text-gray-300 mt-1" style={{ fontSize: 12 }} />
@@ -185,7 +186,8 @@ const ClassCoursesBoard = ({ classe, mode = "learner", learnerId, onOpenCourse, 
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {sorted.map((c) => card(c))}
-          {(general.length > 0 || mode === "professor") && card({ titre: GENERAL_COURSE_LABEL }, true)}
+          {/* Legacy exercises without a course only (no new ones can be created) */}
+          {general.length > 0 && card({ titre: GENERAL_COURSE_LABEL }, true)}
         </div>
       )}
     </div>

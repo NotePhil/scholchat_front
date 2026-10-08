@@ -10,6 +10,7 @@ import ExerciseInfoPanel from "./exerciseDetails/ExerciseInfoPanel";
 import ProgramModal from "./exerciseDetails/ProgramModal";
 import {
   countProgrammations,
+  programmingErrorMessage,
   toCoursParClasse,
 } from "../../shared/scolarite/CoursSelectField";
 
@@ -208,7 +209,7 @@ const ExerciseDetailsView = ({
       setShowProgramModal(false);
       programForm.resetFields();
     } catch (e) {
-      message.error(e.message || "Erreur lors de la programmation");
+      message.error(programmingErrorMessage(e));
     } finally {
       setProgramLoading(false);
     }

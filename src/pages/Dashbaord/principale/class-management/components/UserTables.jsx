@@ -298,23 +298,31 @@ const UserTables = ({
         },
         {
           title: "Type",
-          dataIndex: "type",
+          dataIndex: "typeUtilisateur",
           key: "type",
-          render: (type) => (
-            <Tag color="purple">
-              {type === "utilisateur" ? "Utilisateur" : type}
-            </Tag>
-          ),
+          // GET /acceder/classes/{id}/utilisateurs returns typeUtilisateur (UTILISATEUR here)
+          render: (typeUtilisateur, record) => {
+            const t = String(typeUtilisateur || record?.type || "").toUpperCase();
+            return (
+              <Tag color="purple">
+                {!t || t === "UTILISATEUR" ? "Utilisateur" : t}
+              </Tag>
+            );
+          },
         },
         {
           title: "Admin",
           dataIndex: "admin",
           key: "admin",
-          render: (isAdmin) => (
-            <Tag color={isAdmin ? "gold" : "default"}>
-              {isAdmin ? "Oui" : "Non"}
-            </Tag>
-          ),
+          // Only admin user pools carry this flag: unknown → "—" rather than a wrong "Non"
+          render: (isAdmin) =>
+            typeof isAdmin === "boolean" ? (
+              <Tag color={isAdmin ? "gold" : "default"}>
+                {isAdmin ? "Oui" : "Non"}
+              </Tag>
+            ) : (
+              "—"
+            ),
         },
         {
           title: "Date de création",
@@ -357,6 +365,8 @@ const UserTables = ({
         dataIndex: "etat",
         key: "etat",
         render: (etat) => {
+          // Unknown state (field not returned) is never shown as "Inactif"
+          if (!etat) return "—";
           const isActive = etat === "ACTIVE" || etat === "ACTIF";
           return (
             <Tag color={isActive ? "green" : "red"}>
@@ -376,7 +386,7 @@ const UserTables = ({
         ],
         onFilter: (value, record) => {
           const isActive = record.etat === "ACTIVE" || record.etat === "ACTIF";
-          return value === "ACTIVE" ? isActive : !isActive;
+          return value === "ACTIVE" ? isActive : !!record.etat && !isActive;
         },
       });
     }

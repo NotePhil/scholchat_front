@@ -206,7 +206,7 @@ const ProgramModal = ({
           </Select>
         </Form.Item>
 
-        {/* Course of the class(es) — required (or "Exercice général") */}
+        {/* Course of the class(es) — required (no exercise without a course) */}
         <CoursSelectField form={form} classes={classes} classesField="classeIds" />
 
         {/* Diffuse immediately toggle */}

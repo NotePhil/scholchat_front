@@ -19,6 +19,7 @@ import { classService } from "../../../../../services/ClassService";
 import { userService } from "../../../../../services/userService";
 import CoursSelectField, {
   countProgrammations,
+  programmingErrorMessage,
   toCoursParClasse,
 } from "../../shared/scolarite/CoursSelectField";
 import ChangeCourseModal from "../../shared/scolarite/ChangeCourseModal";
@@ -190,6 +191,16 @@ const ExerciseProgrammerContent = () => {
   const PAGE_SIZE = 8;
   const [currentPage, setCurrentPage] = useState(1);
   const [form] = Form.useForm();
+  // Class preselected when the form is opened for a given class (class filter / empty class)
+  const [formClassId, setFormClassId] = useState(null);
+  const openForm = (classId) => {
+    setFormClassId(classId ? String(classId) : null);
+    setView("form");
+  };
+  useEffect(() => {
+    // Runs once the form is mounted: preselect the class so its course picker loads right away
+    if (view === "form" && formClassId) form.setFieldsValue({ classeIds: [formClassId] });
+  }, [view, formClassId, form]);
   const userId = getUserId();
 
   // ── Load exercises and classes (for form dropdowns) ──
@@ -349,7 +360,7 @@ const ExerciseProgrammerContent = () => {
       await loadProgs();
       setView("list");
     } catch (e) {
-      message.error(e.message || "Erreur lors de la programmation");
+      message.error(programmingErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
@@ -1133,7 +1144,7 @@ const ExerciseProgrammerContent = () => {
 
           {/* New programmation button */}
           <button
-            onClick={() => setView("form")}
+            onClick={() => openForm(filterClassId)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 shadow-sm flex-shrink-0"
             style={{
               background: "linear-gradient(135deg, #7c3aed, #db2777)",
@@ -1352,9 +1363,21 @@ const ExerciseProgrammerContent = () => {
                 ? "Aucune programmation pour cette classe"
                 : "Aucune programmation"}
             </p>
-            <p className="text-gray-400 text-xs mt-1">
-              Cliquez sur « Programmer un exercice » pour commencer
-            </p>
+            {filterClassId ? (
+              <button
+                type="button"
+                onClick={() => openForm(filterClassId)}
+                className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)" }}
+              >
+                <FontAwesomeIcon icon={faPlus} style={{ fontSize: 13 }} />
+                Programmer un exercice pour cette classe
+              </button>
+            ) : (
+              <p className="text-gray-400 text-xs mt-1">
+                Cliquez sur « Programmer un exercice » pour commencer
+              </p>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-gray-50">

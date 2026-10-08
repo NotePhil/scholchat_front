@@ -3,7 +3,6 @@ import { Empty, Tag, Spin } from "antd";
 import StudentExerciseView from "./StudentExerciseView";
 import StudentExerciseResultView from "./StudentExerciseResultView";
 import { exerciseProgrammerService } from "../../../../../services/exerciseProgrammerService";
-import { GENERAL_COURSE_LABEL } from "../../../../../utils/scolarite";
 import {
   openingDone,
   openingFailed,
@@ -29,6 +28,9 @@ import {
   faFileLines,
   faTrophy,
 } from "@fortawesome/free-solid-svg-icons";
+
+// Devoirs (DEVOIR) without a course; EXERCICE-type programmations only appear inside the courses
+const GENERAL_DEVOIRS_LABEL = "Devoirs généraux (sans cours)";
 const getUserId = () => {
   const isParent = (localStorage.getItem("userRole") || "")
     .toUpperCase()
@@ -427,7 +429,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
     corriges: inClass.filter((c) => c.isGraded).length,
   };
 
-  // Class → course sections (courses sorted by title, "Exercices généraux" last)
+  // Class → course sections (courses sorted by title, "Devoirs généraux (sans cours)" last)
   const sections = (() => {
     const byClass = new Map();
     filtered.forEach((item) => {
@@ -438,7 +440,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
       if (!courses.has(ck))
         courses.set(ck, {
           key: ck,
-          titre: item.ep.coursId ? item.ep.coursTitre || "Cours" : GENERAL_COURSE_LABEL,
+          titre: item.ep.coursId ? item.ep.coursTitre || "Cours" : GENERAL_DEVOIRS_LABEL,
           items: [],
         });
       courses.get(ck).items.push(item);

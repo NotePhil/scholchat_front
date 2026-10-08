@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Alert, Modal, Select, message } from "antd";
 import scolariteService from "../../../../../services/scolariteService";
-import {
-  GENERAL_COURSE_KEY,
-  loadCommonCourseOptions,
-} from "../../../../../utils/scolarite";
+import { loadCommonCourseOptions } from "../../../../../utils/scolarite";
+import NoCourseNotice from "./NoCourseNotice";
 
 /**
- * Change (or clear) the course of a programmed exercise.
+ * Change the course of a programmed exercise — or attach a legacy « Exercices
+ * généraux » row (no course) to one. A course is required: there is no
+ * "without course" option (the backend answers 400 COURS_REQUIS).
  * prog: { id, titre|nom, coursId, classes|classesDiffusees:[{id}] }; classIds overrides the classes.
  * The spinner stays until the PATCH settles; errors stay inside the modal.
  */
 const ChangeCourseModal = ({ open, prog, classIds, onClose, onChanged }) => {
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [value, setValue] = useState(GENERAL_COURSE_KEY);
+  const [value, setValue] = useState(undefined);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -24,7 +24,7 @@ const ChangeCourseModal = ({ open, prog, classIds, onClose, onChanged }) => {
   useEffect(() => {
     if (!open || !prog) return;
     setError(null);
-    setValue(prog.coursId || GENERAL_COURSE_KEY);
+    setValue(prog.coursId || undefined);
     setLoading(true);
     loadCommonCourseOptions(idsKey ? idsKey.split(",") : [])
       .then(setOptions)
@@ -34,18 +34,29 @@ const ChangeCourseModal = ({ open, prog, classIds, onClose, onChanged }) => {
 
   const handleOk = async () => {
     if (!prog) return;
+    if (!value) {
+      setError(
+        options.length === 0
+          ? "Aucun cours programmé dans cette classe — programmez d'abord un cours."
+          : "Choisissez le cours auquel rattacher cet exercice.",
+      );
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      const coursId = value === GENERAL_COURSE_KEY ? null : value;
+      const coursId = value;
       const updated = await scolariteService.changerCoursExerciseProgramme(prog.id, coursId);
-      const titre =
-        coursId === null ? null : options.find((o) => String(o.coursId) === String(coursId))?.titre || null;
+      const titre = options.find((o) => String(o.coursId) === String(coursId))?.titre || null;
       onClose?.();
-      message.success(coursId ? `Exercice rattaché au cours « ${titre || "sélectionné"} »` : "Exercice classé dans « Exercices généraux »");
+      message.success(`Exercice rattaché au cours « ${titre || "sélectionné"} »`);
       onChanged?.({ ...(updated || {}), id: prog.id, coursId, coursTitre: updated?.coursTitre ?? titre });
     } catch (e) {
-      setError(e.message || "Impossible de modifier le cours");
+      setError(
+        e.code === "COURS_REQUIS"
+          ? e.message || "Choisissez le cours auquel rattacher cet exercice."
+          : e.message || "Impossible de modifier le cours",
+      );
     } finally {
       setSaving(false);
     }
@@ -54,12 +65,12 @@ const ChangeCourseModal = ({ open, prog, classIds, onClose, onChanged }) => {
   return (
     <Modal
       open={open}
-      title="Changer le cours de l'exercice"
+      title={prog?.coursId ? "Changer le cours de l'exercice" : "Associer l'exercice à un cours"}
       okText="Enregistrer"
       cancelText="Annuler"
       onOk={handleOk}
       onCancel={saving ? undefined : onClose}
-      okButtonProps={{ loading: saving, disabled: loading }}
+      okButtonProps={{ loading: saving, disabled: loading || !value }}
       cancelButtonProps={{ disabled: saving }}
       maskClosable={!saving}
       closable={!saving}
@@ -71,18 +82,21 @@ const ChangeCourseModal = ({ open, prog, classIds, onClose, onChanged }) => {
       <Select
         style={{ width: "100%" }}
         value={value}
-        onChange={setValue}
+        onChange={(v) => {
+          setValue(v);
+          setError(null);
+        }}
         loading={loading}
-        disabled={saving}
+        disabled={saving || (!loading && options.length === 0)}
+        placeholder="Choisissez le cours"
         showSearch
         optionFilterProp="label"
-        options={[
-          ...options.map((c) => ({ value: c.coursId, label: c.matiere ? `${c.titre} — ${c.matiere}` : c.titre })),
-          { value: GENERAL_COURSE_KEY, label: "Exercice général (sans cours)" },
-        ]}
+        options={options.map((c) => ({ value: c.coursId, label: c.matiere ? `${c.titre} — ${c.matiere}` : c.titre }))}
       />
       {!loading && options.length === 0 && (
-        <p className="text-xs text-gray-400 mt-2">Aucun cours programmé dans la classe de cet exercice.</p>
+        <p className="mt-2">
+          <NoCourseNotice classeId={ids.length === 1 ? ids[0] : undefined} onNavigate={onClose} />
+        </p>
       )}
       {error && <Alert type="error" showIcon title={error} style={{ marginTop: 12 }} />}
     </Modal>

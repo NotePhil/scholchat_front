@@ -44,9 +44,9 @@ class ExerciseProgrammerService {
           ? { typeAssignation: exerciseProgrammerData.typeAssignation }
           : {}),
         classeIds: exerciseProgrammerData.classeIds || [],
-        // Course programmed in the class (null = "Exercices généraux")
+        // Course programmed in the class (required for every class: 400 COURS_REQUIS otherwise)
         coursId: exerciseProgrammerData.coursId || null,
-        // One course per class {classeId: coursId|null}; classes mapped to different
+        // One course per class {classeId: coursId}; classes mapped to different
         // courses get one programmation each (response.programmations / nombreProgrammations).
         ...(exerciseProgrammerData.coursParClasse
           ? { coursParClasse: exerciseProgrammerData.coursParClasse }
@@ -96,9 +96,9 @@ class ExerciseProgrammerService {
           ? { typeAssignation: exerciseProgrammerData.typeAssignation }
           : {}),
         classeIds: exerciseProgrammerData.classeIds || [],
-        // Course programmed in the class (null = "Exercices généraux")
+        // Course programmed in the class (required for every class: 400 COURS_REQUIS otherwise)
         coursId: exerciseProgrammerData.coursId || null,
-        // One course per class {classeId: coursId|null}; classes mapped to different
+        // One course per class {classeId: coursId}; classes mapped to different
         // courses get one programmation each (response.programmations / nombreProgrammations).
         ...(exerciseProgrammerData.coursParClasse
           ? { coursParClasse: exerciseProgrammerData.coursParClasse }
@@ -444,7 +444,11 @@ class ExerciseProgrammerService {
         headers: error.response.headers,
       });
 
-      throw new Error(errorMessage);
+      const err = new Error(errorMessage);
+      // API error code (e.g. COURS_REQUIS, COURS_NON_PROGRAMME_DANS_CLASSE)
+      err.code = error.response.data?.code;
+      err.status = error.response.status;
+      throw err;
     } else if (error.request) {
       console.error("Network Error:", error.request);
       throw new Error(

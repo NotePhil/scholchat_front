@@ -296,9 +296,9 @@ class ExerciseProgrammerService {
         ),
         etat: exerciseProgrammerData.etat || "BROUILLON",
         classeIds: exerciseProgrammerData.classeIds || [],
-        // Course programmed in the class (null = "Exercices généraux")
+        // Course programmed in the class (required for every class: 400 COURS_REQUIS otherwise)
         coursId: exerciseProgrammerData.coursId || null,
-        // One course per class {classeId: coursId|null}; classes mapped to different
+        // One course per class {classeId: coursId}; classes mapped to different
         // courses get one programmation each (response.programmations / nombreProgrammations).
         ...(exerciseProgrammerData.coursParClasse
           ? { coursParClasse: exerciseProgrammerData.coursParClasse }
@@ -349,9 +349,9 @@ class ExerciseProgrammerService {
         dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat || "ACTIF",
         classeIds: exerciseProgrammerData.classeIds || [],
-        // Course programmed in the class (null = "Exercices généraux")
+        // Course programmed in the class (required for every class: 400 COURS_REQUIS otherwise)
         coursId: exerciseProgrammerData.coursId || null,
-        // One course per class {classeId: coursId|null}; classes mapped to different
+        // One course per class {classeId: coursId}; classes mapped to different
         // courses get one programmation each (response.programmations / nombreProgrammations).
         ...(exerciseProgrammerData.coursParClasse
           ? { coursParClasse: exerciseProgrammerData.coursParClasse }

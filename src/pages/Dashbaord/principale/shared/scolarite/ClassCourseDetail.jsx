@@ -254,14 +254,54 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
         >
           Corrections
         </Button>
-        <Tooltip title="Rattacher à un autre cours">
-          <Button size="small" type="text" onClick={() => setCourseProg(e)}>
-            Changer de cours
+        <Tooltip title={coursId ? "Rattacher à un autre cours" : "Ranger cet exercice dans un cours de la classe"}>
+          <Button size="small" type={coursId ? "text" : "default"} onClick={() => setCourseProg(e)}>
+            {coursId ? "Changer de cours" : "Associer à un cours"}
           </Button>
         </Tooltip>
       </div>
     );
   };
+
+  const renderItem = (e) => (
+            <div key={e.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="font-semibold text-sm text-gray-900 break-words">{e.titre}</span>
+                  <Tag color={TYPE_META[e.type]?.color || "default"} className="m-0">
+                    {TYPE_META[e.type]?.label || e.type}
+                  </Tag>
+                  {mode === "learner" && <StatusPill statut={e.statut} />}
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                  {e.dateDebut && (
+                    <span>
+                      <FontAwesomeIcon icon={faCalendarDays} className="mr-1" />
+                      Début {fmtDate(e.dateDebut, true)}
+                    </span>
+                  )}
+                  <span className={e.statut === "EN_RETARD" && mode === "learner" ? "text-red-600 font-medium" : ""}>
+                    <FontAwesomeIcon icon={faClock} className="mr-1" />
+                    À rendre avant {fmtDate(e.dateFin, true)}
+                  </span>
+                  {e.points ? (
+                    <span>
+                      <FontAwesomeIcon icon={faPenToSquare} className="mr-1" />
+                      {e.points} pts
+                    </span>
+                  ) : e.nbQuestions ? (
+                    <span>
+                      {e.nbQuestions} question{e.nbQuestions > 1 ? "s" : ""}
+                    </span>
+                  ) : null}
+                  {mode === "learner" && e.statut === "CORRIGE" && (
+                    <span className="text-purple-700 font-semibold">Note : {e.note ?? fmtNote20(e.noteOn20)}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex-shrink-0">{mode === "learner" ? learnerActions(e) : professorBlock(e)}</div>
+            </div>
+  );
 
   return (
     <div className="w-full">
@@ -275,6 +315,7 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-bold truncate">{coursId ? course?.titre || "Cours" : GENERAL_COURSE_LABEL}</h2>
             <p className="text-xs text-blue-100 truncate">
+              {!coursId ? "Exercices programmés sans cours associé · " : ""}
               {classe?.nom}
               {course?.matiere ? ` · ${course.matiere}` : ""}
               {course?.prochaineSession ? ` · prochaine session ${fmtDate(course.prochaineSession, true)}` : ""}
@@ -331,44 +372,25 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
           />
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {visible.map((e) => (
-            <div key={e.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="font-semibold text-sm text-gray-900 break-words">{e.titre}</span>
-                  <Tag color={TYPE_META[e.type]?.color || "default"} className="m-0">
-                    {TYPE_META[e.type]?.label || e.type}
-                  </Tag>
-                  {mode === "learner" && <StatusPill statut={e.statut} />}
-                </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                  {e.dateDebut && (
-                    <span>
-                      <FontAwesomeIcon icon={faCalendarDays} className="mr-1" />
-                      Début {fmtDate(e.dateDebut, true)}
-                    </span>
-                  )}
-                  <span className={e.statut === "EN_RETARD" && mode === "learner" ? "text-red-600 font-medium" : ""}>
-                    <FontAwesomeIcon icon={faClock} className="mr-1" />
-                    À rendre avant {fmtDate(e.dateFin, true)}
-                  </span>
-                  {e.points ? (
-                    <span>
-                      <FontAwesomeIcon icon={faPenToSquare} className="mr-1" />
-                      {e.points} pts
-                    </span>
-                  ) : e.nbQuestions ? (
-                    <span>
-                      {e.nbQuestions} question{e.nbQuestions > 1 ? "s" : ""}
-                    </span>
-                  ) : null}
-                  {mode === "learner" && e.statut === "CORRIGE" && (
-                    <span className="text-purple-700 font-semibold">Note : {e.note ?? fmtNote20(e.noteOn20)}</span>
-                  )}
-                </div>
+        // Exercises (EXERCICE) and homework (DEVOIR) of the course, in two separate sections
+        <div className="space-y-3">
+          {[
+            { key: "ex", title: "Exercices", empty: "Aucun exercice", list: visible.filter((e) => e.type !== "DEVOIR") },
+            { key: "dv", title: "Devoirs", empty: "Aucun devoir", list: visible.filter((e) => e.type === "DEVOIR") },
+          ].map((sec) => (
+            <div key={sec.key} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+                <FontAwesomeIcon icon={sec.key === "ex" ? faBookOpen : faPenToSquare} className="text-gray-400" style={{ fontSize: 12 }} />
+                <span className="text-sm font-semibold text-gray-800">{sec.title}</span>
+                <span className="ml-auto text-xs text-gray-500">{sec.list.length}</span>
               </div>
-              <div className="flex-shrink-0">{mode === "learner" ? learnerActions(e) : professorBlock(e)}</div>
+              {sec.list.length === 0 ? (
+                <p className="px-4 py-3 text-xs text-gray-400 m-0">{sec.empty}</p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {sec.list.map((e) => renderItem(e))}
+                </div>
+              )}
             </div>
           ))}
         </div>

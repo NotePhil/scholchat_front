@@ -4,20 +4,31 @@ import {
   GENERAL_COURSE_KEY,
   loadClassCourseOptions,
 } from "../../../../../utils/scolarite";
+import NoCourseNotice from "./NoCourseNotice";
 
 /**
  * "Cours" part of an exercise programming form: ONE required select per
  * selected class, listing the courses programmed in that class (labelled
- * "Cours — Classe") plus "Exercice général (sans cours)".
+ * "Cours — Classe"). There is no exercise / homework without a course: a class
+ * with no programmed course shows a notice with a shortcut to course
+ * programming, and the backend refuses a missing course (400 COURS_REQUIS).
  *
  * Form values live under `name` (default "coursParClasse") as
- * { [classeId]: coursId | GENERAL_COURSE_KEY }; convert them with
- * toCoursParClasse() before sending (backend field `coursParClasse`).
- * Classes mapped to different courses produce one programmation per course.
+ * { [classeId]: coursId }; convert them with toCoursParClasse() before sending
+ * (backend field `coursParClasse`). Classes mapped to different courses
+ * produce one programmation per course.
  */
 export const toCoursId = (value) => (!value || value === GENERAL_COURSE_KEY ? null : value);
 
-/** {classeId: coursId|null} for the selected classes only (stale entries of unselected classes dropped). */
+/** Message to show for a failed programming request (maps 400 COURS_REQUIS). */
+export const programmingErrorMessage = (e, fallback = "Erreur lors de la programmation") => {
+  if (e?.code === "COURS_REQUIS") {
+    return e.message || "Choisissez le cours auquel rattacher cet exercice pour chaque classe.";
+  }
+  return e?.message || fallback;
+};
+
+/** {classeId: coursId} for the selected classes only (stale entries of unselected classes dropped). */
 export const toCoursParClasse = (values, classeIds = []) => {
   const out = {};
   (classeIds || []).filter(Boolean).forEach((id) => {
@@ -66,11 +77,7 @@ const CoursSelectField = ({
             if (!mountedRef.current) return;
             setOptionsByClass((prev) => ({ ...prev, [classeId]: list || [] }));
             const current = form.getFieldValue([name, classeId]);
-            if (
-              current &&
-              current !== GENERAL_COURSE_KEY &&
-              !(list || []).some((c) => String(c.coursId) === String(current))
-            ) {
+            if (current && !(list || []).some((c) => String(c.coursId) === String(current))) {
               form.setFieldValue([name, classeId], undefined);
             }
           });
@@ -107,18 +114,26 @@ const CoursSelectField = ({
           const nomClasse = className(classeId);
           const list = optionsByClass[classeId];
           const loading = list === undefined;
+          const empty = !loading && list.length === 0;
           return (
             <Form.Item
               key={classeId}
               name={[name, classeId]}
               label={classIds.length > 1 ? <span className="text-xs text-slate-600">{nomClasse}</span> : undefined}
-              rules={[{ required: true, message: `Choisissez le cours pour ${nomClasse} (ou « Exercice général »)` }]}
+              rules={[
+                {
+                  required: true,
+                  message: empty
+                    ? `Aucun cours programmé dans ${nomClasse} — programmez d'abord un cours`
+                    : `Choisissez le cours auquel rattacher cet exercice pour ${nomClasse}`,
+                },
+              ]}
               extra={
-                loading
-                  ? "Chargement des cours programmés…"
-                  : list.length === 0
-                    ? `Aucun cours programmé dans ${nomClasse}.`
-                    : undefined
+                loading ? (
+                  "Chargement des cours programmés…"
+                ) : empty ? (
+                  <NoCourseNotice classeId={classeId} classeNom={classIds.length > 1 ? nomClasse : null} />
+                ) : undefined
               }
               style={{ marginBottom: classIds.length > 1 ? 12 : 0 }}
             >
@@ -126,15 +141,13 @@ const CoursSelectField = ({
                 size={size}
                 placeholder={`Cours — ${nomClasse}`}
                 loading={loading}
+                disabled={empty}
                 showSearch
                 optionFilterProp="label"
-                options={[
-                  ...(list || []).map((c) => ({
-                    value: c.coursId,
-                    label: `${c.titre}${c.matiere ? ` (${c.matiere})` : ""} — ${nomClasse}`,
-                  })),
-                  { value: GENERAL_COURSE_KEY, label: `Exercice général (sans cours) — ${nomClasse}` },
-                ]}
+                options={(list || []).map((c) => ({
+                  value: c.coursId,
+                  label: `${c.titre}${c.matiere ? ` (${c.matiere})` : ""} — ${nomClasse}`,
+                }))}
               />
             </Form.Item>
           );
