@@ -16,18 +16,17 @@ import {
   Typography,
   Alert,
 } from "antd";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  CreditCardOutlined,
-  WalletOutlined,
-  BankOutlined,
-  CheckCircleOutlined,
-  LoadingOutlined,
-} from "@ant-design/icons";
-
+  faBuildingColumns,
+  faCircleCheck,
+  faCreditCard,
+  faSpinner,
+  faWallet,
+} from "@fortawesome/free-solid-svg-icons";
 const { Option } = Select;
 const { Title, Text } = Typography;
 const { Step } = Steps;
-
 const PaymentModal = ({ visible, onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
@@ -61,14 +60,12 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
       setLoading(false);
     }
   };
-
   const handleModalClose = () => {
     setCurrentStep(0);
     setPaymentMethod("card");
     form.resetFields();
     onCancel();
   };
-
   const renderPaymentForm = () => {
     switch (paymentMethod) {
       case "card":
@@ -78,14 +75,20 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
               name="cardNumber"
               label="Card Number"
               rules={[
-                { required: true, message: "Please enter card number" },
-                { len: 16, message: "Card number must be 16 digits" },
+                {
+                  required: true,
+                  message: "Please enter card number",
+                },
+                {
+                  len: 16,
+                  message: "Card number must be 16 digits",
+                },
               ]}
             >
               <Input
                 placeholder="1234 5678 9012 3456"
                 maxLength={16}
-                prefix={<CreditCardOutlined />}
+                prefix={<FontAwesomeIcon icon={faCreditCard} />}
               />
             </Form.Item>
 
@@ -95,7 +98,10 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
                   name="expiryDate"
                   label="Expiry Date"
                   rules={[
-                    { required: true, message: "Please enter expiry date" },
+                    {
+                      required: true,
+                      message: "Please enter expiry date",
+                    },
                     {
                       pattern: /^(0[1-9]|1[0-2])\/\d{2}$/,
                       message: "Format: MM/YY",
@@ -110,8 +116,14 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
                   name="cvv"
                   label="CVV"
                   rules={[
-                    { required: true, message: "Please enter CVV" },
-                    { len: 3, message: "CVV must be 3 digits" },
+                    {
+                      required: true,
+                      message: "Please enter CVV",
+                    },
+                    {
+                      len: 3,
+                      message: "CVV must be 3 digits",
+                    },
                   ]}
                 >
                   <Input placeholder="123" maxLength={3} />
@@ -123,32 +135,49 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
               name="cardHolderName"
               label="Cardholder Name"
               rules={[
-                { required: true, message: "Please enter cardholder name" },
+                {
+                  required: true,
+                  message: "Please enter cardholder name",
+                },
               ]}
             >
               <Input placeholder="John Doe" />
             </Form.Item>
           </>
         );
-
       case "paypal":
         return (
-          <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <WalletOutlined style={{ fontSize: "48px", color: "#1890ff" }} />
+          <div
+            style={{
+              textAlign: "center",
+              padding: "40px 0",
+            }}
+          >
+            <FontAwesomeIcon
+              icon={faWallet}
+              style={{
+                fontSize: "48px",
+                color: "#1890ff",
+              }}
+            />
             <Title level={4}>PayPal Payment</Title>
             <Text>
               You will be redirected to PayPal to complete your payment.
             </Text>
           </div>
         );
-
       case "bank":
         return (
           <>
             <Form.Item
               name="bankName"
               label="Bank Name"
-              rules={[{ required: true, message: "Please select bank" }]}
+              rules={[
+                {
+                  required: true,
+                  message: "Please select bank",
+                },
+              ]}
             >
               <Select placeholder="Select your bank">
                 <Option value="bank1">First National Bank</Option>
@@ -162,7 +191,10 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
               name="accountNumber"
               label="Account Number"
               rules={[
-                { required: true, message: "Please enter account number" },
+                {
+                  required: true,
+                  message: "Please enter account number",
+                },
               ]}
             >
               <Input placeholder="Enter your account number" />
@@ -172,19 +204,20 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
               name="routingNumber"
               label="Routing Number"
               rules={[
-                { required: true, message: "Please enter routing number" },
+                {
+                  required: true,
+                  message: "Please enter routing number",
+                },
               ]}
             >
               <Input placeholder="Enter routing number" />
             </Form.Item>
           </>
         );
-
       default:
         return null;
     }
   };
-
   const steps = [
     {
       title: "Payment Method",
@@ -199,7 +232,6 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
       content: "Payment successful",
     },
   ];
-
   return (
     <Modal
       title="Complete Payment"
@@ -209,7 +241,12 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
       width={600}
       destroyOnClose
     >
-      <Steps current={currentStep} style={{ marginBottom: 24 }}>
+      <Steps
+        current={currentStep}
+        style={{
+          marginBottom: 24,
+        }}
+      >
         {steps.map((item) => (
           <Step key={item.title} title={item.title} />
         ))}
@@ -222,37 +259,78 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
             description={`Creating a class without school association requires a one-time fee of $${paymentAmount}`}
             type="info"
             showIcon
-            style={{ marginBottom: 24 }}
+            style={{
+              marginBottom: 24,
+            }}
           />
 
           <Title level={4}>Select Payment Method</Title>
           <Radio.Group
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value)}
-            style={{ width: "100%" }}
+            style={{
+              width: "100%",
+            }}
           >
-            <Card style={{ marginBottom: 16 }}>
+            <Card
+              style={{
+                marginBottom: 16,
+              }}
+            >
               <Radio value="card">
-                <CreditCardOutlined style={{ marginRight: 8 }} />
+                <FontAwesomeIcon
+                  icon={faCreditCard}
+                  style={{
+                    marginRight: 8,
+                  }}
+                />
                 Credit/Debit Card
               </Radio>
             </Card>
-            <Card style={{ marginBottom: 16 }}>
+            <Card
+              style={{
+                marginBottom: 16,
+              }}
+            >
               <Radio value="paypal">
-                <WalletOutlined style={{ marginRight: 8 }} />
+                <FontAwesomeIcon
+                  icon={faWallet}
+                  style={{
+                    marginRight: 8,
+                  }}
+                />
                 PayPal
               </Radio>
             </Card>
-            <Card style={{ marginBottom: 16 }}>
+            <Card
+              style={{
+                marginBottom: 16,
+              }}
+            >
               <Radio value="bank">
-                <BankOutlined style={{ marginRight: 8 }} />
+                <FontAwesomeIcon
+                  icon={faBuildingColumns}
+                  style={{
+                    marginRight: 8,
+                  }}
+                />
                 Bank Transfer
               </Radio>
             </Card>
           </Radio.Group>
 
-          <div style={{ textAlign: "right", marginTop: 24 }}>
-            <Button onClick={handleModalClose} style={{ marginRight: 8 }}>
+          <div
+            style={{
+              textAlign: "right",
+              marginTop: 24,
+            }}
+          >
+            <Button
+              onClick={handleModalClose}
+              style={{
+                marginRight: 8,
+              }}
+            >
               Cancel
             </Button>
             <Button type="primary" onClick={() => setCurrentStep(1)}>
@@ -266,7 +344,9 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
         <div>
           <Card
             title="Payment Summary"
-            style={{ marginBottom: 24 }}
+            style={{
+              marginBottom: 24,
+            }}
             size="small"
           >
             <Row justify="space-between">
@@ -275,7 +355,11 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
                 <strong>${paymentAmount}</strong>
               </Col>
             </Row>
-            <Divider style={{ margin: "12px 0" }} />
+            <Divider
+              style={{
+                margin: "12px 0",
+              }}
+            />
             <Row justify="space-between">
               <Col>
                 <strong>Total:</strong>
@@ -289,10 +373,17 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
           <Form form={form} layout="vertical" onFinish={handlePaymentSubmit}>
             {renderPaymentForm()}
 
-            <div style={{ textAlign: "right", marginTop: 24 }}>
+            <div
+              style={{
+                textAlign: "right",
+                marginTop: 24,
+              }}
+            >
               <Button
                 onClick={() => setCurrentStep(0)}
-                style={{ marginRight: 8 }}
+                style={{
+                  marginRight: 8,
+                }}
               >
                 Back
               </Button>
@@ -300,7 +391,13 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
                 type="primary"
                 htmlType="submit"
                 loading={loading}
-                icon={loading ? <LoadingOutlined /> : <CreditCardOutlined />}
+                icon={
+                  loading ? (
+                    <FontAwesomeIcon icon={faSpinner} spin />
+                  ) : (
+                    <FontAwesomeIcon icon={faCreditCard} />
+                  )
+                }
               >
                 {loading ? "Processing..." : `Pay $${paymentAmount}`}
               </Button>
@@ -310,9 +407,19 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
       )}
 
       {currentStep === 2 && (
-        <div style={{ textAlign: "center", padding: "40px 0" }}>
-          <CheckCircleOutlined
-            style={{ fontSize: "64px", color: "#52c41a", marginBottom: 16 }}
+        <div
+          style={{
+            textAlign: "center",
+            padding: "40px 0",
+          }}
+        >
+          <FontAwesomeIcon
+            icon={faCircleCheck}
+            style={{
+              fontSize: "64px",
+              color: "#52c41a",
+              marginBottom: 16,
+            }}
           />
           <Title level={3}>Payment Successful!</Title>
           <Text>
@@ -324,5 +431,4 @@ const PaymentModal = ({ visible, onSuccess, onCancel }) => {
     </Modal>
   );
 };
-
 export default PaymentModal;

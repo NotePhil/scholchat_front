@@ -1,6 +1,7 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const matiereApi = axios.create({
   baseURL: BASE_URL,
@@ -10,20 +11,7 @@ const matiereApi = axios.create({
   },
 });
 
-matiereApi.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("cmr.notep.business.business.token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+applyAuthInterceptors(matiereApi);
 
 class MatiereService {
   /**
@@ -32,9 +20,12 @@ class MatiereService {
    */
   async getAllMatieres() {
     try {
+      console.log("MatiereService - Calling getAllMatieres");
       const response = await matiereApi.get("/matieres");
+      console.log("MatiereService - Response:", response.data);
       return response.data;
     } catch (error) {
+      console.error("MatiereService - Error in getAllMatieres:", error);
       this.handleError(error);
     }
   }
@@ -49,7 +40,15 @@ class MatiereService {
       if (!matiereData.nom) {
         throw new Error("Subject name is required");
       }
-      const response = await matiereApi.post("/matieres", matiereData);
+      
+      // Ensure required fields are set
+      const completeData = {
+        ...matiereData,
+        dateCreation: new Date().toISOString(),
+        etat: "ACTIF" // Default state
+      };
+      
+      const response = await matiereApi.post("/matieres", completeData);
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -72,6 +71,42 @@ class MatiereService {
       this.handleError(error);
     }
   }
+
+  /**
+   * Updates a subject
+   * @param {String} id - Subject ID
+   * @param {Object} matiereData - Updated subject data
+   * @returns {Promise<Object>} Updated subject
+   */
+  async updateMatiere(id, matiereData) {
+    try {
+      if (!id) {
+        throw new Error("Subject ID is required");
+      }
+      const response = await matiereApi.put(`/matieres/${id}`, matiereData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
+   * Deletes a subject
+   * @param {String} id - Subject ID
+   * @returns {Promise<void>}
+   */
+  async deleteMatiere(id) {
+    try {
+      if (!id) {
+        throw new Error("Subject ID is required");
+      }
+      await matiereApi.delete(`/matieres/${id}`);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+
 
   /**
    * Error handler

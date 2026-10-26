@@ -66,7 +66,30 @@ const ParentClassManagementModalUpdate = ({
   const [parentId, setParentId] = useState(propParentId);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredStudents, setFilteredStudents] = useState([]);
+  const [parentChildren, setParentChildren] = useState([]);
+  const [selectedChildren, setSelectedChildren] = useState([]);
   const { enqueueSnackbar } = useSnackbar();
+
+  // Fetch parent's children when modal opens
+  useEffect(() => {
+    if (open) {
+      const fetchChildren = async () => {
+        try {
+          const pid = propParentId || localStorage.getItem("userId");
+          const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+          if (!pid || !token) return;
+          const resp = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/parents/${pid}/enfants`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setParentChildren(resp.data || []);
+        } catch (e) {
+          console.warn("Could not fetch parent children:", e);
+          setParentChildren([]);
+        }
+      };
+      fetchChildren();
+    }
+  }, [open, propParentId]);
 
   const getUserIdFromToken = () => {
     try {
@@ -192,7 +215,7 @@ const ParentClassManagementModalUpdate = ({
         };
       }
       const response = await axios.get(
-        "http://localhost:8486/scholchat/parent-access/infos-classe",
+        `${process.env.REACT_APP_API_BASE_URL}/parent-access/infos-classe`,
         config
       );
       setClassInfo(response.data);
@@ -252,35 +275,21 @@ const ParentClassManagementModalUpdate = ({
       setError("Le code d'activation doit contenir exactement 6 chiffres");
       return;
     }
-    if (selectedStudents.length === 0) {
-      setError("Veuillez ajouter ou sélectionner au moins un élève");
+    // Check if at least one child selected (from parent's children or existing students)
+    const hasChildrenSelected = selectedChildren.length > 0;
+    const hasStudentsSelected = selectedStudents.length > 0;
+    if (!hasChildrenSelected && !hasStudentsSelected) {
+      setError("Veuillez selectionner au moins un enfant");
       return;
     }
     if (!classInfo) {
-      setError("Veuillez d'abord vérifier le code d'activation");
+      setError("Veuillez d'abord entrer un code d'activation valide");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const requestData = {
-        token: activationCode,
-        classeId: classe.id,
-        parentId: parentId,
-      };
-
-      if (classInfo.accesMajeur) {
-        // For majeur access, use elevesIds
-        requestData.elevesIds = selectedStudents.map((s) => s.id);
-        if (selectedStudents.some((s) => s.email)) {
-          requestData.elevesEmails = selectedStudents.map((s) => s.email || "");
-        }
-      } else {
-        // For mineur access, use elevesNoms
-        requestData.elevesNoms = selectedStudents.map((s) => s.nom);
-      }
-
-      const authToken = getAuthToken();
+      const authToken = getAuthToken() || localStorage.getItem("accessToken") || localStorage.getItem("authToken");
       const config = {
         headers: {
           "Content-Type": "application/json",
@@ -290,16 +299,31 @@ const ParentClassManagementModalUpdate = ({
       if (authToken) {
         config.headers["Authorization"] = `Bearer ${authToken}`;
       }
+
+      // Combine parent's children IDs + selected existing students
+      const allEleveIds = [
+        ...selectedChildren,
+        ...selectedStudents.map((s) => s.id),
+      ];
+
+      const requestData = {
+        token: activationCode,
+        classeId: classe.id,
+        parentId: parentId,
+        elevesIds: allEleveIds,
+      };
+
       const response = await axios.post(
-        "http://localhost:8486/scholchat/parent-access/demande",
+        `${process.env.REACT_APP_API_BASE_URL}/parent-access/demande`,
         requestData,
         config
       );
-      enqueueSnackbar("Demande d'accès envoyée avec succès", {
+      enqueueSnackbar(`Demande d'acces envoyee pour ${allEleveIds.length} enfant(s)`, {
         variant: "success",
       });
       setHasPendingRequest(true);
       setSelectedStudents([]);
+      setSelectedChildren([]);
       setNewStudentName("");
       setSearchTerm("");
       onClose();
@@ -627,73 +651,122 @@ const ParentClassManagementModalUpdate = ({
               modérateur.
             </DialogContentText>
 
-            <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-              <TextField
-                autoFocus
-                margin="dense"
-                label="Code d'activation (6 chiffres)"
-                type="text"
-                fullWidth
-                variant="outlined"
-                value={activationCode}
-                onChange={handleActivationCodeChange}
-                placeholder="Entrez 6 chiffres"
-                disabled={hasPendingRequest || loading}
-                inputProps={{
-                  inputMode: "numeric",
-                  pattern: "[0-9]*",
-                  maxLength: 6,
-                }}
-              />
-              <Button
-                variant="contained"
-                onClick={handleFetchClassInfo}
-                disabled={
-                  !validateActivationCode(activationCode) ||
-                  loading ||
-                  hasPendingRequest
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Code d'activation (6 chiffres)"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={activationCode}
+              onChange={(e) => {
+                handleActivationCodeChange(e);
+                // Auto-fetch when 6 digits are entered
+                const val = e.target.value.replace(/\D/g, '');
+                if (val.length === 6 && classe?.id) {
+                  setTimeout(() => handleFetchClassInfo(), 300);
                 }
-                startIcon={
-                  loading ? <CircularProgress size={20} /> : <VpnKeyIcon />
-                }
-                sx={{ minWidth: 120 }}
-              >
-                {loading ? "Vérification..." : "Vérifier"}
-              </Button>
-            </Stack>
+              }}
+              placeholder="Entrez 6 chiffres"
+              disabled={hasPendingRequest || loading}
+              inputProps={{
+                inputMode: "numeric",
+                pattern: "[0-9]*",
+                maxLength: 6,
+              }}
+              InputProps={{
+                endAdornment: loading ? (
+                  <InputAdornment position="end"><CircularProgress size={20} /></InputAdornment>
+                ) : classInfo ? (
+                  <InputAdornment position="end"><Chip label="Valide" color="success" size="small" /></InputAdornment>
+                ) : null,
+              }}
+              sx={{ mb: 2 }}
+            />
 
             {classInfo && (
               <Box mt={3}>
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={600}
-                  gutterBottom
-                  sx={{ display: "flex", alignItems: "center" }}
-                >
-                  <InfoIcon sx={{ mr: 1, color: "primary.main" }} />
-                  Type d'accès: {classInfo.accesMajeur ? "Majeur" : "Mineur"}
+                {/* Class info display */}
+                <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+                  <strong>{classInfo.nomClasse || classe?.nom}</strong> - Niveau: {classInfo.niveau || classe?.niveau}
+                  {classInfo.moderateurNom && (
+                    <Typography variant="caption" display="block">
+                      Moderateur: {classInfo.moderateurPrenom} {classInfo.moderateurNom}
+                    </Typography>
+                  )}
+                </Alert>
+
+                {/* Parent's children selector */}
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ display: "flex", alignItems: "center" }}>
+                  <PersonIcon sx={{ mr: 1, color: "primary.main" }} />
+                  Selectionnez vos enfants a inscrire
                 </Typography>
                 <DialogContentText sx={{ mb: 2, fontSize: "0.875rem" }}>
-                  {classInfo.accesMajeur
-                    ? "Pour les classes avec accès majeur, sélectionnez les élèves existants qui vous concernent."
-                    : "Pour les classes avec accès mineur, ajoutez les noms des nouveaux élèves."}
+                  Choisissez un ou plusieurs de vos enfants pour qui vous souhaitez demander l'acces a cette classe.
+                  Une demande sera envoyee pour chaque enfant selectionne.
                 </DialogContentText>
 
-                {classInfo.accesMajeur ? (
+                {parentChildren.length > 0 ? (
+                  <Box sx={{ mb: 2 }}>
+                    <FormGroup>
+                      {parentChildren.map((child) => (
+                        <FormControlLabel
+                          key={child.id}
+                          control={
+                            <Checkbox
+                              checked={selectedChildren.includes(child.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedChildren(prev => [...prev, child.id]);
+                                } else {
+                                  setSelectedChildren(prev => prev.filter(id => id !== child.id));
+                                }
+                              }}
+                            />
+                          }
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Avatar sx={{ width: 28, height: 28, fontSize: '0.8rem', bgcolor: 'primary.main' }}>
+                                {(child.prenom || '?').charAt(0)}
+                              </Avatar>
+                              <Box>
+                                <Typography variant="body2" fontWeight={600}>
+                                  {child.prenom} {child.nom}
+                                </Typography>
+                                {child.niveau && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    Niveau: {child.niveau}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+                          }
+                        />
+                      ))}
+                    </FormGroup>
+                    {selectedChildren.length > 0 && (
+                      <Chip
+                        label={`${selectedChildren.length} enfant(s) selectionne(s)`}
+                        color="primary"
+                        size="small"
+                        sx={{ mt: 1 }}
+                      />
+                    )}
+                  </Box>
+                ) : (
+                  <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+                    Vous n'avez pas encore d'enfants associes a votre compte.
+                    Ajoutez d'abord un enfant depuis votre tableau de bord.
+                  </Alert>
+                )}
+
+                {/* Also show existing class students for majeur access */}
+                {classInfo.accesMajeur && students.length > 0 && (
                   <Box>
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight={600}
-                      gutterBottom
-                      sx={{ display: "flex", alignItems: "center" }}
-                    >
-                      <GroupsIcon sx={{ mr: 1, color: "primary.main" }} />
-                      Rechercher et sélectionner les élèves
+                    <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: "flex", alignItems: "center", mt: 2 }}>
+                      <GroupsIcon sx={{ mr: 1, color: "secondary.main" }} />
+                      Ou selectionnez des eleves existants dans la classe
                     </Typography>
-                    <DialogContentText sx={{ mb: 2, fontSize: "0.875rem" }}>
-                      Recherchez les élèves existants dans cette classe et
-                      sélectionnez ceux qui vous concernent.
-                    </DialogContentText>
 
                     <TextField
                       fullWidth
@@ -778,16 +851,19 @@ const ParentClassManagementModalUpdate = ({
                       </Alert>
                     )}
                   </Box>
-                ) : (
-                  <Box>
+                )}
+
+                {/* Mineur access - add new students */}
+                {!classInfo.accesMajeur && (
+                  <Box sx={{ mt: 2 }}>
                     <Typography
-                      variant="subtitle1"
+                      variant="subtitle2"
                       fontWeight={600}
                       gutterBottom
                       sx={{ display: "flex", alignItems: "center" }}
                     >
                       <GroupAddIcon sx={{ mr: 1, color: "primary.main" }} />
-                      Ajouter les élèves concernés
+                      Ou ajouter de nouveaux eleves
                     </Typography>
                     <DialogContentText sx={{ mb: 2, fontSize: "0.875rem" }}>
                       Pour les classes avec accès mineur, ajoutez manuellement
@@ -904,7 +980,7 @@ const ParentClassManagementModalUpdate = ({
             variant="contained"
             color="primary"
             disabled={
-              loading || hasPendingRequest || selectedStudents.length === 0
+              loading || hasPendingRequest || (selectedStudents.length === 0 && selectedChildren.length === 0)
             }
             startIcon={
               loading ? <CircularProgress size={20} /> : <PersonAddIcon />

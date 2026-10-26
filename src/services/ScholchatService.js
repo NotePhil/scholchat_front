@@ -1,6 +1,7 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Create axios instance with common configuration
 const api = axios.create({
@@ -11,16 +12,12 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to handle different content types and add authentication token
-api.interceptors.request.use((config) => {
-  // Add authentication token to all requests
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+// Attach auth token on every request + trigger session-expired modal on 401/403
+applyAuthInterceptors(api);
 
+// Keep existing content-type logic on top (runs before applyAuthInterceptors request interceptor)
+api.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
-    // Let browser set the boundary for multipart/form-data
     delete config.headers["Content-Type"];
   } else {
     config.headers["Content-Type"] = "application/json";
@@ -83,7 +80,7 @@ class ScholchatService {
             `${key}.${subKey}`,
             subKey === "email" && typeof subValue === "string"
               ? subValue.toLowerCase()
-              : subValue
+              : subValue,
           );
         });
       } else {
@@ -133,12 +130,35 @@ class ScholchatService {
     }
   }
 
+  // Only used to create professors (see ProfessorModal). The backend resolves the
+  // concrete user subtype — and therefore the role it grants — from the "type"
+  // JSON property (@JsonTypeInfo discriminator on Utilisateurs). Routing this
+  // through createBaseUserPayload() silently dropped "type", "statut" and
+  // "matriculeProfesseur", which made every professor creation fail outright
+  // ("missing type id property 'type'"). Build the full payload explicitly,
+  // the same way createParent()/createStudent() already do below.
   async createUser(userData) {
+    if (!userData.type) {
+      // Fail loud instead of silently defaulting to "professeur" — the caller
+      // must say what role it's creating, since that's what the backend keys off.
+      throw new Error(
+        "createUser() requires an explicit 'type' (the backend uses it to decide which role to grant).",
+      );
+    }
     try {
-      const payload = this.createBaseUserPayload({
-        ...userData,
-        email: userData.email?.toLowerCase(), // Ensure email is lowercase
-      });
+      const payload = {
+        type: userData.type,
+        nom: userData.nom?.trim(),
+        prenom: userData.prenom?.trim(),
+        email: userData.email?.trim().toLowerCase(),
+        telephone: userData.telephone?.trim(),
+        adresse: userData.adresse?.trim(),
+        etat: userData.etat || "ACTIVE",
+        matriculeProfesseur: userData.matriculeProfesseur || null,
+        cniUrlRecto: userData.cniUrlRecto || null,
+        cniUrlVerso: userData.cniUrlVerso || null,
+        selfieUrl: userData.selfieUrl || null,
+      };
       const response = await api.post("/utilisateurs", payload);
       return response.data;
     } catch (error) {
@@ -146,13 +166,21 @@ class ScholchatService {
     }
   }
 
+  // Only used by ProfessorModal to attach uploaded document paths after create.
+  // /utilisateurs/{id} only exposes PATCH (patcherUtilisateur) — there is no
+  // PUT route, so api.put() failed outright with "Request method 'PUT' is not
+  // supported". PATCH also needs the "type" discriminator, same reason as
+  // createUser(), for the payload to deserialize as a Professeurs update.
   async updateUser(id, userData) {
     try {
       // Ensure email is lowercase if provided
       if (userData.email) {
         userData.email = userData.email.toLowerCase();
       }
-      const response = await api.put(`/utilisateurs/${id}`, userData);
+      const response = await api.patch(`/utilisateurs/${id}`, {
+        type: "professeur",
+        ...userData,
+      });
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -248,7 +276,7 @@ class ScholchatService {
         error.response?.data?.message?.includes("Value too long for column")
       ) {
         throw new Error(
-          "Image file size is too large. Please use a smaller image or compress it further."
+          "Image file size is too large. Please use a smaller image or compress it further.",
         );
       }
       this.handleError(error);
@@ -265,12 +293,12 @@ class ScholchatService {
       // Process and validate image files if present
       if (professorData.cniUrlRecto) {
         professorData.cniUrlRecto = await this.processFileUpload(
-          professorData.cniUrlRecto
+          professorData.cniUrlRecto,
         );
       }
       if (professorData.cniUrlVerso) {
         professorData.cniUrlVerso = await this.processFileUpload(
-          professorData.cniUrlVerso
+          professorData.cniUrlVerso,
         );
       }
 
@@ -293,7 +321,7 @@ class ScholchatService {
   // ============ Parent Management ============
   async getAllParents() {
     try {
-      const response = await api.get("/parents");
+      const response = await api.get("/parents/summary");
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -323,7 +351,14 @@ class ScholchatService {
         classes: parentData.classes || [],
       };
 
-      const response = await api.post("/parents", payload);
+      // POST /parents (ParentsBusiness.posterParent) never assigns an id before
+      // save and throws "Identifier ... must be manually assigned" — confirmed
+      // live, creation is broken there. /utilisateurs with the "type" discriminator
+      // routes through UtilisateursBusiness.posterUtilisateur, which does id
+      // generation + role assignment correctly (same fix as professor creation).
+      // Class enrollment isn't handled by either endpoint — it's a separate flow —
+      // so nothing is lost by switching.
+      const response = await api.post("/utilisateurs", payload);
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -392,7 +427,11 @@ class ScholchatService {
         classes: studentData.classes || [],
       };
 
-      const response = await api.post("/profil-eleves", payload);
+      // Same issue as createParent: POST /profil-eleves (ElevesBusiness) never
+      // assigns an id before save and throws "Identifier ... must be manually
+      // assigned" — confirmed live. /utilisateurs with "type" routes through the
+      // working UtilisateursBusiness.posterUtilisateur pipeline instead.
+      const response = await api.post("/utilisateurs", payload);
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -484,17 +523,17 @@ class ScholchatService {
       // Process and validate image files if present
       if (tutorData.cniUrlFront) {
         tutorData.cniUrlFront = await this.processFileUpload(
-          tutorData.cniUrlFront
+          tutorData.cniUrlFront,
         );
       }
       if (tutorData.cniUrlBack) {
         tutorData.cniUrlBack = await this.processFileUpload(
-          tutorData.cniUrlBack
+          tutorData.cniUrlBack,
         );
       }
       if (tutorData.fullPicUrl) {
         tutorData.fullPicUrl = await this.processFileUpload(
-          tutorData.fullPicUrl
+          tutorData.fullPicUrl,
         );
       }
 
@@ -543,9 +582,8 @@ class ScholchatService {
         dateCreation: classData.date_creation || new Date().toISOString(),
         codeActivation: classData.code_activation || null,
         etat: classData.etat || "ACTIF",
-        etablissement: {
-          id: classData.etablissement_id || null,
-        },
+        // No establishment: send null (an empty {id: null} object is meaningless to the backend)
+        etablissement: classData.etablissement_id ? { id: classData.etablissement_id } : null,
       };
 
       const response = await api.post("/classes", payload);
@@ -565,9 +603,8 @@ class ScholchatService {
         dateCreation: classData.date_creation,
         codeActivation: classData.code_activation || null,
         etat: classData.etat,
-        etablissement: {
-          id: classData.etablissement_id || null,
-        },
+        // No establishment: send null (an empty {id: null} object is meaningless to the backend)
+        etablissement: classData.etablissement_id ? { id: classData.etablissement_id } : null,
       };
 
       const response = await api.put(`/classes/${id}`, payload);
@@ -620,7 +657,7 @@ class ScholchatService {
     try {
       const response = await api.put(
         `/etablissements/${id}`,
-        establishmentData
+        establishmentData,
       );
       return response.data;
     } catch (error) {
@@ -694,7 +731,7 @@ class ScholchatService {
   async assignMotifToProfessor(professorId, motifId) {
     try {
       const response = await api.post(
-        `/professeurs/${professorId}/motifs/${motifId}`
+        `/professeurs/${professorId}/motifs/${motifId}`,
       );
       return response.data;
     } catch (error) {
@@ -705,7 +742,7 @@ class ScholchatService {
   async removeMotifFromProfessor(professorId, motifId) {
     try {
       const response = await api.delete(
-        `/professeurs/${professorId}/motifs/${motifId}`
+        `/professeurs/${professorId}/motifs/${motifId}`,
       );
       return response.data;
     } catch (error) {
@@ -730,7 +767,7 @@ class ScholchatService {
   async validateProfessor(professorId) {
     try {
       const response = await api.post(
-        `/utilisateurs/professeurs/${professorId}/validate`
+        `/utilisateurs/professors/${professorId}/validate`,
       );
       return response.data;
     } catch (error) {
@@ -738,12 +775,24 @@ class ScholchatService {
     }
   }
 
-  async rejectProfessor(professorId, rejectionData) {
+  async rejectProfessor(professorId, codeErreur, motifSupplementaire) {
     try {
-      const formData = this.createFormDataFromObject(rejectionData);
+      const params = new URLSearchParams({ codeErreur });
+      if (motifSupplementaire)
+        params.append("motifSupplementaire", motifSupplementaire);
       const response = await api.post(
-        `/utilisateurs/professeurs/${professorId}/rejet`,
-        formData
+        `/utilisateurs/professeurs/${professorId}/rejet?${params.toString()}`,
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async resendActivationEmail(email) {
+    try {
+      const response = await api.post(
+        `/utilisateurs/regenerate-activation?email=${encodeURIComponent(email)}`,
       );
       return response.data;
     } catch (error) {
@@ -754,7 +803,17 @@ class ScholchatService {
   // ============ Pending Professors ============
   async getPendingProfessors() {
     try {
-      const response = await api.get("/utilisateurs/professeurs/pending");
+      const response = await api.get("/utilisateurs/professors/pending");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // ============ Gestionnaire Management ============
+  async getAllGestionnaires() {
+    try {
+      const response = await api.get("/gestionnaires");
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -799,6 +858,28 @@ class ScholchatService {
 
   getToken() {
     return localStorage.getItem("authToken");
+  }
+
+  // ============ Password Management ============
+  async changePassword(passwordData) {
+    try {
+      const response = await api.post("/auth/change-password", {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getCurrentUser() {
+    try {
+      const response = await api.get("/auth/me");
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
   }
   async patchUser(id, partialUpdate) {
     try {

@@ -1,6 +1,8 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
+import { toServerDateTime } from "../utils/dateUtils";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const exerciseProgrammerApi = axios.create({
   baseURL: BASE_URL,
@@ -10,20 +12,7 @@ const exerciseProgrammerApi = axios.create({
   },
 });
 
-exerciseProgrammerApi.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("cmr.notep.business.business.token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+applyAuthInterceptors(exerciseProgrammerApi);
 
 class ExerciseProgrammerService {
   // ============ Exercise Programming Operations ============
@@ -47,11 +36,21 @@ class ExerciseProgrammerService {
       const formattedData = {
         exerciseId: exerciseProgrammerData.exerciseId,
         programmeParId: exerciseProgrammerData.programmeParId,
-        dateExoPrevue: exerciseProgrammerData.dateExoPrevue,
-        dateDebutExoEffectif: exerciseProgrammerData.dateDebutExoEffectif,
-        dateFinExoEffectif: exerciseProgrammerData.dateFinExoEffectif,
+        dateExoPrevue: toServerDateTime(exerciseProgrammerData.dateExoPrevue),
+        dateDebutExoEffectif: toServerDateTime(exerciseProgrammerData.dateDebutExoEffectif),
+        dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat,
+        ...(exerciseProgrammerData.typeAssignation
+          ? { typeAssignation: exerciseProgrammerData.typeAssignation }
+          : {}),
         classeIds: exerciseProgrammerData.classeIds || [],
+        // Course programmed in the class (required for every class: 400 COURS_REQUIS otherwise)
+        coursId: exerciseProgrammerData.coursId || null,
+        // One course per class {classeId: coursId}; classes mapped to different
+        // courses get one programmation each (response.programmations / nombreProgrammations).
+        ...(exerciseProgrammerData.coursParClasse
+          ? { coursParClasse: exerciseProgrammerData.coursParClasse }
+          : {}),
       };
 
       console.log(
@@ -89,11 +88,21 @@ class ExerciseProgrammerService {
       const formattedData = {
         exerciseId: exerciseProgrammerData.exerciseId,
         programmeParId: exerciseProgrammerData.programmeParId,
-        dateExoPrevue: exerciseProgrammerData.dateExoPrevue,
-        dateDebutExoEffectif: exerciseProgrammerData.dateDebutExoEffectif,
-        dateFinExoEffectif: exerciseProgrammerData.dateFinExoEffectif,
+        dateExoPrevue: toServerDateTime(exerciseProgrammerData.dateExoPrevue),
+        dateDebutExoEffectif: toServerDateTime(exerciseProgrammerData.dateDebutExoEffectif),
+        dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat,
+        ...(exerciseProgrammerData.typeAssignation
+          ? { typeAssignation: exerciseProgrammerData.typeAssignation }
+          : {}),
         classeIds: exerciseProgrammerData.classeIds || [],
+        // Course programmed in the class (required for every class: 400 COURS_REQUIS otherwise)
+        coursId: exerciseProgrammerData.coursId || null,
+        // One course per class {classeId: coursId}; classes mapped to different
+        // courses get one programmation each (response.programmations / nombreProgrammations).
+        ...(exerciseProgrammerData.coursParClasse
+          ? { coursParClasse: exerciseProgrammerData.coursParClasse }
+          : {}),
       };
 
       console.log(
@@ -147,6 +156,20 @@ class ExerciseProgrammerService {
       }
       const response = await exerciseProgrammerApi.get(
         `/exercises-programmer/classe/${classeId}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getExercisesProgrammesParExercise(exerciseId) {
+    try {
+      if (!exerciseId) {
+        throw new Error("Exercise ID is required");
+      }
+      const response = await exerciseProgrammerApi.get(
+        `/exercises-programmer/exercise/${exerciseId}`
       );
       return response.data;
     } catch (error) {
@@ -237,8 +260,9 @@ class ExerciseProgrammerService {
       const formattedData = {
         utilisateurId: participationData.utilisateurId,
         exerciseProgrammerId: participationData.exerciseProgrammerId,
-        dateDebut: participationData.dateDebut || new Date().toISOString(),
-        dateFin: participationData.dateFin,
+        dateDebut:
+          toServerDateTime(participationData.dateDebut) || new Date().toISOString(),
+        dateFin: toServerDateTime(participationData.dateFin),
       };
 
       const response = await exerciseProgrammerApi.post(
@@ -384,8 +408,7 @@ class ExerciseProgrammerService {
   formatDateTime(dateString) {
     if (!dateString) return null;
     try {
-      const date = new Date(dateString);
-      return date.toISOString();
+      return toServerDateTime(dateString);
     } catch (error) {
       console.error("Date formatting error:", error);
       return null;
@@ -421,7 +444,11 @@ class ExerciseProgrammerService {
         headers: error.response.headers,
       });
 
-      throw new Error(errorMessage);
+      const err = new Error(errorMessage);
+      // API error code (e.g. COURS_REQUIS, COURS_NON_PROGRAMME_DANS_CLASSE)
+      err.code = error.response.data?.code;
+      err.status = error.response.status;
+      throw err;
     } else if (error.request) {
       console.error("Network Error:", error.request);
       throw new Error(

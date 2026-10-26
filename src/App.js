@@ -1,7 +1,8 @@
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Provider } from "react-redux";
+import { Provider, useSelector } from "react-redux";
 import { store } from "./store/store";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { Layout } from "./components/common/Layout";
 import { Home } from "./pages/Home";
 import { BlogSinglePage } from "./components/common/BlogSinglePage";
@@ -10,17 +11,36 @@ import { Courses } from "./pages/Courses";
 import { Blog } from "./pages/Blog";
 import { Instructor } from "./pages/Instructor";
 import FunctionalitiesSection from "./pages/FunctionalitiesSection";
+import FunctionalityDetails from "./pages/FunctionalityDetails";
+import SolutionDetails from "./pages/SolutionDetails";
+import Contact from "./pages/Contact";
+import Nursery from "./pages/EducationLevels/Nursery";
+import Kindergarten from "./pages/EducationLevels/Kindergarten";
+import PrimarySchool from "./pages/EducationLevels/PrimarySchool";
+import HighSchool from "./pages/EducationLevels/HighSchool";
+import University from "./pages/EducationLevels/University";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import RenewalPage from "./pages/RenewalPage";
 import AccountActivation from "./pages/AccountActivation";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import PasswordPage from "./pages/PasswordPage";
 import ResetPassword from "./pages/ResetPassword";
+import ForcePasswordChange from "./pages/ForcePasswordChange";
+import AccountCreated from "./pages/AccountCreated";
+import VerifyAccount from "./pages/VerifyAccount";
+import NotFound from "./pages/NotFound";
 import Principal from "./pages/Dashbaord/principale/Principal";
 import ManageClass from "./pages/Dashbaord/principale/ManageClass/ManageClass";
+import ClassApprovalConfirmation from "./pages/ClassApprovalConfirmation";
+import ClassApproval from "./pages/ClassApproval";
+import ClassRejection from "./pages/ClassRejection";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import { AnimatePresence } from "framer-motion";
+import PageTransition from "./components/common/PageTransition";
+import "./CSS/themes.css";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -32,20 +52,19 @@ function ScrollToTop() {
   return null;
 }
 
-function App() {
-  const [theme, setTheme] = useState("default");
-
+function AnimatedRoutes({ theme, setTheme }) {
+  const location = useLocation();
+  
   return (
-    <Provider store={store}>
-      <BrowserRouter>
-        <AuthProvider>
-          <ScrollToTop />
-          <Routes>
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
             <Route
               path="/"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Home theme={theme} />
+                  <PageTransition>
+                    <Home theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -53,7 +72,9 @@ function App() {
               path="/schoolchat/about"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <About theme={theme} />
+                  <PageTransition>
+                    <About theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -61,7 +82,9 @@ function App() {
               path="/schoolchat/courses"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Courses theme={theme} />
+                  <PageTransition>
+                    <Courses theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -69,7 +92,9 @@ function App() {
               path="/schoolchat/instructor"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Instructor theme={theme} />
+                  <PageTransition>
+                    <Instructor theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -77,15 +102,19 @@ function App() {
               path="/schoolchat/blog"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Blog theme={theme} />
+                  <PageTransition>
+                    <Blog theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
             <Route
-              path="/schoolchat/single-blog"
+              path="/schoolchat/blog/:id"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <BlogSinglePage theme={theme} />
+                  <PageTransition>
+                    <BlogSinglePage theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -93,7 +122,89 @@ function App() {
               path="/schoolchat/functionalities"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <FunctionalitiesSection theme={theme} />
+                  <PageTransition>
+                    <FunctionalitiesSection theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/functionality/:id"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <FunctionalityDetails theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/solution/:id"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <SolutionDetails theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/contact"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <Contact theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/nursery"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <Nursery theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/kindergarten"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <Kindergarten theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/primary-school"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <PrimarySchool theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/high-school"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <HighSchool theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/university"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <University theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -101,7 +212,9 @@ function App() {
               path="/schoolchat/login"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <Login theme={theme} />
+                  <PageTransition>
+                    <Login theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
@@ -109,23 +222,154 @@ function App() {
               path="/schoolchat/signup"
               element={
                 <Layout theme={theme} setTheme={setTheme}>
-                  <SignUp theme={theme} />
+                  <PageTransition>
+                    <SignUp theme={theme} />
+                  </PageTransition>
                 </Layout>
               }
             />
-            <Route path="/schoolchat/PasswordPage" element={<PasswordPage />} />
+            <Route
+              path="/schoolchat/renouveler-offre"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <RenewalPage theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/PasswordPage"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <PasswordPage theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
             <Route
               path="/schoolchat/account-activation"
-              element={<AccountActivation />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <AccountActivation theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
-            <Route path="/schoolchat/verify-email" element={<VerifyEmail />} />
+            <Route
+              path="/schoolchat/verify-email"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <VerifyEmail theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            {/* Account activation with an e-mailed 6-digit code (alternative to the activation link) */}
+            <Route
+              path="/schoolchat/verifier-compte"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <VerifyAccount theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
             <Route
               path="/schoolchat/forgot-password"
-              element={<ForgotPassword />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ForgotPassword theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
             <Route
               path="/schoolchat/reset-password"
-              element={<ResetPassword />}
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ResetPassword theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            {/* First login with a temporary password (mustChangePassword / 403 MOT_DE_PASSE_A_CHANGER) */}
+            <Route
+              path="/schoolchat/nouveau-mot-de-passe"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ForcePasswordChange theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            {/* Parent / élève sign-up with a class code: pending teacher approval */}
+            <Route
+              path="/schoolchat/compte-cree"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <AccountCreated theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/scholchat/etablissements/approve-class/:establishmentId/:classId"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassApprovalConfirmation theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/class-approval"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassApproval theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/class-approval/:classeId/:etablissementId"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassApproval theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/class-rejection"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassRejection theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
+            <Route
+              path="/schoolchat/class-rejection/:classeId/:etablissementId"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <ClassRejection theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
             />
 
             <Route element={<ProtectedRoute />}>
@@ -133,17 +377,78 @@ function App() {
                 path="/schoolchat/manage-class"
                 element={
                   <Layout theme={theme} setTheme={setTheme}>
-                    <ManageClass theme={theme} />
+                    <PageTransition>
+                      <ManageClass theme={theme} />
+                    </PageTransition>
                   </Layout>
                 }
               />
-              <Route path="/schoolchat/principal" element={<Principal />} />
+              <Route path="/schoolchat/Principal" element={<Principal />} />
               <Route
-                path="/schoolchat/principal/:dashboardType"
+                path="/schoolchat/Principal/:dashboardType"
+                element={<Principal />}
+              />
+              <Route
+                path="/schoolchat/Principal/:dashboardType/:section"
                 element={<Principal />}
               />
             </Route>
+
+            {/* 404 */}
+            <Route
+              path="*"
+              element={
+                <Layout theme={theme} setTheme={setTheme}>
+                  <PageTransition>
+                    <NotFound theme={theme} />
+                  </PageTransition>
+                </Layout>
+              }
+            />
           </Routes>
+        </AnimatePresence>
+  );
+}
+
+// Settings' dark-mode toggle only ever updated Redux's `ui.isDark` and the
+// dashboard components that read it directly via inline ternaries. Several
+// dashboard files (Principal.jsx, etc.) style themselves with Tailwind's
+// `dark:` variant instead, which only activates behind a literal `dark`
+// class on <html> — nothing put that there, so those files were stuck on
+// light styling no matter what the toggle said. This applies it.
+//
+// Scoped to dashboard routes only: the public pages (Login.jsx, Header.jsx,
+// Home, ...) already have their own independent light/dark system — each
+// page adds `dark` to its OWN wrapper div based on a local `theme` prop
+// (Header's own toggle), not Redux. Setting `dark` on <html> globally made
+// their `dark:` utility classes activate even while their local `theme`
+// was "light", producing mismatched combinations like white text on a
+// light background. Redux's isDark also isn't cleared on logout, so it
+// would otherwise leak onto the public login page. Keeping this off outside
+// the dashboard leaves that separate system alone entirely.
+const ThemeClassSync = () => {
+  const isDark = useSelector((state) => state.ui.isDark);
+  const location = useLocation();
+  const inDashboard = location.pathname.startsWith("/schoolchat/Principal");
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", inDashboard && !!isDark);
+  }, [isDark, inDashboard]);
+
+  return null;
+};
+
+function App() {
+  const [theme, setTheme] = useState("default");
+
+  return (
+    <Provider store={store}>
+      <BrowserRouter>
+        <AuthProvider>
+          <ThemeClassSync />
+          <ScrollToTop />
+          <AnimatedRoutes theme={theme} setTheme={setTheme} />
+          <PWAInstallPrompt />
         </AuthProvider>
       </BrowserRouter>
     </Provider>

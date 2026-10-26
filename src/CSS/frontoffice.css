@@ -1,0 +1,33 @@
+/* Front office (public pages) — overrides the global `input { color: #111 !important }`
+   rule from index.css so text stays readable in dark mode. */
+.dark .sc-input,
+.dark .sc-phone input {
+  color: #f1f5f9 !important;
+}
+.sc-phone .PhoneInputInput {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background-color: #ffffff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.sc-phone .PhoneInputInput:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+}
+.sc-phone.sc-phone-error .PhoneInputInput {
+  border-color: #ef4444;
+}
+.dark .sc-phone .PhoneInputInput {
+  background-color: #1e293b;
+  border-color: #475569;
+}
+.sc-phone .PhoneInput {
+  gap: 0.5rem;
+}
+html {
+  scroll-behavior: smooth;
+}

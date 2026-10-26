@@ -1,6 +1,8 @@
 import axios from "axios";
+import { applyAuthInterceptors } from "../utils/axiosConfig";
+import { toServerDateTime } from "../utils/dateUtils";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // ============================================
 // NIVEAU MAPPING
@@ -40,32 +42,7 @@ const createApiInstance = () => {
     },
   });
 
-  instance.interceptors.request.use(
-    (config) => {
-      const token =
-        localStorage.getItem("accessToken") ||
-        localStorage.getItem("authToken") ||
-        sessionStorage.getItem("accessToken") ||
-        sessionStorage.getItem("authToken");
-
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
-
-  instance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        console.error("Authentication error - Token may be expired");
-      }
-      return Promise.reject(error);
-    }
-  );
-
+  applyAuthInterceptors(instance);
   return instance;
 };
 
@@ -310,22 +287,22 @@ class ExerciseProgrammerService {
       const formattedData = {
         exerciseId: exerciseProgrammerData.exerciseId,
         programmeParId: exerciseProgrammerData.programmeParId,
-        dateExoPrevue:
-          typeof exerciseProgrammerData.dateExoPrevue === "string"
-            ? exerciseProgrammerData.dateExoPrevue
-            : new Date(exerciseProgrammerData.dateExoPrevue).toISOString(),
-        dateDebutExoEffectif:
-          typeof exerciseProgrammerData.dateDebutExoEffectif === "string"
-            ? exerciseProgrammerData.dateDebutExoEffectif
-            : new Date(
-                exerciseProgrammerData.dateDebutExoEffectif
-              ).toISOString(),
-        dateFinExoEffectif:
-          typeof exerciseProgrammerData.dateFinExoEffectif === "string"
-            ? exerciseProgrammerData.dateFinExoEffectif
-            : new Date(exerciseProgrammerData.dateFinExoEffectif).toISOString(),
+        dateExoPrevue: toServerDateTime(exerciseProgrammerData.dateExoPrevue),
+        dateDebutExoEffectif: toServerDateTime(
+          exerciseProgrammerData.dateDebutExoEffectif
+        ),
+        dateFinExoEffectif: toServerDateTime(
+          exerciseProgrammerData.dateFinExoEffectif
+        ),
         etat: exerciseProgrammerData.etat || "BROUILLON",
         classeIds: exerciseProgrammerData.classeIds || [],
+        // Course programmed in the class (required for every class: 400 COURS_REQUIS otherwise)
+        coursId: exerciseProgrammerData.coursId || null,
+        // One course per class {classeId: coursId}; classes mapped to different
+        // courses get one programmation each (response.programmations / nombreProgrammations).
+        ...(exerciseProgrammerData.coursParClasse
+          ? { coursParClasse: exerciseProgrammerData.coursParClasse }
+          : {}),
       };
 
       console.log(
@@ -367,11 +344,19 @@ class ExerciseProgrammerService {
       const formattedData = {
         exerciseId: exerciseProgrammerData.exerciseId,
         programmeParId: exerciseProgrammerData.programmeParId,
-        dateExoPrevue: exerciseProgrammerData.dateExoPrevue,
-        dateDebutExoEffectif: exerciseProgrammerData.dateDebutExoEffectif,
-        dateFinExoEffectif: exerciseProgrammerData.dateFinExoEffectif,
+        dateExoPrevue: toServerDateTime(exerciseProgrammerData.dateExoPrevue),
+        dateDebutExoEffectif: toServerDateTime(exerciseProgrammerData.dateDebutExoEffectif),
+        dateFinExoEffectif: toServerDateTime(exerciseProgrammerData.dateFinExoEffectif),
         etat: exerciseProgrammerData.etat || "ACTIF",
         classeIds: exerciseProgrammerData.classeIds || [],
+        // Course programmed in the class (required for every class: 400 COURS_REQUIS otherwise)
+        coursId: exerciseProgrammerData.coursId || null,
+        // One course per class {classeId: coursId}; classes mapped to different
+        // courses get one programmation each (response.programmations / nombreProgrammations).
+        ...(exerciseProgrammerData.coursParClasse
+          ? { coursParClasse: exerciseProgrammerData.coursParClasse }
+          : {}),
+        typeAssignation: exerciseProgrammerData.typeAssignation,
       };
 
       console.log(
@@ -425,6 +410,18 @@ class ExerciseProgrammerService {
       return response.data;
     } catch (error) {
       handleError(error, "getExercisesProgrammesParClasse");
+    }
+  }
+
+  async getExercisesProgrammesParExercise(exerciseId) {
+    try {
+      if (!exerciseId) throw new Error("L'ID de l'exercice est requis");
+      const response = await this.api.get(
+        `/exercises-programmer/exercise/${exerciseId}`
+      );
+      return response.data;
+    } catch (error) {
+      handleError(error, "getExercisesProgrammesParExercise");
     }
   }
 
@@ -502,16 +499,10 @@ class QuestionReponseService {
         throw new Error("L'intitulé et le type de question sont requis");
       }
 
-      const formattedData = {
-        intitule: questionData.intitule,
-        reponse: questionData.reponse || "",
-        typeQuestion: questionData.typeQuestion,
-      };
-
-      console.log("Creating question:", JSON.stringify(formattedData, null, 2));
+      console.log("Creating question:", JSON.stringify(questionData, null, 2));
       const response = await this.api.post(
         `/questions/exercise/${exerciseId}`,
-        formattedData
+        questionData
       );
       return response.data;
     } catch (error) {
@@ -537,9 +528,13 @@ class QuestionReponseService {
         intitule: questionData.intitule,
         reponse: questionData.reponse,
         typeQuestion: questionData.typeQuestion,
+        points: questionData.points,
+        choixReponses: questionData.choixReponses,
+        // Full current list: the backend keeps medias sent with an id, adds
+        // those without one and deletes the rest. Omitted → left unchanged.
+        ...(questionData.medias !== undefined && { medias: questionData.medias }),
       };
 
-      console.log("Updating question:", JSON.stringify(formattedData, null, 2));
       const response = await this.api.put(
         `/questions/${questionId}`,
         formattedData
@@ -702,8 +697,9 @@ class ParticipationExerciseService {
       const formattedData = {
         utilisateurId: participationData.utilisateurId,
         exerciseProgrammerId: participationData.exerciseProgrammerId,
-        dateDebut: participationData.dateDebut || new Date().toISOString(),
-        dateFin: participationData.dateFin,
+        dateDebut:
+          toServerDateTime(participationData.dateDebut) || new Date().toISOString(),
+        dateFin: toServerDateTime(participationData.dateFin),
         note: participationData.note,
         appreciation: participationData.appreciation,
       };
@@ -736,10 +732,11 @@ class ParticipationExerciseService {
       const formattedData = {
         utilisateurId: participationData.utilisateurId,
         exerciseProgrammerId: participationData.exerciseProgrammerId,
-        dateDebut: participationData.dateDebut,
-        dateFin: participationData.dateFin,
+        dateDebut: toServerDateTime(participationData.dateDebut),
+        dateFin: toServerDateTime(participationData.dateFin),
         note: participationData.note,
         appreciation: participationData.appreciation,
+        etatSoumission: participationData.etatSoumission,
       };
 
       console.log(
@@ -804,8 +801,7 @@ class ParticipationExerciseService {
 const formatDateTime = (dateString) => {
   if (!dateString) return null;
   try {
-    const date = new Date(dateString);
-    return date.toISOString();
+    return toServerDateTime(dateString);
   } catch (error) {
     console.error("Date formatting error:", error);
     return null;
@@ -840,7 +836,7 @@ export const utils = {
   mapNiveauToEnum,
 };
 
-export default {
+const exerciseServiceExport = {
   exercise: exerciseService,
   exerciseProgrammer: exerciseProgrammerService,
   questionReponse: questionReponseService,
@@ -848,3 +844,5 @@ export default {
   participationExercise: participationExerciseService,
   utils,
 };
+
+export default exerciseServiceExport;

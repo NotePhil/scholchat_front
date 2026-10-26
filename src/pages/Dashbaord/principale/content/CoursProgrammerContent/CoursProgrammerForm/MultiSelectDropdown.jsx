@@ -1,6 +1,10 @@
 import React, { useState } from "react";
-import { ChevronDown, Users, Check } from "lucide-react";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCheck,
+  faChevronDown,
+  faUsers,
+} from "@fortawesome/free-solid-svg-icons";
 const MultiSelectDropdown = ({
   options = [],
   selected = [],
@@ -12,32 +16,25 @@ const MultiSelectDropdown = ({
   loading = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-
   const handleToggle = (id) => {
     const newSelected = selected.includes(id)
       ? selected.filter((item) => item !== id)
       : [...selected, id];
     onChange(newSelected);
   };
-
   return (
     <div className="relative">
       <div
-        className={`w-full px-3 sm:px-4 py-3 border rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between ${
-          error
-            ? "border-red-300 bg-red-50"
-            : "border-slate-200 hover:border-slate-300"
-        } ${
-          disabled
-            ? "bg-gray-100 cursor-not-allowed"
-            : "bg-white hover:bg-slate-50"
-        }`}
+        className={`w-full px-3 sm:px-4 py-3 border rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between ${error ? "border-red-300 bg-red-50" : "border-slate-200 hover:border-slate-300"} ${disabled ? "bg-gray-100 cursor-not-allowed" : "bg-white hover:bg-slate-50"}`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <div className="flex items-center flex-1 min-w-0">
-          <Users
-            size={16}
+          <FontAwesomeIcon
+            icon={faUsers}
             className="text-slate-400 mr-2 sm:mr-3 flex-shrink-0"
+            style={{
+              fontSize: 16,
+            }}
           />
           {loading ? (
             <span className="text-slate-400 flex items-center truncate">
@@ -55,11 +52,12 @@ const MultiSelectDropdown = ({
             </span>
           )}
         </div>
-        <ChevronDown
-          size={16}
-          className={`text-slate-400 transition-transform duration-200 flex-shrink-0 ml-2 ${
-            isOpen ? "transform rotate-180" : ""
-          }`}
+        <FontAwesomeIcon
+          icon={faChevronDown}
+          className={`text-slate-400 transition-transform duration-200 flex-shrink-0 ml-2 ${isOpen ? "transform rotate-180" : ""}`}
+          style={{
+            fontSize: 16,
+          }}
         />
       </div>
 
@@ -70,9 +68,12 @@ const MultiSelectDropdown = ({
               className="px-3 sm:px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-100 transition-colors flex items-center"
               onClick={onSelectAll}
             >
-              <Check
-                size={14}
+              <FontAwesomeIcon
+                icon={faCheck}
                 className="text-indigo-600 mr-2 sm:mr-3 flex-shrink-0"
+                style={{
+                  fontSize: 14,
+                }}
               />
               <span className="font-medium text-indigo-700 text-xs sm:text-sm">
                 {selected.length === options.length
@@ -107,7 +108,13 @@ const MultiSelectDropdown = ({
           ))}
           {options.length === 0 && (
             <div className="px-3 sm:px-4 py-3 text-slate-400 flex items-center text-xs sm:text-sm">
-              <Users size={14} className="mr-2 flex-shrink-0" />
+              <FontAwesomeIcon
+                icon={faUsers}
+                className="mr-2 flex-shrink-0"
+                style={{
+                  fontSize: 14,
+                }}
+              />
               Aucun participant disponible
             </div>
           )}
@@ -116,5 +123,4 @@ const MultiSelectDropdown = ({
     </div>
   );
 };
-
 export default MultiSelectDropdown;

@@ -1,296 +1,93 @@
-import React, { useState, useEffect } from "react";
-import { Mail, Loader, ArrowRight } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faArrowRight, faEnvelopeOpenText, faKey, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
+import { Alert, AuthShell, BrandLogo, Button, StatusIcon } from "../components/frontoffice/ui";
 
-const VerifyEmail = () => {
-  const navigate = useNavigate();
+/**
+ * "Vérifiez votre e-mail" (/schoolchat/verify-email?email=…) — shown after a sign-up / a new
+ * activation link. Process unchanged: "Renvoyer l'e-mail" → POST /utilisateurs/regenerate-activation?email=…
+ * (not for a professor, whose account is first validated by the administration).
+ */
+const VerifyEmail = ({ theme }) => {
   const location = useLocation();
-
-  // Get email from URL query parameters
-  const queryParams = new URLSearchParams(location.search);
-  const email = queryParams.get("email");
-  const [userType, setUserType] = useState("");
-
-  useEffect(() => {
-    // Get user type from localStorage
-    const storedUserType = localStorage.getItem("userType");
-    if (storedUserType) {
-      setUserType(storedUserType);
-    }
-  }, []);
-
-  const [isResendingEmail, setIsResendingEmail] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
-  const [alertType, setAlertType] = useState("");
-
-  const showAlert = (message, type = "error") => {
-    setAlertMessage(message);
-    setAlertType(type);
-    setTimeout(() => {
-      setAlertMessage("");
-      setAlertType("");
-    }, 3000);
-  };
+  const email = new URLSearchParams(location.search).get("email") || "";
+  const [userType] = useState(() => localStorage.getItem("userType") || "");
+  const isProfessor = userType === "professeur";
+  const [isResending, setIsResending] = useState(false);
+  const [message, setMessage] = useState({ text: "", type: "" });
 
   const handleResendVerification = async () => {
-    if (isResendingEmail || !email || userType === "professeur") return;
-
+    if (isResending || !email || isProfessor) return;
+    setIsResending(true);
+    setMessage({ text: "", type: "" });
     try {
-      setIsResendingEmail(true);
-
-      const resendUrl = `http://localhost:8486/scholchat/utilisateurs/regenerate-activation?email=${encodeURIComponent(
-        email
-      )}`;
-
-      const response = await fetch(resendUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/regenerate-activation?email=${encodeURIComponent(email)}`,
+        { method: "POST", headers: { "Content-Type": "application/json" } },
+      );
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Échec de l'envoi de l'e-mail de vérification"
-        );
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Échec de l'envoi de l'e-mail de vérification.");
       }
-
-      showAlert(
-        "L'e-mail de vérification a été renvoyé. Veuillez vérifier votre boîte de réception.",
-        "success"
-      );
+      setMessage({ text: "L'e-mail a été renvoyé. Consultez votre boîte de réception (et le dossier Spam).", type: "success" });
     } catch (err) {
-      console.error("Erreur de renvoi de vérification:", err);
-      showAlert(
-        err.message ||
-          "Échec de l'envoi de l'e-mail de vérification. Veuillez réessayer."
-      );
+      setMessage({ text: err.message || "Échec de l'envoi de l'e-mail. Veuillez réessayer.", type: "error" });
     } finally {
-      setIsResendingEmail(false);
+      setIsResending(false);
     }
   };
 
-  // Custom message for professors
-  const professorMessage =
-    "Un mail de confirmation de création de compte a été envoyé. Veuillez consulter votre boite mail pour plus d'informations.";
-
   return (
-    <div className="verification-page">
-      {alertMessage && (
-        <div className={`alert-message ${alertType}`}>{alertMessage}</div>
-      )}
-      <div className="verification-container">
-        <div className="verification-icon">
-          <Mail size={64} strokeWidth={1.5} />
-        </div>
-        <h2>Vérifiez votre e-mail</h2>
-        <p className="verification-message">
-          Nous avons envoyé un e-mail à <strong>{email}</strong>
+    <AuthShell theme={theme}>
+      <div className="max-w-md mx-auto text-center">
+        <BrandLogo className="mb-8" />
+        <StatusIcon icon={faEnvelopeOpenText} />
+        <h1 className="mt-6 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Vérifiez votre e-mail</h1>
+        {email && (
+          <p className="mt-2 text-slate-500 dark:text-slate-400">
+            Nous avons envoyé un e-mail à <strong className="text-slate-800 dark:text-slate-100 break-all">{email}</strong>.
+          </p>
+        )}
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+          {isProfessor
+            ? "Votre demande de compte professeur a bien été reçue. Elle va être vérifiée par l'administration : vous recevrez ensuite un e-mail pour activer votre compte."
+            : "Suivez les instructions qu'il contient pour activer votre compte. Vous ne le voyez pas ? Vérifiez votre dossier Spam."}
         </p>
-        <p className="verification-instructions">
-          {userType === "professeur" ? (
-            professorMessage
-          ) : (
-            <>
-              Un mail vous a été envoyé. Veuillez suivre les instructions qui
-              s'y trouvent. Si vous ne voyez pas l'e-mail, veuillez vérifier
-              votre dossier de spam.
-            </>
+
+        {message.text && (
+          <Alert type={message.type} className="mt-6 text-left">
+            {message.text}
+          </Alert>
+        )}
+
+        <div className="mt-8 grid gap-3">
+          <Button to="/schoolchat/login" icon={faArrowRight}>
+            Aller à la connexion
+          </Button>
+          {!isProfessor && email && (
+            <Button variant="secondary" icon={faPaperPlane} onClick={handleResendVerification} loading={isResending} loadingLabel="Envoi en cours…">
+              Renvoyer l'e-mail
+            </Button>
           )}
-        </p>
-        <div className="verification-actions">
-          {userType !== "professeur" && (
-            <button
-              type="button"
-              className={`action-button resend-button ${
-                userType === "professeur" ? "disabled" : ""
-              }`}
-              onClick={handleResendVerification}
-              disabled={isResendingEmail || userType === "professeur"}
+          {!isProfessor && (
+            <Button
+              variant="ghost"
+              icon={faKey}
+              to={`/schoolchat/verifier-compte${email ? `?email=${encodeURIComponent(email)}` : ""}`}
             >
-              {isResendingEmail ? (
-                <>
-                  <Loader className="button-icon spinner" size={18} />
-                  <span>Envoi en cours...</span>
-                </>
-              ) : (
-                <>
-                  <span>Renvoyer l'email</span>
-                  <Mail className="button-icon" size={18} />
-                </>
-              )}
-            </button>
+              Vérifier avec un code reçu par e-mail
+            </Button>
           )}
-          <button
-            type="button"
-            className="action-button login-button"
-            onClick={() => navigate("/schoolchat/login")}
-          >
-            <span>Aller à la connexion</span>
-            <ArrowRight className="button-icon" size={18} />
-          </button>
         </div>
+
+        <p className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-[#4F46E5] dark:text-indigo-300 hover:underline">
+            <FontAwesomeIcon icon={faArrowLeft} /> Retour à l'accueil
+          </Link>
+        </p>
       </div>
-      <style jsx>{`
-        .verification-page {
-          min-height: 100vh;
-          padding: 2rem;
-          background: linear-gradient(135deg, #1a365d, #2d3748);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .verification-container {
-          width: 100%;
-          max-width: 600px;
-          background: white;
-          padding: 3rem 2rem;
-          border-radius: 10px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-          text-align: center;
-        }
-        .verification-icon {
-          width: 110px;
-          height: 110px;
-          margin: 0 auto 1.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #e8f5e9;
-          border-radius: 50%;
-          color: #4caf50;
-        }
-        .verification-page h2 {
-          font-size: 2rem;
-          color: #333;
-          margin-bottom: 1.2rem;
-          font-weight: 600;
-        }
-        .verification-message {
-          font-size: 1.1rem;
-          margin-bottom: 1rem;
-          color: #424242;
-        }
-        .verification-instructions {
-          color: #666;
-          line-height: 1.6;
-          margin-bottom: 2rem;
-          font-size: 1rem;
-        }
-        .verification-actions {
-          display: flex;
-          justify-content: center;
-          gap: 1.5rem;
-          margin-top: 2.5rem;
-          padding: 0 1rem;
-        }
-        .action-button {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          padding: 0.85rem 0;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-weight: 500;
-          font-size: 1rem;
-          transition: all 0.3s ease;
-          width: 200px;
-          height: 48px;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .button-icon {
-          flex-shrink: 0;
-        }
-        .resend-button {
-          background: #f0f4f8;
-          color: #2d3748;
-          border: 1px solid #dde5ed;
-        }
-        .resend-button:hover:not(:disabled) {
-          background: #e1e8f0;
-          transform: translateY(-2px);
-        }
-        .resend-button:disabled,
-        .resend-button.disabled {
-          background: #eaeaea;
-          color: #999;
-          cursor: not-allowed;
-          transform: none;
-          box-shadow: none;
-        }
-        .login-button {
-          background: #4caf50;
-          color: white;
-          border: 1px solid #4caf50;
-        }
-        .login-button:hover {
-          background: #45a049;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
-        }
-        .alert-message {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          padding: 1rem 1.5rem;
-          border-radius: 6px;
-          z-index: 1001;
-          animation: slideIn 0.3s ease-out;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          max-width: 400px;
-          text-align: left;
-        }
-        .alert-message.error {
-          background: #fff2f2;
-          color: #e53935;
-          border-left: 4px solid #e53935;
-        }
-        .alert-message.success {
-          background: #f1f8e9;
-          color: #2e7d32;
-          border-left: 4px solid #2e7d32;
-        }
-        .spinner {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @media (max-width: 768px) {
-          .verification-container {
-            margin: 1rem;
-            padding: 2rem 1.5rem;
-          }
-          .verification-actions {
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-          }
-          .action-button {
-            width: 100%;
-            max-width: 280px;
-          }
-        }
-      `}</style>
-    </div>
+    </AuthShell>
   );
 };
 

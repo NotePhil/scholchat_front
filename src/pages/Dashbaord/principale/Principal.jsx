@@ -1,19 +1,12 @@
-import React, { useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useReturnToPage } from "../../../hooks/useReturnToPage";
+import { useDispatch, useSelector, useStore } from "react-redux";
 import Modal from "react-modal";
 import {
-  Menu,
-  User,
-  ChevronDown,
-  LogOut,
-  Settings,
-  Phone,
-  Mail,
-} from "lucide-react";
-
-import { useAuth } from "../../../hooks/useAuth";
-import { setLastLocation } from "../../../store/slices/authSlice";
+  setLastLocation,
+  logout as logoutAction,
+} from "../../../store/slices/authSlice";
 import {
   toggleSidebar as toggleSidebarAction,
   setSidebar,
@@ -23,7 +16,7 @@ import {
   setBreakpoints,
   setTheme as setThemeAction,
 } from "../../../store/slices/uiSlice";
-
+import { useAuth } from "../../../hooks/useAuth";
 import Sidebar from "../components/Sidebar";
 import DashboardContent from "./DashboardContent";
 import ParentsContent from "./content/ParentContent/ParentsContent";
@@ -40,47 +33,242 @@ import OthersContent from "./content/othersContent/OthersContent";
 import CreateClassContent from "./content/AllClassesContent/CreateClassContent";
 import ManageClassContent from "./content/AllClassesContent/ManageClassContent";
 import CreateEstablishmentContent from "./content/EstablishmentContent/CreateEstablishmentContent";
+import OfferAdminContent from "./content/OfferAdminContent/OfferAdminContent";
 import ActivitiesContent from "./content/ActivitiesContent/ActivitiesContent";
 import StudentParentStats from "./shared/StudentParentStats";
 import ParentClassManagement from "./ParentSidebar/ParentClassManagement";
 import ParentClassManagementClass from "./ParentSidebar/ParentClassManagementClass";
 import NotificationIcon from "./modals/NotificationIcon";
 import ProfessorCoursesContent from "./content/ProfessorsContent/ProfessorCoursesContent";
+import CreateCourseContent from "./content/ProfessorsContent/CreateCourseContent";
 import CoursProgrammerContent from "./content/CoursProgrammerContent/CoursProgrammerContent";
+import CoursProgrammeManagement from "./content/InterfaceCours/CoursProgrammeManagement";
 import ManageExercisesContent from "./content/excerciseContent/ManageExercisesContent";
-
+import StudentDevoirsContent from "./content/excerciseContent/StudentDevoirsContent";
+import ExerciseProgrammerContent from "./content/excerciseContent/ExerciseProgrammerContent";
+import ExerciseCorrectionsContent from "./content/excerciseContent/ExerciseCorrectionsContent";
+import MatiereContent from "./content/MatiereContent/MatiereContent";
+import GestionnaireDashboardContent from "./content/GestionnaireContent/GestionnaireDashboardContent";
+import MobileBottomNav from "../components/MobileBottomNav";
+import ParentChildrenList from "./ParentSidebar/ParentChildrenList";
+import {
+  PARENT_ACCESS_CHANGED_EVENT,
+  PARENT_LIMITED_EVENT,
+  PARENT_LIMITED_TABS,
+  checkFetchResponseForParentLimit,
+  installParentLimitNetworkHook,
+  isParentLimited,
+  refreshParentAccessFlag,
+} from "../../../utils/parentAccess";
+import {
+  childHasApprovedClass,
+  fetchChildrenStatuses,
+} from "../../../services/parentChildrenService";
+import GestionnairesManagement from "./content/GestionnaireContent/GestionnairesManagement";
+import RoleSelectorModal from "../../../components/modals/RoleSelectorModal";
+import AddRoleModal from "../../../components/modals/AddRoleModal";
+import {
+  STUDENT_SWITCH_HINT,
+  accountHasOtherRoles,
+  getStoredAddableRoles,
+  isStudentSwitchForbidden,
+} from "../../../utils/roleRules";
+import HelpButton from "../../../components/help/HelpButton";
+import {
+  helpPageFromTab,
+  helpRoleFromSession,
+} from "../../../help/helpContent";
+import ReAuthModal from "../../../components/modals/ReAuthModal";
+import ChildSelectorModal from "../../../components/modals/ChildSelectorModal";
+import ProfessorVerificationStatus from "./ProfessorVerificationStatus";
+import { scholchatService } from "../../../services/ScholchatService";
+import {
+  PROFESSOR_NOT_VALIDATED_EVENT,
+  PROFESSOR_STATUS,
+  checkFetchResponseForProfessorBlock,
+  getStoredProfessorStatus,
+  installProfessorVerificationNetworkHook,
+  storeProfessorStatus,
+} from "../../../utils/professorVerification";
+import {
+  dashboardNameForRole,
+  storeSwitchRoleResponse,
+} from "../../../utils/authSession";
+import { InstallButton } from "../../../components/PWAInstallPrompt";
 import "../../../CSS/Principal.css";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faBars,
+  faChevronDown,
+  faCircleInfo,
+  faEnvelope,
+  faHourglassHalf,
+  faGear,
+  faPhone,
+  faRightFromBracket,
+  faUser,
+} from "@fortawesome/free-solid-svg-icons";
 Modal.setAppElement("#root");
-
 const themes = {
-  light: { cardBg: "bg-white", border: "border-gray-200" },
-  dark: { cardBg: "bg-gray-800", border: "border-gray-700" },
+  light: {
+    background: "bg-gray-100",
+    cardBg: "bg-white",
+    text: "text-gray-800",
+    border: "border-gray-200",
+    hover: "hover:bg-gray-50",
+    chartBg: "#ffffff",
+    gridColor: "#e5e7eb",
+  },
+  dark: {
+    background: "bg-slate-900",
+    cardBg: "bg-slate-800",
+    text: "text-gray-100",
+    border: "border-gray-700",
+    hover: "hover:bg-slate-700",
+    chartBg: "#1e293b",
+    gridColor: "#374151",
+  },
 };
-
 const colorSchemes = {
-  blue: { primary: "#4a6da7", light: "#6889c3" },
-  green: { primary: "#2e7d32", light: "#4caf50" },
+  blue: {
+    name: "Bleu",
+    primary: "#3b82f6",
+    secondary: "#1d4ed8",
+    accent: "#60a5fa",
+    hover: "#2563eb",
+    light: "#dbeafe",
+    gradient: "from-blue-500 to-blue-600",
+  },
+  green: {
+    name: "Vert",
+    primary: "#10b981",
+    secondary: "#047857",
+    accent: "#34d399",
+    hover: "#059669",
+    light: "#d1fae5",
+    gradient: "from-green-500 to-green-600",
+  },
+  purple: {
+    name: "Violet",
+    primary: "#8b5cf6",
+    secondary: "#6d28d9",
+    accent: "#a78bfa",
+    hover: "#7c3aed",
+    light: "#ede9fe",
+    gradient: "from-purple-500 to-purple-600",
+  },
+  orange: {
+    name: "Orange",
+    primary: "#f97316",
+    secondary: "#c2410c",
+    accent: "#fb923c",
+    hover: "#ea580c",
+    light: "#ffedd5",
+    gradient: "from-orange-500 to-orange-600",
+  },
 };
-
 const languages = {
-  fr: { name: "Français", flag: "🇫🇷" },
-  en: { name: "English", flag: "🇺🇸" },
+  fr: {
+    name: "Français",
+    flag: "🇫🇷",
+  },
+  en: {
+    name: "English",
+    flag: "🇺🇸",
+  },
 };
+// Tabs each (selected) role may open. Tabs are URL-driven
+// (/schoolchat/Principal/:dashboardType/:section), so the sidebar alone is not
+// enough: a student could type .../schedule-exercise and land on the
+// professor-only programmer. Anything not listed falls back to the role's home.
+const COMMON_TABS = ["dashboard", "activities", "messages", "settings"];
+const PROFESSOR_TABS = [
+  "courses",
+  "create-course",
+  "schedule-course",
+  "cours",
+  "matieres",
+  "manage-exercises",
+  "schedule-exercise",
+  "corrections-exercise",
+  "professors",
+  "parents",
+  "students",
+  "classes",
+  "create-class",
+  "manage-class",
+];
+const ROLE_TABS = {
+  admin: [
+    "admin",
+    "professors",
+    "parents",
+    "students",
+    "others",
+    "gestionnaires",
+    "matieres",
+    "motifs-de-rejet",
+    "classes",
+    "create-class",
+    "manage-class",
+    "create-establishment",
+    "manage-establishment",
+    "manage-offers",
+    // Admin keeps oversight of course/exercise screens (backend allows ADMIN
+    // on course sessions and the "cours" tab offers Programmer to admins).
+    "courses",
+    "create-course",
+    "schedule-course",
+    "cours",
+    "manage-exercises",
+    "schedule-exercise",
+    "corrections-exercise",
+  ],
+  professor: PROFESSOR_TABS,
+  tutor: PROFESSOR_TABS,
+  parent: ["manage-exercises", "devoirs", "classes", "cours", "my-children"],
+  student: ["manage-exercises", "devoirs", "classes", "cours"],
+  gestionnaire: [
+    "matieres",
+    "classes",
+    "create-class",
+    "manage-class",
+    // No "create-establishment": creating an établissement is admin-only.
+    "manage-establishment",
+  ],
+};
+const DEFAULT_ROLE_TABS = ["classes"];
+const isTabAllowedForRole = (tab, role) =>
+  COMMON_TABS.includes(tab) ||
+  (ROLE_TABS[role] || DEFAULT_ROLE_TABS).includes(tab);
 
 const Principal = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-  const { dashboardType } = useParams();
+  const store = useStore();
+  const { dashboardType, section } = useParams();
+  const { storeCurrentPage, hasStoredPage } = useReturnToPage();
 
-  const auth = useAuth();
-  const { userRole, userRoles, user, logout } = auth;
-
+  // Use the useAuth hook for clean role handling
+  const {
+    user,
+    displayRole,
+    normalizedUserRole,
+    isAdmin,
+    isProfessor,
+    isParent,
+    isStudent,
+    isParentOrStudent,
+    isGestionnaire,
+    hasRole,
+  } = useAuth();
   const ui = useSelector((state) => state.ui);
   const {
     showSidebar,
     activeTab,
+    tabData,
     isDark,
     currentTheme,
     currentLanguage,
@@ -89,40 +277,232 @@ const Principal = () => {
     isMobile,
     isCustomBreakpoint,
   } = ui;
+  const [showManageClass, setShowManageClass] = useState(false);
+  const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showRoleSwitchModal, setShowRoleSwitchModal] = useState(false);
+  const [showReAuthModal, setShowReAuthModal] = useState(false);
+  const [pendingRoleSwitch, setPendingRoleSwitch] = useState(null);
+  const [roleSwitchLoading, setRoleSwitchLoading] = useState(false);
+  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  // Bumped when the profiles list changes (role added) so the header re-reads localStorage
+  const [, setRolesVersion] = useState(0);
+  // Child switcher for parents
+  const [parentChildren, setParentChildren] = useState([]);
+  const [selectedChild, setSelectedChild] = useState(null);
+  const [showChildDropdown, setShowChildDropdown] = useState(false);
+  const [pendingChildSwitch, setPendingChildSwitch] = useState(null);
+  const [showChildAuthModal, setShowChildAuthModal] = useState(false);
+  const [childAuthLoading, setChildAuthLoading] = useState(false);
+  // Parent "limited mode" (parentAEnfantValide === false): until one of the
+  // children is accepted in a class, only « Mes enfants », Profil/Paramètres
+  // and the notifications are available.
+  const [parentLimited, setParentLimited] = useState(
+    () => isParent && isParentLimited(),
+  );
+  // Professor verification gate: until the admin validates the identity
+  // documents (statutVerification === VALIDE) the professor dashboard is not
+  // rendered at all — every professor API call would be refused with 403
+  // PROFIL_PROFESSEUR_NON_VALIDE. "CHECKING" = status unknown (legacy session
+  // without professeurStatutVerification, or a 403 just received): resolved
+  // with GET /utilisateurs/{id} before anything is shown.
+  const [professorGate, setProfessorGate] = useState(() => {
+    if (!isProfessor) return PROFESSOR_STATUS.VALIDE;
+    return getStoredProfessorStatus().status || "CHECKING";
+  });
+  const [professorMotif, setProfessorMotif] = useState(
+    () => getStoredProfessorStatus().motif,
+  );
 
-  const [showManageClass, setShowManageClass] = React.useState(false);
-  const [showTokenExpiredModal, setShowTokenExpiredModal] =
-    React.useState(false);
-  const [showLanguageDropdown, setShowLanguageDropdown] = React.useState(false);
-  const [showUserProfile, setShowUserProfile] = React.useState(false);
+  useEffect(() => {
+    if (!isProfessor || professorGate !== "CHECKING") return;
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      setProfessorGate(PROFESSOR_STATUS.VALIDE);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const professor = await scholchatService.getUserById(userId);
+        if (cancelled) return;
+        // Field absent (older backend): never lock the user out
+        const status = professor?.statutVerification || PROFESSOR_STATUS.VALIDE;
+        const motif = professor?.motifRejetVerification || null;
+        storeProfessorStatus(status, motif);
+        setProfessorMotif(motif);
+        setProfessorGate(status);
+      } catch (e) {
+        console.warn("Could not check professor verification status:", e);
+        // Server enforcement + the 403 listener below still protect the data
+        if (!cancelled)
+          setProfessorGate((g) => (g === "CHECKING" ? PROFESSOR_STATUS.VALIDE : g));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isProfessor, professorGate]);
 
-  // Handle responsive breakpoints
+  // Any request refused with 403 PROFIL_PROFESSEUR_NON_VALIDE while acting as
+  // professor (e.g. validation revoked, stale stored status) → status screen.
+  useEffect(() => {
+    if (!isProfessor) return undefined;
+    const uninstall = installProfessorVerificationNetworkHook();
+    const onNotValidated = () => {
+      setProfessorGate((g) => (g === PROFESSOR_STATUS.VALIDE ? "CHECKING" : g));
+    };
+    window.addEventListener(PROFESSOR_NOT_VALIDATED_EVENT, onNotValidated);
+    return () => {
+      uninstall();
+      window.removeEventListener(PROFESSOR_NOT_VALIDATED_EVENT, onNotValidated);
+    };
+  }, [isProfessor]);
+
+  // Fetch children for parent role. The child selector only lists the
+  // children accepted in at least one class (GET /parents/{id}/enfants/statuts);
+  // « Mes enfants » still lists all of them with the state of each request.
+  const fetchParentChildren = useCallback(async () => {
+    if (!isParent) return;
+    try {
+      const pid = localStorage.getItem("userId");
+      const token =
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("authToken");
+      if (!pid || !token) return;
+      const { children, withStatuses } = await fetchChildrenStatuses(pid);
+      const kids = withStatuses
+        ? children.filter(childHasApprovedClass)
+        : children;
+      setParentChildren(kids);
+      if (kids.length === 0) {
+        setSelectedChild(null);
+        if (localStorage.getItem("selectedChildId")) {
+          ["selectedChildId", "selectedChildName", "selectedChildNiveau", "selectedChildHasAccount"].forEach(
+            (k) => localStorage.removeItem(k),
+          );
+          window.dispatchEvent(new Event("childChanged"));
+        }
+        return;
+      }
+      const storedId = localStorage.getItem("selectedChildId");
+      const found = kids.find((k) => String(k.id) === String(storedId));
+      // Auto-select the first approved child when none (or a non-approved one) is selected.
+      const autoSelect = found || kids[0];
+      setSelectedChild(autoSelect);
+      // Minor (no own account) → the parent answers homework for them; adult → read-only.
+      localStorage.setItem(
+        "selectedChildHasAccount",
+        autoSelect.email ? "true" : "false",
+      );
+      if (!found) {
+        localStorage.setItem("selectedChildId", autoSelect.id);
+        localStorage.setItem(
+          "selectedChildName",
+          `${autoSelect.prenom || ""} ${autoSelect.nom || ""}`,
+        );
+        localStorage.setItem("selectedChildNiveau", autoSelect.niveau || "");
+        window.dispatchEvent(new Event("childChanged"));
+      }
+    } catch (e) {
+      console.warn("Could not fetch parent children:", e);
+    }
+  }, [isParent]);
+  useEffect(() => {
+    fetchParentChildren();
+  }, [fetchParentChildren]);
+
+  // Child switched elsewhere (e.g. a notification about another child's
+  // class or homework): keep the header's child selector in sync.
+  useEffect(() => {
+    if (!isParent) return undefined;
+    const syncSelectedChild = () => {
+      const id = localStorage.getItem("selectedChildId");
+      setSelectedChild((current) =>
+        current?.id === id
+          ? current
+          : parentChildren.find((k) => k.id === id) || current,
+      );
+    };
+    window.addEventListener("childChanged", syncSelectedChild);
+    return () => window.removeEventListener("childChanged", syncSelectedChild);
+  }, [isParent, parentChildren]);
+
+  // Re-fetch when a child is added from anywhere in the app
+  useEffect(() => {
+    window.addEventListener("childrenUpdated", fetchParentChildren);
+    return () =>
+      window.removeEventListener("childrenUpdated", fetchParentChildren);
+  }, [fetchParentChildren]);
+  const handleChildSwitch = (child) => {
+    // If switching to a different child, require password verification
+    if (selectedChild && selectedChild.id !== child.id) {
+      setPendingChildSwitch(child);
+      setShowChildDropdown(false);
+      setShowChildAuthModal(true);
+      return;
+    }
+    // Same child or first selection - just switch
+    doChildSwitch(child);
+  };
+  const doChildSwitch = (child) => {
+    setSelectedChild(child);
+    // Clear previous child data from localStorage
+    localStorage.removeItem("childClasses");
+    localStorage.removeItem("childCourses");
+    // Set new child info
+    localStorage.setItem("selectedChildId", child.id);
+    localStorage.setItem(
+      "selectedChildName",
+      `${child.prenom || ""} ${child.nom || ""}`,
+    );
+    localStorage.setItem("selectedChildNiveau", child.niveau || "");
+    localStorage.setItem(
+      "selectedChildHasAccount",
+      child.email ? "true" : "false",
+    );
+    setShowChildDropdown(false);
+    // Trigger full refresh of all child data
+    window.dispatchEvent(new Event("childChanged"));
+  };
+
+  // PWA Install — handled by InstallButton component
+
+  const handleLogout = useCallback(() => {
+    // Store current page before logout using hook
+    storeCurrentPage();
+
+    // Clear ALL auth data (keep only language and PWA settings)
+    const lang = localStorage.getItem("language");
+    const pwa = localStorage.getItem("pwaInstallDismissed");
+    localStorage.clear();
+    if (lang) localStorage.setItem("language", lang);
+    if (pwa) localStorage.setItem("pwaInstallDismissed", pwa);
+    dispatch(logoutAction());
+    navigate("/schoolchat/login");
+  }, [dispatch, navigate, storeCurrentPage]);
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
       const customBreakpoint =
         window.innerWidth <= 992 && window.innerWidth > 768;
-
       dispatch(
         setBreakpoints({
           isMobile: mobile,
           isCustomBreakpoint: customBreakpoint,
-        })
+        }),
       );
-
       if (mobile || customBreakpoint) {
         dispatch(setSidebar(false));
       } else if (window.innerWidth > 992) {
         dispatch(setSidebar(true));
       }
     };
-
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [dispatch]);
-
-  // Save last location
   useEffect(() => {
     const currentPath = location.pathname;
     if (currentPath.includes("/schoolchat/principal")) {
@@ -130,8 +510,6 @@ const Principal = () => {
       dispatch(setLastLocation(currentPath));
     }
   }, [location.pathname, dispatch]);
-
-  // Token expiration check
   useEffect(() => {
     const checkTokenExpiration = () => {
       const token = localStorage.getItem("accessToken");
@@ -139,11 +517,9 @@ const Principal = () => {
         setShowTokenExpiredModal(true);
         return;
       }
-
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
         const expirationTime = payload.exp * 1000;
-
         if (Date.now() > expirationTime) {
           setShowTokenExpiredModal(true);
         }
@@ -151,62 +527,87 @@ const Principal = () => {
         setShowTokenExpiredModal(true);
       }
     };
-
     checkTokenExpiration();
     const interval = setInterval(checkTokenExpiration, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // Handle 401 responses
   useEffect(() => {
     const originalFetch = window.fetch;
-
     window.fetch = async (...args) => {
       const response = await originalFetch(...args);
       if (response.status === 401) {
         setShowTokenExpiredModal(true);
       }
+      checkFetchResponseForProfessorBlock(response);
+      checkFetchResponseForParentLimit(response);
       return response;
     };
-
     return () => {
       window.fetch = originalFetch;
     };
   }, []);
 
-  // Navigate to appropriate dashboard
+  // Listen for session expiry events dispatched by the axios interceptor
   useEffect(() => {
-    if (!userRole) return;
-
+    const handleSessionExpired = () => {
+      setShowTokenExpiredModal(true);
+    };
+    window.addEventListener("auth:sessionExpired", handleSessionExpired);
+    return () =>
+      window.removeEventListener("auth:sessionExpired", handleSessionExpired);
+  }, []);
+  useEffect(() => {
+    if (!normalizedUserRole) return;
+    // Don't do any navigation if we already have both dashboardType and section
+    if (dashboardType && section) return;
+    // Don't redirect if we're already on a valid dashboard path
+    if (location.pathname.includes("/schoolchat/Principal/") && dashboardType)
+      return;
+    // Don't redirect if user just logged in and we're navigating to their return page
+    if (hasStoredPage()) return;
     let expectedDashboard;
-    const safeUserRole = userRole || "admin";
-
-    if (safeUserRole === "admin" || userRoles.includes("ROLE_ADMIN")) {
+    if (isAdmin) {
       expectedDashboard = "AdminDashboard";
-    } else if (
-      safeUserRole === "professor" ||
-      userRoles.includes("ROLE_PROFESSOR")
-    ) {
+    } else if (isProfessor) {
       expectedDashboard = "ProfessorDashboard";
-    } else if (safeUserRole === "parent" || userRoles.includes("ROLE_PARENT")) {
+    } else if (isParent) {
       expectedDashboard = "ParentDashboard";
-    } else if (
-      safeUserRole === "student" ||
-      userRoles.includes("ROLE_STUDENT")
-    ) {
+    } else if (isStudent) {
       expectedDashboard = "StudentDashboard";
+    } else if (isGestionnaire) {
+      expectedDashboard = "GestionnaireDashboard";
     } else {
-      expectedDashboard = `${
-        safeUserRole.charAt(0).toUpperCase() + safeUserRole.slice(1)
-      }Dashboard`;
+      expectedDashboard = `${normalizedUserRole.charAt(0).toUpperCase() + normalizedUserRole.slice(1)}Dashboard`;
     }
 
-    if (!dashboardType) {
-      navigate(`/schoolchat/Principal/${expectedDashboard}`);
+    // Only redirect if we don't have a dashboardType at all and we're not already on the right path
+    if (!dashboardType && !location.pathname.includes(expectedDashboard)) {
+      navigate(`/schoolchat/Principal/${expectedDashboard}/activities`, {
+        replace: true,
+      });
     }
-  }, [dashboardType, navigate, userRole, userRoles]);
+  }, [
+    dashboardType,
+    section,
+    navigate,
+    normalizedUserRole,
+    isAdmin,
+    isProfessor,
+    isParent,
+    isStudent,
+    location.pathname,
+    hasStoredPage,
+  ]);
 
-  // Close dropdowns on outside click
+  // Set active tab based on URL section parameter. Skip when the store is
+  // already on that tab: a notification click dispatches
+  // setActiveTab({ tab, data }) and then navigates, and re-dispatching the bare
+  // string here would wipe the tabData (classId / subTab) it just set.
+  useEffect(() => {
+    if (section && section !== store.getState().ui.activeTab) {
+      dispatch(setActiveTabAction(section));
+    }
+  }, [section, dispatch, store]);
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".language-dropdown")) {
@@ -216,113 +617,246 @@ const Principal = () => {
         setShowUserProfile(false);
       }
     };
-
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setShowLanguageDropdown(false);
+        setShowUserProfile(false);
+      }
+    };
+    document.addEventListener("click", handleClickOutside, true);
+    document.addEventListener("touchend", handleClickOutside, true);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("click", handleClickOutside, true);
+      document.removeEventListener("touchend", handleClickOutside, true);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
-
   const handleTabChange = useCallback(
-    (tab) => {
+    (requestedTab, queryParams = null) => {
+      // Limited parent: everything but « Mes enfants » / Paramètres leads to « Mes enfants »
+      const tab =
+        parentLimited && !PARENT_LIMITED_TABS.includes(requestedTab)
+          ? "my-children"
+          : requestedTab;
+      // Skip if already on this tab, unless query params are provided (e.g. pre-filtering)
+      if (tab === activeTab && !queryParams) return;
       setShowManageClass(false);
       dispatch(setActiveTabAction(tab));
 
+      // Build the dashboard base path
+      let dashboard = dashboardType;
+      if (!dashboard) {
+        if (isAdmin) {
+          dashboard = "AdminDashboard";
+        } else if (
+          normalizedUserRole === "professor" ||
+          normalizedUserRole === "tutor"
+        ) {
+          dashboard = "ProfessorDashboard";
+        } else if (normalizedUserRole === "parent") {
+          dashboard = "ParentDashboard";
+        } else if (normalizedUserRole === "student") {
+          dashboard = "StudentDashboard";
+        } else if (normalizedUserRole === "gestionnaire") {
+          dashboard = "GestionnaireDashboard";
+        } else {
+          dashboard = "AdminDashboard";
+        }
+      }
+      const search = queryParams
+        ? `?${new URLSearchParams(queryParams).toString()}`
+        : "";
+      navigate(`/schoolchat/Principal/${dashboard}/${tab}${search}`);
       if (isMobile || isCustomBreakpoint) {
         dispatch(setSidebar(false));
       }
     },
-    [dispatch, isMobile, isCustomBreakpoint]
+    [
+      dispatch,
+      isMobile,
+      isCustomBreakpoint,
+      navigate,
+      dashboardType,
+      normalizedUserRole,
+      isAdmin,
+      activeTab,
+      parentLimited,
+    ],
   );
 
+  /* ---------- Parent limited mode ---------- */
+  // Flag changes (login payload, GET /utilisateurs/{id}, a 403
+  // PARENT_SANS_ENFANT_VALIDE, a child accepted…) lock / unlock the UI.
+  useEffect(() => {
+    if (!isParent) return undefined;
+    setParentLimited(isParentLimited());
+    refreshParentAccessFlag();
+    const uninstall = installParentLimitNetworkHook();
+    const onChanged = (e) => {
+      const valid = e?.detail?.valid;
+      if (typeof valid !== "boolean") return;
+      setParentLimited(!valid);
+      // Unlocked: reload the (approved) children → first approved child selected
+      if (valid) fetchParentChildren();
+    };
+    window.addEventListener(PARENT_ACCESS_CHANGED_EVENT, onChanged);
+    return () => {
+      uninstall();
+      window.removeEventListener(PARENT_ACCESS_CHANGED_EVENT, onChanged);
+    };
+  }, [isParent, fetchParentChildren]);
+
+  // While limited, any other page (URL typed, login landing, 403
+  // PARENT_SANS_ENFANT_VALIDE) goes to « Mes enfants ».
+  const goToMyChildren = useCallback(() => {
+    dispatch(setActiveTabAction("my-children"));
+    navigate("/schoolchat/Principal/ParentDashboard/my-children", {
+      replace: true,
+    });
+  }, [dispatch, navigate]);
+  useEffect(() => {
+    if (!isParent || !parentLimited) return;
+    if (!PARENT_LIMITED_TABS.includes(activeTab)) goToMyChildren();
+  }, [isParent, parentLimited, activeTab, goToMyChildren]);
+  useEffect(() => {
+    if (!isParent) return undefined;
+    const onLimited = () => {
+      setParentLimited(true);
+      if (!PARENT_LIMITED_TABS.includes(store.getState().ui.activeTab)) {
+        goToMyChildren();
+      }
+    };
+    window.addEventListener(PARENT_LIMITED_EVENT, onLimited);
+    return () => window.removeEventListener(PARENT_LIMITED_EVENT, onLimited);
+  }, [isParent, goToMyChildren, store]);
+
+  // A child's request decided (CHILD_ACCESS_APPROVED / REJECTED notification
+  // received): refresh the flag and the children.
+  const latestChildAccessNotif = useSelector((state) => {
+    const list = state.notifications?.notifications || [];
+    const n = list.find((x) =>
+      /^CHILD_ACCESS_/.test(String(x?.type || "").toUpperCase()),
+    );
+    return n ? n.id : null;
+  });
+  const seenChildAccessNotif = useRef(undefined);
+  useEffect(() => {
+    if (!isParent) return;
+    if (seenChildAccessNotif.current === latestChildAccessNotif) return;
+    const first = seenChildAccessNotif.current === undefined;
+    seenChildAccessNotif.current = latestChildAccessNotif;
+    if (first || !latestChildAccessNotif) return;
+    refreshParentAccessFlag();
+    window.dispatchEvent(new CustomEvent("childrenUpdated"));
+  }, [isParent, latestChildAccessNotif]);
+  // Profile page focused on "Mes profils" (after adding a profile, role notifications…)
+  const openProfiles = useCallback(() => {
+    dispatch(
+      setActiveTabAction({ tab: "settings", data: { section: "profils" } }),
+    );
+    navigate(
+      `/schoolchat/Principal/${dashboardType || dashboardNameForRole(normalizedUserRole)}/settings`,
+    );
+  }, [dispatch, navigate, dashboardType, normalizedUserRole]);
   const handleManageClass = useCallback(() => {
     setShowManageClass(true);
   }, []);
-
   const handleBackToClasses = useCallback(() => {
     setShowManageClass(false);
   }, []);
-
   const toggleSidebar = useCallback(() => {
     dispatch(toggleSidebarAction());
   }, [dispatch]);
-
   const handleShowMessaging = useCallback(
     (conversation = null) => {
-      dispatch(setMessaging({ show: true, conversation }));
+      dispatch(
+        setMessaging({
+          show: true,
+          conversation,
+        }),
+      );
     },
-    [dispatch]
+    [dispatch],
   );
-
   const handleCloseMessaging = useCallback(() => {
-    dispatch(setMessaging({ show: false, conversation: null }));
+    dispatch(
+      setMessaging({
+        show: false,
+        conversation: null,
+      }),
+    );
   }, [dispatch]);
-
   const handleLanguageChange = useCallback(
     (lang) => {
       dispatch(setLanguage(lang));
       setShowLanguageDropdown(false);
     },
-    [dispatch]
+    [dispatch],
   );
-
   const handleThemeChange = useCallback(
     (isDarkMode, theme) => {
-      dispatch(setThemeAction({ isDark: isDarkMode, currentTheme: theme }));
+      dispatch(
+        setThemeAction({
+          isDark: isDarkMode,
+          currentTheme: theme,
+        }),
+      );
     },
-    [dispatch]
+    [dispatch],
   );
-
-  const isParentOrStudent = useMemo(() => {
-    return (
-      userRoles.includes("ROLE_PARENT") ||
-      userRoles.includes("ROLE_STUDENT") ||
-      userRole === "parent" ||
-      userRole === "student"
-    );
-  }, [userRole, userRoles]);
-
   const onNavigateToClassesList = useCallback(() => {
     dispatch(setActiveTabAction("manage-class"));
   }, [dispatch]);
-
   const onNavigateToEstablishmentsList = useCallback(() => {
     dispatch(setActiveTabAction("manage-establishment"));
   }, [dispatch]);
-
   const contentProps = useMemo(
     () => ({
       isDark,
       currentTheme,
       themes,
       colorSchemes,
-      userRole: userRole || "admin",
-      userRoles: userRoles || [],
+      userRole: normalizedUserRole || "admin",
       onManageClass: handleManageClass,
       onShowMessaging: handleShowMessaging,
+      setActiveTab: handleTabChange,
+      tabData,
     }),
     [
       isDark,
       currentTheme,
-      userRole,
-      userRoles,
+      normalizedUserRole,
       handleManageClass,
       handleShowMessaging,
-    ]
+      handleTabChange,
+      tabData,
+    ],
   );
-
   const renderContent = () => {
-    switch (activeTab) {
+    let tab = isTabAllowedForRole(activeTab, normalizedUserRole)
+      ? activeTab
+      : "dashboard";
+    if (isParent && parentLimited && !PARENT_LIMITED_TABS.includes(tab)) {
+      tab = "my-children";
+    }
+    switch (tab) {
       case "dashboard":
-        return isParentOrStudent ? (
-          <StudentParentStats {...contentProps} />
-        ) : (
-          <DashboardContent {...contentProps} />
-        );
+        if (isParentOrStudent) {
+          return <StudentParentStats {...contentProps} />;
+        } else if (isGestionnaire) {
+          return <GestionnaireDashboardContent {...contentProps} />;
+        } else {
+          return <DashboardContent {...contentProps} />;
+        }
       case "activities":
         return <ActivitiesContent {...contentProps} />;
       case "admin":
         return <AdminContent {...contentProps} />;
       case "professors":
         return <ProfessorsContent {...contentProps} />;
+      case "matieres":
+        return <MatiereContent {...contentProps} />;
       case "motifs-de-rejet":
         return <MotifsDeRejet {...contentProps} />;
       case "parents":
@@ -331,25 +865,53 @@ const Principal = () => {
         return <StudentsContent {...contentProps} />;
       case "others":
         return <OthersContent {...contentProps} />;
+      case "courses":
+        return (
+          <ProfessorCoursesContent
+            {...contentProps}
+            setActiveTab={handleTabChange}
+          />
+        );
       case "create-course":
-        return <ProfessorCoursesContent {...contentProps} />;
+        return (
+          <CreateCourseContent
+            {...contentProps}
+            onBack={() => handleTabChange("courses")}
+          />
+        );
       case "schedule-course":
         return <CoursProgrammerContent {...contentProps} />;
       case "manage-exercises":
         return <ManageExercisesContent {...contentProps} />;
+      case "devoirs":
+        return <StudentDevoirsContent tabData={tabData} />;
+      case "schedule-exercise":
+        return <ExerciseProgrammerContent {...contentProps} />;
+      case "corrections-exercise":
+        return <ExerciseCorrectionsContent {...contentProps} />;
       case "classes":
-        if (userRole === "parent" || userRoles.includes("ROLE_PARENT")) {
+        if (isParent) {
           return <ParentClassManagementClass {...contentProps} />;
-        } else if (
-          userRole === "student" ||
-          userRoles.includes("ROLE_STUDENT")
-        ) {
+        } else if (isStudent) {
           return <ParentClassManagement {...contentProps} />;
         }
         return showManageClass ? (
           <ManageClass onBack={handleBackToClasses} />
         ) : (
           <ClassesContent {...contentProps} />
+        );
+      case "cours":
+        return (
+          <CoursProgrammeManagement
+            {...contentProps}
+            selectedClass={null}
+            onBack={() => handleTabChange("classes")}
+            onScheduleCourse={
+              isProfessor || isAdmin
+                ? () => handleTabChange("schedule-course")
+                : undefined
+            }
+          />
         );
       case "create-class":
         return (
@@ -371,6 +933,12 @@ const Principal = () => {
         );
       case "manage-establishment":
         return <ManageEstablishmentContent {...contentProps} />;
+      case "manage-offers":
+        return <OfferAdminContent {...contentProps} />;
+      case "my-children":
+        return <ParentChildrenList tabData={tabData} />;
+      case "gestionnaires":
+        return <GestionnairesManagement />;
       case "messages":
         return (
           <div className="messages-content-container">
@@ -384,7 +952,12 @@ const Principal = () => {
             setIsDark={(val) => handleThemeChange(val, currentTheme)}
             currentTheme={currentTheme}
             setCurrentTheme={(val) => handleThemeChange(isDark, val)}
-            userRoles={userRoles}
+            onSwitchProfile={
+              isStudent ? undefined : () => setShowRoleSwitchModal(true)
+            }
+            onLogout={handleLogout}
+            focusSection={tabData?.section}
+            focusKey={tabData?._nav}
           />
         );
       default:
@@ -395,40 +968,40 @@ const Principal = () => {
         );
     }
   };
-
   const getTabDisplayName = () => {
-    const safeUserRole = userRole || "admin";
-
     if (
       activeTab === "dashboard" &&
-      (safeUserRole === "professor" || safeUserRole === "repetiteur")
+      (normalizedUserRole === "professor" || normalizedUserRole === "tutor")
     ) {
       return "Activities";
     }
     if (activeTab === "dashboard" && isParentOrStudent) {
-      return safeUserRole === "student"
-        ? "Mon Tableau de Bord"
-        : "Tableau de Bord Parent";
+      return isStudent ? "Mon Tableau de Bord" : "Tableau de Bord Parent";
     }
-
     const tabNames = {
       messages: "Messages",
       admin: "Gérer Administrateurs",
       professors: "Gérer Professeurs",
+      matieres: "Gestion des Matières",
       "motifs-de-rejet": "Motifs de Rejet",
       parents: "Gérer Parents",
       students: "Gérer Élèves",
       others: "Gérer Autres Utilisateurs",
       activities: "Activités",
-      "create-course": "Gérer les Cours",
+      courses: "Gérer les Cours",
+      "create-course": "Créer un Cours",
       "schedule-course": "Programmer le Cours",
       "manage-exercises": "Gérer les Exercices",
+      devoirs: "Mes Devoirs",
+      "schedule-exercise": "Programmer les Exercices",
+      "corrections-exercise": "Corrections des Exercices",
       "create-class": "Créer une Classe",
       "manage-class": "Gérer une Classe",
       "create-establishment": "Créer un Établissement",
       "manage-establishment": "Gérer un Établissement",
+      cours: "Cours Programmés",
+      "my-children": "Mes enfants",
     };
-
     return (
       tabNames[activeTab] ||
       (activeTab
@@ -437,8 +1010,137 @@ const Principal = () => {
     );
   };
 
+  // Apply theme colors to document root for global CSS variables
+  useEffect(() => {
+    const root = document.documentElement;
+    const scheme = colorSchemes[currentTheme] || colorSchemes.blue;
+    root.style.setProperty("--primary-color", scheme.primary);
+    root.style.setProperty("--secondary-color", scheme.secondary);
+    root.style.setProperty("--accent-color", scheme.accent);
+    root.style.setProperty("--hover-color", scheme.hover);
+    root.style.setProperty("--light-color", scheme.light);
+  }, [currentTheme]);
+  const sessionExpiredModal = (
+    <Modal
+      isOpen={showTokenExpiredModal}
+      onRequestClose={() => {}}
+      contentLabel="Session expirée"
+      className="session-expired-modal"
+      overlayClassName="session-expired-overlay"
+      shouldCloseOnOverlayClick={false}
+    >
+      <div className={`session-expired-content ${isDark ? "dark-mode" : ""}`}>
+        <div className="session-expired-icon">
+          <svg
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              fill="#fef3c7"
+            />
+            <path
+              d="M12 8v4l3 3"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <h2 className="session-expired-title">Session Expirée</h2>
+        <p className="session-expired-message">
+          Votre session a expiré. Veuillez vous reconnecter pour continuer à
+          utiliser l'application.
+        </p>
+        <div className="session-expired-actions">
+          <button onClick={handleLogout} className="reconnect-button">
+            Se reconnecter
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+
+  // Non-validated professor: dedicated status screen instead of the dashboard
+  if (isProfessor && professorGate !== PROFESSOR_STATUS.VALIDE) {
+    if (professorGate === "CHECKING") {
+      return (
+        <>
+          {sessionExpiredModal}
+          <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="flex flex-col items-center gap-3 text-slate-500">
+              <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+              <p className="text-sm">Vérification de votre profil...</p>
+            </div>
+          </div>
+        </>
+      );
+    }
+    const otherRoles = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("availableRoles") || "[]")
+          .map((r) => String(r).toUpperCase().replace(/^ROLE_/, ""))
+          .filter((r) => r !== "PROFESSOR");
+      } catch {
+        return [];
+      }
+    })();
+    return (
+      <>
+        {sessionExpiredModal}
+        <ProfessorVerificationStatus
+          status={professorGate}
+          motif={professorMotif}
+          userName={user?.name || localStorage.getItem("username")}
+          userEmail={user?.email || localStorage.getItem("userEmail")}
+          isDark={isDark}
+          otherRoles={otherRoles}
+          onStatusChange={(status, motif) => {
+            setProfessorMotif(motif);
+            setProfessorGate(status);
+          }}
+          onValidated={() => {
+            setProfessorMotif(null);
+            setProfessorGate(PROFESSOR_STATUS.VALIDE);
+          }}
+          onLogout={handleLogout}
+          renderSettings={() => (
+            <SettingsContent
+              isDark={isDark}
+              setIsDark={(val) => handleThemeChange(val, currentTheme)}
+              currentTheme={currentTheme}
+              setCurrentTheme={(val) => handleThemeChange(isDark, val)}
+            />
+          )}
+        />
+      </>
+    );
+  }
+
   return (
-    <div className={`principal-container ${isDark ? "dark-mode" : ""}`}>
+    <div
+      className={`principal-container ${isDark ? "dark-mode" : ""}`}
+      style={{
+        "--primary-color":
+          colorSchemes[currentTheme]?.primary || colorSchemes.blue.primary,
+        "--secondary-color":
+          colorSchemes[currentTheme]?.secondary || colorSchemes.blue.secondary,
+        "--accent-color":
+          colorSchemes[currentTheme]?.accent || colorSchemes.blue.accent,
+        "--hover-color":
+          colorSchemes[currentTheme]?.hover || colorSchemes.blue.hover,
+        "--light-color":
+          colorSchemes[currentTheme]?.light || colorSchemes.blue.light,
+      }}
+    >
       {showSidebar && (isMobile || isCustomBreakpoint) && (
         <div
           className="sidebar-overlay"
@@ -446,28 +1148,151 @@ const Principal = () => {
         />
       )}
 
-      <Modal
-        isOpen={showTokenExpiredModal}
-        onRequestClose={() => {}}
-        contentLabel="Session expirée"
-        className="modal"
-        overlayClassName="modal-overlay"
-        shouldCloseOnOverlayClick={false}
-      >
-        <div className={`modal-content ${isDark ? "dark-mode" : ""}`}>
-          <h2>Session expirée</h2>
-          <p>
-            Votre session a expiré en raison d'une inactivité prolongée ou d'un
-            problème d'authentification. Veuillez vous reconnecter pour
-            continuer.
-          </p>
-          <div className="modal-actions">
-            <button onClick={logout} className="logout-button">
-              Se reconnecter
-            </button>
-          </div>
-        </div>
-      </Modal>
+      {sessionExpiredModal}
+
+      {/* Role Switch Flow */}
+      <RoleSelectorModal
+        isOpen={showRoleSwitchModal && !isStudent}
+        roles={(() => {
+          const stored = JSON.parse(localStorage.getItem("availableRoles") || "[]");
+          return stored.length > 0 ? stored : [normalizedUserRole ? normalizedUserRole.toUpperCase() : "USER"];
+        })()}
+        pendingRoles={(() => {
+          try {
+            return JSON.parse(localStorage.getItem("authResponse") || "{}").pendingRoles || [];
+          } catch {
+            return [];
+          }
+        })()}
+        currentRole={localStorage.getItem("userRole")}
+        onSelect={(role) => {
+          setShowRoleSwitchModal(false);
+          // Already in this profile: nothing to switch
+          if (
+            String(localStorage.getItem("userRole") || "").toUpperCase() ===
+            "ROLE_" + String(role).toUpperCase().replace(/^ROLE_/, "")
+          ) {
+            return;
+          }
+          setPendingRoleSwitch(role);
+          setShowReAuthModal(true);
+        }}
+        // "Ajouter un profil" only while a combinable profile (parent/professeur) is missing —
+        // never for a student account (the student profile is exclusive).
+        onAddRole={
+          getStoredAddableRoles().length > 0
+            ? () => {
+                setShowRoleSwitchModal(false);
+                setShowAddRoleModal(true);
+              }
+            : null
+        }
+        onClose={() => setShowRoleSwitchModal(false)}
+        title="Changer de profil"
+        subtitle="Choisissez le profil vers lequel vous souhaitez basculer."
+      />
+
+      <AddRoleModal
+        isOpen={showAddRoleModal}
+        onClose={() => setShowAddRoleModal(false)}
+        onRolesUpdated={() => setRolesVersion((v) => v + 1)}
+        onOpenProfile={openProfiles}
+      />
+
+      <ReAuthModal
+        isOpen={showReAuthModal}
+        email={localStorage.getItem("userEmail")}
+        loading={roleSwitchLoading}
+        onConfirm={async (encryptedPassword) => {
+          setRoleSwitchLoading(true);
+          try {
+            const response = await fetch(
+              `${process.env.REACT_APP_API_BASE_URL}/auth/switch-role`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  email: localStorage.getItem("userEmail"),
+                  password: encryptedPassword,
+                  selectedRole: pendingRoleSwitch,
+                }),
+              },
+            );
+            if (!response.ok) {
+              // Wrong password, or e.g. professor profile awaiting validation / offer expired
+              const errData = await response.json().catch(() => ({}));
+              // Student session: switching is forbidden (log out, then pick the profile at login)
+              if (isStudentSwitchForbidden(errData)) {
+                throw new Error(
+                  `${errData.message || "Changement de profil impossible depuis le profil élève."} ${STUDENT_SWITCH_HINT}`,
+                );
+              }
+              throw new Error(errData.message || "Mot de passe incorrect");
+            }
+            const authData = await response.json();
+            // Update localStorage with the new session (token carries every active role)
+            const newRole = storeSwitchRoleResponse(authData, pendingRoleSwitch);
+            setShowReAuthModal(false);
+            setPendingRoleSwitch(null);
+
+            // Map role to correct dashboard path
+            const dashName = dashboardNameForRole(newRole);
+            window.location.href = `/schoolchat/Principal/${dashName}/activities`;
+          } catch (err) {
+            throw err;
+          } finally {
+            setRoleSwitchLoading(false);
+          }
+        }}
+        onClose={() => {
+          setShowReAuthModal(false);
+          setPendingRoleSwitch(null);
+        }}
+      />
+
+      {/* Child Switch Auth Modal */}
+      <ReAuthModal
+        isOpen={showChildAuthModal}
+        email={localStorage.getItem("userEmail")}
+        loading={childAuthLoading}
+        onConfirm={async (encryptedPassword) => {
+          setChildAuthLoading(true);
+          try {
+            // Verify password by calling login
+            const response = await fetch(
+              `${process.env.REACT_APP_API_BASE_URL}/auth/login`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  email: localStorage.getItem("userEmail"),
+                  password: encryptedPassword,
+                }),
+              },
+            );
+            if (!response.ok) throw new Error("Mot de passe incorrect");
+
+            // Password verified - do the switch
+            setShowChildAuthModal(false);
+            if (pendingChildSwitch) {
+              doChildSwitch(pendingChildSwitch);
+              setPendingChildSwitch(null);
+            }
+          } catch (err) {
+            throw err;
+          } finally {
+            setChildAuthLoading(false);
+          }
+        }}
+        onClose={() => {
+          setShowChildAuthModal(false);
+          setPendingChildSwitch(null);
+        }}
+      />
 
       <Sidebar
         showSidebar={showSidebar}
@@ -477,16 +1302,13 @@ const Principal = () => {
         currentTheme={currentTheme}
         themes={themes}
         colorSchemes={colorSchemes}
-        userRole={userRole || "admin"}
-        userRoles={userRoles || []}
         onShowMessaging={handleShowMessaging}
         toggleSidebar={toggleSidebar}
+        restrictTabs={isParent && parentLimited ? PARENT_LIMITED_TABS : null}
       />
 
       <div
-        className={`main-content ${
-          showSidebar && !isMobile && !isCustomBreakpoint ? "with-sidebar" : ""
-        }`}
+        className={`main-content ${showSidebar && !isMobile && !isCustomBreakpoint ? "with-sidebar" : ""}`}
       >
         <div className="content-header fixed-header">
           <div className="header-left">
@@ -495,119 +1317,634 @@ const Principal = () => {
               onClick={toggleSidebar}
               aria-label="Toggle sidebar"
             >
-              <Menu size={24} />
+              <FontAwesomeIcon
+                icon={faBars}
+                style={{
+                  fontSize: 24,
+                }}
+              />
             </button>
-            <h1>{getTabDisplayName()}</h1>
           </div>
-          <div className="header-actions">
+          <div
+            className="header-actions"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              flexShrink: 0,
+              minWidth: 0,
+              overflow: "visible",
+            }}
+          >
+            {/* Install PWA button — always visible, no popup */}
+            <InstallButton />
+
+            {/* Refresh button - hidden on very small screens */}
+            <button
+              onClick={() => window.location.reload()}
+              className="hidden xs:flex p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Actualiser"
+              style={{
+                minHeight: "36px",
+                minWidth: "36px",
+              }}
+            >
+              <FontAwesomeIcon
+                icon={faArrowsRotate}
+                className="text-gray-500"
+                style={{
+                  fontSize: 16,
+                }}
+              />
+            </button>
+
+            {/* Contextual help for the current page (texts: src/help/helpContent.js) */}
+            <HelpButton
+              role={helpRoleFromSession(normalizedUserRole)}
+              page={helpPageFromTab(
+                isTabAllowedForRole(activeTab, normalizedUserRole)
+                  ? activeTab
+                  : "dashboard",
+              )}
+              isDark={isDark}
+            />
+
             <NotificationIcon />
 
-            <div className="language-dropdown">
+            {/* Role Switcher - only show if user has multiple roles.
+                Never in a STUDENT session: the student logs out and picks the profile at login. */}
+            {!isStudent && (() => {
+              const storedRoles = JSON.parse(
+                localStorage.getItem("availableRoles") || "[]",
+              );
+              // Shown for every non-admin account with something to do: switching between
+              // several profiles, or "Ajouter un profil" (a professor who is also a parent, etc.).
+              // A single-profile student has neither (the student profile is exclusive).
+              if (storedRoles.length <= 1 && (isAdmin || storedRoles.includes("ADMIN"))) return null;
+              const hasPending = (() => {
+                try {
+                  return (JSON.parse(localStorage.getItem("authResponse") || "{}").pendingRoles || []).length > 0;
+                } catch {
+                  return false;
+                }
+              })();
+              if (storedRoles.length <= 1 && !hasPending && getStoredAddableRoles().length === 0) return null;
+              const currentRole =
+                (normalizedUserRole || "").charAt(0).toUpperCase() +
+                (normalizedUserRole || "").slice(1);
+              return (
+                <button
+                  onClick={() => setShowRoleSwitchModal(true)}
+                  className="hidden sm:flex items-center gap-1 px-2 py-1.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
+                  title="Changer de role"
+                  style={{
+                    minHeight: "36px",
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={faGear}
+                    style={{
+                      fontSize: 14,
+                    }}
+                  />
+                  <span className="hidden sm:inline">{currentRole}</span>
+                </button>
+              );
+            })()}
+
+            {/* Child Switcher - only for parents with children */}
+            {isParent && !parentLimited && parentChildren.length > 0 && (
+              <div
+                style={{
+                  position: "relative",
+                }}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowChildDropdown((prev) => !prev);
+                  }}
+                  className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                  style={{
+                    minHeight: "36px",
+                    maxWidth: "160px",
+                  }}
+                  title="Changer d'enfant"
+                >
+                  <FontAwesomeIcon
+                    icon={faUser}
+                    style={{
+                      fontSize: 14,
+                    }}
+                  />
+                  <span className="truncate">
+                    {selectedChild
+                      ? `${selectedChild.prenom || ""} ${(selectedChild.nom || "").charAt(0)}.`
+                      : "Enfant"}
+                  </span>
+                  <FontAwesomeIcon
+                    icon={faChevronDown}
+                    style={{
+                      fontSize: 12,
+                    }}
+                  />
+                </button>
+                {showChildDropdown && (
+                  <>
+                    <div
+                      onClick={() => setShowChildDropdown(false)}
+                      style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 9998,
+                        background: "transparent",
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        right: 0,
+                        marginTop: "4px",
+                        background: "white",
+                        borderRadius: "12px",
+                        boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                        zIndex: 9999,
+                        minWidth: "220px",
+                        overflow: "hidden",
+                        border: "1px solid #e5e7eb",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "8px 12px",
+                          borderBottom: "1px solid #f3f4f6",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          Mes enfants
+                        </span>
+                      </div>
+                      {parentChildren.map((child) => (
+                        <button
+                          key={child.id}
+                          onClick={() => handleChildSwitch(child)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            width: "100%",
+                            padding: "10px 12px",
+                            border: "none",
+                            background:
+                              selectedChild?.id === child.id
+                                ? "#f3e8ff"
+                                : "white",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            fontSize: "13px",
+                            borderLeft:
+                              selectedChild?.id === child.id
+                                ? "3px solid #9333ea"
+                                : "3px solid transparent",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedChild?.id !== child.id)
+                              e.target.style.background = "#faf5ff";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedChild?.id !== child.id)
+                              e.target.style.background = "white";
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "28px",
+                              height: "28px",
+                              borderRadius: "50%",
+                              background:
+                                selectedChild?.id === child.id
+                                  ? "#9333ea"
+                                  : "#e9d5ff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color:
+                                selectedChild?.id === child.id
+                                  ? "white"
+                                  : "#7c3aed",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {(child.prenom || "?").charAt(0)}
+                          </div>
+                          <div
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontWeight: 600,
+                                color: "#1f2937",
+                              }}
+                            >
+                              {child.prenom} {child.nom}
+                            </div>
+                            {child.niveau && (
+                              <div
+                                style={{
+                                  fontSize: "11px",
+                                  color: "#9ca3af",
+                                }}
+                              >
+                                {child.niveau}
+                              </div>
+                            )}
+                          </div>
+                          {selectedChild?.id === child.id && (
+                            <span
+                              style={{
+                                marginLeft: "auto",
+                                color: "#9333ea",
+                                fontSize: "16px",
+                                flexShrink: 0,
+                              }}
+                            >
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div
+              className="language-dropdown"
+              style={{
+                position: "relative",
+              }}
+            >
               <button
                 className="language-toggle-btn"
-                onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowLanguageDropdown((prev) => !prev);
+                  setShowUserProfile(false);
+                }}
+                style={{
+                  touchAction: "manipulation",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "8px",
+                  minWidth: "44px",
+                  minHeight: "44px",
+                }}
+                type="button"
               >
                 <span className="flag">{languages[currentLanguage].flag}</span>
-                <ChevronDown size={16} />
+                <FontAwesomeIcon
+                  icon={faChevronDown}
+                  style={{
+                    fontSize: 16,
+                  }}
+                />
               </button>
               {showLanguageDropdown && (
-                <div className="language-dropdown-menu">
-                  {Object.entries(languages).map(([key, lang]) => (
-                    <button
-                      key={key}
-                      className={`language-option ${
-                        key === currentLanguage ? "active" : ""
-                      }`}
-                      onClick={() => handleLanguageChange(key)}
-                    >
-                      <span className="flag">{lang.flag}</span>
-                      <span>{lang.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div
+                    className="dropdown-backdrop"
+                    onClick={() => setShowLanguageDropdown(false)}
+                    style={{
+                      position: "fixed",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 9998,
+                      background: "transparent",
+                    }}
+                  />
+                  <div
+                    className="language-dropdown-menu"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      right: 0,
+                      marginTop: "4px",
+                      zIndex: 9999,
+                      minWidth: "120px",
+                      maxWidth: "200px",
+                    }}
+                  >
+                    {Object.entries(languages).map(([key, lang]) => (
+                      <button
+                        key={key}
+                        className={`language-option ${key === currentLanguage ? "active" : ""}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleLanguageChange(key);
+                        }}
+                        style={{
+                          touchAction: "manipulation",
+                          minHeight: "44px",
+                          width: "100%",
+                        }}
+                        type="button"
+                      >
+                        <span className="flag">{lang.flag}</span>
+                        <span>{lang.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
-            <div className="user-profile-dropdown">
+            <div
+              className="user-profile-dropdown"
+              style={{
+                position: "relative",
+              }}
+            >
               <button
                 className="user-profile-btn"
-                onClick={() => setShowUserProfile(!showUserProfile)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowUserProfile((prev) => !prev);
+                  setShowLanguageDropdown(false);
+                }}
+                style={{
+                  touchAction: "manipulation",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  whiteSpace: "nowrap",
+                  minWidth: "fit-content",
+                  maxWidth: "160px",
+                  minHeight: "44px",
+                  padding: "8px 12px",
+                }}
+                type="button"
               >
-                <div className="user-avatar">
-                  <User size={20} />
+                <div
+                  className="user-avatar"
+                  style={{
+                    flexShrink: 0,
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={faUser}
+                    style={{
+                      fontSize: 20,
+                    }}
+                  />
                 </div>
-                <div className="user-info">
-                  <span className="user-name">{user?.name || "User"}</span>
+                <div
+                  className="user-info"
+                  style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    minWidth: 0,
+                    fontSize: "14px",
+                  }}
+                >
+                  <span
+                    className="user-name"
+                    style={{
+                      display: "block",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {user?.name || "User"}
+                  </span>
                 </div>
-                <ChevronDown size={16} />
+                <FontAwesomeIcon
+                  icon={faChevronDown}
+                  style={{
+                    flexShrink: 0,
+                    fontSize: 16,
+                  }}
+                />
               </button>
               {showUserProfile && (
-                <div className="user-profile-menu">
-                  <div className="user-profile-header">
-                    <div className="user-avatar large">
-                      <User size={32} />
+                <>
+                  <div
+                    className="dropdown-backdrop"
+                    onClick={() => setShowUserProfile(false)}
+                    style={{
+                      position: "fixed",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 9998,
+                      background: "transparent",
+                    }}
+                  />
+                  <div
+                    className="user-profile-menu"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: window.innerWidth < 768 ? "fixed" : "absolute",
+                      top: window.innerWidth < 768 ? "60px" : "100%",
+                      right: window.innerWidth < 768 ? "12px" : 0,
+                      marginTop: "4px",
+                      zIndex: 9999,
+                      minWidth: "200px",
+                      maxWidth:
+                        window.innerWidth < 768
+                          ? "calc(100vw - 24px)"
+                          : "280px",
+                    }}
+                  >
+                    <div className="user-profile-header">
+                      <div className="user-avatar large">
+                        <FontAwesomeIcon
+                          icon={faUser}
+                          style={{
+                            fontSize: 32,
+                          }}
+                        />
+                      </div>
+                      <div className="user-details">
+                        <h4>{user?.name || "User"}</h4>
+                        <p className="user-role-text">
+                          {displayRole || "User"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="user-details">
-                      <h4>{user?.name || "User"}</h4>
-                      <p className="user-role-text">{userRole || "admin"}</p>
+                    <div className="user-profile-info">
+                      {user?.email && (
+                        <div className="info-item">
+                          <FontAwesomeIcon
+                            icon={faEnvelope}
+                            style={{
+                              fontSize: 16,
+                            }}
+                          />
+                          <span>{user.email}</span>
+                        </div>
+                      )}
+                      {user?.phone && (
+                        <div className="info-item">
+                          <FontAwesomeIcon
+                            icon={faPhone}
+                            style={{
+                              fontSize: 16,
+                            }}
+                          />
+                          <span>{user.phone}</span>
+                        </div>
+                      )}
+                      {user?.username && (
+                        <div className="info-item">
+                          <FontAwesomeIcon
+                            icon={faUser}
+                            style={{
+                              fontSize: 16,
+                            }}
+                          />
+                          <span>{user.username}</span>
+                        </div>
+                      )}
+                    </div>
+                    {isStudent && accountHasOtherRoles() && (
+                      <div
+                        className="flex items-start gap-2 text-xs"
+                        style={{
+                          padding: "8px 12px",
+                          margin: "0 8px 8px",
+                          borderRadius: 10,
+                          background: "#eef2ff",
+                          color: "#3730a3",
+                        }}
+                      >
+                        <FontAwesomeIcon
+                          icon={faCircleInfo}
+                          style={{ marginTop: 2 }}
+                        />
+                        <span>{STUDENT_SWITCH_HINT}</span>
+                      </div>
+                    )}
+                    <div className="user-profile-actions">
+                      <button
+                        className="profile-action-btn"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleTabChange("settings");
+                          setShowUserProfile(false);
+                        }}
+                        style={{
+                          touchAction: "manipulation",
+                          minHeight: "44px",
+                        }}
+                        type="button"
+                      >
+                        <FontAwesomeIcon
+                          icon={faGear}
+                          style={{
+                            fontSize: 16,
+                          }}
+                        />
+                        <span>Settings</span>
+                      </button>
+                      <button
+                        className="profile-action-btn logout"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleLogout();
+                        }}
+                        style={{
+                          touchAction: "manipulation",
+                          minHeight: "44px",
+                        }}
+                        type="button"
+                      >
+                        <FontAwesomeIcon
+                          icon={faRightFromBracket}
+                          style={{
+                            fontSize: 16,
+                          }}
+                        />
+                        <span>Logout</span>
+                      </button>
                     </div>
                   </div>
-                  <div className="user-profile-info">
-                    {user?.email && (
-                      <div className="info-item">
-                        <Mail size={16} />
-                        <span>{user.email}</span>
-                      </div>
-                    )}
-                    {user?.phone && (
-                      <div className="info-item">
-                        <Phone size={16} />
-                        <span>{user.phone}</span>
-                      </div>
-                    )}
-                    {user?.username && (
-                      <div className="info-item">
-                        <User size={16} />
-                        <span>{user.username}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="user-profile-actions">
-                    <button
-                      className="profile-action-btn"
-                      onClick={() => {
-                        handleTabChange("settings");
-                        setShowUserProfile(false);
-                      }}
-                    >
-                      <Settings size={16} />
-                      <span>Settings</span>
-                    </button>
-                    <button
-                      className="profile-action-btn logout"
-                      onClick={logout}
-                    >
-                      <LogOut size={16} />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                </div>
+                </>
               )}
             </div>
           </div>
         </div>
 
         <div
-          className={`content-body ${
-            isDark ? "bg-gray-900 text-white" : "bg-gray-50"
-          }`}
-          style={{ paddingTop: "100px" }}
+          className={`content-body ${isDark ? "bg-gray-900 text-white" : "bg-gray-50"}`}
+          style={{
+            paddingTop: isMobile ? "80px" : "100px",
+            // Reserve space for the fixed mobile bottom nav (~80px + safe-area inset) so the
+            // last elements of any page (e.g. a submit button) are never hidden behind it.
+            paddingBottom: isMobile
+              ? "calc(88px + env(safe-area-inset-bottom, 16px))"
+              : undefined,
+          }}
         >
+          {isParent && parentLimited && (
+            <div
+              className="mx-2 sm:mx-6 mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+              role="status"
+            >
+              <FontAwesomeIcon icon={faHourglassHalf} className="mt-0.5" />
+              <span>
+                Votre compte sera pleinement accessible dès qu'un de vos enfants
+                sera accepté dans une classe.
+              </span>
+            </div>
+          )}
           {renderContent()}
         </div>
       </div>
 
-      {showMessaging && activeTab !== "messages" && (
+      {/* Mobile Bottom Navigation - only on dashboard */}
+      {isMobile && (
+        <MobileBottomNav
+          activeTab={activeTab}
+          setActiveTab={handleTabChange}
+          isDark={isDark}
+          currentTheme={currentTheme}
+          colorSchemes={colorSchemes}
+          onLogout={handleLogout}
+          restrictTabs={isParent && parentLimited ? PARENT_LIMITED_TABS : null}
+        />
+      )}
+
+      {showMessaging && activeTab !== "messages" && !isMobile && !(isParent && parentLimited) && (
         <div className="messaging-sidebar">
           <MessagingInterface
             onClose={handleCloseMessaging}
@@ -615,12 +1952,11 @@ const Principal = () => {
             isDark={isDark}
             currentTheme={currentTheme}
             colorSchemes={colorSchemes}
-            userRole={userRole || "admin"}
+            userRole={normalizedUserRole || "admin"}
           />
         </div>
       )}
     </div>
   );
 };
-
 export default Principal;

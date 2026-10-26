@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:8486/scholchat";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Create axios instance with common configuration
 const messageApi = axios.create({
@@ -13,7 +13,7 @@ const messageApi = axios.create({
 
 // Request interceptor to handle different content types and authentication
 messageApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem("accessToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -274,7 +274,7 @@ class MessageService {
         ...messageData,
         ...(expediteur && { expediteur }),
         ...(destinataires && { destinataires }),
-        dateModification: this.formatDateForBackend(),
+        dateModification: new Date().toISOString(),
       };
 
       const response = await messageApi.put(
@@ -292,12 +292,12 @@ class MessageService {
    * @param {string} messageId - The ID of the message to delete
    * @returns {Promise<Object>} Success response
    */
-  async deleteMessage(messageId) {
+  async deleteMessage(messageId, scope = "me") {
     try {
-      await messageApi.delete(`/messages/${messageId}`);
-      return { success: true, message: "Message deleted successfully" };
+      await messageApi.delete(`/messages/${messageId}`, { params: { scope } });
+      return { success: true };
     } catch (error) {
-      this.handleError(error);
+      throw apiError(error, "Impossible de supprimer le message.");
     }
   }
 
@@ -421,23 +421,70 @@ class MessageService {
    * @param {string} messageId - The ID of the message to mark as read
    * @returns {Promise<Object>} Updated message object
    */
-  async markAsRead(messageId) {
+  async setStatutLu(messageId, utilisateurId, lu) {
     try {
-      const response = await messageApi.patch(`/messages/${messageId}/read`);
+      const response = await messageApi.post(
+        `/messages/${messageId}/statut/${utilisateurId}/lu`,
+        null,
+        { params: { lu } }
+      );
       return response.data;
     } catch (error) {
       this.handleError(error);
     }
   }
 
-  /**
-   * Mark a message as unread
-   * @param {string} messageId - The ID of the message to mark as unread
-   * @returns {Promise<Object>} Updated message object
-   */
-  async markAsUnread(messageId) {
+  async setStatutFavori(messageId, utilisateurId, favori) {
     try {
-      const response = await messageApi.patch(`/messages/${messageId}/unread`);
+      const response = await messageApi.post(
+        `/messages/${messageId}/statut/${utilisateurId}/favori`,
+        null,
+        { params: { favori } }
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getStatut(messageId, utilisateurId) {
+    try {
+      const response = await messageApi.get(
+        `/messages/${messageId}/statut/${utilisateurId}`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getFavoris(utilisateurId) {
+    try {
+      const response = await messageApi.get(
+        `/messages/utilisateur/${utilisateurId}/favoris`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async getNonLus(utilisateurId) {
+    try {
+      const response = await messageApi.get(
+        `/messages/utilisateur/${utilisateurId}/non-lus`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async compterNonLus(utilisateurId) {
+    try {
+      const response = await messageApi.get(
+        `/messages/utilisateur/${utilisateurId}/non-lus/count`
+      );
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -533,29 +580,165 @@ class MessageService {
 
     return this.createMessage(messageData);
   }
-  async starMessage(messageId) {
+
+  // ============ Messaging v2 (JWT-derived caller) ============
+  /** POST /messages — body { objet?, contenu?, destinataires, medias? }. */
+  async sendMessage(payload) {
     try {
-      const response = await messageApi.patch(`/messages/${messageId}`, {
-        starred: true,
-        dateModification: this.formatDateForBackend(),
-      });
+      const response = await messageApi.post("/messages", payload);
       return response.data;
     } catch (error) {
-      this.handleError(error);
+      throw apiError(error, "Échec de l'envoi du message.");
     }
   }
 
-  async unstarMessage(messageId) {
+  /** POST /messages/group — body { classIds, objet?, content?, copieRecipientIds?, medias? }. */
+  async sendGroupMessage(payload) {
     try {
-      const response = await messageApi.patch(`/messages/${messageId}`, {
-        starred: false,
-        dateModification: this.formatDateForBackend(),
+      const response = await messageApi.post("/messages/group", payload);
+      return response.data;
+    } catch (error) {
+      throw apiError(error, "Échec de l'envoi du message.");
+    }
+  }
+
+  /** People the caller may message. */
+  async getContacts() {
+    try {
+      const response = await messageApi.get("/messages/contacts");
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      throw apiError(error, "Impossible de charger vos contacts.");
+    }
+  }
+
+  /** Classes the caller may group-message. */
+  async getContactClasses() {
+    try {
+      const response = await messageApi.get("/messages/contacts/classes");
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      throw apiError(error, "Impossible de charger vos classes.");
+    }
+  }
+
+  /** POST /messages/bulk-delete { messageIds, scope: "me" | "everyone" }. */
+  async bulkDelete(messageIds, scope = "me") {
+    try {
+      const response = await messageApi.post("/messages/bulk-delete", {
+        messageIds,
+        scope,
       });
       return response.data;
     } catch (error) {
-      this.handleError(error);
+      throw apiError(error, "Impossible de supprimer la conversation.");
     }
   }
+
+  async getTrash(utilisateurId) {
+    try {
+      const response = await messageApi.get(
+        `/messages/utilisateur/${utilisateurId}/trash`,
+      );
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      throw apiError(error, "Impossible de charger la corbeille.");
+    }
+  }
+
+  async restoreMessage(messageId) {
+    try {
+      const response = await messageApi.post(`/messages/${messageId}/restore`);
+      return response.data;
+    } catch (error) {
+      throw apiError(error, "Impossible de restaurer le message.");
+    }
+  }
+
+  /** Permanently empties the CALLER's trash only. */
+  async emptyTrash() {
+    try {
+      await messageApi.delete("/messages/trash/cleanup");
+      return true;
+    } catch (error) {
+      throw apiError(error, "Erreur lors du vidage de la corbeille.");
+    }
+  }
+
+  // ============ Message attachments ============
+  /** POST /media/presigned-url -> { url, fileName, filePath, ... } */
+  async requestMediaUpload({ fileName, contentType, mediaType, ownerId }) {
+    try {
+      const response = await messageApi.post("/media/presigned-url", {
+        fileName,
+        contentType,
+        mediaType,
+        ownerId,
+        documentType: "messages",
+      });
+      return response.data;
+    } catch (error) {
+      throw apiError(error, "Impossible de préparer l'envoi du fichier.");
+    }
+  }
+
+  /**
+   * PUT the bytes to the presigned URL; falls back to POST /media/proxy-upload
+   * when the direct upload fails (CORS / network).
+   */
+  async uploadToPresignedUrl(url, file, contentType, onProgress) {
+    const progress = (e) => {
+      if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    try {
+      await axios.put(url, file, {
+        headers: { "Content-Type": contentType },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        onUploadProgress: progress,
+      });
+      return;
+    } catch (directError) {
+      console.warn("Direct upload failed, using proxy-upload:", directError?.message);
+    }
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("presignedUrl", url);
+      formData.append("contentType", contentType);
+      await messageApi.post("/media/proxy-upload", formData, {
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        onUploadProgress: progress,
+      });
+    } catch (error) {
+      throw apiError(error, "Échec du téléversement du fichier.");
+    }
+  }
+
+  /** GET /media/download-by-path?filePath= -> fresh URL for an attachment. */
+  async resolveMediaUrl(filePath) {
+    try {
+      const response = await messageApi.get("/media/download-by-path", {
+        params: { filePath },
+      });
+      return response.data?.url || null;
+    } catch (error) {
+      throw apiError(error, "Fichier indisponible.");
+    }
+  }
+}
+
+/** Error carrying the server's French message (403/400/404 bodies). */
+function apiError(error, fallback) {
+  const message =
+    error?.response?.data?.message ||
+    (typeof error?.response?.data === "string" ? error.response.data : null) ||
+    fallback;
+  const err = new Error(message);
+  err.status = error?.response?.status;
+  err.code = error?.response?.data?.code;
+  return err;
 }
 
 export const messageService = new MessageService();

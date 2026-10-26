@@ -1,335 +1,156 @@
-import React, { useState, useEffect } from "react";
-import { Lock, KeyRound, Eye, EyeOff } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faCircleCheck, faKey, faLock, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
+import {
+  Alert,
+  AuthShell,
+  BrandLogo,
+  Button,
+  PasswordChecklist,
+  PasswordField,
+  StatusIcon,
+  passwordIsValid,
+} from "../components/frontoffice/ui";
 
-const PasswordPage = () => {
+/**
+ * Choice of the password after the account activation (activation link → AccountActivation, or
+ * e-mailed code → VerifyAccount). Router state: { email, activationToken }.
+ * Process unchanged: POST /auth/registerPassword {email, passeAccess, type} with
+ * Authorization: Bearer <activationToken>, then the login page.
+ */
+const PasswordPage = ({ theme }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const userEmail = location.state?.email || "";
+  const activationToken = location.state?.activationToken || "";
   const [passeAccess, setPasseAccess] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
-  const [alertType, setAlertType] = useState("");
+  const [message, setMessage] = useState(
+    activationToken ? { text: "", type: "" } : { text: "Lien incomplet : aucun jeton d'activation trouvé.", type: "error" },
+  );
   const [loading, setLoading] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [activationToken, setActivationToken] = useState("");
-
-  useEffect(() => {
-    if (location.state) {
-      const { email, activationToken } = location.state;
-      if (email) {
-        setUserEmail(email);
-      }
-      if (activationToken) {
-        setActivationToken(activationToken);
-      }
-    } else {
-      showAlert("Aucun email ou token trouvé. Veuillez vous réinscrire.");
-    }
-  }, [location.state]);
-
-  const showAlert = (message, type = "error") => {
-    setAlertMessage(message);
-    setAlertType(type);
-    setTimeout(() => {
-      setAlertMessage("");
-      setAlertType("");
-    }, 3000);
-  };
+  const [success, setSuccess] = useState(false);
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-
-    if (passeAccess.length < 8) {
-      showAlert("Le mot de passe doit contenir au moins 8 caractères.");
-      setLoading(false);
+    if (!activationToken) return;
+    if (!passwordIsValid(passeAccess)) {
+      setMessage({ text: "Le mot de passe ne respecte pas tous les critères de sécurité.", type: "error" });
       return;
     }
-
     if (passeAccess !== confirmPassword) {
-      showAlert("Les mots de passe ne correspondent pas.");
-      setLoading(false);
+      setMessage({ text: "Les mots de passe ne correspondent pas.", type: "error" });
       return;
     }
-
-    const hasUppercase = /[A-Z]/.test(passeAccess);
-    const hasLowercase = /[a-z]/.test(passeAccess);
-    const hasNumber = /[0-9]/.test(passeAccess);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(passeAccess);
-
-    if (!(hasUppercase && hasLowercase && hasNumber && hasSpecialChar)) {
-      showAlert("Mot de passe trop faible. Utilisez des caractères variés.");
-      setLoading(false);
-      return;
-    }
-
+    setLoading(true);
+    setMessage({ text: "", type: "" });
     try {
-      const response = await fetch(
-        "http://localhost:8486/scholchat/auth/registerPassword",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${activationToken}`,
-          },
-          body: JSON.stringify({
-            email: userEmail,
-            passeAccess: passeAccess,
-            type: "utilisateur",
-          }),
-        }
-      );
-
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/auth/registerPassword`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${activationToken}` },
+        body: JSON.stringify({ email: userEmail, passeAccess, type: "utilisateur" }),
+      });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Échec de la définition du mot de passe"
-        );
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Échec de la définition du mot de passe.");
       }
-
-      showAlert("Mot de passe défini avec succès !", "success");
       localStorage.removeItem("userEmail");
-      setTimeout(() => {
-        navigate("/schoolchat/login", { replace: true });
-      }, 2000);
-    } catch (error) {
-      console.error("Registration error:", error);
-      showAlert(
-        error.message || "Erreur lors de la définition du mot de passe"
+      setSuccess(true);
+      setTimeout(
+        () =>
+          navigate("/schoolchat/login", {
+            replace: true,
+            state: { email: userEmail, message: "Mot de passe enregistré : vous pouvez vous connecter." },
+          }),
+        2000,
       );
+    } catch (error) {
+      setMessage({ text: error.message || "Erreur lors de la définition du mot de passe.", type: "error" });
+    } finally {
       setLoading(false);
-    }
-  };
-
-  const togglePasswordVisibility = (field) => {
-    if (field === "password") {
-      setShowPassword(!showPassword);
-    } else {
-      setShowConfirmPassword(!showConfirmPassword);
     }
   };
 
   return (
-    <div className="password-page">
-      {alertMessage && (
-        <div className={`alert-message ${alertType}`}>{alertMessage}</div>
-      )}
-      <div className="password-container">
-        <div className="password-icon">
-          <Lock size={64} strokeWidth={1.5} />
-        </div>
-        <h2>Définir un nouveau mot de passe</h2>
-        {userEmail && <p className="email-display">Pour: {userEmail}</p>}
-        <form onSubmit={handlePasswordSubmit} className="password-form">
-          <div className="input-group">
-            <label htmlFor="passeAccess">Mot de passe</label>
-            <div className="input-wrapper">
-              <KeyRound className="input-icon" size={20} />
-              <input
-                type={showPassword ? "text" : "password"}
-                id="passeAccess"
+    <AuthShell theme={theme}>
+      <div className="max-w-md mx-auto">
+        <BrandLogo className="mb-8" />
+        {success ? (
+          <div className="text-center">
+            <StatusIcon icon={faCircleCheck} tone="success" />
+            <h1 className="mt-6 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Mot de passe enregistré</h1>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">Votre compte est prêt. Redirection vers la connexion…</p>
+            <Button to="/schoolchat/login" state={{ email: userEmail }} className="mt-6">
+              Se connecter
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="text-center">
+              <StatusIcon icon={faLock} />
+              <h1 className="mt-6 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Choisissez votre mot de passe</h1>
+              <p className="mt-2 text-slate-500 dark:text-slate-400">Dernière étape pour sécuriser votre compte.</p>
+              {userEmail && (
+                <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800 px-4 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 break-all">
+                  {userEmail}
+                </p>
+              )}
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="mt-8 space-y-5" noValidate>
+              {message.text && <Alert type={message.type || "error"}>{message.text}</Alert>}
+              <PasswordField
+                label="Nouveau mot de passe"
+                name="password"
+                icon={faKey}
+                autoComplete="new-password"
                 value={passeAccess}
-                onChange={(e) => setPasseAccess(e.target.value)}
-                placeholder="Entrez votre mot de passe"
+                onChange={(e) => {
+                  setPasseAccess(e.target.value);
+                  if (message.type === "error" && activationToken) setMessage({ text: "", type: "" });
+                }}
+                placeholder="Minimum 8 caractères"
                 required
               />
-              <button
-                type="button"
-                className="visibility-toggle"
-                onClick={() => togglePasswordVisibility("password")}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            <p className="password-requirements">
-              Le mot de passe doit contenir:
-              <br />- Au moins 8 caractères - Une majuscule - Un chiffre - Un
-              caractère spécial
-            </p>
-          </div>
-          <div className="input-group">
-            <label htmlFor="confirm-password">Confirmer le mot de passe</label>
-            <div className="input-wrapper">
-              <KeyRound className="input-icon" size={20} />
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                id="confirm-password"
+              <PasswordField
+                label="Confirmer le mot de passe"
+                name="confirmPassword"
+                icon={faShieldHalved}
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirmez votre mot de passe"
+                placeholder="Répétez votre mot de passe"
+                error={confirmPassword && passeAccess !== confirmPassword ? "Les mots de passe ne correspondent pas." : ""}
                 required
               />
-              <button
-                type="button"
-                className="visibility-toggle"
-                onClick={() => togglePasswordVisibility("confirm")}
+              <PasswordChecklist password={passeAccess} />
+              <Button
+                type="submit"
+                className="w-full"
+                loading={loading}
+                loadingLabel="Enregistrement…"
+                disabled={!activationToken || !passwordIsValid(passeAccess) || passeAccess !== confirmPassword}
               >
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
-          <div className="button-container">
-            <button
-              type="submit"
-              className="submit-button"
-              disabled={loading}
-            >
-              {loading ? "Traitement en cours..." : "Définir le mot de passe"}
-            </button>
-          </div>
-        </form>
+                Valider mon mot de passe
+              </Button>
+            </form>
+            {!activationToken && (
+              <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                Recevez un code de vérification pour reprendre l'activation :{" "}
+                <Link to="/schoolchat/verifier-compte" className="font-semibold text-[#4F46E5] dark:text-indigo-300 hover:underline">
+                  Vérifier mon compte
+                </Link>
+              </p>
+            )}
+          </>
+        )}
+        <p className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
+          <Link to="/schoolchat/login" className="inline-flex items-center gap-2 text-sm font-medium text-[#4F46E5] dark:text-indigo-300 hover:underline">
+            <FontAwesomeIcon icon={faArrowLeft} /> Retour à la connexion
+          </Link>
+        </p>
       </div>
-      <style jsx>{`
-        .password-page {
-          min-height: 100vh;
-          padding: 2rem;
-          background: linear-gradient(135deg, #1a365d, #2d3748);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .password-container {
-          width: 100%;
-          max-width: 500px;
-          background: white;
-          padding: 3rem 2rem;
-          border-radius: 10px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-          text-align: center;
-        }
-        .password-icon {
-          width: 110px;
-          height: 110px;
-          margin: 0 auto 1.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #e8f5e9;
-          border-radius: 50%;
-          color: #4caf50;
-        }
-        .password-container h2 {
-          font-size: 1.8rem;
-          color: #333;
-          margin-bottom: 1rem;
-          font-weight: 600;
-          text-align: center;
-        }
-        .email-display {
-          color: #555;
-          margin-bottom: 1.5rem;
-          font-weight: 500;
-        }
-        .input-group {
-          margin-bottom: 1.5rem;
-          text-align: left;
-        }
-        .input-group label {
-          display: block;
-          margin-bottom: 0.5rem;
-          color: #555;
-          font-weight: 500;
-        }
-        .input-wrapper {
-          position: relative;
-        }
-        .input-wrapper input {
-          width: 100%;
-          padding: 0.75rem 0.75rem 0.75rem 40px;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 1rem;
-        }
-        .input-icon {
-          position: absolute;
-          left: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #888;
-        }
-        .visibility-toggle {
-          position: absolute;
-          right: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #888;
-        }
-        .password-requirements {
-          font-size: 0.8rem;
-          color: #666;
-          margin-top: 0.5rem;
-          line-height: 1.4;
-        }
-        .button-container {
-          display: flex;
-          justify-content: center;
-          margin-top: 1.5rem;
-        }
-        .submit-button {
-          padding: 0.85rem 2rem;
-          background: #4caf50;
-          color: white;
-          border: none;
-          border-radius: 6px;
-          font-size: 1rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background 0.3s ease;
-          text-align: center;
-          width: 100%;
-        }
-        .submit-button:hover {
-          background: #45a049;
-        }
-        .submit-button:disabled {
-          background: #9e9e9e;
-          cursor: not-allowed;
-        }
-        .alert-message {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          padding: 1rem 1.5rem;
-          border-radius: 6px;
-          z-index: 1001;
-          animation: slideIn 0.3s ease-out;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          max-width: 400px;
-          text-align: left;
-        }
-        .alert-message.error {
-          background: #fff2f2;
-          color: #e53935;
-          border-left: 4px solid #e53935;
-        }
-        .alert-message.success {
-          background: #f1f8e9;
-          color: #2e7d32;
-          border-left: 4px solid #2e7d32;
-        }
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @media (max-width: 768px) {
-          .password-container {
-            margin: 1rem;
-            padding: 2rem 1.5rem;
-          }
-        }
-      `}</style>
-    </div>
+    </AuthShell>
   );
 };
 

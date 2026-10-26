@@ -15,7 +15,7 @@ import StudentDashboard from "./components/StudentDashboard/StudentDashboard";
 import ParentDashboard from "./components/ParentDashboard/ParentDashboard";
 import EmailDashboard from "./components/StudentDashboard/EmailDashboard";
 import { scholchatService } from "../../services/ScholchatService";
-import StudentParentStats from "./principale/StudentParentStats";
+import StudentParentStats from "./principale/shared/StudentParentStats";
 const Layoute = () => {
   // State management
   const [showSidebar, setShowSidebar] = useState(true);

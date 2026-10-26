@@ -1,4 +1,5 @@
 import axios from "axios";
+import { applyAuthInterceptors, handleAuthenticationError } from "../utils/axiosConfig";
 
 export const EtatDemandeAcces = {
   EN_ATTENTE: "EN_ATTENTE",
@@ -6,12 +7,16 @@ export const EtatDemandeAcces = {
   REJETEE: "REJETEE",
 };
 
+// Shared axios instance so all accederService calls go through auth interceptors
+const accederAxios = axios.create({
+  baseURL: process.env.REACT_APP_API_BASE_URL,
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
+});
+applyAuthInterceptors(accederAxios);
+
 class AccederService {
   constructor(baseUrl = null) {
-    this.baseUrl =
-      baseUrl ||
-      process.env.REACT_APP_API_BASE_URL ||
-      "http://localhost:8486/scholchat";
+    this.baseUrl = baseUrl || process.env.REACT_APP_API_BASE_URL;
     this.apiUrl = `${this.baseUrl}/acceder`;
   }
 
@@ -81,7 +86,7 @@ class AccederService {
   /**
    * Request access to a class with an activation code
    */
-  async demanderAcces({ utilisateurId, classeId, codeActivation }) {
+  async demanderAcces({ utilisateurId, classeId, codeActivation, estParent = false, eleveAssocieId = null }) {
     try {
       const actualUserId = utilisateurId || this.getUserId();
       if (!actualUserId) {
@@ -89,13 +94,15 @@ class AccederService {
       }
 
       console.log("Making POST request to:", `${this.apiUrl}/demandes`);
-      console.log("With params:", { actualUserId, classeId, codeActivation });
+      console.log("With params:", { actualUserId, classeId, codeActivation, estParent, eleveAssocieId });
 
-      const response = await axios.post(`${this.apiUrl}/demandes`, null, {
+      const response = await accederAxios.post(`${this.apiUrl}/demandes`, null, {
         params: {
           utilisateurId: actualUserId,
           classeId,
           codeActivation,
+          estParent,
+          eleveAssocieId,
         },
         headers: {
           "Content-Type": "application/json",
@@ -120,7 +127,7 @@ class AccederService {
         `${this.apiUrl}/classes/${classeId}/demandes`
       );
 
-      const response = await axios.get(
+      const response = await accederAxios.get(
         `${this.apiUrl}/classes/${classeId}/demandes`,
         {
           headers: {
@@ -138,13 +145,29 @@ class AccederService {
   }
 
   /**
+   * A user's own access requests (all states): the user, their parent or an admin.
+   * (The per-class endpoint is reserved to the class managers.)
+   */
+  async obtenirDemandesAccesUtilisateur(utilisateurId) {
+    try {
+      const actualUserId = utilisateurId || this.getUserId();
+      const response = await accederAxios.get(
+        `${this.apiUrl}/utilisateurs/${actualUserId}/demandes`
+      );
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
    * Get pending access requests for a specific class
    */
   async obtenirDemandesAccesEnAttentePourClasse(classeId) {
     try {
       console.log("Fetching pending access requests for class:", classeId);
 
-      const response = await axios.get(
+      const response = await accederAxios.get(
         `${this.apiUrl}/classes/${classeId}/demandes/pending`,
         {
           headers: {
@@ -176,7 +199,7 @@ class AccederService {
         `${this.apiUrl}/moderator/${actualModeratorId}/demandes`
       );
 
-      const response = await axios.get(
+      const response = await accederAxios.get(
         `${this.apiUrl}/moderator/${actualModeratorId}/demandes`,
         {
           headers: {
@@ -203,7 +226,7 @@ class AccederService {
         `${this.apiUrl}/demandes/${demandeId}/approve`
       );
 
-      const response = await axios.post(
+      const response = await accederAxios.post(
         `${this.apiUrl}/demandes/${demandeId}/approve`,
         null,
         {
@@ -237,7 +260,7 @@ class AccederService {
         `${this.apiUrl}/demandes/${demandeId}/reject`
       );
 
-      const response = await axios.post(
+      const response = await accederAxios.post(
         `${this.apiUrl}/demandes/${demandeId}/reject`,
         null,
         {
@@ -272,7 +295,7 @@ class AccederService {
         `${this.apiUrl}/${utilisateurId}/${classeId}`
       );
 
-      const response = await axios.delete(
+      const response = await accederAxios.delete(
         `${this.apiUrl}/${utilisateurId}/${classeId}`,
         {
           headers: {
@@ -299,7 +322,7 @@ class AccederService {
         `${this.apiUrl}/classes/${classeId}/utilisateurs`
       );
 
-      const response = await axios.get(
+      const response = await accederAxios.get(
         `${this.apiUrl}/classes/${classeId}/utilisateurs`,
         {
           headers: {
@@ -323,7 +346,7 @@ class AccederService {
     try {
       console.log("Fetching users with access for classes:", classeIds);
 
-      const response = await axios.get(`${this.apiUrl}/classes/utilisateurs`, {
+      const response = await accederAxios.get(`${this.apiUrl}/classes/utilisateurs`, {
         params: { classeIds },
         headers: {
           "Content-Type": "application/json",
@@ -356,7 +379,7 @@ class AccederService {
         `${this.apiUrl}/utilisateurs/${actualUserId}/classes`
       );
 
-      const response = await axios.get(
+      const response = await accederAxios.get(
         `${this.apiUrl}/utilisateurs/${actualUserId}/classes`,
         {
           headers: {
