@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import PublicationRightsService from "../../../../../services/PublicationRightsService";
 import { useTranslation } from "../../../../../hooks/useTranslation";
 import { NIVEAUX, NIVEAU_AUTRE } from "../../../../../constants/niveaux";
+import ScrollableSelect from "../../../../../components/common/ScrollableSelect";
 import { useAuth } from "../../../../../hooks/useAuth";
 import PaymentModal from "../../../../../components/modals/PaymentModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -450,29 +451,28 @@ const CreateClassContent = ({
                       <div className="relative">
                         <FontAwesomeIcon
                           icon={faGraduationCap}
-                          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10 pointer-events-none"
                         />
-                        <select
-                          name="niveau"
+                        <ScrollableSelect
                           value={formData.niveau}
-                          onChange={handleInputChange}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.niveau ? "border-red-500" : "border-gray-300"}`}
-                        >
-                          <option value="">
-                            {t(
-                              "classes.create.form.select.level",
-                              "Sélectionner un niveau",
-                            )}
-                          </option>
-                          {NIVEAUX.map((n) => (
-                            <option key={n} value={n}>
-                              {n}
-                            </option>
-                          ))}
-                          <option value={NIVEAU_AUTRE}>
-                            {t("classes.create.form.levelOther", "Autre")}
-                          </option>
-                        </select>
+                          onChange={(v) =>
+                            handleInputChange({ target: { name: "niveau", value: v } })
+                          }
+                          options={[
+                            ...NIVEAUX.map((n) => ({ value: n, label: n })),
+                            {
+                              value: NIVEAU_AUTRE,
+                              label: t("classes.create.form.levelOther", "Autre"),
+                            },
+                          ]}
+                          placeholder={t(
+                            "classes.create.form.select.level",
+                            "Sélectionner un niveau",
+                          )}
+                          ariaLabel={t("classes.create.form.level", "Niveau")}
+                          hasError={!!errors.niveau}
+                          className="w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        />
                       </div>
                       {formData.niveau === NIVEAU_AUTRE && (
                         <input

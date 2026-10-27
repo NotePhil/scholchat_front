@@ -10,6 +10,7 @@ import {
   NIVEAU_AUTRE,
   isNiveauStandard,
 } from "../../../../constants/niveaux";
+import ScrollableSelect from "../../../../components/common/ScrollableSelect";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendarDays,
@@ -347,23 +348,21 @@ const ClassEditModal = ({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Niveau *
                   </label>
-                  <select
+                  <ScrollableSelect
                     value={niveauSelect}
-                    onChange={(e) => {
-                      const v = e.target.value;
+                    onChange={(v) => {
                       setNiveauSelect(v);
                       handleInputChange("niveau", v === NIVEAU_AUTRE ? "" : v);
                     }}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.niveau ? "border-red-500" : "border-gray-300"}`}
-                  >
-                    <option value="">Sélectionner un niveau</option>
-                    {NIVEAUX.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                    <option value={NIVEAU_AUTRE}>Autre</option>
-                  </select>
+                    options={[
+                      ...NIVEAUX.map((n) => ({ value: n, label: n })),
+                      { value: NIVEAU_AUTRE, label: "Autre" },
+                    ]}
+                    placeholder="Sélectionner un niveau"
+                    ariaLabel="Niveau"
+                    hasError={!!validationErrors.niveau}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
                   {niveauSelect === NIVEAU_AUTRE && (
                     <input
                       type="text"
