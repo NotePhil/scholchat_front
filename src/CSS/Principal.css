@@ -640,10 +640,19 @@
    header. Switch to natural height here so the page flows normally and each
    screen (inbox / open thread) manages its own clearance. */
 @media (max-width: 768px) {
+  /* A definite height (not just min-height) so the chat pane's h-full chain
+     resolves: with height:auto the open conversation shrank to its content and
+     the composer floated mid-screen. It fills content-body (whose top padding
+     clears the fixed header, and .main-content's bottom padding the fixed
+     bottom nav); Principal.jsx drops content-body's bottom padding on this
+     tab so the page itself doesn't scroll. */
   .messages-content-container {
-    height: auto;
-    min-height: calc(100vh - 80px - 80px - env(safe-area-inset-bottom, 16px));
-    overflow: visible;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .content-body:has(.messages-content-container) {
+    overflow: hidden;
   }
 }
 

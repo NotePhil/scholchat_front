@@ -622,6 +622,18 @@ class MessageService {
     }
   }
 
+  /** Members of a class (GET /acceder/classes/{id}/utilisateurs). */
+  async getClassMembers(classeId) {
+    const response = await messageApi.get(`/acceder/classes/${classeId}/utilisateurs`);
+    return Array.isArray(response.data) ? response.data : [];
+  }
+
+  /** Class details, for its moderator (GET /classes/{id}). */
+  async getClassDetails(classeId) {
+    const response = await messageApi.get(`/classes/${classeId}`);
+    return response.data;
+  }
+
   /** POST /messages/bulk-delete { messageIds, scope: "me" | "everyone" }. */
   async bulkDelete(messageIds, scope = "me") {
     try {

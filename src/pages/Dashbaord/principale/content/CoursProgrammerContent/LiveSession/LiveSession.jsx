@@ -85,14 +85,13 @@ const LiveSession = ({
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
-  const mobileVideoSlotRef = useRef(null);
-  const desktopVideoSlotRef = useRef(null);
-  // Portal targets aren't available until after the first commit, so force
-  // one extra render once both slot divs exist.
-  const [videoSlotsReady, setVideoSlotsReady] = useState(false);
-  useEffect(() => {
-    setVideoSlotsReady(true);
-  }, []);
+  // Portal targets kept in state (callback refs): the slot divs only exist
+  // once the session screen renders (not during the loading/error screens),
+  // and a state update re-renders as soon as they're attached. Portaling into
+  // a not-yet-attached ref crashed the page (React error #200, white screen).
+  const [mobileVideoSlot, setMobileVideoSlot] = useState(null);
+  const [desktopVideoSlot, setDesktopVideoSlot] = useState(null);
+  const videoSlot = isDesktopLayout ? desktopVideoSlot : mobileVideoSlot;
   const sessionRef = useRef(null);
   const currentUserId = localStorage.getItem("userId");
   const userName =
@@ -583,7 +582,7 @@ const LiveSession = ({
           <div
             className={`w-full h-full ${mobileTab === "video" ? "block" : "hidden"}`}
           >
-            <div ref={mobileVideoSlotRef} className="w-full h-full" />
+            <div ref={setMobileVideoSlot} className="w-full h-full" />
           </div>
           {/* Content tab */}
           <div
@@ -650,7 +649,7 @@ const LiveSession = ({
           className={`flex flex-col transition-all duration-300 ${panelCollapsed ? "flex-1" : "flex-1 lg:w-0 lg:flex-none lg:basis-[55%]"}`}
         >
           <div className="flex-1 p-2">
-            <div ref={desktopVideoSlotRef} className="w-full h-full" />
+            <div ref={setDesktopVideoSlot} className="w-full h-full" />
           </div>
         </div>
         <div
@@ -721,7 +720,7 @@ const LiveSession = ({
           tab or desktop column) is currently active - reparented on layout
           change, never unmounted, so the live connection survives a resize
           instead of forcing a disconnect+rejoin. */}
-      {videoSlotsReady &&
+      {videoSlot &&
         createPortal(
           <JitsiRoom
             roomName={session?.roomName}
@@ -733,9 +732,7 @@ const LiveSession = ({
             mode={session?.mode}
             onHangup={isModerator ? handleEndSession : onClose}
           />,
-          isDesktopLayout
-            ? desktopVideoSlotRef.current
-            : mobileVideoSlotRef.current,
+          videoSlot,
         )}
     </div>,
     document.body,

@@ -36,11 +36,18 @@ const ComposeModal = ({
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [sending, setSending] = useState(false);
+  // Members (and moderator) of each selected class: recipients are picked
+  // among them, as in the original flow (class first, then the person).
+  const [classUsers, setClassUsers] = useState({});
   const attachments = useMessageAttachments();
 
-  // Group messaging is offered whenever GET /messages/contacts/classes returns
-  // classes — the server decides (member/moderator/creator/publication rights).
-  const canGroupMessage = true;
+  // "Message général" (whole class) is not offered to parents and students.
+  const userRole = (localStorage.getItem("userRole") || "").toUpperCase();
+  const canGeneralMessage = !(
+    userRole.includes("PARENT") ||
+    userRole.includes("ELEVE") ||
+    userRole.includes("STUDENT")
+  );
 
   // Who the caller may message (server-enforced: anything else is a 403).
   useEffect(() => {
@@ -64,22 +71,59 @@ const ComposeModal = ({
     };
   }, [currentUser]);
 
+  // Load the members of each newly selected class (once per class).
+  useEffect(() => {
+    let cancelled = false;
+    selectedClasses
+      .filter((id) => !(id in classUsers))
+      .forEach(async (classeId) => {
+        const [members, classe] = await Promise.all([
+          messageService.getClassMembers(classeId).catch(() => null),
+          messageService.getClassDetails(classeId).catch(() => null),
+        ]);
+        if (cancelled) return;
+        const list = Array.isArray(members) ? [...members] : null;
+        const moderator = classe?.moderator;
+        if (list && moderator?.id && !list.some((u) => u.id === moderator.id)) {
+          list.push(moderator);
+        }
+        setClassUsers((prev) => ({ ...prev, [classeId]: list }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClasses]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // People the caller may write to: all contacts, or only the members of the
+  // selected classes. If a class's member list can't be read, all contacts.
+  const classPeople = useMemo(() => {
+    if (selectedClasses.length === 0) return contacts;
+    const loaded = selectedClasses.map((id) => classUsers[id]);
+    if (loaded.some((l) => l === null)) return contacts;
+    const allowed = new Map(contacts.map((u) => [u.id, u]));
+    const me = localStorage.getItem("userId");
+    const seen = new Set();
+    return loaded
+      .flatMap((l) => l || [])
+      .filter((u) => u?.id && u.id !== me && allowed.has(u.id))
+      .filter((u) => (seen.has(u.id) ? false : seen.add(u.id)))
+      .map((u) => allowed.get(u.id));
+  }, [selectedClasses, classUsers, contacts]);
+
   const toggleClassSelection = (classeId) => {
     if (selectedClasses.includes(classeId)) {
-      const next = selectedClasses.filter((id) => id !== classeId);
-      setSelectedClasses(next);
-      if (next.length === 0) setIsGeneralMessage(false);
+      setSelectedClasses(selectedClasses.filter((id) => id !== classeId));
     } else {
       setSelectedClasses([...selectedClasses, classeId]);
     }
   };
 
-  const setMode = (general) => {
+  const toggleGeneralMessage = () => {
+    const general = !isGeneralMessage;
     setIsGeneralMessage(general);
     setErrorMessage("");
     if (general) {
       setNewMessage((prev) => ({ ...prev, destinataires: [] }));
-    } else {
       setSelectedClasses([]);
     }
   };
@@ -115,9 +159,13 @@ const ComposeModal = ({
 
   const hasText = !!newMessage.contenu?.trim();
   const hasMedia = attachments.medias.length > 0;
+  // Général: every class the caller can write to. Otherwise the chosen people,
+  // or — when no one is named — every member of the selected classes.
   const hasRecipients = isGeneralMessage
-    ? selectedClasses.length > 0
-    : newMessage.destinataires.length > 0 || ccRecipients.length > 0;
+    ? classesList.length > 0
+    : newMessage.destinataires.length > 0 || selectedClasses.length > 0;
+  const sendToClasses =
+    isGeneralMessage || newMessage.destinataires.length === 0;
   const canSend =
     !sending &&
     !attachments.uploading &&
@@ -133,9 +181,11 @@ const ComposeModal = ({
       const objet = newMessage.objet?.trim() || undefined;
       const medias = attachments.medias.length ? attachments.medias : undefined;
       let sent;
-      if (isGeneralMessage) {
+      if (sendToClasses) {
         sent = await messageService.sendGroupMessage({
-          classIds: selectedClasses,
+          classIds: isGeneralMessage
+            ? classesList.map((classe) => classe.id)
+            : selectedClasses,
           objet,
           content: newMessage.contenu || "",
           ...(ccRecipients.length > 0 && {
@@ -223,83 +273,97 @@ const ComposeModal = ({
         )}
 
         <div className="p-4 space-y-4">
-          {/* Individual vs class (group) message */}
-          {canGroupMessage && classesList.length > 0 && (
-            <div className="flex gap-2">
-              {[
-                {
-                  general: false,
-                  label: t("messaging.compose.individualMessage", "Message individuel"),
-                },
-                {
-                  general: true,
-                  label: t("messaging.conversations.classMessage", "Message à une classe"),
-                },
-              ].map((opt) => (
-                <button
-                  key={opt.label}
-                  type="button"
-                  onClick={() => setMode(opt.general)}
-                  className={`px-3 py-1.5 rounded-full text-sm border ${isGeneralMessage === opt.general ? "bg-blue-100 text-blue-800 border-blue-300" : isDark ? "border-gray-500 text-gray-300 hover:bg-gray-600" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+          {/* Message général: everyone in every class the caller can write to */}
+          {canGeneralMessage && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="generalMessage"
+                checked={isGeneralMessage}
+                onChange={toggleGeneralMessage}
+                className="rounded"
+              />
+              <label
+                htmlFor="generalMessage"
+                className={`text-sm ${isDark ? "text-gray-300" : "text-gray-700"}`}
+              >
+                {t(
+                  "messaging.compose.generalCheckbox",
+                  "Message général (envoyé à tous les utilisateurs de toutes vos classes)",
+                )}
+              </label>
             </div>
           )}
 
-          {isGeneralMessage && (
+          {/* Classes Selection (hidden for a general message) */}
+          {!isGeneralMessage && (
             <div>
               <label className={labelCls}>
                 {t("messaging.compose.classes", "Classes")}
               </label>
               <div className={fieldBox}>
                 <div className="flex flex-wrap gap-2">
-                  {classesList.map((classe) => (
-                    <button
-                      key={classe.id}
-                      onClick={() => toggleClassSelection(classe.id)}
-                      className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm border ${selectedClasses.includes(classe.id) ? "bg-blue-100 text-blue-800 border-blue-300" : isDark ? "border-gray-500 text-gray-300 hover:bg-gray-600" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
-                    >
-                      {selectedClasses.includes(classe.id) && (
-                        <FontAwesomeIcon icon={faCheck} style={{ fontSize: 14 }} />
-                      )}
-                      {classe.nom}
-                      {classe.niveau ? ` (${classe.niveau})` : ""}
-                    </button>
-                  ))}
+                  {loadingContacts ? (
+                    <FontAwesomeIcon
+                      icon={faArrowsRotate}
+                      className={`animate-spin ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                    />
+                  ) : classesList.length === 0 ? (
+                    <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                      {t("messaging.compose.noClasses", "Aucune classe disponible.")}
+                    </span>
+                  ) : (
+                    classesList.map((classe) => (
+                      <button
+                        key={classe.id}
+                        type="button"
+                        onClick={() => toggleClassSelection(classe.id)}
+                        className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm border ${selectedClasses.includes(classe.id) ? "bg-blue-100 text-blue-800 border-blue-300" : isDark ? "border-gray-500 text-gray-300 hover:bg-gray-600" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
+                      >
+                        {selectedClasses.includes(classe.id) && (
+                          <FontAwesomeIcon icon={faCheck} style={{ fontSize: 14 }} />
+                        )}
+                        {classe.nom}
+                        {classe.niveau ? ` (${classe.niveau})` : ""}
+                      </button>
+                    ))
+                  )}
                 </div>
                 <p className={`text-xs mt-2 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
                   {t(
-                    "messaging.compose.classesHint",
-                    "Le message sera envoyé à tous les membres des classes sélectionnées.",
+                    "messaging.compose.classesOrPeopleHint",
+                    "Sans destinataire précis, le message est envoyé à tous les membres des classes sélectionnées.",
                   )}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Main Recipients */}
-          {!isGeneralMessage && (
-            <div>
+          {/* Main Recipients (greyed out for a general message) */}
+          <div
+            className={isGeneralMessage ? "opacity-50 pointer-events-none select-none" : ""}
+            aria-disabled={isGeneralMessage}
+          >
               <label className={labelCls} htmlFor="compose-to">
                 {t("messaging.compose.to", "À")}
               </label>
               <div className={fieldBox}>
                 <ContactAutocomplete
                   inputId="compose-to"
-                  contacts={contacts}
+                  contacts={classPeople}
                   selected={newMessage.destinataires}
                   excludeIds={selectedIds}
                   onAdd={handleAddRecipient}
                   onRemove={handleRemoveRecipient}
                   isDark={isDark}
-                  loading={loadingContacts}
+                  loading={
+                    loadingContacts ||
+                    selectedClasses.some((id) => !(id in classUsers))
+                  }
                   placeholder={t("messaging.compose.toPlaceholder", "Tapez un nom ou un e-mail")}
                 />
               </div>
-            </div>
-          )}
+          </div>
 
           {/* CC Recipients */}
           <div>
@@ -309,7 +373,7 @@ const ComposeModal = ({
             <div className={fieldBox}>
               <ContactAutocomplete
                 inputId="compose-cc"
-                contacts={contacts}
+                contacts={classPeople}
                 selected={ccRecipients}
                 excludeIds={selectedIds}
                 onAdd={handleAddCcRecipient}

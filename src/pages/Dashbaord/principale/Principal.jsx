@@ -1910,8 +1910,12 @@ const Principal = () => {
             paddingTop: isMobile ? "80px" : "100px",
             // Reserve space for the fixed mobile bottom nav (~80px + safe-area inset) so the
             // last elements of any page (e.g. a submit button) are never hidden behind it.
+            // Messages fills the screen height itself (chat composer sits right
+            // above the bottom nav, cleared by .main-content's bottom padding).
             paddingBottom: isMobile
-              ? "calc(88px + env(safe-area-inset-bottom, 16px))"
+              ? activeTab === "messages"
+                ? 0
+                : "calc(88px + env(safe-area-inset-bottom, 16px))"
               : undefined,
           }}
         >
