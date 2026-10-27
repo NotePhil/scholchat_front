@@ -224,6 +224,14 @@ class ClassService {
   }
 
   /**
+   * Student capacity of the class (offer's "Élèves max" restriction):
+   * { classeId, elevesMax (null = unlimited), nombreEleves, complete }.
+   */
+  async obtenirCapacite(idClasse) {
+    return this.axiosRequest(`/classes/${idClasse}/capacite`, { method: "get" });
+  }
+
+  /**
    * Approves a pending class (changes status to ACTIF)
    * @param {string} idClasse - The class ID to approve
    * @returns {Promise<Object>} The approved class

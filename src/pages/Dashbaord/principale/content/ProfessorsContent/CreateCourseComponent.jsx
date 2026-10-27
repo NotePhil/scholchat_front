@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { coursService } from "../../../../../services/CoursService";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import { minioS3Service } from "../../../../../services/minioS3";
+import RichTextEditor from "../../../../../components/richtext/RichTextEditor";
+import { isRichHtmlEmpty, richHtmlToText } from "../../../../../components/richtext/sanitizeRichHtml";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -15,7 +17,6 @@ import {
   faCircleXmark,
   faFileLines,
   faFloppyDisk,
-  faPaperclip,
   faPencil,
   faPlus,
   faSpinner,
@@ -39,559 +40,6 @@ const courseSchema = yup.object().shape({
   references: yup.string(),
   restriction: yup.string().required("La restriction est requise"),
 });
-const RichTextEditor = ({
-  value,
-  onChange,
-  placeholder,
-  chapterIndex,
-  onFileAdd,
-}) => {
-  const editorRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const savedRangeRef = useRef(null);
-  const [pendingFiles, setPendingFiles] = useState([]);
-  const execCommand = (command, value = null) => {
-    document.execCommand(command, false, value);
-    handleContentChange();
-  };
-  const handleContentChange = () => {
-    if (editorRef.current) {
-      const htmlContent = editorRef.current.innerHTML;
-      onChange(htmlContent);
-    }
-  };
-  const saveSelection = () => {
-    const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-      savedRangeRef.current = selection.getRangeAt(0).cloneRange();
-    }
-  };
-  const restoreSelection = () => {
-    editorRef.current.focus();
-    if (savedRangeRef.current) {
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(savedRangeRef.current);
-    }
-  };
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      setTimeout(() => {
-        handleContentChange();
-      }, 10);
-      return;
-    }
-    if (e.key === " " || e.key === "Backspace" || e.key === "Delete") {
-      setTimeout(() => {
-        handleContentChange();
-      }, 10);
-    }
-  };
-  const insertNodeAtSavedRange = (node) => {
-    restoreSelection();
-    const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      // Ensure the range is inside the editor
-      if (editorRef.current.contains(range.commonAncestorContainer)) {
-        range.insertNode(node);
-        range.setStartAfter(node);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        savedRangeRef.current = range.cloneRange();
-        return;
-      }
-    }
-    editorRef.current.appendChild(node);
-  };
-  const handleFileInputChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-    for (const file of files) {
-      const timestamp = Date.now() + Math.random();
-      const fileId = `file_${timestamp}`;
-      if (file.type.startsWith("image/")) {
-        const imgContainer = document.createElement("div");
-        imgContainer.dataset.fileId = fileId;
-        imgContainer.style.position = "relative";
-        imgContainer.style.display = "inline-block";
-        imgContainer.style.margin = "8px";
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(file);
-        img.alt = file.name;
-        img.dataset.fileId = fileId;
-        img.style.maxWidth = "250px";
-        img.style.maxHeight = "200px";
-        img.style.width = "auto";
-        img.style.height = "auto";
-        img.style.objectFit = "contain";
-        img.style.borderRadius = "8px";
-        img.style.border = "1px solid #e2e8f0";
-        img.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.1)";
-        img.style.display = "block";
-        const controls = document.createElement("div");
-        controls.style.position = "absolute";
-        controls.style.top = "4px";
-        controls.style.right = "4px";
-        controls.style.display = "flex";
-        controls.style.gap = "2px";
-        controls.style.opacity = "0";
-        controls.style.transition = "opacity 0.2s";
-        controls.style.zIndex = "10";
-        const floatLeft = document.createElement("button");
-        floatLeft.innerHTML = "⬅️";
-        floatLeft.style.cssText =
-          "background: rgba(0,0,0,0.7); color: white; border: none; padding: 2px 4px; border-radius: 3px; font-size: 10px; cursor: pointer;";
-        floatLeft.title = "Texte à droite";
-        floatLeft.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          imgContainer.style.float = "left";
-          imgContainer.style.marginRight = "12px";
-          imgContainer.style.marginBottom = "8px";
-        };
-        const floatRight = document.createElement("button");
-        floatRight.innerHTML = "➡️";
-        floatRight.style.cssText =
-          "background: rgba(0,0,0,0.7); color: white; border: none; padding: 2px 4px; border-radius: 3px; font-size: 10px; cursor: pointer;";
-        floatRight.title = "Texte à gauche";
-        floatRight.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          imgContainer.style.float = "right";
-          imgContainer.style.marginLeft = "12px";
-          imgContainer.style.marginBottom = "8px";
-        };
-        const noFloat = document.createElement("button");
-        noFloat.innerHTML = "⬆️";
-        noFloat.style.cssText =
-          "background: rgba(0,0,0,0.7); color: white; border: none; padding: 2px 4px; border-radius: 3px; font-size: 10px; cursor: pointer;";
-        noFloat.title = "Centrer (pas de texte autour)";
-        noFloat.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          imgContainer.style.float = "none";
-          imgContainer.style.display = "block";
-          imgContainer.style.margin = "8px auto";
-        };
-        controls.appendChild(floatLeft);
-        controls.appendChild(noFloat);
-        controls.appendChild(floatRight);
-        imgContainer.appendChild(img);
-        imgContainer.appendChild(controls);
-        imgContainer.onmouseenter = () => (controls.style.opacity = "1");
-        imgContainer.onmouseleave = () => (controls.style.opacity = "0");
-        insertNodeAtSavedRange(imgContainer);
-      } else if (file.type.startsWith("video/")) {
-        const videoContainer = document.createElement("div");
-        videoContainer.dataset.fileId = fileId;
-        videoContainer.style.cssText =
-          "margin: 8px 0; display: inline-block; max-width: 100%;";
-        const video = document.createElement("video");
-        video.src = URL.createObjectURL(file);
-        video.controls = true;
-        video.dataset.fileId = fileId;
-        video.style.cssText =
-          "max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #e2e8f0; display: block;";
-        const caption = document.createElement("div");
-        caption.style.cssText =
-          "font-size: 11px; color: #6b7280; margin-top: 4px; text-align: center;";
-        caption.textContent = file.name;
-        videoContainer.appendChild(video);
-        videoContainer.appendChild(caption);
-        insertNodeAtSavedRange(videoContainer);
-      } else {
-        const linkContainer = document.createElement("div");
-        linkContainer.dataset.fileId = fileId;
-        linkContainer.style.cssText =
-          "margin: 8px 0; padding: 8px 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; gap: 8px;";
-        const icon = document.createElement("span");
-        icon.innerHTML = "📄";
-        icon.style.fontSize = "16px";
-        const link = document.createElement("span");
-        link.style.color = "#3b82f6";
-        link.style.fontWeight = "500";
-        link.textContent = file.name;
-        linkContainer.appendChild(icon);
-        linkContainer.appendChild(link);
-        insertNodeAtSavedRange(linkContainer);
-      }
-      setPendingFiles((prev) => [
-        ...prev,
-        {
-          id: fileId,
-          file,
-          name: file.name,
-          type: file.type,
-          timestamp,
-        },
-      ]);
-      onFileAdd && onFileAdd(fileId, file);
-    }
-    handleContentChange();
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-  const removePendingFile = (fileId) => {
-    // Remove from DOM
-    const elements = editorRef.current.querySelectorAll(
-      `[data-file-id="${fileId}"]`,
-    );
-    elements.forEach((el) => el.remove());
-
-    // Remove from pending files
-    setPendingFiles((prev) => prev.filter((file) => file.id !== fileId));
-    handleContentChange();
-  };
-  const downloadFile = async (file) => {
-    try {
-      const response = await fetch(file.url);
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = file.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-      console.error("Error downloading file:", error);
-      window.open(file.url, "_blank");
-    }
-  };
-  useEffect(() => {
-    if (editorRef.current && value !== editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = value || "";
-    }
-  }, [value]);
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const text = e.clipboardData.getData("text/plain");
-    const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-      const fragment = document.createDocumentFragment();
-      const lines = text.split("\n");
-      lines.forEach((line, index) => {
-        if (index > 0) {
-          fragment.appendChild(document.createElement("br"));
-        }
-        if (line.trim()) {
-          fragment.appendChild(document.createTextNode(line));
-        }
-      });
-      range.insertNode(fragment);
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
-    setTimeout(() => handleContentChange(), 10);
-  };
-  const handleInput = (e) => {
-    handleContentChange();
-  };
-  const handleDoubleClick = (e) => {
-    e.stopPropagation();
-
-    // Get click position
-    const rect = editorRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    // Create a range at the click position
-    const range = document.caretRangeFromPoint(x + rect.left, y + rect.top);
-    if (range) {
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      // Focus the editor
-      editorRef.current.focus();
-    }
-  };
-  return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden">
-      {pendingFiles.length > 0 && (
-        <div className="bg-blue-50 border-b border-blue-200 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <FontAwesomeIcon
-              icon={faPaperclip}
-              className="text-blue-600"
-              style={{
-                fontSize: 16,
-              }}
-            />
-            <span className="text-sm font-medium text-blue-800">
-              Fichiers en attente:
-            </span>
-          </div>
-          <div className="space-y-2">
-            {pendingFiles.map((file) => (
-              <div
-                key={file.id}
-                className="flex items-center justify-between bg-white p-2 rounded border"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">
-                    {file.type.startsWith("image/") ? "🖼️" : "📄"}
-                  </span>
-                  <span className="text-sm text-slate-700">{file.name}</span>
-                </div>
-                <button
-                  onClick={() => removePendingFile(file.id)}
-                  className="text-red-500 hover:text-red-700 p-1"
-                  title="Supprimer"
-                >
-                  <FontAwesomeIcon
-                    icon={faXmark}
-                    style={{
-                      fontSize: 14,
-                    }}
-                  />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap gap-1">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            execCommand("bold");
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600 font-bold"
-          title="Gras"
-        >
-          B
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            execCommand("italic");
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600 italic"
-          title="Italique"
-        >
-          I
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            execCommand("underline");
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600 underline"
-          title="Souligné"
-        >
-          U
-        </button>
-        <div className="w-px bg-slate-300 mx-1"></div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            execCommand("insertUnorderedList");
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600"
-          title="Liste à puces"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 6h13v2H8V6zM8 12h13v2H8v-2zm0 6h13v2H8v-2zM3 6h2v2H3V6zm0 6h2v2H3v-2zm0 6h2v2H3v-2z" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            execCommand("insertOrderedList");
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600"
-          title="Liste numérotée"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2v1zm1-9h1V4H2v1h1v3zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2v1zm5-6v2h14V6H7zm0 14h14v-2H7v2zm0-6h14v-2H7v2z" />
-          </svg>
-        </button>
-        <div className="w-px bg-slate-300 mx-1"></div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            execCommand("justifyLeft");
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600"
-          title="Aligner à gauche"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 3h18v2H3V3zm0 4h12v2H3V7zm0 4h18v2H3v-2zm0 4h12v2H3v-2zm0 4h18v2H3v-2z" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            execCommand("justifyCenter");
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600"
-          title="Centrer"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 3h18v2H3V3zm4 4h10v2H7V7zm-4 4h18v2H3v-2zm4 4h10v2H7v-2zm-4 4h18v2H3v-2z" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            execCommand("justifyRight");
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600"
-          title="Aligner à droite"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 3h18v2H3V3zm6 4h12v2H9V7zm-6 4h18v2H3v-2zm6 4h12v2H9v-2zm-6 4h18v2H3v-2z" />
-          </svg>
-        </button>
-        <div className="w-px bg-slate-300 mx-1"></div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            saveSelection();
-            fileInputRef.current?.click();
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600 flex items-center gap-1"
-          title="Insérer fichier/image (plusieurs fichiers possibles)"
-        >
-          <FontAwesomeIcon
-            icon={faPaperclip}
-            style={{
-              fontSize: 14,
-            }}
-          />
-          <span className="text-xs hidden sm:inline">Fichiers</span>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            execCommand("removeFormat");
-          }}
-          className="p-2 hover:bg-slate-200 rounded text-slate-600 text-xs"
-          title="Supprimer le formatage"
-        >
-          Clear
-        </button>
-      </div>
-
-      <div
-        ref={editorRef}
-        contentEditable
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        onClick={(e) => {
-          e.stopPropagation();
-          saveSelection();
-        }}
-        onKeyUp={saveSelection}
-        onDoubleClick={handleDoubleClick}
-        className="w-full min-h-[150px] p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-inset"
-        style={{
-          minHeight: "150px",
-          maxHeight: "300px",
-          overflowY: "auto",
-          lineHeight: "1.6",
-        }}
-        data-placeholder={placeholder}
-        suppressContentEditableWarning={true}
-      />
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
-        accept="image/*,video/*,.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx"
-        onChange={handleFileInputChange}
-        multiple
-      />
-
-      <style>{`
-        [contenteditable]:empty:before {
-          content: attr(data-placeholder);
-          color: #9ca3af;
-          font-style: italic;
-        }
-        [contenteditable] p {
-          margin: 0.5em 0;
-        }
-        [contenteditable] div {
-          margin: 0.25em 0;
-        }
-        [contenteditable] ul,
-        [contenteditable] ol {
-          margin: 0.5em 0;
-          padding-left: 2em;
-        }
-        [contenteditable] li {
-          margin: 0.25em 0;
-        }
-        [contenteditable] img {
-          max-width: 250px;
-          max-height: 200px;
-          width: auto;
-          height: auto;
-          object-fit: contain;
-          border-radius: 8px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          display: block;
-        }
-        [contenteditable] div[data-file-id] {
-          position: relative;
-          display: inline-block;
-          margin: 8px;
-        }
-        [contenteditable] div[data-file-id]:hover button {
-          opacity: 1 !important;
-        }
-        [contenteditable] div[data-file-id][style*="float: left"] {
-          float: left;
-          margin-right: 12px;
-          margin-bottom: 8px;
-        }
-        [contenteditable] div[data-file-id][style*="float: right"] {
-          float: right;
-          margin-left: 12px;
-          margin-bottom: 8px;
-        }
-        [contenteditable] br {
-          display: block;
-          margin: 0;
-          line-height: 1.2;
-        }
-        [contenteditable] a {
-          color: #3b82f6;
-          text-decoration: underline;
-        }
-        [contenteditable] a:hover {
-          color: #1d4ed8;
-        }
-      `}</style>
-    </div>
-  );
-};
 const ChapterCard = ({
   chapter,
   index,
@@ -607,11 +55,7 @@ const ChapterCard = ({
     if (text.length <= length) return text;
     return text.substring(0, length) + "...";
   };
-  const getPlainText = (html) => {
-    const div = document.createElement("div");
-    div.innerHTML = html;
-    return div.textContent || div.innerText || "";
-  };
+  const getPlainText = (html) => richHtmlToText(html || "");
   return (
     <div
       className={`bg-white border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow relative group ${loading ? "opacity-50 pointer-events-none" : ""}`}
@@ -737,6 +181,8 @@ const ChapterEditor = ({
   onSave,
   onCancel,
   onFileAdd,
+  onFileRemove,
+  pendingFiles,
 }) => {
   const [formData, setFormData] = useState({
     titre: "",
@@ -760,7 +206,7 @@ const ChapterEditor = ({
     if (!formData.titre.trim()) {
       newErrors.titre = "Le titre est requis";
     }
-    if (!formData.contenu.replace(/<[^>]*>/g, "").trim()) {
+    if (isRichHtmlEmpty(formData.contenu)) {
       newErrors.contenu = "Le contenu est requis";
     }
     setErrors(newErrors);
@@ -883,14 +329,15 @@ const ChapterEditor = ({
           <RichTextEditor
             value={formData.contenu}
             onChange={(content) =>
-              setFormData({
-                ...formData,
+              setFormData((prev) => ({
+                ...prev,
                 contenu: content,
-              })
+              }))
             }
             placeholder="Contenu détaillé du chapitre..."
-            chapterIndex={chapterNumber - 1}
             onFileAdd={onFileAdd}
+            onFileRemove={onFileRemove}
+            pendingFiles={pendingFiles}
           />
           {errors.contenu && (
             <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -1090,47 +537,87 @@ const CreateCourseComponent = ({
       }
     }
   }, [editMode, courseToEdit, setValue]);
+  const [uploadProgress, setUploadProgress] = useState(null); // { done, total, percent, name }
   const handleFileAdd = (fileId, file) => {
-    setPendingFiles((prev) => new Map(prev.set(fileId, file)));
+    setPendingFiles((prev) => new Map(prev).set(fileId, file));
   };
-  const uploadPendingFiles = async () => {
-    const uploadPromises = [];
+  const handleFileRemove = (fileId) => {
+    setPendingFiles((prev) => {
+      const next = new Map(prev);
+      next.delete(fileId);
+      return next;
+    });
+  };
+  // Uploads only the pending files still referenced by a chapter (a file whose
+  // placeholder was deleted from the text is not sent), with progress.
+  const uploadPendingFiles = async (chapters) => {
+    const allContent = chapters.map((c) => c.contenu || "").join("\n");
+    const toUpload = Array.from(pendingFiles.entries()).filter(([fileId]) =>
+      allContent.includes(`data-file-id="${fileId}"`),
+    );
     const fileMap = new Map();
-    for (const [fileId, file] of pendingFiles) {
-      const uploadPromise = (async () => {
+    if (toUpload.length === 0) return fileMap;
+    const totalBytes = toUpload.reduce((n, [, f]) => n + (f.size || 0), 0) || 1;
+    const loaded = new Map();
+    let done = 0;
+    const report = (name) =>
+      setUploadProgress({
+        done,
+        total: toUpload.length,
+        name,
+        percent: Math.min(
+          100,
+          Math.round(
+            (Array.from(loaded.values()).reduce((n, v) => n + v, 0) / totalBytes) * 100,
+          ),
+        ),
+      });
+    report(toUpload[0][1].name);
+    await Promise.all(
+      toUpload.map(async ([fileId, file]) => {
+        let documentType = "documents";
+        let mediaType = "DOCUMENT";
+        if (file.type.startsWith("image/")) {
+          documentType = "images";
+          mediaType = "IMAGE";
+        } else if (file.type.startsWith("video/")) {
+          documentType = "videos";
+          mediaType = "VIDEO";
+        }
+        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+        const uniqueFileName = `${Date.now()}_${cleanFileName}`;
         try {
-          let documentType = "documents";
-          let mediaType = "DOCUMENT";
-          if (file.type.startsWith("image/")) {
-            documentType = "images";
-            mediaType = "IMAGE";
-          } else if (file.type.startsWith("video/")) {
-            documentType = "videos";
-            mediaType = "VIDEO";
-          }
-          const timestamp = Date.now();
-          const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-          const uniqueFileName = `${timestamp}_${cleanFileName}`;
           const result = await minioS3Service.uploadFile(
-            new File([file], uniqueFileName, {
-              type: file.type,
-            }),
+            new File([file], uniqueFileName, { type: file.type }),
             mediaType,
             documentType,
+            null,
+            null,
+            (bytes) => {
+              loaded.set(fileId, Math.min(bytes, file.size));
+              report(file.name);
+            },
           );
-          const userId = minioS3Service.getValidUserId();
-          const expectedFilePath = `users/${userId}/${mediaType.toLowerCase()}/${documentType}/${uniqueFileName}`;
-          const downloadData =
-            await minioS3Service.generateDownloadUrlByPath(expectedFilePath);
-          fileMap.set(fileId, downloadData.downloadUrl);
+          loaded.set(fileId, file.size);
+          done += 1;
+          report(file.name);
+          const downloadData = await minioS3Service.generateDownloadUrlByPath(
+            result.filePath,
+          );
+          fileMap.set(fileId, {
+            url: downloadData.downloadUrl,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+          });
         } catch (error) {
           console.error(`Error uploading file ${file.name}:`, error);
-          throw error;
+          throw new Error(
+            `Échec de l'envoi de « ${file.name} » : ${error.message || "erreur réseau"}`,
+          );
         }
-      })();
-      uploadPromises.push(uploadPromise);
-    }
-    await Promise.all(uploadPromises);
+      }),
+    );
     return fileMap;
   };
   const updateContentWithUploadedFiles = (content, fileUrlMap) => {
@@ -1140,37 +627,50 @@ const CreateCourseComponent = ({
       "text/html",
     );
     const root = doc.getElementById("root");
+    const urlOf = (id) => fileUrlMap.get(id)?.url;
 
-    // Update images: data-file-id is on the <img> itself
+    // Images / videos carry data-file-id themselves
     root.querySelectorAll("img[data-file-id]").forEach((img) => {
-      const url = fileUrlMap.get(img.dataset.fileId);
-      if (url) img.src = url;
+      const url = urlOf(img.dataset.fileId);
+      if (url) img.setAttribute("src", url);
     });
-
-    // Update videos: data-file-id is on the <video> itself (inside a div wrapper)
     root.querySelectorAll("video[data-file-id]").forEach((video) => {
-      const url = fileUrlMap.get(video.dataset.fileId);
+      const url = urlOf(video.dataset.fileId);
       if (url) video.setAttribute("src", url);
     });
 
-    // Update file link containers: replace blob placeholder with real anchor
-    root.querySelectorAll("div[data-file-id]").forEach((div) => {
-      const url = fileUrlMap.get(div.dataset.fileId);
-      if (url) {
-        const nameSpan = div.querySelector("span:last-child");
-        const fileName =
-          nameSpan?.textContent ||
-          pendingFiles.get(div.dataset.fileId)?.name ||
-          "File";
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.target = "_blank";
-        anchor.style.cssText =
-          "color: #3b82f6; text-decoration: underline; font-weight: 500;";
-        anchor.textContent = fileName;
-        if (nameSpan) nameSpan.replaceWith(anchor);
-      }
+    // New attachment chips: name placeholder -> real link
+    root.querySelectorAll(".rc-attachment[data-file-id]").forEach((chip) => {
+      const info = fileUrlMap.get(chip.dataset.fileId);
+      const nameEl = chip.querySelector(".rc-attachment-name");
+      if (!info || !nameEl) return;
+      const anchor = doc.createElement("a");
+      anchor.href = info.url;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.setAttribute("data-file-name", info.name);
+      anchor.setAttribute("data-file-type", info.type || "");
+      anchor.setAttribute("data-file-size", String(info.size || ""));
+      anchor.textContent = info.name;
+      nameEl.replaceWith(anchor);
     });
+
+    // Legacy file blocks: replace the name span with a link
+    root
+      .querySelectorAll("div[data-file-id]:not(.rc-attachment):not(.rc-figure)")
+      .forEach((div) => {
+        const info = fileUrlMap.get(div.dataset.fileId);
+        if (!info || div.querySelector("img,video,a")) return;
+        const nameSpan = div.querySelector("span:last-child");
+        const anchor = doc.createElement("a");
+        anchor.href = info.url;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        anchor.setAttribute("data-file-name", info.name);
+        anchor.textContent = nameSpan?.textContent || info.name;
+        if (nameSpan) nameSpan.replaceWith(anchor);
+        else div.appendChild(anchor);
+      });
     return root.innerHTML;
   };
   const handleSaveChapter = (chapterData) => {
@@ -1246,10 +746,10 @@ const CreateCourseComponent = ({
         throw new Error("ID du professeur non trouvé");
       }
 
-      // Upload all pending files first
+      // Upload the pending files still used by a chapter
       let fileUrlMap = new Map();
       if (pendingFiles.size > 0) {
-        fileUrlMap = await uploadPendingFiles();
+        fileUrlMap = await uploadPendingFiles(savedChapters);
       }
 
       // Update chapter content with uploaded file URLs
@@ -1288,6 +788,7 @@ const CreateCourseComponent = ({
       } else {
         await coursService.createCours(courseData);
       }
+      setPendingFiles(new Map());
       setShowSuccessModal(true);
       loadCourses();
       setTimeout(() => onBack(), 2000);
@@ -1298,6 +799,7 @@ const CreateCourseComponent = ({
     } finally {
       setIsSubmitting(false);
       setLoading(false);
+      setUploadProgress(null);
     }
   };
   const handleMatiereChange = (newSelectedIds) => {
@@ -1523,6 +1025,8 @@ const CreateCourseComponent = ({
                     onSave={handleSaveChapter}
                     onCancel={handleCancelEditor}
                     onFileAdd={handleFileAdd}
+                    onFileRemove={handleFileRemove}
+                    pendingFiles={pendingFiles}
                   />
                 </div>
               )}
@@ -1567,6 +1071,28 @@ const CreateCourseComponent = ({
             </div>
           </div>
 
+          {uploadProgress && uploadProgress.done < uploadProgress.total && (
+            <div
+              className="max-w-md mx-auto px-2 sm:px-0"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={uploadProgress.percent}
+              aria-label="Envoi des fichiers joints"
+            >
+              <div className="flex justify-between text-xs text-slate-600 mb-1">
+                <span className="truncate pr-2">{uploadProgress.name}</span>
+                <span>{uploadProgress.percent} %</span>
+              </div>
+              <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-600 transition-all"
+                  style={{ width: `${uploadProgress.percent}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 pt-6 pb-12 px-2 sm:px-0">
             <button
@@ -1596,7 +1122,9 @@ const CreateCourseComponent = ({
                       fontSize: 16,
                     }}
                   />
-                  Traitement...
+                  {uploadProgress && uploadProgress.done < uploadProgress.total
+                    ? `Envoi des fichiers ${uploadProgress.done}/${uploadProgress.total} — ${uploadProgress.percent} %`
+                    : "Traitement..."}
                 </>
               ) : (
                 <>

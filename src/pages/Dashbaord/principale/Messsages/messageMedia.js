@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { messageService } from "../../../../services/MessageService";
+import { useTranslation } from "../../../../hooks/useTranslation";
+import { defaultT } from "./chatUtils";
 
 export const MAX_ATTACHMENTS = 10;
 
@@ -17,21 +19,35 @@ export const mediaTypeOf = (contentType = "") => {
 export const mediaKind = (media) =>
   (media?.mediaType || mediaTypeOf(media?.contentType)).toUpperCase();
 
-export const formatFileSize = (bytes) => {
+export const formatFileSize = (bytes, t = defaultT) => {
   const n = Number(bytes);
   if (!n || Number.isNaN(n)) return "";
-  if (n < 1024) return `${n} o`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} Ko`;
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} Mo`;
-  return `${(n / (1024 * 1024 * 1024)).toFixed(1)} Go`;
+  if (n < 1024) return t("messaging.fileSize.bytes", "{{size}} o", { size: n });
+  if (n < 1024 * 1024) {
+    return t("messaging.fileSize.kb", "{{size}} Ko", {
+      size: (n / 1024).toFixed(0),
+    });
+  }
+  if (n < 1024 * 1024 * 1024) {
+    return t("messaging.fileSize.mb", "{{size}} Mo", {
+      size: (n / (1024 * 1024)).toFixed(1),
+    });
+  }
+  return t("messaging.fileSize.gb", "{{size}} Go", {
+    size: (n / (1024 * 1024 * 1024)).toFixed(1),
+  });
 };
 
 /** List preview for a message without text: "Photo" / "Vidéo" / "Document". */
-export const attachmentPreview = (medias) => {
+export const attachmentPreview = (medias, t = defaultT) => {
   if (!Array.isArray(medias) || medias.length === 0) return null;
   const kind = mediaKind(medias[0]);
   const label =
-    kind === "IMAGE" ? "Photo" : kind === "VIDEO" ? "Vidéo" : "Document";
+    kind === "IMAGE"
+      ? t("messaging.attachments.photo", "Photo")
+      : kind === "VIDEO"
+        ? t("messaging.attachments.video", "Vidéo")
+        : t("messaging.attachments.document", "Document");
   return {
     kind,
     label: medias.length > 1 ? `${label} (+${medias.length - 1})` : label,
@@ -45,7 +61,7 @@ const uniqueFileName = (name) => {
 };
 
 /** Contract upload flow: presigned-url (unique name) -> PUT (proxy fallback). */
-export const uploadMessageAttachment = async (file, onProgress) => {
+export const uploadMessageAttachment = async (file, onProgress, t = defaultT) => {
   const ownerId = localStorage.getItem("userId");
   const contentType = file.type || "application/octet-stream";
   const mediaType = mediaTypeOf(contentType);
@@ -55,7 +71,11 @@ export const uploadMessageAttachment = async (file, onProgress) => {
     mediaType,
     ownerId,
   });
-  if (!presign?.url) throw new Error("URL de téléversement manquante.");
+  if (!presign?.url) {
+    throw new Error(
+      t("messaging.attachments.missingUploadUrl", "URL de téléversement manquante."),
+    );
+  }
   await messageService.uploadToPresignedUrl(
     presign.url,
     file,
@@ -78,6 +98,7 @@ let keySeq = 0;
  * send button can be disabled while uploading.
  */
 export const useMessageAttachments = () => {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -89,8 +110,10 @@ export const useMessageAttachments = () => {
 
   const startUpload = useCallback((item) => {
     patch(item.key, { status: "uploading", progress: 0, error: null });
-    uploadMessageAttachment(item.file, (progress) =>
-      patch(item.key, { progress }),
+    uploadMessageAttachment(
+      item.file,
+      (progress) => patch(item.key, { progress }),
+      t,
     )
       .then((uploaded) =>
         patch(item.key, { status: "done", progress: 100, uploaded }),
@@ -98,10 +121,12 @@ export const useMessageAttachments = () => {
       .catch((err) =>
         patch(item.key, {
           status: "error",
-          error: err?.message || "Échec du téléversement",
+          error:
+            err?.message ||
+            t("messaging.attachments.uploadFailed", "Échec du téléversement"),
         }),
       );
-  }, []);
+  }, [t]);
 
   const addFiles = useCallback(
     (fileList) => {

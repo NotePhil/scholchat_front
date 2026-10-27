@@ -22,3 +22,11 @@ export const NIVEAUX = [
   "Master 1",
   "Master 2",
 ];
+
+// Option "Autre" proposée en fin de liste dans les formulaires de CLASSE : elle révèle un champ
+// libre et c'est le texte saisi (pas "Autre") qui est envoyé comme niveau. Le backend accepte
+// n'importe quel niveau de classe. (Les exercices, eux, restent limités à NIVEAUX.)
+export const NIVEAU_AUTRE = "Autre";
+
+/** true si le niveau fait partie de la liste standard (sinon : niveau personnalisé → "Autre"). */
+export const isNiveauStandard = (niveau) => NIVEAUX.includes(niveau);

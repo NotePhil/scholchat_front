@@ -34,8 +34,11 @@ import {
   faSpinner,
   faSun,
   faUser,
+  faUserShield,
   faUsersGear,
 } from "@fortawesome/free-solid-svg-icons";
+import ParentLinkRequests from "../../../../../components/parentLink/ParentLinkRequests";
+import { FOCUS_PARENT_LINKS_KEY } from "../../../../../services/parentLinkService";
 import AddRoleModal from "../../../../../components/modals/AddRoleModal";
 import { ROLE_CONFIG } from "../../../../../components/modals/RoleSelectorModal";
 import {
@@ -321,7 +324,7 @@ const SettingsContent = ({
   focusKey,
 }) => {
   const { updateProfile, normalizedUserRole } = useAuth();
-  const { language, changeLanguage } = useTranslation();
+  const { language, changeLanguage, t } = useTranslation();
   const roleLabel = ROLE_LABELS[normalizedUserRole] || "Utilisateur";
   const [activeTab, setActiveTab] = useState("profile");
   const [userProfile, setUserProfile] = useState(null);
@@ -336,6 +339,7 @@ const SettingsContent = ({
   const [addRoleMode, setAddRoleMode] = useState(null); // null | "docs" (re-send professor documents)
   const [, setRolesVersion] = useState(0);
   const profilesRef = useRef(null);
+  const parentLinksRef = useRef(null);
   const studentSession = isStudentSession();
   const [profileData, setProfileData] = useState({ nom: "", prenom: "", telephone: "", adresse: "" });
   const [passwordData, setPasswordData] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -401,6 +405,31 @@ const SettingsContent = ({
     const t = setTimeout(() => profilesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
     return () => clearTimeout(t);
   }, [focusSection, focusKey, loading]); // focusKey: a new click while already on Settings
+
+  // « Suivi parental » (adult student, read-only): opened from a PARENT_LINK_ACCEPTED / _REMOVED notification or from
+  // the e-mail link (/schoolchat/demandes-suivi-parental → sessionStorage flag, kept across the login).
+  let focusLinksFlag = false;
+  try {
+    focusLinksFlag = sessionStorage.getItem(FOCUS_PARENT_LINKS_KEY) === "1";
+  } catch {
+    focusLinksFlag = false;
+  }
+  const focusParentLinks = focusSection === "suivi-parental" || focusLinksFlag;
+  const showParentLinks = isStudent || normalizedUserRole === "student" || focusParentLinks;
+  useEffect(() => {
+    if (!focusParentLinks || loading) return undefined;
+    try {
+      sessionStorage.removeItem(FOCUS_PARENT_LINKS_KEY);
+    } catch {
+      // storage unavailable
+    }
+    setActiveTab("profile");
+    const timer = setTimeout(
+      () => parentLinksRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      150,
+    );
+    return () => clearTimeout(timer);
+  }, [focusParentLinks, focusKey, loading]);
 
   const startEdit = () => {
     setMessage({ text: "", type: "" });
@@ -571,6 +600,16 @@ const SettingsContent = ({
         {activeTab === "profile" && (
           <>
             <MessageBanner msg={message} />
+            {showParentLinks && (
+              <div ref={parentLinksRef} id="suivi-parental">
+                <SectionCard
+                  icon={faUserShield}
+                  title={t("parentLink.title")}
+                >
+                  <ParentLinkRequests isDark={isDark} />
+                </SectionCard>
+              </div>
+            )}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
               <SectionCard
                 icon={faUser}

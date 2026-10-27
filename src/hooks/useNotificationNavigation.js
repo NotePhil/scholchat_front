@@ -31,7 +31,7 @@ export const useNotificationNavigation = () => {
       }
       const target = getNotificationTarget(notification, normalizedUserRole);
       // A child's class request was decided: the parent's access may have changed.
-      if (/^CHILD_ACCESS_/.test(String(notification.type || "").toUpperCase())) {
+      if (/^(CHILD_ACCESS_|PARENT_LINK_)/.test(String(notification.type || "").toUpperCase())) {
         refreshParentAccessFlag();
       }
       if (!target) return null;

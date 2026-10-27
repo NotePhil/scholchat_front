@@ -3,7 +3,8 @@
 // GET /public/classes/apercu?code=XXXX&type=parent|eleve
 //   200 {classeId, nom, niveau, etablissementNom|null, accesMajeur, professeurNom|null}
 //   erreurs {code, message} : 404 CODE_CLASSE_INVALIDE, 400 CLASSE_NON_ACTIVE,
-//   400 CLASSE_RESERVEE_MINEURS, 400 CODE_CLASSE_REQUIS, 429 TROP_DE_TENTATIVES.
+//   400 CLASSE_RESERVEE_MINEURS, 400 CODE_CLASSE_REQUIS, 409 CLASSE_COMPLETE (élèves max de
+//   l'offre atteint), 429 TROP_DE_TENTATIVES.
 
 const API = process.env.REACT_APP_API_BASE_URL;
 
@@ -16,6 +17,7 @@ const FALLBACK_MESSAGES = {
   CLASSE_RESERVEE_MINEURS:
     "Cette classe est réservée aux élèves mineurs : c'est le parent qui doit faire la demande pour son enfant.",
   CODE_CLASSE_REQUIS: "Le code de la classe est requis.",
+  CLASSE_COMPLETE: "Cette classe est complète. Contactez l'enseignant.",
   TROP_DE_TENTATIVES: "Trop de tentatives. Patientez quelques minutes avant de réessayer.",
 };
 

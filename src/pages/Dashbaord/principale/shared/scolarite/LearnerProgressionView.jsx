@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { formatDuration } from "../../../../../hooks/useReadingTimer";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowTrendUp,
@@ -163,6 +164,11 @@ const LearnerProgressionView = ({
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className={`text-sm font-medium ${text} truncate`}>{c.titre}</span>
                         <span className="text-xs text-gray-500 flex-shrink-0">
+                          {c.tempsLectureSecondes > 0 && (
+                            <span className="mr-3" title="Temps de lecture">
+                              Lecture <strong className="text-gray-800">{formatDuration(c.tempsLectureSecondes)}</strong>
+                            </span>
+                          )}
                           Moyenne <strong className="text-gray-800">{fmtNote20(c.moyenne)}</strong>
                         </span>
                       </div>

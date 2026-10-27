@@ -2,6 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { activityFeedService } from "../../../../../services/ActivityFeedService";
 import { minioS3Service } from "../../../../../services/minioS3";
 import { useTranslation } from "../../../../../hooks/useTranslation";
+import CameraCaptureButton, { isTouchDevice } from "../../../../../components/common/CameraCaptureButton";
+import {
+  VideoThumbnail,
+  VideoViewerPlayer,
+  ViewerImage,
+} from "../../../../../components/media/VideoMedia";
 import { useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import {
@@ -17,6 +23,10 @@ import {
  * All API calls preserved, enhanced UI/UX
  */
 import { useAuth } from "../../../../../hooks/useAuth";
+import {
+  isParentLimited,
+  PARENT_ACCESS_CHANGED_EVENT,
+} from "../../../../../utils/parentAccess";
 
 /**
  * BrokenImagePlaceholder — shown when an image fails to load.
@@ -42,12 +52,18 @@ import {
   faSpinner,
   faTrashCan,
   faUserPlus,
-  faVideo,
   faXmark,
   faHouse,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../../utils/faIconAdapter";
-import { toLocalInputValue } from "../../../../../utils/dateUtils";
+import {
+  toLocalInputValue,
+  formatLocalDateTime,
+} from "../../../../../utils/dateUtils";
+import {
+  computeEventStatus,
+  EVENT_STATUS_META,
+} from "../../../../../utils/eventStatus";
 const Calendar = asIconComponent(faCalendarDays);
 const Clock = asIconComponent(faClock);
 const Home = asIconComponent(faHouse);
@@ -172,62 +188,74 @@ const ExistingMediaThumb = ({ mediaId }) => {
   );
 };
 
+/** Fresh displayable URL for a media: GET /media/{id}/download-url, else the proxy. */
+const resolveMediaUrl = (mediaId) => {
+  const token =
+    localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+  const proxy = `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`;
+  return fetch(
+    `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/download-url`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  )
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((d) => (d.url && !isDirectMinioUrl(d.url) ? d.url : proxy))
+    .catch(() => proxy);
+};
+
 /**
- * LightboxImage — resolves a presigned URL once when the lightbox opens.
+ * LightboxMedia — image or video shown in the viewer, with loading states.
+ * Uses the presigned URL embedded in the event when present, otherwise
+ * resolves one; "Réessayer" always fetches a fresh URL (expired presigned).
  */
-const LightboxImage = ({ mediaId, onClick }) => {
-  const [url, setUrl] = React.useState(null);
-  const [broken, setBroken] = React.useState(false);
+const LightboxMedia = ({ media, onClick }) => {
+  const mediaId = media && media.id;
+  const embedded =
+    media && media.presignedUrl && !isDirectMinioUrl(media.presignedUrl)
+      ? media.presignedUrl
+      : null;
+  const [url, setUrl] = React.useState(embedded);
   React.useEffect(() => {
-    if (!mediaId) return;
-    const token =
-      localStorage.getItem("accessToken") || localStorage.getItem("authToken");
-    fetch(
-      `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/download-url`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    )
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((d) => {
-        const resolved =
-          d.url && !isDirectMinioUrl(d.url)
-            ? d.url
-            : `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`;
-        setUrl(resolved);
-      })
-      .catch(() =>
-        setUrl(
-          `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`,
-        ),
-      );
-  }, [mediaId]);
-  if (!url)
+    let cancelled = false;
+    setUrl(embedded);
+    if (!embedded && mediaId)
+      resolveMediaUrl(mediaId).then((u) => !cancelled && setUrl(u));
+    return () => {
+      cancelled = true;
+    };
+  }, [mediaId, embedded]);
+  const refresh = () => (mediaId ? resolveMediaUrl(mediaId) : Promise.resolve(url));
+  const isVideo = media && media.type === "VIDEO";
+  if (isVideo)
     return (
-      <FontAwesomeIcon
-        icon={faSpinner}
-        className="w-10 h-10 text-white animate-spin"
+      <VideoViewerPlayer
+        key={mediaId}
+        src={url}
+        poster={media.posterUrl || undefined}
+        onRetry={refresh}
+        onClick={onClick}
+        className="rounded-xl overflow-hidden shadow-2xl"
+        style={{ width: "min(960px, calc(100% - 96px))" }}
+        maxVideoHeight="calc(100vh - 170px)"
       />
     );
-  if (broken)
+  if (!url)
     return (
-      <div className="w-64 h-48 rounded-xl overflow-hidden">
-        <BrokenImagePlaceholder />
+      <div className="flex flex-col items-center gap-3 text-white/90 text-sm">
+        <FontAwesomeIcon icon={faSpinner} className="w-10 h-10 animate-spin" />
+        Chargement de l'image…
       </div>
     );
   return (
-    <img
+    <ViewerImage
+      key={mediaId}
       src={url}
-      alt=""
+      onRetry={refresh}
       className="object-contain rounded-xl shadow-2xl"
       style={{
         maxWidth: "calc(100% - 96px)",
         maxHeight: "calc(100% - 80px)",
       }}
       onClick={onClick}
-      onError={() => setBroken(true)}
     />
   );
 };
@@ -240,9 +268,80 @@ const LightboxImage = ({ mediaId, onClick }) => {
  */
 const MediaSuspendedContext = React.createContext(false);
 
+let _stagedMediaSeq = 0;
+/** Wraps a picked File into a staged media entry (uploaded on save). */
+const stageMediaFile = (file) => ({
+  id: `m${Date.now()}-${++_stagedMediaSeq}`,
+  file,
+  url: URL.createObjectURL(file),
+  name: file.name,
+  type: file.type.startsWith("video/") ? "VIDEO" : "IMAGE",
+  contentType: file.type,
+  status: "pending", // pending | uploading | done | error
+  progress: 0,
+  result: null,
+  error: null,
+});
+
+/**
+ * Per-file upload state drawn over a staged media thumbnail:
+ * percentage + progress bar while uploading, error state on failure.
+ */
+const MediaUploadOverlay = ({ media, t }) => {
+  if (media.status === "uploading" || media.status === "done") {
+    const pct = media.status === "done" ? 100 : media.progress || 0;
+    return (
+      <div
+        className="absolute inset-0 rounded-xl bg-black/50 flex flex-col items-center justify-end p-2 pointer-events-none"
+        data-testid="media-upload-progress"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        aria-label={media.name}
+      >
+        <span className="text-white text-sm font-black drop-shadow mb-auto mt-auto">
+          {pct}%
+        </span>
+        <div className="w-full h-1.5 rounded-full bg-white/30 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-[width] duration-200 ${
+              media.status === "done" ? "bg-green-400" : "bg-blue-400"
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+  if (media.status === "error") {
+    return (
+      <div
+        className="absolute inset-0 rounded-xl bg-red-900/70 flex flex-col items-center justify-center p-2 text-center pointer-events-none"
+        data-testid="media-upload-error"
+        title={media.error || ""}
+      >
+        <span className="text-white text-[10px] font-black uppercase tracking-widest">
+          {t("activities.upload.failed", "Échec de l'envoi")}
+        </span>
+      </div>
+    );
+  }
+  if (media.status === "pending" && media.waiting) {
+    return (
+      <div className="absolute inset-0 rounded-xl bg-black/40 flex items-center justify-center pointer-events-none">
+        <span className="text-white text-[10px] font-black uppercase tracking-widest">
+          {t("activities.upload.waiting", "En attente…")}
+        </span>
+      </div>
+    );
+  }
+  return null;
+};
+
 /**
  * LazyMedia — resolves the presigned URL only when the element enters the viewport.
- * Images show a skeleton placeholder until visible; videos use VideoPlayer.
+ * Images show a skeleton placeholder until visible; videos use VideoThumbnail.
  */
 // Returns true if the URL is a direct internal MinIO URL that the browser cannot reach.
 // AWS S3 presigned URLs (amazonaws.com) are publicly reachable — do NOT proxy them.
@@ -268,7 +367,15 @@ const isDirectMinioUrl = (url) => {
   }
 };
 const LazyMedia = React.memo(
-  ({ mediaId, mediaType, presignedUrl, className, onClick, overlay }) => {
+  ({
+    mediaId,
+    mediaType,
+    presignedUrl,
+    posterUrl,
+    className,
+    onClick,
+    overlay,
+  }) => {
     const containerRef = React.useRef(null);
     // Always start null — the URL is set only when the element enters the viewport
     const [url, setUrl] = React.useState(null);
@@ -294,10 +401,10 @@ const LazyMedia = React.memo(
               localStorage.getItem("authToken");
             const isVideo = (mediaType || "").toUpperCase() === "VIDEO";
             if (isVideo) {
-              setUrl(
-                `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/content`,
-              );
-              setLoading(false);
+              // <video src> cannot send the bearer token: use a presigned URL.
+              resolveMediaUrl(mediaId)
+                .then(setUrl)
+                .finally(() => setLoading(false));
             } else {
               fetch(
                 `${process.env.REACT_APP_API_BASE_URL}/media/${mediaId}/download-url`,
@@ -338,7 +445,9 @@ const LazyMedia = React.memo(
         className={`relative overflow-hidden ${className}`}
         onClick={onClick}
       >
-        {!url ? (
+        {isVideo && posterUrl ? (
+          <VideoThumbnail src={url} poster={posterUrl} className="w-full h-full" />
+        ) : !url ? (
           // Skeleton placeholder — zero network cost
           <div className="w-full h-full bg-gray-200 dark:bg-gray-700 animate-pulse flex items-center justify-center">
             {loading && (
@@ -349,7 +458,7 @@ const LazyMedia = React.memo(
             )}
           </div>
         ) : isVideo ? (
-          <VideoPlayer src={url} className="w-full h-full object-cover" />
+          <VideoThumbnail src={url} className="w-full h-full" />
         ) : imgBroken ? (
           <BrokenImagePlaceholder />
         ) : (
@@ -370,228 +479,10 @@ const LazyMedia = React.memo(
   },
 );
 
-/**
- * VideoPlayer — shows a real first-frame thumbnail in preview mode.
- *
- * Phase 1 (preview): Loads video metadata + seeks to 0.5 s to paint a
- *   thumbnail onto a canvas. Only a few KB are fetched (metadata range).
- *   The canvas image is shown as the poster with a play-button overlay.
- *
- * Phase 2 (active): On click, fetches the presigned S3 URL and streams
- *   the video natively with controls. Uses preload="metadata".
- *
- * Auto-pauses when scrolled out of view.
- */
-const VideoPlayer = ({ src, className }) => {
-  const videoRef = useRef(null);
-  const thumbVideoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const containerRef = useRef(null);
-  const [streamUrl, setStreamUrl] = useState(null);
-  const [thumbnailUrl, setThumbnailUrl] = useState(null);
-  const [thumbError, setThumbError] = useState(false);
-  const [error, setError] = useState(false);
-  const [resolving, setResolving] = useState(false);
-  const [active, setActive] = useState(false);
-  // Pause thumbnail generation while a modal is open
-  const suspended = React.useContext(MediaSuspendedContext);
-
-  // ── Generate thumbnail from the first frame ────────────────────────────────
-  useEffect(() => {
-    if (!src || suspended) return;
-    const video = document.createElement("video");
-    video.crossOrigin = "anonymous";
-    video.preload = "metadata";
-    video.muted = true;
-    video.playsInline = true;
-    const cleanup = () => {
-      video.removeAttribute("src");
-      video.load();
-    };
-    video.onloadedmetadata = () => {
-      // Seek to 10% of duration (or 0.5 s, whichever is smaller) for a representative frame
-      video.currentTime = Math.min(0.5, video.duration * 0.1 || 0.5);
-    };
-    video.onseeked = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 360;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setThumbnailUrl(canvas.toDataURL("image/jpeg", 0.8));
-      } catch (e) {
-        // CORS or tainted canvas — fall back to styled preview
-        setThumbError(true);
-      }
-      cleanup();
-    };
-    video.onerror = () => {
-      setThumbError(true);
-      cleanup();
-    };
-    video.src = src;
-  }, [src, suspended]);
-  const activate = (e) => {
-    e.stopPropagation();
-    if (active || resolving) return;
-    setResolving(true);
-    setActive(true);
-    const token =
-      localStorage.getItem("accessToken") || localStorage.getItem("authToken");
-    const downloadUrlEndpoint = src.replace(/\/content$/, "/download-url");
-    fetch(downloadUrlEndpoint, {
-      headers: token
-        ? {
-            Authorization: `Bearer ${token}`,
-          }
-        : {},
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        setStreamUrl(data.url || src);
-        setResolving(false);
-      })
-      .catch(() => {
-        setStreamUrl(src);
-        setResolving(false);
-      });
-  };
-
-  // Auto-play once the stream URL is resolved
-  useEffect(() => {
-    if (streamUrl && videoRef.current) {
-      videoRef.current.play().catch(() => {});
-    }
-  }, [streamUrl]);
-
-  // Pause when scrolled out of view
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !streamUrl) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) video.pause();
-      },
-      {
-        threshold: 0.25,
-      },
-    );
-    observer.observe(video);
-    return () => observer.disconnect();
-  }, [streamUrl]);
-
-  // ── Phase 2: active player ─────────────────────────────────────────────────
-  if (active) {
-    if (error) {
-      return (
-        <div
-          className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}
-        >
-          <FontAwesomeIcon icon={faVideo} className="w-8 h-8 opacity-50" />
-          <span className="text-xs">Vidéo indisponible</span>
-        </div>
-      );
-    }
-    if (resolving || !streamUrl) {
-      return (
-        <div
-          className={`${className} flex flex-col items-center justify-center bg-gray-900 text-gray-400 gap-2`}
-        >
-          <FontAwesomeIcon
-            icon={faSpinner}
-            className="w-8 h-8 animate-spin opacity-60"
-          />
-          <span className="text-xs">Préparation...</span>
-        </div>
-      );
-    }
-    return (
-      <video
-        ref={videoRef}
-        src={streamUrl}
-        className={`${className} max-w-full`}
-        controls
-        playsInline
-        preload="metadata"
-        onError={() => setError(true)}
-        onClick={(e) => e.stopPropagation()}
-      />
-    );
-  }
-
-  // ── Phase 1: thumbnail preview ─────────────────────────────────────────────
-  const hasThumbnail = thumbnailUrl && !thumbError;
-  return (
-    <div
-      ref={containerRef}
-      className={`${className} relative flex items-center justify-center cursor-pointer group overflow-hidden`}
-      style={
-        hasThumbnail
-          ? {}
-          : {
-              backgroundColor: "#1a1a2e",
-            }
-      }
-      onClick={activate}
-      title="Lire la vidéo"
-    >
-      {/* Real first-frame thumbnail */}
-      {hasThumbnail ? (
-        <img
-          src={thumbnailUrl}
-          alt="aperçu vidéo"
-          className="absolute inset-0 w-full h-full object-cover"
-          draggable={false}
-        /> /* Fallback: film-strip pattern when thumbnail not yet ready or CORS blocked */
-      ) : (
-        <>
-          <div
-            className="absolute inset-0 opacity-15"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(255,255,255,.06) 28px,rgba(255,255,255,.06) 29px)",
-            }}
-          />
-          {!thumbError /* Subtle pulsing skeleton while thumbnail is being captured */ && (
-            <div className="absolute inset-0 bg-gray-800 animate-pulse" />
-          )}
-        </>
-      )}
-
-      {/* Dark gradient overlay so the play button is always readable */}
-      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors duration-200" />
-
-      {/* Play button */}
-      <div className="relative z-10 flex flex-col items-center gap-2">
-        <div className="w-16 h-16 rounded-full bg-white/25 group-hover:bg-white/40 backdrop-blur-sm border-2 border-white/50 flex items-center justify-center transition-all duration-200 group-hover:scale-110 shadow-2xl">
-          <svg
-            viewBox="0 0 24 24"
-            className="w-7 h-7 text-white fill-current ml-1"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </div>
-        <span className="text-white/80 text-xs font-medium tracking-wide select-none drop-shadow">
-          Lire la vidéo
-        </span>
-      </div>
-
-      {/* Video badge */}
-      <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
-        <FontAwesomeIcon icon={faVideo} className="w-3 h-3" />
-        <span>Vidéo</span>
-      </div>
-    </div>
-  );
-};
-
 // Module-level cache — survives component unmount/remount (navigation away and back)
 const _cache = {
+  // Fil mis en cache (utilisateur + enfant sélectionné / élève) : un autre fil ne doit pas le réutiliser.
+  feedKey: "",
   pages: {},
   // pageIndex -> processed activities array
   totalElements: 0,
@@ -604,13 +495,70 @@ const _cache = {
 };
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 const PAGE_SIZE = 10;
+
+/** "Prénom Nom" of a comment's author (server fields createdByPrenom / createdByNom). */
+const commentAuthorName = (c) =>
+  `${(c && c.createdByPrenom) || ""} ${(c && c.createdByNom) || ""}`.trim() ||
+  (c && c.createdById && _cache.userNames[c.createdById]?.name) ||
+  "";
+
+/** Initials ("AE") of a display name; "?" when unknown. */
+const initialsOf = (name) =>
+  (name || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join("") || "?";
+
 const ActivitiesContent = ({ tabData = null }) => {
   const { t } = useTranslation();
   const language = useSelector(
     (state) => state.language?.currentLanguage || "fr",
   );
   const isMobile = useSelector((state) => state.ui.isMobile);
-  const { isAdmin, isProfessor, isTutor, isGestionnaire, user } = useAuth();
+  const { isAdmin, isProfessor, isTutor, isGestionnaire, isParent, isStudent, user } =
+    useAuth();
+
+  // Parent sans enfant encore accepté (mode limité) : actualités générales seulement (événements
+  // publics sans classe ciblée — le backend filtre), sans eleveId, en lecture + likes / commentaires.
+  const [parentLimited, setParentLimited] = useState(
+    () => isParent && isParentLimited(),
+  );
+  useEffect(() => {
+    if (!isParent) {
+      setParentLimited(false);
+      return undefined;
+    }
+    setParentLimited(isParentLimited());
+    const onChanged = (e) => {
+      if (typeof e?.detail?.valid === "boolean") setParentLimited(!e.detail.valid);
+    };
+    window.addEventListener(PARENT_ACCESS_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(PARENT_ACCESS_CHANGED_EVENT, onChanged);
+  }, [isParent]);
+
+  // Parent : fil de l'enfant sélectionné (événements de ses classes + publics), rechargé quand on
+  // change d'enfant (événement "childChanged"). Élève : ses propres classes. Autres : inchangé.
+  const computeFeedEleveId = () =>
+    isParent
+      ? isParentLimited()
+        ? null
+        : localStorage.getItem("selectedChildId") || null
+      : isStudent
+        ? localStorage.getItem("userId") || null
+        : null;
+  const [feedEleveId, setFeedEleveId] = useState(computeFeedEleveId);
+  const feedEleveIdRef = useRef(feedEleveId);
+  feedEleveIdRef.current = feedEleveId;
+  const feedKey = `${localStorage.getItem("userId") || ""}|${isParent ? (parentLimited ? "PL" : "P") : isStudent ? "S" : "O"}|${feedEleveId || ""}`;
+  useEffect(() => {
+    const sync = () => setFeedEleveId(computeFeedEleveId());
+    sync();
+    window.addEventListener("childChanged", sync);
+    return () => window.removeEventListener("childChanged", sync);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isParent, isStudent, parentLimited]);
 
   // Role check: only professors and admins can create events
   const userRole = (localStorage.getItem("userRole") || "").toUpperCase();
@@ -662,6 +610,11 @@ const ActivitiesContent = ({ tabData = null }) => {
         bg: "bg-blue-50 dark:bg-blue-900/30",
       },
     ];
+    if (parentLimited) {
+      // Limited parent: joining an event is not available yet
+      const idx = base.findIndex((tab) => tab.key === "participating");
+      if (idx >= 0) base.splice(idx, 1);
+    }
     if (canCreateEvent) {
       // Insert "Mes publications" right after "Fil d'actualité"
       base.splice(1, 0, {
@@ -684,20 +637,20 @@ const ActivitiesContent = ({ tabData = null }) => {
       });
     }
     return base;
-  }, [canCreateEvent]);
+  }, [canCreateEvent, parentLimited]);
   const pluralize = (count, singular, plural) => {
     return `${count} ${count === 1 ? singular : plural}`;
   };
   const [activities, setActivities] = useState(() => {
-    // Restore from cache: flatten all pages in order
-    const pages = _cache.pages;
+    // Restore from cache: flatten all pages in order (only the cache of this same feed)
+    const pages = _cache.feedKey === feedKey ? _cache.pages : {};
     const keys = Object.keys(pages)
       .map(Number)
       .sort((a, b) => a - b);
     return keys.length > 0 ? keys.flatMap((k) => pages[k]) : [];
   });
   const [loadingActivities, setLoadingActivities] = useState(() => {
-    const keys = Object.keys(_cache.pages);
+    const keys = _cache.feedKey === feedKey ? Object.keys(_cache.pages) : [];
     return keys.length === 0;
   });
   // Pagination state
@@ -749,6 +702,19 @@ const ActivitiesContent = ({ tabData = null }) => {
   const [editUploadedImages, setEditUploadedImages] = useState([]);
   const [editUploading, setEditUploading] = useState(false);
   const editFileInputRef = useRef(null);
+  // AbortControllers of in-flight media uploads, keyed by staged media id.
+  const uploadAbortRef = useRef({});
+  // Staged media removed by the user while a save is running.
+  const removedMediaRef = useRef(new Set());
+  // Set when the create/edit modal is closed while uploads are running.
+  const saveAbortedRef = useRef(false);
+  useEffect(() => {
+    if (showCreateForm || editingActivity) return;
+    const pending = Object.values(uploadAbortRef.current);
+    if (pending.length === 0) return;
+    saveAbortedRef.current = true;
+    pending.forEach((c) => c.abort());
+  }, [showCreateForm, editingActivity]);
   const [userPublicationClassIds, setUserPublicationClassIds] = useState([]);
   const [classFilterId, setClassFilterId] = useState(() => {
     const saved = localStorage.getItem("selectedClassId");
@@ -922,9 +888,23 @@ const ActivitiesContent = ({ tabData = null }) => {
       currentIndex: index,
     });
   };
+  // Changement d'enfant (parent) : on repart de la page 0 pour le nouvel enfant.
+  const loadedFeedKeyRef = useRef(feedKey);
+  useEffect(() => {
+    if (loadedFeedKeyRef.current === feedKey) return;
+    loadedFeedKeyRef.current = feedKey;
+    _cache.pages = {};
+    _cache.feedKey = feedKey;
+    setActivities([]);
+    setCurrentPage(0);
+    setHasMore(true);
+    loadEvents(0, true, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedKey]);
   useEffect(() => {
     const now = Date.now();
     const hasFreshCache =
+      _cache.feedKey === feedKey &&
       Object.keys(_cache.pages).length > 0 &&
       now - _cache.timestamp < CACHE_TTL;
     if (hasFreshCache) {
@@ -936,7 +916,9 @@ const ActivitiesContent = ({ tabData = null }) => {
       setTotalElements(_cache.totalElements || 0);
       setLoadingActivities(false);
     } else {
-      loadEvents(0, true);
+      _cache.pages = {};
+      _cache.feedKey = feedKey;
+      loadEvents(0, true, true);
     }
     // Load publication rights once on mount (no form update — just IDs for permission checks)
     loadClasses({
@@ -1045,11 +1027,15 @@ const ActivitiesContent = ({ tabData = null }) => {
    */
   const loadEvents = async (page = 0, showSpinner = true, reset = false) => {
     if (showSpinner) setLoadingActivities(true);
+    const eleveId = feedEleveIdRef.current;
     try {
       const pagedResult = await activityFeedService.getActivitiesPaged(
         page,
         PAGE_SIZE,
+        eleveId,
       );
+      // L'enfant sélectionné a changé pendant le chargement : page obsolète, on l'ignore.
+      if (eleveId !== feedEleveIdRef.current) return;
       const events = pagedResult.content || [];
       const token =
         localStorage.getItem("accessToken") ||
@@ -1136,6 +1122,7 @@ const ActivitiesContent = ({ tabData = null }) => {
             type:
               (m.mediaType || "").toUpperCase() === "VIDEO" ? "VIDEO" : "IMAGE",
             presignedUrl: m.presignedUrl || null,
+            posterUrl: m.thumbnailUrl || m.posterUrl || null,
             fileName: m.fileName,
             filePath: m.filePath,
             fileType: m.fileType,
@@ -1154,6 +1141,7 @@ const ActivitiesContent = ({ tabData = null }) => {
             createdById: c.createdById,
             creationDate: c.creationDate,
             isCurrentUser: c.createdById === currentUserId,
+            authorName: commentAuthorName(c),
           }));
         const isLiked = interactions.some(
           (i) => i.type === "LIKE" && i.createdById === currentUserId,
@@ -1194,28 +1182,19 @@ const ActivitiesContent = ({ tabData = null }) => {
           titre: event.titre,
           description: event.description,
           content: event.description,
-          timestamp: event.creationDate
-            ? new Date(event.creationDate).toLocaleString("fr-FR", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : event.heureDebut
-              ? new Date(event.heureDebut).toLocaleString("fr-FR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "",
+          // En-tête : date de PUBLICATION (création du post), pas la date de début de l'événement.
+          timestamp: formatLocalDateTime(
+            event.datePublication || event.creationDate || event.heureDebut,
+          ),
+          datePublication: event.datePublication,
+          heureFin: event.heureFin,
+          etat: event.etat,
+          statut: event.statut,
           eventDetails: {
             title: event.titre,
             description: event.description,
             location: event.lieu,
-            status: event.etat,
+            status: computeEventStatus(event),
             startTime: event.heureDebut,
             endTime: event.heureFin,
             participantsCount: participants,
@@ -1252,7 +1231,7 @@ const ActivitiesContent = ({ tabData = null }) => {
       console.error("Error loading activities (page", page, "):", error);
       if (Object.keys(_cache.pages).length === 0) setActivities([]);
     } finally {
-      setLoadingActivities(false);
+      if (eleveId === feedEleveIdRef.current) setLoadingActivities(false);
     }
   };
   const closeImagePreview = () => {
@@ -1295,13 +1274,7 @@ const ActivitiesContent = ({ tabData = null }) => {
         }
         validFiles.push(file);
       }
-      const newMedia = validFiles.map((file) => ({
-        file,
-        url: URL.createObjectURL(file),
-        name: file.name,
-        type: file.type.startsWith("video/") ? "VIDEO" : "IMAGE",
-        contentType: file.type,
-      }));
+      const newMedia = validFiles.map(stageMediaFile);
       setUploadedImages((prev) => [...prev, ...newMedia]);
     } catch (error) {
       console.error("Error processing media:", error);
@@ -1315,8 +1288,101 @@ const ActivitiesContent = ({ tabData = null }) => {
       setUploading(false);
     }
   };
-  const removeImage = (index) => {
-    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
+  /** Removes a staged media; cancels its upload if it is in flight. */
+  const removeStagedMedia = (id, setList) => {
+    removedMediaRef.current.add(id);
+    uploadAbortRef.current[id]?.abort();
+    setList((prev) => prev.filter((m) => m.id !== id));
+  };
+  const removeImage = (id) => removeStagedMedia(id, setUploadedImages);
+
+  /**
+   * Uploads every staged media of `items` one by one, reporting per-file
+   * progress into the list held by `setList`. Already uploaded entries (from a
+   * previous attempt) are reused. Returns the uploaded media payloads; throws
+   * if any file failed so the save is aborted instead of silently dropping it.
+   */
+  const uploadStagedMedia = async (items, setList) => {
+    const patch = (id, p) =>
+      setList((prev) => prev.map((m) => (m.id === id ? { ...m, ...p } : m)));
+    removedMediaRef.current = new Set();
+    saveAbortedRef.current = false;
+    // Mark the files that will be uploaded as waiting.
+    setList((prev) =>
+      prev.map((m) => (m.result ? m : { ...m, status: "pending", waiting: true, error: null })),
+    );
+    const uploaded = [];
+    const failed = [];
+    for (const media of items) {
+      if (removedMediaRef.current.has(media.id)) continue;
+      if (media.result) {
+        uploaded.push(media.result);
+        continue;
+      }
+      const controller = new AbortController();
+      uploadAbortRef.current[media.id] = controller;
+      patch(media.id, { status: "uploading", progress: 0, waiting: false });
+      // Bring the tile being uploaded into view (the grid is at the bottom of
+      // a scrolling modal, under the fold when "Publier" is pressed).
+      setTimeout(() => {
+        try {
+          document
+            .querySelector(`[data-media-id="${media.id}"]`)
+            ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        } catch {}
+      }, 50);
+      try {
+        const total = media.file.size || 1;
+        const res = await minioS3Service.uploadFile(
+          media.file,
+          media.type === "VIDEO" ? "videos" : "images",
+          "general",
+          null,
+          null,
+          (loaded) =>
+            patch(media.id, {
+              progress: Math.min(99, Math.round((loaded / total) * 100)),
+            }),
+          controller.signal,
+        );
+        const result = {
+          fileName: res.fileName,
+          filePath: res.filePath,
+          contentType: res.contentType,
+          fileSize: res.fileSize,
+          mediaType: media.type, // 'IMAGE' or 'VIDEO'
+          bucketName: "scholchat",
+        };
+        if (removedMediaRef.current.has(media.id)) continue;
+        uploaded.push(result);
+        patch(media.id, { status: "done", progress: 100, result });
+      } catch (err) {
+        if (err?.cancelled || removedMediaRef.current.has(media.id)) continue;
+        console.error(`Error uploading ${media.name}:`, err);
+        failed.push(media.name);
+        patch(media.id, { status: "error", error: err?.message || String(err) });
+      } finally {
+        delete uploadAbortRef.current[media.id];
+      }
+      if (saveAbortedRef.current) break;
+    }
+    if (saveAbortedRef.current) {
+      const e = new Error("Save aborted");
+      e.saveAborted = true;
+      throw e;
+    }
+    if (failed.length > 0) {
+      const e = new Error(
+        t(
+          "activities.upload.someFailed",
+          "Échec de l'envoi de : {{files}}. Retirez ces fichiers ou réessayez.",
+          { files: failed.join(", ") },
+        ),
+      );
+      e.uploadFailed = true;
+      throw e;
+    }
+    return uploaded;
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1464,14 +1530,16 @@ const ActivitiesContent = ({ tabData = null }) => {
   const addComment = async (activityId) => {
     const comment = newComment[activityId];
     if (!comment?.trim()) return;
+    const tempId = `temp-${Date.now()}`;
     try {
       const userId = localStorage.getItem("userId");
       const newCommentObj = {
-        id: `temp-${Date.now()}`,
+        id: tempId,
         content: comment,
         createdById: userId,
         creationDate: new Date().toISOString(),
         isCurrentUser: true,
+        authorName: localStorage.getItem("userName") || localStorage.getItem("username") || "",
       };
       setActivities((prev) =>
         prev.map((activity) =>
@@ -1487,9 +1555,78 @@ const ActivitiesContent = ({ tabData = null }) => {
         ...prev,
         [activityId]: "",
       }));
-      await activityFeedService.commentOnEvent(activityId, comment);
+      const created = await activityFeedService.commentOnEvent(activityId, comment);
+      if (created && created.id) {
+        // Real id (needed to delete it) and the author's name as stored by the server.
+        setActivities((prev) =>
+          prev.map((activity) =>
+            activity.id === activityId
+              ? {
+                  ...activity,
+                  comments: activity.comments.map((c) =>
+                    c.id === tempId
+                      ? {
+                          ...c,
+                          id: created.id,
+                          creationDate: created.creationDate || c.creationDate,
+                          authorName: commentAuthorName(created) || c.authorName,
+                        }
+                      : c,
+                  ),
+                }
+              : activity,
+          ),
+        );
+      }
     } catch (error) {
       console.error("Error adding comment:", error);
+      setActivities((prev) =>
+        prev.map((activity) =>
+          activity.id === activityId
+            ? { ...activity, comments: activity.comments.filter((c) => c.id !== tempId) }
+            : activity,
+        ),
+      );
+    }
+  };
+
+  // Comment moderation: the comment's author, the publication's author and admins see the delete
+  // action (the server also lets managers of a targeted class delete; it answers 403 otherwise).
+  const [confirmDeleteComment, setConfirmDeleteComment] = useState(null);
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
+  const canDeleteComment = (activity, comment) => {
+    if (!comment?.id || String(comment.id).startsWith("temp-")) return false;
+    const me = localStorage.getItem("userId");
+    const admin = isAdmin || (localStorage.getItem("userRole") || "").toUpperCase().includes("ADMIN");
+    return admin || (!!me && (comment.createdById === me || activity.createurId === me));
+  };
+  const handleDeleteComment = async () => {
+    if (!confirmDeleteComment) return;
+    const { activityId, commentId } = confirmDeleteComment;
+    setDeletingCommentId(commentId);
+    try {
+      await activityFeedService.deleteComment(activityId, commentId);
+      setActivities((prev) =>
+        prev.map((activity) =>
+          activity.id === activityId
+            ? { ...activity, comments: activity.comments.filter((c) => c.id !== commentId) }
+            : activity,
+        ),
+      );
+      Object.keys(_cache.pages).forEach((k) => {
+        _cache.pages[k] = _cache.pages[k].map((a) =>
+          a.id === activityId ? { ...a, comments: (a.comments || []).filter((c) => c.id !== commentId) } : a,
+        );
+      });
+      setConfirmDeleteComment(null);
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      alert(
+        error?.response?.data?.message ||
+          t("activities.commentDelete.error", "Impossible de supprimer le commentaire."),
+      );
+    } finally {
+      setDeletingCommentId(null);
     }
   };
   const handleShare = (activityId) => {
@@ -1524,13 +1661,7 @@ const ActivitiesContent = ({ tabData = null }) => {
         }
         return true;
       })
-      .map((f) => ({
-        file: f,
-        url: URL.createObjectURL(f),
-        name: f.name,
-        type: f.type.startsWith("video/") ? "VIDEO" : "IMAGE",
-        contentType: f.type,
-      }));
+      .map(stageMediaFile);
     setEditUploadedImages((prev) => [...prev, ...newMedia]);
     setEditUploading(false);
   };
@@ -1566,24 +1697,11 @@ const ActivitiesContent = ({ tabData = null }) => {
       ];
       if (editUploadedImages.length > 0) {
         setEditUploading(true);
-        for (const media of editUploadedImages) {
-          try {
-            const result = await minioS3Service.uploadFile(
-              media.file,
-              media.type === "VIDEO" ? "videos" : "images",
-            );
-            uploadedMedia.push({
-              fileName: result.fileName,
-              filePath: result.filePath,
-              contentType: result.contentType,
-              fileSize: result.fileSize,
-              mediaType: media.type,
-              bucketName: "scholchat",
-            });
-          } catch (e) {
-            console.error("Upload error:", e);
-          }
-        }
+        const newMedia = await uploadStagedMedia(
+          editUploadedImages,
+          setEditUploadedImages,
+        );
+        uploadedMedia.push(...newMedia);
         setEditUploading(false);
       }
       await activityFeedService.editEvent(editingActivity.id, {
@@ -1598,8 +1716,13 @@ const ActivitiesContent = ({ tabData = null }) => {
       _cache.pages = {};
       await loadEvents(0, true, true);
     } catch (error) {
+      if (error?.saveAborted) return;
       console.error("Error updating event:", error);
-      alert(`Échec de la mise à jour: ${error.message}`);
+      alert(
+        error?.uploadFailed
+          ? error.message
+          : `Échec de la mise à jour: ${error.message}`,
+      );
     } finally {
       setEditLoading(false);
       setEditUploading(false);
@@ -1656,28 +1779,13 @@ const ActivitiesContent = ({ tabData = null }) => {
     }
     setLoading(true);
     try {
-      const uploadedMedia = [];
+      let uploadedMedia = [];
       if (uploadedImages.length > 0) {
         setUploading(true);
-        for (const media of uploadedImages) {
-          try {
-            const result = await minioS3Service.uploadFile(
-              media.file,
-              media.type === "VIDEO" ? "videos" : "images",
-            );
-            uploadedMedia.push({
-              fileName: result.fileName,
-              filePath: result.filePath,
-              contentType: result.contentType,
-              fileSize: result.fileSize,
-              mediaType: media.type,
-              // 'IMAGE' or 'VIDEO'
-              bucketName: "scholchat",
-            });
-          } catch (uploadError) {
-            console.error(`Error uploading ${media.name}:`, uploadError);
-          }
-        }
+        uploadedMedia = await uploadStagedMedia(
+          uploadedImages,
+          setUploadedImages,
+        );
         setUploading(false);
       }
       const eventData = {
@@ -1716,6 +1824,7 @@ const ActivitiesContent = ({ tabData = null }) => {
       _cache.pages = {};
       await loadEvents(0, true, true);
     } catch (error) {
+      if (error?.saveAborted) return;
       console.error("Error creating event:", error);
       const msg =
         error?.response?.data?.message ||
@@ -1737,9 +1846,9 @@ const ActivitiesContent = ({ tabData = null }) => {
       <div className="relative full-bleed-page overflow-x-hidden">
         {/* Facebook-like Layout: Sidebar + Main Content */}
         <div className={`w-full px-4 lg:px-6 ${isMobile ? "pb-32" : ""}`}>
-          <div className="flex gap-0 lg:gap-6">
+          <div className="flex gap-0 xl:gap-6">
             {/* Left Sidebar - Hidden on mobile, visible on desktop */}
-            <aside className="hidden lg:block lg:w-80 xl:w-96 lg:flex-shrink-0">
+            <aside className="hidden xl:block xl:w-80 2xl:w-96 xl:flex-shrink-0">
               <div className="sticky top-20 space-y-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
                 {sidebarTabs.map((item) => {
                   const Icon = item.icon;
@@ -1813,7 +1922,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                 className={`w-full ${isMobile ? "px-0 py-2" : "px-0 sm:px-4 py-4 sm:py-6"}`}
               >
                 {/* Mobile Header - Sticky, compact (filters moved to a popup) */}
-                <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 rounded-none shadow-md mb-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="xl:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 rounded-none shadow-md mb-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between gap-2 p-3">
                     <h1
                       className={`${isMobile ? "text-base" : "text-xl"} font-bold text-gray-900 dark:text-white truncate`}
@@ -1868,7 +1977,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                     exit={{
                       opacity: 0,
                     }}
-                    className="lg:hidden fixed inset-0 z-[1090] flex items-end bg-black/60 backdrop-blur-sm"
+                    className="xl:hidden fixed inset-0 z-[1090] flex items-end bg-black/60 backdrop-blur-sm"
                     onClick={(e) => {
                       if (e.target === e.currentTarget)
                         setShowFilterPopup(false);
@@ -2267,19 +2376,40 @@ const ActivitiesContent = ({ tabData = null }) => {
                               onChange={handleImageUpload}
                               className="hidden"
                             />
+                            {isTouchDevice() && (
+                              <div className="grid grid-cols-2 gap-3 mt-3">
+                                <CameraCaptureButton
+                                  kind="photo"
+                                  disabled={uploading}
+                                  label={t("activities.camera.takePhoto", "Prendre une photo")}
+                                  onFiles={(files) => handleImageUpload({ target: { files } })}
+                                  className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-black text-xs disabled:opacity-50"
+                                />
+                                <CameraCaptureButton
+                                  kind="video"
+                                  disabled={uploading}
+                                  label={t("activities.camera.recordVideo", "Filmer une vidéo")}
+                                  onFiles={(files) => handleImageUpload({ target: { files } })}
+                                  className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-black text-xs disabled:opacity-50"
+                                />
+                              </div>
+                            )}
                           </div>
 
                           {uploadedImages.length > 0 && (
                             <div className="grid grid-cols-3 gap-3 pt-2">
-                              {uploadedImages.map((media, index) => (
+                              {uploadedImages.map((media) => (
                                 <div
-                                  key={index}
+                                  key={media.id}
                                   className="relative group aspect-square"
+                                  data-testid="staged-media"
+                                  data-media-id={media.id}
                                 >
                                   {media.type === "VIDEO" ? (
-                                    <video
+                                    <VideoThumbnail
                                       src={media.url}
-                                      className="w-full h-full object-cover rounded-xl shadow-md"
+                                      compact
+                                      className="w-full h-full rounded-xl shadow-md"
                                     />
                                   ) : (
                                     <img
@@ -2288,15 +2418,30 @@ const ActivitiesContent = ({ tabData = null }) => {
                                       className="w-full h-full object-cover rounded-xl shadow-md"
                                     />
                                   )}
-                                  <button
-                                    onClick={() => removeImage(index)}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-lg hover:scale-110 transition-transform"
-                                  >
-                                    <FontAwesomeIcon
-                                      icon={faTrashCan}
-                                      className="w-3 h-3"
-                                    />
-                                  </button>
+                                  <MediaUploadOverlay media={media} t={t} />
+                                  {media.status !== "done" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeImage(media.id)}
+                                      title={
+                                        media.status === "uploading"
+                                          ? t("activities.upload.cancel", "Annuler l'envoi")
+                                          : t("activities.upload.remove", "Retirer")
+                                      }
+                                      aria-label={
+                                        media.status === "uploading"
+                                          ? t("activities.upload.cancel", "Annuler l'envoi")
+                                          : t("activities.upload.remove", "Retirer")
+                                      }
+                                      data-testid="staged-media-remove"
+                                      className="absolute -top-2 -right-2 z-10 bg-red-500 text-white p-1.5 rounded-lg shadow-lg hover:scale-110 transition-transform"
+                                    >
+                                      <FontAwesomeIcon
+                                        icon={media.status === "uploading" ? faXmark : faTrashCan}
+                                        className="w-3 h-3"
+                                      />
+                                    </button>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2353,7 +2498,16 @@ const ActivitiesContent = ({ tabData = null }) => {
                                   className="w-4 h-4 animate-spin"
                                 />
                                 <span>
-                                  {uploading ? "Upload..." : "Envoi..."}
+                                  {uploading
+                                    ? t(
+                                        "activities.upload.progressLabel",
+                                        "Envoi des médias {{done}}/{{total}}",
+                                        {
+                                          done: uploadedImages.filter((m) => m.status === "done").length,
+                                          total: uploadedImages.length,
+                                        },
+                                      )
+                                    : "Envoi..."}
                                 </span>
                               </>
                             ) : (
@@ -2372,6 +2526,20 @@ const ActivitiesContent = ({ tabData = null }) => {
                 )}
 
                 {/* Activities Feed */}
+                {parentLimited && (
+                  <div
+                    className="mb-3 flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200"
+                    role="status"
+                  >
+                    <FontAwesomeIcon icon={faGlobe} className="mt-0.5 w-4 h-4 flex-shrink-0" />
+                    <span>
+                      {t(
+                        "activities.parentLimitedBanner",
+                        "Actualités générales — les actualités des classes seront visibles dès qu'un enfant sera accepté",
+                      )}
+                    </span>
+                  </div>
+                )}
                 {/* Class filter banner */}
                 {classFilterId && (
                   <div className="mb-3 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-2">
@@ -2475,11 +2643,25 @@ const ActivitiesContent = ({ tabData = null }) => {
                                     </span>
                                   )}
                                 </div>
-                                <p
-                                  className={`${isMobile ? "text-[10px]" : "text-xs"} text-gray-500 dark:text-gray-400`}
-                                >
-                                  {activity.timestamp}
-                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p
+                                    className={`${isMobile ? "text-[10px]" : "text-xs"} text-gray-500 dark:text-gray-400`}
+                                  >
+                                    {activity.timestamp}
+                                  </p>
+                                  {(() => {
+                                    // Statut recalculé à l'affichage à partir des dates.
+                                    const st = computeEventStatus(activity);
+                                    const meta = st && EVENT_STATUS_META[st];
+                                    return meta ? (
+                                      <span
+                                        className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${meta.className}`}
+                                      >
+                                        {meta.label}
+                                      </span>
+                                    ) : null;
+                                  })()}
+                                </div>
                               </div>
                               {(() => {
                                 const currentUserId =
@@ -2570,7 +2752,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                                 {/* Dates — right on desktop, below on mobile */}
                                 {(activity.eventDetails?.startTime ||
                                   activity.eventDetails?.endTime) && (
-                                  <div className="flex items-center gap-1 sm:justify-end flex-shrink-0 flex-wrap">
+                                  <div className="flex items-center gap-1 sm:justify-end min-w-0 flex-wrap">
                                     <FontAwesomeIcon
                                       icon={faCalendarDays}
                                       className="w-3 h-3 flex-shrink-0 text-blue-500"
@@ -2635,9 +2817,8 @@ const ActivitiesContent = ({ tabData = null }) => {
                             <div className="w-full overflow-hidden">
                               {(() => {
                                 const medias = activity.medias;
-                                const imageIds = medias
-                                  .filter((m) => m.type === "IMAGE")
-                                  .map((m) => m.id);
+                                // Called as a plain function (not <MediaItem/>): a component
+                                // defined in render would remount tiles on every re-render.
                                 const MediaItem = ({
                                   media,
                                   index,
@@ -2645,63 +2826,58 @@ const ActivitiesContent = ({ tabData = null }) => {
                                   overlay,
                                 }) => (
                                   <LazyMedia
+                                    key={media.id}
                                     mediaId={media.id}
                                     mediaType={media.type}
                                     presignedUrl={media.presignedUrl || null}
+                                    posterUrl={media.posterUrl || null}
                                     className={`cursor-pointer group ${className}`}
                                     overlay={overlay}
-                                    onClick={() => {
-                                      if (media.type === "IMAGE") {
-                                        openImagePreview(
-                                          imageIds,
-                                          imageIds.indexOf(media.id),
-                                        );
-                                      }
-                                    }}
+                                    onClick={() =>
+                                      openImagePreview(medias, index)
+                                    }
                                   />
                                 );
                                 if (medias.length === 1)
-                                  return (
-                                    <MediaItem
-                                      media={medias[0]}
-                                      index={0}
-                                      className="w-full h-72 sm:h-96"
-                                    />
-                                  );
+                                  return MediaItem({
+                                    media: medias[0],
+                                    index: 0,
+                                    className: "w-full h-72 sm:h-96",
+                                  });
                                 if (medias.length === 2)
                                   return (
                                     <div className="flex gap-0.5 h-64 sm:h-80">
-                                      <MediaItem
-                                        media={medias[0]}
-                                        index={0}
-                                        className="flex-1"
-                                      />
-                                      <MediaItem
-                                        media={medias[1]}
-                                        index={1}
-                                        className="flex-1"
-                                      />
+                                      {MediaItem({
+                                        media: medias[0],
+                                        index: 0,
+                                        className: "flex-1",
+                                      })}
+                                      {MediaItem({
+                                        media: medias[1],
+                                        index: 1,
+                                        className: "flex-1",
+                                      })}
                                     </div>
                                   );
                                 if (medias.length === 3)
                                   return (
                                     <div className="flex gap-0.5 h-64 sm:h-80">
-                                      <MediaItem
-                                        media={medias[0]}
-                                        index={0}
-                                        className="flex-[2]"
-                                      />
+                                      {MediaItem({
+                                        media: medias[0],
+                                        index: 0,
+                                        className: "flex-[2]",
+                                      })}
                                       <div className="flex flex-col gap-0.5 flex-1">
-                                        <MediaItem
-                                          media={medias[1]}
-                                          index={1}
-                                          className="flex-1"
-                                        />
-                                        <MediaItem
-                                          media={medias[2]}
-                                          index={2}
-                                          className="flex-1"
-                                        />
+                                        {MediaItem({
+                                          media: medias[1],
+                                          index: 1,
+                                          className: "flex-1",
+                                        })}
+                                        {MediaItem({
+                                          media: medias[2],
+                                          index: 2,
+                                          className: "flex-1",
+                                        })}
                                       </div>
                                     </div>
                                   );
@@ -2710,31 +2886,30 @@ const ActivitiesContent = ({ tabData = null }) => {
                                 return (
                                   <div className="flex flex-col gap-0.5">
                                     <div className="flex gap-0.5 h-48 sm:h-56">
-                                      <MediaItem
-                                        media={shown[0]}
-                                        index={0}
-                                        className="flex-1"
-                                      />
-                                      <MediaItem
-                                        media={shown[1]}
-                                        index={1}
-                                        className="flex-1"
-                                      />
+                                      {MediaItem({
+                                        media: shown[0],
+                                        index: 0,
+                                        className: "flex-1",
+                                      })}
+                                      {MediaItem({
+                                        media: shown[1],
+                                        index: 1,
+                                        className: "flex-1",
+                                      })}
                                     </div>
                                     <div className="flex gap-0.5 h-48 sm:h-56">
-                                      <MediaItem
-                                        media={shown[2]}
-                                        index={2}
-                                        className="flex-1"
-                                      />
-                                      <MediaItem
-                                        media={shown[3]}
-                                        index={3}
-                                        className="flex-1"
-                                        overlay={
-                                          remaining > 0 ? `+${remaining}` : null
-                                        }
-                                      />
+                                      {MediaItem({
+                                        media: shown[2],
+                                        index: 2,
+                                        className: "flex-1",
+                                      })}
+                                      {MediaItem({
+                                        media: shown[3],
+                                        index: 3,
+                                        className: "flex-1",
+                                        overlay:
+                                          remaining > 0 ? `+${remaining}` : null,
+                                      })}
                                     </div>
                                   </div>
                                 );
@@ -2796,7 +2971,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                               <button
                                 onClick={() => handleLike(activity.id)}
                                 disabled={likingActivities[activity.id]}
-                                className={`flex-1 flex items-center justify-center ${isMobile ? "gap-1 px-1 py-1.5" : "gap-2 px-2 py-2.5"} rounded-lg font-semibold ${isMobile ? "text-xs" : "text-sm"} transition-all ${activity.isLiked ? "text-red-600 bg-red-50 dark:bg-red-900/20" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                                className={`flex-1 min-w-0 flex items-center justify-center ${isMobile ? "gap-1 px-1 py-1.5" : "gap-2 px-2 py-2.5"} rounded-lg font-semibold ${isMobile ? "text-xs" : "text-sm"} transition-all ${activity.isLiked ? "text-red-600 bg-red-50 dark:bg-red-900/20" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                               >
                                 {likingActivities[activity.id] ? (
                                   <FontAwesomeIcon
@@ -2818,7 +2993,7 @@ const ActivitiesContent = ({ tabData = null }) => {
 
                               <button
                                 onClick={() => toggleComments(activity.id)}
-                                className={`flex-1 flex items-center justify-center ${isMobile ? "gap-1 px-1 py-1.5" : "gap-2 px-2 py-2.5"} rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold ${isMobile ? "text-xs" : "text-sm"} transition-all`}
+                                className={`flex-1 min-w-0 flex items-center justify-center ${isMobile ? "gap-1 px-1 py-1.5" : "gap-2 px-2 py-2.5"} rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold ${isMobile ? "text-xs" : "text-sm"} transition-all`}
                               >
                                 <FontAwesomeIcon
                                   icon={faComment}
@@ -2831,9 +3006,10 @@ const ActivitiesContent = ({ tabData = null }) => {
                                 </span>
                               </button>
 
+                              {!parentLimited && (
                               <button
                                 onClick={() => handleParticipate(activity.id)}
-                                className={`flex-1 flex items-center justify-center ${isMobile ? "gap-1 px-1 py-1.5" : "gap-2 px-2 py-2.5"} rounded-lg font-semibold ${isMobile ? "text-xs" : "text-sm"} transition-all ${activity.isParticipating ? "text-green-600 bg-green-50 dark:bg-green-900/20" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                                className={`flex-1 min-w-0 flex items-center justify-center ${isMobile ? "gap-1 px-1 py-1.5" : "gap-2 px-2 py-2.5"} rounded-lg font-semibold ${isMobile ? "text-xs" : "text-sm"} transition-all ${activity.isParticipating ? "text-green-600 bg-green-50 dark:bg-green-900/20" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                               >
                                 <FontAwesomeIcon
                                   icon={faUserPlus}
@@ -2848,10 +3024,11 @@ const ActivitiesContent = ({ tabData = null }) => {
                                   )}
                                 </span>
                               </button>
+                              )}
 
                               <button
                                 onClick={() => handleShare(activity.id)}
-                                className={`flex-1 flex items-center justify-center ${isMobile ? "gap-1 px-1 py-1.5" : "gap-2 px-2 py-2.5"} rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold ${isMobile ? "text-xs" : "text-sm"} transition-all`}
+                                className={`flex-1 min-w-0 flex items-center justify-center ${isMobile ? "gap-1 px-1 py-1.5" : "gap-2 px-2 py-2.5"} rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold ${isMobile ? "text-xs" : "text-sm"} transition-all`}
                               >
                                 <FontAwesomeIcon
                                   icon={faShareNodes}
@@ -2888,11 +3065,18 @@ const ActivitiesContent = ({ tabData = null }) => {
                                         className={`flex gap-2 ${comment.isCurrentUser ? "flex-row-reverse" : ""}`}
                                       >
                                         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                          {comment.isCurrentUser ? "V" : "U"}
+                                          {initialsOf(comment.authorName)}
                                         </div>
                                         <div
                                           className={`flex-1 max-w-[75%] ${comment.isCurrentUser ? "text-right" : ""}`}
                                         >
+                                          <p
+                                            className={`text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5 truncate ${comment.isCurrentUser ? "mr-3" : "ml-3"}`}
+                                          >
+                                            {comment.isCurrentUser
+                                              ? t("activities.commentDelete.you", "Vous")
+                                              : comment.authorName || t("activities.commentDelete.unknownAuthor", "Utilisateur")}
+                                          </p>
                                           <div
                                             className={`rounded-2xl px-4 py-2 inline-block ${comment.isCurrentUser ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"}`}
                                           >
@@ -2904,6 +3088,19 @@ const ActivitiesContent = ({ tabData = null }) => {
                                             className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${comment.isCurrentUser ? "mr-3" : "ml-3"}`}
                                           >
                                             {commentTime}
+                                            {canDeleteComment(activity, comment) && (
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setConfirmDeleteComment({ activityId: activity.id, commentId: comment.id })
+                                                }
+                                                className="ml-2 text-gray-400 hover:text-red-600 transition-colors"
+                                                title={t("activities.commentDelete.action", "Supprimer le commentaire")}
+                                                aria-label={t("activities.commentDelete.action", "Supprimer le commentaire")}
+                                              >
+                                                <FontAwesomeIcon icon={faTrashCan} className="w-3 h-3" />
+                                              </button>
+                                            )}
                                           </p>
                                         </div>
                                       </div>
@@ -2916,7 +3113,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                               <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
                                 <div className="flex gap-2">
                                   <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                    V
+                                    {initialsOf(localStorage.getItem("userName") || localStorage.getItem("username") || "V")}
                                   </div>
                                   <div className="flex-1 relative">
                                     <input
@@ -3018,14 +3215,10 @@ const ActivitiesContent = ({ tabData = null }) => {
 
         {/* Image Preview Modal — resolves full URL on demand */}
         {imagePreview.isOpen && (
+          // Full-screen: the old fixed 70px/280px offsets left gaps whenever the
+          // sidebar was collapsed or narrower (260px at 993-1200px, overlay below).
           <div
-            className="fixed bg-black/75 backdrop-blur-sm z-[500] flex items-center justify-center"
-            style={{
-              top: "70px",
-              bottom: 0,
-              left: isMobile ? 0 : "280px",
-              right: 0,
-            }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[1200] flex items-center justify-center"
             onClick={closeImagePreview}
           >
             {imagePreview.images.length > 1 && (
@@ -3056,9 +3249,9 @@ const ActivitiesContent = ({ tabData = null }) => {
             >
               <FontAwesomeIcon icon={faXmark} className="w-5 h-5" />
             </button>
-            {/* Resolve full URL for the lightbox image */}
-            <LightboxImage
-              mediaId={imagePreview.images[imagePreview.currentIndex]}
+            {/* Image or video, with loading / buffering states */}
+            <LightboxMedia
+              media={imagePreview.images[imagePreview.currentIndex]}
               onClick={(e) => e.stopPropagation()}
             />
             {imagePreview.images.length > 1 && (
@@ -3128,6 +3321,53 @@ const ActivitiesContent = ({ tabData = null }) => {
                     </>
                   ) : (
                     <span>Supprimer</span>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Delete comment confirmation */}
+        {confirmDeleteComment && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setConfirmDeleteComment(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm"
+            >
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FontAwesomeIcon icon={faTrashCan} className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-black text-gray-900 dark:text-white text-center mb-2">
+                {t("activities.commentDelete.title", "Supprimer le commentaire ?")}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+                {t("activities.commentDelete.confirm", "Ce commentaire sera définitivement supprimé.")}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmDeleteComment(null)}
+                  className="flex-1 py-3 text-gray-600 dark:text-gray-300 font-bold text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-all"
+                >
+                  {t("common.cancel", "Annuler")}
+                </button>
+                <button
+                  onClick={handleDeleteComment}
+                  disabled={deletingCommentId === confirmDeleteComment.commentId}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deletingCommentId === confirmDeleteComment.commentId ? (
+                    <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <span>{t("common.delete", "Supprimer")}</span>
                   )}
                 </button>
               </div>
@@ -3354,9 +3594,11 @@ const ActivitiesContent = ({ tabData = null }) => {
                         {editFormData.existingMedias.map((media, i) => (
                           <div key={i} className="relative group aspect-square">
                             {media.type === "VIDEO" ? (
-                              <video
+                              <VideoThumbnail
                                 src={media.presignedUrl || media.url}
-                                className="w-full h-full object-cover rounded-xl shadow-md"
+                                poster={media.posterUrl || undefined}
+                                compact
+                                className="w-full h-full rounded-xl shadow-md"
                               />
                             ) : media.presignedUrl || media.url ? (
                               <SafeImg
@@ -3420,15 +3662,39 @@ const ActivitiesContent = ({ tabData = null }) => {
                     onChange={handleEditImageUpload}
                     className="hidden"
                   />
+                  {isTouchDevice() && (
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <CameraCaptureButton
+                        kind="photo"
+                        disabled={editUploading}
+                        label={t("activities.camera.takePhoto", "Prendre une photo")}
+                        onFiles={(files) => handleEditImageUpload({ target: { files } })}
+                        className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-black text-xs disabled:opacity-50"
+                      />
+                      <CameraCaptureButton
+                        kind="video"
+                        disabled={editUploading}
+                        label={t("activities.camera.recordVideo", "Filmer une vidéo")}
+                        onFiles={(files) => handleEditImageUpload({ target: { files } })}
+                        className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-black text-xs disabled:opacity-50"
+                      />
+                    </div>
+                  )}
                 </div>
                 {editUploadedImages.length > 0 && (
                   <div className="grid grid-cols-3 gap-3">
-                    {editUploadedImages.map((media, i) => (
-                      <div key={i} className="relative group aspect-square">
+                    {editUploadedImages.map((media) => (
+                      <div
+                        key={media.id}
+                        className="relative group aspect-square"
+                        data-testid="staged-media"
+                        data-media-id={media.id}
+                      >
                         {media.type === "VIDEO" ? (
-                          <video
+                          <VideoThumbnail
                             src={media.url}
-                            className="w-full h-full object-cover rounded-xl shadow-md"
+                            compact
+                            className="w-full h-full rounded-xl shadow-md"
                           />
                         ) : (
                           <img
@@ -3437,19 +3703,32 @@ const ActivitiesContent = ({ tabData = null }) => {
                             className="w-full h-full object-cover rounded-xl shadow-md"
                           />
                         )}
-                        <button
-                          onClick={() =>
-                            setEditUploadedImages((p) =>
-                              p.filter((_, idx) => idx !== i),
-                            )
-                          }
-                          className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-lg hover:scale-110 transition-transform"
-                        >
-                          <FontAwesomeIcon
-                            icon={faTrashCan}
-                            className="w-3 h-3"
-                          />
-                        </button>
+                        <MediaUploadOverlay media={media} t={t} />
+                        {media.status !== "done" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeStagedMedia(media.id, setEditUploadedImages)
+                            }
+                            title={
+                              media.status === "uploading"
+                                ? t("activities.upload.cancel", "Annuler l'envoi")
+                                : t("activities.upload.remove", "Retirer")
+                            }
+                            aria-label={
+                              media.status === "uploading"
+                                ? t("activities.upload.cancel", "Annuler l'envoi")
+                                : t("activities.upload.remove", "Retirer")
+                            }
+                            data-testid="staged-media-remove"
+                            className="absolute -top-2 -right-2 z-10 bg-red-500 text-white p-1.5 rounded-lg shadow-lg hover:scale-110 transition-transform"
+                          >
+                            <FontAwesomeIcon
+                              icon={media.status === "uploading" ? faXmark : faTrashCan}
+                              className="w-3 h-3"
+                            />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -3486,7 +3765,18 @@ const ActivitiesContent = ({ tabData = null }) => {
                         icon={faSpinner}
                         className="w-4 h-4 animate-spin"
                       />
-                      <span>Enregistrement...</span>
+                      <span>
+                        {editUploading
+                          ? t(
+                              "activities.upload.progressLabel",
+                              "Envoi des médias {{done}}/{{total}}",
+                              {
+                                done: editUploadedImages.filter((m) => m.status === "done").length,
+                                total: editUploadedImages.length,
+                              },
+                            )
+                          : "Enregistrement..."}
+                      </span>
                     </>
                   ) : (
                     <span>Enregistrer</span>

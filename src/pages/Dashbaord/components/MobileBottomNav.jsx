@@ -7,7 +7,7 @@ import {
   faRightFromBracket,
   faTableColumns,
   faXmark,
-  faHeartPulse,
+  faNewspaper,
   faCirclePlus,
   faUsers,
   faGraduationCap,
@@ -22,13 +22,11 @@ import {
   faGear,
   faUser,
   faPlus,
-  faBell,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../utils/faIconAdapter";
 import { useUnreadMessageCount } from "../../../hooks/useMessageSocket";
-const Activity = asIconComponent(faHeartPulse);
+const Activity = asIconComponent(faNewspaper);
 const AlertCircle = asIconComponent(faCircleExclamation);
-const Bell = asIconComponent(faBell);
 const Book = asIconComponent(faBook);
 const BookOpen = asIconComponent(faBookOpen);
 const Building2 = asIconComponent(faBuilding);
@@ -78,6 +76,12 @@ const MobileBottomNav = ({
           label: "Enfants",
           color: "bg-purple-500",
           tab: "my-children",
+        },
+        {
+          icon: Activity,
+          label: "Activités",
+          color: "bg-blue-500",
+          tab: "activities",
         },
         {
           icon: Settings,
@@ -395,10 +399,9 @@ const MobileBottomNav = ({
       isCenter: true,
     },
     {
-      icon: Bell,
-      label: "Alerts",
+      icon: Activity,
+      label: "Activités",
       tab: "activities",
-      neverActive: true,
     },
     {
       icon: User,
@@ -413,6 +416,11 @@ const MobileBottomNav = ({
           icon: Users,
           label: "Enfants",
           tab: "my-children",
+        },
+        {
+          icon: Activity,
+          label: "Activités",
+          tab: "activities",
         },
         navItems.find((item) => item.isCenter),
         navItems.find((item) => item.tab === "settings"),

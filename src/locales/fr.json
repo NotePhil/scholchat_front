@@ -201,7 +201,6 @@
     }
   },
   "pages": {
-
     "home": {
       "badge": "Plateforme Éducative",
       "animatedTexts": {
@@ -228,14 +227,14 @@
       "title": "Rencontrez Notre Équipe d'Experts",
       "subtitle": "Des professionnels dévoués travaillant à révolutionner l'expérience éducative.",
       "team": {
-         "productManager": "Chef de Produit",
-         "leadDeveloper": "Développeur Principal",
-         "uxDesigner": "Designer UX",
-         "marketingDirector": "Directeur Marketing",
-         "customerSuccess": "Succès Client",
-         "headOfEngineering": "Chef de l'Ingénierie",
-         "contentStrategist": "Stratège de Contenu",
-         "salesManager": "Responsable des Ventes"
+        "productManager": "Chef de Produit",
+        "leadDeveloper": "Développeur Principal",
+        "uxDesigner": "Designer UX",
+        "marketingDirector": "Directeur Marketing",
+        "customerSuccess": "Succès Client",
+        "headOfEngineering": "Chef de l'Ingénierie",
+        "contentStrategist": "Stratège de Contenu",
+        "salesManager": "Responsable des Ventes"
       }
     },
     "functionalities": {
@@ -329,20 +328,20 @@
           "title": "Analyses et Rapports",
           "longDesc": "Transformez les données brutes en informations exploitables avec notre moteur avancé d'Analyses et Rapports. Visualisez les tendances de performance des élèves, d'assiduité et d'utilisation des ressources. Des rapports détaillés aident les administrateurs et les enseignants à prendre des décisions éclairées.",
           "benefits": [
-             "Visualisations de tableaux de bord personnalisables",
-             "Analyse des tendances pour une meilleure prise de décision",
-             "Rapports automatisés sur les performances académiques",
-             "Métriques d'efficacité opérationnelle"
+            "Visualisations de tableaux de bord personnalisables",
+            "Analyse des tendances pour une meilleure prise de décision",
+            "Rapports automatisés sur les performances académiques",
+            "Métriques d'efficacité opérationnelle"
           ]
         },
         "curriculum": {
           "title": "Gestion du Curriculum",
           "longDesc": "Modernisez votre planification et votre prestation de programmes. Nos outils permettent aux enseignants de concevoir collaborativement des leçons, de partager des ressources et d'aligner le contenu sur les normes éducatives. Rationalisez la notation et les commentaires.",
           "benefits": [
-             "Outils de planification de cours collaboratifs",
-             "Référentiel de ressources numériques",
-             "Suivi de l'alignement sur les normes",
-             "Système de notation et de rétroaction intégré"
+            "Outils de planification de cours collaboratifs",
+            "Référentiel de ressources numériques",
+            "Suivi de l'alignement sur les normes",
+            "Système de notation et de rétroaction intégré"
           ]
         }
       }
@@ -352,12 +351,30 @@
       "title": "Explorez Nos Solutions Populaires",
       "subtitle": "Découvrez des outils adaptés à vos besoins éducatifs, de l'administration à l'engagement en classe.",
       "items": {
-         "nurseries": { "name": "Crèches", "desc": "Système de Gestion de la Petite Enfance" },
-         "kindergarten": { "name": "Maternelle", "desc": "Plateforme d'Éducation Préscolaire" },
-         "primary": { "name": "Écoles Primaires", "desc": "Gestion de l'École Élémentaire" },
-         "middle": { "name": "Collèges", "desc": "Outils d'Administration du Secondaire Inférieur" },
-         "high": { "name": "Lycées", "desc": "Plateforme d'Éducation Secondaire" },
-         "university": { "name": "Universités", "desc": "Gestion de l'Enseignement Supérieur" }
+        "nurseries": {
+          "name": "Crèches",
+          "desc": "Système de Gestion de la Petite Enfance"
+        },
+        "kindergarten": {
+          "name": "Maternelle",
+          "desc": "Plateforme d'Éducation Préscolaire"
+        },
+        "primary": {
+          "name": "Écoles Primaires",
+          "desc": "Gestion de l'École Élémentaire"
+        },
+        "middle": {
+          "name": "Collèges",
+          "desc": "Outils d'Administration du Secondaire Inférieur"
+        },
+        "high": {
+          "name": "Lycées",
+          "desc": "Plateforme d'Éducation Secondaire"
+        },
+        "university": {
+          "name": "Universités",
+          "desc": "Gestion de l'Enseignement Supérieur"
+        }
       },
       "cardDesc": "Une solution complète conçue pour améliorer l'environnement d'apprentissage et rationaliser les opérations pour {name}.",
       "details": "Détails"
@@ -429,12 +446,30 @@
         }
       },
       "items": {
-        "item1": { "title": "Révolutionner la Communication Scolaire", "desc": "Découvrez comment les plateformes numériques transforment la façon dont les écoles se connectent avec les parents et les élèves." },
-        "item2": { "title": "Meilleures Pratiques pour l'Apprentissage à Distance", "desc": "Apprenez des stratégies efficaces pour engager les élèves dans des classes virtuelles et maintenir la qualité éducative." },
-        "item3": { "title": "Soutenir l'Éducation de Votre Enfant à la Maison", "desc": "Conseils et techniques pour les parents afin de créer un environnement d'apprentissage efficace à la maison." },
-        "item4": { "title": "Intégration Technologique dans les Classes Modernes", "desc": "Explorer les dernières tendances technologiques éducatives et leur impact sur les résultats d'apprentissage des élèves." },
-        "item5": { "title": "Stratégies d'Évaluation qui Fonctionnent", "desc": "Approches innovantes pour évaluer les progrès des élèves et fournir des commentaires significatifs." },
-        "item6": { "title": "Construire un Partenariat Parents-Enseignants Solide", "desc": "Comment une collaboration efficace entre parents et enseignants améliore la réussite des élèves." }
+        "item1": {
+          "title": "Révolutionner la Communication Scolaire",
+          "desc": "Découvrez comment les plateformes numériques transforment la façon dont les écoles se connectent avec les parents et les élèves."
+        },
+        "item2": {
+          "title": "Meilleures Pratiques pour l'Apprentissage à Distance",
+          "desc": "Apprenez des stratégies efficaces pour engager les élèves dans des classes virtuelles et maintenir la qualité éducative."
+        },
+        "item3": {
+          "title": "Soutenir l'Éducation de Votre Enfant à la Maison",
+          "desc": "Conseils et techniques pour les parents afin de créer un environnement d'apprentissage efficace à la maison."
+        },
+        "item4": {
+          "title": "Intégration Technologique dans les Classes Modernes",
+          "desc": "Explorer les dernières tendances technologiques éducatives et leur impact sur les résultats d'apprentissage des élèves."
+        },
+        "item5": {
+          "title": "Stratégies d'Évaluation qui Fonctionnent",
+          "desc": "Approches innovantes pour évaluer les progrès des élèves et fournir des commentaires significatifs."
+        },
+        "item6": {
+          "title": "Construire un Partenariat Parents-Enseignants Solide",
+          "desc": "Comment une collaboration efficace entre parents et enseignants améliore la réussite des élèves."
+        }
       }
     },
     "accountActivation": {
@@ -588,7 +623,7 @@
         "featuresTitle": "Fonctionnalités Essentielles pour la Garde d'Enfants",
         "featuresSubtitle": "Tout ce dont vous avez besoin pour gérer votre crèche efficacement et tenir les parents informés",
         "benefitsTitle": "Pourquoi Choisir SchoolChat pour Votre Crèche?",
-        "benefitsSubtitle":"Rationalisez les opérations et améliorez la satisfaction des parents avec notre plateforme complète",
+        "benefitsSubtitle": "Rationalisez les opérations et améliorez la satisfaction des parents avec notre plateforme complète",
         "benefits": [
           "Rapports d'activités quotidiennes en temps réel avec photos et vidéos",
           "Suivi de l'alimentation, du sommeil et des changes",
@@ -829,34 +864,88 @@
       },
       "features": {
         "nurseries": {
-          "f1": { "title": "Connectivité Parentale", "desc": "Mises à jour en temps réel sur les repas, les siestes et les changes." },
-          "f2": { "title": "Récupération Sécurisée", "desc": "Gestion des contacts autorisés avec vérification photo." },
-          "f3": { "title": "Suivi du Développement", "desc": "Portfolio numérique des étapes clés du développement précoce." }
+          "f1": {
+            "title": "Connectivité Parentale",
+            "desc": "Mises à jour en temps réel sur les repas, les siestes et les changes."
+          },
+          "f2": {
+            "title": "Récupération Sécurisée",
+            "desc": "Gestion des contacts autorisés avec vérification photo."
+          },
+          "f3": {
+            "title": "Suivi du Développement",
+            "desc": "Portfolio numérique des étapes clés du développement précoce."
+          }
         },
         "kindergarten": {
-          "f1": { "title": "Gestion des Classes", "desc": "Suivi quotidien des activités et de la participation des élèves." },
-          "f2": { "title": "Communication Directe", "desc": "Messagerie instantanée sécurisée entre enseignants et parents." },
-          "f3": { "title": "Rapports de Progrès", "desc": "Évaluations périodiques et rapports de compétences détaillés." }
+          "f1": {
+            "title": "Gestion des Classes",
+            "desc": "Suivi quotidien des activités et de la participation des élèves."
+          },
+          "f2": {
+            "title": "Communication Directe",
+            "desc": "Messagerie instantanée sécurisée entre enseignants et parents."
+          },
+          "f3": {
+            "title": "Rapports de Progrès",
+            "desc": "Évaluations périodiques et rapports de compétences détaillés."
+          }
         },
         "primary": {
-          "f1": { "title": "Suivi Académique", "desc": "Carnet de notes numérique et suivi des devoirs en temps réel." },
-          "f2": { "title": "Gestion du Comportement", "desc": "Système de points et rapports de conduite pour les élèves." },
-          "f3": { "title": "Calendrier Scolaire", "desc": "Gestion centralisée des événements et des examens." }
+          "f1": {
+            "title": "Suivi Académique",
+            "desc": "Carnet de notes numérique et suivi des devoirs en temps réel."
+          },
+          "f2": {
+            "title": "Gestion du Comportement",
+            "desc": "Système de points et rapports de conduite pour les élèves."
+          },
+          "f3": {
+            "title": "Calendrier Scolaire",
+            "desc": "Gestion centralisée des événements et des examens."
+          }
         },
         "middle": {
-          "f1": { "title": "Orientation Scolaire", "desc": "Outils d'aide à l'orientation et suivi des projets personnels." },
-          "f2": { "title": "Gestion Multi-matières", "desc": "Emplois du temps complexes et gestion des professeurs par matière." },
-          "f3": { "title": "Espace Élève", "desc": "Accès direct aux ressources et aux supports de cours." }
+          "f1": {
+            "title": "Orientation Scolaire",
+            "desc": "Outils d'aide à l'orientation et suivi des projets personnels."
+          },
+          "f2": {
+            "title": "Gestion Multi-matières",
+            "desc": "Emplois du temps complexes et gestion des professeurs par matière."
+          },
+          "f3": {
+            "title": "Espace Élève",
+            "desc": "Accès direct aux ressources et aux supports de cours."
+          }
         },
         "high": {
-          "f1": { "title": "Préparation Baccalauréat", "desc": "Suivi intensif et examens blancs automatisés." },
-          "f2": { "title": "Dossiers Universitaires", "desc": "Aide à la constitution des dossiers et suivi des admissions." },
-          "f3": { "title": "Analyses Prédictives", "desc": "Identification précoce des élèves en difficulté scolaire." }
+          "f1": {
+            "title": "Préparation Baccalauréat",
+            "desc": "Suivi intensif et examens blancs automatisés."
+          },
+          "f2": {
+            "title": "Dossiers Universitaires",
+            "desc": "Aide à la constitution des dossiers et suivi des admissions."
+          },
+          "f3": {
+            "title": "Analyses Prédictives",
+            "desc": "Identification précoce des élèves en difficulté scolaire."
+          }
         },
         "university": {
-          "f1": { "title": "Gestion des Inscriptions", "desc": "Processus d'admission et d'inscription 100% numérique." },
-          "f2": { "title": "Portail Étudiant", "desc": "Services académiques, financiers et administratifs centralisés." },
-          "f3": { "title": "Suivi de Recherche", "desc": "Outils de gestion pour les projets et publications académiques." }
+          "f1": {
+            "title": "Gestion des Inscriptions",
+            "desc": "Processus d'admission et d'inscription 100% numérique."
+          },
+          "f2": {
+            "title": "Portail Étudiant",
+            "desc": "Services académiques, financiers et administratifs centralisés."
+          },
+          "f3": {
+            "title": "Suivi de Recherche",
+            "desc": "Outils de gestion pour les projets et publications académiques."
+          }
         }
       }
     },
@@ -894,8 +983,6 @@
     },
     "copyright": "Tous droits réservés."
   },
-
-
   "activities": {
     "sidebar": {
       "groups": "Groupes",
@@ -958,6 +1045,27 @@
     "errors": {
       "imageUploadFailed": "Erreur lors du téléchargement des images",
       "createEventFailed": "Erreur lors de la création de l'événement"
+    },
+    "commentDelete": {
+      "action": "Supprimer le commentaire",
+      "title": "Supprimer le commentaire ?",
+      "confirm": "Ce commentaire sera définitivement supprimé.",
+      "error": "Impossible de supprimer le commentaire.",
+      "you": "Vous",
+      "unknownAuthor": "Utilisateur"
+    },
+    "camera": {
+      "takePhoto": "Prendre une photo",
+      "recordVideo": "Filmer une vidéo"
+    },
+    "parentLimitedBanner": "Actualités générales — les actualités des classes seront visibles dès qu'un enfant sera accepté",
+    "upload": {
+      "failed": "Échec de l'envoi",
+      "waiting": "En attente…",
+      "someFailed": "Échec de l'envoi de : {{files}}. Retirez ces fichiers ou réessayez.",
+      "cancel": "Annuler l'envoi",
+      "remove": "Retirer",
+      "progressLabel": "Envoi des médias {{done}}/{{total}}"
     }
   },
   "subjects": {
@@ -1121,7 +1229,7 @@
       "pendingApproval": "En attente d'approbation. Le bouton \"Gérer\" sera disponible après approbation.",
       "pendingBadge": "En attente d'approbation",
       "rightsGranted": "Droits accordés",
-      "seeDetails": "Détails" 
+      "seeDetails": "Détails"
     },
     "actions": {
       "view": "Voir",
@@ -1149,7 +1257,6 @@
     "create": {
       "title": "Nouvelle Classe",
       "subtitle": "Créez une nouvelle classe pour votre établissement",
-
       "validation": {
         "nameRequired": "Le nom de la classe est requis",
         "nameLength": "Le nom doit contenir au moins 2 caractères",
@@ -1197,6 +1304,8 @@
         "name": "Nom de la classe",
         "namePlaceholder": "Ex: 6ème A",
         "level": "Niveau",
+        "levelOther": "Autre",
+        "levelOtherPlaceholder": "Saisissez le niveau (ex. BTS 1, Formation adulte…)",
         "levelPlaceholder": "Sélectionnez un niveau",
         "school": "Établissement (Optionnel)",
         "schoolPlaceholder": "Sélectionnez un établissement",
@@ -1215,8 +1324,7 @@
           "level": "Sélectionner un niveau"
         },
         "info": {
-          "title": "Information importante",
-          "required": "Les champs marqués d'un * sont obligatoires.",
+          "required": "* Champs obligatoires",
           "email": "✉️ Cet établissement envoie des emails aux classes.",
           "token": "🔑 Un token général est requis pour cet établissement.",
           "code": "🎯 Un code unique est requis pour cet établissement.",
@@ -1486,6 +1594,236 @@
       "message": "Êtes-vous sûr de vouloir vous déconnecter?",
       "cancel": "Annuler",
       "confirm": "Confirmer"
+    }
+  },
+  "parentLink": {
+    "title": "Suivi parental",
+    "intro": "Parents qui suivent votre scolarité, classe par classe (classes, progression, copies et notes), en lecture seule. Vous restez seul à rendre vos devoirs.",
+    "help": "Chaque demande de suivi est validée par le professeur de la classe. Seuls le professeur ou l'administration peuvent ajouter ou retirer un suivi.",
+    "refresh": "Actualiser",
+    "empty": "Aucun parent ne suit votre scolarité.",
+    "loadError": "Impossible de charger votre suivi parental.",
+    "since": "suivie depuis le {{date}}",
+    "readOnly": "Lecture seule",
+    "classFallback": "Classe"
+  },
+  "messaging": {
+    "common": {
+      "message": "Message",
+      "loading": "Chargement…",
+      "you": "Vous",
+      "close": "Fermer",
+      "retry": "Réessayer",
+      "reply": "Répondre",
+      "cancel": "Annuler",
+      "send": "Envoyer",
+      "group": "Groupe",
+      "removeFavorite": "Retirer des favoris",
+      "addFavorite": "Ajouter aux favoris",
+      "delete": "Supprimer",
+      "deleteFailed": "Suppression impossible.",
+      "refresh": "Actualiser",
+      "newMessage": "Nouveau message",
+      "clear": "Effacer",
+      "user": "Utilisateur",
+      "actionFailed": "Action impossible.",
+      "attachmentLabel": "📎 Pièce jointe",
+      "deletedMessage": "Ce message a été supprimé",
+      "me": "Moi",
+      "participantsCount": "{{count}} participants",
+      "classSubtitle": "Classe · {{count}}"
+    },
+    "dates": {
+      "yesterday": "Hier",
+      "today": "Aujourd'hui"
+    },
+    "roles": {
+      "professor": "Professeur",
+      "student": "Élève",
+      "parent": "Parent",
+      "tutor": "Répétiteur",
+      "manager": "Gestionnaire",
+      "admin": "Administrateur"
+    },
+    "filters": {
+      "trash": "Corbeille",
+      "all": "Tous",
+      "unread": "Non lus",
+      "favorites": "Favoris",
+      "general": "Général",
+      "sent": "Envoyés"
+    },
+    "conversations": {
+      "newChat": "Nouvelle discussion",
+      "classMessage": "Message à une classe",
+      "badgeGeneral": "Général",
+      "badgeClass": "Classe",
+      "youPrefix": "Vous : ",
+      "senderPrefix": "{{name}} : ",
+      "empty": {
+        "unread": "Aucune discussion non lue.",
+        "favorites": "Aucun favori. Ajoutez une discussion ou un message aux favoris avec l'étoile.",
+        "general": "Aucun message de classe, de groupe ou général.",
+        "sent": "Aucune discussion envoyée.",
+        "all": "Aucune discussion pour le moment. Écrivez à un contact ou à une classe avec « Nouveau message »."
+      },
+      "title": "Discussions",
+      "searchTrash": "Rechercher dans la corbeille",
+      "searchChats": "Rechercher une discussion",
+      "filterChats": "Filtrer les discussions",
+      "noSearchResults": "Aucune discussion ne correspond à votre recherche.",
+      "favoriteChat": "Discussion favorite",
+      "containsFavorite": "Contient un message favori"
+    },
+    "chat": {
+      "viewOriginal": "Voir le message d'origine",
+      "read": "Lu",
+      "sent": "Envoyé",
+      "starredMessage": "Message favori",
+      "moreOptions": "Plus d'options",
+      "copy": "Copier",
+      "sendFailed": "Échec de l'envoi du message.",
+      "backToChats": "Retour aux discussions",
+      "chatOptions": "Options de la discussion",
+      "markUnread": "Marquer comme non lu",
+      "unmute": "Réactiver les notifications",
+      "mute": "Désactiver les notifications",
+      "deleteChat": "Supprimer la discussion",
+      "loadingOlder": "Chargement des messages précédents…",
+      "chatStart": "Début de la discussion",
+      "empty": "Aucun message. Écrivez le premier !",
+      "replyTo": "Réponse à",
+      "yourself": "vous-même",
+      "cancelReply": "Annuler la réponse",
+      "inputPlaceholder": "Écrire un message",
+      "markRead": "Marquer comme lu"
+    },
+    "deleteDialog": {
+      "chatTitle": "Supprimer la discussion ?",
+      "messageTitle": "Supprimer le message ?",
+      "chatDescription": "La discussion et son historique iront dans la corbeille, d'où vous pourrez la restaurer. Elle réapparaîtra si un nouveau message arrive.",
+      "messageDescription": "Le message ira dans votre corbeille, d'où vous pourrez le restaurer.",
+      "deleteForMe": "Supprimer pour moi",
+      "deleteForEveryone": "Supprimer pour tout le monde"
+    },
+    "confirm": {
+      "emptyTitle": "Vider la corbeille ?",
+      "purgeChatTitle": "Supprimer définitivement la discussion ?",
+      "purgeMessageTitle": "Supprimer définitivement le message ?",
+      "emptyDescription": "Toutes les discussions et tous les messages de la corbeille seront supprimés définitivement pour vous. Cette action est irréversible.",
+      "hideDescription": "« {{name}} » et son historique iront dans la corbeille, d'où vous pourrez la restaurer. Elle réapparaîtra si un nouveau message arrive.",
+      "purgeDescription": "L'élément ne pourra plus être restauré. Les autres participants ne sont pas concernés."
+    },
+    "trash": {
+      "info": "Les éléments supprimés pour vous restent ici jusqu'à leur suppression définitive.",
+      "empty": "Vider la corbeille",
+      "noSearchResults": "Aucun élément de la corbeille ne correspond à votre recherche.",
+      "isEmpty": "La corbeille est vide.",
+      "deletedChatHistory": "Discussion supprimée · historique antérieur",
+      "deletedChat": "Discussion supprimée",
+      "messageFrom": "Message de {{sender}}",
+      "deletedForEveryone": " · supprimé pour tout le monde",
+      "restore": "Restaurer",
+      "purge": "Supprimer définitivement"
+    },
+    "attachments": {
+      "download": "Télécharger",
+      "photo": "Photo",
+      "playVideo": "Lire la vidéo",
+      "document": "Document",
+      "fileUnavailable": "Fichier indisponible",
+      "attachFilesMax": "Joindre des fichiers (max {{max}})",
+      "attachFiles": "Joindre des fichiers",
+      "takePhoto": "Prendre une photo",
+      "removeAttachment": "Retirer la pièce jointe",
+      "maxPerMessage": "Au plus {{max}} pièces jointes par message.",
+      "video": "Vidéo",
+      "missingUploadUrl": "URL de téléversement manquante.",
+      "uploadFailed": "Échec du téléversement"
+    },
+    "fileSize": {
+      "bytes": "{{size}} o",
+      "kb": "{{size}} Ko",
+      "mb": "{{size}} Mo",
+      "gb": "{{size}} Go"
+    },
+    "compose": {
+      "maxAttachments": "Maximum {{max}} pièces jointes par message.",
+      "attach": "Joindre",
+      "sending": "Envoi...",
+      "toPlaceholder": "Tapez un nom ou un e-mail",
+      "sendFailed": "Échec de l'envoi du message. Veuillez réessayer.",
+      "individualMessage": "Message individuel",
+      "classes": "Classes",
+      "classesHint": "Le message sera envoyé à tous les membres des classes sélectionnées.",
+      "to": "À",
+      "cc": "Copie (CC)",
+      "ccPlaceholder": "Ajouter en copie : nom ou e-mail",
+      "subjectOptional": "Objet (facultatif)",
+      "subjectPlaceholder": "Saisissez l'objet du message",
+      "messagePlaceholder": "Tapez votre message ici...",
+      "attachHint": "Images, vidéos, PDF et documents",
+      "uploadingSuffix": " — téléversement en cours...",
+      "uploading": "Téléversement..."
+    },
+    "newConversation": {
+      "createFailed": "Impossible de créer la discussion.",
+      "direct": "Discussion",
+      "groupName": "Nom du groupe",
+      "groupHintMany": "Choisissez au moins 2 participants ({{count}} sélectionnés).",
+      "groupHintOne": "Choisissez au moins 2 participants ({{count}} sélectionné).",
+      "searchContact": "Rechercher un contact",
+      "loadingContacts": "Chargement des contacts…",
+      "noContacts": "Aucun contact trouvé.",
+      "creating": "Création…",
+      "createGroup": "Créer le groupe"
+    },
+    "recipients": {
+      "remove": "Retirer {{name}}",
+      "loadingContacts": "Chargement des contacts...",
+      "loading": "Chargement...",
+      "noContacts": "Aucun contact trouvé",
+      "title": "Sélectionner des destinataires",
+      "searchPlaceholder": "Rechercher par nom ou e-mail...",
+      "confirm": "Valider la sélection"
+    },
+    "detail": {
+      "noSubject": "Sans objet",
+      "replyEmpty": "Veuillez saisir un message ou joindre un fichier",
+      "replyFailed": "Erreur lors de l'envoi de la réponse",
+      "forward": "Transférer",
+      "deleteConversation": "Supprimer la conversation",
+      "subjectLabel": "Objet:",
+      "deleteThisMessage": "Supprimer ce message",
+      "subject": "Objet",
+      "replySubjectPlaceholder": "Objet de la réponse",
+      "unknown": "Inconnu",
+      "reply": "Réponse",
+      "replyPlaceholder": "Tapez votre réponse..."
+    },
+    "list": {
+      "selectedCount": "{{count}} sélectionné(s)",
+      "restoreSelection": "Restaurer la sélection",
+      "deleteSelection": "Supprimer la sélection",
+      "searchPlaceholder": "Rechercher dans les messages",
+      "noResults": "Aucun résultat trouvé",
+      "noMessages": "Aucun message",
+      "tryOtherKeywords": "Essayez avec d'autres mots-clés",
+      "inboxEmpty": "Votre boîte de réception est vide",
+      "restoreMessage": "Restaurer le message"
+    },
+    "sidebar": {
+      "inbox": "Boite de reception",
+      "starred": "Messages suivis",
+      "sent": "Envoyes"
+    },
+    "home": {
+      "title": "Vos discussions",
+      "subtitle": "Sélectionnez une discussion ou écrivez un nouveau message à vos contacts ou à une classe."
+    },
+    "notifications": {
+      "opening": "Ouverture de la conversation…",
+      "unavailable": "Ce message n'existe plus ou ne vous est plus accessible."
     }
   }
 }

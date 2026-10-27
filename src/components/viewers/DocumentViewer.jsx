@@ -8,6 +8,7 @@ import {
   faFileLines,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { VideoViewerPlayer, ViewerImage } from "../media/VideoMedia";
 /**
  * Universal Document Viewer - supports PDF, images, videos, and office docs
  * - PDF: uses browser's built-in PDF viewer via iframe
@@ -139,8 +140,8 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
 
           {/* Image Viewer */}
           {fileType === "image" && (
-            <div className="w-full h-full flex items-center justify-center p-4 overflow-auto">
-              <img
+            <div className="relative w-full h-full flex items-center justify-center p-4 overflow-auto">
+              <ViewerImage
                 src={url}
                 alt={fileName}
                 className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
@@ -151,19 +152,13 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
           {/* Video Player - Streaming */}
           {fileType === "video" && (
             <div className="w-full h-full flex items-center justify-center bg-black">
-              <video
+              <VideoViewerPlayer
+                key={url}
                 src={url}
-                controls
                 autoPlay={false}
-                playsInline
-                preload="metadata"
-                className="max-w-full max-h-full"
-                style={{
-                  maxHeight: isFullscreen ? "100vh" : "70vh",
-                }}
-              >
-                Votre navigateur ne supporte pas la lecture video.
-              </video>
+                className="w-full"
+                maxVideoHeight={isFullscreen ? "100vh" : "70vh"}
+              />
             </div>
           )}
 

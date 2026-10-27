@@ -10,7 +10,7 @@ import { scholchatService } from "../../../../../services/ScholchatService";
 import { useNavigate } from "react-router-dom";
 import PublicationRightsService from "../../../../../services/PublicationRightsService";
 import { useTranslation } from "../../../../../hooks/useTranslation";
-import { NIVEAUX } from "../../../../../constants/niveaux";
+import { NIVEAUX, NIVEAU_AUTRE } from "../../../../../constants/niveaux";
 import { useAuth } from "../../../../../hooks/useAuth";
 import PaymentModal from "../../../../../components/modals/PaymentModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -41,6 +41,11 @@ const CreateClassContent = ({
     codeUnique: "",
     accesMajeur: false,
   });
+  // Niveau libre saisi quand l'option "Autre" est choisie (c'est ce texte qui est envoyé).
+  const [niveauAutre, setNiveauAutre] = useState("");
+  const niveauEffectif = (
+    formData.niveau === NIVEAU_AUTRE ? niveauAutre : formData.niveau
+  ).trim();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const navigate = useNavigate();
@@ -194,7 +199,7 @@ const CreateClassContent = ({
         "Le nom doit contenir au moins 2 caractères",
       );
     }
-    if (!formData.niveau.trim()) {
+    if (!niveauEffectif) {
       newErrors.niveau = t(
         "classes.create.validation.levelRequired",
         "Le niveau est requis",
@@ -248,7 +253,7 @@ const CreateClassContent = ({
     try {
       let classData = {
         nom: formData.nom.trim(),
-        niveau: formData.niveau.trim(),
+        niveau: niveauEffectif,
       };
       classData.creatorId = currentUserId;
       classData.moderatorId = currentUserId;
@@ -464,8 +469,28 @@ const CreateClassContent = ({
                               {n}
                             </option>
                           ))}
+                          <option value={NIVEAU_AUTRE}>
+                            {t("classes.create.form.levelOther", "Autre")}
+                          </option>
                         </select>
                       </div>
+                      {formData.niveau === NIVEAU_AUTRE && (
+                        <input
+                          type="text"
+                          value={niveauAutre}
+                          maxLength={60}
+                          onChange={(e) => {
+                            setNiveauAutre(e.target.value);
+                            if (errors.niveau)
+                              setErrors((prev) => ({ ...prev, niveau: null }));
+                          }}
+                          placeholder={t(
+                            "classes.create.form.levelOtherPlaceholder",
+                            "Saisissez le niveau (ex. BTS 1, Formation adulte…)",
+                          )}
+                          className={`mt-2 w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.niveau ? "border-red-500" : "border-gray-300"}`}
+                        />
+                      )}
                       {errors.niveau && (
                         <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                           <FontAwesomeIcon
@@ -590,53 +615,37 @@ const CreateClassContent = ({
                         </div>
                       )}
 
-                    {/* Information Panel */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <FontAwesomeIcon
-                          icon={faCircleExclamation}
-                          className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"
-                        />
-                        <div className="text-sm text-blue-700">
-                          <p className="font-semibold mb-1">
-                            {t(
-                              "classes.create.form.info.title",
-                              "Information importante",
-                            )}
-                          </p>
+                    {/* Notes spécifiques à l'établissement sélectionné */}
+                    {(selectedEstablishment?.optionEnvoiMailVersClasse ||
+                      selectedEstablishment?.optionTokenGeneral ||
+                      selectedEstablishment?.codeUnique) && (
+                      <div className="text-xs text-gray-500 space-y-1">
+                        {selectedEstablishment?.optionEnvoiMailVersClasse && (
                           <p>
                             {t(
-                              "classes.create.form.info.required",
-                              "Les champs marqués d'un * sont obligatoires.",
-                            )}
-                            {selectedEstablishment?.optionEnvoiMailVersClasse && (
-                              <span className="block mt-1">
-                                {t(
-                                  "classes.create.form.info.email",
-                                  "✉️ Cet établissement envoie des emails aux classes.",
-                                )}
-                              </span>
-                            )}
-                            {selectedEstablishment?.optionTokenGeneral && (
-                              <span className="block mt-1">
-                                {t(
-                                  "classes.create.form.info.token",
-                                  "🔑 Un token général est requis pour cet établissement.",
-                                )}
-                              </span>
-                            )}
-                            {selectedEstablishment?.codeUnique && (
-                              <span className="block mt-1">
-                                {t(
-                                  "classes.create.form.info.code",
-                                  "🎯 Un code unique est requis pour cet établissement.",
-                                )}
-                              </span>
+                              "classes.create.form.info.email",
+                              "✉️ Cet établissement envoie des emails aux classes.",
                             )}
                           </p>
-                        </div>
+                        )}
+                        {selectedEstablishment?.optionTokenGeneral && (
+                          <p>
+                            {t(
+                              "classes.create.form.info.token",
+                              "🔑 Un token général est requis pour cet établissement.",
+                            )}
+                          </p>
+                        )}
+                        {selectedEstablishment?.codeUnique && (
+                          <p>
+                            {t(
+                              "classes.create.form.info.code",
+                              "🎯 Un code unique est requis pour cet établissement.",
+                            )}
+                          </p>
+                        )}
                       </div>
-                    </div>
+                    )}
 
                     {/* Offre / Forfait (classe sans établissement) */}
                     {!formData.etablissement && (
@@ -744,6 +753,13 @@ const CreateClassContent = ({
                       </div>
                     </div>
                   )}
+
+                  <p className="text-xs text-gray-500 text-right mb-2">
+                    {t(
+                      "classes.create.form.info.required",
+                      "* Champs obligatoires",
+                    )}
+                  </p>
 
                   {/* Submit Button */}
                   <div className="flex justify-end">

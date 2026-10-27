@@ -278,6 +278,7 @@ export const loadLearnerProgression = async (eleveId, classeId) => {
         exercicesTotal: num(c.exercicesTotal) ?? 0,
         moyenne: num(c.moyenne),
         derniereActivite: c.derniereActivite || null,
+        tempsLectureSecondes: num(c.tempsLectureSecondes) ?? 0,
       })),
       devoirsEnRetard: (data.devoirsEnRetard || [])
         .map((d) => normalizeProg(d, eleveId))
@@ -319,6 +320,7 @@ const buildProgressionFallback = async (eleveId, classeId) => {
       titre: titleOf(id).titre,
       chapitresLus: num(p.chapitresCompletes) ?? 0,
       chapitresTotal: num(p.totalChapitres) ?? 0,
+      tempsLectureSecondes: num(p.tempsTotalSecondes) ?? 0,
       pourcentage: num(p.pourcentage) ?? 0,
       exercicesFaits: done.length,
       exercicesTotal: exos.length,
@@ -358,6 +360,16 @@ export const loadClassStatistics = async (classeId, eleves = []) => {
         coursId: c.coursId,
         titre: c.titre || "Cours",
         progressionMoyenne: num(c.progressionMoyenne),
+        // Average reading time (s) over the learners with a measured time; per chapter too.
+        tempsMoyenSecondes: num(c.tempsMoyenSecondes),
+        nbLecteurs: num(c.nbLecteurs) ?? 0,
+        chapitres: (c.chapitres || []).map((ch) => ({
+          chapitreId: ch.chapitreId,
+          titre: ch.titre || "",
+          ordre: num(ch.ordre),
+          tempsMoyenSecondes: num(ch.tempsMoyenSecondes),
+          nbLecteurs: num(ch.nbLecteurs) ?? 0,
+        })),
         exercices: (c.exercices || []).map((e) => ({
           exerciseProgrammerId: e.exerciseProgrammerId ?? e.id,
           titre: e.titre || e.nom || "Exercice",
@@ -378,6 +390,7 @@ export const loadClassStatistics = async (classeId, eleves = []) => {
         devoirsTotal: num(s.devoirsTotal) ?? 0,
         moyenne: num(s.moyenne),
         enRetard: num(s.enRetard) ?? 0,
+        tempsLectureSecondes: num(s.tempsLectureSecondes) ?? 0,
       })),
     };
   }
@@ -387,6 +400,9 @@ export const loadClassStatistics = async (classeId, eleves = []) => {
     coursId: g.coursId,
     titre: g.titre,
     progressionMoyenne: null,
+    tempsMoyenSecondes: null,
+    nbLecteurs: 0,
+    chapitres: [],
     exercices: exercises
       .filter((e) => String(e.coursId) === String(g.coursId))
       .map((e) => exerciseFigures(e, effectif || null)),

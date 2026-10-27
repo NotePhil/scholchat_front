@@ -14,7 +14,7 @@ import {
   faCircleXmark,
   faClock,
   faFileLines,
-  faHeartPulse,
+  faChartLine,
   faLocationDot,
   faPen,
   faSchool,
@@ -733,7 +733,7 @@ const CoursProgrammerViewModal = ({
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
                     <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
                       <FontAwesomeIcon
-                        icon={faHeartPulse}
+                        icon={faChartLine}
                         className="w-5 h-5 mr-2 text-blue-600"
                       />
                       Résumé des Sessions

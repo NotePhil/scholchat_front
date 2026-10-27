@@ -1,0 +1,275 @@
+/*
+ * Shared typography for rich course content. Applied to the editor surface
+ * (.rich-content--editor) AND every display (RichContent), so a chapter looks
+ * the same while it is written and when it is read. Restores what Tailwind's
+ * preflight resets (headings, lists, blockquotes, tables, inline images).
+ */
+.rich-content {
+  color: inherit;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: flow-root; /* contains floated images */
+  max-width: 100%;
+}
+.rich-content.rich-content--compact {
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+.rich-content > :first-child { margin-top: 0; }
+.rich-content > :last-child { margin-bottom: 0; }
+
+.rich-content p { margin: 0.5em 0; }
+.rich-content div { margin: 0; }
+
+.rich-content h1,
+.rich-content h2,
+.rich-content h3,
+.rich-content h4,
+.rich-content h5,
+.rich-content h6 {
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0.9em 0 0.4em;
+  color: inherit;
+}
+.rich-content h1 { font-size: 1.75em; }
+.rich-content h2 { font-size: 1.45em; }
+.rich-content h3 { font-size: 1.2em; }
+.rich-content h4 { font-size: 1.05em; }
+.rich-content h5,
+.rich-content h6 { font-size: 1em; }
+
+.rich-content b,
+.rich-content strong { font-weight: 700; }
+.rich-content i,
+.rich-content em { font-style: italic; }
+.rich-content u,
+.rich-content ins { text-decoration: underline; }
+.rich-content s,
+.rich-content strike,
+.rich-content del { text-decoration: line-through; }
+.rich-content mark { background: #fef08a; color: #111827; padding: 0 0.1em; }
+
+.rich-content ul,
+.rich-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.6em;
+}
+.rich-content ul { list-style: disc outside; }
+.rich-content ol { list-style: decimal outside; }
+.rich-content ul ul { list-style-type: circle; }
+.rich-content ul ul ul { list-style-type: square; }
+.rich-content ol ol { list-style-type: lower-alpha; }
+.rich-content ol ol ol { list-style-type: lower-roman; }
+.rich-content li { margin: 0.2em 0; display: list-item; }
+.rich-content li > p { margin: 0; }
+.rich-content ol[type="a"] { list-style-type: lower-alpha; }
+.rich-content ol[type="A"] { list-style-type: upper-alpha; }
+.rich-content ol[type="i"] { list-style-type: lower-roman; }
+.rich-content ol[type="I"] { list-style-type: upper-roman; }
+
+/* Quill-style classes, in case content comes from a Quill editor */
+.rich-content .ql-align-center { text-align: center; }
+.rich-content .ql-align-right { text-align: right; }
+.rich-content .ql-align-justify { text-align: justify; }
+.rich-content .ql-size-small { font-size: 0.75em; }
+.rich-content .ql-size-large { font-size: 1.5em; }
+.rich-content .ql-size-huge { font-size: 2.5em; }
+.rich-content .ql-indent-1 { padding-left: 3em; }
+.rich-content .ql-indent-2 { padding-left: 6em; }
+.rich-content .ql-indent-3 { padding-left: 9em; }
+.rich-content .ql-indent-4 { padding-left: 12em; }
+
+.rich-content blockquote {
+  margin: 0.75em 0;
+  padding: 0.35em 1em;
+  border-left: 4px solid #cbd5e1;
+  color: #475569;
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: 0 6px 6px 0;
+}
+
+/* execCommand("indent") output: a plain indented block, not a quote */
+.rich-content blockquote[style*="margin: 0px 0px 0px 40px"],
+.rich-content blockquote[style*="margin: 0 0 0 40px"] {
+  background: transparent;
+  border-radius: 0;
+  color: inherit;
+}
+
+.rich-content pre {
+  margin: 0.75em 0;
+  padding: 0.75em 1em;
+  background: #f1f5f9;
+  color: #0f172a;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  line-height: 1.5;
+}
+.rich-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: #f1f5f9;
+  color: #0f172a;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.rich-content pre code { background: transparent; padding: 0; font-size: inherit; }
+
+.rich-content hr {
+  border: 0;
+  border-top: 1px solid #cbd5e1;
+  margin: 1em 0;
+}
+
+.rich-content a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.rich-content a:hover { color: #1d4ed8; }
+
+/* Media: never wider than the content box, inline so text-align centers them */
+.rich-content img,
+.rich-content video {
+  display: inline-block;
+  max-width: 100% !important;
+  height: auto;
+  vertical-align: middle;
+  border-radius: 6px;
+}
+.rich-content img { cursor: zoom-in; }
+.rich-content--editor img { cursor: pointer; }
+.rich-content video { background: #000; max-height: 70vh; }
+.rich-content audio { max-width: 100%; }
+
+/* Image wrappers inserted by the editor */
+.rich-content [data-file-id] { max-width: 100%; }
+.rich-content [data-file-id][style*="margin: 8px auto"] { text-align: center; }
+.rich-content [data-file-id][style*="margin: 8px auto"] img { margin-left: auto; margin-right: auto; }
+.rich-content .rc-figure { margin: 0.5em 0; max-width: 100%; }
+.rich-content .rc-figure img,
+.rich-content .rc-figure video { display: inline-block; }
+.rich-content .rc-figure.rc-float-left { float: left; margin: 0.25em 1em 0.5em 0; }
+.rich-content .rc-figure.rc-float-right { float: right; margin: 0.25em 0 0.5em 1em; }
+.rich-content .rc-figure figcaption,
+.rich-content .rc-caption {
+  font-size: 0.75em;
+  color: #64748b;
+  text-align: center;
+  margin-top: 0.25em;
+}
+@media (max-width: 480px) {
+  /* Floats squeeze text into slivers on phones: stack instead. */
+  .rich-content:not(.rich-content--editor) .rc-figure.rc-float-left,
+  .rich-content:not(.rich-content--editor) .rc-figure.rc-float-right,
+  .rich-content:not(.rich-content--editor) [data-file-id][style*="float"] {
+    float: none !important;
+    margin: 0.5em 0 !important;
+    display: block !important;
+    width: auto !important;
+  }
+}
+
+/* File attachment chips */
+.rich-content .rc-attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0.5em 0;
+  padding: 0.55em 0.8em;
+  max-width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  text-align: left;
+}
+.rich-content .rc-attachment-icon { font-size: 1.15em; flex-shrink: 0; }
+.rich-content .rc-attachment a,
+.rich-content .rc-attachment .rc-attachment-name {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rich-content .rc-attachment-meta {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.75em;
+  color: #64748b;
+}
+/* Legacy attachment blocks (div[data-file-id] with inline flex style) */
+.rich-content div[data-file-id][style*="display: flex"] a { font-weight: 600; }
+
+/* Tables */
+.rich-content .rc-table-wrap {
+  clear: both; /* never squeezed next to a floated image */
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0.75em 0;
+}
+.rich-content table {
+  border-collapse: collapse;
+  margin: 0.75em 0;
+  font-size: 0.95em;
+}
+.rich-content .rc-table-wrap > table { margin: 0; }
+.rich-content th,
+.rich-content td {
+  border: 1px solid #cbd5e1;
+  padding: 0.4em 0.65em;
+  vertical-align: top;
+  min-width: 3em;
+  /* whole words in cells: the wrapper scrolls instead of splitting "deu|x" */
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.rich-content th { background: #f1f5f9; font-weight: 700; }
+.rich-content caption { caption-side: bottom; font-size: 0.8em; color: #64748b; padding-top: 0.3em; }
+
+/* ── Dark mode ── */
+.dark .rich-content blockquote { border-left-color: #475569; color: #cbd5e1; background: rgba(148, 163, 184, 0.1); }
+.dark .rich-content pre,
+.dark .rich-content code { background: #1e293b; color: #e2e8f0; }
+.dark .rich-content hr { border-top-color: #475569; }
+.dark .rich-content a { color: #93c5fd; }
+.dark .rich-content a:hover { color: #bfdbfe; }
+.dark .rich-content th,
+.dark .rich-content td { border-color: #475569; }
+.dark .rich-content th { background: #1e293b; }
+.dark .rich-content .rc-attachment { background: #1f2937; border-color: #374151; }
+.dark .rich-content .rc-attachment-meta,
+.dark .rich-content .rc-caption,
+.dark .rich-content figcaption { color: #94a3b8; }
+/* Highlighted text keeps a dark ink so it stays readable on its light background */
+.dark .rich-content [style*="background-color"]:not([style^="color"]):not([style*="; color"]),
+.dark .rich-content mark { color: #111827; }
+/* Explicit black / near-black ink would vanish on a dark background */
+.dark .rich-content [style*="color: rgb(0, 0, 0)"]:not([style*="background"]),
+.dark .rich-content [style*="color: #000"]:not([style*="background"]),
+.dark .rich-content [style*="color: black"]:not([style*="background"]),
+.dark .rich-content font[color="#000000"],
+.dark .rich-content font[color="#000"] { color: inherit !important; }
+
+/* ── Editor surface only ── */
+.rich-content--editor:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  font-style: italic;
+  pointer-events: none;
+}
+.rich-content--editor .rc-editor-selected {
+  outline: 3px solid #6366f1;
+  outline-offset: 2px;
+}
+.rich-content--editor .rc-attachment { cursor: default; user-select: none; }
+.rich-content--editor td:empty::after,
+.rich-content--editor th:empty::after { content: "\00a0"; }

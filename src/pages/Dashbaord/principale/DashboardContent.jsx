@@ -26,7 +26,8 @@ import {
   faArrowTrendUp,
   faArrowsRotate,
   faCalendarDays,
-  faHeartPulse,
+  faChartLine,
+  faNewspaper,
   faBookOpen,
   faCircleCheck,
   faUsers,
@@ -40,7 +41,7 @@ import {
   faSchool,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../utils/faIconAdapter";
-const Activity = asIconComponent(faHeartPulse);
+const Activity = asIconComponent(faChartLine);
 const Award = asIconComponent(faAward);
 const BarChart3 = asIconComponent(faChartBar);
 const BookOpen = asIconComponent(faBookOpen);
@@ -110,7 +111,7 @@ const StatCard = ({
       stiffness: 300,
       damping: 20,
     }}
-    className={`relative overflow-hidden rounded-2xl p-5 shadow-lg border ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"}`}
+    className={`relative overflow-hidden rounded-2xl p-3 sm:p-5 shadow-lg border ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"}`}
   >
     {/* gradient blob */}
     <div
@@ -119,10 +120,10 @@ const StatCard = ({
         background: gradient,
       }}
     />
-    <div className="relative z-10 flex items-start justify-between">
-      <div>
+    <div className="relative z-10 flex items-start justify-between gap-2">
+      <div className="min-w-0 flex-1">
         <p
-          className={`text-xs font-semibold uppercase tracking-widest mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+          className={`text-[10px] sm:text-xs font-semibold uppercase tracking-wide sm:tracking-widest mb-1 break-words ${isDark ? "text-slate-400" : "text-slate-500"}`}
         >
           {title}
         </p>
@@ -141,12 +142,12 @@ const StatCard = ({
         )}
       </div>
       <div
-        className="p-3 rounded-xl shadow-md flex-shrink-0"
+        className="p-2 sm:p-3 rounded-xl shadow-md flex-shrink-0"
         style={{
           background: gradient,
         }}
       >
-        <Icon className="w-5 h-5 text-white" />
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
       </div>
     </div>
     {trend && (
@@ -420,7 +421,7 @@ const DashboardContent = ({
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30">
                 <FontAwesomeIcon
-                  icon={faHeartPulse}
+                  icon={faChartLine}
                   className="w-5 h-5 text-white"
                 />
               </div>
@@ -856,7 +857,7 @@ const DashboardContent = ({
                 Activités Récentes
               </h3>
               <FontAwesomeIcon
-                icon={faHeartPulse}
+                icon={faNewspaper}
                 className="w-4 h-4 text-slate-400"
               />
             </div>

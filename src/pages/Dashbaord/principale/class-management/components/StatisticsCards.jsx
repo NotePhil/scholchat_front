@@ -1,6 +1,6 @@
 // components/StatisticsCards.jsx - UPDATED VERSION WITH UNIFIED USER COUNTING
 import React from "react";
-import { Card, Statistic, Row, Col } from "antd";
+import { Card, Statistic } from "antd";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faClock,
@@ -62,9 +62,17 @@ const StatisticsCards = ({ statistics, loading }) => {
         marginBottom: "24px",
       }}
     >
-      <Row gutter={[16, 16]}>
+      {/* auto-fill grid: card width follows the available content width, not the
+          viewport (the sidebar eats 260-280px on laptops). */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 170px), 1fr))",
+          gap: "16px",
+        }}
+      >
         {statsConfig.map((stat) => (
-          <Col xs={24} sm={12} md={8} lg={5} xl={4} key={stat.key}>
+          <div key={stat.key} style={{ minWidth: 0 }}>
             <Card
               style={{
                 background: "rgba(255, 255, 255, 0.95)",
@@ -138,6 +146,7 @@ const StatisticsCards = ({ statistics, loading }) => {
                     display: "flex",
                     flexDirection: "column",
                     gap: "4px",
+                    minWidth: 0,
                   }}
                 >
                   <div
@@ -171,6 +180,7 @@ const StatisticsCards = ({ statistics, loading }) => {
                       textTransform: "uppercase",
                       letterSpacing: "0.5px",
                       lineHeight: 1.2,
+                      overflowWrap: "anywhere",
                     }}
                   >
                     {stat.title}
@@ -178,9 +188,9 @@ const StatisticsCards = ({ statistics, loading }) => {
                 </div>
               </div>
             </Card>
-          </Col>
+          </div>
         ))}
-      </Row>
+      </div>
 
       <style jsx>{`
         @keyframes spin {

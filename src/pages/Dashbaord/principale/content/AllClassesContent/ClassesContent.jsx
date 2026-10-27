@@ -339,7 +339,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
       try {
         setLoading(true);
         const [classesData, establishmentsData] = await Promise.all([
-          classService.getAllClasses(),
+          classService.obtenirToutesLesClasses(),
           establishmentService.getAllEstablishments(),
         ]);
         setClasses(classesData);
@@ -532,7 +532,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
         etablissementId: newClass.etablissementId || null,
         accesMajeur: newClass.accesMajeur || false,
       };
-      const createdClass = await classService.createClass(classData);
+      const createdClass = await classService.creerClasse(classData);
       setClasses([...classes, createdClass]);
       setShowCreateModal(false);
       setShowTokenModal(true);
@@ -632,7 +632,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
         setSelectedClass(classes.find((cls) => cls.id === classId));
         setShowRejectModal(true);
       } else {
-        const updatedClass = await classService.activateClass(classId);
+        const updatedClass = await classService.approuverClasse(classId);
         setClasses(
           classes.map((cls) => (cls.id === classId ? updatedClass : cls)),
         );

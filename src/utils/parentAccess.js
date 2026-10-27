@@ -3,7 +3,8 @@
 // backend refuses everything except auth, own profile, password, notifications,
 // /parents/{id}/enfants** and child inscriptions / requests with
 // 403 { code: "PARENT_SANS_ENFANT_VALIDE" }. The web then only shows
-// « Mes enfants », Profil / Paramètres and the notifications.
+// « Mes enfants », « Activités » (general news only: public events without a
+// target class), Profil / Paramètres and the notifications.
 
 export const PARENT_LIMITED_CODE = "PARENT_SANS_ENFANT_VALIDE";
 
@@ -13,7 +14,7 @@ export const PARENT_ACCESS_CHANGED_EVENT = "parent:accessChanged";
 export const PARENT_LIMITED_EVENT = "parent:limited";
 
 /** Tabs a limited parent can open. */
-export const PARENT_LIMITED_TABS = ["my-children", "settings"];
+export const PARENT_LIMITED_TABS = ["my-children", "activities", "settings"];
 
 const API = process.env.REACT_APP_API_BASE_URL;
 

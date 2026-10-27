@@ -34,7 +34,7 @@ import {
   faFilter,
   faGraduationCap,
   faHashtag,
-  faHeartPulse,
+  faChartLine,
   faLocationDot,
   faMagnifyingGlass,
   faPen,
@@ -1531,7 +1531,7 @@ const ProfessorsContent = ({
             </div>
             <div className="mt-2 sm:mt-4 flex items-center">
               <FontAwesomeIcon
-                icon={faHeartPulse}
+                icon={faChartLine}
                 className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2"
               />
               <span

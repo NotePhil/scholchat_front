@@ -11,6 +11,7 @@ import { messageService } from "../../../../services/MessageService";
 import { useMessageAttachments, MAX_ATTACHMENTS } from "./messageMedia";
 import { AttachButton, AttachmentPreviewList } from "./MessageAttachments";
 import { ContactAutocomplete } from "./RecipientSelectorModal";
+import { useTranslation } from "../../../../hooks/useTranslation";
 
 
 const ComposeModal = ({
@@ -29,6 +30,7 @@ const ComposeModal = ({
   setCcRecipients,
   onMessageSent,
 }) => {
+  const { t } = useTranslation();
   const [contacts, setContacts] = useState([]);
   const [classesList, setClassesList] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
@@ -171,7 +173,8 @@ const ComposeModal = ({
       console.error("Error sending message:", error);
       // 403/400 carry a French message from the server.
       setErrorMessage(
-        error?.message || "Échec de l'envoi du message. Veuillez réessayer.",
+        error?.message ||
+          t("messaging.compose.sendFailed", "Échec de l'envoi du message. Veuillez réessayer."),
       );
     } finally {
       setSending(false);
@@ -181,7 +184,11 @@ const ComposeModal = ({
   const onFiles = (files) => {
     const rejected = attachments.addFiles(files);
     if (rejected > 0) {
-      setErrorMessage(`Maximum ${MAX_ATTACHMENTS} pièces jointes par message.`);
+      setErrorMessage(
+        t("messaging.compose.maxAttachments", "Maximum {{max}} pièces jointes par message.", {
+          max: MAX_ATTACHMENTS,
+        }),
+      );
     }
   };
 
@@ -199,7 +206,7 @@ const ComposeModal = ({
           <h3
             className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}
           >
-            Nouveau message
+            {t("messaging.common.newMessage", "Nouveau message")}
           </h3>
           <button
             className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
@@ -220,8 +227,14 @@ const ComposeModal = ({
           {canGroupMessage && classesList.length > 0 && (
             <div className="flex gap-2">
               {[
-                { general: false, label: "Message individuel" },
-                { general: true, label: "Message à une classe" },
+                {
+                  general: false,
+                  label: t("messaging.compose.individualMessage", "Message individuel"),
+                },
+                {
+                  general: true,
+                  label: t("messaging.conversations.classMessage", "Message à une classe"),
+                },
               ].map((opt) => (
                 <button
                   key={opt.label}
@@ -237,7 +250,9 @@ const ComposeModal = ({
 
           {isGeneralMessage && (
             <div>
-              <label className={labelCls}>Classes</label>
+              <label className={labelCls}>
+                {t("messaging.compose.classes", "Classes")}
+              </label>
               <div className={fieldBox}>
                 <div className="flex flex-wrap gap-2">
                   {classesList.map((classe) => (
@@ -255,8 +270,10 @@ const ComposeModal = ({
                   ))}
                 </div>
                 <p className={`text-xs mt-2 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Le message sera envoyé à tous les membres des classes
-                  sélectionnées.
+                  {t(
+                    "messaging.compose.classesHint",
+                    "Le message sera envoyé à tous les membres des classes sélectionnées.",
+                  )}
                 </p>
               </div>
             </div>
@@ -266,7 +283,7 @@ const ComposeModal = ({
           {!isGeneralMessage && (
             <div>
               <label className={labelCls} htmlFor="compose-to">
-                À
+                {t("messaging.compose.to", "À")}
               </label>
               <div className={fieldBox}>
                 <ContactAutocomplete
@@ -278,7 +295,7 @@ const ComposeModal = ({
                   onRemove={handleRemoveRecipient}
                   isDark={isDark}
                   loading={loadingContacts}
-                  placeholder="Tapez un nom ou un e-mail"
+                  placeholder={t("messaging.compose.toPlaceholder", "Tapez un nom ou un e-mail")}
                 />
               </div>
             </div>
@@ -287,7 +304,7 @@ const ComposeModal = ({
           {/* CC Recipients */}
           <div>
             <label className={labelCls} htmlFor="compose-cc">
-              Copie (CC)
+              {t("messaging.compose.cc", "Copie (CC)")}
             </label>
             <div className={fieldBox}>
               <ContactAutocomplete
@@ -300,17 +317,22 @@ const ComposeModal = ({
                 isDark={isDark}
                 loading={loadingContacts}
                 accent="purple"
-                placeholder="Ajouter en copie : nom ou e-mail"
+                placeholder={t(
+                  "messaging.compose.ccPlaceholder",
+                  "Ajouter en copie : nom ou e-mail",
+                )}
               />
             </div>
           </div>
 
           {/* Subject (optional) */}
           <div>
-            <label className={labelCls}>Objet (facultatif)</label>
+            <label className={labelCls}>
+              {t("messaging.compose.subjectOptional", "Objet (facultatif)")}
+            </label>
             <input
               type="text"
-              placeholder="Saisissez l'objet du message"
+              placeholder={t("messaging.compose.subjectPlaceholder", "Saisissez l'objet du message")}
               className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
               value={newMessage.objet}
               onChange={(e) =>
@@ -321,9 +343,9 @@ const ComposeModal = ({
 
           {/* Message Content */}
           <div>
-            <label className={labelCls}>Message</label>
+            <label className={labelCls}>{t("messaging.common.message", "Message")}</label>
             <textarea
-              placeholder="Tapez votre message ici..."
+              placeholder={t("messaging.compose.messagePlaceholder", "Tapez votre message ici...")}
               rows={6}
               className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
               value={newMessage.contenu}
@@ -340,11 +362,12 @@ const ComposeModal = ({
                 onFiles={onFiles}
                 disabled={sending || attachments.items.length >= MAX_ATTACHMENTS}
                 isDark={isDark}
-                label="Joindre"
+                label={t("messaging.compose.attach", "Joindre")}
               />
               <span className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                Images, vidéos, PDF et documents
-                {attachments.uploading && " — téléversement en cours..."}
+                {t("messaging.compose.attachHint", "Images, vidéos, PDF et documents")}
+                {attachments.uploading &&
+                  t("messaging.compose.uploadingSuffix", " — téléversement en cours...")}
               </span>
             </div>
             <AttachmentPreviewList
@@ -365,7 +388,7 @@ const ComposeModal = ({
             onClick={() => setShowCompose(false)}
             disabled={sending}
           >
-            Annuler
+            {t("messaging.common.cancel", "Annuler")}
           </button>
           <button
             className={`px-4 py-2 rounded-lg text-white transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${canSend ? "hover:shadow-lg" : "bg-gray-400 cursor-not-allowed"}`}
@@ -382,12 +405,14 @@ const ComposeModal = ({
                   className="animate-spin"
                   style={{ fontSize: 16 }}
                 />
-                {sending ? "Envoi..." : "Téléversement..."}
+                {sending
+                  ? t("messaging.compose.sending", "Envoi...")
+                  : t("messaging.compose.uploading", "Téléversement...")}
               </>
             ) : (
               <>
                 <FontAwesomeIcon icon={faPaperPlane} style={{ fontSize: 16 }} />
-                Envoyer
+                {t("messaging.common.send", "Envoyer")}
               </>
             )}
           </button>

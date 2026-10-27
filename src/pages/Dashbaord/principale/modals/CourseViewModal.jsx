@@ -25,6 +25,7 @@ import {
   faUsers,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import RichContent from "../../../../components/richtext/RichContent";
 const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
   // Handle the course data (passed as classe prop)
   const course = classe;
@@ -260,20 +261,8 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
   };
   const renderChapterContent = (content) => {
     if (!content) return null;
-
-    // Convert newlines to <br> tags for display
-    const formattedContent = content.replace(/\n/g, "<br>");
-    return (
-      <div
-        className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
-        dangerouslySetInnerHTML={{
-          __html: formattedContent,
-        }}
-        style={{
-          wordBreak: "break-word",
-        }}
-      />
-    );
+    // Same renderer as every other course view (formatting, alignment, media, files).
+    return <RichContent html={content} />;
   };
   return (
     <div className="fixed inset-0 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">

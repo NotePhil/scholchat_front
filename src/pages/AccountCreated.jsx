@@ -104,11 +104,11 @@ const AccountCreated = ({ theme }) => {
                     className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 px-4 py-2.5 text-sm"
                   >
                     <span className="font-semibold text-slate-800 dark:text-slate-100">
-                      {`${e.prenom || ""} ${e.nom || ""}`.trim() || `Enfant ${i + 1}`}
+                      {`${e.prenom || ""} ${e.nom || ""}`.trim() || e.email || `Enfant ${i + 1}`}
                       {e.classeNom ? <span className="font-normal text-slate-500 dark:text-slate-400"> — {e.classeNom}</span> : null}
                     </span>
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
-                      En attente
+                      {e.lienStatut === "EN_ATTENTE_VALIDATION_PROFESSEUR" ? "En attente de validation par le professeur" : "En attente"}
                     </span>
                   </li>
                 ))}

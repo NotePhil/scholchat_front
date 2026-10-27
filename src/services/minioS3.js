@@ -138,7 +138,13 @@ class MinioS3Service {
     }
   }
 
-  async uploadFileToMinio(presignedUrl, file, contentType) {
+  async uploadFileToMinio(
+    presignedUrl,
+    file,
+    contentType,
+    onProgress = null,
+    signal = null,
+  ) {
     try {
       console.log("=== UPLOADING TO MINIO ===");
       console.log("Presigned URL:", presignedUrl);
@@ -150,6 +156,10 @@ class MinioS3Service {
           headers: {
             "Content-Type": contentType,
           },
+          ...(onProgress && {
+            onUploadProgress: (e) => onProgress(e.loaded || 0),
+          }),
+          ...(signal && { signal }),
           maxContentLength: Infinity,
           maxBodyLength: Infinity,
           timeout: 60000,
@@ -157,6 +167,10 @@ class MinioS3Service {
         console.log("Direct upload success:", uploadResponse.status);
         return { success: true, status: uploadResponse.status };
       } catch (directError) {
+        // A cancelled upload must not fall back to the proxy.
+        if (signal?.aborted || axios.isCancel(directError)) throw directError;
+        // Restart the progress from 0 for the proxy attempt.
+        if (onProgress) onProgress(0);
         console.warn(
           "Direct MinIO upload failed (CORS), using backend proxy...",
         );
@@ -179,6 +193,10 @@ class MinioS3Service {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
           },
+          ...(onProgress && {
+            onUploadProgress: (e) => onProgress(e.loaded || 0),
+          }),
+          ...(signal && { signal }),
           maxContentLength: Infinity,
           maxBodyLength: Infinity,
           timeout: 120000,
@@ -189,6 +207,11 @@ class MinioS3Service {
       console.log("=== MINIO UPLOAD SUCCESS (via proxy) ===");
       return { success: true, status: proxyResponse.status };
     } catch (error) {
+      if (signal?.aborted || axios.isCancel(error)) {
+        const cancelled = new Error("Upload cancelled");
+        cancelled.cancelled = true;
+        throw cancelled;
+      }
       console.error("=== MINIO UPLOAD ERROR ===");
       console.error("Error status:", error.response?.status);
       console.error("Error data:", error.response?.data);
@@ -208,6 +231,8 @@ class MinioS3Service {
     documentType = "general",
     coursId = null,
     ownerId = null,
+    onProgress = null,
+    signal = null,
   ) {
     try {
       console.log("=== MINIO UPLOAD FILE START ===");
@@ -235,7 +260,19 @@ class MinioS3Service {
 
       console.log("Generated upload URL data:", uploadUrlData);
 
-      await this.uploadFileToMinio(uploadUrlData.uploadUrl, file, file.type);
+      if (signal?.aborted) {
+        const cancelled = new Error("Upload cancelled");
+        cancelled.cancelled = true;
+        throw cancelled;
+      }
+
+      await this.uploadFileToMinio(
+        uploadUrlData.uploadUrl,
+        file,
+        file.type,
+        onProgress,
+        signal,
+      );
 
       // The presigned-url response already reflects the ownerId we sent
       // (explicit override, or the current user as a fallback) — reuse it

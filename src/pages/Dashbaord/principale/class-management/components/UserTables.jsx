@@ -580,12 +580,16 @@ const UserTables = ({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              flexWrap: "wrap",
+              gap: "8px",
             }}
           >
             <span
               style={{
                 fontWeight: "bold",
                 fontSize: "16px",
+                minWidth: 0,
+                overflowWrap: "anywhere",
               }}
             >
               {getTableTitle()}

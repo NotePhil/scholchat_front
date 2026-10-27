@@ -15,6 +15,8 @@ import {
   AttachmentPreviewList,
   MessageAttachments,
 } from "./MessageAttachments";
+import { useTranslation } from "../../../../hooks/useTranslation";
+import { dateLocale } from "./chatUtils";
 const QUOTE_SEPARATOR = "--- Message original ---";
 const MessageContent = ({ contenu, isDark }) => {
   if (!contenu) return null;
@@ -47,6 +49,7 @@ const MessageDetailPanel = ({
   onDeleteMessage,
   onDeleteConversation,
 }) => {
+  const { t, language } = useTranslation();
   const attachments = useMessageAttachments();
   const [showReplyField, setShowReplyField] = useState(false);
   const [replyContent, setReplyContent] = useState("");
@@ -65,7 +68,8 @@ const MessageDetailPanel = ({
   }, [selectedMessage?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const handleReplyClick = () => {
     setShowReplyField(true);
-    const originalSubject = selectedMessage.objet || "Sans objet";
+    const originalSubject =
+      selectedMessage.objet || t("messaging.detail.noSubject", "Sans objet");
     setReplySubject(
       originalSubject.startsWith("Re: ")
         ? originalSubject
@@ -94,7 +98,9 @@ const MessageDetailPanel = ({
   };
   const handleSendReply = async () => {
     if (!replyContent.trim() && attachments.medias.length === 0) {
-      setReplyError("Veuillez saisir un message ou joindre un fichier");
+      setReplyError(
+        t("messaging.detail.replyEmpty", "Veuillez saisir un message ou joindre un fichier"),
+      );
       return;
     }
     setIsReplying(true);
@@ -115,7 +121,10 @@ const MessageDetailPanel = ({
       onMessageSent?.(sent);
     } catch (error) {
       console.error("Error sending reply:", error);
-      setReplyError(error?.message || "Erreur lors de l'envoi de la réponse");
+      setReplyError(
+        error?.message ||
+          t("messaging.detail.replyFailed", "Erreur lors de l'envoi de la réponse"),
+      );
     } finally {
       setIsReplying(false);
     }
@@ -186,7 +195,7 @@ const MessageDetailPanel = ({
                   fontSize: 16,
                 }}
               />
-              Répondre
+              {t("messaging.common.reply", "Répondre")}
             </button>
           )}
           <button
@@ -198,13 +207,13 @@ const MessageDetailPanel = ({
                 fontSize: 16,
               }}
             />
-            Transférer
+            {t("messaging.detail.forward", "Transférer")}
           </button>
           {onDeleteConversation && (
             <button
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-red-600 ${isDark ? "border-gray-600 hover:bg-gray-700" : "border-gray-300 hover:bg-red-50"}`}
               onClick={() => onDeleteConversation(selectedMessage)}
-              title="Supprimer la conversation"
+              title={t("messaging.detail.deleteConversation", "Supprimer la conversation")}
             >
               <FontAwesomeIcon icon={faTrashCan} style={{ fontSize: 16 }} />
             </button>
@@ -218,12 +227,12 @@ const MessageDetailPanel = ({
           <div
             className={`text-sm font-medium mb-2 ${isDark ? "text-gray-400" : "text-gray-600"}`}
           >
-            Objet:
+            {t("messaging.detail.subjectLabel", "Objet:")}
           </div>
           <div
             className={`font-medium text-lg mb-4 ${isDark ? "text-gray-200" : "text-gray-800"}`}
           >
-            {selectedMessage?.objet || "Sans objet"}
+            {selectedMessage?.objet || t("messaging.detail.noSubject", "Sans objet")}
           </div>
         </div>
 
@@ -256,7 +265,7 @@ const MessageDetailPanel = ({
                     <button
                       className={`ml-auto p-2 rounded-full opacity-60 hover:opacity-100 hover:text-red-600 ${isDark ? "hover:bg-gray-600" : "hover:bg-gray-200"}`}
                       onClick={() => onDeleteMessage(msg)}
-                      title="Supprimer ce message"
+                      title={t("messaging.detail.deleteThisMessage", "Supprimer ce message")}
                     >
                       <FontAwesomeIcon icon={faTrashCan} style={{ fontSize: 13 }} />
                     </button>
@@ -295,14 +304,14 @@ const MessageDetailPanel = ({
             <label
               className={`block text-sm font-medium mb-1 ${isDark ? "text-gray-300" : "text-gray-700"}`}
             >
-              Objet
+              {t("messaging.detail.subject", "Objet")}
             </label>
             <input
               type="text"
               value={replySubject}
               onChange={(e) => setReplySubject(e.target.value)}
               className={`w-full px-3 py-2 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900"}`}
-              placeholder="Objet de la réponse"
+              placeholder={t("messaging.detail.replySubjectPlaceholder", "Objet de la réponse")}
             />
           </div>
           {/* Quoted original message */}
@@ -312,11 +321,11 @@ const MessageDetailPanel = ({
             <div className="font-semibold mb-1">
               {selectedMessage?.expediteur
                 ? `${selectedMessage.expediteur.prenom || ""} ${selectedMessage.expediteur.nom || ""}`.trim()
-                : "Inconnu"}
+                : t("messaging.detail.unknown", "Inconnu")}
               {selectedMessage?.dateCreation && (
                 <span className="font-normal ml-2">
                   {new Date(selectedMessage.dateCreation).toLocaleString(
-                    "fr-FR",
+                    dateLocale(language),
                   )}
                 </span>
               )}
@@ -330,14 +339,14 @@ const MessageDetailPanel = ({
             <label
               className={`block text-sm font-medium mb-1 ${isDark ? "text-gray-300" : "text-gray-700"}`}
             >
-              Réponse
+              {t("messaging.detail.reply", "Réponse")}
             </label>
             <textarea
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
               rows={4}
               className={`w-full px-3 py-2 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900"}`}
-              placeholder="Tapez votre réponse..."
+              placeholder={t("messaging.detail.replyPlaceholder", "Tapez votre réponse...")}
             />
           </div>
           <div className="mb-3 space-y-2">
@@ -345,7 +354,11 @@ const MessageDetailPanel = ({
               onFiles={(files) => {
                 if (attachments.addFiles(files) > 0) {
                   setReplyError(
-                    `Maximum ${MAX_ATTACHMENTS} pièces jointes par message.`,
+                    t(
+                      "messaging.compose.maxAttachments",
+                      "Maximum {{max}} pièces jointes par message.",
+                      { max: MAX_ATTACHMENTS },
+                    ),
                   );
                 }
               }}
@@ -353,7 +366,7 @@ const MessageDetailPanel = ({
                 isReplying || attachments.items.length >= MAX_ATTACHMENTS
               }
               isDark={isDark}
-              label="Joindre"
+              label={t("messaging.compose.attach", "Joindre")}
             />
             <AttachmentPreviewList
               items={attachments.items}
@@ -375,7 +388,7 @@ const MessageDetailPanel = ({
                   fontSize: 14,
                 }}
               />
-              Annuler
+              {t("messaging.common.cancel", "Annuler")}
             </button>
             <button
               className={`px-4 py-2 text-sm rounded text-white flex items-center gap-2 ${!canSendReply ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
@@ -385,7 +398,7 @@ const MessageDetailPanel = ({
               {isReplying || attachments.uploading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Envoi...
+                  {t("messaging.compose.sending", "Envoi...")}
                 </>
               ) : (
                 <>
@@ -395,7 +408,7 @@ const MessageDetailPanel = ({
                       fontSize: 14,
                     }}
                   />
-                  Envoyer
+                  {t("messaging.common.send", "Envoyer")}
                 </>
               )}
             </button>

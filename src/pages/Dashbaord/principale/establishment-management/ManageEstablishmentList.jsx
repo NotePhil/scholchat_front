@@ -12,7 +12,7 @@ import {
   faEnvelope,
   faEye,
   faGlobe,
-  faHeartPulse,
+  faChartLine,
   faKey,
   faLocationDot,
   faMagnifyingGlass,
@@ -305,7 +305,7 @@ const ManageEstablishmentList = ({
             </div>
             <div className="mt-2 sm:mt-4 flex items-center">
               <FontAwesomeIcon
-                icon={faHeartPulse}
+                icon={faChartLine}
                 className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2"
               />
               <span className="text-slate-500 text-xs sm:text-sm">
@@ -363,7 +363,7 @@ const ManageEstablishmentList = ({
               />
             </div>
 
-            <div className="flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4">
+            <div className="flex flex-col min-[480px]:flex-row min-[480px]:flex-wrap lg:justify-end items-stretch min-[480px]:items-center gap-3 min-[480px]:gap-2 sm:gap-4 min-w-0">
               {/* Country Filter */}
               {availableCountries.length > 0 && (
                 <div className="relative flex-1 min-[480px]:flex-none min-w-0">
@@ -418,7 +418,7 @@ const ManageEstablishmentList = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleRefresh}
                   disabled={refreshing}

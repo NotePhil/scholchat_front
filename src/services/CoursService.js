@@ -126,6 +126,9 @@ class CoursService {
           id: matiere.id,
         })),
         chapitres: updates.chapitres.map((chapitre) => ({
+          // Keep the id: the backend updates the chapter in place, so students'
+          // reading progress survives course edits.
+          id: chapitre.id || undefined,
           titre: chapitre.titre,
           description: chapitre.description || "",
           ordre: chapitre.ordre,
@@ -222,9 +225,12 @@ class CoursService {
     }
   }
 
-  async marquerChapitreComplete(coursId, chapitreId, utilisateurId) {
+  /** `dureeSecondes`: active reading time measured in the browser (capped at 4 h server-side, summed on re-completion). */
+  async marquerChapitreComplete(coursId, chapitreId, utilisateurId, dureeSecondes) {
     try {
-      await coursApi.post(`/cours/${coursId}/chapitres/${chapitreId}/complete/${utilisateurId}`);
+      await coursApi.post(`/cours/${coursId}/chapitres/${chapitreId}/complete/${utilisateurId}`, null, {
+        params: dureeSecondes != null ? { dureeSecondes: Math.max(0, Math.round(dureeSecondes)) } : undefined,
+      });
     } catch (error) {
       this.handleError(error);
     }

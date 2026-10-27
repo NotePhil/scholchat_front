@@ -124,6 +124,8 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
     isParent ? localStorage.getItem("selectedChildId") || parentId : parentId,
   );
   const userId = activeUserId;
+  // Parent following an adult child (own account): read-only — the child asks for class access himself.
+  const adultChildView = isParentView && localStorage.getItem("selectedChildHasAccount") === "true";
   const [userClasses, setUserClasses] = useState([]);
   const [allClasses, setAllClasses] = useState([]);
   const [accessMap, setAccessMap] = useState({}); // classId -> APPROVED|PENDING|REJECTED
@@ -564,6 +566,14 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
                 </button>
               )}
               {/* Primary action, always labelled and visible without scrolling (desktop and mobile) */}
+              {adultChildView ? (
+                <span
+                  className="px-3 py-1.5 rounded-lg bg-white/20 text-white text-xs font-semibold border border-white/30"
+                  title="Votre enfant a son propre compte : c'est lui qui demande l'accès à une classe."
+                >
+                  Lecture seule
+                </span>
+              ) : (
               <button
                 onClick={() => setShowSearchModal(true)}
                 className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white text-[#1d3557] hover:bg-indigo-50 text-xs sm:text-sm font-bold shadow-md transition-colors"
@@ -571,6 +581,7 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
                 <FontAwesomeIcon icon={faRightToBracket} />
                 <span>Rejoindre une classe</span>
               </button>
+              )}
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
@@ -699,6 +710,7 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
               ? "Rejoignez une classe avec un code d'activation."
               : "Aucune classe ne correspond à votre recherche."}
           </p>
+          {!adultChildView && (
           <Button
             type="primary"
             icon={<FontAwesomeIcon icon={faRightToBracket} />}
@@ -709,6 +721,7 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
           >
             Rejoindre une classe
           </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -910,7 +923,7 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
                       >
                         <FontAwesomeIcon icon={faClock} /> Demande en attente
                       </button>
-                    ) : (
+                    ) : adultChildView ? null : (
                       <button
                         onClick={() => setShowSearchModal(true)}
                         className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors"

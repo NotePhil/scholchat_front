@@ -24,7 +24,7 @@ import {
   faXmark,
   faArrowTrendUp,
   faFileLines,
-  faHeartPulse,
+  faFilePen,
   faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../../utils/faIconAdapter";
@@ -34,7 +34,7 @@ import {
   openingStart,
   useMountedRef,
 } from "../../../../../utils/notificationNavigation";
-const Activity = asIconComponent(faHeartPulse);
+const Activity = asIconComponent(faFilePen);
 const BookOpen = asIconComponent(faBookOpen);
 const CheckCircle = asIconComponent(faCircleCheck);
 const FileText = asIconComponent(faFileLines);

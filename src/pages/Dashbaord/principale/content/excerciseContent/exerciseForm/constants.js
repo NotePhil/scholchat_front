@@ -258,6 +258,24 @@ export const QUESTION_MEDIA_ACCEPT = "image/*,application/pdf";
 export const isAllowedQuestionMediaFile = (file) =>
   !!file && (file.type.startsWith("image/") || file.type === "application/pdf");
 
+export const QUESTION_MEDIA_LIMITS = {
+  image: { max: 10 * 1024 * 1024, label: "10 Mo" },
+  pdf: { max: 25 * 1024 * 1024, label: "25 Mo" },
+};
+/** Error message for a question attachment, or null when it can be uploaded. */
+export const validateQuestionMediaFile = (file) => {
+  if (!isAllowedQuestionMediaFile(file)) {
+    return `« ${file?.name || "fichier"} » : seules les images et les fichiers PDF sont acceptés.`;
+  }
+  if (file.size === 0) return `« ${file.name} » est vide.`;
+  const lim = file.type.startsWith("image/") ? QUESTION_MEDIA_LIMITS.image : QUESTION_MEDIA_LIMITS.pdf;
+  if (file.size > lim.max) {
+    const mb = (file.size / (1024 * 1024)).toFixed(1).replace(".", ",");
+    return `« ${file.name} » est trop volumineux (${mb} Mo). Taille maximale : ${lim.label}.`;
+  }
+  return null;
+};
+
 // ── Build API payload for a question ──────────────────────────────────────────
 export const buildQuestionPayload = (q) => {
   const base = {

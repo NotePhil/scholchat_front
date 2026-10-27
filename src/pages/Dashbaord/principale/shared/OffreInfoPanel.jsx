@@ -7,6 +7,7 @@ import {
 } from "../../../../services/OfferService";
 import PaymentModal from "../../../../components/modals/PaymentModal";
 import { useAuth } from "../../../../hooks/useAuth";
+import { texteConfirmationChangement } from "../../../../utils/changementOffre";
 
 /**
  * Panneau "Offre / Forfait actuel" — Classe ou Établissement.
@@ -24,13 +25,15 @@ import {
   faWrench,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-const OffreInfoPanel = ({ type, entityId, isDark }) => {
+const OffreInfoPanel = ({ type, entityId, isDark, onContratChange }) => {
   const { isAdmin } = useAuth();
   const [contrat, setContrat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAction, setShowAction] = useState(null); // "prolonger" | "changer" | "admin"
   const [showPayment, setShowPayment] = useState(false);
+  // "Changer d'offre" confirmation, shown between the offer selection and the payment
+  const [showConfirmChange, setShowConfirmChange] = useState(false);
   const [offresDisponibles, setOffresDisponibles] = useState([]);
   const [nouvelleOffreId, setNouvelleOffreId] = useState("");
   const [periodicite, setPeriodicite] = useState(PeriodiciteContrat.MENSUEL);
@@ -94,6 +97,7 @@ const OffreInfoPanel = ({ type, entityId, isDark }) => {
   }, [contrat]);
   const ouvrirAction = async (action) => {
     setShowAction(action);
+    setShowConfirmChange(false);
     setActionError("");
     setActionSuccess("");
     setNouvelleOffreId("");
@@ -180,8 +184,13 @@ const OffreInfoPanel = ({ type, entityId, isDark }) => {
         await contratService.prolongerContratClasse(entityId, payload);
       }
       setShowPayment(false);
-      setActionSuccess("Offre activée avec succès !");
+      setActionSuccess(
+        showAction === "changer"
+          ? "Offre modifiée — effective immédiatement"
+          : "Offre activée avec succès !",
+      );
       await chargerContrat();
+      if (onContratChange) onContratChange();
       setTimeout(() => {
         setShowAction(null);
         setActionSuccess("");
@@ -407,7 +416,7 @@ const OffreInfoPanel = ({ type, entityId, isDark }) => {
       )}
 
       {/* Sélection offre / périodicité (étape 1) */}
-      {showAction && !showPayment && (
+      {showAction && !showPayment && !showConfirmChange && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
           <div
             className={`w-full sm:max-w-sm max-h-[92vh] overflow-y-auto ${modalBg} rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 sm:p-6`}
@@ -564,7 +573,8 @@ const OffreInfoPanel = ({ type, entityId, isDark }) => {
                     return;
                   }
                   setActionError("");
-                  setShowPayment(true);
+                  if (showAction === "changer") setShowConfirmChange(true);
+                  else setShowPayment(true);
                 }}
                 disabled={montant <= 0}
                 className="w-full py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 active:scale-[0.98] transition-all"
@@ -572,6 +582,54 @@ const OffreInfoPanel = ({ type, entityId, isDark }) => {
                 Continuer vers le paiement
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation du changement d'offre (avant le paiement) */}
+      {showAction === "changer" && showConfirmChange && !showPayment && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className={`w-full sm:max-w-sm ${modalBg} rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 sm:p-6`}
+          >
+            <h4 className={`font-semibold mb-3 ${textMain}`}>Changer d'offre ?</h4>
+            {texteConfirmationChangement({
+              contrat,
+              offre: offreCible,
+              montant,
+              periodicite,
+            }).map((para, i) => (
+              <p
+                key={i}
+                className={`text-sm leading-relaxed ${i > 0 ? "mt-2" : ""} ${textMuted}`}
+              >
+                {para}
+              </p>
+            ))}
+            <p className={`text-sm mt-2 ${textMain}`}>Confirmer ?</p>
+            <div className="flex gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setShowConfirmChange(false)}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-medium ${isDark ? "border-gray-600 text-gray-200 hover:bg-gray-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmChange(false);
+                  setShowPayment(true);
+                }}
+                className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              >
+                Confirmer
+              </button>
+            </div>
           </div>
         </div>
       )}

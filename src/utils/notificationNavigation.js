@@ -115,6 +115,24 @@ export const getNotificationTarget = (notification, role) => {
         },
       };
 
+    // Parental follow-up of an adult student (validated by his professors, not by the student):
+    //  - PARENT_LINK_REQUEST (per class) to the class managers: CLASS(classeId) → class detail « Demandes » tab
+    //    (legacy rows without a class: no destination; old student-side rows → « Suivi parental »).
+    //  - ACCEPTED / REJECTED / REMOVED to the parent: CHILD(eleveId) → « Mes enfants »;
+    //    to the student (informative): PARENT_LINK → Paramètres « Suivi parental » (read-only).
+    case "PARENT_LINK_REQUEST":
+      if (entity === "CLASS" || entity === "CLASSE") return classTarget("access-requests");
+      return role === "student" ? { tab: "settings", data: { section: "suivi-parental" } } : null;
+    case "PARENT_LINK_ACCEPTED":
+    case "PARENT_LINK_REJECTED":
+    case "PARENT_LINK_REMOVED":
+      if (role === "parent" || entity === "CHILD") {
+        if (role !== "parent") return null;
+        const outcome = type === "PARENT_LINK_ACCEPTED" ? "linked" : type === "PARENT_LINK_REJECTED" ? "refused" : "removed";
+        return { tab: "my-children", data: { childId: entity === "CHILD" ? id || actorId : actorId, outcome } };
+      }
+      return { tab: "settings", data: { section: "suivi-parental" } };
+
     case "MESSAGE_SENT":
     case "NEW_MESSAGE":
       return actorId || id

@@ -17,85 +17,51 @@ import {
   faTrashCan,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import {
+  formatDureeJours,
+  joursEnMinutes,
+  minutesEnJoursSaisie,
+} from "../../../../../utils/offreDuree";
 const DEFAULT_FORM = {
   nom: "",
   description: "",
   cible: TypeCibleOffre.CLASSE,
   prixMensuel: "",
-  dureeMensuelleMinutes: "",
+  dureeMensuelleJours: "",
   prixAnnuel: "",
-  dureeAnnuelleMinutes: "",
+  dureeAnnuelleJours: "",
   nombreClassesInclues: "",
   classesBonus: "",
   estTest: false,
   actif: true,
-  delaiRappelSuppressionMinutes: "",
-  delaiSuppressionMinutes: "",
+  delaiRappelSuppressionJours: "",
+  delaiSuppressionJours: "",
   elevesMax: "",
   stockageMaxGo: "",
   messagerieIncluse: false,
 };
 
-// Raccourcis usuels de duree pour eviter d'avoir a calculer les minutes a la main.
+// Raccourcis usuels de duree (saisie en jours, convertie en minutes a l'envoi).
 const DUREE_PRESETS = [
-  {
-    label: "1 mois (30 jours)",
-    minutes: 30 * 24 * 60,
-  },
-  {
-    label: "1 an (365 jours)",
-    minutes: 365 * 24 * 60,
-  },
-  {
-    label: "2 ans",
-    minutes: 2 * 365 * 24 * 60,
-  },
-  {
-    label: "Test - 3 minutes",
-    minutes: 3,
-  },
+  { label: "1 mois (30 j)", jours: 30 },
+  { label: "1 an (365 j)", jours: 365 },
+  { label: "2 ans (730 j)", jours: 730 },
 ];
 
-// La durée est stockée en minutes côté API mais toujours affichée/saisie en jours dans ce formulaire.
-const MINUTES_PAR_JOUR = 24 * 60;
-const minutesEnJours = (minutes) => {
-  if (minutes === "" || minutes === null || minutes === undefined) return "";
-  const jours = Number(minutes) / MINUTES_PAR_JOUR;
-  return Number.isInteger(jours) ? jours : Math.round(jours * 10000) / 10000;
-};
-const joursEnMinutes = (jours) =>
-  jours === "" || jours === null || jours === undefined
-    ? ""
-    : Math.round(Number(jours) * MINUTES_PAR_JOUR);
+// Champs duree : saisis en jours dans le formulaire, envoyes en minutes a l'API.
+const CHAMPS_DUREE = [
+  ["dureeMensuelleJours", "dureeMensuelleMinutes"],
+  ["dureeAnnuelleJours", "dureeAnnuelleMinutes"],
+  ["delaiRappelSuppressionJours", "delaiRappelSuppressionMinutes"],
+  ["delaiSuppressionJours", "delaiSuppressionMinutes"],
+];
 
 // Raccourcis pour les delais de purge post-expiration (rappel puis suppression definitive).
-const DELAI_RAPPEL_PRESETS = [
-  {
-    label: "2 jours",
-    minutes: 2 * 24 * 60,
-  },
-  {
-    label: "7 jours",
-    minutes: 7 * 24 * 60,
-  },
-  {
-    label: "Test - 1 minute",
-    minutes: 1,
-  },
-];
-const DELAI_SUPPRESSION_PRESETS = [
-  {
-    label: "3 jours",
-    minutes: 3 * 24 * 60,
-  },
-  {
-    label: "14 jours",
-    minutes: 14 * 24 * 60,
-  },
-  {
-    label: "Test - 2 minutes",
-    minutes: 2,
-  },
+const DELAI_PURGE_PRESETS = [
+  { label: "2 jours", jours: 2 },
+  { label: "3 jours", jours: 3 },
+  { label: "7 jours", jours: 7 },
+  { label: "14 jours", jours: 14 },
 ];
 const OfferAdminContent = ({ isDark }) => {
   const [offres, setOffres] = useState([]);
@@ -106,6 +72,9 @@ const OfferAdminContent = ({ isDark }) => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
+  // Minutes d'origine de l'offre editee : renvoyees telles quelles si le champ jours n'a pas ete touche
+  // (evite d'arrondir une duree qui n'est pas un multiple de 0,01 jour).
+  const [minutesInitiales, setMinutesInitiales] = useState({});
   const cardBg = isDark
     ? "bg-gray-800 border-gray-700"
     : "bg-white border-gray-200";
@@ -130,25 +99,31 @@ const OfferAdminContent = ({ isDark }) => {
   }, []);
   const ouvrirCreation = () => {
     setEditingId(null);
+    setMinutesInitiales({});
     setFormData(DEFAULT_FORM);
     setShowForm(true);
   };
   const ouvrirEdition = (offre) => {
     setEditingId(offre.id);
+    setMinutesInitiales(
+      Object.fromEntries(CHAMPS_DUREE.map(([, m]) => [m, offre[m]])),
+    );
     setFormData({
       nom: offre.nom || "",
       description: offre.description || "",
       cible: offre.cible || TypeCibleOffre.CLASSE,
       prixMensuel: offre.prixMensuel ?? "",
-      dureeMensuelleMinutes: offre.dureeMensuelleMinutes ?? "",
+      dureeMensuelleJours: minutesEnJoursSaisie(offre.dureeMensuelleMinutes),
       prixAnnuel: offre.prixAnnuel ?? "",
-      dureeAnnuelleMinutes: offre.dureeAnnuelleMinutes ?? "",
+      dureeAnnuelleJours: minutesEnJoursSaisie(offre.dureeAnnuelleMinutes),
       nombreClassesInclues: offre.nombreClassesInclues ?? "",
       classesBonus: offre.classesBonus ?? "",
       estTest: !!offre.estTest,
       actif: !!offre.actif,
-      delaiRappelSuppressionMinutes: offre.delaiRappelSuppressionMinutes ?? "",
-      delaiSuppressionMinutes: offre.delaiSuppressionMinutes ?? "",
+      delaiRappelSuppressionJours: minutesEnJoursSaisie(
+        offre.delaiRappelSuppressionMinutes,
+      ),
+      delaiSuppressionJours: minutesEnJoursSaisie(offre.delaiSuppressionMinutes),
       elevesMax: offre.elevesMax ?? "",
       stockageMaxGo: offre.stockageMaxGo ?? "",
       messagerieIncluse: !!offre.messagerieIncluse,
@@ -164,6 +139,17 @@ const OfferAdminContent = ({ isDark }) => {
   };
   const toNumberOrNull = (v) =>
     v === "" || v === null || v === undefined ? null : Number(v);
+  const champJoursEnMinutes = (champJours, champMinutes) => {
+    const initiale = minutesInitiales[champMinutes];
+    if (
+      editingId &&
+      initiale != null &&
+      String(formData[champJours]) === minutesEnJoursSaisie(initiale)
+    ) {
+      return initiale;
+    }
+    return joursEnMinutes(formData[champJours]);
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -174,9 +160,15 @@ const OfferAdminContent = ({ isDark }) => {
         description: formData.description.trim() || null,
         cible: formData.cible,
         prixMensuel: toNumberOrNull(formData.prixMensuel),
-        dureeMensuelleMinutes: toNumberOrNull(formData.dureeMensuelleMinutes),
+        dureeMensuelleMinutes: champJoursEnMinutes(
+          "dureeMensuelleJours",
+          "dureeMensuelleMinutes",
+        ),
         prixAnnuel: toNumberOrNull(formData.prixAnnuel),
-        dureeAnnuelleMinutes: toNumberOrNull(formData.dureeAnnuelleMinutes),
+        dureeAnnuelleMinutes: champJoursEnMinutes(
+          "dureeAnnuelleJours",
+          "dureeAnnuelleMinutes",
+        ),
         nombreClassesInclues:
           formData.cible === TypeCibleOffre.ETABLISSEMENT
             ? toNumberOrNull(formData.nombreClassesInclues)
@@ -187,11 +179,13 @@ const OfferAdminContent = ({ isDark }) => {
             : null,
         estTest: formData.estTest,
         actif: formData.actif,
-        delaiRappelSuppressionMinutes: toNumberOrNull(
-          formData.delaiRappelSuppressionMinutes,
+        delaiRappelSuppressionMinutes: champJoursEnMinutes(
+          "delaiRappelSuppressionJours",
+          "delaiRappelSuppressionMinutes",
         ),
-        delaiSuppressionMinutes: toNumberOrNull(
-          formData.delaiSuppressionMinutes,
+        delaiSuppressionMinutes: champJoursEnMinutes(
+          "delaiSuppressionJours",
+          "delaiSuppressionMinutes",
         ),
         elevesMax: toNumberOrNull(formData.elevesMax),
         stockageMaxGo: toNumberOrNull(formData.stockageMaxGo),
@@ -233,16 +227,10 @@ const OfferAdminContent = ({ isDark }) => {
       setError("Impossible de désactiver cette offre.");
     }
   };
-  const appliquerPreset = (champDuree, minutes) => {
+  const appliquerPreset = (champJours, jours) => {
     setFormData((prev) => ({
       ...prev,
-      [champDuree]: minutes,
-    }));
-  };
-  const handleDureeJoursChange = (champDureeMinutes) => (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [champDureeMinutes]: joursEnMinutes(e.target.value),
+      [champJours]: String(jours),
     }));
   };
   return (
@@ -404,9 +392,10 @@ const OfferAdminContent = ({ isDark }) => {
                     className={inputCls}
                     type="number"
                     step="any"
+                    min="0"
                     name="dureeMensuelleJours"
-                    value={minutesEnJours(formData.dureeMensuelleMinutes)}
-                    onChange={handleDureeJoursChange("dureeMensuelleMinutes")}
+                    value={formData.dureeMensuelleJours}
+                    onChange={handleChange}
                   />
                   <div className="flex flex-wrap gap-2 mt-1">
                     {DUREE_PRESETS.map((p) => (
@@ -414,7 +403,7 @@ const OfferAdminContent = ({ isDark }) => {
                         type="button"
                         key={p.label}
                         onClick={() =>
-                          appliquerPreset("dureeMensuelleMinutes", p.minutes)
+                          appliquerPreset("dureeMensuelleJours", p.jours)
                         }
                         className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100"
                       >
@@ -452,9 +441,10 @@ const OfferAdminContent = ({ isDark }) => {
                     className={inputCls}
                     type="number"
                     step="any"
+                    min="0"
                     name="dureeAnnuelleJours"
-                    value={minutesEnJours(formData.dureeAnnuelleMinutes)}
-                    onChange={handleDureeJoursChange("dureeAnnuelleMinutes")}
+                    value={formData.dureeAnnuelleJours}
+                    onChange={handleChange}
                   />
                   <div className="flex flex-wrap gap-2 mt-1">
                     {DUREE_PRESETS.map((p) => (
@@ -462,7 +452,7 @@ const OfferAdminContent = ({ isDark }) => {
                         type="button"
                         key={p.label}
                         onClick={() =>
-                          appliquerPreset("dureeAnnuelleMinutes", p.minutes)
+                          appliquerPreset("dureeAnnuelleJours", p.jours)
                         }
                         className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100"
                       >
@@ -474,18 +464,18 @@ const OfferAdminContent = ({ isDark }) => {
               </div>
               {formData.prixMensuel &&
                 formData.prixAnnuel &&
-                formData.dureeMensuelleMinutes &&
-                formData.dureeAnnuelleMinutes && (
+                formData.dureeMensuelleJours &&
+                formData.dureeAnnuelleJours && (
                   <p className="text-sm text-green-600 mt-2">
                     {(() => {
                       const reduction = offerService.calculerReduction({
                         prixMensuel: Number(formData.prixMensuel),
                         prixAnnuel: Number(formData.prixAnnuel),
-                        dureeMensuelleMinutes: Number(
-                          formData.dureeMensuelleMinutes,
+                        dureeMensuelleMinutes: joursEnMinutes(
+                          formData.dureeMensuelleJours,
                         ),
-                        dureeAnnuelleMinutes: Number(
-                          formData.dureeAnnuelleMinutes,
+                        dureeAnnuelleMinutes: joursEnMinutes(
+                          formData.dureeAnnuelleJours,
                         ),
                       });
                       return reduction != null
@@ -517,25 +507,24 @@ const OfferAdminContent = ({ isDark }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={`block text-sm mb-1 ${textMuted}`}>
-                    Rappel de suppression (minutes après expiration)
+                    Rappel de suppression (jours après expiration)
                   </label>
                   <input
                     className={inputCls}
                     type="number"
-                    name="delaiRappelSuppressionMinutes"
-                    value={formData.delaiRappelSuppressionMinutes}
+                    step="any"
+                    min="0"
+                    name="delaiRappelSuppressionJours"
+                    value={formData.delaiRappelSuppressionJours}
                     onChange={handleChange}
                   />
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {DELAI_RAPPEL_PRESETS.map((p) => (
+                    {DELAI_PURGE_PRESETS.map((p) => (
                       <button
                         type="button"
                         key={p.label}
                         onClick={() =>
-                          appliquerPreset(
-                            "delaiRappelSuppressionMinutes",
-                            p.minutes,
-                          )
+                          appliquerPreset("delaiRappelSuppressionJours", p.jours)
                         }
                         className="text-xs px-2 py-1 rounded bg-amber-50 text-amber-700 hover:bg-amber-100"
                       >
@@ -546,22 +535,24 @@ const OfferAdminContent = ({ isDark }) => {
                 </div>
                 <div>
                   <label className={`block text-sm mb-1 ${textMuted}`}>
-                    Suppression définitive (minutes après expiration)
+                    Suppression définitive (jours après expiration)
                   </label>
                   <input
                     className={inputCls}
                     type="number"
-                    name="delaiSuppressionMinutes"
-                    value={formData.delaiSuppressionMinutes}
+                    step="any"
+                    min="0"
+                    name="delaiSuppressionJours"
+                    value={formData.delaiSuppressionJours}
                     onChange={handleChange}
                   />
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {DELAI_SUPPRESSION_PRESETS.map((p) => (
+                    {DELAI_PURGE_PRESETS.map((p) => (
                       <button
                         type="button"
                         key={p.label}
                         onClick={() =>
-                          appliquerPreset("delaiSuppressionMinutes", p.minutes)
+                          appliquerPreset("delaiSuppressionJours", p.jours)
                         }
                         className="text-xs px-2 py-1 rounded bg-red-50 text-red-700 hover:bg-red-100"
                       >
@@ -585,7 +576,7 @@ const OfferAdminContent = ({ isDark }) => {
                     fontSize: 16,
                   }}
                 />{" "}
-                Restrictions (informatif)
+                Restrictions
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -595,14 +586,18 @@ const OfferAdminContent = ({ isDark }) => {
                   <input
                     className={inputCls}
                     type="number"
+                    min="0"
                     name="elevesMax"
                     value={formData.elevesMax}
                     onChange={handleChange}
                   />
+                  <p className={`text-xs mt-1 ${textMuted}`}>
+                    Appliqué : une classe complète refuse les nouveaux élèves. Vide = illimité.
+                  </p>
                 </div>
                 <div>
                   <label className={`block text-sm mb-1 ${textMuted}`}>
-                    Stockage max (Go)
+                    Stockage max (Go) (informatif)
                   </label>
                   <input
                     className={inputCls}
@@ -620,7 +615,7 @@ const OfferAdminContent = ({ isDark }) => {
                       checked={formData.messagerieIncluse}
                       onChange={handleChange}
                     />
-                    <span className={textMuted}>Messagerie incluse</span>
+                    <span className={textMuted}>Messagerie incluse (informatif)</span>
                   </label>
                 </div>
               </div>
@@ -756,12 +751,12 @@ const OfferAdminContent = ({ isDark }) => {
                     </td>
                     <td className={`p-3 ${textMuted}`}>
                       {offre.prixMensuel != null
-                        ? `${offre.prixMensuel} FCFA / ${offre.dureeMensuelleMinutes} min`
+                        ? `${offre.prixMensuel} FCFA / ${formatDureeJours(offre.dureeMensuelleMinutes) || "-"}`
                         : "-"}
                     </td>
                     <td className={`p-3 ${textMuted}`}>
                       {offre.prixAnnuel != null
-                        ? `${offre.prixAnnuel} FCFA / ${offre.dureeAnnuelleMinutes} min`
+                        ? `${offre.prixAnnuel} FCFA / ${formatDureeJours(offre.dureeAnnuelleMinutes) || "-"}`
                         : "-"}
                     </td>
                     <td className={`p-3 ${textMuted}`}>

@@ -14,7 +14,7 @@ import {
   Cell,
 } from "recharts";
 import establishmentService from "../../../../../services/EstablishmentService";
-import ClassService from "../../../../../services/ClassService";
+import { classService } from "../../../../../services/ClassService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowTrendUp,
@@ -22,7 +22,8 @@ import {
   faBuilding,
   faChartBar,
   faCircleExclamation,
-  faHeartPulse,
+  faChartLine,
+  faNewspaper,
   faSchool,
   faUsers,
   faCircleCheck,
@@ -84,7 +85,7 @@ const GestionnaireDashboardContent = ({
             console.error("Establishments error:", err);
             return [];
           }),
-        ClassService.getAllClasses().catch((err) => {
+        classService.obtenirToutesLesClasses().catch((err) => {
           console.error("Classes error:", err);
           return [];
         }),
@@ -288,7 +289,7 @@ const GestionnaireDashboardContent = ({
             Vue d'ensemble rapide
           </h3>
           <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-            <FontAwesomeIcon icon={faHeartPulse} className="h-5 w-5" />
+            <FontAwesomeIcon icon={faNewspaper} className="h-5 w-5" />
           </div>
         </div>
         <div className="space-y-6">
@@ -401,7 +402,7 @@ const GestionnaireDashboardContent = ({
                 <>
                   <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-3">
                     <FontAwesomeIcon
-                      icon={faHeartPulse}
+                      icon={faChartLine}
                       className="w-3 h-3 mr-2"
                     />
                     Tableau de bord live

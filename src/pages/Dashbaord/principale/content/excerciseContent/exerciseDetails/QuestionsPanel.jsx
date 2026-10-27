@@ -19,6 +19,7 @@ import {
   faPlus,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
+import QuestionMediaList from "../../../../../../components/common/QuestionMediaList";
 const { Text } = Typography;
 const QuestionDetailModal = ({ question, onClose, onEdit }) => {
   if (!question) return null;
@@ -65,8 +66,17 @@ const QuestionDetailModal = ({ question, onClose, onEdit }) => {
           <Text type="secondary" className="text-xs block mb-1">
             Intitulé
           </Text>
-          <Text strong>{question.intitule}</Text>
+          <Text strong className="whitespace-pre-line break-words">{question.intitule}</Text>
         </div>
+
+        {Array.isArray(question.medias) && question.medias.length > 0 && (
+          <div>
+            <Text type="secondary" className="text-xs block mb-1">
+              Pièces jointes
+            </Text>
+            <QuestionMediaList medias={question.medias} />
+          </div>
+        )}
 
         {(type === "QCM" || type === "VRAI_FAUX") && sorted.length > 0 && (
           <div>

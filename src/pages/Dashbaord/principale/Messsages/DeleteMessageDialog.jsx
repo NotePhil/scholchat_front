@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowsRotate, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { useTranslation } from "../../../../hooks/useTranslation";
 
 /**
  * Delete confirmation.
@@ -17,7 +18,9 @@ const DeleteMessageDialog = ({
   onEveryone,
   onMe,
   onCancel,
+  meLabel,
 }) => {
+  const { t } = useTranslation();
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && !busy && onCancel();
     window.addEventListener("keydown", onKey);
@@ -60,7 +63,7 @@ const DeleteMessageDialog = ({
               onClick={onEveryone}
               disabled={busy}
             >
-              Supprimer pour tout le monde
+              {t("messaging.deleteDialog.deleteForEveryone", "Supprimer pour tout le monde")}
             </button>
           )}
           <button
@@ -68,7 +71,7 @@ const DeleteMessageDialog = ({
             onClick={onMe}
             disabled={busy}
           >
-            Supprimer pour moi
+            {meLabel ?? t("messaging.deleteDialog.deleteForMe", "Supprimer pour moi")}
           </button>
           <button
             className={`${btn} ${isDark ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-100"}`}
@@ -78,7 +81,7 @@ const DeleteMessageDialog = ({
             {busy ? (
               <FontAwesomeIcon icon={faArrowsRotate} className="animate-spin" />
             ) : (
-              "Annuler"
+              t("messaging.common.cancel", "Annuler")
             )}
           </button>
         </div>

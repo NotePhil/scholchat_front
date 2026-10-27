@@ -8,6 +8,7 @@ import {
   faTrashCan,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../utils/faIconAdapter";
+import { useTranslation } from "../../../../hooks/useTranslation";
 const Inbox = asIconComponent(faInbox);
 const Send = asIconComponent(faPaperPlane);
 const Star = asIconComponent(faStar);
@@ -22,10 +23,11 @@ const Sidebar = ({
   currentUser,
   handleEmptyTrash,
 }) => {
+  const { t } = useTranslation();
   const sidebarItems = [
     {
       key: "all",
-      label: "Boite de reception",
+      label: t("messaging.sidebar.inbox", "Boite de reception"),
       icon: Inbox,
       // red badge = unread received only
       badge:
@@ -33,20 +35,20 @@ const Sidebar = ({
     },
     {
       key: "starred",
-      label: "Messages suivis",
+      label: t("messaging.sidebar.starred", "Messages suivis"),
       icon: Star,
       count: messageCounts.starred,
     },
     {
       key: "sent",
-      label: "Envoyes",
+      label: t("messaging.sidebar.sent", "Envoyes"),
       icon: Send,
       // badge = sent messages not yet read by recipient
       badge: messageCounts.sent > 0 ? messageCounts.sent : null,
     },
     {
       key: "trash",
-      label: "Corbeille",
+      label: t("messaging.filters.trash", "Corbeille"),
       icon: Trash2,
       count: messageCounts.trash,
     },
@@ -70,7 +72,7 @@ const Sidebar = ({
               fontSize: 20,
             }}
           />
-          Nouveau message
+          {t("messaging.common.newMessage", "Nouveau message")}
         </button>
       </div>
       <div className="px-2">
@@ -105,7 +107,7 @@ const Sidebar = ({
             className={`w-full mt-2 px-4 py-2 rounded-lg text-sm transition-colors ${isDark ? "bg-red-900 text-red-200 hover:bg-red-800" : "bg-red-50 text-red-700 hover:bg-red-100"}`}
             onClick={handleEmptyTrash}
           >
-            Vider la corbeille
+            {t("messaging.trash.empty", "Vider la corbeille")}
           </button>
         )}
       </div>

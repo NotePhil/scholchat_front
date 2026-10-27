@@ -55,6 +55,8 @@ const EditExerciseForm = ({
   const [removedIds, setRemovedIds] = useState([]); // IDs of questions deleted by the user
   const [currentQuestion, setCurrentQuestion] = useState(emptyQuestion());
   const [editingIndex, setEditingIndex] = useState(null);
+  // True while an attachment of the question being built is still uploading.
+  const [filesUploading, setFilesUploading] = useState(false);
 
   // ── Load data ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -149,6 +151,10 @@ const EditExerciseForm = ({
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (values) => {
+    if (filesUploading) {
+      message.warning("Envoi des fichiers en cours…");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -553,6 +559,7 @@ const EditExerciseForm = ({
                 onEdit={handleEditQuestion}
                 onRemove={handleRemoveQuestion}
                 onCancelEdit={handleCancelEdit}
+                onUploadingChange={setFilesUploading}
               />
             </div>
           </div>
@@ -585,6 +592,8 @@ const EditExerciseForm = ({
               type="primary"
               htmlType="submit"
               loading={saving}
+              disabled={filesUploading}
+              data-testid="exercise-save-btn"
               icon={<FontAwesomeIcon icon={faFloppyDisk} />}
               size="large"
               className="w-full sm:w-auto"
@@ -594,12 +603,19 @@ const EditExerciseForm = ({
                 background: "#1a3a5c",
                 borderColor: "#1a3a5c",
                 fontWeight: 600,
+                ...(filesUploading && { opacity: 0.6, color: "#fff" }),
               }}
             >
-              <span className="sm:hidden">Enregistrer</span>
-              <span className="hidden sm:inline">
-                Enregistrer les modifications
-              </span>
+              {filesUploading ? (
+                <span>Envoi des fichiers en cours…</span>
+              ) : (
+                <>
+                  <span className="sm:hidden">Enregistrer</span>
+                  <span className="hidden sm:inline">
+                    Enregistrer les modifications
+                  </span>
+                </>
+              )}
             </Button>
           </div>
         </Form>

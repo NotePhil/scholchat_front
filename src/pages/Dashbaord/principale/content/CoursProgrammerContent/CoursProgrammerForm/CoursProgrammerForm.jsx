@@ -12,7 +12,7 @@ import {
   faClock,
   faFileLines,
   faHashtag,
-  faHeartPulse,
+  faCirclePlay,
   faLocationDot,
   faPlus,
   faUserGroup,
@@ -20,7 +20,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../../../utils/faIconAdapter";
 import { toLocalInputValue, toServerDateTime } from "../../../../../../utils/dateUtils";
-const Activity = asIconComponent(faHeartPulse);
+const Activity = asIconComponent(faCirclePlay);
 const BookOpen = asIconComponent(faBookOpen);
 const Calendar = asIconComponent(faCalendarDays);
 const X = asIconComponent(faXmark);
@@ -524,7 +524,7 @@ const CoursProgrammerForm = ({
                   className="block text-sm font-semibold text-slate-700 mb-2 flex items-center"
                 >
                   <FontAwesomeIcon
-                    icon={faHeartPulse}
+                    icon={faCirclePlay}
                     className="mr-2 text-indigo-600"
                     style={{
                       fontSize: 16,
@@ -707,7 +707,7 @@ const CoursProgrammerForm = ({
                         className="block text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center"
                       >
                         <FontAwesomeIcon
-                          icon={faHeartPulse}
+                          icon={faCirclePlay}
                           className="mr-2 text-green-600"
                           style={{
                             fontSize: 16,

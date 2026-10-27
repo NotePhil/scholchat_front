@@ -227,14 +227,14 @@
       "title": "Meet Our Expert Team",
       "subtitle": "Dedicated professionals working to revolutionize the educational experience.",
       "team": {
-         "productManager": "Product Manager",
-         "leadDeveloper": "Lead Developer",
-         "uxDesigner": "UX Designer",
-         "marketingDirector": "Marketing Director",
-         "customerSuccess": "Customer Success",
-         "headOfEngineering": "Head of Engineering",
-         "contentStrategist": "Content Strategist",
-         "salesManager": "Sales Manager"
+        "productManager": "Product Manager",
+        "leadDeveloper": "Lead Developer",
+        "uxDesigner": "UX Designer",
+        "marketingDirector": "Marketing Director",
+        "customerSuccess": "Customer Success",
+        "headOfEngineering": "Head of Engineering",
+        "contentStrategist": "Content Strategist",
+        "salesManager": "Sales Manager"
       }
     },
     "functionalities": {
@@ -338,10 +338,10 @@
           "title": "Curriculum Management",
           "longDesc": "Modernize your curriculum planning and delivery. Our tools allow teachers to collaboratively design lessons, share resources, and align content with educational standards. Streamline grading and feedback to provide a richer learning experience for students.",
           "benefits": [
-             "Collaborative lesson planning tools",
-             "Digital resource repository",
-             "Standards alignment tracking",
-             "Integrated grading and feedback system"
+            "Collaborative lesson planning tools",
+            "Digital resource repository",
+            "Standards alignment tracking",
+            "Integrated grading and feedback system"
           ]
         }
       }
@@ -351,12 +351,30 @@
       "title": "Explore Our Popular Products",
       "subtitle": "Discover tools tailored to your educational needs, from administration to classroom engagement.",
       "items": {
-         "nurseries": { "name": "Nurseries", "desc": "Early Childhood Management System" },
-         "kindergarten": { "name": "Kindergarten", "desc": "Preschool Education Platform" },
-         "primary": { "name": "Primary Schools", "desc": "Elementary School Management" },
-         "middle": { "name": "Middle Schools", "desc": "Junior High Administration Tools" },
-         "high": { "name": "High Schools", "desc": "Secondary Education Platform" },
-         "university": { "name": "Universities", "desc": "Higher Education Management" }
+        "nurseries": {
+          "name": "Nurseries",
+          "desc": "Early Childhood Management System"
+        },
+        "kindergarten": {
+          "name": "Kindergarten",
+          "desc": "Preschool Education Platform"
+        },
+        "primary": {
+          "name": "Primary Schools",
+          "desc": "Elementary School Management"
+        },
+        "middle": {
+          "name": "Middle Schools",
+          "desc": "Junior High Administration Tools"
+        },
+        "high": {
+          "name": "High Schools",
+          "desc": "Secondary Education Platform"
+        },
+        "university": {
+          "name": "Universities",
+          "desc": "Higher Education Management"
+        }
       },
       "cardDesc": "A comprehensive solution designed to enhance the learning environment and streamline operations for {name}.",
       "details": "Details"
@@ -428,12 +446,30 @@
         }
       },
       "items": {
-        "item1": { "title": "Revolutionizing School Communication", "desc": "Discover how digital platforms are transforming the way schools connect with parents and students." },
-        "item2": { "title": "Best Practices for Remote Learning", "desc": "Learn effective strategies for engaging students in virtual classrooms and maintaining educational quality." },
-        "item3": { "title": "Supporting Your Child's Education at Home", "desc": "Tips and techniques for parents to create an effective learning environment at home." },
-        "item4": { "title": "Technology Integration in Modern Classrooms", "desc": "Exploring the latest educational technology trends and their impact on student learning outcomes." },
-        "item5": { "title": "Assessment Strategies That Work", "desc": "Innovative approaches to evaluating student progress and providing meaningful feedback." },
-        "item6": { "title": "Building Strong Parent-Teacher Partnerships", "desc": "How effective collaboration between parents and teachers enhances student success." }
+        "item1": {
+          "title": "Revolutionizing School Communication",
+          "desc": "Discover how digital platforms are transforming the way schools connect with parents and students."
+        },
+        "item2": {
+          "title": "Best Practices for Remote Learning",
+          "desc": "Learn effective strategies for engaging students in virtual classrooms and maintaining educational quality."
+        },
+        "item3": {
+          "title": "Supporting Your Child's Education at Home",
+          "desc": "Tips and techniques for parents to create an effective learning environment at home."
+        },
+        "item4": {
+          "title": "Technology Integration in Modern Classrooms",
+          "desc": "Exploring the latest educational technology trends and their impact on student learning outcomes."
+        },
+        "item5": {
+          "title": "Assessment Strategies That Work",
+          "desc": "Innovative approaches to evaluating student progress and providing meaningful feedback."
+        },
+        "item6": {
+          "title": "Building Strong Parent-Teacher Partnerships",
+          "desc": "How effective collaboration between parents and teachers enhances student success."
+        }
       }
     },
     "accountActivation": {
@@ -828,34 +864,88 @@
       },
       "features": {
         "nurseries": {
-          "f1": { "title": "Parent Connectivity", "desc": "Real-time updates on meals, naps, and diaper changes." },
-          "f2": { "title": "Safe Pick-up", "desc": "Authorized contact management with photo verification." },
-          "f3": { "title": "Milestone Tracking", "desc": "Digital portfolio of early development milestones." }
+          "f1": {
+            "title": "Parent Connectivity",
+            "desc": "Real-time updates on meals, naps, and diaper changes."
+          },
+          "f2": {
+            "title": "Safe Pick-up",
+            "desc": "Authorized contact management with photo verification."
+          },
+          "f3": {
+            "title": "Milestone Tracking",
+            "desc": "Digital portfolio of early development milestones."
+          }
         },
         "kindergarten": {
-          "f1": { "title": "Classroom Management", "desc": "Daily activity tracking and student participation logs." },
-          "f2": { "title": "Direct Communication", "desc": "Secure instant messaging between teachers and parents." },
-          "f3": { "title": "Progress Reports", "desc": "Periodic evaluations and detailed skill assessments." }
+          "f1": {
+            "title": "Classroom Management",
+            "desc": "Daily activity tracking and student participation logs."
+          },
+          "f2": {
+            "title": "Direct Communication",
+            "desc": "Secure instant messaging between teachers and parents."
+          },
+          "f3": {
+            "title": "Progress Reports",
+            "desc": "Periodic evaluations and detailed skill assessments."
+          }
         },
         "primary": {
-          "f1": { "title": "Academic Tracking", "desc": "Digital gradebooks and real-time homework monitoring." },
-          "f2": { "title": "Behavior Management", "desc": "Point systems and student conduct reporting." },
-          "f3": { "title": "School Calendar", "desc": "Centralized event and examination management." }
+          "f1": {
+            "title": "Academic Tracking",
+            "desc": "Digital gradebooks and real-time homework monitoring."
+          },
+          "f2": {
+            "title": "Behavior Management",
+            "desc": "Point systems and student conduct reporting."
+          },
+          "f3": {
+            "title": "School Calendar",
+            "desc": "Centralized event and examination management."
+          }
         },
         "middle": {
-          "f1": { "title": "Career Guidance", "desc": "Guidance tools and personal project tracking." },
-          "f2": { "title": "Multi-subject Management", "desc": "Complex scheduling and teacher management by subject." },
-          "f3": { "title": "Student Space", "desc": "Direct access to resources and course materials." }
+          "f1": {
+            "title": "Career Guidance",
+            "desc": "Guidance tools and personal project tracking."
+          },
+          "f2": {
+            "title": "Multi-subject Management",
+            "desc": "Complex scheduling and teacher management by subject."
+          },
+          "f3": {
+            "title": "Student Space",
+            "desc": "Direct access to resources and course materials."
+          }
         },
         "high": {
-          "f1": { "title": "Baccalaureate Prep", "desc": "Intensive monitoring and automated mock exams." },
-          "f2": { "title": "University Files", "desc": "Assistance in creating files and monitoring admissions." },
-          "f3": { "title": "Predictive Analytics", "desc": "Early identification of students with academic difficulties." }
+          "f1": {
+            "title": "Baccalaureate Prep",
+            "desc": "Intensive monitoring and automated mock exams."
+          },
+          "f2": {
+            "title": "University Files",
+            "desc": "Assistance in creating files and monitoring admissions."
+          },
+          "f3": {
+            "title": "Predictive Analytics",
+            "desc": "Early identification of students with academic difficulties."
+          }
         },
         "university": {
-          "f1": { "title": "Enrollment Management", "desc": "100% digital admission and registration process." },
-          "f2": { "title": "Student Portal", "desc": "Centralized academic, financial, and administrative services." },
-          "f3": { "title": "Research Hosting", "desc": "Management tools for academic projects and publications." }
+          "f1": {
+            "title": "Enrollment Management",
+            "desc": "100% digital admission and registration process."
+          },
+          "f2": {
+            "title": "Student Portal",
+            "desc": "Centralized academic, financial, and administrative services."
+          },
+          "f3": {
+            "title": "Research Hosting",
+            "desc": "Management tools for academic projects and publications."
+          }
         }
       }
     },
@@ -893,7 +983,6 @@
     },
     "copyright": "All rights reserved."
   },
-
   "activities": {
     "sidebar": {
       "groups": "Groups",
@@ -954,6 +1043,27 @@
     "errors": {
       "imageUploadFailed": "Error uploading images",
       "createEventFailed": "Error creating event"
+    },
+    "commentDelete": {
+      "action": "Delete comment",
+      "title": "Delete this comment?",
+      "confirm": "This comment will be permanently deleted.",
+      "error": "Could not delete the comment.",
+      "you": "You",
+      "unknownAuthor": "User"
+    },
+    "camera": {
+      "takePhoto": "Take a photo",
+      "recordVideo": "Record a video"
+    },
+    "parentLimitedBanner": "General news — class news will be visible as soon as one of your children is accepted",
+    "upload": {
+      "failed": "Upload failed",
+      "waiting": "Waiting…",
+      "someFailed": "Upload failed for: {{files}}. Remove these files or try again.",
+      "cancel": "Cancel upload",
+      "remove": "Remove",
+      "progressLabel": "Uploading media {{done}}/{{total}}"
     }
   },
   "subjects": {
@@ -1235,6 +1345,8 @@
         "name": "Class Name",
         "namePlaceholder": "Ex: 6th Grade A",
         "level": "Level",
+        "levelOther": "Other",
+        "levelOtherPlaceholder": "Type the level (e.g. BTS 1, Adult training…)",
         "levelPlaceholder": "Select a level",
         "school": "Establishment (Optional)",
         "schoolPlaceholder": "Select an establishment",
@@ -1253,8 +1365,7 @@
           "level": "Select a level"
         },
         "info": {
-          "title": "Important Information",
-          "required": "Fields marked with * are mandatory.",
+          "required": "* Required fields",
           "email": "✉️ This establishment sends emails to classes.",
           "token": "🔑 A general token is required for this establishment.",
           "code": "🎯 A unique code is required for this establishment.",
@@ -1431,6 +1542,236 @@
       "message": "Are you sure you want to logout?",
       "cancel": "Cancel",
       "confirm": "Confirm"
+    }
+  },
+  "parentLink": {
+    "title": "Parental follow-up",
+    "intro": "Parents who follow your schooling, class by class (classes, progress, copies and marks), read-only. Only you hand in your homework.",
+    "help": "Each follow-up request is validated by the class's teacher. Only the teacher or the administration can add or remove a follow-up.",
+    "refresh": "Refresh",
+    "empty": "No parent follows your schooling.",
+    "loadError": "Could not load your parental follow-up.",
+    "since": "followed since {{date}}",
+    "readOnly": "Read-only",
+    "classFallback": "Class"
+  },
+  "messaging": {
+    "common": {
+      "message": "Message",
+      "loading": "Loading…",
+      "you": "You",
+      "close": "Close",
+      "retry": "Retry",
+      "reply": "Reply",
+      "cancel": "Cancel",
+      "send": "Send",
+      "group": "Group",
+      "removeFavorite": "Remove from favorites",
+      "addFavorite": "Add to favorites",
+      "delete": "Delete",
+      "deleteFailed": "Unable to delete.",
+      "refresh": "Refresh",
+      "newMessage": "New message",
+      "clear": "Clear",
+      "user": "User",
+      "actionFailed": "Action failed.",
+      "attachmentLabel": "📎 Attachment",
+      "deletedMessage": "This message was deleted",
+      "me": "Me",
+      "participantsCount": "{{count}} participants",
+      "classSubtitle": "Class · {{count}}"
+    },
+    "dates": {
+      "yesterday": "Yesterday",
+      "today": "Today"
+    },
+    "roles": {
+      "professor": "Teacher",
+      "student": "Student",
+      "parent": "Parent",
+      "tutor": "Tutor",
+      "manager": "Manager",
+      "admin": "Administrator"
+    },
+    "filters": {
+      "trash": "Trash",
+      "all": "All",
+      "unread": "Unread",
+      "favorites": "Favorites",
+      "general": "General",
+      "sent": "Sent"
+    },
+    "conversations": {
+      "newChat": "New chat",
+      "classMessage": "Message to a class",
+      "badgeGeneral": "General",
+      "badgeClass": "Class",
+      "youPrefix": "You: ",
+      "senderPrefix": "{{name}}: ",
+      "empty": {
+        "unread": "No unread chats.",
+        "favorites": "No favorites. Add a chat or a message to your favorites with the star.",
+        "general": "No class, group or general messages.",
+        "sent": "No sent chats.",
+        "all": "No chats yet. Write to a contact or a class with “New message”."
+      },
+      "title": "Chats",
+      "searchTrash": "Search the trash",
+      "searchChats": "Search chats",
+      "filterChats": "Filter chats",
+      "noSearchResults": "No chat matches your search.",
+      "favoriteChat": "Favorite chat",
+      "containsFavorite": "Contains a starred message"
+    },
+    "chat": {
+      "viewOriginal": "View original message",
+      "read": "Read",
+      "sent": "Sent",
+      "starredMessage": "Starred message",
+      "moreOptions": "More options",
+      "copy": "Copy",
+      "sendFailed": "Failed to send the message.",
+      "backToChats": "Back to chats",
+      "chatOptions": "Chat options",
+      "markUnread": "Mark as unread",
+      "unmute": "Turn notifications back on",
+      "mute": "Turn off notifications",
+      "deleteChat": "Delete chat",
+      "loadingOlder": "Loading earlier messages…",
+      "chatStart": "Start of the chat",
+      "empty": "No messages yet. Write the first one!",
+      "replyTo": "Replying to",
+      "yourself": "yourself",
+      "cancelReply": "Cancel reply",
+      "inputPlaceholder": "Type a message",
+      "markRead": "Mark as read"
+    },
+    "deleteDialog": {
+      "chatTitle": "Delete chat?",
+      "messageTitle": "Delete message?",
+      "chatDescription": "The chat and its history will go to the trash, where you can restore it. It will reappear if a new message arrives.",
+      "messageDescription": "The message will go to your trash, where you can restore it.",
+      "deleteForMe": "Delete for me",
+      "deleteForEveryone": "Delete for everyone"
+    },
+    "confirm": {
+      "emptyTitle": "Empty the trash?",
+      "purgeChatTitle": "Permanently delete the chat?",
+      "purgeMessageTitle": "Permanently delete the message?",
+      "emptyDescription": "All chats and messages in the trash will be permanently deleted for you. This action cannot be undone.",
+      "hideDescription": "“{{name}}” and its history will go to the trash, where you can restore it. It will reappear if a new message arrives.",
+      "purgeDescription": "The item can no longer be restored. Other participants are not affected."
+    },
+    "trash": {
+      "info": "Items you deleted stay here until they are permanently deleted.",
+      "empty": "Empty trash",
+      "noSearchResults": "No trash item matches your search.",
+      "isEmpty": "The trash is empty.",
+      "deletedChatHistory": "Deleted chat · earlier history",
+      "deletedChat": "Deleted chat",
+      "messageFrom": "Message from {{sender}}",
+      "deletedForEveryone": " · deleted for everyone",
+      "restore": "Restore",
+      "purge": "Delete permanently"
+    },
+    "attachments": {
+      "download": "Download",
+      "photo": "Photo",
+      "playVideo": "Play video",
+      "document": "Document",
+      "fileUnavailable": "File unavailable",
+      "attachFilesMax": "Attach files (max {{max}})",
+      "attachFiles": "Attach files",
+      "takePhoto": "Take a photo",
+      "removeAttachment": "Remove attachment",
+      "maxPerMessage": "At most {{max}} attachments per message.",
+      "video": "Video",
+      "missingUploadUrl": "Missing upload URL.",
+      "uploadFailed": "Upload failed"
+    },
+    "fileSize": {
+      "bytes": "{{size}} B",
+      "kb": "{{size}} KB",
+      "mb": "{{size}} MB",
+      "gb": "{{size}} GB"
+    },
+    "compose": {
+      "maxAttachments": "Maximum {{max}} attachments per message.",
+      "attach": "Attach",
+      "sending": "Sending...",
+      "toPlaceholder": "Type a name or an email",
+      "sendFailed": "Failed to send the message. Please try again.",
+      "individualMessage": "Individual message",
+      "classes": "Classes",
+      "classesHint": "The message will be sent to all members of the selected classes.",
+      "to": "To",
+      "cc": "Copy (CC)",
+      "ccPlaceholder": "Add in copy: name or email",
+      "subjectOptional": "Subject (optional)",
+      "subjectPlaceholder": "Enter the message subject",
+      "messagePlaceholder": "Type your message here...",
+      "attachHint": "Images, videos, PDFs and documents",
+      "uploadingSuffix": " — uploading...",
+      "uploading": "Uploading..."
+    },
+    "newConversation": {
+      "createFailed": "Unable to create the chat.",
+      "direct": "Chat",
+      "groupName": "Group name",
+      "groupHintMany": "Choose at least 2 participants ({{count}} selected).",
+      "groupHintOne": "Choose at least 2 participants ({{count}} selected).",
+      "searchContact": "Search for a contact",
+      "loadingContacts": "Loading contacts…",
+      "noContacts": "No contact found.",
+      "creating": "Creating…",
+      "createGroup": "Create group"
+    },
+    "recipients": {
+      "remove": "Remove {{name}}",
+      "loadingContacts": "Loading contacts...",
+      "loading": "Loading...",
+      "noContacts": "No contact found",
+      "title": "Select recipients",
+      "searchPlaceholder": "Search by name or email...",
+      "confirm": "Confirm selection"
+    },
+    "detail": {
+      "noSubject": "No subject",
+      "replyEmpty": "Please enter a message or attach a file",
+      "replyFailed": "Error while sending the reply",
+      "forward": "Forward",
+      "deleteConversation": "Delete conversation",
+      "subjectLabel": "Subject:",
+      "deleteThisMessage": "Delete this message",
+      "subject": "Subject",
+      "replySubjectPlaceholder": "Reply subject",
+      "unknown": "Unknown",
+      "reply": "Reply",
+      "replyPlaceholder": "Type your reply..."
+    },
+    "list": {
+      "selectedCount": "{{count}} selected",
+      "restoreSelection": "Restore selection",
+      "deleteSelection": "Delete selection",
+      "searchPlaceholder": "Search messages",
+      "noResults": "No results found",
+      "noMessages": "No messages",
+      "tryOtherKeywords": "Try other keywords",
+      "inboxEmpty": "Your inbox is empty",
+      "restoreMessage": "Restore message"
+    },
+    "sidebar": {
+      "inbox": "Inbox",
+      "starred": "Starred messages",
+      "sent": "Sent"
+    },
+    "home": {
+      "title": "Your chats",
+      "subtitle": "Select a chat or write a new message to your contacts or to a class."
+    },
+    "notifications": {
+      "opening": "Opening the conversation…",
+      "unavailable": "This message no longer exists or is no longer available to you."
     }
   }
 }

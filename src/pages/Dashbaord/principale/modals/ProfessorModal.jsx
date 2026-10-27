@@ -54,7 +54,7 @@ const ProfessorModal = ({
     cniVerso: null,
     selfie: null,
   });
-  const [existingImages, setExistingImages] = useState({
+  const [, setExistingImages] = useState({
     cniRecto: null,
     cniVerso: null,
     selfie: null,
@@ -399,8 +399,6 @@ const ProfessorModal = ({
               updatePayload.cniUrlRecto = fileName;
             }),
           );
-        } else if (existingImages.cniRecto) {
-          updatePayload.cniUrlRecto = existingImages.cniRecto;
         }
         if (formData.cniVerso) {
           mediaPromises.push(
@@ -412,8 +410,6 @@ const ProfessorModal = ({
               updatePayload.cniUrlVerso = fileName;
             }),
           );
-        } else if (existingImages.cniVerso) {
-          updatePayload.cniUrlVerso = existingImages.cniVerso;
         }
         if (formData.selfie) {
           mediaPromises.push(
@@ -425,15 +421,15 @@ const ProfessorModal = ({
               updatePayload.selfieUrl = fileName;
             }),
           );
-        } else if (existingImages.selfie) {
-          updatePayload.selfieUrl = existingImages.selfie;
         }
 
         // Wait for any uploads to complete
         await Promise.all(mediaPromises);
 
-        // Use patch for partial updates
-        await scholchatService.patchUser(selectedProfessor.id, updatePayload);
+        // PATCH /utilisateurs/{id} with type "professeur": common fields + matricule,
+        // plus only the documents actually re-uploaded here (patchUser() strips the
+        // document keys, so a replaced CNI/selfie was silently dropped).
+        await scholchatService.updateUser(selectedProfessor.id, updatePayload);
       }
       await loadData();
       message.success(

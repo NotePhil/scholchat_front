@@ -2,6 +2,7 @@ import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { messageService } from "../../../../services/MessageService";
+import { useTranslation } from "../../../../hooks/useTranslation";
 
 /** Lower-case, accent-free form for search ("Élève" → "eleve"). */
 const normalize = (value) =>
@@ -31,30 +32,39 @@ const contactMatches = (user, query) => {
   );
 };
 
-const ROLE_LABELS = {
-  PROFESSEUR: "Professeur",
-  PROFESSOR: "Professeur",
-  ELEVE: "Élève",
-  STUDENT: "Élève",
-  PARENT: "Parent",
-  PARENTS: "Parent",
-  REPETITEUR: "Répétiteur",
-  TUTOR: "Répétiteur",
-  GESTIONNAIRE: "Gestionnaire",
-  ADMIN: "Administrateur",
-};
-
-const roleLabel = (user) =>
-  ROLE_LABELS[
+const roleLabel = (user, t) => {
+  switch (
     normalize(user?.typeUtilisateur || user?.type || user?.role).toUpperCase()
-  ] || "";
+  ) {
+    case "PROFESSEUR":
+    case "PROFESSOR":
+      return t("messaging.roles.professor", "Professeur");
+    case "ELEVE":
+    case "STUDENT":
+      return t("messaging.roles.student", "Élève");
+    case "PARENT":
+    case "PARENTS":
+      return t("messaging.roles.parent", "Parent");
+    case "REPETITEUR":
+    case "TUTOR":
+      return t("messaging.roles.tutor", "Répétiteur");
+    case "GESTIONNAIRE":
+      return t("messaging.roles.manager", "Gestionnaire");
+    case "ADMIN":
+      return t("messaging.roles.admin", "Administrateur");
+    default:
+      return "";
+  }
+};
 
 const initialsOf = (user) =>
   `${(user?.prenom || "").charAt(0)}${(user?.nom || "").charAt(0)}`.toUpperCase() ||
   (user?.email || "?").charAt(0).toUpperCase();
 
-const displayName = (user) =>
-  `${user?.prenom || ""} ${user?.nom || ""}`.trim() || user?.email || "Utilisateur";
+const displayName = (user, t) =>
+  `${user?.prenom || ""} ${user?.nom || ""}`.trim() ||
+  user?.email ||
+  t("messaging.common.user", "Utilisateur");
 
 const MAX_SUGGESTIONS = 30;
 
@@ -74,9 +84,10 @@ export const ContactAutocomplete = ({
   isDark,
   loading = false,
   accent = "blue",
-  placeholder = "Tapez un nom ou un e-mail",
+  placeholder,
   inputId,
 }) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -150,10 +161,12 @@ export const ContactAutocomplete = ({
               key={user.id}
               className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${chipCls}`}
             >
-              {displayName(user)}
+              {displayName(user, t)}
               <button
                 type="button"
-                aria-label={`Retirer ${displayName(user)}`}
+                aria-label={t("messaging.recipients.remove", "Retirer {{name}}", {
+                  name: displayName(user, t),
+                })}
                 onClick={() => onRemove(user)}
               >
                 <FontAwesomeIcon icon={faXmark} style={{ fontSize: 14 }} />
@@ -181,7 +194,11 @@ export const ContactAutocomplete = ({
               : undefined
           }
           autoComplete="off"
-          placeholder={loading ? "Chargement des contacts..." : placeholder}
+          placeholder={
+            loading
+              ? t("messaging.recipients.loadingContacts", "Chargement des contacts...")
+              : placeholder ?? t("messaging.compose.toPlaceholder", "Tapez un nom ou un e-mail")
+          }
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -200,10 +217,12 @@ export const ContactAutocomplete = ({
             className={`absolute left-0 right-0 mt-1 max-h-64 overflow-y-auto z-20 shadow-lg rounded-md border ${isDark ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
           >
             {loading ? (
-              <li className="p-2 text-sm text-gray-500">Chargement...</li>
+              <li className="p-2 text-sm text-gray-500">
+                {t("messaging.recipients.loading", "Chargement...")}
+              </li>
             ) : suggestions.length > 0 ? (
               suggestions.map((user, index) => {
-                const role = roleLabel(user);
+                const role = roleLabel(user, t);
                 return (
                   <li
                     key={user.id}
@@ -227,7 +246,7 @@ export const ContactAutocomplete = ({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate">
-                          {displayName(user)}
+                          {displayName(user, t)}
                         </div>
                         {user.email && (
                           <div className="text-xs text-gray-500 truncate">
@@ -247,7 +266,9 @@ export const ContactAutocomplete = ({
                 );
               })
             ) : (
-              <li className="p-2 text-sm text-gray-500">Aucun contact trouvé</li>
+              <li className="p-2 text-sm text-gray-500">
+                {t("messaging.recipients.noContacts", "Aucun contact trouvé")}
+              </li>
             )}
           </ul>
         )}
@@ -264,6 +285,7 @@ const RecipientSelectorModal = ({
   setCcRecipients,
   setShowRecipientSelector,
 }) => {
+  const { t } = useTranslation();
   // Recipients always come from GET /messages/contacts (server-enforced list).
   const [contacts, setContacts] = useState(filteredUsers || []);
   const [loading, setLoading] = useState(true);
@@ -295,7 +317,7 @@ const RecipientSelectorModal = ({
           <h3
             className={`text-xl font-semibold ${isDark ? "text-white" : "text-gray-900"}`}
           >
-            Sélectionner des destinataires
+            {t("messaging.recipients.title", "Sélectionner des destinataires")}
           </h3>
           <button
             className={`p-2 rounded-full ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
@@ -324,7 +346,7 @@ const RecipientSelectorModal = ({
             }
             isDark={isDark}
             loading={loading}
-            placeholder="Rechercher par nom ou e-mail..."
+            placeholder={t("messaging.recipients.searchPlaceholder", "Rechercher par nom ou e-mail...")}
           />
         </div>
         <div
@@ -334,7 +356,7 @@ const RecipientSelectorModal = ({
             className={`px-4 py-2 rounded-lg ${isDark ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-500 hover:bg-blue-600"} text-white`}
             onClick={() => setShowRecipientSelector(false)}
           >
-            Valider la sélection
+            {t("messaging.recipients.confirm", "Valider la sélection")}
           </button>
         </div>
       </div>

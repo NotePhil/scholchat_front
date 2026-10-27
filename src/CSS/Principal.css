@@ -287,10 +287,14 @@
   min-height: 0; /* let this flex child shrink so .content-body can actually scroll instead of pushing the page taller than the viewport */
   height: 100%;
   width: 100%;
+  /* A flex item defaults to min-width:auto, so a wide child (tab bar, table)
+     would stretch the whole column past the viewport. */
+  min-width: 0;
 }
 
 .main-content.with-sidebar {
   margin-left: 280px;
+  width: calc(100% - 280px);
 }
 
 .content-header {
@@ -587,6 +591,7 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
+  min-width: 0;
   padding-top: 110px;
 }
 
@@ -597,6 +602,13 @@
   margin-top: 0;
   /* Ensure content never touches the screen edges */
   min-width: 0;
+}
+
+/* A full-bleed view rendered inside another one (e.g. the exercise form inside
+   ManageExercisesContent) must not cancel the padding a second time: that
+   pushed it ~6px past the right edge. */
+.full-bleed-page .full-bleed-page {
+  margin: 0 !important;
 }
 
 .messaging-sidebar {
@@ -993,6 +1005,7 @@
 
   .main-content.with-sidebar {
     margin-left: 260px;
+    width: calc(100% - 260px);
   }
 
   .main-content.with-sidebar .content-header {
@@ -1018,6 +1031,7 @@
 @media (max-width: 992px) {
   .main-content.with-sidebar {
     margin-left: 0;
+    width: 100%;
   }
 
   .main-content.with-sidebar .content-header {

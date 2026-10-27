@@ -9,7 +9,7 @@ import {
   faRightFromBracket,
   faXmark,
   faBars,
-  faHeartPulse,
+  faNewspaper,
   faUsers,
   faGraduationCap,
   faBookOpen,
@@ -23,7 +23,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../utils/faIconAdapter";
 import { useUnreadMessageCount } from "../../../hooks/useMessageSocket";
-const Activity = asIconComponent(faHeartPulse);
+const Activity = asIconComponent(faNewspaper);
 const Book = asIconComponent(faBook);
 const BookOpen = asIconComponent(faBookOpen);
 const Building2 = asIconComponent(faBuilding);
@@ -382,6 +382,11 @@ const Sidebar = ({
           name: "Mes enfants",
           icon: Users,
           tab: "my-children",
+        },
+        {
+          name: t("sidebar.activities"),
+          icon: Activity,
+          tab: "activities",
         },
         {
           name: t("sidebar.settings"),

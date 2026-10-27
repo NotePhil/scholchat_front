@@ -5,7 +5,11 @@ import {
   DroitPublication,
 } from "../../../../services/ClassService";
 import { scholchatService } from "../../../../services/ScholchatService";
-import { NIVEAUX } from "../../../../constants/niveaux";
+import {
+  NIVEAUX,
+  NIVEAU_AUTRE,
+  isNiveauStandard,
+} from "../../../../constants/niveaux";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendarDays,
@@ -42,6 +46,9 @@ const ClassEditModal = ({
     droitPublication: DroitPublication.MODERATEUR_SEULEMENT,
   });
   const [originalData, setOriginalData] = useState(null);
+  // Valeur affichée dans la liste déroulante : un niveau standard ou "Autre" (niveau libre,
+  // saisi dans un champ texte et stocké tel quel dans classData.niveau).
+  const [niveauSelect, setNiveauSelect] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -85,6 +92,13 @@ const ClassEditModal = ({
       };
       setClassData(completeData);
       setOriginalData(completeData);
+      setNiveauSelect(
+        isNiveauStandard(completeData.niveau)
+          ? completeData.niveau
+          : completeData.niveau
+            ? NIVEAU_AUTRE
+            : "",
+      );
       setError("");
     } catch (error) {
       console.error("Error loading class:", error);
@@ -334,10 +348,12 @@ const ClassEditModal = ({
                     Niveau *
                   </label>
                   <select
-                    value={classData.niveau}
-                    onChange={(e) =>
-                      handleInputChange("niveau", e.target.value)
-                    }
+                    value={niveauSelect}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNiveauSelect(v);
+                      handleInputChange("niveau", v === NIVEAU_AUTRE ? "" : v);
+                    }}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.niveau ? "border-red-500" : "border-gray-300"}`}
                   >
                     <option value="">Sélectionner un niveau</option>
@@ -346,7 +362,20 @@ const ClassEditModal = ({
                         {n}
                       </option>
                     ))}
+                    <option value={NIVEAU_AUTRE}>Autre</option>
                   </select>
+                  {niveauSelect === NIVEAU_AUTRE && (
+                    <input
+                      type="text"
+                      value={classData.niveau}
+                      maxLength={60}
+                      onChange={(e) =>
+                        handleInputChange("niveau", e.target.value)
+                      }
+                      placeholder="Saisissez le niveau (ex. BTS 1, Formation adulte…)"
+                      className={`mt-2 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.niveau ? "border-red-500" : "border-gray-300"}`}
+                    />
+                  )}
                   {validationErrors.niveau && (
                     <p className="mt-1 text-sm text-red-600">
                       {validationErrors.niveau}

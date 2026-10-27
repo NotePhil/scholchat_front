@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { Spin, Button, Tag, Select } from "antd";
 import { classService } from "../../../../services/ClassService";
-import { NIVEAUX } from "../../../../constants/niveaux";
+import {
+  NIVEAUX,
+  NIVEAU_AUTRE,
+  isNiveauStandard,
+} from "../../../../constants/niveaux";
 import { message, Modal, Input, Form } from "antd";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -88,7 +92,7 @@ const ClassCard = ({
     moderatorId !== currentUserId &&
     moderatorId !== cls.creatorId;
   return (
-    <div className="bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3">
+    <div className="min-w-0 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -105,9 +109,11 @@ const ClassCard = ({
               ? "red"
               : cls.etat === "ACTIVE" || cls.etat === "ACTIF"
                 ? "green"
-                : cls.etat === "ARCHIVEE"
-                  ? "orange"
-                  : "default"
+                : cls.etat === "EN_ATTENTE_APPROBATION"
+                  ? "gold"
+                  : cls.etat === "ARCHIVEE"
+                    ? "orange"
+                    : "default"
           }
           style={{
             fontSize: 11,
@@ -119,9 +125,11 @@ const ClassCard = ({
             ? "Offre expirée"
             : cls.etat === "ACTIVE" || cls.etat === "ACTIF"
               ? "Actif"
-              : cls.etat === "ARCHIVEE"
-                ? "Archivé"
-                : "Inactif"}
+              : cls.etat === "EN_ATTENTE_APPROBATION"
+                ? "En attente"
+                : cls.etat === "ARCHIVEE"
+                  ? "Archivé"
+                  : "Inactif"}
         </Tag>
       </div>
 
@@ -274,6 +282,16 @@ const ManageClassList = ({
     ],
     [moderatedClasses, assignedModeratorClasses, publicationClasses, classes],
   );
+  // Nombre de classes par statut (toutes les classes, quel que soit leur état — y compris celles
+  // en attente de validation par l'établissement).
+  const statusCounts = useMemo(() => {
+    const counts = { all: allClasses.length };
+    allClasses.forEach((c) => {
+      const etat = c.etat === "ACTIVE" ? "ACTIF" : c.etat || "INACTIF";
+      counts[etat] = (counts[etat] || 0) + 1;
+    });
+    return counts;
+  }, [allClasses]);
   const niveaux = useMemo(() => {
     const set = new Set(allClasses.map((c) => c.niveau).filter(Boolean));
     return Array.from(set).sort();
@@ -285,7 +303,8 @@ const ManageClassList = ({
         !q ||
         cls.nom?.toLowerCase().includes(q) ||
         cls.niveau?.toLowerCase().includes(q);
-      const matchStatus = statusFilter === "all" || cls.etat === statusFilter;
+      const etat = cls.etat === "ACTIVE" ? "ACTIF" : cls.etat || "INACTIF";
+      const matchStatus = statusFilter === "all" || etat === statusFilter;
       const matchNiveau = niveauFilter === "all" || cls.niveau === niveauFilter;
       const matchRole = roleFilter === "all" || cls._role === roleFilter;
       return matchSearch && matchStatus && matchNiveau && matchRole;
@@ -304,7 +323,9 @@ const ManageClassList = ({
   };
   const handleEditSubmit = async () => {
     try {
-      const values = await editForm.validateFields();
+      const { niveauAutre, ...values } = await editForm.validateFields();
+      // "Autre" → c'est le niveau libre saisi qui est envoyé.
+      if (values.niveau === NIVEAU_AUTRE) values.niveau = (niveauAutre || "").trim();
       setEditLoading(true);
       await classService.modifierClasse(editingClass.id, values);
       message.success("Classe modifiée avec succès");
@@ -322,7 +343,10 @@ const ManageClassList = ({
     setEditingClass(cls);
     editForm.setFieldsValue({
       nom: cls.nom,
-      niveau: cls.niveau,
+      niveau:
+        !cls.niveau || isNiveauStandard(cls.niveau) ? cls.niveau : NIVEAU_AUTRE,
+      niveauAutre:
+        cls.niveau && !isNiveauStandard(cls.niveau) ? cls.niveau : "",
       description: cls.description,
       codeActivation: cls.codeActivation,
     });
@@ -422,10 +446,13 @@ const ManageClassList = ({
               minWidth: 130,
             }}
           >
-            <Option value="all">Tous les statuts</Option>
-            <Option value="ACTIF">Actif</Option>
-            <Option value="INACTIF">Inactif</Option>
-            <Option value="ARCHIVEE">Archivé</Option>
+            <Option value="all">Tous les statuts ({statusCounts.all})</Option>
+            <Option value="ACTIF">Actif ({statusCounts.ACTIF || 0})</Option>
+            <Option value="EN_ATTENTE_APPROBATION">
+              En attente ({statusCounts.EN_ATTENTE_APPROBATION || 0})
+            </Option>
+            <Option value="INACTIF">Inactif ({statusCounts.INACTIF || 0})</Option>
+            <Option value="ARCHIVEE">Archivé ({statusCounts.ARCHIVEE || 0})</Option>
           </Select>
           {niveaux.length > 0 && (
             <Select
@@ -511,7 +538,7 @@ const ManageClassList = ({
           )}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((cls) => (
             <ClassCard
               key={cls.id}
@@ -599,11 +626,42 @@ const ManageClassList = ({
               style={{
                 borderRadius: 8,
               }}
-              options={NIVEAUX.map((n) => ({
-                value: n,
-                label: n,
-              }))}
+              options={[
+                ...NIVEAUX.map((n) => ({
+                  value: n,
+                  label: n,
+                })),
+                { value: NIVEAU_AUTRE, label: "Autre" },
+              ]}
             />
+          </Form.Item>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, cur) => prev.niveau !== cur.niveau}
+          >
+            {({ getFieldValue }) =>
+              getFieldValue("niveau") === NIVEAU_AUTRE ? (
+                <Form.Item
+                  name="niveauAutre"
+                  label="Précisez le niveau"
+                  rules={[
+                    {
+                      required: true,
+                      whitespace: true,
+                      message: "Saisissez le niveau",
+                    },
+                  ]}
+                >
+                  <Input
+                    maxLength={60}
+                    placeholder="Ex. BTS 1, Formation adulte…"
+                    style={{
+                      borderRadius: 8,
+                    }}
+                  />
+                </Form.Item>
+              ) : null
+            }
           </Form.Item>
           <Form.Item name="description" label="Description">
             <Input.TextArea

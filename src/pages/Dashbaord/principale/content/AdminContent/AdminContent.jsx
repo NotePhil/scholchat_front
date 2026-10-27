@@ -19,7 +19,7 @@ import {
   faCircleExclamation,
   faEye,
   faFilter,
-  faHeartPulse,
+  faChartLine,
   faMagnifyingGlass,
   faPen,
   faPlus,
@@ -487,7 +487,7 @@ const StatsCard = ({ title, value, icon: Icon, gradient, subtext, color }) => (
     </div>
     <div className="mt-4 flex items-center">
       <FontAwesomeIcon
-        icon={faHeartPulse}
+        icon={faChartLine}
         className="w-4 h-4 text-slate-400 mr-2"
       />
       <span className="text-slate-500 text-sm">{subtext}</span>

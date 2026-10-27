@@ -92,12 +92,25 @@ const FILE_FIELDS = DOCS.map((d) => d.name);
 const MAX_CHILDREN = 10;
 const CHILD_CODE_ERRORS = ["CODE_CLASSE_INVALIDE", "CLASSE_NON_ACTIVE", "CODE_CLASSE_REQUIS", "CLASSE_RESERVEE_MINEURS"];
 
+/** Item of `enfants` sent to POST /utilisateurs (type parent). */
+const cleanCodes = (codes) => [...new Set((codes || []).map((x) => String(x || "").trim()).filter(Boolean))];
+
+const childPayload = (c) => {
+  if (c.type !== "MAJEUR") return { prenom: c.prenom.trim(), nom: c.nom.trim(), codeClasse: c.codeClasse.trim() };
+  // Adult child: e-mail of his existing student account + the class(es) to follow (validated per class).
+  return { type: "MAJEUR", email: c.email.trim(), codesClasse: cleanCodes(c.codesClasse) };
+};
+
 let childKeySeq = 0;
 const newChild = (data = {}) => ({
   key: `c${Date.now()}-${++childKeySeq}`,
+  // MINEUR: no account (prénom, nom, code) — MAJEUR: has (or will have) his own account (e-mail).
+  type: data.type === "MAJEUR" ? "MAJEUR" : "MINEUR",
+  email: data.email || "",
   prenom: data.prenom || "",
   nom: data.nom || "",
   codeClasse: data.codeClasse || "",
+  codesClasse: Array.isArray(data.codesClasse) && data.codesClasse.length ? data.codesClasse : [""],
   preview: null,
   errors: {},
   resetKey: 0,
@@ -240,7 +253,14 @@ const SignUp = ({ theme }) => {
   useEffect(() => {
     if (isUpdateMode) return;
     const { cniRecto, cniVerso, selfie, enfants: kids, ...serializable } = formData;
-    serializable.enfants = (kids || []).map(({ prenom, nom, codeClasse }) => ({ prenom, nom, codeClasse }));
+    serializable.enfants = (kids || []).map(({ type, email, prenom, nom, codeClasse, codesClasse }) => ({
+      type,
+      email,
+      prenom,
+      nom,
+      codeClasse,
+      codesClasse,
+    }));
     localStorage.setItem("signupFormData", JSON.stringify(serializable));
   }, [formData, isUpdateMode]);
 
@@ -585,7 +605,12 @@ const SignUp = ({ theme }) => {
   const removeChild = (key) => updateChildren((list) => (list.length <= 1 ? list : list.filter((c) => c.key !== key)));
   const changeChild = (key, field, value) =>
     updateChildren((list) =>
-      list.map((c) => (c.key === key ? { ...c, [field]: value, errors: { ...c.errors, [field]: undefined, general: undefined } } : c)),
+      list.map((c) => {
+        if (c.key !== key) return c;
+        // Switching Mineur / Majeur: the class is checked again (an adult's code must accept adults).
+        if (field === "type") return { ...c, type: value, preview: null, resetKey: c.resetKey + 1, errors: {} };
+        return { ...c, [field]: value, errors: { ...c.errors, [field]: undefined, general: undefined, suggestAdult: undefined } };
+      }),
     );
   const setChildPreview = useCallback(
     (key, preview) =>
@@ -598,7 +623,10 @@ const SignUp = ({ theme }) => {
       ),
     [updateChildren],
   );
-  const allChildrenVerified = enfants.length > 0 && enfants.every((c) => !!c.preview);
+  // Minor: code verified. Adult: valid e-mail (of his existing student account) and at least one class code.
+  const childReady = (c) =>
+    c.type === "MAJEUR" ? isValidEmail(c.email) && cleanCodes(c.codesClasse).length > 0 : !!c.preview;
+  const allChildrenVerified = enfants.length > 0 && enfants.every(childReady);
 
   // Names required, every code verified, no child twice in the same class.
   const validateChildren = () => {
@@ -610,6 +638,17 @@ const SignUp = ({ theme }) => {
     let firstError = "";
     const checked = enfants.map((c) => {
       const e = {};
+      if (c.type === "MAJEUR") {
+        const mail = c.email.trim().toLowerCase();
+        if (!mail) e.email = "L'e-mail de votre enfant est requis";
+        else if (!isValidEmail(mail)) e.email = "Adresse e-mail invalide";
+        else if (mail === formData.email.trim().toLowerCase()) e.email = "Indiquez l'adresse e-mail de votre enfant, pas la vôtre";
+        if (cleanCodes(c.codesClasse).length === 0) e.codesClasse = "Indiquez le code d'au moins une classe à suivre";
+        if (!e.email && seen.has(`mail|${mail}`)) e.general = "Cet enfant figure déjà dans la liste.";
+        seen.add(`mail|${mail}`);
+        if (!firstError) firstError = Object.values(e)[0] || "";
+        return Object.keys(e).length ? { ...c, errors: { ...c.errors, ...e } } : c;
+      }
       if (!c.prenom.trim()) e.prenom = "Le prénom est requis";
       if (!c.nom.trim()) e.nom = "Le nom est requis";
       if (!c.preview) e.codeClasse = c.codeClasse.trim() ? "Cliquez sur « Vérifier le code »" : "Le code de la classe est requis";
@@ -644,7 +683,7 @@ const SignUp = ({ theme }) => {
         email,
         telephone: formData.telephone,
         adresse: formData.adresse.trim(),
-        enfants: enfants.map((c) => ({ prenom: c.prenom.trim(), nom: c.nom.trim(), codeClasse: c.codeClasse.trim() })),
+        enfants: enfants.map(childPayload),
       };
       const response = await axios.post(`${API}/utilisateurs`, payload);
       const data = response.data || {};
@@ -664,16 +703,29 @@ const SignUp = ({ theme }) => {
       }
       const returned = Array.isArray(data.enfants) && data.enfants.length > 0 ? data.enfants : null;
       const recap = returned
-        ? returned.map((e) => ({ prenom: e.prenom, nom: e.nom, classeNom: e.classeNom || null }))
-        : enfants.map((c) => ({ prenom: c.prenom.trim(), nom: c.nom.trim(), classeNom: c.preview?.nom || null }));
+        ? returned.map((e) => ({
+            prenom: e.prenom,
+            nom: e.nom,
+            email: e.email || null,
+            classeNom: e.classeNom || null,
+            lienStatut: e.lienStatut || null,
+          }))
+        : enfants.map((c) => ({
+            prenom: c.type === "MAJEUR" ? "" : c.prenom.trim(),
+            nom: c.type === "MAJEUR" ? "" : c.nom.trim(),
+            email: c.type === "MAJEUR" ? c.email.trim() : null,
+            lienStatut: c.type === "MAJEUR" ? "EN_ATTENTE_VALIDATION_PROFESSEUR" : null,
+            classeNom: c.preview?.nom || null,
+          }));
       navigate("/schoolchat/compte-cree", {
         replace: true,
         state: { email, role: "parent", statut, enfants: recap },
       });
     } catch (err) {
       console.error("Erreur lors de l'inscription parent:", err);
-      if (showFieldError(err)) return;
       const data = err.response?.data || {};
+      // An error about one child (enfantIndex, e.g. 409 ELEVE_EXISTE_AVEC_COMPTE) is not about the parent's e-mail.
+      if ((data.enfantIndex === undefined || data.enfantIndex === null) && showFieldError(err)) return;
       const code = String(data.code || "").toUpperCase();
       const rawIndex = data.enfantIndex;
       const idx =
@@ -684,9 +736,16 @@ const SignUp = ({ theme }) => {
         updateChildren((list) =>
           list.map((c, i) => {
             if (i !== idx) return c;
-            return aboutCode
-              ? { ...c, preview: null, resetKey: c.resetKey + 1, errors: { codeClasse: msg } }
-              : { ...c, errors: { general: msg } };
+            if (aboutCode && c.type !== "MAJEUR") return { ...c, preview: null, resetKey: c.resetKey + 1, errors: { codeClasse: msg } };
+            if (c.type === "MAJEUR") {
+              const aboutClass =
+                ["ELEVE_PAS_DANS_CLASSE", "LIEN_PARENT_DEJA_DEMANDE"].includes(code) ||
+                (code === "ENFANT_INVALIDE" && /code|classe/i.test(msg));
+              return { ...c, errors: aboutClass ? { codesClasse: msg } : { email: msg } };
+            }
+            if (["COMPTE_NON_ELEVE", "ELEVE_INTROUVABLE"].includes(code)) return { ...c, errors: { email: msg } };
+            // Same name as a student with his own account in that class: offer « Ajouter avec son e-mail ».
+            return { ...c, errors: { general: msg, suggestAdult: code === "ELEVE_EXISTE_AVEC_COMPTE" } };
           }),
         );
         setCurrentStep(2);
@@ -1005,7 +1064,9 @@ const SignUp = ({ theme }) => {
             <motion.div key="step2-children" variants={stepVariants} initial="hidden" animate="visible" exit="exit" transition={{ duration: 0.25 }}>
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Vos enfants</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                Pour chaque enfant, renseignez son prénom, son nom et le code de sa classe, puis vérifiez le code.
+                Pour chaque enfant mineur, renseignez son prénom, son nom et le code de sa classe, puis vérifiez le code. Un
+                enfant majeur s'ajoute avec l'adresse e-mail de son compte élève et le code de chaque classe à suivre (il
+                doit déjà avoir son compte et être inscrit dans la classe) : le professeur de chaque classe validera.
               </p>
               {enfants.length === 0 ? (
                 <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 p-5">
@@ -1052,7 +1113,7 @@ const SignUp = ({ theme }) => {
                       </select>
                     </label>
                     <span className="text-xs text-slate-500 dark:text-slate-400">
-                      {enfants.filter((c) => c.preview).length} / {enfants.length} code(s) vérifié(s)
+                      {enfants.filter(childReady).length} / {enfants.length} enfant(s) prêt(s)
                     </span>
                   </div>
                   <div className="space-y-4">
@@ -1061,8 +1122,9 @@ const SignUp = ({ theme }) => {
                         key={c.key}
                         index={i}
                         idPrefix="signup-enfant"
-                        title={`Enfant ${i + 1}${c.prenom.trim() ? ` — ${c.prenom.trim()}` : ""}`}
+                        title={`Enfant ${i + 1}${c.type === "MAJEUR" ? (c.email.trim() ? ` — ${c.email.trim()}` : "") : c.prenom.trim() ? ` — ${c.prenom.trim()}` : ""}`}
                         value={c}
+                        allowAdult
                         errors={c.errors}
                         resetKey={c.resetKey}
                         verifiedPreview={c.preview}
@@ -1081,7 +1143,7 @@ const SignUp = ({ theme }) => {
                   {!allChildrenVerified && (
                     <p className="mt-4 text-xs text-slate-500 dark:text-slate-400 flex items-start gap-2">
                       <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 text-[#4F46E5]" />
-                      Vérifiez le code de la classe de chaque enfant pour continuer.
+                      Vérifiez le code de la classe de chaque enfant mineur (et l'e-mail de chaque enfant majeur) pour continuer.
                     </p>
                   )}
                 </>
@@ -1155,15 +1217,34 @@ const SignUp = ({ theme }) => {
                     {enfants.length > 1 ? `Vos ${enfants.length} enfants` : "Votre enfant"}
                   </h3>
                   <ul className="space-y-3">
-                    {enfants.map((c, i) => (
-                      <li key={c.key}>
-                        <ClassPreviewCard
-                          compact
-                          preview={c.preview}
-                          title={`Enfant ${i + 1} — ${`${c.prenom.trim()} ${c.nom.trim()}`.trim()} rejoint`}
-                        />
-                      </li>
-                    ))}
+                    {enfants.map((c, i) => {
+                      const name = `${c.prenom.trim()} ${c.nom.trim()}`.trim();
+                      if (c.type === "MAJEUR") {
+                        return (
+                          <li
+                            key={c.key}
+                            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 px-4 py-3 text-sm"
+                          >
+                            <p className="font-semibold text-slate-900 dark:text-white">
+                              Enfant {i + 1} — {c.email.trim()} (majeur)
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              Classe{cleanCodes(c.codesClasse).length > 1 ? "s" : ""} {cleanCodes(c.codesClasse).join(", ")} · demande de
+                              suivi à valider par le professeur de chaque classe (lecture seule une fois acceptée).
+                            </p>
+                          </li>
+                        );
+                      }
+                      return (
+                        <li key={c.key}>
+                          <ClassPreviewCard
+                            compact
+                            preview={c.preview}
+                            title={`Enfant ${i + 1} — ${name || c.email.trim()}${c.type === "MAJEUR" ? " (majeur)" : ""} rejoint`}
+                          />
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}

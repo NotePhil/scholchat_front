@@ -1,6 +1,14 @@
 import React, { useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChild, faKey, faMagnifyingGlass, faTrashCan, faUser } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChild,
+  faEnvelope,
+  faKey,
+  faMagnifyingGlass,
+  faTrashCan,
+  faUser,
+  faUserGraduate,
+} from "@fortawesome/free-solid-svg-icons";
 import { Button, TextField } from "./ui";
 import { ClassPreviewCard, ClassPreviewStatus } from "../common/ClassPreviewCard";
 import { useClassPreview } from "../../hooks/useClassPreview";
@@ -13,6 +21,13 @@ import { normalizeClassCode } from "../../services/classePreview";
  *
  * value: { prenom, nom, codeClasse }; onChange(field, value); onPreviewChange(preview | null) is called
  * whenever the verified class changes. errors: { prenom, nom, codeClasse, general } (strings).
+ * allowAdult: shows the choice « Mineur (sans compte) » / « Majeur — a (ou aura) son propre compte »
+ * (value.type: "MINEUR" | "MAJEUR", onChange("type", …)). An adult child is identified by the e-mail of his
+ * existing student account (value.email) and the code(s) of the class(es) to follow (value.codesClasse: string[],
+ * onChange("codesClasse", […]), at least one): he must already have his account and be a member of each class;
+ * the professor of each class validates the follow. adultEmailLocked hides the e-mail (« Suivre une autre
+ * classe » of a known child). errors.email / errors.codesClasse (strings). errors.suggestAdult (with errors.general, e.g.
+ * ELEVE_EXISTE_AVEC_COMPTE) shows « Ajouter avec son e-mail », which switches the card to « Majeur ».
  * verifiedPreview: class already verified for this code (kept by the parent while the card was unmounted,
  * e.g. when coming back from the summary step). resetKey: changing it clears the verified class (e.g. the
  * backend refused the code) — the parent clears its verifiedPreview too.
@@ -31,8 +46,13 @@ const ChildCodeCard = ({
   verifiedPreview = null,
   idPrefix = "enfant",
   className = "",
+  allowAdult = false,
+  adultEmailLocked = false,
 }) => {
-  const preview = useClassPreview(value.codeClasse, "parent");
+  const adult = (allowAdult || adultEmailLocked) && value.type === "MAJEUR";
+  const codes = Array.isArray(value.codesClasse) && value.codesClasse.length ? value.codesClasse : [""];
+  const setCode = (i, v) => onChange("codesClasse", codes.map((c, k) => (k === i ? v : c)));
+  const preview = useClassPreview(value.codeClasse, adult ? "eleve" : "parent");
   const { isValid, preview: found, reset } = preview;
   const clean = normalizeClassCode(value.codeClasse);
   const stored = verifiedPreview && verifiedPreview.code === clean ? verifiedPreview : null;
@@ -87,12 +107,125 @@ const ChildCodeCard = ({
           )}
         </div>
       )}
-      {errors.general && (
-        <p className="mb-3 text-sm text-[#EF4444]" role="alert">
-          {errors.general}
-        </p>
+      {allowAdult && showNames && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4" role="radiogroup" aria-label="Type d'inscription">
+          {[
+            { type: "MINEUR", icon: faChild, label: "Mineur (sans compte)", hint: "Vous agissez pour lui" },
+            { type: "MAJEUR", icon: faUserGraduate, label: "Majeur", hint: "A déjà son propre compte élève" },
+          ].map((opt) => {
+            const active = (value.type || "MINEUR") === opt.type;
+            return (
+              <button
+                key={opt.type}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                disabled={disabled}
+                onClick={() => !active && onChange("type", opt.type)}
+                className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-left transition-colors disabled:opacity-60 ${
+                  active
+                    ? "border-[#4F46E5] bg-indigo-50 dark:bg-indigo-500/10"
+                    : "border-slate-200 dark:border-slate-600 hover:border-indigo-300"
+                }`}
+              >
+                <FontAwesomeIcon icon={opt.icon} className={`mt-0.5 ${active ? "text-[#4F46E5]" : "text-slate-400"}`} />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-slate-900 dark:text-white">{opt.label}</span>
+                  <span className="block text-xs text-slate-500 dark:text-slate-400">{opt.hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       )}
-      {showNames && (
+      {errors.general && (
+        <div className="mb-3" role="alert">
+          <p className="text-sm text-[#EF4444]">{errors.general}</p>
+          {allowAdult && errors.suggestAdult && !adult && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="mt-2 !py-2"
+              onClick={() => onChange("type", "MAJEUR")}
+              disabled={disabled}
+            >
+              <FontAwesomeIcon icon={faEnvelope} /> Ajouter avec son e-mail
+            </Button>
+          )}
+        </div>
+      )}
+      {adult && (
+        <div className="mb-4">
+          {!adultEmailLocked && (
+          <TextField
+            id={id("email")}
+            type="email"
+            label="E-mail de votre enfant"
+            required
+            icon={faEnvelope}
+            value={value.email || ""}
+            onChange={(e) => onChange("email", e.target.value)}
+            placeholder="adresse@exemple.com"
+            error={errors.email}
+            hint="L'adresse de son compte élève ScholChat."
+            disabled={disabled}
+            autoComplete="off"
+          />
+          )}
+          <div className={adultEmailLocked ? "" : "mt-4"}>
+            <p className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Code{codes.length > 1 ? "s" : ""} de la classe à suivre <span className="text-[#EF4444]">*</span>
+            </p>
+            <div className="space-y-2">
+              {codes.map((code, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <TextField
+                    id={id(`code-majeur-${i}`)}
+                    className="flex-1"
+                    icon={faKey}
+                    value={code}
+                    onChange={(e) => setCode(i, e.target.value)}
+                    placeholder="Ex. 123456"
+                    disabled={disabled}
+                    autoComplete="off"
+                    aria-label={`Code de classe ${i + 1}`}
+                    inputClassName="tracking-wider font-semibold"
+                  />
+                  {codes.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => onChange("codesClasse", codes.filter((_, k) => k !== i))}
+                      disabled={disabled}
+                      className="p-2 text-slate-400 hover:text-[#EF4444]"
+                      aria-label={`Retirer le code ${i + 1}`}
+                    >
+                      <FontAwesomeIcon icon={faTrashCan} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {typeof errors.codesClasse === "string" && (
+              <p className="mt-1.5 text-sm text-[#EF4444]" role="alert">{errors.codesClasse}</p>
+            )}
+            {codes.length < 10 && (
+              <button
+                type="button"
+                onClick={() => onChange("codesClasse", [...codes, ""])}
+                disabled={disabled}
+                className="mt-2 text-xs font-semibold text-[#4F46E5] hover:underline disabled:opacity-50"
+              >
+                + Ajouter un autre code de classe
+              </button>
+            )}
+          </div>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            Votre enfant majeur doit déjà avoir son compte élève et être inscrit dans chaque classe indiquée. Le
+            professeur de chaque classe valide votre demande ; vous suivrez alors cette classe en lecture seule.
+          </p>
+        </div>
+      )}
+      {showNames && !adult && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <TextField
             id={id("prenom")}
@@ -120,6 +253,7 @@ const ChildCodeCard = ({
           />
         </div>
       )}
+      {!adult && (
       <div className="flex flex-col sm:flex-row sm:items-start gap-3">
         <TextField
           id={id("code")}
@@ -156,8 +290,9 @@ const ChildCodeCard = ({
           </Button>
         )}
       </div>
-      {preview.status === "loading" && <ClassPreviewStatus status="loading" />}
-      {current && <ClassPreviewCard preview={current} className="mt-4" compact />}
+      )}
+      {!adult && preview.status === "loading" && <ClassPreviewStatus status="loading" />}
+      {!adult && current && <ClassPreviewCard preview={current} className="mt-4" compact />}
     </div>
   );
 };

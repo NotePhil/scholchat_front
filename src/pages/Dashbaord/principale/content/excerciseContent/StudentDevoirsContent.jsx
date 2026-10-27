@@ -684,6 +684,11 @@ const StudentDevoirsContent = ({ tabData = null }) => {
               ? `Devoirs${viewer.childName ? ` de ${viewer.childName}` : ""}`
               : "Mes Devoirs"}
           </span>
+          {viewer.isParentView && !viewer.canAnswer && (
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/20">
+              Lecture seule
+            </span>
+          )}
           <button
             onClick={load}
             className="ml-auto p-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors"

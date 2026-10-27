@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { minioS3Service } from "../../../../../../services/minioS3";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { VideoViewerPlayer } from "../../../../../../components/media/VideoMedia";
+import RichContent from "../../../../../../components/richtext/RichContent";
 import {
   faArrowUpRightFromSquare,
   faBookOpen,
@@ -230,7 +232,13 @@ const FileViewer = ({
       {preview && (
         <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           {type === "video" && (
-            <video src={url} controls playsInline className="w-full max-h-64" />
+            <VideoViewerPlayer
+              key={url}
+              src={url}
+              autoPlay={false}
+              className="w-full"
+              maxVideoHeight="16rem"
+            />
           )}
           {(type === "pdf" || type === "office") && (
             <div className="relative">
@@ -447,88 +455,14 @@ const ChapterPanel = ({
     };
     process();
   }, [currentChap?.id, currentChap?.contenu, redacteurId]);
-  const handleContentClick = (e) => {
-    // Click on image → popup
-    const img = e.target.closest("img");
-    if (img) {
-      const url = img.getAttribute("src");
-      const fileName = img.getAttribute("alt") || "Image";
-      if (url) {
-        e.preventDefault();
-        e.stopPropagation();
-        setImagePopup({
-          url,
-          fileName,
-        });
-      }
-      return;
-    }
-    // Click on anchor → open viewer or new tab
-    const anchor = e.target.closest("a");
-    if (anchor) {
-      const href = anchor.getAttribute("href");
-      if (href && href.startsWith("http")) {
-        e.preventDefault();
-        const t = getFileType(href, "");
-        if (t === "image") {
-          setImagePopup({
-            url: href,
-            fileName: anchor.textContent.trim() || "Image",
-          });
-        } else {
-          setFileViewer({
-            url: href,
-            fileName:
-              anchor.textContent.trim() ||
-              href.split("/").pop().split("?")[0] ||
-              "Fichier",
-            contentType: "",
-          });
-        }
-      }
-      return;
-    }
-    // Click on file container div[data-file-id] (span-based, no anchor yet)
-    const fileDiv = e.target.closest("div[data-file-id]");
-    if (fileDiv) {
-      e.preventDefault();
-      const innerAnchor = fileDiv.querySelector("a");
-      if (innerAnchor) {
-        const href = innerAnchor.getAttribute("href");
-        const t = getFileType(href, "");
-        if (t === "image")
-          setImagePopup({
-            url: href,
-            fileName: innerAnchor.textContent.trim() || "Image",
-          });
-        else
-          setFileViewer({
-            url: href,
-            fileName: innerAnchor.textContent.trim() || "Fichier",
-            contentType: "",
-          });
-        return;
-      }
-      // Span-only file link — match by filename in mediaItems
-      const nameSpan = fileDiv.querySelector("span:last-child");
-      const name = nameSpan?.textContent?.trim();
-      if (name) {
-        const match = mediaItems.find((m) => m.fileName === name);
-        if (match) {
-          const t = getFileType(match.url, match.contentType);
-          if (t === "image")
-            setImagePopup({
-              url: match.url,
-              fileName: match.fileName,
-            });
-          else
-            setFileViewer({
-              url: match.url,
-              fileName: match.fileName,
-              contentType: match.contentType,
-            });
-        }
-      }
+  // Images open in the zoomable popup, attached files in the file viewer.
+  const openContentImage = (url, fileName) =>
+    setImagePopup({ url, fileName: fileName || "Image" });
+  const openContentFile = ({ url, fileName, contentType }) => {
+    if (getFileType(url, contentType) === "image" || getFileType(fileName, contentType) === "image") {
+      setImagePopup({ url, fileName });
+    } else {
+      setFileViewer({ url, fileName, contentType: contentType || "" });
     }
   };
   return (
@@ -654,47 +588,13 @@ const ChapterPanel = ({
                   {/* Render HTML content with images and links */}
                   {processedContent && (
                     <>
-                      <div
-                        className="chapter-live-content text-xs text-gray-700 dark:text-gray-300 leading-relaxed"
-                        dangerouslySetInnerHTML={{
-                          __html: processedContent,
-                        }}
-                        onClick={handleContentClick}
+                      <RichContent
+                        html={processedContent}
+                        compact
+                        className="text-gray-700 dark:text-gray-300"
+                        onImageClick={openContentImage}
+                        onFileClick={openContentFile}
                       />
-                      <style>{`
-                        .chapter-live-content img {
-                          max-width: 100%;
-                          max-height: 200px;
-                          width: auto;
-                          height: auto;
-                          object-fit: contain;
-                          border-radius: 6px;
-                          border: 1px solid #e2e8f0;
-                          display: block;
-                          margin: 6px 0;
-                          cursor: zoom-in;
-                        }
-                        .chapter-live-content a {
-                          color: #3b82f6;
-                          text-decoration: underline;
-                          font-weight: 500;
-                          cursor: pointer;
-                        }
-                        .chapter-live-content div[data-file-id] {
-                          margin: 6px 0;
-                          padding: 6px 10px;
-                          background: #f8fafc;
-                          border: 1px solid #e2e8f0;
-                          border-radius: 6px;
-                          display: flex;
-                          align-items: center;
-                          gap: 6px;
-                        }
-                        .chapter-live-content ul { list-style: disc; padding-left: 1.5em; margin: 0.4em 0; }
-                        .chapter-live-content ol { list-style: decimal; padding-left: 1.5em; margin: 0.4em 0; }
-                        .chapter-live-content li { margin: 0.2em 0; }
-                        .chapter-live-content p { margin: 0.4em 0; }
-                      `}</style>
                     </>
                   )}
 

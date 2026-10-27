@@ -18,7 +18,7 @@ import {
   faEye,
   faFilter,
   faGraduationCap,
-  faHeartPulse,
+  faChartLine,
   faLocationDot,
   faMagnifyingGlass,
   faPen,
@@ -628,7 +628,7 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
             <div className="mt-2 sm:mt-4 flex items-center">
               <FontAwesomeIcon
-                icon={faHeartPulse}
+                icon={faChartLine}
                 className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 mr-1 sm:mr-2"
               />
               <span className="text-slate-500 text-xs sm:text-sm">

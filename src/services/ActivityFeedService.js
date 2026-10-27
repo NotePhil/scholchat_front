@@ -83,9 +83,12 @@ class ActivityFeedService {
     return finalId;
   }
 
-  async getActivities() {
+  /** @param {string} [eleveId] fil vu pour cet élève (l'élève lui-même ou l'enfant sélectionné d'un parent) */
+  async getActivities(eleveId) {
     try {
-      const response = await activityFeedApi.get("/evenements");
+      const response = await activityFeedApi.get("/evenements", {
+        params: eleveId ? { eleveId } : undefined,
+      });
       return response.data || [];
     } catch (error) {
       console.error("Failed to fetch events:", error);
@@ -97,11 +100,14 @@ class ActivityFeedService {
    * Paginated fetch. Returns { content, page, size, totalElements, totalPages, last }.
    * @param {number} page  0-based page index
    * @param {number} size  number of events per page (default 10)
+   * @param {string} [eleveId] fil vu pour cet élève (l'élève lui-même ou l'enfant sélectionné
+   *   d'un parent) : le backend ne renvoie alors que les événements publics et ceux qui ciblent
+   *   les classes de cet élève.
    */
-  async getActivitiesPaged(page = 0, size = 10) {
+  async getActivitiesPaged(page = 0, size = 10, eleveId) {
     try {
       const response = await activityFeedApi.get("/evenements/pagines", {
-        params: { page, size },
+        params: eleveId ? { page, size, eleveId } : { page, size },
       });
       return response.data;
     } catch (error) {
@@ -122,12 +128,22 @@ class ActivityFeedService {
 
   async commentOnEvent(eventId, comment) {
     try {
-      await activityFeedApi.post(`/evenements/${eventId}/comment`, { content: comment });
-      return true;
+      const res = await activityFeedApi.post(`/evenements/${eventId}/comment`, { content: comment });
+      // Created comment (id, createdByPrenom / createdByNom…); `true` if the server sent no body.
+      return res?.data || true;
     } catch (error) {
       console.error("Failed to comment on event:", error);
       throw error;
     }
+  }
+
+  /**
+   * DELETE /evenements/{eventId}/comment/{commentId} — allowed for the comment's author, the
+   * publication's author, admins and managers of a targeted class (403 otherwise).
+   */
+  async deleteComment(eventId, commentId) {
+    await activityFeedApi.delete(`/evenements/${eventId}/comment/${commentId}`);
+    return true;
   }
 
   async joinEvent(eventId) {

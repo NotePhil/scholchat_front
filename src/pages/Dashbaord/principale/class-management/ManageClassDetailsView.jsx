@@ -36,10 +36,13 @@ import AccederService, {
 import { coursProgrammerService } from "../../../../services/coursProgrammerService";
 import { exerciseProgrammerService } from "../../../../services/exerciseProgrammerService";
 import { activityFeedService } from "../../../../services/ActivityFeedService";
+import { computeEventStatus } from "../../../../utils/eventStatus";
 
 // Import separated components
 import UserTables from "./components/UserTables";
 import AccessRequestDecisionModal from "../../../../components/common/AccessRequestDecisionModal";
+import { ClassFollowRequests, ClassParentFollows } from "../../../../components/parentLink/ClassParentFollow";
+import { fetchClassFollowRequests, fetchClassParentFollows } from "../../../../services/parentLinkService";
 import { accessRequestLabel } from "../../../../utils/accessRequestLabel";
 import StatisticsCards from "./components/StatisticsCards";
 import OffreInfoPanel from "../shared/OffreInfoPanel";
@@ -226,6 +229,18 @@ const ManageClassDetailsView = ({
   const [actionLoading, setActionLoading] = useState(null);
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
+  // Parental follow-up of adult students (managers): pending requests (« Demandes ») and active follows (« Élèves »)
+  const [followRequests, setFollowRequests] = useState([]);
+  const [parentFollows, setParentFollows] = useState([]);
+  const loadParentFollow = async () => {
+    const [requests, follows] = await Promise.all([
+      fetchClassFollowRequests(classId).catch(() => []),
+      fetchClassParentFollows(classId).catch(() => []),
+    ]);
+    setFollowRequests(requests);
+    setParentFollows(follows);
+  };
+  const notifyFollow = (type, text) => (type === "success" ? message.success(text) : message.info(text));
 
   // When initialTab / navKey change (a notification clicked while this view is
   // already mounted — same class or another one), switch to the requested tab.
@@ -239,6 +254,7 @@ const ManageClassDetailsView = ({
     if (initialTab === "access-requests" && sameClass) {
       if (!canManageRef.current) return;
       loadAccessRequests();
+      loadParentFollow();
     }
     setActiveTab(initialTab);
   }, [initialTab, navKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -270,6 +286,15 @@ const ManageClassDetailsView = ({
   const [rejectReason, setRejectReason] = useState("");
   // Access request approve / reject confirmation: { mode: "approve" | "reject", request }
   const [requestDecision, setRequestDecision] = useState(null);
+  // Offer's "Élèves max" restriction: { elevesMax (null = unlimited), nombreEleves, complete }
+  const [capacite, setCapacite] = useState(null);
+  const loadCapacite = async () => {
+    try {
+      setCapacite(await classService.obtenirCapacite(classId));
+    } catch {
+      setCapacite(null); // not a member / no contract: nothing shown
+    }
+  };
   const [requestDecisionLoading, setRequestDecisionLoading] = useState(false);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [moderatorModalVisible, setModeratorModalVisible] = useState(false);
@@ -391,6 +416,7 @@ const ManageClassDetailsView = ({
     }
     if (classId) {
       loadClassDetails();
+      loadCapacite();
       fetchProfessors();
       fetchRejectionMotifs();
     }
@@ -515,6 +541,10 @@ const ManageClassDetailsView = ({
       if (rid !== loadRidRef.current) return;
       if (perms.canManage) {
         await loadAccessRequests();
+        await loadParentFollow();
+      } else {
+        setFollowRequests([]);
+        setParentFollows([]);
       }
       if (rid !== loadRidRef.current) return;
       await loadModeratorsAndRights();
@@ -988,9 +1018,12 @@ const ManageClassDetailsView = ({
     try {
       const allEvents = await activityFeedService.getActivities();
       // Filter by classId
-      const classEvents = allEvents.filter(
-        (event) => event.classesIds && event.classesIds.includes(classId),
-      );
+      const classEvents = allEvents
+        .filter(
+          (event) => event.classesIds && event.classesIds.includes(classId),
+        )
+        // Statut calculé à partir des dates, pas l'état stocké (toujours PLANIFIE).
+        .map((event) => ({ ...event, etat: computeEventStatus(event) }));
       // Sort by status: EN_COURS (0), PLANIFIE/A_VENIR (1), PASSE (2), ANNULE (3)
       const sorted = classEvents.sort((a, b) => {
         const order = {
@@ -1149,7 +1182,7 @@ const ManageClassDetailsView = ({
     // Refresh lists without blocking the UI (errors there are reported by the loaders).
     Promise.resolve()
       .then(() => loadAccessRequests())
-      .then(() => (mode === "approve" ? loadClassDetails() : null))
+      .then(() => (mode === "approve" ? Promise.all([loadClassDetails(), loadCapacite()]) : null))
       .catch((err) => console.error("Refresh after access decision failed:", err));
   };
   const handleRejectRequest = (request) => {
@@ -2118,7 +2151,26 @@ const ManageClassDetailsView = ({
                     />
                     {statistics.eleves || 0} participants
                   </span>
+                  {capacite?.elevesMax != null && (
+                    <span
+                      className={`text-xs font-semibold ${capacite.complete ? "text-amber-200" : "text-blue-100"}`}
+                      title="Nombre maximum d'élèves de l'offre de la classe"
+                    >
+                      Élèves : {capacite.nombreEleves} / {capacite.elevesMax}
+                    </span>
+                  )}
                 </div>
+                {capacite?.complete && canManageClass && (
+                  <div
+                    className="mt-2 text-xs rounded-lg px-3 py-2"
+                    style={{ background: "rgba(251,191,36,0.18)", color: "#fef3c7" }}
+                    role="status"
+                  >
+                    Classe complète : le nombre maximum d'élèves de l'offre ({capacite.elevesMax}) est atteint. Les
+                    nouvelles demandes d'élèves ne peuvent plus être acceptées — passez à une offre supérieure
+                    (Offre / Forfait › Changer d'offre).
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2402,7 +2454,7 @@ const ManageClassDetailsView = ({
               ? [
                   {
                     key: "access-requests",
-                    label: `Demandes (${users.accessRequests.length})`,
+                    label: `Demandes (${users.accessRequests.length + followRequests.length})`,
                     icon: <FontAwesomeIcon icon={faClock} />,
                   },
                 ]
@@ -2588,6 +2640,7 @@ const ManageClassDetailsView = ({
                       type="CLASSE"
                       entityId={classId}
                       isDark={false}
+                      onContratChange={loadCapacite}
                     />
                   </div>
                 )}
@@ -2751,6 +2804,9 @@ const ManageClassDetailsView = ({
                 isModerator={canManageClass}
                 currentUserId={currentUserId}
               />
+              {canManageClass && (
+                <ClassParentFollows items={parentFollows} onChanged={loadParentFollow} onNotify={notifyFollow} />
+              )}
             </div>
           )}
 
@@ -2787,6 +2843,8 @@ const ManageClassDetailsView = ({
 
           {/* Demandes d'accès */}
           {activeTab === "access-requests" && canManageClass && (
+            <>
+            <ClassFollowRequests items={followRequests} onChanged={loadParentFollow} onNotify={notifyFollow} />
             <UserTables
               users={users.accessRequests}
               loading={loading}
@@ -2798,6 +2856,7 @@ const ManageClassDetailsView = ({
               userRole={userRole}
               isModerator={canManageClass}
             />
+            </>
           )}
 
           {/* Cours: programmed courses → course (content + exercises) */}

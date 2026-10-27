@@ -11,6 +11,7 @@ import {
   faSpinner,
   faTrophy,
 } from "@fortawesome/free-solid-svg-icons";
+import QuestionMediaList from "../../../../../components/common/QuestionMediaList";
 
 /**
  * Read-only copy of a submitted devoir (the student's own, or the parent's
@@ -258,9 +259,10 @@ const StudentExerciseResultView = ({
                       {i + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-semibold text-gray-900 whitespace-pre-line break-words">
                         {q.intitule}
                       </p>
+                      <QuestionMediaList medias={q.medias} className="mt-2 mb-1" />
                       <span className="text-xs text-gray-400">
                         {TYPE_LABELS[q.typeQuestion] || q.typeQuestion} · {max}{" "}
                         pt{max > 1 ? "s" : ""}

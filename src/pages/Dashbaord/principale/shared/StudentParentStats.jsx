@@ -783,7 +783,7 @@ const StudentParentStats = ({
               </p>
             </div>
             <div
-              className={`flex items-center ${isMobile ? "gap-2" : "space-x-4"}`}
+              className={`flex flex-wrap items-center min-w-0 ${isMobile ? "gap-2" : "gap-4"}`}
             >
               {/* Child selector for parents */}
               {userRole === "parent" && children.length > 0 && (
@@ -802,7 +802,7 @@ const StudentParentStats = ({
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className={`${isMobile ? "p-2" : "p-2.5"} rounded-lg border ${themeColors.border} ${themeColors.cardBg} hover:shadow-md transition-all`}
+                className={`flex-shrink-0 ${isMobile ? "p-2" : "p-2.5"} rounded-lg border ${themeColors.border} ${themeColors.cardBg} hover:shadow-md transition-all`}
               >
                 <FontAwesomeIcon
                   icon={faArrowsRotate}

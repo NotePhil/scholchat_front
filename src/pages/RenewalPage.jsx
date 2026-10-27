@@ -16,6 +16,7 @@ import {
 import { contratService } from "../services/ContratService";
 import { PeriodiciteContrat } from "../services/OfferService";
 import PaymentModal from "../components/modals/PaymentModal";
+import { texteConfirmationChangement } from "../utils/changementOffre";
 import { Alert, AuthShell, BrandLogo, BRAND_GRADIENT, Button, TextField } from "../components/frontoffice/ui";
 
 /**
@@ -205,6 +206,9 @@ const RenewalWithToken = ({ token, theme }) => {
   const [success, setSuccess] = useState(false);
   const [payError, setPayError] = useState("");
   const [showPayment, setShowPayment] = useState(false);
+  // "Changer d'offre" confirmation, shown before the payment
+  const [showConfirmChange, setShowConfirmChange] = useState(false);
+  const [offreModifiee, setOffreModifiee] = useState(false);
 
   useEffect(() => {
     const charger = async () => {
@@ -239,6 +243,7 @@ const RenewalWithToken = ({ token, theme }) => {
       const payload = { nouvelleOffreId: action === "changer" ? nouvelleOffreId : null, periodicite, paymentInfo };
       if (action === "changer") await contratService.changerOffreParToken(token, payload);
       else await contratService.prolongerParToken(token, payload);
+      setOffreModifiee(action === "changer");
       setShowPayment(false);
       setSuccess(true);
     } catch (err) {
@@ -272,9 +277,13 @@ const RenewalWithToken = ({ token, theme }) => {
     return (
       <>
         <HeaderIcon icon={faCircleCheck} />
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-slate-900 dark:text-white">Offre activée !</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-slate-900 dark:text-white">
+          {offreModifiee ? "Offre modifiée" : "Offre activée !"}
+        </h1>
         <p className="mt-3 text-center text-slate-500 dark:text-slate-400">
-          Votre offre a été renouvelée avec succès. Vous pouvez maintenant vous connecter.
+          {offreModifiee
+            ? "Offre modifiée — effective immédiatement. Vous pouvez maintenant vous connecter."
+            : "Votre offre a été renouvelée avec succès. Vous pouvez maintenant vous connecter."}
         </p>
         <Button to="/schoolchat/login" className="w-full mt-6">
           Se connecter
@@ -398,12 +407,50 @@ const RenewalWithToken = ({ token, theme }) => {
               return;
             }
             setPayError("");
-            setShowPayment(true);
+            if (action === "changer") setShowConfirmChange(true);
+            else setShowPayment(true);
           }}
         >
           Procéder au paiement
         </Button>
       </div>
+
+      {showConfirmChange && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full sm:max-w-sm bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 sm:p-6">
+            <h2 className="font-semibold mb-3 text-slate-900 dark:text-white">Changer d'offre ?</h2>
+            {texteConfirmationChangement({ contrat, offre: offreCible, montant, periodicite }).map((para, i) => (
+              <p key={i} className={`text-sm leading-relaxed text-slate-500 dark:text-slate-400 ${i > 0 ? "mt-2" : ""}`}>
+                {para}
+              </p>
+            ))}
+            <p className="text-sm mt-2 text-slate-900 dark:text-white">Confirmer ?</p>
+            <div className="flex gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setShowConfirmChange(false)}
+                className="flex-1 py-2.5 rounded-xl border text-sm font-medium border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmChange(false);
+                  setShowPayment(true);
+                }}
+                className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <PaymentModal
         isOpen={showPayment}

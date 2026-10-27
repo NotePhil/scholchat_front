@@ -51,6 +51,14 @@ const LearnerClassSpace = ({ classe, onBack }) => {
                   .join(" · ") || "Espace de classe"}
               </p>
             </div>
+            {viewer.isParentView && !viewer.canAnswer && (
+              <span
+                className="ml-auto shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20"
+                title={`${viewer.childName || "Votre enfant"} a son propre compte : il rend lui-même ses devoirs et suit ses cours.`}
+              >
+                Lecture seule
+              </span>
+            )}
           </div>
           <div className="flex border-t border-gray-100 overflow-x-auto">
             {TABS.map((t) => (

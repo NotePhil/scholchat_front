@@ -29,6 +29,7 @@ import PasswordPage from "./pages/PasswordPage";
 import ResetPassword from "./pages/ResetPassword";
 import ForcePasswordChange from "./pages/ForcePasswordChange";
 import AccountCreated from "./pages/AccountCreated";
+import ParentLinkRequestsPage from "./pages/ParentLinkRequestsPage";
 import VerifyAccount from "./pages/VerifyAccount";
 import NotFound from "./pages/NotFound";
 import Principal from "./pages/Dashbaord/principale/Principal";
@@ -310,6 +311,8 @@ function AnimatedRoutes({ theme, setTheme }) {
                 </Layout>
               }
             />
+            {/* E-mail link « Votre parent souhaite suivre votre scolarité » → Paramètres (login first if needed) */}
+            <Route path="/schoolchat/demandes-suivi-parental" element={<ParentLinkRequestsPage />} />
             {/* Parent / élève sign-up with a class code: pending teacher approval */}
             <Route
               path="/schoolchat/compte-cree"

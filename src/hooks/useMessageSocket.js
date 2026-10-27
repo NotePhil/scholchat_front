@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import { messageService } from "../services/MessageService";
+import { conversationService } from "../services/ConversationService";
 import { isParentLimited } from "../utils/parentAccess";
 
 // SockJS endpoint registered under the servlet context path
@@ -36,8 +37,14 @@ export const refreshUnreadMessageCount = (
   // Limited parent (no child accepted yet): /messages/** answers 403 PARENT_SANS_ENFANT_VALIDE.
   if (isParentLimited()) return Promise.resolve(unreadCount);
   if (unreadInflight) return unreadInflight;
-  unreadInflight = messageService
-    .compterNonLus(userId)
+  // Chat API first (unread messages across conversations), legacy count as fallback.
+  unreadInflight = conversationService
+    .unreadCount()
+    .then((res) => {
+      if (typeof res?.total !== "number") throw new Error("no total");
+      return res.total;
+    })
+    .catch(() => messageService.compterNonLus(userId))
     .then((count) => {
       countedMessageIds.clear();
       setUnreadMessageCount(typeof count === "number" ? count : Number(count));
@@ -56,6 +63,16 @@ export const refreshUnreadMessageCount = (
 let shared = null;
 
 const handleUnreadEvent = (userId, event) => {
+  // Conversation read (here or on another device): recount.
+  if (event?.type === "CONVERSATION_READ") {
+    if (event.lecteurId === userId) refreshUnreadMessageCount(userId);
+    return;
+  }
+  // Marked unread / moved to or restored from the trash (here or elsewhere): recount.
+  if (event?.type === "CONVERSATION_UPDATED") {
+    refreshUnreadMessageCount(userId);
+    return;
+  }
   const msg = event?.message;
   if (!event?.type || !msg) return;
   if (event.type === "NEW_MESSAGE") {
@@ -158,7 +175,8 @@ const releaseConnection = (state) => {
  * Subscribes to /topic/messages/{userId} via STOMP/SockJS.
  *
  * onEvent(event) is called for every push:
- *   { type: "NEW_MESSAGE" | "MESSAGE_DELETED" | "MESSAGE_RESTORED", message }
+ *   { type: "NEW_MESSAGE" | "MESSAGE_DELETED" | "MESSAGE_RESTORED" | "CONVERSATION_READ",
+ *     message, conversationId, chat (ChatMessageDto), lecteurId, luJusqua, pourTous }
  * onReconnect() is called once each time the socket comes back after a drop.
  */
 export function useMessageSocket(userId, onEvent, onReconnect) {

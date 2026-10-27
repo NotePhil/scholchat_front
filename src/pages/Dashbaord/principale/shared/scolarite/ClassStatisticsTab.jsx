@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
   faBookOpen,
+  faClock,
   faCheckDouble,
   faClipboardCheck,
   faMagnifyingGlass,
@@ -21,6 +22,7 @@ import {
 } from "recharts";
 import { useOpenTab } from "../../../../../hooks/useOpenTab";
 import { average, fmtNote20, fmtPct, loadClassStatistics, round1 } from "../../../../../utils/scolarite";
+import { formatDuration } from "../../../../../hooks/useReadingTimer";
 
 const INK = "#334155";
 const MUTED = "#94a3b8";
@@ -231,6 +233,14 @@ const ClassStatisticsTab = ({ classId, eleves = [] }) => {
       render: fmtNote20,
     },
     {
+      title: "Temps de lecture",
+      dataIndex: "tempsLectureSecondes",
+      key: "temps",
+      width: 130,
+      sorter: (a, b) => (a.tempsLectureSecondes ?? 0) - (b.tempsLectureSecondes ?? 0),
+      render: (v) => (v ? formatDuration(v) : <span className="text-slate-400">—</span>),
+    },
+    {
       title: "En retard",
       dataIndex: "enRetard",
       key: "late",
@@ -288,6 +298,17 @@ const ClassStatisticsTab = ({ classId, eleves = [] }) => {
                     <span className="text-xs text-slate-500">
                       Progression <strong style={{ color: INK }}>{fmtPct(c.progressionMoyenne)}</strong>
                     </span>
+                    <span className="text-xs text-slate-500" title="Temps de lecture moyen (élèves ayant un temps mesuré)">
+                      <FontAwesomeIcon icon={faClock} className="mr-1" style={{ fontSize: 11 }} />
+                      {c.tempsMoyenSecondes != null ? (
+                        <>
+                          Lecture moy. <strong style={{ color: INK }}>{formatDuration(c.tempsMoyenSecondes)}</strong>
+                          {` · ${c.nbLecteurs} lecteur${c.nbLecteurs > 1 ? "s" : ""}`}
+                        </>
+                      ) : (
+                        "Lecture : —"
+                      )}
+                    </span>
                     <span className="text-xs text-slate-500">
                       {c.exercices.length} exercice{c.exercices.length > 1 ? "s" : ""}
                     </span>
@@ -295,6 +316,31 @@ const ClassStatisticsTab = ({ classId, eleves = [] }) => {
                   </div>
                 ),
                 children: (
+                  <>
+                  {c.tempsMoyenSecondes != null && (c.chapitres || []).length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs font-semibold text-slate-700 mb-1">Temps de lecture moyen par chapitre</p>
+                      <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
+                        {c.chapitres.map((ch, i) => (
+                          <div key={ch.chapitreId || i} className="flex items-center justify-between gap-3 px-3 py-1.5 text-xs">
+                            <span className="text-slate-700 truncate">
+                              {i + 1}. {ch.titre || `Chapitre ${i + 1}`}
+                            </span>
+                            <span className="text-slate-500 whitespace-nowrap">
+                              {ch.tempsMoyenSecondes != null ? (
+                                <>
+                                  <strong style={{ color: INK }}>{formatDuration(ch.tempsMoyenSecondes)}</strong>
+                                  {` · ${ch.nbLecteurs} lecteur${ch.nbLecteurs > 1 ? "s" : ""}`}
+                                </>
+                              ) : (
+                                "—"
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <Table
                     size="small"
                     rowKey="exerciseProgrammerId"
@@ -304,6 +350,7 @@ const ClassStatisticsTab = ({ classId, eleves = [] }) => {
                     scroll={{ x: 640 }}
                     locale={{ emptyText: "Aucun exercice lié à ce cours" }}
                   />
+                  </>
                 ),
               };
             })}

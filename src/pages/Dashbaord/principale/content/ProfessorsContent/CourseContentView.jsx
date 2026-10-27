@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { minioS3Service } from "../../../../../services/minioS3";
 import { useNavigate } from "react-router-dom";
 import DocumentViewer from "../../../../../components/viewers/DocumentViewer";
+import RichContent from "../../../../../components/richtext/RichContent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -295,107 +296,19 @@ const CourseContentView = ({ course, onBack }) => {
       </span>
     );
   };
-  const handleDocumentClick = (e) => {
-    // Click on image → popup viewer
-    if (e.target.tagName === "IMG") {
-      const url = e.target.getAttribute("src");
-      const fileName = e.target.getAttribute("alt") || "Image";
-      if (url && url.startsWith("http")) {
-        e.preventDefault();
-        e.stopPropagation();
-        setViewerConfig({
-          isOpen: true,
-          url,
-          fileName,
-          contentType: "image",
-        });
-        return;
-      }
-    }
-    // Click on anchor link → open viewer
-    const anchor = e.target.closest("a");
-    if (anchor) {
-      const url = anchor.getAttribute("href");
-      const fileName =
-        anchor.textContent.trim() ||
-        url?.split("/").pop().split("?")[0] ||
-        "Document";
-      if (url && url.startsWith("http")) {
-        e.preventDefault();
-        e.stopPropagation();
-        setViewerConfig({
-          isOpen: true,
-          url,
-          fileName,
-          contentType: "",
-        });
-      }
-    }
-  };
   const renderChapterContent = (content) => {
     if (!content) return null;
     return (
-      <>
-        <div
-          className="course-content-container text-slate-700 leading-relaxed"
-          dangerouslySetInnerHTML={{
-            __html: content,
-          }}
-          style={{
-            wordBreak: "break-word",
-          }}
-          onClick={handleDocumentClick}
-        />
-        <style>{`
-          .course-content-container img {
-            max-width: 250px;
-            max-height: 200px;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            display: block;
-            margin: 8px 0;
-          }
-          .course-content-container div[data-file-id] {
-            margin: 8px 0;
-            padding: 8px 12px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          .course-content-container a {
-            color: #3b82f6;
-            text-decoration: underline;
-            font-weight: 500;
-            cursor: pointer;
-          }
-          .course-content-container a:hover {
-            color: #1d4ed8;
-          }
-          .course-content-container ul {
-            list-style-type: disc;
-            padding-left: 2em;
-            margin: 0.5em 0;
-          }
-          .course-content-container ol {
-            list-style-type: decimal;
-            padding-left: 2em;
-            margin: 0.5em 0;
-          }
-          .course-content-container li {
-            margin: 0.25em 0;
-          }
-          .course-content-container p {
-            margin: 0.5em 0;
-          }
-        `}</style>
-      </>
+      <RichContent
+        html={content}
+        className="text-slate-700 dark:text-gray-200"
+        onImageClick={(url, fileName) =>
+          setViewerConfig({ isOpen: true, url, fileName, contentType: "image" })
+        }
+        onFileClick={({ url, fileName, contentType }) =>
+          setViewerConfig({ isOpen: true, url, fileName, contentType })
+        }
+      />
     );
   };
   if (!course) {

@@ -42,6 +42,8 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(emptyQuestion());
   const [editingIndex, setEditingIndex] = useState(null);
+  // True while an attachment of the question being built is still uploading.
+  const [filesUploading, setFilesUploading] = useState(false);
   useEffect(() => {
     (async () => {
       setLoadingMatieres(true);
@@ -94,6 +96,10 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
     setEditingIndex(null);
   };
   const handleSubmit = async (values) => {
+    if (filesUploading) {
+      message.warning("Envoi des fichiers en cours…");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -458,6 +464,7 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
                 onEdit={handleEditQuestion}
                 onRemove={handleRemoveQuestion}
                 onCancelEdit={handleCancelEdit}
+                onUploadingChange={setFilesUploading}
               />
             </div>
           </div>
@@ -527,6 +534,8 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
               type="primary"
               htmlType="submit"
               loading={loading}
+              disabled={filesUploading}
+              data-testid="exercise-save-btn"
               icon={<FontAwesomeIcon icon={faFloppyDisk} />}
               size="large"
               style={{
@@ -535,9 +544,17 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
                 background: "#1a3a5c",
                 borderColor: "#1a3a5c",
                 fontWeight: 600,
+                ...(filesUploading && { opacity: 0.6, color: "#fff" }),
               }}
             >
-              Créer l'exercice
+              {filesUploading ? (
+                <>
+                  <span className="sm:hidden">Envoi…</span>
+                  <span className="hidden sm:inline">Envoi des fichiers en cours…</span>
+                </>
+              ) : (
+                "Créer l'exercice"
+              )}
             </Button>
           </div>
         </Form>

@@ -4,6 +4,9 @@ import { openingFailed } from "../../../../../utils/notificationNavigation";
 import DocumentViewer from "../../../../../components/viewers/DocumentViewer";
 import { motion } from "framer-motion";
 import { useAuth } from "../../../../../context/AuthContext";
+import { formatDuration, useReadingTimer } from "../../../../../hooks/useReadingTimer";
+import { VideoViewerPlayer } from "../../../../../components/media/VideoMedia";
+import RichContent from "../../../../../components/richtext/RichContent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -173,6 +176,8 @@ const CourseDetailsView = ({ courseId, onBack }) => {
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("content");
+  // Reading time per chapter, sent with "Marquer comme terminé" (paused while the tab is hidden).
+  const readingTimer = useReadingTimer();
   const [courseFiles, setCourseFiles] = useState([]);
   const [minioFiles, setMinioFiles] = useState([]);
   const [filesLoading, setFilesLoading] = useState(false);
@@ -638,22 +643,28 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     if (!html)
       return <p className="text-gray-500 italic">Aucun contenu disponible</p>;
     return (
-      <div className="prose max-w-none">
-        <div
-          className="text-gray-700 leading-relaxed"
-          dangerouslySetInnerHTML={{
-            __html: html,
-          }}
-        />
-      </div>
+      <RichContent
+        html={html}
+        className="text-gray-700 dark:text-gray-200"
+        onFileClick={({ url, fileName, contentType }) =>
+          setDocViewerFile({ url, fileName, contentType })
+        }
+        onImageClick={(url, fileName) =>
+          setDocViewerFile({ url, fileName, contentType: "image" })
+        }
+      />
     );
   };
+  /** Reading time (seconds) recorded for a chapter (GET /cours/{id}/progression/{userId} → chapitres[]). */
+  const chapterSeconds = (chapterId) =>
+    Number((progression.chapitres || []).find((c) => c.chapitreId === chapterId)?.dureeSecondes) || 0;
   const toggleChapter = (chapterId) => {
     const newExpanded = new Set(expandedChapters);
     if (newExpanded.has(chapterId)) {
       newExpanded.delete(chapterId);
     } else {
       newExpanded.add(chapterId);
+      readingTimer.markOpened(chapterId);
     }
     setExpandedChapters(newExpanded);
   };
@@ -662,7 +673,8 @@ const CourseDetailsView = ({ courseId, onBack }) => {
     try {
       const { coursService } =
         await import("../../../../../services/CoursService");
-      await coursService.marquerChapitreComplete(courseId, chapterId, user.id);
+      await coursService.marquerChapitreComplete(courseId, chapterId, user.id, readingTimer.peek(chapterId));
+      readingTimer.commit();
       showToast("✅ Chapitre marqué comme terminé!", "success");
       await fetchProgression();
     } catch (e) {
@@ -895,6 +907,15 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                                     className="w-3 h-3 mr-1"
                                   />
                                   Terminé
+                                </span>
+                              )}
+                              {chapterSeconds(chapter.id) > 0 && (
+                                <span
+                                  className="text-xs text-gray-500 flex items-center"
+                                  title="Temps de lecture"
+                                >
+                                  <FontAwesomeIcon icon={faClock} className="w-3 h-3 mr-1" />
+                                  {formatDuration(chapterSeconds(chapter.id))}
                                 </span>
                               )}
                             </div>
@@ -1306,6 +1327,14 @@ const CourseDetailsView = ({ courseId, onBack }) => {
                     {progression.totalChapitres ?? chapters.length}
                   </span>
                 </div>
+                {progression.tempsTotalSecondes > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Temps de lecture</span>
+                    <span className="font-medium text-gray-900">
+                      {formatDuration(progression.tempsTotalSecondes)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Statut</span>
                   <span className="font-medium text-blue-600">
@@ -1454,22 +1483,12 @@ const CourseDetailsView = ({ courseId, onBack }) => {
             }}
           >
             {currentVideoUrl ? (
-              <video
+              <VideoViewerPlayer
                 key={currentVideoUrl}
-                controls
-                autoPlay
-                playsInline
-                style={{
-                  display: "block",
-                  width: "100%",
-                  maxHeight: "75vh",
-                  background: "#000",
-                }}
-                onError={(e) => console.error("Video error:", e.target.error)}
-              >
-                <source src={currentVideoUrl} />
-                Votre navigateur ne supporte pas la lecture vidéo.
-              </video>
+                src={currentVideoUrl}
+                className="w-full"
+                maxVideoHeight="75vh"
+              />
             ) : (
               <div
                 style={{

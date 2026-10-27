@@ -14,6 +14,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { MessagePreviewText } from "./MessageAttachments";
+import { useTranslation } from "../../../../hooks/useTranslation";
 const MessageList = ({
   isDark,
   messages,
@@ -43,6 +44,7 @@ const MessageList = ({
   formatDate,
   currentUser,
 }) => {
+  const { t } = useTranslation();
   const userId = localStorage.getItem("userId");
   return (
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
@@ -64,15 +66,17 @@ const MessageList = ({
                 />
               </button>
               <span className="text-sm text-gray-600">
-                {selectedMessages.size} sélectionné(s)
+                {t("messaging.list.selectedCount", "{{count}} sélectionné(s)", {
+                  count: selectedMessages.size,
+                })}
               </span>
               <button
                 className={`p-2 rounded-full text-red-600 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
                 onClick={handleBulkDelete}
                 title={
                   filterType === "trash"
-                    ? "Restaurer la sélection"
-                    : "Supprimer la sélection"
+                    ? t("messaging.list.restoreSelection", "Restaurer la sélection")
+                    : t("messaging.list.deleteSelection", "Supprimer la sélection")
                 }
               >
                 <FontAwesomeIcon
@@ -96,7 +100,7 @@ const MessageList = ({
           />
           <input
             type="text"
-            placeholder="Rechercher dans les messages"
+            placeholder={t("messaging.list.searchPlaceholder", "Rechercher dans les messages")}
             className={`w-full pl-12 pr-4 py-3 rounded-full border-2 focus:outline-none focus:border-blue-500 ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500"}`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -164,12 +168,14 @@ const MessageList = ({
             <h3
               className={`text-xl font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
             >
-              {searchTerm ? "Aucun résultat trouvé" : "Aucun message"}
+              {searchTerm
+                ? t("messaging.list.noResults", "Aucun résultat trouvé")
+                : t("messaging.list.noMessages", "Aucun message")}
             </h3>
             <p className={`${isDark ? "text-gray-500" : "text-gray-500"}`}>
               {searchTerm
-                ? "Essayez avec d'autres mots-clés"
-                : "Votre boîte de réception est vide"}
+                ? t("messaging.list.tryOtherKeywords", "Essayez avec d'autres mots-clés")
+                : t("messaging.list.inboxEmpty", "Votre boîte de réception est vide")}
             </p>
           </div>
         ) : (
@@ -271,7 +277,7 @@ const MessageList = ({
                     <span
                       className={`font-medium text-sm ${!message.read ? "font-bold" : ""} ${isDark ? "text-gray-200" : "text-gray-800"} truncate`}
                     >
-                      {message.objet || "Sans objet"}
+                      {message.objet || t("messaging.detail.noSubject", "Sans objet")}
                     </span>
                     {message.isConversation && (
                       <span
@@ -324,7 +330,9 @@ const MessageList = ({
                       }
                     }}
                     title={
-                      message.read ? "Marquer comme non lu" : "Marquer comme lu"
+                      message.read
+                        ? t("messaging.chat.markUnread", "Marquer comme non lu")
+                        : t("messaging.chat.markRead", "Marquer comme lu")
                     }
                   >
                     {message.read ? (
@@ -350,7 +358,7 @@ const MessageList = ({
                         e.stopPropagation();
                         handleRestoreMessage(message);
                       }}
-                      title="Restaurer le message"
+                      title={t("messaging.list.restoreMessage", "Restaurer le message")}
                     >
                       <FontAwesomeIcon
                         icon={faRotateLeft}
@@ -366,7 +374,7 @@ const MessageList = ({
                         e.stopPropagation();
                         handleDeleteMessage(message);
                       }}
-                      title="Supprimer la conversation"
+                      title={t("messaging.detail.deleteConversation", "Supprimer la conversation")}
                     >
                       <FontAwesomeIcon
                         icon={faTrashCan}
