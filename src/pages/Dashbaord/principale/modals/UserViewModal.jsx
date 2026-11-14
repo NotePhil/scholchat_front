@@ -189,6 +189,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
           </p>
         </div>
         <button
+          aria-label="Fermer"
           onClick={onClose}
           className="text-white hover:text-gray-300 p-2 rounded-full bg-black/50 backdrop-blur-sm transition-colors"
         >
@@ -199,6 +200,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
       {/* Navigation arrows */}
       {currentIndex > 0 && (
         <button
+          aria-label="Précédent"
           onClick={() => onNavigate(currentIndex - 1)}
           className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 backdrop-blur-sm z-10 transition-colors"
         >
@@ -207,6 +209,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
       )}
       {currentIndex < images.length - 1 && (
         <button
+          aria-label="Suivant"
           onClick={() => onNavigate(currentIndex + 1)}
           className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 backdrop-blur-sm z-10 transition-colors"
         >
@@ -236,6 +239,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
       {/* Bottom controls */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-black/50 backdrop-blur-sm rounded-full px-4 py-2">
         <button
+          aria-label="Zoom arrière"
           onClick={handleZoomOut}
           className="text-white hover:text-gray-300 p-2 rounded transition-colors"
           disabled={zoom <= 0.5}
@@ -246,6 +250,7 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
           {Math.round(zoom * 100)}%
         </span>
         <button
+          aria-label="Zoom avant"
           onClick={handleZoomIn}
           className="text-white hover:text-gray-300 p-2 rounded transition-colors"
           disabled={zoom >= 5}
@@ -254,12 +259,14 @@ const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
         </button>
         <div className="w-px h-6 bg-gray-400 mx-2"></div>
         <button
+          aria-label="Pivoter"
           onClick={handleRotate}
           className="text-white hover:text-gray-300 p-2 rounded transition-colors"
         >
           <FontAwesomeIcon icon={faRotate} className="w-5 h-5" />
         </button>
         <button
+          aria-label="Réinitialiser le zoom"
           onClick={handleReset}
           className="text-white hover:text-gray-300 p-2 rounded transition-colors"
         >
@@ -768,6 +775,7 @@ const UserViewModal = ({ user: userProp, onClose, onSuccess }) => {
               <div className="flex items-center space-x-3 sm:space-x-4">
                 {getVerificationStatusBadge()}
                 <button
+                  aria-label="Fermer"
                   onClick={onClose}
                   className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                 >

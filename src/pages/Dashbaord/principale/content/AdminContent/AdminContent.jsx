@@ -129,6 +129,7 @@ const AdminModal = ({
               </div>
             </div>
             <button
+              aria-label="Fermer"
               onClick={() => setShowModal(false)}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
               disabled={loading}
@@ -395,6 +396,7 @@ const AdminViewModal = ({ admin, onClose }) => {
               </div>
             </div>
             <button
+              aria-label="Fermer"
               onClick={onClose}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
@@ -809,7 +811,7 @@ const AdminContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
             <div>
               <h1
-                className={`text-3xl font-bold ${isDark ? "text-white" : "bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent"}`}
+                className={`text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
               >
                 {t("admin.title")}
               </h1>

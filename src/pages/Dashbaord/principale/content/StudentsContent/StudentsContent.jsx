@@ -230,7 +230,7 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             className="relative overflow-hidden"
             style={{
               background:
-                "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)",
+                "var(--gradient-hero)",
             }}
           >
             <div
@@ -560,7 +560,7 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             </div>
             <div>
               <h1
-                className={`text-xl sm:text-3xl font-bold ${isDark ? "text-white" : "bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent"}`}
+                className={`text-xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
               >
                 Gestion des Élèves
               </h1>
@@ -592,6 +592,7 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   </p>
                 </div>
                 <button
+                  aria-label="Masquer le message"
                   onClick={() => setError("")}
                   className="flex-shrink-0 ml-4 text-red-400 hover:text-red-600 transition-colors"
                 >

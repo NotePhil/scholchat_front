@@ -1,0 +1,1271 @@
+/* Dark-mode compatibility layer for the dashboard.
+ *
+ * Most dashboard screens were written light-only (bg-white, text-gray-900,
+ * inline hex colours) and never received dark variants, so in dark mode they
+ * rendered as white panels inside a dark shell. Rather than touching every
+ * screen, this file remaps the *light-only* values to the dark tokens of
+ * themes.css. It is active only under `html.dark`, which App.js sets on
+ * dashboard routes when the dark theme is on — light mode and the public
+ * pages are untouched.
+ *
+ * How it stays out of the way:
+ *  - Tailwind remaps use `html:where(.dark) .x` = specificity (0,1,1): above
+ *    the plain utility (0,1,0), below any `dark:` variant (0,2,0). A screen
+ *    that sets its own `dark:` class or an isDark ternary always wins.
+ *  - Inline-style remaps match the serialised style attribute
+ *    (`background: rgb(r, g, b)`), which is what React writes to the DOM.
+ *    They need !important to beat an inline style.
+ *  - Inline dark text is only lightened when the element has no solid inline
+ *    background of its own (see --sc-own below), so "dark text on an amber
+ *    badge" keeps its ink.
+ *
+ * New screens should use `dark:` variants or the themes.css variables
+ * (--bg-primary, --text-primary, --border-subtle ...) directly; this layer is
+ * the safety net for the existing ones. Sections 6-8 list the inline colours
+ * found in src/pages/Dashbaord and src/components when it was written; a new
+ * hard-coded inline colour will not be covered until it is added here.
+ */
+
+/* Per-element flag: "this element paints its own solid inline background".
+   Registered as non-inheriting so children are judged on their own style. */
+@property --sc-own {
+  syntax: "*";
+  inherits: false;
+}
+
+/* ---- 0. Depth: black-alpha shadows vanish on dark surfaces ---- */
+html:where(.dark) .shadow-sm { --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.4); }
+html:where(.dark) .shadow,
+html:where(.dark) .shadow-md { --tw-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.4), 0 6px 14px -4px rgb(0 0 0 / 0.5); }
+
+/* ---- 0b. Translucent "glass" whites and state variants ---- */
+html:where(.dark) .bg-white\/40 { background-color: rgb(30 41 59 / 0.4); }
+html:where(.dark) .bg-white\/50 { background-color: rgb(30 41 59 / 0.5); }
+html:where(.dark) .bg-white\/60 { background-color: rgb(30 41 59 / 0.6); }
+html:where(.dark) .bg-white\/70 { background-color: rgb(30 41 59 / 0.7); }
+html:where(.dark) .bg-white\/75 { background-color: rgb(30 41 59 / 0.75); }
+html:where(.dark) .bg-white\/80 { background-color: rgb(30 41 59 / 0.8); }
+html:where(.dark) .bg-white\/90 { background-color: rgb(30 41 59 / 0.9); }
+html:where(.dark) .bg-white\/95 { background-color: rgb(30 41 59 / 0.95); }
+html:where(.dark) .border-white\/50,
+html:where(.dark) .border-white\/60,
+html:where(.dark) .border-white\/70,
+html:where(.dark) .border-white\/80 { border-color: var(--border-subtle); }
+html:where(.dark) .bg-slate-50\/30,
+html:where(.dark) .bg-slate-100\/30,
+html:where(.dark) .bg-gray-50\/30,
+html:where(.dark) .bg-gray-100\/30,
+html:where(.dark) .bg-zinc-50\/30,
+html:where(.dark) .bg-zinc-100\/30,
+html:where(.dark) .bg-neutral-50\/30,
+html:where(.dark) .bg-neutral-100\/30,
+html:where(.dark) .bg-stone-50\/30,
+html:where(.dark) .bg-stone-100\/30 { background-color: rgb(23 32 51 / 0.3); }
+html:where(.dark) .bg-slate-50\/50,
+html:where(.dark) .bg-slate-100\/50,
+html:where(.dark) .bg-gray-50\/50,
+html:where(.dark) .bg-gray-100\/50,
+html:where(.dark) .bg-zinc-50\/50,
+html:where(.dark) .bg-zinc-100\/50,
+html:where(.dark) .bg-neutral-50\/50,
+html:where(.dark) .bg-neutral-100\/50,
+html:where(.dark) .bg-stone-50\/50,
+html:where(.dark) .bg-stone-100\/50 { background-color: rgb(23 32 51 / 0.5); }
+html:where(.dark) .bg-slate-50\/60,
+html:where(.dark) .bg-slate-100\/60,
+html:where(.dark) .bg-gray-50\/60,
+html:where(.dark) .bg-gray-100\/60,
+html:where(.dark) .bg-zinc-50\/60,
+html:where(.dark) .bg-zinc-100\/60,
+html:where(.dark) .bg-neutral-50\/60,
+html:where(.dark) .bg-neutral-100\/60,
+html:where(.dark) .bg-stone-50\/60,
+html:where(.dark) .bg-stone-100\/60 { background-color: rgb(23 32 51 / 0.6); }
+html:where(.dark) .bg-slate-50\/70,
+html:where(.dark) .bg-slate-100\/70,
+html:where(.dark) .bg-gray-50\/70,
+html:where(.dark) .bg-gray-100\/70,
+html:where(.dark) .bg-zinc-50\/70,
+html:where(.dark) .bg-zinc-100\/70,
+html:where(.dark) .bg-neutral-50\/70,
+html:where(.dark) .bg-neutral-100\/70,
+html:where(.dark) .bg-stone-50\/70,
+html:where(.dark) .bg-stone-100\/70 { background-color: rgb(23 32 51 / 0.7); }
+html:where(.dark) .bg-slate-50\/80,
+html:where(.dark) .bg-slate-100\/80,
+html:where(.dark) .bg-gray-50\/80,
+html:where(.dark) .bg-gray-100\/80,
+html:where(.dark) .bg-zinc-50\/80,
+html:where(.dark) .bg-zinc-100\/80,
+html:where(.dark) .bg-neutral-50\/80,
+html:where(.dark) .bg-neutral-100\/80,
+html:where(.dark) .bg-stone-50\/80,
+html:where(.dark) .bg-stone-100\/80 { background-color: rgb(23 32 51 / 0.8); }
+html:where(.dark) .hover\:bg-slate-50\/50:hover,
+html:where(.dark) .hover\:bg-slate-50\/60:hover,
+html:where(.dark) .hover\:bg-slate-50\/80:hover,
+html:where(.dark) .hover\:bg-slate-100\/50:hover,
+html:where(.dark) .hover\:bg-slate-100\/60:hover,
+html:where(.dark) .hover\:bg-slate-100\/80:hover,
+html:where(.dark) .hover\:bg-gray-50\/50:hover,
+html:where(.dark) .hover\:bg-gray-50\/60:hover,
+html:where(.dark) .hover\:bg-gray-50\/80:hover,
+html:where(.dark) .hover\:bg-gray-100\/50:hover,
+html:where(.dark) .hover\:bg-gray-100\/60:hover,
+html:where(.dark) .hover\:bg-gray-100\/80:hover,
+html:where(.dark) .hover\:bg-zinc-50\/50:hover,
+html:where(.dark) .hover\:bg-zinc-50\/60:hover,
+html:where(.dark) .hover\:bg-zinc-50\/80:hover,
+html:where(.dark) .hover\:bg-zinc-100\/50:hover,
+html:where(.dark) .hover\:bg-zinc-100\/60:hover,
+html:where(.dark) .hover\:bg-zinc-100\/80:hover,
+html:where(.dark) .hover\:bg-neutral-50\/50:hover,
+html:where(.dark) .hover\:bg-neutral-50\/60:hover,
+html:where(.dark) .hover\:bg-neutral-50\/80:hover,
+html:where(.dark) .hover\:bg-neutral-100\/50:hover,
+html:where(.dark) .hover\:bg-neutral-100\/60:hover,
+html:where(.dark) .hover\:bg-neutral-100\/80:hover,
+html:where(.dark) .hover\:bg-stone-50\/50:hover,
+html:where(.dark) .hover\:bg-stone-50\/60:hover,
+html:where(.dark) .hover\:bg-stone-50\/80:hover,
+html:where(.dark) .hover\:bg-stone-100\/50:hover,
+html:where(.dark) .hover\:bg-stone-100\/60:hover,
+html:where(.dark) .hover\:bg-stone-100\/80:hover { background-color: var(--hover-overlay); }
+html:where(.dark) .focus\:bg-white:focus,
+html:where(.dark) .focus\:bg-slate-50:focus,
+html:where(.dark) .focus\:bg-slate-100:focus,
+html:where(.dark) .focus\:bg-gray-50:focus,
+html:where(.dark) .focus\:bg-gray-100:focus,
+html:where(.dark) .focus\:bg-zinc-50:focus,
+html:where(.dark) .focus\:bg-zinc-100:focus,
+html:where(.dark) .focus\:bg-neutral-50:focus,
+html:where(.dark) .focus\:bg-neutral-100:focus,
+html:where(.dark) .focus\:bg-stone-50:focus,
+html:where(.dark) .focus\:bg-stone-100:focus { background-color: var(--bg-inset); }
+html:where(.dark) .disabled\:bg-white:disabled,
+html:where(.dark) .disabled\:bg-slate-50:disabled,
+html:where(.dark) .disabled\:bg-slate-100:disabled,
+html:where(.dark) .disabled\:bg-slate-200:disabled,
+html:where(.dark) .disabled\:bg-gray-50:disabled,
+html:where(.dark) .disabled\:bg-gray-100:disabled,
+html:where(.dark) .disabled\:bg-gray-200:disabled,
+html:where(.dark) .disabled\:bg-zinc-50:disabled,
+html:where(.dark) .disabled\:bg-zinc-100:disabled,
+html:where(.dark) .disabled\:bg-zinc-200:disabled,
+html:where(.dark) .disabled\:bg-neutral-50:disabled,
+html:where(.dark) .disabled\:bg-neutral-100:disabled,
+html:where(.dark) .disabled\:bg-neutral-200:disabled,
+html:where(.dark) .disabled\:bg-stone-50:disabled,
+html:where(.dark) .disabled\:bg-stone-100:disabled,
+html:where(.dark) .disabled\:bg-stone-200:disabled { background-color: var(--bg-inset); }
+html:where(.dark) .hover\:border-slate-200:hover,
+html:where(.dark) .hover\:border-slate-300:hover,
+html:where(.dark) .hover\:border-slate-400:hover,
+html:where(.dark) .hover\:border-gray-200:hover,
+html:where(.dark) .hover\:border-gray-300:hover,
+html:where(.dark) .hover\:border-gray-400:hover,
+html:where(.dark) .hover\:border-zinc-200:hover,
+html:where(.dark) .hover\:border-zinc-300:hover,
+html:where(.dark) .hover\:border-zinc-400:hover,
+html:where(.dark) .hover\:border-neutral-200:hover,
+html:where(.dark) .hover\:border-neutral-300:hover,
+html:where(.dark) .hover\:border-neutral-400:hover,
+html:where(.dark) .hover\:border-stone-200:hover,
+html:where(.dark) .hover\:border-stone-300:hover,
+html:where(.dark) .hover\:border-stone-400:hover { border-color: var(--border-color); }
+html:where(.dark) .ring-slate-100,
+html:where(.dark) .ring-slate-200,
+html:where(.dark) .ring-gray-100,
+html:where(.dark) .ring-gray-200,
+html:where(.dark) .ring-zinc-100,
+html:where(.dark) .ring-zinc-200,
+html:where(.dark) .ring-neutral-100,
+html:where(.dark) .ring-neutral-200,
+html:where(.dark) .ring-stone-100,
+html:where(.dark) .ring-stone-200 { --tw-ring-color: var(--border-subtle); }
+/* Form controls with no background class would otherwise take the browser's
+   neutral-grey dark field colour. Specificity (0,0,1): any class wins. */
+html:where(.dark) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), textarea, select) { background-color: var(--bg-inset); }
+/* Arbitrary-value text colours used in the dashboard */
+html:where(.dark) .text-\[\#1d3557\] { color: #93c5fd; }
+html:where(.dark) .text-\[\#4F46E5\] { color: #a5b4fc; }
+html:where(.dark) .text-\[\#EF4444\] { color: #f87171; }
+/* ---- 1. Tailwind neutral surfaces ---- */
+html:where(.dark) .bg-white:where(:not(.rounded-full:empty)) { background-color: var(--bg-primary); }
+html:where(.dark) .bg-slate-50,
+html:where(.dark) .bg-gray-50,
+html:where(.dark) .bg-zinc-50,
+html:where(.dark) .bg-neutral-50,
+html:where(.dark) .bg-stone-50 { background-color: var(--bg-inset); }
+html:where(.dark) .bg-slate-100,
+html:where(.dark) .bg-gray-100,
+html:where(.dark) .bg-zinc-100,
+html:where(.dark) .bg-neutral-100,
+html:where(.dark) .bg-stone-100 { background-color: var(--bg-raised); }
+html:where(.dark) .bg-slate-200,
+html:where(.dark) .bg-gray-200,
+html:where(.dark) .bg-zinc-200,
+html:where(.dark) .bg-neutral-200,
+html:where(.dark) .bg-stone-200 { background-color: var(--bg-tertiary); }
+html:where(.dark) .bg-slate-300,
+html:where(.dark) .bg-gray-300,
+html:where(.dark) .bg-zinc-300,
+html:where(.dark) .bg-neutral-300,
+html:where(.dark) .bg-stone-300 { background-color: var(--border-color); }
+html:where(.dark) .min-h-screen.bg-white,
+html:where(.dark) .min-h-screen.bg-slate-50,
+html:where(.dark) .min-h-screen.bg-slate-100,
+html:where(.dark) .min-h-screen.bg-gray-50,
+html:where(.dark) .min-h-screen.bg-gray-100,
+html:where(.dark) .min-h-screen.bg-zinc-50,
+html:where(.dark) .min-h-screen.bg-zinc-100,
+html:where(.dark) .min-h-screen.bg-neutral-50,
+html:where(.dark) .min-h-screen.bg-neutral-100,
+html:where(.dark) .min-h-screen.bg-stone-50,
+html:where(.dark) .min-h-screen.bg-stone-100 { background-color: var(--bg-secondary); }
+html:where(.dark) .hover\:bg-white:hover { background-color: var(--bg-raised); }
+html:where(.dark) .hover\:bg-slate-50:hover,
+html:where(.dark) .hover\:bg-gray-50:hover,
+html:where(.dark) .hover\:bg-zinc-50:hover,
+html:where(.dark) .hover\:bg-neutral-50:hover,
+html:where(.dark) .hover\:bg-stone-50:hover { background-color: var(--hover-overlay); }
+html:where(.dark) .hover\:bg-slate-100:hover,
+html:where(.dark) .hover\:bg-gray-100:hover,
+html:where(.dark) .hover\:bg-zinc-100:hover,
+html:where(.dark) .hover\:bg-neutral-100:hover,
+html:where(.dark) .hover\:bg-stone-100:hover { background-color: var(--hover-overlay-strong); }
+html:where(.dark) .hover\:bg-slate-200:hover,
+html:where(.dark) .hover\:bg-slate-300:hover,
+html:where(.dark) .hover\:bg-gray-200:hover,
+html:where(.dark) .hover\:bg-gray-300:hover,
+html:where(.dark) .hover\:bg-zinc-200:hover,
+html:where(.dark) .hover\:bg-zinc-300:hover,
+html:where(.dark) .hover\:bg-neutral-200:hover,
+html:where(.dark) .hover\:bg-neutral-300:hover,
+html:where(.dark) .hover\:bg-stone-200:hover,
+html:where(.dark) .hover\:bg-stone-300:hover { background-color: var(--border-color); }
+html:where(.dark) .hover\:bg-slate-400:hover,
+html:where(.dark) .hover\:bg-gray-400:hover,
+html:where(.dark) .hover\:bg-zinc-400:hover,
+html:where(.dark) .hover\:bg-neutral-400:hover,
+html:where(.dark) .hover\:bg-stone-400:hover { background-color: #64748b; }
+/* ---- 2. Tailwind neutral text ---- */
+html:where(.dark) .text-black,
+html:where(.dark) .text-slate-800,
+html:where(.dark) .text-slate-900,
+html:where(.dark) .text-slate-950,
+html:where(.dark) .text-gray-800,
+html:where(.dark) .text-gray-900,
+html:where(.dark) .text-gray-950,
+html:where(.dark) .text-zinc-800,
+html:where(.dark) .text-zinc-900,
+html:where(.dark) .text-zinc-950,
+html:where(.dark) .text-neutral-800,
+html:where(.dark) .text-neutral-900,
+html:where(.dark) .text-neutral-950,
+html:where(.dark) .text-stone-800,
+html:where(.dark) .text-stone-900,
+html:where(.dark) .text-stone-950 { color: var(--text-primary); }
+html:where(.dark) .text-slate-700,
+html:where(.dark) .text-gray-700,
+html:where(.dark) .text-zinc-700,
+html:where(.dark) .text-neutral-700,
+html:where(.dark) .text-stone-700 { color: var(--text-strong); }
+html:where(.dark) .text-slate-600,
+html:where(.dark) .text-gray-600,
+html:where(.dark) .text-zinc-600,
+html:where(.dark) .text-neutral-600,
+html:where(.dark) .text-stone-600 { color: var(--text-secondary); }
+html:where(.dark) .text-slate-500,
+html:where(.dark) .text-gray-500,
+html:where(.dark) .text-zinc-500,
+html:where(.dark) .text-neutral-500,
+html:where(.dark) .text-stone-500 { color: var(--text-tertiary); }
+html:where(.dark) .hover\:text-black:hover,
+html:where(.dark) .hover\:text-slate-600:hover,
+html:where(.dark) .hover\:text-slate-700:hover,
+html:where(.dark) .hover\:text-slate-800:hover,
+html:where(.dark) .hover\:text-slate-900:hover,
+html:where(.dark) .hover\:text-gray-600:hover,
+html:where(.dark) .hover\:text-gray-700:hover,
+html:where(.dark) .hover\:text-gray-800:hover,
+html:where(.dark) .hover\:text-gray-900:hover,
+html:where(.dark) .hover\:text-zinc-600:hover,
+html:where(.dark) .hover\:text-zinc-700:hover,
+html:where(.dark) .hover\:text-zinc-800:hover,
+html:where(.dark) .hover\:text-zinc-900:hover,
+html:where(.dark) .hover\:text-neutral-600:hover,
+html:where(.dark) .hover\:text-neutral-700:hover,
+html:where(.dark) .hover\:text-neutral-800:hover,
+html:where(.dark) .hover\:text-neutral-900:hover,
+html:where(.dark) .hover\:text-stone-600:hover,
+html:where(.dark) .hover\:text-stone-700:hover,
+html:where(.dark) .hover\:text-stone-800:hover,
+html:where(.dark) .hover\:text-stone-900:hover { color: var(--text-primary); }
+/* ---- 3. Tailwind neutral borders and dividers ---- */
+html:where(.dark) *,
+html:where(.dark) ::before,
+html:where(.dark) ::after {
+  border-color: var(--border-subtle);
+}
+html:where(.dark) .border-slate-100,
+html:where(.dark) .border-slate-200,
+html:where(.dark) .border-gray-100,
+html:where(.dark) .border-gray-200,
+html:where(.dark) .border-zinc-100,
+html:where(.dark) .border-zinc-200,
+html:where(.dark) .border-neutral-100,
+html:where(.dark) .border-neutral-200,
+html:where(.dark) .border-stone-100,
+html:where(.dark) .border-stone-200 { border-color: var(--border-subtle); }
+html:where(.dark) .border-slate-300,
+html:where(.dark) .border-slate-400,
+html:where(.dark) .border-gray-300,
+html:where(.dark) .border-gray-400,
+html:where(.dark) .border-zinc-300,
+html:where(.dark) .border-zinc-400,
+html:where(.dark) .border-neutral-300,
+html:where(.dark) .border-neutral-400,
+html:where(.dark) .border-stone-300,
+html:where(.dark) .border-stone-400 { border-color: var(--border-color); }
+html:where(.dark) .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-slate-300 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-gray-300 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-zinc-200 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-zinc-300 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-neutral-100 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-neutral-200 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-neutral-300 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-stone-100 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-stone-200 > :not([hidden]) ~ :not([hidden]),
+html:where(.dark) .divide-stone-300 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border-subtle); }
+/* ---- 4. Tailwind tinted surfaces, text and borders (per colour family) ---- */
+html:where(.dark) .bg-red-50 { background-color: rgb(239 68 68 / 0.1); }
+html:where(.dark) .bg-red-100 { background-color: rgb(239 68 68 / 0.16); }
+html:where(.dark) .bg-red-200 { background-color: rgb(239 68 68 / 0.24); }
+html:where(.dark) .hover\:bg-red-50:hover { background-color: rgb(239 68 68 / 0.16); }
+html:where(.dark) .hover\:bg-red-100:hover,
+html:where(.dark) .hover\:bg-red-200:hover { background-color: rgb(239 68 68 / 0.26); }
+html:where(.dark) .text-red-500,
+html:where(.dark) .text-red-600,
+html:where(.dark) .text-red-700 { color: #f87171; }
+html:where(.dark) .text-red-800,
+html:where(.dark) .text-red-900,
+html:where(.dark) .text-red-950 { color: #fca5a5; }
+html:where(.dark) .hover\:text-red-600:hover,
+html:where(.dark) .hover\:text-red-700:hover,
+html:where(.dark) .hover\:text-red-800:hover,
+html:where(.dark) .hover\:text-red-900:hover { color: #fca5a5; }
+html:where(.dark) .border-red-100,
+html:where(.dark) .border-red-200 { border-color: rgb(239 68 68 / 0.3); }
+html:where(.dark) .border-red-300 { border-color: rgb(239 68 68 / 0.45); }
+html:where(.dark) .bg-orange-50 { background-color: rgb(249 115 22 / 0.1); }
+html:where(.dark) .bg-orange-100 { background-color: rgb(249 115 22 / 0.16); }
+html:where(.dark) .bg-orange-200 { background-color: rgb(249 115 22 / 0.24); }
+html:where(.dark) .hover\:bg-orange-50:hover { background-color: rgb(249 115 22 / 0.16); }
+html:where(.dark) .hover\:bg-orange-100:hover,
+html:where(.dark) .hover\:bg-orange-200:hover { background-color: rgb(249 115 22 / 0.26); }
+html:where(.dark) .text-orange-500,
+html:where(.dark) .text-orange-600,
+html:where(.dark) .text-orange-700 { color: #fb923c; }
+html:where(.dark) .text-orange-800,
+html:where(.dark) .text-orange-900,
+html:where(.dark) .text-orange-950 { color: #fdba74; }
+html:where(.dark) .hover\:text-orange-600:hover,
+html:where(.dark) .hover\:text-orange-700:hover,
+html:where(.dark) .hover\:text-orange-800:hover,
+html:where(.dark) .hover\:text-orange-900:hover { color: #fdba74; }
+html:where(.dark) .border-orange-100,
+html:where(.dark) .border-orange-200 { border-color: rgb(249 115 22 / 0.3); }
+html:where(.dark) .border-orange-300 { border-color: rgb(249 115 22 / 0.45); }
+html:where(.dark) .bg-amber-50 { background-color: rgb(245 158 11 / 0.1); }
+html:where(.dark) .bg-amber-100 { background-color: rgb(245 158 11 / 0.16); }
+html:where(.dark) .bg-amber-200 { background-color: rgb(245 158 11 / 0.24); }
+html:where(.dark) .hover\:bg-amber-50:hover { background-color: rgb(245 158 11 / 0.16); }
+html:where(.dark) .hover\:bg-amber-100:hover,
+html:where(.dark) .hover\:bg-amber-200:hover { background-color: rgb(245 158 11 / 0.26); }
+html:where(.dark) .text-amber-500,
+html:where(.dark) .text-amber-600,
+html:where(.dark) .text-amber-700 { color: #fbbf24; }
+html:where(.dark) .text-amber-800,
+html:where(.dark) .text-amber-900,
+html:where(.dark) .text-amber-950 { color: #fcd34d; }
+html:where(.dark) .hover\:text-amber-600:hover,
+html:where(.dark) .hover\:text-amber-700:hover,
+html:where(.dark) .hover\:text-amber-800:hover,
+html:where(.dark) .hover\:text-amber-900:hover { color: #fcd34d; }
+html:where(.dark) .border-amber-100,
+html:where(.dark) .border-amber-200 { border-color: rgb(245 158 11 / 0.3); }
+html:where(.dark) .border-amber-300 { border-color: rgb(245 158 11 / 0.45); }
+html:where(.dark) .bg-yellow-50 { background-color: rgb(234 179 8 / 0.1); }
+html:where(.dark) .bg-yellow-100 { background-color: rgb(234 179 8 / 0.16); }
+html:where(.dark) .bg-yellow-200 { background-color: rgb(234 179 8 / 0.24); }
+html:where(.dark) .hover\:bg-yellow-50:hover { background-color: rgb(234 179 8 / 0.16); }
+html:where(.dark) .hover\:bg-yellow-100:hover,
+html:where(.dark) .hover\:bg-yellow-200:hover { background-color: rgb(234 179 8 / 0.26); }
+html:where(.dark) .text-yellow-500,
+html:where(.dark) .text-yellow-600,
+html:where(.dark) .text-yellow-700 { color: #facc15; }
+html:where(.dark) .text-yellow-800,
+html:where(.dark) .text-yellow-900,
+html:where(.dark) .text-yellow-950 { color: #fde047; }
+html:where(.dark) .hover\:text-yellow-600:hover,
+html:where(.dark) .hover\:text-yellow-700:hover,
+html:where(.dark) .hover\:text-yellow-800:hover,
+html:where(.dark) .hover\:text-yellow-900:hover { color: #fde047; }
+html:where(.dark) .border-yellow-100,
+html:where(.dark) .border-yellow-200 { border-color: rgb(234 179 8 / 0.3); }
+html:where(.dark) .border-yellow-300 { border-color: rgb(234 179 8 / 0.45); }
+html:where(.dark) .bg-lime-50 { background-color: rgb(132 204 22 / 0.1); }
+html:where(.dark) .bg-lime-100 { background-color: rgb(132 204 22 / 0.16); }
+html:where(.dark) .bg-lime-200 { background-color: rgb(132 204 22 / 0.24); }
+html:where(.dark) .hover\:bg-lime-50:hover { background-color: rgb(132 204 22 / 0.16); }
+html:where(.dark) .hover\:bg-lime-100:hover,
+html:where(.dark) .hover\:bg-lime-200:hover { background-color: rgb(132 204 22 / 0.26); }
+html:where(.dark) .text-lime-500,
+html:where(.dark) .text-lime-600,
+html:where(.dark) .text-lime-700 { color: #a3e635; }
+html:where(.dark) .text-lime-800,
+html:where(.dark) .text-lime-900,
+html:where(.dark) .text-lime-950 { color: #bef264; }
+html:where(.dark) .hover\:text-lime-600:hover,
+html:where(.dark) .hover\:text-lime-700:hover,
+html:where(.dark) .hover\:text-lime-800:hover,
+html:where(.dark) .hover\:text-lime-900:hover { color: #bef264; }
+html:where(.dark) .border-lime-100,
+html:where(.dark) .border-lime-200 { border-color: rgb(132 204 22 / 0.3); }
+html:where(.dark) .border-lime-300 { border-color: rgb(132 204 22 / 0.45); }
+html:where(.dark) .bg-green-50 { background-color: rgb(34 197 94 / 0.1); }
+html:where(.dark) .bg-green-100 { background-color: rgb(34 197 94 / 0.16); }
+html:where(.dark) .bg-green-200 { background-color: rgb(34 197 94 / 0.24); }
+html:where(.dark) .hover\:bg-green-50:hover { background-color: rgb(34 197 94 / 0.16); }
+html:where(.dark) .hover\:bg-green-100:hover,
+html:where(.dark) .hover\:bg-green-200:hover { background-color: rgb(34 197 94 / 0.26); }
+html:where(.dark) .text-green-500,
+html:where(.dark) .text-green-600,
+html:where(.dark) .text-green-700 { color: #4ade80; }
+html:where(.dark) .text-green-800,
+html:where(.dark) .text-green-900,
+html:where(.dark) .text-green-950 { color: #86efac; }
+html:where(.dark) .hover\:text-green-600:hover,
+html:where(.dark) .hover\:text-green-700:hover,
+html:where(.dark) .hover\:text-green-800:hover,
+html:where(.dark) .hover\:text-green-900:hover { color: #86efac; }
+html:where(.dark) .border-green-100,
+html:where(.dark) .border-green-200 { border-color: rgb(34 197 94 / 0.3); }
+html:where(.dark) .border-green-300 { border-color: rgb(34 197 94 / 0.45); }
+html:where(.dark) .bg-emerald-50 { background-color: rgb(16 185 129 / 0.1); }
+html:where(.dark) .bg-emerald-100 { background-color: rgb(16 185 129 / 0.16); }
+html:where(.dark) .bg-emerald-200 { background-color: rgb(16 185 129 / 0.24); }
+html:where(.dark) .hover\:bg-emerald-50:hover { background-color: rgb(16 185 129 / 0.16); }
+html:where(.dark) .hover\:bg-emerald-100:hover,
+html:where(.dark) .hover\:bg-emerald-200:hover { background-color: rgb(16 185 129 / 0.26); }
+html:where(.dark) .text-emerald-500,
+html:where(.dark) .text-emerald-600,
+html:where(.dark) .text-emerald-700 { color: #34d399; }
+html:where(.dark) .text-emerald-800,
+html:where(.dark) .text-emerald-900,
+html:where(.dark) .text-emerald-950 { color: #6ee7b7; }
+html:where(.dark) .hover\:text-emerald-600:hover,
+html:where(.dark) .hover\:text-emerald-700:hover,
+html:where(.dark) .hover\:text-emerald-800:hover,
+html:where(.dark) .hover\:text-emerald-900:hover { color: #6ee7b7; }
+html:where(.dark) .border-emerald-100,
+html:where(.dark) .border-emerald-200 { border-color: rgb(16 185 129 / 0.3); }
+html:where(.dark) .border-emerald-300 { border-color: rgb(16 185 129 / 0.45); }
+html:where(.dark) .bg-teal-50 { background-color: rgb(20 184 166 / 0.1); }
+html:where(.dark) .bg-teal-100 { background-color: rgb(20 184 166 / 0.16); }
+html:where(.dark) .bg-teal-200 { background-color: rgb(20 184 166 / 0.24); }
+html:where(.dark) .hover\:bg-teal-50:hover { background-color: rgb(20 184 166 / 0.16); }
+html:where(.dark) .hover\:bg-teal-100:hover,
+html:where(.dark) .hover\:bg-teal-200:hover { background-color: rgb(20 184 166 / 0.26); }
+html:where(.dark) .text-teal-500,
+html:where(.dark) .text-teal-600,
+html:where(.dark) .text-teal-700 { color: #2dd4bf; }
+html:where(.dark) .text-teal-800,
+html:where(.dark) .text-teal-900,
+html:where(.dark) .text-teal-950 { color: #5eead4; }
+html:where(.dark) .hover\:text-teal-600:hover,
+html:where(.dark) .hover\:text-teal-700:hover,
+html:where(.dark) .hover\:text-teal-800:hover,
+html:where(.dark) .hover\:text-teal-900:hover { color: #5eead4; }
+html:where(.dark) .border-teal-100,
+html:where(.dark) .border-teal-200 { border-color: rgb(20 184 166 / 0.3); }
+html:where(.dark) .border-teal-300 { border-color: rgb(20 184 166 / 0.45); }
+html:where(.dark) .bg-cyan-50 { background-color: rgb(6 182 212 / 0.1); }
+html:where(.dark) .bg-cyan-100 { background-color: rgb(6 182 212 / 0.16); }
+html:where(.dark) .bg-cyan-200 { background-color: rgb(6 182 212 / 0.24); }
+html:where(.dark) .hover\:bg-cyan-50:hover { background-color: rgb(6 182 212 / 0.16); }
+html:where(.dark) .hover\:bg-cyan-100:hover,
+html:where(.dark) .hover\:bg-cyan-200:hover { background-color: rgb(6 182 212 / 0.26); }
+html:where(.dark) .text-cyan-500,
+html:where(.dark) .text-cyan-600,
+html:where(.dark) .text-cyan-700 { color: #22d3ee; }
+html:where(.dark) .text-cyan-800,
+html:where(.dark) .text-cyan-900,
+html:where(.dark) .text-cyan-950 { color: #67e8f9; }
+html:where(.dark) .hover\:text-cyan-600:hover,
+html:where(.dark) .hover\:text-cyan-700:hover,
+html:where(.dark) .hover\:text-cyan-800:hover,
+html:where(.dark) .hover\:text-cyan-900:hover { color: #67e8f9; }
+html:where(.dark) .border-cyan-100,
+html:where(.dark) .border-cyan-200 { border-color: rgb(6 182 212 / 0.3); }
+html:where(.dark) .border-cyan-300 { border-color: rgb(6 182 212 / 0.45); }
+html:where(.dark) .bg-sky-50 { background-color: rgb(14 165 233 / 0.1); }
+html:where(.dark) .bg-sky-100 { background-color: rgb(14 165 233 / 0.16); }
+html:where(.dark) .bg-sky-200 { background-color: rgb(14 165 233 / 0.24); }
+html:where(.dark) .hover\:bg-sky-50:hover { background-color: rgb(14 165 233 / 0.16); }
+html:where(.dark) .hover\:bg-sky-100:hover,
+html:where(.dark) .hover\:bg-sky-200:hover { background-color: rgb(14 165 233 / 0.26); }
+html:where(.dark) .text-sky-500,
+html:where(.dark) .text-sky-600,
+html:where(.dark) .text-sky-700 { color: #38bdf8; }
+html:where(.dark) .text-sky-800,
+html:where(.dark) .text-sky-900,
+html:where(.dark) .text-sky-950 { color: #7dd3fc; }
+html:where(.dark) .hover\:text-sky-600:hover,
+html:where(.dark) .hover\:text-sky-700:hover,
+html:where(.dark) .hover\:text-sky-800:hover,
+html:where(.dark) .hover\:text-sky-900:hover { color: #7dd3fc; }
+html:where(.dark) .border-sky-100,
+html:where(.dark) .border-sky-200 { border-color: rgb(14 165 233 / 0.3); }
+html:where(.dark) .border-sky-300 { border-color: rgb(14 165 233 / 0.45); }
+html:where(.dark) .bg-blue-50 { background-color: rgb(59 130 246 / 0.1); }
+html:where(.dark) .bg-blue-100 { background-color: rgb(59 130 246 / 0.16); }
+html:where(.dark) .bg-blue-200 { background-color: rgb(59 130 246 / 0.24); }
+html:where(.dark) .hover\:bg-blue-50:hover { background-color: rgb(59 130 246 / 0.16); }
+html:where(.dark) .hover\:bg-blue-100:hover,
+html:where(.dark) .hover\:bg-blue-200:hover { background-color: rgb(59 130 246 / 0.26); }
+html:where(.dark) .text-blue-500,
+html:where(.dark) .text-blue-600,
+html:where(.dark) .text-blue-700 { color: #60a5fa; }
+html:where(.dark) .text-blue-800,
+html:where(.dark) .text-blue-900,
+html:where(.dark) .text-blue-950 { color: #93c5fd; }
+html:where(.dark) .hover\:text-blue-600:hover,
+html:where(.dark) .hover\:text-blue-700:hover,
+html:where(.dark) .hover\:text-blue-800:hover,
+html:where(.dark) .hover\:text-blue-900:hover { color: #93c5fd; }
+html:where(.dark) .border-blue-100,
+html:where(.dark) .border-blue-200 { border-color: rgb(59 130 246 / 0.3); }
+html:where(.dark) .border-blue-300 { border-color: rgb(59 130 246 / 0.45); }
+html:where(.dark) .bg-indigo-50 { background-color: rgb(99 102 241 / 0.1); }
+html:where(.dark) .bg-indigo-100 { background-color: rgb(99 102 241 / 0.16); }
+html:where(.dark) .bg-indigo-200 { background-color: rgb(99 102 241 / 0.24); }
+html:where(.dark) .hover\:bg-indigo-50:hover { background-color: rgb(99 102 241 / 0.16); }
+html:where(.dark) .hover\:bg-indigo-100:hover,
+html:where(.dark) .hover\:bg-indigo-200:hover { background-color: rgb(99 102 241 / 0.26); }
+html:where(.dark) .text-indigo-500,
+html:where(.dark) .text-indigo-600,
+html:where(.dark) .text-indigo-700 { color: #818cf8; }
+html:where(.dark) .text-indigo-800,
+html:where(.dark) .text-indigo-900,
+html:where(.dark) .text-indigo-950 { color: #a5b4fc; }
+html:where(.dark) .hover\:text-indigo-600:hover,
+html:where(.dark) .hover\:text-indigo-700:hover,
+html:where(.dark) .hover\:text-indigo-800:hover,
+html:where(.dark) .hover\:text-indigo-900:hover { color: #a5b4fc; }
+html:where(.dark) .border-indigo-100,
+html:where(.dark) .border-indigo-200 { border-color: rgb(99 102 241 / 0.3); }
+html:where(.dark) .border-indigo-300 { border-color: rgb(99 102 241 / 0.45); }
+html:where(.dark) .bg-violet-50 { background-color: rgb(139 92 246 / 0.1); }
+html:where(.dark) .bg-violet-100 { background-color: rgb(139 92 246 / 0.16); }
+html:where(.dark) .bg-violet-200 { background-color: rgb(139 92 246 / 0.24); }
+html:where(.dark) .hover\:bg-violet-50:hover { background-color: rgb(139 92 246 / 0.16); }
+html:where(.dark) .hover\:bg-violet-100:hover,
+html:where(.dark) .hover\:bg-violet-200:hover { background-color: rgb(139 92 246 / 0.26); }
+html:where(.dark) .text-violet-500,
+html:where(.dark) .text-violet-600,
+html:where(.dark) .text-violet-700 { color: #a78bfa; }
+html:where(.dark) .text-violet-800,
+html:where(.dark) .text-violet-900,
+html:where(.dark) .text-violet-950 { color: #c4b5fd; }
+html:where(.dark) .hover\:text-violet-600:hover,
+html:where(.dark) .hover\:text-violet-700:hover,
+html:where(.dark) .hover\:text-violet-800:hover,
+html:where(.dark) .hover\:text-violet-900:hover { color: #c4b5fd; }
+html:where(.dark) .border-violet-100,
+html:where(.dark) .border-violet-200 { border-color: rgb(139 92 246 / 0.3); }
+html:where(.dark) .border-violet-300 { border-color: rgb(139 92 246 / 0.45); }
+html:where(.dark) .bg-purple-50 { background-color: rgb(168 85 247 / 0.1); }
+html:where(.dark) .bg-purple-100 { background-color: rgb(168 85 247 / 0.16); }
+html:where(.dark) .bg-purple-200 { background-color: rgb(168 85 247 / 0.24); }
+html:where(.dark) .hover\:bg-purple-50:hover { background-color: rgb(168 85 247 / 0.16); }
+html:where(.dark) .hover\:bg-purple-100:hover,
+html:where(.dark) .hover\:bg-purple-200:hover { background-color: rgb(168 85 247 / 0.26); }
+html:where(.dark) .text-purple-500,
+html:where(.dark) .text-purple-600,
+html:where(.dark) .text-purple-700 { color: #c084fc; }
+html:where(.dark) .text-purple-800,
+html:where(.dark) .text-purple-900,
+html:where(.dark) .text-purple-950 { color: #d8b4fe; }
+html:where(.dark) .hover\:text-purple-600:hover,
+html:where(.dark) .hover\:text-purple-700:hover,
+html:where(.dark) .hover\:text-purple-800:hover,
+html:where(.dark) .hover\:text-purple-900:hover { color: #d8b4fe; }
+html:where(.dark) .border-purple-100,
+html:where(.dark) .border-purple-200 { border-color: rgb(168 85 247 / 0.3); }
+html:where(.dark) .border-purple-300 { border-color: rgb(168 85 247 / 0.45); }
+html:where(.dark) .bg-fuchsia-50 { background-color: rgb(217 70 239 / 0.1); }
+html:where(.dark) .bg-fuchsia-100 { background-color: rgb(217 70 239 / 0.16); }
+html:where(.dark) .bg-fuchsia-200 { background-color: rgb(217 70 239 / 0.24); }
+html:where(.dark) .hover\:bg-fuchsia-50:hover { background-color: rgb(217 70 239 / 0.16); }
+html:where(.dark) .hover\:bg-fuchsia-100:hover,
+html:where(.dark) .hover\:bg-fuchsia-200:hover { background-color: rgb(217 70 239 / 0.26); }
+html:where(.dark) .text-fuchsia-500,
+html:where(.dark) .text-fuchsia-600,
+html:where(.dark) .text-fuchsia-700 { color: #e879f9; }
+html:where(.dark) .text-fuchsia-800,
+html:where(.dark) .text-fuchsia-900,
+html:where(.dark) .text-fuchsia-950 { color: #f0abfc; }
+html:where(.dark) .hover\:text-fuchsia-600:hover,
+html:where(.dark) .hover\:text-fuchsia-700:hover,
+html:where(.dark) .hover\:text-fuchsia-800:hover,
+html:where(.dark) .hover\:text-fuchsia-900:hover { color: #f0abfc; }
+html:where(.dark) .border-fuchsia-100,
+html:where(.dark) .border-fuchsia-200 { border-color: rgb(217 70 239 / 0.3); }
+html:where(.dark) .border-fuchsia-300 { border-color: rgb(217 70 239 / 0.45); }
+html:where(.dark) .bg-pink-50 { background-color: rgb(236 72 153 / 0.1); }
+html:where(.dark) .bg-pink-100 { background-color: rgb(236 72 153 / 0.16); }
+html:where(.dark) .bg-pink-200 { background-color: rgb(236 72 153 / 0.24); }
+html:where(.dark) .hover\:bg-pink-50:hover { background-color: rgb(236 72 153 / 0.16); }
+html:where(.dark) .hover\:bg-pink-100:hover,
+html:where(.dark) .hover\:bg-pink-200:hover { background-color: rgb(236 72 153 / 0.26); }
+html:where(.dark) .text-pink-500,
+html:where(.dark) .text-pink-600,
+html:where(.dark) .text-pink-700 { color: #f472b6; }
+html:where(.dark) .text-pink-800,
+html:where(.dark) .text-pink-900,
+html:where(.dark) .text-pink-950 { color: #f9a8d4; }
+html:where(.dark) .hover\:text-pink-600:hover,
+html:where(.dark) .hover\:text-pink-700:hover,
+html:where(.dark) .hover\:text-pink-800:hover,
+html:where(.dark) .hover\:text-pink-900:hover { color: #f9a8d4; }
+html:where(.dark) .border-pink-100,
+html:where(.dark) .border-pink-200 { border-color: rgb(236 72 153 / 0.3); }
+html:where(.dark) .border-pink-300 { border-color: rgb(236 72 153 / 0.45); }
+html:where(.dark) .bg-rose-50 { background-color: rgb(244 63 94 / 0.1); }
+html:where(.dark) .bg-rose-100 { background-color: rgb(244 63 94 / 0.16); }
+html:where(.dark) .bg-rose-200 { background-color: rgb(244 63 94 / 0.24); }
+html:where(.dark) .hover\:bg-rose-50:hover { background-color: rgb(244 63 94 / 0.16); }
+html:where(.dark) .hover\:bg-rose-100:hover,
+html:where(.dark) .hover\:bg-rose-200:hover { background-color: rgb(244 63 94 / 0.26); }
+html:where(.dark) .text-rose-500,
+html:where(.dark) .text-rose-600,
+html:where(.dark) .text-rose-700 { color: #fb7185; }
+html:where(.dark) .text-rose-800,
+html:where(.dark) .text-rose-900,
+html:where(.dark) .text-rose-950 { color: #fda4af; }
+html:where(.dark) .hover\:text-rose-600:hover,
+html:where(.dark) .hover\:text-rose-700:hover,
+html:where(.dark) .hover\:text-rose-800:hover,
+html:where(.dark) .hover\:text-rose-900:hover { color: #fda4af; }
+html:where(.dark) .border-rose-100,
+html:where(.dark) .border-rose-200 { border-color: rgb(244 63 94 / 0.3); }
+html:where(.dark) .border-rose-300 { border-color: rgb(244 63 94 / 0.45); }
+/* ---- 5. Tailwind light gradient stops ---- */
+html:where(.dark) .from-white { --tw-gradient-from: var(--bg-primary) var(--tw-gradient-from-position); }
+html:where(.dark) .via-white { --tw-gradient-stops: var(--tw-gradient-from), var(--bg-primary) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-white { --tw-gradient-to: var(--bg-primary) var(--tw-gradient-to-position); }
+html:where(.dark) .from-slate-50,
+html:where(.dark) .from-gray-50,
+html:where(.dark) .from-zinc-50,
+html:where(.dark) .from-neutral-50,
+html:where(.dark) .from-stone-50 { --tw-gradient-from: var(--bg-inset) var(--tw-gradient-from-position); }
+html:where(.dark) .via-slate-50,
+html:where(.dark) .via-gray-50,
+html:where(.dark) .via-zinc-50,
+html:where(.dark) .via-neutral-50,
+html:where(.dark) .via-stone-50 { --tw-gradient-stops: var(--tw-gradient-from), var(--bg-inset) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-slate-50,
+html:where(.dark) .to-gray-50,
+html:where(.dark) .to-zinc-50,
+html:where(.dark) .to-neutral-50,
+html:where(.dark) .to-stone-50 { --tw-gradient-to: var(--bg-inset) var(--tw-gradient-to-position); }
+html:where(.dark) .from-slate-100,
+html:where(.dark) .from-gray-100,
+html:where(.dark) .from-zinc-100,
+html:where(.dark) .from-neutral-100,
+html:where(.dark) .from-stone-100 { --tw-gradient-from: var(--bg-primary) var(--tw-gradient-from-position); }
+html:where(.dark) .via-slate-100,
+html:where(.dark) .via-gray-100,
+html:where(.dark) .via-zinc-100,
+html:where(.dark) .via-neutral-100,
+html:where(.dark) .via-stone-100 { --tw-gradient-stops: var(--tw-gradient-from), var(--bg-primary) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-slate-100,
+html:where(.dark) .to-gray-100,
+html:where(.dark) .to-zinc-100,
+html:where(.dark) .to-neutral-100,
+html:where(.dark) .to-stone-100 { --tw-gradient-to: var(--bg-primary) var(--tw-gradient-to-position); }
+html:where(.dark) .from-slate-200,
+html:where(.dark) .from-gray-200,
+html:where(.dark) .from-zinc-200,
+html:where(.dark) .from-neutral-200,
+html:where(.dark) .from-stone-200 { --tw-gradient-from: var(--bg-raised) var(--tw-gradient-from-position); }
+html:where(.dark) .via-slate-200,
+html:where(.dark) .via-gray-200,
+html:where(.dark) .via-zinc-200,
+html:where(.dark) .via-neutral-200,
+html:where(.dark) .via-stone-200 { --tw-gradient-stops: var(--tw-gradient-from), var(--bg-raised) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-slate-200,
+html:where(.dark) .to-gray-200,
+html:where(.dark) .to-zinc-200,
+html:where(.dark) .to-neutral-200,
+html:where(.dark) .to-stone-200 { --tw-gradient-to: var(--bg-raised) var(--tw-gradient-to-position); }
+html:where(.dark) .from-red-50,
+html:where(.dark) .from-red-100,
+html:where(.dark) .from-red-200 { --tw-gradient-from: rgb(239 68 68 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-red-50,
+html:where(.dark) .via-red-100,
+html:where(.dark) .via-red-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(239 68 68 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-red-50,
+html:where(.dark) .to-red-100,
+html:where(.dark) .to-red-200 { --tw-gradient-to: rgb(239 68 68 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-orange-50,
+html:where(.dark) .from-orange-100,
+html:where(.dark) .from-orange-200 { --tw-gradient-from: rgb(249 115 22 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-orange-50,
+html:where(.dark) .via-orange-100,
+html:where(.dark) .via-orange-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(249 115 22 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-orange-50,
+html:where(.dark) .to-orange-100,
+html:where(.dark) .to-orange-200 { --tw-gradient-to: rgb(249 115 22 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-amber-50,
+html:where(.dark) .from-amber-100,
+html:where(.dark) .from-amber-200 { --tw-gradient-from: rgb(245 158 11 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-amber-50,
+html:where(.dark) .via-amber-100,
+html:where(.dark) .via-amber-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(245 158 11 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-amber-50,
+html:where(.dark) .to-amber-100,
+html:where(.dark) .to-amber-200 { --tw-gradient-to: rgb(245 158 11 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-yellow-50,
+html:where(.dark) .from-yellow-100,
+html:where(.dark) .from-yellow-200 { --tw-gradient-from: rgb(234 179 8 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-yellow-50,
+html:where(.dark) .via-yellow-100,
+html:where(.dark) .via-yellow-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(234 179 8 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-yellow-50,
+html:where(.dark) .to-yellow-100,
+html:where(.dark) .to-yellow-200 { --tw-gradient-to: rgb(234 179 8 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-lime-50,
+html:where(.dark) .from-lime-100,
+html:where(.dark) .from-lime-200 { --tw-gradient-from: rgb(132 204 22 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-lime-50,
+html:where(.dark) .via-lime-100,
+html:where(.dark) .via-lime-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(132 204 22 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-lime-50,
+html:where(.dark) .to-lime-100,
+html:where(.dark) .to-lime-200 { --tw-gradient-to: rgb(132 204 22 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-green-50,
+html:where(.dark) .from-green-100,
+html:where(.dark) .from-green-200 { --tw-gradient-from: rgb(34 197 94 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-green-50,
+html:where(.dark) .via-green-100,
+html:where(.dark) .via-green-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(34 197 94 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-green-50,
+html:where(.dark) .to-green-100,
+html:where(.dark) .to-green-200 { --tw-gradient-to: rgb(34 197 94 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-emerald-50,
+html:where(.dark) .from-emerald-100,
+html:where(.dark) .from-emerald-200 { --tw-gradient-from: rgb(16 185 129 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-emerald-50,
+html:where(.dark) .via-emerald-100,
+html:where(.dark) .via-emerald-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(16 185 129 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-emerald-50,
+html:where(.dark) .to-emerald-100,
+html:where(.dark) .to-emerald-200 { --tw-gradient-to: rgb(16 185 129 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-teal-50,
+html:where(.dark) .from-teal-100,
+html:where(.dark) .from-teal-200 { --tw-gradient-from: rgb(20 184 166 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-teal-50,
+html:where(.dark) .via-teal-100,
+html:where(.dark) .via-teal-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(20 184 166 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-teal-50,
+html:where(.dark) .to-teal-100,
+html:where(.dark) .to-teal-200 { --tw-gradient-to: rgb(20 184 166 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-cyan-50,
+html:where(.dark) .from-cyan-100,
+html:where(.dark) .from-cyan-200 { --tw-gradient-from: rgb(6 182 212 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-cyan-50,
+html:where(.dark) .via-cyan-100,
+html:where(.dark) .via-cyan-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(6 182 212 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-cyan-50,
+html:where(.dark) .to-cyan-100,
+html:where(.dark) .to-cyan-200 { --tw-gradient-to: rgb(6 182 212 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-sky-50,
+html:where(.dark) .from-sky-100,
+html:where(.dark) .from-sky-200 { --tw-gradient-from: rgb(14 165 233 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-sky-50,
+html:where(.dark) .via-sky-100,
+html:where(.dark) .via-sky-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(14 165 233 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-sky-50,
+html:where(.dark) .to-sky-100,
+html:where(.dark) .to-sky-200 { --tw-gradient-to: rgb(14 165 233 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-blue-50,
+html:where(.dark) .from-blue-100,
+html:where(.dark) .from-blue-200 { --tw-gradient-from: rgb(59 130 246 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-blue-50,
+html:where(.dark) .via-blue-100,
+html:where(.dark) .via-blue-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(59 130 246 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-blue-50,
+html:where(.dark) .to-blue-100,
+html:where(.dark) .to-blue-200 { --tw-gradient-to: rgb(59 130 246 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-indigo-50,
+html:where(.dark) .from-indigo-100,
+html:where(.dark) .from-indigo-200 { --tw-gradient-from: rgb(99 102 241 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-indigo-50,
+html:where(.dark) .via-indigo-100,
+html:where(.dark) .via-indigo-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(99 102 241 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-indigo-50,
+html:where(.dark) .to-indigo-100,
+html:where(.dark) .to-indigo-200 { --tw-gradient-to: rgb(99 102 241 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-violet-50,
+html:where(.dark) .from-violet-100,
+html:where(.dark) .from-violet-200 { --tw-gradient-from: rgb(139 92 246 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-violet-50,
+html:where(.dark) .via-violet-100,
+html:where(.dark) .via-violet-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(139 92 246 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-violet-50,
+html:where(.dark) .to-violet-100,
+html:where(.dark) .to-violet-200 { --tw-gradient-to: rgb(139 92 246 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-purple-50,
+html:where(.dark) .from-purple-100,
+html:where(.dark) .from-purple-200 { --tw-gradient-from: rgb(168 85 247 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-purple-50,
+html:where(.dark) .via-purple-100,
+html:where(.dark) .via-purple-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(168 85 247 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-purple-50,
+html:where(.dark) .to-purple-100,
+html:where(.dark) .to-purple-200 { --tw-gradient-to: rgb(168 85 247 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-fuchsia-50,
+html:where(.dark) .from-fuchsia-100,
+html:where(.dark) .from-fuchsia-200 { --tw-gradient-from: rgb(217 70 239 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-fuchsia-50,
+html:where(.dark) .via-fuchsia-100,
+html:where(.dark) .via-fuchsia-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(217 70 239 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-fuchsia-50,
+html:where(.dark) .to-fuchsia-100,
+html:where(.dark) .to-fuchsia-200 { --tw-gradient-to: rgb(217 70 239 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-pink-50,
+html:where(.dark) .from-pink-100,
+html:where(.dark) .from-pink-200 { --tw-gradient-from: rgb(236 72 153 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-pink-50,
+html:where(.dark) .via-pink-100,
+html:where(.dark) .via-pink-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(236 72 153 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-pink-50,
+html:where(.dark) .to-pink-100,
+html:where(.dark) .to-pink-200 { --tw-gradient-to: rgb(236 72 153 / 0.14) var(--tw-gradient-to-position); }
+html:where(.dark) .from-rose-50,
+html:where(.dark) .from-rose-100,
+html:where(.dark) .from-rose-200 { --tw-gradient-from: rgb(244 63 94 / 0.14) var(--tw-gradient-from-position); }
+html:where(.dark) .via-rose-50,
+html:where(.dark) .via-rose-100,
+html:where(.dark) .via-rose-200 { --tw-gradient-stops: var(--tw-gradient-from), rgb(244 63 94 / 0.14) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html:where(.dark) .to-rose-50,
+html:where(.dark) .to-rose-100,
+html:where(.dark) .to-rose-200 { --tw-gradient-to: rgb(244 63 94 / 0.14) var(--tw-gradient-to-position); }
+/* ---- 6. Inline styles: light backgrounds ---- */
+html.dark [style*="background"] { --sc-own: var(--sc-c); }
+html.dark [style*="background: transparent"],
+html.dark [style*="background-color: transparent"],
+html.dark [style*="background: none"],
+html.dark [style*="background: rgba("],
+html.dark [style*="background-color: rgba("] { --sc-own: initial; }
+html.dark [style*="background: rgb(255, 255, 255)"],
+html.dark [style*="background-color: rgb(255, 255, 255)"],
+html.dark [style*="background: white"],
+html.dark [style*="background-color: white"],
+html.dark [style*="background: whitesmoke"],
+html.dark [style*="background-color: whitesmoke"] { background: var(--bg-primary) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(232, 237, 245)"],
+html.dark [style*="background-color: rgb(232, 237, 245)"],
+html.dark [style*="background: rgb(232, 245, 232)"],
+html.dark [style*="background-color: rgb(232, 245, 232)"],
+html.dark [style*="background: rgb(238, 238, 238)"],
+html.dark [style*="background-color: rgb(238, 238, 238)"],
+html.dark [style*="background: rgb(240, 240, 240)"],
+html.dark [style*="background-color: rgb(240, 240, 240)"],
+html.dark [style*="background: rgb(241, 245, 249)"],
+html.dark [style*="background-color: rgb(241, 245, 249)"],
+html.dark [style*="background: rgb(243, 243, 243)"],
+html.dark [style*="background-color: rgb(243, 243, 243)"],
+html.dark [style*="background: rgb(243, 244, 246)"],
+html.dark [style*="background-color: rgb(243, 244, 246)"],
+html.dark [style*="background: rgb(245, 245, 245)"],
+html.dark [style*="background-color: rgb(245, 245, 245)"],
+html.dark [style*="background: rgb(245, 247, 250)"],
+html.dark [style*="background-color: rgb(245, 247, 250)"],
+html.dark [style*="background: rgb(248, 249, 250)"],
+html.dark [style*="background-color: rgb(248, 249, 250)"],
+html.dark [style*="background: rgb(248, 250, 252)"],
+html.dark [style*="background-color: rgb(248, 250, 252)"],
+html.dark [style*="background: rgb(248, 250, 255)"],
+html.dark [style*="background-color: rgb(248, 250, 255)"],
+html.dark [style*="background: rgb(249, 250, 251)"],
+html.dark [style*="background-color: rgb(249, 250, 251)"],
+html.dark [style*="background: rgb(250, 249, 255)"],
+html.dark [style*="background-color: rgb(250, 249, 255)"],
+html.dark [style*="background: rgb(250, 250, 250)"],
+html.dark [style*="background-color: rgb(250, 250, 250)"],
+html.dark [style*="background: rgb(250, 251, 255)"],
+html.dark [style*="background-color: rgb(250, 251, 255)"] { background: var(--bg-inset) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(222, 226, 230)"],
+html.dark [style*="background-color: rgb(222, 226, 230)"],
+html.dark [style*="background: rgb(225, 228, 232)"],
+html.dark [style*="background-color: rgb(225, 228, 232)"],
+html.dark [style*="background: rgb(226, 232, 240)"],
+html.dark [style*="background-color: rgb(226, 232, 240)"],
+html.dark [style*="background: rgb(229, 231, 235)"],
+html.dark [style*="background-color: rgb(229, 231, 235)"],
+html.dark [style*="background: rgb(230, 244, 234)"],
+html.dark [style*="background-color: rgb(230, 244, 234)"],
+html.dark [style*="background: rgb(232, 232, 232)"],
+html.dark [style*="background-color: rgb(232, 232, 232)"],
+html.dark [style*="background: rgb(233, 236, 239)"],
+html.dark [style*="background-color: rgb(233, 236, 239)"],
+html.dark [style*="background: rgb(239, 234, 226)"],
+html.dark [style*="background-color: rgb(239, 234, 226)"] { background: var(--bg-tertiary) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(209, 250, 229)"],
+html.dark [style*="background-color: rgb(209, 250, 229)"] { background: rgb(76 230 151 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(214, 228, 255)"],
+html.dark [style*="background-color: rgb(214, 228, 255)"] { background: rgb(76 129 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(219, 234, 254)"],
+html.dark [style*="background-color: rgb(219, 234, 254)"] { background: rgb(76 142 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(221, 214, 254)"],
+html.dark [style*="background-color: rgb(221, 214, 254)"] { background: rgb(103 76 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(224, 231, 255)"],
+html.dark [style*="background-color: rgb(224, 231, 255)"] { background: rgb(76 111 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(224, 247, 250)"],
+html.dark [style*="background-color: rgb(224, 247, 250)"] { background: rgb(76 212 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(227, 242, 253)"],
+html.dark [style*="background-color: rgb(227, 242, 253)"] { background: rgb(76 165 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(228, 234, 244)"],
+html.dark [style*="background-color: rgb(228, 234, 244)"] { background: rgb(76 134 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(230, 244, 255)"],
+html.dark [style*="background-color: rgb(230, 244, 255)"] { background: rgb(76 162 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(230, 247, 255)"],
+html.dark [style*="background-color: rgb(230, 247, 255)"] { background: rgb(76 181 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(232, 240, 254)"],
+html.dark [style*="background-color: rgb(232, 240, 254)"] { background: rgb(76 132 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(233, 213, 255)"],
+html.dark [style*="background-color: rgb(233, 213, 255)"] { background: rgb(149 76 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(236, 254, 255)"],
+html.dark [style*="background-color: rgb(236, 254, 255)"] { background: rgb(76 221 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(237, 233, 254)"],
+html.dark [style*="background-color: rgb(237, 233, 254)"] { background: rgb(106 76 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(238, 242, 255)"],
+html.dark [style*="background-color: rgb(238, 242, 255)"] { background: rgb(76 112 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(239, 246, 255)"],
+html.dark [style*="background-color: rgb(239, 246, 255)"] { background: rgb(76 143 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(240, 244, 251)"],
+html.dark [style*="background-color: rgb(240, 244, 251)"] { background: rgb(76 132 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(240, 244, 255)"],
+html.dark [style*="background-color: rgb(240, 244, 255)"] { background: rgb(76 117 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(240, 245, 255)"],
+html.dark [style*="background-color: rgb(240, 245, 255)"] { background: rgb(76 128 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(240, 247, 255)"],
+html.dark [style*="background-color: rgb(240, 247, 255)"] { background: rgb(76 148 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(240, 253, 244)"],
+html.dark [style*="background-color: rgb(240, 253, 244)"] { background: rgb(76 230 124 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(243, 229, 245)"],
+html.dark [style*="background-color: rgb(243, 229, 245)"] { background: rgb(210 76 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(243, 232, 255)"],
+html.dark [style*="background-color: rgb(243, 232, 255)"] { background: rgb(150 76 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(245, 243, 255)"],
+html.dark [style*="background-color: rgb(245, 243, 255)"] { background: rgb(102 76 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(246, 255, 237)"],
+html.dark [style*="background-color: rgb(246, 255, 237)"] { background: rgb(153 230 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(249, 240, 255)"],
+html.dark [style*="background-color: rgb(249, 240, 255)"] { background: rgb(168 76 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(250, 245, 255)"],
+html.dark [style*="background-color: rgb(250, 245, 255)"] { background: rgb(153 76 230 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(251, 207, 232)"],
+html.dark [style*="background-color: rgb(251, 207, 232)"] { background: rgb(230 76 163 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(252, 232, 230)"],
+html.dark [style*="background-color: rgb(252, 232, 230)"] { background: rgb(230 90 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(254, 202, 202)"],
+html.dark [style*="background-color: rgb(254, 202, 202)"] { background: rgb(230 76 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(254, 242, 242)"],
+html.dark [style*="background-color: rgb(254, 242, 242)"] { background: rgb(230 76 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(254, 243, 199)"],
+html.dark [style*="background-color: rgb(254, 243, 199)"] { background: rgb(230 199 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(255, 235, 238)"],
+html.dark [style*="background-color: rgb(255, 235, 238)"] { background: rgb(230 76 99 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(255, 237, 213)"],
+html.dark [style*="background-color: rgb(255, 237, 213)"] { background: rgb(230 164 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(255, 241, 240)"],
+html.dark [style*="background-color: rgb(255, 241, 240)"] { background: rgb(230 87 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(255, 243, 224)"],
+html.dark [style*="background-color: rgb(255, 243, 224)"] { background: rgb(230 170 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(255, 247, 230)"],
+html.dark [style*="background-color: rgb(255, 247, 230)"] { background: rgb(230 181 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(255, 247, 237)"],
+html.dark [style*="background-color: rgb(255, 247, 237)"] { background: rgb(230 161 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(255, 251, 230)"],
+html.dark [style*="background-color: rgb(255, 251, 230)"] { background: rgb(230 205 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="background: rgb(255, 251, 235)"],
+html.dark [style*="background-color: rgb(255, 251, 235)"] { background: rgb(230 199 76 / 0.14) !important; --sc-own: initial; }
+html.dark [style*="gradient(135deg, rgb(245, 247, 250)"],
+html.dark [style*="gradient(135deg, rgb(248, 249, 250)"] { background: var(--bg-inset) !important; --sc-own: initial; }
+html.dark [style*="gradient(135deg, rgb(254, 242, 242)"] { background: rgb(239 68 68 / 0.12) !important; --sc-own: initial; }
+html.dark [style*="background: rgba(255, 255, 255, 0.95)"],
+html.dark [style*="background-color: rgba(255, 255, 255, 0.95)"],
+html.dark [style*="background: rgba(255, 255, 255, 0.9)"],
+html.dark [style*="background-color: rgba(255, 255, 255, 0.9)"],
+html.dark [style*="background: rgba(255, 255, 255, 0.7)"],
+html.dark [style*="background-color: rgba(255, 255, 255, 0.7)"],
+html.dark [style*="background: rgba(255, 255, 255, 0.6)"],
+html.dark [style*="background-color: rgba(255, 255, 255, 0.6)"] { background: var(--bg-primary) !important; --sc-own: initial; }
+/* ---- 7. Inline styles: dark text colours ---- */
+html.dark [style*=" color: rgb(0, 0, 0)"],
+html.dark [style^="color: rgb(0, 0, 0)"] { --sc-c: #000000; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(1, 2, 3)"],
+html.dark [style^="color: rgb(1, 2, 3)"] { --sc-c: #010203; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(15, 15, 15)"],
+html.dark [style^="color: rgb(15, 15, 15)"] { --sc-c: #0f0f0f; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(15, 23, 42)"],
+html.dark [style^="color: rgb(15, 23, 42)"] { --sc-c: #0f172a; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(17, 17, 17)"],
+html.dark [style^="color: rgb(17, 17, 17)"] { --sc-c: #111111; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(17, 24, 39)"],
+html.dark [style^="color: rgb(17, 24, 39)"] { --sc-c: #111827; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(26, 26, 26)"],
+html.dark [style^="color: rgb(26, 26, 26)"] { --sc-c: #1a1a1a; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(26, 32, 44)"],
+html.dark [style^="color: rgb(26, 32, 44)"] { --sc-c: #1a202c; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(30, 41, 59)"],
+html.dark [style^="color: rgb(30, 41, 59)"] { --sc-c: #1e293b; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(31, 41, 55)"],
+html.dark [style^="color: rgb(31, 41, 55)"] { --sc-c: #1f2937; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(33, 37, 41)"],
+html.dark [style^="color: rgb(33, 37, 41)"] { --sc-c: #212529; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(34, 0, 0)"],
+html.dark [style^="color: rgb(34, 0, 0)"] { --sc-c: #220000; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(34, 34, 34)"],
+html.dark [style^="color: rgb(34, 34, 34)"] { --sc-c: #222222; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(51, 51, 51)"],
+html.dark [style^="color: rgb(51, 51, 51)"] { --sc-c: #333333; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: rgb(0, 131, 143)"],
+html.dark [style^="color: rgb(0, 131, 143)"] { --sc-c: #00838f; color: var(--sc-own, #47ddeb) !important; }
+html.dark [style*=" color: rgb(4, 120, 87)"],
+html.dark [style^="color: rgb(4, 120, 87)"] { --sc-c: #047857; color: var(--sc-own, #47ebbc) !important; }
+html.dark [style*=" color: rgb(5, 150, 105)"],
+html.dark [style^="color: rgb(5, 150, 105)"] { --sc-c: #059669; color: var(--sc-own, #47ebb8) !important; }
+html.dark [style*=" color: rgb(8, 145, 178)"],
+html.dark [style^="color: rgb(8, 145, 178)"] { --sc-c: #0891b2; color: var(--sc-own, #47cbeb) !important; }
+html.dark [style*=" color: rgb(13, 148, 136)"],
+html.dark [style^="color: rgb(13, 148, 136)"] { --sc-c: #0d9488; color: var(--sc-own, #47ebdc) !important; }
+html.dark [style*=" color: rgb(19, 115, 51)"],
+html.dark [style^="color: rgb(19, 115, 51)"] { --sc-c: #137333; color: var(--sc-own, #50e281) !important; }
+html.dark [style*=" color: rgb(21, 87, 176)"],
+html.dark [style^="color: rgb(21, 87, 176)"] { --sc-c: #1557b0; color: var(--sc-own, #5293ea) !important; }
+html.dark [style*=" color: rgb(21, 128, 61)"],
+html.dark [style^="color: rgb(21, 128, 61)"] { --sc-c: #15803d; color: var(--sc-own, #50e287) !important; }
+html.dark [style*=" color: rgb(22, 119, 255)"],
+html.dark [style^="color: rgb(22, 119, 255)"] { --sc-c: #1677ff; color: var(--sc-own, #5191ec) !important; }
+html.dark [style*=" color: rgb(22, 163, 74)"],
+html.dark [style^="color: rgb(22, 163, 74)"] { --sc-c: #16a34a; color: var(--sc-own, #4be785) !important; }
+html.dark [style*=" color: rgb(25, 118, 210)"],
+html.dark [style^="color: rgb(25, 118, 210)"] { --sc-c: #1976d2; color: var(--sc-own, #4999e9) !important; }
+html.dark [style*=" color: rgb(26, 58, 92)"],
+html.dark [style^="color: rgb(26, 58, 92)"] { --sc-c: #1a3a5c; color: var(--sc-own, #6097d2) !important; }
+html.dark [style*=" color: rgb(26, 115, 232)"],
+html.dark [style^="color: rgb(26, 115, 232)"] { --sc-c: #1a73e8; color: var(--sc-own, #5194ec) !important; }
+html.dark [style*=" color: rgb(29, 53, 87)"],
+html.dark [style^="color: rgb(29, 53, 87)"] { --sc-c: #1d3557; color: var(--sc-own, #6e96cf) !important; }
+html.dark [style*=" color: rgb(29, 78, 216)"],
+html.dark [style^="color: rgb(29, 78, 216)"] { --sc-c: #1d4ed8; color: var(--sc-own, #6f90ec) !important; }
+html.dark [style*=" color: rgb(30, 58, 95)"],
+html.dark [style^="color: rgb(30, 58, 95)"] { --sc-c: #1e3a5f; color: var(--sc-own, #6c97d0) !important; }
+html.dark [style*=" color: rgb(37, 99, 235)"],
+html.dark [style^="color: rgb(37, 99, 235)"] { --sc-c: #2563eb; color: var(--sc-own, #638eee) !important; }
+html.dark [style*=" color: rgb(44, 62, 80)"],
+html.dark [style^="color: rgb(44, 62, 80)"] { --sc-c: #2c3e50; color: var(--sc-own, var(--text-strong)) !important; }
+html.dark [style*=" color: rgb(45, 55, 72)"],
+html.dark [style^="color: rgb(45, 55, 72)"] { --sc-c: #2d3748; color: var(--sc-own, var(--text-strong)) !important; }
+html.dark [style*=" color: rgb(51, 65, 85)"],
+html.dark [style^="color: rgb(51, 65, 85)"] { --sc-c: #334155; color: var(--sc-own, var(--text-strong)) !important; }
+html.dark [style*=" color: rgb(52, 58, 64)"],
+html.dark [style^="color: rgb(52, 58, 64)"] { --sc-c: #343a40; color: var(--sc-own, var(--text-strong)) !important; }
+html.dark [style*=" color: rgb(52, 73, 94)"],
+html.dark [style^="color: rgb(52, 73, 94)"] { --sc-c: #34495e; color: var(--sc-own, var(--text-strong)) !important; }
+html.dark [style*=" color: rgb(55, 65, 81)"],
+html.dark [style^="color: rgb(55, 65, 81)"] { --sc-c: #374151; color: var(--sc-own, var(--text-strong)) !important; }
+html.dark [style*=" color: rgb(68, 68, 68)"],
+html.dark [style^="color: rgb(68, 68, 68)"] { --sc-c: #444444; color: var(--sc-own, var(--text-strong)) !important; }
+html.dark [style*=" color: rgb(73, 80, 87)"],
+html.dark [style^="color: rgb(73, 80, 87)"] { --sc-c: #495057; color: var(--sc-own, var(--text-strong)) !important; }
+html.dark [style*=" color: rgb(45, 106, 159)"],
+html.dark [style^="color: rgb(45, 106, 159)"] { --sc-c: #2d6a9f; color: var(--sc-own, #609dd2) !important; }
+html.dark [style*=" color: rgb(46, 125, 50)"],
+html.dark [style^="color: rgb(46, 125, 50)"] { --sc-c: #2e7d32; color: var(--sc-own, #6ac86f) !important; }
+html.dark [style*=" color: rgb(55, 48, 163)"],
+html.dark [style^="color: rgb(55, 48, 163)"] { --sc-c: #3730a3; color: var(--sc-own, #8e89dc) !important; }
+html.dark [style*=" color: rgb(56, 158, 13)"],
+html.dark [style^="color: rgb(56, 158, 13)"] { --sc-c: #389e0d; color: var(--sc-own, #78eb47) !important; }
+html.dark [style*=" color: rgb(59, 130, 246)"],
+html.dark [style^="color: rgb(59, 130, 246)"] { --sc-c: #3b82f6; color: var(--sc-own, #5a92ed) !important; }
+html.dark [style*=" color: rgb(67, 56, 202)"],
+html.dark [style^="color: rgb(67, 56, 202)"] { --sc-c: #4338ca; color: var(--sc-own, #8d86df) !important; }
+html.dark [style*=" color: rgb(69, 39, 160)"],
+html.dark [style^="color: rgb(69, 39, 160)"] { --sc-c: #4527a0; color: var(--sc-own, #9b84e1) !important; }
+html.dark [style*=" color: rgb(69, 123, 157)"],
+html.dark [style^="color: rgb(69, 123, 157)"] { --sc-c: #457b9d; color: var(--sc-own, #71a2c1) !important; }
+html.dark [style*=" color: rgb(74, 85, 104)"],
+html.dark [style^="color: rgb(74, 85, 104)"] { --sc-c: #4a5568; color: var(--sc-own, var(--text-secondary)) !important; }
+html.dark [style*=" color: rgb(85, 85, 85)"],
+html.dark [style^="color: rgb(85, 85, 85)"] { --sc-c: #555555; color: var(--sc-own, var(--text-secondary)) !important; }
+html.dark [style*=" color: rgb(89, 89, 89)"],
+html.dark [style^="color: rgb(89, 89, 89)"] { --sc-c: #595959; color: var(--sc-own, var(--text-secondary)) !important; }
+html.dark [style*=" color: rgb(97, 97, 97)"],
+html.dark [style^="color: rgb(97, 97, 97)"] { --sc-c: #616161; color: var(--sc-own, var(--text-secondary)) !important; }
+html.dark [style*=" color: rgb(102, 102, 102)"],
+html.dark [style^="color: rgb(102, 102, 102)"] { --sc-c: #666666; color: var(--sc-own, var(--text-secondary)) !important; }
+html.dark [style*=" color: rgb(79, 70, 229)"],
+html.dark [style^="color: rgb(79, 70, 229)"] { --sc-c: #4f46e5; color: var(--sc-own, #908bef) !important; }
+html.dark [style*=" color: rgb(79, 142, 201)"],
+html.dark [style^="color: rgb(79, 142, 201)"] { --sc-c: #4f8ec9; color: var(--sc-own, #639bcf) !important; }
+html.dark [style*=" color: rgb(83, 29, 171)"],
+html.dark [style^="color: rgb(83, 29, 171)"] { --sc-c: #531dab; color: var(--sc-own, #a57ce9) !important; }
+html.dark [style*=" color: rgb(85, 139, 47)"],
+html.dark [style^="color: rgb(85, 139, 47)"] { --sc-c: #558b2f; color: var(--sc-own, #90cb67) !important; }
+html.dark [style*=" color: rgb(90, 111, 216)"],
+html.dark [style^="color: rgb(90, 111, 216)"] { --sc-c: #5a6fd8; color: var(--sc-own, #7b8ce0) !important; }
+html.dark [style*=" color: rgb(100, 116, 139)"],
+html.dark [style^="color: rgb(100, 116, 139)"] { --sc-c: #64748b; color: var(--sc-own, var(--text-tertiary)) !important; }
+html.dark [style*=" color: rgb(107, 114, 128)"],
+html.dark [style^="color: rgb(107, 114, 128)"] { --sc-c: #6b7280; color: var(--sc-own, var(--text-tertiary)) !important; }
+html.dark [style*=" color: rgb(108, 117, 125)"],
+html.dark [style^="color: rgb(108, 117, 125)"] { --sc-c: #6c757d; color: var(--sc-own, var(--text-tertiary)) !important; }
+html.dark [style*=" color: rgb(113, 128, 150)"],
+html.dark [style^="color: rgb(113, 128, 150)"] { --sc-c: #718096; color: var(--sc-own, var(--text-tertiary)) !important; }
+html.dark [style*=" color: rgb(119, 119, 119)"],
+html.dark [style^="color: rgb(119, 119, 119)"] { --sc-c: #777777; color: var(--sc-own, var(--text-tertiary)) !important; }
+html.dark [style*=" color: rgb(136, 136, 136)"],
+html.dark [style^="color: rgb(136, 136, 136)"] { --sc-c: #888888; color: var(--sc-own, var(--text-tertiary)) !important; }
+html.dark [style*=" color: rgb(140, 140, 140)"],
+html.dark [style^="color: rgb(140, 140, 140)"] { --sc-c: #8c8c8c; color: var(--sc-own, var(--text-tertiary)) !important; }
+html.dark [style*=" color: rgb(106, 27, 154)"],
+html.dark [style^="color: rgb(106, 27, 154)"] { --sc-c: #6a1b9a; color: var(--sc-own, #bb74e7) !important; }
+html.dark [style*=" color: rgb(106, 65, 144)"],
+html.dark [style^="color: rgb(106, 65, 144)"] { --sc-c: #6a4190; color: var(--sc-own, #aa88c9) !important; }
+html.dark [style*=" color: rgb(109, 40, 217)"],
+html.dark [style^="color: rgb(109, 40, 217)"] { --sc-c: #6d28d9; color: var(--sc-own, #a77de8) !important; }
+html.dark [style*=" color: rgb(118, 75, 162)"],
+html.dark [style^="color: rgb(118, 75, 162)"] { --sc-c: #764ba2; color: var(--sc-own, #a888c8) !important; }
+html.dark [style*=" color: rgb(123, 31, 162)"],
+html.dark [style^="color: rgb(123, 31, 162)"] { --sc-c: #7b1fa2; color: var(--sc-own, #c476e5) !important; }
+html.dark [style*=" color: rgb(124, 58, 237)"],
+html.dark [style^="color: rgb(124, 58, 237)"] { --sc-c: #7c3aed; color: var(--sc-own, #a97ef1) !important; }
+html.dark [style*=" color: rgb(147, 51, 234)"],
+html.dark [style^="color: rgb(147, 51, 234)"] { --sc-c: #9333ea; color: var(--sc-own, #b675f0) !important; }
+html.dark [style*=" color: rgb(153, 27, 27)"],
+html.dark [style^="color: rgb(153, 27, 27)"] { --sc-c: #991b1b; color: var(--sc-own, #e56c6c) !important; }
+html.dark [style*=" color: rgb(173, 20, 87)"],
+html.dark [style^="color: rgb(173, 20, 87)"] { --sc-c: #ad1457; color: var(--sc-own, #ed64a0) !important; }
+html.dark [style*=" color: rgb(185, 28, 28)"],
+html.dark [style^="color: rgb(185, 28, 28)"] { --sc-c: #b91c1c; color: var(--sc-own, #e86868) !important; }
+html.dark [style*=" color: rgb(194, 65, 12)"],
+html.dark [style^="color: rgb(194, 65, 12)"] { --sc-c: #c2410c; color: var(--sc-own, #eb7747) !important; }
+html.dark [style*=" color: rgb(197, 34, 31)"],
+html.dark [style^="color: rgb(197, 34, 31)"] { --sc-c: #c5221f; color: var(--sc-own, #e76b69) !important; }
+html.dark [style*=" color: rgb(198, 40, 40)"],
+html.dark [style^="color: rgb(198, 40, 40)"] { --sc-c: #c62828; color: var(--sc-own, #e26f6f) !important; }
+html.dark [style*=" color: rgb(207, 19, 34)"],
+html.dark [style^="color: rgb(207, 19, 34)"] { --sc-c: #cf1322; color: var(--sc-own, #ee636e) !important; }
+html.dark [style*=" color: rgb(211, 47, 47)"],
+html.dark [style^="color: rgb(211, 47, 47)"] { --sc-c: #d32f2f; color: var(--sc-own, #e17070) !important; }
+html.dark [style*=" color: rgb(212, 107, 8)"],
+html.dark [style^="color: rgb(212, 107, 8)"] { --sc-c: #d46b08; color: var(--sc-own, #eb9747) !important; }
+html.dark [style*=" color: rgb(219, 39, 119)"],
+html.dark [style^="color: rgb(219, 39, 119)"] { --sc-c: #db2777; color: var(--sc-own, #e66aa1) !important; }
+html.dark [style*=" color: rgb(220, 38, 38)"],
+html.dark [style^="color: rgb(220, 38, 38)"] { --sc-c: #dc2626; color: var(--sc-own, #e76a6a) !important; }
+html.dark [style*=" color: rgb(230, 81, 0)"],
+html.dark [style^="color: rgb(230, 81, 0)"] { --sc-c: #e65100; color: var(--sc-own, #eb8147) !important; }
+html.dark [style*=" color: rgb(234, 67, 53)"],
+html.dark [style^="color: rgb(234, 67, 53)"] { --sc-c: #ea4335; color: var(--sc-own, #ed655a) !important; }
+html.dark [style*=" color: rgb(234, 88, 12)"],
+html.dark [style^="color: rgb(234, 88, 12)"] { --sc-c: #ea580c; color: var(--sc-own, #eb7f47) !important; }
+html.dark [style*=" color: rgb(236, 72, 153)"],
+html.dark [style^="color: rgb(236, 72, 153)"] { --sc-c: #ec4899; color: var(--sc-own, #ed5ca3) !important; }
+html.dark [style*=" color: rgb(239, 68, 68)"],
+html.dark [style^="color: rgb(239, 68, 68)"] { --sc-c: #ef4444; color: var(--sc-own, #ee6464) !important; }
+html.dark [style*=" color: rgb(244, 63, 94)"],
+html.dark [style^="color: rgb(244, 63, 94)"] { --sc-c: #f43f5e; color: var(--sc-own, #ee647b) !important; }
+html.dark [style*=" color: rgb(245, 34, 45)"],
+html.dark [style^="color: rgb(245, 34, 45)"] { --sc-c: #f5222d; color: var(--sc-own, #ee636a) !important; }
+html.dark [style*=" color: rgb(250, 84, 28)"],
+html.dark [style^="color: rgb(250, 84, 28)"] { --sc-c: #fa541c; color: var(--sc-own, #eb7147) !important; }
+html.dark [style*=" color: black"],
+html.dark [style^="color: black"] { --sc-c: #000; color: var(--sc-own, var(--text-primary)) !important; }
+html.dark [style*=" color: gray"],
+html.dark [style^="color: gray"],
+html.dark [style*=" color: grey"],
+html.dark [style^="color: grey"],
+html.dark [style*=" color: dimgray"],
+html.dark [style^="color: dimgray"] { --sc-c: gray; color: var(--sc-own, var(--text-tertiary)) !important; }
+/* ---- 8. Inline styles: light borders ---- */
+html.dark [style*="solid rgb(195, 207, 226)"],
+html.dark [style*="dashed rgb(195, 207, 226)"],
+html.dark [style*="solid rgb(203, 213, 225)"],
+html.dark [style*="dashed rgb(203, 213, 225)"],
+html.dark [style*="solid rgb(209, 213, 219)"],
+html.dark [style*="dashed rgb(209, 213, 219)"],
+html.dark [style*="solid rgb(217, 217, 217)"],
+html.dark [style*="dashed rgb(217, 217, 217)"],
+html.dark [style*="solid rgb(222, 226, 230)"],
+html.dark [style*="dashed rgb(222, 226, 230)"],
+html.dark [style*="solid rgb(225, 228, 232)"],
+html.dark [style*="dashed rgb(225, 228, 232)"],
+html.dark [style*="solid rgb(226, 232, 240)"],
+html.dark [style*="dashed rgb(226, 232, 240)"],
+html.dark [style*="solid rgb(229, 231, 235)"],
+html.dark [style*="dashed rgb(229, 231, 235)"],
+html.dark [style*="solid rgb(230, 244, 234)"],
+html.dark [style*="dashed rgb(230, 244, 234)"],
+html.dark [style*="solid rgb(232, 232, 232)"],
+html.dark [style*="dashed rgb(232, 232, 232)"],
+html.dark [style*="solid rgb(232, 237, 245)"],
+html.dark [style*="dashed rgb(232, 237, 245)"],
+html.dark [style*="solid rgb(232, 245, 232)"],
+html.dark [style*="dashed rgb(232, 245, 232)"],
+html.dark [style*="solid rgb(233, 236, 239)"],
+html.dark [style*="dashed rgb(233, 236, 239)"],
+html.dark [style*="solid rgb(238, 238, 238)"],
+html.dark [style*="dashed rgb(238, 238, 238)"],
+html.dark [style*="solid rgb(239, 234, 226)"],
+html.dark [style*="dashed rgb(239, 234, 226)"],
+html.dark [style*="solid rgb(240, 240, 240)"],
+html.dark [style*="dashed rgb(240, 240, 240)"],
+html.dark [style*="solid rgb(241, 245, 249)"],
+html.dark [style*="dashed rgb(241, 245, 249)"],
+html.dark [style*="solid rgb(243, 243, 243)"],
+html.dark [style*="dashed rgb(243, 243, 243)"],
+html.dark [style*="solid rgb(243, 244, 246)"],
+html.dark [style*="dashed rgb(243, 244, 246)"],
+html.dark [style*="solid rgb(245, 245, 245)"],
+html.dark [style*="dashed rgb(245, 245, 245)"],
+html.dark [style*="solid rgb(245, 247, 250)"],
+html.dark [style*="dashed rgb(245, 247, 250)"],
+html.dark [style*="solid rgb(248, 249, 250)"],
+html.dark [style*="dashed rgb(248, 249, 250)"],
+html.dark [style*="solid rgb(248, 250, 252)"],
+html.dark [style*="dashed rgb(248, 250, 252)"],
+html.dark [style*="solid rgb(248, 250, 255)"],
+html.dark [style*="dashed rgb(248, 250, 255)"],
+html.dark [style*="solid rgb(249, 250, 251)"],
+html.dark [style*="dashed rgb(249, 250, 251)"],
+html.dark [style*="solid rgb(250, 249, 255)"],
+html.dark [style*="dashed rgb(250, 249, 255)"],
+html.dark [style*="solid rgb(250, 250, 250)"],
+html.dark [style*="dashed rgb(250, 250, 250)"],
+html.dark [style*="solid rgb(250, 251, 255)"],
+html.dark [style*="dashed rgb(250, 251, 255)"],
+html.dark [style*="solid rgb(255, 255, 255)"],
+html.dark [style*="dashed rgb(255, 255, 255)"] { border-color: var(--border-subtle) !important; }

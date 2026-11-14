@@ -124,6 +124,7 @@ const AnswerBuilder = ({ question, onChange }) => {
             <div key={i} className="flex items-center gap-2">
               <div className="flex flex-col gap-0.5">
                 <button
+                  aria-label="Monter"
                   type="button"
                   onClick={() => moveChoix(i, -1)}
                   disabled={i === 0}
@@ -137,6 +138,7 @@ const AnswerBuilder = ({ question, onChange }) => {
                   />
                 </button>
                 <button
+                  aria-label="Descendre"
                   type="button"
                   onClick={() => moveChoix(i, 1)}
                   disabled={i === choix.length - 1}
@@ -176,6 +178,7 @@ const AnswerBuilder = ({ question, onChange }) => {
               />
               {choix.length > 2 && (
                 <button
+                  aria-label="Supprimer"
                   type="button"
                   onClick={() => removeChoix(i)}
                   className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors flex-shrink-0"
@@ -548,6 +551,7 @@ const QuestionBuilder = ({
                     </div>
                   </div>
                   <button
+                    aria-label="Supprimer"
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();

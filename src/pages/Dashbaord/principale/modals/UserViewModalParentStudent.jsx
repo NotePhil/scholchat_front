@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import parentService from "../../../../services/parentService";
 import accederService from "../../../../services/accederService";
+import { removeParentFollow } from "../../../../services/parentLinkService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBookOpen,
@@ -70,18 +71,60 @@ const InfoRow = ({ icon: Icon, iconBg, iconColor, label, value }) => (
     </div>
   </div>
 );
-const UserViewModalParentStudent = ({ user, onClose }) => {
+const UserViewModalParentStudent = ({ user, onClose, onFollowRemoved }) => {
   const [activeTab, setActiveTab] = useState("info");
   const [enfants, setEnfants] = useState([]);
   const [childClasses, setChildClasses] = useState({});
   const [parentClasses, setParentClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Professor view only (GET /parents/professeur/{id}): one item per child and
+  // class of the professor — {id, nom, prenom, classeId, classeNom, suiviId}.
+  // null when the data does not carry it (admin, class details view).
+  const [enfantsSuivis, setEnfantsSuivis] = useState(null);
+  const [followToRemove, setFollowToRemove] = useState(null);
+  const [removingFollow, setRemovingFollow] = useState(false);
+  const [followError, setFollowError] = useState("");
   useEffect(() => {
+    setEnfantsSuivis(
+      Array.isArray(user?.enfantsProfesseur) ? user.enfantsProfesseur : null,
+    );
+    setFollowToRemove(null);
+    setFollowError("");
     if (!user?.id) return;
     loadData();
   }, [user]);
+  const parentName =
+    `${user?.prenom || ""} ${user?.nom || ""}`.trim() || "Ce parent";
+  const childName = (child) =>
+    `${child?.prenom || ""} ${child?.nom || ""}`.trim() || "Élève";
+  /** "Retirer le suivi": the parent stops following that (adult) student in that class. */
+  const confirmRemoveFollow = async () => {
+    const suiviId = followToRemove?.suiviId;
+    if (!suiviId) return;
+    setRemovingFollow(true);
+    setFollowError("");
+    try {
+      await removeParentFollow(suiviId);
+      setEnfantsSuivis((prev) =>
+        (prev || []).filter((e) => e.suiviId !== suiviId),
+      );
+      setFollowToRemove(null);
+      if (onFollowRemoved) onFollowRemoved();
+    } catch (err) {
+      setFollowError(err?.message || "Impossible de retirer le suivi.");
+    } finally {
+      setRemovingFollow(false);
+    }
+  };
   const loadData = async () => {
+    // Professor view: the scoped list comes with the parent (reading another user's children /
+    // classes is refused with 403), so nothing is fetched here.
+    if (Array.isArray(user?.enfantsProfesseur)) {
+      setParentClasses(Array.isArray(user.classes) ? user.classes : []);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -122,7 +165,7 @@ const UserViewModalParentStudent = ({ user, onClose }) => {
     },
     {
       id: "children",
-      label: `Enfants (${enfants.length})`,
+      label: `Enfants (${enfantsSuivis ? enfantsSuivis.length : enfants.length})`,
     },
     {
       id: "classes",
@@ -152,6 +195,7 @@ const UserViewModalParentStudent = ({ user, onClose }) => {
               </div>
             </div>
             <button
+              aria-label="Fermer"
               onClick={onClose}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
@@ -309,7 +353,57 @@ const UserViewModalParentStudent = ({ user, onClose }) => {
               {/* ── Children Tab ── */}
               {activeTab === "children" && (
                 <div className="space-y-3">
-                  {enfants.length === 0 ? (
+                  {enfantsSuivis ? (
+                    enfantsSuivis.length === 0 ? (
+                      <p className="text-center py-12 text-slate-500 text-sm">
+                        Aucun enfant de ce parent dans vos classes.
+                      </p>
+                    ) : (
+                      <>
+                        {followError && !followToRemove && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                            {followError}
+                          </div>
+                        )}
+                        {enfantsSuivis.map((child, idx) => (
+                          <div
+                            key={`${child.id}-${child.classeId || idx}`}
+                            className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0 shadow">
+                                <span className="text-white font-semibold text-sm">
+                                  {child.prenom?.charAt(0)}
+                                  {child.nom?.charAt(0)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-slate-900 min-w-0 break-words">
+                                <span className="font-semibold">
+                                  {childName(child)}
+                                </span>
+                                {child.classeNom
+                                  ? ` — Classe : ${child.classeNom}`
+                                  : ""}
+                              </p>
+                            </div>
+                            {child.suiviId && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFollowError("");
+                                  setFollowToRemove(child);
+                                }}
+                                disabled={removingFollow}
+                                className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                              >
+                                Retirer le suivi
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )
+                  ) : enfants.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <FontAwesomeIcon
@@ -479,6 +573,46 @@ const UserViewModalParentStudent = ({ user, onClose }) => {
           )}
         </div>
       </div>
+
+      {/* ── "Retirer le suivi" confirmation ── */}
+      {followToRemove && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5">
+            <h3 className="text-base font-semibold text-slate-900 mb-2">
+              Retirer le suivi ?
+            </h3>
+            <p className="text-sm text-slate-600">
+              {`${parentName} ne suivra plus ${childName(followToRemove)}${followToRemove.classeNom ? ` dans la classe ${followToRemove.classeNom}` : ""}. Le parent et l'élève seront notifiés.`}
+            </p>
+            {followError && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {followError}
+              </div>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setFollowToRemove(null);
+                  setFollowError("");
+                }}
+                disabled={removingFollow}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveFollow}
+                disabled={removingFollow}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {removingFollow ? "Retrait…" : "Retirer le suivi"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

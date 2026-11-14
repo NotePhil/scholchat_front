@@ -548,6 +548,7 @@ const CoursProgrammerContent = () => {
               </strong>
             </div>
             <button
+              aria-label="Effacer le filtre"
               onClick={() => {
                 setFilterClassId("");
                 loadData(professorId);
@@ -573,6 +574,7 @@ const CoursProgrammerContent = () => {
                 </p>
               </div>
               <button
+                aria-label="Masquer le message"
                 onClick={() => setSuccess("")}
                 className="text-green-400 hover:text-green-600 flex-shrink-0"
               >
@@ -595,6 +597,7 @@ const CoursProgrammerContent = () => {
                 </p>
               </div>
               <button
+                aria-label="Masquer le message"
                 onClick={() => setError("")}
                 className="text-red-400 hover:text-red-600 flex-shrink-0"
               >
@@ -748,6 +751,7 @@ const CoursProgrammerContent = () => {
             {/* View toggle */}
             <div className="flex bg-slate-100 rounded-lg p-0.5 flex-shrink-0">
               <button
+                aria-label="Affichage en grille"
                 onClick={() => setViewMode("grid")}
                 className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
               >
@@ -759,6 +763,7 @@ const CoursProgrammerContent = () => {
                 />
               </button>
               <button
+                aria-label="Affichage en liste"
                 onClick={() => setViewMode("table")}
                 className={`p-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
               >

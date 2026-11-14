@@ -682,6 +682,7 @@ const ProfessorModal = ({
                   )}
               </div>
               <button
+                aria-label="Fermer"
                 type="button"
                 onClick={() => setShowModal(false)}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -997,6 +998,7 @@ const ProfessorModal = ({
                 </div>
               </div>
               <button
+                aria-label="Fermer"
                 onClick={() => setShowRejectModal(false)}
                 className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400"
               >

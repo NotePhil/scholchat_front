@@ -463,7 +463,6 @@ const DashboardContent = ({
             value={stats.totalCourses}
             icon={BookOpen}
             gradient="linear-gradient(135deg,#3b82f6,#6366f1)"
-            trend="+12%"
             subtitle={`${stats.totalMatieres} matières`}
             isDark={isDark}
           />
@@ -472,7 +471,6 @@ const DashboardContent = ({
             value={stats.totalExercises}
             icon={Target}
             gradient="linear-gradient(135deg,#10b981,#059669)"
-            trend="+18%"
             subtitle={`${stats.completionRate}% complété`}
             isDark={isDark}
           />
@@ -481,7 +479,6 @@ const DashboardContent = ({
             value={stats.activeClasses}
             icon={Users}
             gradient="linear-gradient(135deg,#8b5cf6,#7c3aed)"
-            trend="+8%"
             subtitle={`${stats.totalStudents} élèves`}
             isDark={isDark}
           />
@@ -490,7 +487,6 @@ const DashboardContent = ({
             value={`${stats.averageProgress}%`}
             icon={BarChart3}
             gradient="linear-gradient(135deg,#f59e0b,#d97706)"
-            trend="+5%"
             subtitle="Toutes les classes"
             isDark={isDark}
           />

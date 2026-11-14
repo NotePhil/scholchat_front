@@ -96,6 +96,7 @@ const MultiSelectDropdown = ({
               >
                 {option.nom}
                 <button
+                  aria-label="Retirer"
                   type="button"
                   onClick={() => handleSelect(option.id)}
                   className="ml-2 hover:text-indigo-600"

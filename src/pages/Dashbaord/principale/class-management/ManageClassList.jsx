@@ -92,7 +92,7 @@ const ClassCard = ({
     moderatorId !== currentUserId &&
     moderatorId !== cls.creatorId;
   return (
-    <div className="min-w-0 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3">
+    <div className="min-w-0 bg-white border border-slate-200 rounded-xl shadow hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 flex flex-col gap-3">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">

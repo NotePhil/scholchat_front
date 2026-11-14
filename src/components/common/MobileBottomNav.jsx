@@ -119,6 +119,7 @@ const MobileBottomNav = () => {
                   Quick Actions
                 </h3>
                 <button
+                  aria-label="Fermer"
                   onClick={() => setShowQuickActions(false)}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
                 >

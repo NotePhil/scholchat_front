@@ -246,6 +246,7 @@ const ProfessorsContent = ({ isDark = false, currentTheme = "blue" }) => {
             </p>
           </div>
           <button
+            aria-label="Actualiser"
             className={`p-2 rounded text-black hover:bg-gray-100 transition-colors duration-200 ${isLoading ? "animate-spin" : ""}`}
             onClick={handleRefresh}
             disabled={isLoading}

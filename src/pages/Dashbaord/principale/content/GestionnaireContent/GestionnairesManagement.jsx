@@ -181,6 +181,7 @@ const GestionnairesManagement = () => {
         </div>
         <div className="flex gap-2">
           <button
+            aria-label="Actualiser"
             onClick={loadGestionnaires}
             className="p-2 hover:bg-gray-100 rounded-lg"
           >
@@ -267,6 +268,7 @@ const GestionnairesManagement = () => {
                   </div>
                 </div>
                 <button
+                  aria-label="Supprimer"
                   onClick={() => handleDelete(g.id)}
                   className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500"
                 >
@@ -312,6 +314,7 @@ const GestionnairesManagement = () => {
                 Creer un Gestionnaire
               </h2>
               <button
+                aria-label="Fermer"
                 onClick={() => setShowCreateModal(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >

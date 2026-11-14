@@ -67,6 +67,7 @@ const AttendanceModal = ({ isOpen, onClose, coursId, sessionId, sessionTitle }) 
             <p className="text-gray-400 text-sm mt-1">{sessionTitle}</p>
           </div>
           <button
+            aria-label="Fermer"
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
           >

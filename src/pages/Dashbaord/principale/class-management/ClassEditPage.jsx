@@ -270,6 +270,7 @@ const ClassEditModal = ({
               </div>
             </div>
             <button
+              aria-label="Annuler"
               onClick={handleCancel}
               className="text-white hover:text-blue-100 transition-colors"
             >

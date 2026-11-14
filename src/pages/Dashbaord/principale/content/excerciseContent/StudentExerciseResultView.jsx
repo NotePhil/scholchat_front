@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { applyAuthInterceptors } from "../../../../../utils/axiosConfig";
+import { answerDisplayText } from "../../../../../utils/answerDisplay";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -121,18 +122,12 @@ const StudentExerciseResultView = ({
     (q) => answers[q.id]?.estCorrecte === true,
   ).length;
 
-  const answerText = (q, raw) => {
-    if (!raw) return raw;
-    const c = (q.choixReponses || []).find((x) => x.id === raw);
-    return c?.texte ?? raw;
-  };
-
   return (
     <div className="w-full px-2 py-3">
       <div
         className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-xl"
         style={{
-          background: "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)",
+          background: "var(--gradient-hero)",
         }}
       >
         <button
@@ -232,7 +227,7 @@ const StudentExerciseResultView = ({
           <div className="space-y-3">
             {questions.map((q, i) => {
               const r = answers[q.id];
-              const text = answerText(q, r?.reponseUtilisateur);
+              const text = answerDisplayText(q, r?.reponseUtilisateur);
               const max = q.points || 1;
               const earned = earnedList[i];
               const verdict =

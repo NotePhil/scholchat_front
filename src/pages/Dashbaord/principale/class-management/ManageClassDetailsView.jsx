@@ -157,6 +157,7 @@ const TabScrollBar = ({ activeTab, onTabChange, tabs }) => {
     <div className="bg-white border-b border-slate-200 relative">
       {canLeft && (
         <button
+          aria-label="Faire défiler vers la gauche"
           onClick={() => scroll("left")}
           className="absolute left-0 top-0 bottom-0 z-10 flex items-center px-1.5 bg-gradient-to-r from-white via-white to-transparent"
         >
@@ -172,6 +173,7 @@ const TabScrollBar = ({ activeTab, onTabChange, tabs }) => {
       )}
       {canRight && (
         <button
+          aria-label="Faire défiler vers la droite"
           onClick={() => scroll("right")}
           className="absolute right-0 top-0 bottom-0 z-10 flex items-center px-1.5 bg-gradient-to-l from-white via-white to-transparent"
         >
@@ -1985,7 +1987,7 @@ const ManageClassDetailsView = ({
           className="relative overflow-hidden"
           style={{
             background:
-              "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)",
+              "var(--gradient-hero)",
           }}
         >
           <div
@@ -2560,6 +2562,7 @@ const ManageClassDetailsView = ({
                           {classDetails.codeActivation}
                         </code>
                         <button
+                          aria-label="Copier"
                           onClick={() => {
                             navigator.clipboard.writeText(
                               classDetails.codeActivation,
@@ -3605,6 +3608,7 @@ const ManageClassDetailsView = ({
                 </div>
               </div>
               <button
+                aria-label="Fermer"
                 onClick={() => setClassRejectModalVisible(false)}
                 className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400"
               >

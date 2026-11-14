@@ -14,6 +14,7 @@ import {
   repondreService,
   participationExerciseService,
 } from "../../../../../../services/exerciseService";
+import { answerDisplayText, expectedAnswerText } from "../../../../../../utils/answerDisplay";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCircleCheck,
@@ -484,7 +485,7 @@ const CorrectionsPanel = ({ exerciseId, programmations }) => {
                                 <span className="font-medium text-gray-500">
                                   Réponse :{" "}
                                 </span>
-                                {answer.reponseUtilisateur}
+                                {answerDisplayText(q, answer.reponseUtilisateur)}
                               </p>
                               {correctChoice && (
                                 <p className="text-xs text-green-700">
@@ -494,12 +495,12 @@ const CorrectionsPanel = ({ exerciseId, programmations }) => {
                                   {correctChoice.texte}
                                 </p>
                               )}
-                              {!correctChoice && q.reponse && (
+                              {!correctChoice && expectedAnswerText(q) && (
                                 <p className="text-xs text-green-700">
                                   <span className="font-medium">
                                     Attendue :{" "}
                                   </span>
-                                  {q.reponse}
+                                  {expectedAnswerText(q)}
                                 </p>
                               )}
 

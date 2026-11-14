@@ -69,18 +69,26 @@ export const ConversationAvatar = ({ conv, myId, size = 48, themeColor }) => {
   );
 };
 
-/** "Classe" (message à une classe) or "Général" (message to several classes) badge. */
+/**
+ * Class badge (shows the name of the class concerned when the backend sends
+ * `classeNom`, "Classe" otherwise) or "Général" (message to several classes).
+ */
 export const ConversationBadge = ({ conv, isDark }) => {
   const { t } = useTranslation();
-  const label = isGeneralBroadcast(conv)
+  const general = isGeneralBroadcast(conv);
+  const classeNom =
+    !general && typeof conv?.classeNom === "string" ? conv.classeNom.trim() : "";
+  const label = general
     ? t("messaging.conversations.badgeGeneral", "Général")
     : isClassConversation(conv)
-      ? t("messaging.conversations.badgeClass", "Classe")
+      ? classeNom || t("messaging.conversations.badgeClass", "Classe")
       : null;
   if (!label) return null;
+  const named = !general && !!classeNom;
   return (
     <span
-      className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded flex-shrink-0 ${isDark ? "bg-gray-700 text-gray-300" : "bg-blue-50 text-blue-700"}`}
+      title={named ? classeNom : undefined}
+      className={`text-[10px] tracking-wide px-1.5 py-0.5 rounded ${named ? "inline-block max-w-[120px] truncate align-middle flex-shrink-0" : "uppercase flex-shrink-0"} ${isDark ? "bg-gray-700 text-gray-300" : "bg-blue-50 text-blue-700"}`}
     >
       {label}
     </span>

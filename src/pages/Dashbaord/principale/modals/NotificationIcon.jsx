@@ -417,6 +417,7 @@ const NotificationIcon = () => {
                     </button>
                   )}
                   <button
+                    aria-label="Fermer"
                     onClick={closePanel}
                     className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                   >

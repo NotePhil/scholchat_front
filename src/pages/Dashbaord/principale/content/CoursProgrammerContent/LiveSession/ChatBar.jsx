@@ -189,6 +189,7 @@ const ChatBar = ({
           className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white placeholder-gray-400"
         />
         <button
+          aria-label="Envoyer"
           onClick={handleSend}
           disabled={!input.trim()}
           className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-40 flex-shrink-0"

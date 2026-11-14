@@ -107,6 +107,7 @@ const Instructions = ({ browser, onClose }) => {
           Installer sur {browserName[browser]}
         </span>
         <button
+          aria-label="Fermer"
           onClick={onClose}
           className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
         >

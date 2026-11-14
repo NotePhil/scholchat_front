@@ -14,6 +14,9 @@ export default function ThemeSelector({
       {Object.keys(colorSchemes).map((theme) => (
         <button
           key={theme}
+          type="button"
+          aria-label={`Thème de couleur : ${theme}`}
+          aria-pressed={currentTheme === theme}
           onClick={() => setCurrentTheme(theme)}
           className={`w-8 h-8 rounded-full border-2 transition-transform duration-200 transform hover:scale-110 ${currentTheme === theme ? "border-gray-600 scale-110" : "border-gray-300"}`}
           style={{
@@ -22,6 +25,8 @@ export default function ThemeSelector({
         />
       ))}
       <button
+        type="button"
+        aria-label={isDark ? "Passer au thème clair" : "Passer au thème sombre"}
         onClick={() => setIsDark(!isDark)}
         className={`p-2 rounded-full transition-colors duration-200 ${isDark ? "bg-gray-700 text-white" : "bg-gray-200 text-gray-700"} hover:scale-110 transform`}
       >

@@ -61,6 +61,7 @@ const SessionLauncher = ({ cours, onStart, onClose, loading }) => {
             </p>
           </div>
           <button
+            aria-label="Fermer"
             onClick={onClose}
             className="text-white/70 hover:text-white p-1.5 rounded-lg transition-colors"
           >

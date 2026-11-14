@@ -178,7 +178,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
       );
       const classes = classesResp.ok ? await classesResp.json() : [];
 
-      // 2. For each class, fetch exerciseProgrammer records filtered to DEVOIR.
+      // 2. For each class, fetch exerciseProgrammer records (DEVOIR and EXERCICE).
       //    ExerciseProgrammerResponseDTO already embeds:
       //      - questions[]       (stubs, used for count)
       //      - participations[]  (all students' participations — we pick ours)
@@ -198,7 +198,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
             const records = await r.json();
             for (const prog of records) {
               if (seen.has(prog.id)) continue;
-              if (prog.typeAssignation !== "DEVOIR") continue;
+              // Devoirs AND exercises: a class that only has EXERCICE-type work must not look empty here.
               // every devoir belongs to a course: legacy rows without one are ignored
               if (!prog.coursId) continue;
               seen.add(prog.id);
@@ -483,8 +483,11 @@ const StudentDevoirsContent = ({ tabData = null }) => {
                     }}
                   >
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Tag color="blue" className="m-0 text-xs">
-                        Devoir
+                      <Tag
+                        color={ep.typeAssignation === "DEVOIR" ? "blue" : "default"}
+                        className="m-0 text-xs"
+                      >
+                        {ep.typeAssignation === "DEVOIR" ? "Devoir" : "Exercice"}
                       </Tag>
                       {ep.niveau && (
                         <Tag color="cyan" className="m-0 text-xs">
@@ -510,7 +513,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
                   {/* Body */}
                   <div className="px-4 py-3">
                     <p className="font-semibold text-gray-900 text-sm mb-0.5">
-                      {ep.nom || "Devoir"}
+                      {ep.nom || (ep.typeAssignation === "DEVOIR" ? "Devoir" : "Exercice")}
                     </p>
                     {ep.description && (
                       <p className="text-xs text-gray-500 mb-2 line-clamp-2">
@@ -651,7 +654,9 @@ const StudentDevoirsContent = ({ tabData = null }) => {
                           <FontAwesomeIcon icon={faCirclePlay} />
                           {viewer.isParentView
                             ? "Rendre pour l'enfant"
-                            : "Rendre le devoir"}
+                            : ep.typeAssignation === "DEVOIR"
+                              ? "Rendre le devoir"
+                              : "Faire l'exercice"}
                         </button>
                       )}
                     </div>
@@ -668,7 +673,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
       <div
         className="mb-4 rounded-xl p-4"
         style={{
-          background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%)",
+          background: "var(--gradient-hero)",
           color: "#fff",
         }}
       >
@@ -681,8 +686,8 @@ const StudentDevoirsContent = ({ tabData = null }) => {
           />
           <span className="text-base font-bold">
             {viewer.isParentView
-              ? `Devoirs${viewer.childName ? ` de ${viewer.childName}` : ""}`
-              : "Mes Devoirs"}
+              ? `Devoirs et exercices${viewer.childName ? ` de ${viewer.childName}` : ""}`
+              : "Mes devoirs et exercices"}
           </span>
           {viewer.isParentView && !viewer.canAnswer && (
             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/20">
@@ -703,7 +708,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
         </div>
         <p className="text-xs opacity-80 mb-3">
           {!viewer.isParentView
-            ? "Retrouvez ici tous les devoirs assignés par vos professeurs."
+            ? "Retrouvez ici tous les devoirs et exercices donnés par vos professeurs."
             : viewer.canAnswer
               ? "Votre enfant n'a pas de compte personnel : vous rendez ses devoirs à sa place et suivez ses notes et corrections."
               : "Votre enfant a son propre compte et rend ses devoirs lui-même. Vous suivez ici ses notes et corrections."}
@@ -713,7 +718,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
             {
               icon: <FontAwesomeIcon icon={faBook} />,
               val: counts.all,
-              label: `devoir${counts.all !== 1 ? "s" : ""}`,
+              label: "au total",
             },
             {
               icon: <FontAwesomeIcon icon={faClock} />,
@@ -803,8 +808,8 @@ const StudentDevoirsContent = ({ tabData = null }) => {
         <Empty
           description={
             activeFilter === "all"
-              ? "Aucun devoir assigné"
-              : "Aucun devoir dans cette catégorie"
+              ? "Aucun devoir ni exercice pour le moment"
+              : "Aucun devoir ni exercice dans cette catégorie"
           }
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />

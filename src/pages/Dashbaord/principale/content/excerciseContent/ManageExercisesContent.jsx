@@ -496,7 +496,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab, tabData }) => {
                 className="mb-4 rounded-xl p-4"
                 style={{
                   background:
-                    "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)",
+                    "var(--gradient-hero)",
                   color: "#fff",
                 }}
               >
@@ -567,7 +567,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab, tabData }) => {
                   className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                   style={{
                     background:
-                      "linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)",
+                      "var(--gradient-hero)",
                   }}
                 >
                   <div className="flex items-center gap-3">

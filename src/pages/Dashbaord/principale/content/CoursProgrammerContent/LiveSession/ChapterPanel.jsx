@@ -84,6 +84,7 @@ const ImagePopup = ({ url, fileName, onClose }) => {
         </span>
         <div className="flex items-center gap-1.5">
           <button
+            aria-label="Zoom arrière"
             onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}
             className="p-1 bg-white/20 hover:bg-white/30 rounded text-white"
           >
@@ -96,6 +97,7 @@ const ImagePopup = ({ url, fileName, onClose }) => {
             {Math.round(zoom * 100)}%
           </span>
           <button
+            aria-label="Zoom avant"
             onClick={() => setZoom((z) => Math.min(5, z + 0.25))}
             className="p-1 bg-white/20 hover:bg-white/30 rounded text-white"
           >
@@ -114,6 +116,7 @@ const ImagePopup = ({ url, fileName, onClose }) => {
             <FontAwesomeIcon icon={faDownload} className="w-3.5 h-3.5" />
           </a>
           <button
+            aria-label="Fermer"
             onClick={onClose}
             className="p-1 bg-red-500/80 hover:bg-red-600 rounded text-white"
           >
@@ -246,6 +249,7 @@ const FileViewer = ({
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                 <span className="text-xs text-gray-500 flex-1">Zoom</span>
                 <button
+                  aria-label="Zoom arrière"
                   onClick={() => setIframeZoom((z) => Math.max(0.5, z - 0.25))}
                   className="p-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700"
                 >
@@ -258,6 +262,7 @@ const FileViewer = ({
                   {Math.round(iframeZoom * 100)}%
                 </span>
                 <button
+                  aria-label="Zoom avant"
                   onClick={() => setIframeZoom((z) => Math.min(3, z + 0.25))}
                   className="p-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700"
                 >
@@ -682,6 +687,7 @@ const ChapterPanel = ({
                 Ouvrir
               </a>
               <button
+                aria-label="Fermer"
                 onClick={() => setFileViewer(null)}
                 className="p-1 bg-red-100 hover:bg-red-200 rounded text-red-600"
               >

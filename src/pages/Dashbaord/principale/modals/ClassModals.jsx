@@ -96,6 +96,7 @@ const ClassModals = ({
                   </div>
                 </div>
                 <button
+                  aria-label="Fermer"
                   onClick={() => setSelectedClass(null)}
                   className="p-3 hover:bg-white/20 rounded-full transition-all duration-200 backdrop-blur-sm"
                 >

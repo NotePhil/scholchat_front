@@ -399,7 +399,7 @@ const SuccessModal = ({ show, message, onClose }) => {
     <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-right duration-300">
       <div className="w-2 h-2 bg-white rounded-full"></div>
       <span className="font-medium">{message}</span>
-      <button onClick={onClose} className="ml-2 hover:bg-green-600 rounded p-1">
+      <button aria-label="Fermer" onClick={onClose} className="ml-2 hover:bg-green-600 rounded p-1">
         <FontAwesomeIcon
           icon={faXmark}
           style={{

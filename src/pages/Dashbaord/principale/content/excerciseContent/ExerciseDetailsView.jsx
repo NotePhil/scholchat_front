@@ -288,7 +288,7 @@ const ExerciseDetailsView = ({
           className="relative overflow-hidden"
           style={{
             background:
-              "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)",
+              "var(--gradient-hero)",
           }}
         >
           {/* subtle decorative circle */}

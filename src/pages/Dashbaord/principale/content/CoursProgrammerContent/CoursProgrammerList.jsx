@@ -336,7 +336,7 @@ const CoursProgrammerList = ({
                   </div>
                 </div>
                 <div className="relative group/actions">
-                  <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                  <button aria-label="Plus d'options" className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
                     <FontAwesomeIcon
                       icon={faEllipsisVertical}
                       style={{

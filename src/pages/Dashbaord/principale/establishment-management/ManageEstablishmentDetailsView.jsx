@@ -41,13 +41,16 @@ import {
   faCheck,
   faCircleExclamation,
   faCircleInfo,
+  faCopy,
   faEnvelope,
   faEye,
   faFloppyDisk,
   faGear,
   faGlobe,
   faLocationDot,
+  faPause,
   faPenToSquare,
+  faPlay,
   faPhone,
   faSchool,
   faStop,
@@ -97,6 +100,31 @@ const ManageEstablishmentDetailsView = ({
   const [isProfessorModalOpen, setIsProfessorModalOpen] = useState(false);
   const [selectedClassView, setSelectedClassView] = useState(null);
   const [isClassViewModalOpen, setIsClassViewModalOpen] = useState(false);
+  // Bumped after every action that changes the establishment's classes so the
+  // offer panel silently re-reads its "Classes x / max" counter.
+  const [offreRefreshKey, setOffreRefreshKey] = useState(0);
+  const bumpOffreRefresh = () => setOffreRefreshKey((k) => k + 1);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const handleCopyCode = async () => {
+    const code = establishment?.codeUnique;
+    if (!code) return;
+    if (!navigator.clipboard?.writeText) {
+      message.error("La copie n'est pas disponible sur ce navigateur.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch (err) {
+      message.error("Impossible de copier le code.");
+    }
+  };
+  // Backend message first (e.g. QUOTA_CLASSES_ATTEINT), generic wording otherwise.
+  const backendErrorMessage = (error, fallback) => {
+    const msg = error?.response?.data?.message;
+    return typeof msg === "string" && msg.trim() ? msg : fallback;
+  };
   useEffect(() => {
     if (establishmentId) {
       fetchEstablishmentDetails();
@@ -224,6 +252,7 @@ const ManageEstablishmentDetailsView = ({
       fetchEstablishmentClasses(),
       fetchEstablishmentProfessors(),
     ]);
+    bumpOffreRefresh();
     setRefreshing(false);
     setSuccessMessage("Données actualisées avec succès");
     setTimeout(() => setSuccessMessage(null), 3000);
@@ -331,14 +360,36 @@ const ManageEstablishmentDetailsView = ({
           await classService.approuverClasse(cls.id);
           message.success(texts.success);
           fetchEstablishmentClasses();
+          bumpOffreRefresh();
         } catch (error) {
           console.error("Error approving class:", error);
-          message.error(texts.error);
+          message.error(backendErrorMessage(error, texts.error));
         } finally {
           setActionLoading(null);
         }
       },
     });
+  };
+  // Activate / deactivate a class (same action as the mobile app). Activation is refused by the
+  // server when the offer's class quota is reached: its message is shown.
+  const handleToggleClassState = async (cls) => {
+    const newEtat = cls.etat === "ACTIF" ? "INACTIF" : "ACTIF";
+    try {
+      setActionLoading(`toggle-${cls.id}`);
+      await classService.modifierClasse(cls.id, { etat: newEtat });
+      message.success(
+        newEtat === "ACTIF" ? "Classe activée." : "Classe désactivée.",
+      );
+      fetchEstablishmentClasses();
+      bumpOffreRefresh();
+    } catch (error) {
+      console.error("Error toggling class state:", error);
+      message.error(
+        backendErrorMessage(error, "Échec de la mise à jour de la classe."),
+      );
+    } finally {
+      setActionLoading(null);
+    }
   };
   const handleRejectClass = (cls) => {
     const texts = getClassActionTexts("reject", cls.nom);
@@ -354,9 +405,10 @@ const ManageEstablishmentDetailsView = ({
           );
           message.success(texts.success);
           fetchEstablishmentClasses();
+          bumpOffreRefresh();
         } catch (error) {
           console.error("Error rejecting class:", error);
-          message.error(texts.error);
+          message.error(backendErrorMessage(error, texts.error));
         } finally {
           setActionLoading(null);
         }
@@ -374,9 +426,10 @@ const ManageEstablishmentDetailsView = ({
           await classService.supprimerClasse(cls.id);
           message.success(texts.success);
           fetchEstablishmentClasses();
+          bumpOffreRefresh();
         } catch (error) {
           console.error("Error deleting class:", error);
-          message.error(texts.error);
+          message.error(backendErrorMessage(error, texts.error));
         } finally {
           setActionLoading(null);
         }
@@ -485,7 +538,25 @@ const ManageEstablishmentDetailsView = ({
       title: "Nom",
       dataIndex: "nom",
       key: "nom",
-      render: (text) => <Text strong>{text}</Text>,
+      render: (text, record) => (
+        <div>
+          <Text strong>{text}</Text>
+          {record.codeEtablissementUtilise != null && (
+            <div>
+              <Text
+                type="secondary"
+                style={{
+                  fontSize: 12,
+                }}
+              >
+                {record.codeEtablissementUtilise
+                  ? `Créée avec le code établissement ${record.codeEtablissementUtilise}`
+                  : "Créée sans code établissement"}
+              </Text>
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: "Niveau",
@@ -552,6 +623,26 @@ const ManageEstablishmentDetailsView = ({
                 />
               </Tooltip>
             </>
+          )}
+          {record.etat !== "EN_ATTENTE_APPROBATION" && (
+            <Tooltip title={record.etat === "ACTIF" ? "Désactiver" : "Activer"}>
+              <Button
+                type="text"
+                size="small"
+                aria-label={record.etat === "ACTIF" ? "Désactiver" : "Activer"}
+                icon={
+                  <FontAwesomeIcon
+                    icon={record.etat === "ACTIF" ? faPause : faPlay}
+                  />
+                }
+                loading={actionLoading === `toggle-${record.id}`}
+                disabled={!!actionLoading}
+                onClick={() => handleToggleClassState(record)}
+                style={{
+                  color: record.etat === "ACTIF" ? "#d97706" : "#52c41a",
+                }}
+              />
+            </Tooltip>
           )}
           <Tooltip title="Supprimer">
             <Button
@@ -876,11 +967,19 @@ const ManageEstablishmentDetailsView = ({
                           color: "#7c3aed",
                           fontSize: "16px",
                         }}
-                        copyable
                       >
                         {establishment.codeUnique}
                       </Text>
                     </div>
+                    <Button
+                      size="small"
+                      icon={
+                        <FontAwesomeIcon icon={codeCopied ? faCheck : faCopy} />
+                      }
+                      onClick={handleCopyCode}
+                    >
+                      {codeCopied ? "Copié" : "Copier"}
+                    </Button>
                   </div>
                 </Descriptions.Item>
               )}
@@ -985,6 +1084,7 @@ const ManageEstablishmentDetailsView = ({
           type="ETABLISSEMENT"
           entityId={establishmentId}
           isDark={false}
+          refreshKey={offreRefreshKey}
         />
       </div>
 

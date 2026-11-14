@@ -20,6 +20,7 @@ export default function Header({
     >
       <div className="flex items-center justify-between p-4">
         <button
+          aria-label="Menu"
           onClick={() => setShowSidebar(!showSidebar)}
           className={`md:hidden p-2 rounded-md transition-colors duration-200 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
         >

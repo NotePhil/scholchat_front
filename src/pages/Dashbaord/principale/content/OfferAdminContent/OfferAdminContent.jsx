@@ -288,7 +288,7 @@ const OfferAdminContent = ({ isDark }) => {
             <h2 className={`text-lg font-semibold ${textMain}`}>
               {editingId ? "Modifier l'offre" : "Nouvelle offre"}
             </h2>
-            <button onClick={() => setShowForm(false)} className={textMuted}>
+            <button aria-label="Fermer" onClick={() => setShowForm(false)} className={textMuted}>
               <FontAwesomeIcon
                 icon={faXmark}
                 style={{
@@ -774,6 +774,7 @@ const OfferAdminContent = ({ isDark }) => {
                     <td className="p-3">
                       <div className="flex justify-end gap-2">
                         <button
+                          aria-label="Modifier"
                           onClick={() => ouvrirEdition(offre)}
                           className="p-1.5 rounded hover:bg-blue-50 text-blue-600"
                         >
@@ -786,6 +787,7 @@ const OfferAdminContent = ({ isDark }) => {
                         </button>
                         {offre.actif && (
                           <button
+                            aria-label="Désactiver"
                             onClick={() => handleDesactiver(offre)}
                             className="p-1.5 rounded hover:bg-red-50 text-red-600"
                           >

@@ -397,6 +397,7 @@ const CoursProgrammeManagement = ({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <button
+                aria-label="Retour"
                 onClick={onBack}
                 className="p-1.5 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
               >

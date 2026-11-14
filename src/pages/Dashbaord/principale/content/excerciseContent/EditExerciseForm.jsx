@@ -212,7 +212,11 @@ const EditExerciseForm = ({
             r.reason,
           ),
         );
-        const failMsg = `Exercice mis à jour, mais ${failedQuestions.length} question${failedQuestions.length > 1 ? "s n'ont" : " n'a"} pas pu être enregistrée${failedQuestions.length > 1 ? "s" : ""}.`;
+        const failMsg = `Exercice mis à jour, mais ${failedQuestions.length} question${failedQuestions.length > 1 ? "s n'ont" : " n'a"} pas pu être enregistrée${failedQuestions.length > 1 ? "s" : ""}.${
+          failedQuestions[0]?.reason?.response?.data?.message
+            ? ` ${failedQuestions[0].reason.response.data.message}`
+            : ""
+        }`;
         message.warning(failMsg);
         onError?.(failMsg);
       } else {
@@ -248,10 +252,11 @@ const EditExerciseForm = ({
         <div
           className="flex items-center gap-3 mb-6 px-6 py-5 rounded-2xl"
           style={{
-            background: "linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)",
+            background: "var(--gradient-hero)",
           }}
         >
           <button
+            aria-label="Retour"
             type="button"
             onClick={onCancel}
             style={{

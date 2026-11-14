@@ -47,6 +47,7 @@ const ManageClassMobile = ({
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
       <header className="flex items-center justify-between px-4 py-4 bg-gray-900/50 backdrop-blur-md z-10">
         <button
+          aria-label="Retour"
           onClick={onBack}
           className="p-2 bg-gray-800 rounded-2xl hover:bg-gray-700 transition-colors"
         >
@@ -65,6 +66,7 @@ const ManageClassMobile = ({
         </div>
         <div className="flex space-x-2">
           <button
+            aria-label="Participants"
             onClick={() => setShowParticipants(true)}
             className="p-2 bg-gray-800 rounded-2xl relative"
           >
@@ -242,6 +244,7 @@ const ManageClassMobile = ({
                     )}
                   </button>
                   <button
+                    aria-label="Discussion"
                     onClick={() => setShowChat(true)}
                     className="p-5 rounded-3xl bg-gray-800 border border-gray-700 shadow-xl"
                   >
@@ -252,7 +255,7 @@ const ManageClassMobile = ({
                       }}
                     />
                   </button>
-                  <button className="p-5 rounded-3xl bg-red-600 shadow-xl shadow-red-500/20">
+                  <button aria-label="Quitter l'appel" className="p-5 rounded-3xl bg-red-600 shadow-xl shadow-red-500/20">
                     <FontAwesomeIcon
                       icon={faXmark}
                       style={{
@@ -283,7 +286,7 @@ const ManageClassMobile = ({
             >
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold">Your Assignments</h2>
-                <button className="p-2 bg-blue-600 rounded-xl">
+                <button aria-label="Plein écran" className="p-2 bg-blue-600 rounded-xl">
                   <FontAwesomeIcon
                     icon={faExpand}
                     style={{
@@ -365,7 +368,7 @@ const ManageClassMobile = ({
                     <h4 className="text-xs font-bold mb-3 truncate w-full">
                       Lecture_Note_{i + 1}
                     </h4>
-                    <button className="p-2 bg-gray-700 rounded-xl w-full flex justify-center">
+                    <button aria-label="Envoyer" className="p-2 bg-gray-700 rounded-xl w-full flex justify-center">
                       <FontAwesomeIcon
                         icon={faPaperPlane}
                         style={{
@@ -397,7 +400,7 @@ const ManageClassMobile = ({
           >
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <h3 className="font-bold">Live Chat</h3>
-              <button onClick={() => setShowChat(false)}>
+              <button aria-label="Fermer" onClick={() => setShowChat(false)}>
                 <FontAwesomeIcon icon={faXmark} />
               </button>
             </div>
@@ -419,7 +422,7 @@ const ManageClassMobile = ({
                   placeholder="Type a message..."
                   className="bg-transparent flex-1 px-4 outline-none text-sm"
                 />
-                <button className="p-2 bg-blue-600 rounded-xl">
+                <button aria-label="Envoyer" className="p-2 bg-blue-600 rounded-xl">
                   <FontAwesomeIcon
                     icon={faPaperPlane}
                     style={{
@@ -452,6 +455,7 @@ const ManageClassMobile = ({
                 Participants ({participants.length})
               </h2>
               <button
+                aria-label="Fermer"
                 onClick={() => setShowParticipants(false)}
                 className="p-3 bg-gray-800 rounded-2xl"
               >
@@ -809,6 +813,7 @@ const ManageClass = ({ classInfo, onBack }) => {
             <h2>Manage Class</h2>
             <h2 className="text-xl font-bold">Créer un nouveau devoir</h2>
             <button
+              aria-label="Fermer"
               className="text-gray-500 hover:text-gray-700"
               onClick={() => setShowCreateAssignment(false)}
             >
@@ -969,6 +974,7 @@ const ManageClass = ({ classInfo, onBack }) => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">{assignment.title}</h2>
             <button
+              aria-label="Fermer"
               className="text-gray-500 hover:text-gray-700"
               onClick={onClose}
             >
@@ -1098,7 +1104,7 @@ const ManageClass = ({ classInfo, onBack }) => {
       <div className="bg-white border-b shadow-sm px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <button className="mr-4 text-gray-600 hover:text-gray-900">
+            <button aria-label="Retour" className="mr-4 text-gray-600 hover:text-gray-900">
               <FontAwesomeIcon
                 icon={faArrowLeft}
                 style={{
@@ -1131,7 +1137,7 @@ const ManageClass = ({ classInfo, onBack }) => {
                 Prochaine séance: {classeInfo.nextSession}
               </div>
             </div>
-            <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full">
+            <button aria-label="Paramètres" className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full">
               <FontAwesomeIcon
                 icon={faGear}
                 style={{
@@ -1341,6 +1347,7 @@ const ManageClass = ({ classInfo, onBack }) => {
                   </button>
 
                   <button
+                    aria-label="Lever la main"
                     className={`p-3 rounded-full ${handRaised ? "bg-yellow-500 hover:bg-yellow-600" : "bg-gray-700 hover:bg-gray-600"}`}
                     onClick={() => setHandRaised(!handRaised)}
                   >
@@ -1413,6 +1420,7 @@ const ManageClass = ({ classInfo, onBack }) => {
                   </button>
 
                   <button
+                    aria-label="Participants"
                     className="md:hidden p-2 rounded-full bg-gray-700 hover:bg-gray-600"
                     onClick={() => setShowParticipants(!showParticipants)}
                   >
@@ -1426,6 +1434,7 @@ const ManageClass = ({ classInfo, onBack }) => {
                   </button>
 
                   <button
+                    aria-label="Discussion"
                     className="md:hidden p-2 rounded-full bg-gray-700 hover:bg-gray-600"
                     onClick={() => setShowChat(!showChat)}
                   >
@@ -1590,6 +1599,7 @@ const ManageClass = ({ classInfo, onBack }) => {
                         onChange={(e) => setChatMessage(e.target.value)}
                       />
                       <button
+                        aria-label="Envoyer"
                         className="bg-blue-600 text-white px-3 py-2 rounded-r-lg hover:bg-blue-700"
                         onClick={handleSendMessage}
                       >
@@ -1731,7 +1741,7 @@ const ManageClass = ({ classInfo, onBack }) => {
                             Voir détails
                           </button>
                           {assignment.status !== "completed" && (
-                            <button className="text-gray-500 hover:text-gray-700">
+                            <button aria-label="Plus d'options" className="text-gray-500 hover:text-gray-700">
                               <FontAwesomeIcon
                                 icon={faEllipsisVertical}
                                 style={{
@@ -1855,7 +1865,7 @@ const ManageClass = ({ classInfo, onBack }) => {
                           />
                           Télécharger
                         </button>
-                        <button className="text-gray-500 hover:text-gray-700">
+                        <button aria-label="Plus d'options" className="text-gray-500 hover:text-gray-700">
                           <FontAwesomeIcon
                             icon={faEllipsisVertical}
                             style={{

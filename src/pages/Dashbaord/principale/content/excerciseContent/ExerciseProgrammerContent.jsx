@@ -568,6 +568,7 @@ const ExerciseProgrammerContent = () => {
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
+                        aria-label="Voir"
                         onClick={() => setDetailProg(prog)}
                         className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
                       >

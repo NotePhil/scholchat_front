@@ -385,7 +385,7 @@ const CoursProgrammerViewModal = ({
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent truncate">
+                <h2 className="text-lg sm:text-2xl font-bold text-slate-900 truncate">
                   <span className="hidden sm:inline">
                     Détails de la Programmation
                   </span>
@@ -409,6 +409,7 @@ const CoursProgrammerViewModal = ({
                 </span>
               </span>
               <button
+                aria-label="Fermer"
                 onClick={onClose}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
               >

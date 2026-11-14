@@ -6,6 +6,7 @@ import {
   repondreService,
   participationExerciseService,
 } from "../../../../../services/exerciseService";
+import { answerDisplayText, expectedAnswerText } from "../../../../../utils/answerDisplay";
 import { classService } from "../../../../../services/ClassService";
 import { userService } from "../../../../../services/userService";
 import { questionEarned } from "./StudentExerciseResultView";
@@ -528,13 +529,7 @@ const ProgrammationCorrections = ({ prog, focusStudentId = null }) => {
                     const isAutoType = ["QCM", "VRAI_FAUX"].includes(
                       q.typeQuestion,
                     );
-                    const correctChoices = (q.choixReponses || []).filter(
-                      (c) => c.estCorrect,
-                    );
-                    const expectedAnswer =
-                      correctChoices.length > 0
-                        ? correctChoices.map((c) => c.texte).join(" / ")
-                        : q.reponse || null;
+                    const expectedAnswer = expectedAnswerText(q);
                     const needsGrading =
                       answer &&
                       (answer.estCorrecte === null ||
@@ -644,7 +639,7 @@ const ProgrammationCorrections = ({ prog, focusStudentId = null }) => {
                               <span
                                 className={`text-sm px-2 py-0.5 rounded flex-1 ${answer.estCorrecte === true ? "bg-green-50 text-green-800" : answer.estCorrecte === false ? "bg-red-50 text-red-800" : "bg-gray-50 text-gray-800"}`}
                               >
-                                {answer.reponseUtilisateur}
+                                {answerDisplayText(q, answer.reponseUtilisateur)}
                               </span>
                             </div>
                           ) : (

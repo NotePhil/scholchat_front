@@ -800,6 +800,7 @@ const StudentParentStats = ({
                 </button>
               )}
               <button
+                aria-label="Actualiser"
                 onClick={handleRefresh}
                 disabled={refreshing}
                 className={`flex-shrink-0 ${isMobile ? "p-2" : "p-2.5"} rounded-lg border ${themeColors.border} ${themeColors.cardBg} hover:shadow-md transition-all`}

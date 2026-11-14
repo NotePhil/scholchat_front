@@ -491,6 +491,7 @@ const LiveSession = ({
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-900 border-b border-gray-800 flex-shrink-0">
         <button
+          aria-label="Retour"
           onClick={onClose}
           className="p-1.5 text-gray-400 hover:text-white rounded-lg transition-colors"
         >
@@ -516,6 +517,7 @@ const LiveSession = ({
         {/* Chapter nav — visible on all sizes */}
         <div className="flex items-center gap-1 bg-gray-800 rounded-lg px-2 py-1">
           <button
+            aria-label="Précédent"
             onClick={handlePrevChapter}
             disabled={currentChapIdx <= 0}
             className="p-1 text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
@@ -532,6 +534,7 @@ const LiveSession = ({
             )}
           </span>
           <button
+            aria-label="Suivant"
             onClick={handleNextChapter}
             disabled={currentChapIdx >= chapitres.length - 1}
             className="p-1 text-gray-400 hover:text-white disabled:opacity-30 transition-colors"

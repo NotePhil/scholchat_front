@@ -5,28 +5,124 @@
   --accent-color: #60a5fa;
   --hover-color: #2563eb;
   --light-color: #dbeafe;
-  
-  /* Light theme colors */
+
+  /* Light theme colors (kept in sync with scholchat_mobile/src/styles/theme.ts) */
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
+  --bg-inset: #f8fafc;
+  --bg-raised: #f1f5f9;
   --text-primary: #1e293b;
+  --text-strong: #334155;
   --text-secondary: #64748b;
   --text-tertiary: #94a3b8;
   --border-color: #e2e8f0;
+  --border-subtle: #eef2f6;
   --shadow-color: rgba(0, 0, 0, 0.1);
+  --hover-overlay: rgb(15 23 42 / 0.04);
+  --hover-overlay-strong: rgb(15 23 42 / 0.08);
+
+  /* Page hero banner. Replaces three near-identical navy gradients that were
+     pasted inline across the exercise / class / people screens. The light end
+     stops at #3a78b5 (was #4f8ec9) so white text stays above 4.5:1. */
+  --gradient-hero: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #3a78b5 100%);
+
+  /* Elevation: every level carries an offset and a soft blur. */
+  --elevation-1: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.05);
+  --elevation-2: 0 1px 3px rgb(15 23 42 / 0.08), 0 6px 16px -4px rgb(15 23 42 / 0.1);
+  --elevation-3: 0 4px 8px -2px rgb(15 23 42 / 0.08), 0 16px 32px -8px rgb(15 23 42 / 0.16);
+  --elevation-4: 0 8px 16px -4px rgb(15 23 42 / 0.12), 0 28px 56px -12px rgb(15 23 42 / 0.28);
 }
 
-/* Dark theme colors */
-.dark-mode {
+/* One brand gradient for the "primary" role (buttons, active nav, headers).
+   Re-declared on the dashboard container so it follows the colour scheme the
+   user picked there (Principal.jsx sets --primary-color inline). */
+:root,
+.principal-container {
+  --gradient-brand: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  --gradient-brand-hover: linear-gradient(135deg, var(--hover-color), var(--primary-color));
+  --focus-ring: var(--primary-color);
+}
+
+/* Dark theme colors.
+   `.dark-mode` sits on the dashboard container; `html.dark` is the Tailwind
+   class App.js toggles on dashboard routes. Portalled content (antd modals,
+   dropdowns, react-modal) lives outside the container, so the tokens must
+   resolve from <html> too. */
+.dark-mode,
+html.dark {
   --bg-primary: #1e293b;
   --bg-secondary: #0f172a;
   --bg-tertiary: #334155;
+  --bg-inset: #172033;
+  --bg-raised: #283548;
   --text-primary: #f8fafc;
+  --text-strong: #e2e8f0;
   --text-secondary: #cbd5e1;
   --text-tertiary: #94a3b8;
   --border-color: #475569;
+  --border-subtle: #334155;
   --shadow-color: rgba(0, 0, 0, 0.3);
+  --hover-overlay: rgb(148 163 184 / 0.1);
+  --hover-overlay-strong: rgb(148 163 184 / 0.18);
+
+  --gradient-hero: linear-gradient(135deg, #172d4d 0%, #1f4f7d 60%, #2a639b 100%);
+
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --elevation-2: 0 2px 4px rgb(0 0 0 / 0.3), 0 8px 20px -6px rgb(0 0 0 / 0.5);
+  --elevation-3: 0 4px 8px -2px rgb(0 0 0 / 0.4), 0 18px 36px -10px rgb(0 0 0 / 0.6);
+  --elevation-4: 0 8px 16px -4px rgb(0 0 0 / 0.5), 0 30px 60px -12px rgb(0 0 0 / 0.7);
+}
+
+.principal-container.dark-mode,
+html.dark {
+  --focus-ring: var(--accent-color);
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* Browser surfaces: focus ring, selection, scrollbars follow the palette.
+   :where() keeps specificity at zero so any component-level focus style
+   (focus:ring-*, focus:outline-none on inputs) still wins. */
+:where(a, button, summary, [role="button"], [role="tab"], [role="menuitem"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--primary-color) 28%, transparent);
+}
+
+html.dark {
+  scrollbar-color: #475569 transparent;
+}
+
+/* index.css forces dark ink on every form control; flip it with the theme. */
+/* MUI fields are excluded: those screens keep MUI's own light surfaces. */
+html.dark input:not([class*="Mui"]),
+html.dark textarea:not([class*="Mui"]),
+html.dark select:not([class*="Mui"]) {
+  color: var(--text-primary) !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  /* Decorative loops only; spinners and state transitions keep running. */
+  .animate-bounce,
+  .animate-ping,
+  .animate-pulse {
+    animation: none !important;
+  }
 }
 
 /* Theme-aware components */
@@ -79,7 +175,7 @@
 
 /* Button styles */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  background: var(--gradient-brand);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -90,9 +186,9 @@
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--hover-color), var(--primary-color));
+  background: var(--gradient-brand-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--elevation-2);
 }
 
 .btn-secondary {
@@ -116,12 +212,12 @@
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 0.75rem;
-  box-shadow: 0 1px 3px var(--shadow-color);
-  transition: all 0.2s ease;
+  box-shadow: var(--elevation-1);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .theme-card:hover {
-  box-shadow: 0 4px 12px var(--shadow-color);
+  box-shadow: var(--elevation-2);
   transform: translateY(-1px);
 }
 
@@ -138,7 +234,7 @@
 .theme-input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(var(--primary-color), 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 22%, transparent);
 }
 
 /* Sidebar and navigation */
@@ -154,12 +250,12 @@
 
 .sidebar-item.active {
   color: white;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  background: var(--gradient-brand);
 }
 
 /* Header styles */
 .header-primary {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  background: var(--gradient-brand);
   color: white;
 }
 
@@ -328,4 +424,11 @@
   background-color: var(--primary-color);
   color: white;
   border-left: 4px solid var(--secondary-color);
+}
+
+/* Dark canvas behind the dashboard (overscroll, portalled modals). Portals
+   inherit body's colour, so it has to be a readable one on dark surfaces. */
+html.dark body {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
 }

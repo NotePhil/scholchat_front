@@ -834,11 +834,15 @@
 }
 
 /* Reduced Motion */
+/* Was `* { transition/animation/transform: none !important }`: this file is
+   bundled app-wide, so for anyone with "reduce motion" on it also removed
+   every layout transform (the closed sidebar's translateX(-100%), centred
+   modals, antd switches) and froze loading spinners. Now scoped to this view
+   and limited to motion. */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-    animation: none !important;
-    transform: none !important;
+  .manage-class-details-view *,
+  .user-table-container * {
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -848,4 +852,41 @@
     flex: 0 0 100% !important;
     max-width: 100% !important;
   }
+}
+
+/* Dark theme. The .ant-table and scrollbar rules above are unscoped, so they
+   style every antd table in the app; without these they stayed light on the
+   dark dashboard. */
+html.dark .manage-class-details-view {
+  background: transparent;
+}
+
+html.dark .ant-table-wrapper {
+  background: var(--bg-primary);
+  box-shadow: var(--elevation-1);
+}
+
+html.dark .ant-table-thead > tr > th {
+  background: var(--bg-inset);
+  color: var(--text-strong);
+}
+
+html.dark .ant-table-tbody > tr > td {
+  border-bottom-color: var(--border-subtle);
+}
+
+html.dark .ant-table-tbody > tr:hover > td {
+  background: var(--hover-overlay);
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }

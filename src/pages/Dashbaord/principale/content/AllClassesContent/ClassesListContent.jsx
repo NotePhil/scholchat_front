@@ -1085,6 +1085,7 @@ const ClassesListContent = ({
 
                   <div className="flex items-center gap-2">
                     <button
+                      aria-label="Précédent"
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
                       className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1127,6 +1128,7 @@ const ClassesListContent = ({
                     })}
 
                     <button
+                      aria-label="Suivant"
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
                       className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"

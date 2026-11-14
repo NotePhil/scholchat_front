@@ -441,7 +441,8 @@ const Sidebar = ({
               <h2
                 className="text-2xl font-bold mb-1"
                 style={{
-                  color: colorSchemes?.[currentTheme]?.primary,
+                  // accent, not primary: the scheme's primary is ~1.8:1 on the navy header
+                  color: colorSchemes?.[currentTheme]?.accent,
                 }}
               >
                 ScholChat
@@ -475,13 +476,7 @@ const Sidebar = ({
                     >
                       <a href="#" onClick={(e) => e.preventDefault()}>
                         <span className="icon">
-                          <item.icon
-                            style={{
-                              color: isActiveDropdown(item.dropdown, item.items)
-                                ? colorSchemes?.[currentTheme]?.primary
-                                : "currentColor",
-                            }}
-                          />
+                          <item.icon style={{ color: "currentColor" }} />
                         </span>
                         <span className="menu-text">{item.name}</span>
                         <span className="dropdown-icon">
@@ -528,13 +523,9 @@ const Sidebar = ({
                   >
                     <a href="#" onClick={(e) => e.preventDefault()}>
                       <span className="icon">
-                        <item.icon
-                          style={{
-                            color: isActiveTab(item.tab)
-                              ? colorSchemes?.[currentTheme]?.primary
-                              : "currentColor",
-                          }}
-                        />
+                        {/* follows the label colour: the scheme primary was
+                            invisible (1:1) on the active row's blue */}
+                        <item.icon style={{ color: "currentColor" }} />
                       </span>
                       <span className="menu-text">{item.name}</span>
                       {item.tab === "messages" && unreadMessages > 0 && (

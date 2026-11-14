@@ -113,6 +113,7 @@ const DocumentViewer = ({ url, fileName, contentType, onClose, isOpen }) => {
               )}
             </button>
             <button
+              aria-label="Fermer"
               onClick={onClose}
               className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
             >

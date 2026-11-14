@@ -103,6 +103,7 @@ const EstablishmentModal = ({
                     Détails de l'Établissement
                   </h3>
                   <button
+                    aria-label="Fermer"
                     type="button"
                     onClick={() => setShowModal(false)}
                     className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
@@ -331,6 +332,7 @@ const EstablishmentModal = ({
                       : "Modifier l'Établissement"}
                   </h3>
                   <button
+                    aria-label="Fermer"
                     type="button"
                     onClick={() => setShowModal(false)}
                     className="text-white/60 hover:text-white p-2 hover:bg-white/10 rounded-full transition-all"

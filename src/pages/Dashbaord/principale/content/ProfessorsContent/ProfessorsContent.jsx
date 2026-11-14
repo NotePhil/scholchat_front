@@ -676,7 +676,7 @@ const ProfessorsContent = ({
               className="relative overflow-hidden"
               style={{
                 background:
-                  "linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4f8ec9 100%)",
+                  "var(--gradient-hero)",
               }}
             >
               <div
@@ -1234,6 +1234,7 @@ const ProfessorsContent = ({
                 />
                 {actionSuccess}
                 <button
+                  aria-label="Masquer le message"
                   onClick={() => setActionSuccess("")}
                   className="ml-auto text-green-400 hover:text-green-600"
                 >
@@ -1263,6 +1264,7 @@ const ProfessorsContent = ({
                 />
                 {actionError}
                 <button
+                  aria-label="Masquer le message"
                   onClick={() => setActionError("")}
                   className="ml-auto text-red-400 hover:text-red-600"
                 >
@@ -1308,6 +1310,7 @@ const ProfessorsContent = ({
                   </div>
                 </div>
                 <button
+                  aria-label="Fermer"
                   onClick={() => setShowRejectModal(false)}
                   className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400"
                 >
@@ -1451,7 +1454,7 @@ const ProfessorsContent = ({
             </div>
             <div>
               <h1
-                className={`text-xl sm:text-3xl font-bold ${isDark ? "text-white" : "bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent"}`}
+                className={`text-xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
               >
                 {t("professors.title")}
               </h1>
@@ -1491,6 +1494,7 @@ const ProfessorsContent = ({
                   </p>
                 </div>
                 <button
+                  aria-label="Masquer le message"
                   onClick={() => setError("")}
                   className="flex-shrink-0 ml-4 text-red-400 hover:text-red-600 transition-colors"
                 >
@@ -1790,7 +1794,7 @@ const ProfessorsContent = ({
                           )}
                       </div>
                     </div>
-                    <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                    <button aria-label="Plus d'options" className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                       <FontAwesomeIcon
                         icon={faEllipsisVertical}
                         className="sm:w-4 sm:h-4"

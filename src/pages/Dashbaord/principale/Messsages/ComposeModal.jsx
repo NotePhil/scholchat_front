@@ -12,6 +12,7 @@ import { useMessageAttachments, MAX_ATTACHMENTS } from "./messageMedia";
 import { AttachButton, AttachmentPreviewList } from "./MessageAttachments";
 import { ContactAutocomplete } from "./RecipientSelectorModal";
 import { useTranslation } from "../../../../hooks/useTranslation";
+import { useChildClassScope } from "../../../../hooks/useChildClassScope";
 
 
 const ComposeModal = ({
@@ -32,7 +33,13 @@ const ComposeModal = ({
 }) => {
   const { t } = useTranslation();
   const [contacts, setContacts] = useState([]);
-  const [classesList, setClassesList] = useState([]);
+  const [allClasses, setClassesList] = useState([]);
+  // Parent: only the classes of the child selected in the header.
+  const { scopeClasses } = useChildClassScope();
+  const classesList = useMemo(
+    () => scopeClasses(allClasses),
+    [scopeClasses, allClasses],
+  );
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [sending, setSending] = useState(false);

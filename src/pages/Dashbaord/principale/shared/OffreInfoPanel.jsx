@@ -25,7 +25,15 @@ import {
   faWrench,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-const OffreInfoPanel = ({ type, entityId, isDark, onContratChange }) => {
+const OffreInfoPanel = ({
+  type,
+  entityId,
+  isDark,
+  onContratChange,
+  // Bump to silently re-read the contract (e.g. the "Classes x / max" counter
+  // after a class was created, approved or deleted).
+  refreshKey = 0,
+}) => {
   const { isAdmin } = useAuth();
   const [contrat, setContrat] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,9 +60,9 @@ const OffreInfoPanel = ({ type, entityId, isDark, onContratChange }) => {
     ? "bg-gray-900 border-gray-700 text-gray-100"
     : "bg-white border-gray-300 text-gray-900";
   const modalBg = isDark ? "bg-gray-800" : "bg-white";
-  const chargerContrat = async () => {
+  const chargerContrat = async (silent = false) => {
     if (!entityId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError("");
     try {
       const data =
@@ -72,11 +80,11 @@ const OffreInfoPanel = ({ type, entityId, isDark, onContratChange }) => {
         err.response?.data?.code === "CONTRAT_INTROUVABLE"
       ) {
         setContrat(null);
-      } else {
+      } else if (!silent) {
         setError("Impossible de charger les informations de l'offre.");
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
   useEffect(() => {
@@ -84,6 +92,12 @@ const OffreInfoPanel = ({ type, entityId, isDark, onContratChange }) => {
     chargerContrat();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, entityId]);
+
+  // Silent refresh asked by the parent (keeps the panel on screen, no spinner).
+  useEffect(() => {
+    if (refreshKey > 0) chargerContrat(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   // Popup contextuel : affiché une seule fois, au moment où l'utilisateur ouvre CETTE classe/cet
   // établissement précis(e) si son offre est expirée — pas au login (voir Login.jsx / AuthBusiness).

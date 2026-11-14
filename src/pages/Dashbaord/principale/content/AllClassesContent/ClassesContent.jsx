@@ -240,7 +240,7 @@ const ClassesContentMobile = ({
                 />
                 ENTRER DANS LA CLASSE
               </button>
-              <button className="p-4 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-2xl font-black text-xs transition-all active:scale-95">
+              <button aria-label="Plus d'options" className="p-4 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-2xl font-black text-xs transition-all active:scale-95">
                 <FontAwesomeIcon
                   icon={faEllipsisVertical}
                   style={{
@@ -275,6 +275,7 @@ const ClassesContentMobile = ({
         userRole === "ADMINISTRATEUR" ||
         userRole === "ADMIN") && (
         <button
+          aria-label="Créer une classe"
           onClick={onCreateClass}
           className="fixed bottom-28 right-6 w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 z-[30] active:scale-95 transition-transform"
         >
@@ -1069,7 +1070,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
 
                   {user.role === "ADMINISTRATEUR" && (
                     <>
-                      <button className="px-3 py-1 text-sm border rounded hover:bg-gray-50 transition">
+                      <button aria-label="Modifier" className="px-3 py-1 text-sm border rounded hover:bg-gray-50 transition">
                         <FontAwesomeIcon
                           icon={faPenToSquare}
                           style={{
@@ -1155,6 +1156,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Créer une Nouvelle Classe</h2>
               <button
+                aria-label="Fermer"
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowCreateModal(false)}
               >
@@ -1404,6 +1406,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Créer un Établissement</h2>
               <button
+                aria-label="Fermer"
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowEstablishmentModal(false)}
               >
@@ -1532,6 +1535,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Classe Créée avec Succès</h2>
               <button
+                aria-label="Fermer"
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowTokenModal(false)}
               >
@@ -1589,6 +1593,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Paiement Requis</h2>
               <button
+                aria-label="Fermer"
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowPaymentModal(false)}
               >
@@ -1686,6 +1691,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Demande d'Accès</h2>
               <button
+                aria-label="Fermer"
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowAccessModal(false)}
               >
@@ -1773,6 +1779,7 @@ const ClassesContent = ({ onManageClass, setActiveTab }) => {
                   : "Désactiver la Classe"}
               </h2>
               <button
+                aria-label="Fermer"
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setShowRejectModal(false)}
               >

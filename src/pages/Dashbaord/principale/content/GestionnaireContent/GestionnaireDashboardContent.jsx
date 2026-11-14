@@ -466,7 +466,6 @@ const GestionnaireDashboardContent = ({
             value={stats.totalStudents}
             icon={Users}
             color="bg-indigo-600"
-            trend="+12%"
             subtitle="Nombre total d'élèves"
           />
           <StatCard

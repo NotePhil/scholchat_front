@@ -478,7 +478,7 @@ const VirtualClassroomModal = ({
                   />
                 </button>
 
-                <button className="p-3 bg-slate-600 hover:bg-slate-500 rounded-xl text-white transition-all duration-200">
+                <button aria-label="Partager l'écran" className="p-3 bg-slate-600 hover:bg-slate-500 rounded-xl text-white transition-all duration-200">
                   <FontAwesomeIcon
                     icon={faDesktop}
                     style={{
@@ -487,7 +487,7 @@ const VirtualClassroomModal = ({
                   />
                 </button>
 
-                <button className="p-3 bg-slate-600 hover:bg-slate-500 rounded-xl text-white transition-all duration-200">
+                <button aria-label="Paramètres" className="p-3 bg-slate-600 hover:bg-slate-500 rounded-xl text-white transition-all duration-200">
                   <FontAwesomeIcon
                     icon={faGear}
                     style={{
@@ -498,7 +498,7 @@ const VirtualClassroomModal = ({
 
                 <div className="w-px h-8 bg-slate-600"></div>
 
-                <button className="p-3 bg-red-500 hover:bg-red-600 rounded-xl text-white transition-all duration-200">
+                <button aria-label="Quitter l'appel" className="p-3 bg-red-500 hover:bg-red-600 rounded-xl text-white transition-all duration-200">
                   <FontAwesomeIcon
                     icon={faPhoneSlash}
                     style={{
@@ -612,7 +612,7 @@ const VirtualClassroomModal = ({
                         className="w-full bg-slate-700 text-white rounded-xl px-4 py-3 pr-20 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
                       />
                       <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex space-x-1">
-                        <button className="p-1.5 text-slate-400 hover:text-purple-400 transition-colors">
+                        <button aria-label="Émojis" className="p-1.5 text-slate-400 hover:text-purple-400 transition-colors">
                           <FontAwesomeIcon
                             icon={faFaceSmile}
                             style={{
@@ -620,7 +620,7 @@ const VirtualClassroomModal = ({
                             }}
                           />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-purple-400 transition-colors">
+                        <button aria-label="Joindre un fichier" className="p-1.5 text-slate-400 hover:text-purple-400 transition-colors">
                           <FontAwesomeIcon
                             icon={faPaperclip}
                             style={{
@@ -631,6 +631,7 @@ const VirtualClassroomModal = ({
                       </div>
                     </div>
                     <button
+                      aria-label="Envoyer"
                       onClick={sendMessage}
                       className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl text-white transition-all duration-200 transform hover:scale-105"
                     >
@@ -699,7 +700,7 @@ const VirtualClassroomModal = ({
                             }}
                           />
                         )}
-                        <button className="p-1.5 text-slate-400 hover:text-white transition-colors">
+                        <button aria-label="Plus d'options" className="p-1.5 text-slate-400 hover:text-white transition-colors">
                           <FontAwesomeIcon
                             icon={faEllipsisVertical}
                             style={{

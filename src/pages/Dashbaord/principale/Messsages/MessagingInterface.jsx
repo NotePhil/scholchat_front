@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   openingDone,
   openingFailed,
@@ -19,6 +19,7 @@ import { conversationName, sortConversations, toLastMessage } from "./chatUtils"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faComments } from "@fortawesome/free-solid-svg-icons";
 import { useTranslation } from "../../../../hooks/useTranslation";
+import { useChildClassScope } from "../../../../hooks/useChildClassScope";
 
 const PAGE_SIZE = 30;
 const EMPTY_TRASH = { conversations: [], messages: [] };
@@ -79,6 +80,12 @@ const MessagingInterface = ({
   const mountedRef = useMountedRef();
 
   const [conversations, setConversations] = useState([]);
+  // Parent: the list follows the child selected in the header (class conversations of that child only).
+  const { inScope } = useChildClassScope();
+  const visibleConversations = useMemo(
+    () => conversations.filter(inScope),
+    [conversations, inScope],
+  );
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState(null);
   const [activeId, setActiveId] = useState(null);
@@ -810,7 +817,7 @@ const MessagingInterface = ({
           className={`${narrow ? "w-full" : "w-80 lg:w-96 flex-shrink-0 border-r"} h-full min-h-0 ${isDark ? "border-gray-700" : "border-gray-200"}`}
         >
           <ConversationList
-            conversations={conversations}
+            conversations={visibleConversations}
             activeId={activeId}
             onSelect={(c) => openConversation(c)}
             onNew={() => setShowNew(true)}

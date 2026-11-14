@@ -1955,6 +1955,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                       </button>
                       {canCreateEvent && (
                         <button
+                          aria-label="Créer"
                           onClick={() => setShowCreateForm(true)}
                           className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all flex-shrink-0"
                         >
@@ -2004,6 +2005,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                           Filtrer le fil
                         </h3>
                         <button
+                          aria-label="Fermer"
                           onClick={() => setShowFilterPopup(false)}
                           className="p-2 bg-gray-100 dark:bg-gray-700 rounded-xl"
                         >
@@ -2084,6 +2086,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                           )}
                         </div>
                         <button
+                          aria-label="Fermer"
                           onClick={() => {
                             setShowCreateForm(false);
                             setCreateFormError("");
@@ -2668,13 +2671,10 @@ const ActivitiesContent = ({ tabData = null }) => {
                                   localStorage.getItem("userId");
                                 const isCreator =
                                   activity.createurId === currentUserId;
-                                const hasPublicationRight =
-                                  activity.selectedClasses &&
-                                  activity.selectedClasses.some((classId) =>
-                                    userPublicationClassIds.includes(classId),
-                                  );
-                                const canEdit =
-                                  isAdmin || isCreator || hasPublicationRight;
+                                // Same rule the server enforces on PUT/DELETE /evenements (and the
+                                // mobile app): the author or an admin. Sharing a class is not enough —
+                                // a parent or student must never see edit / delete on a teacher's post.
+                                const canEdit = isAdmin || isCreator;
                                 return (
                                   canEdit && (
                                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -3136,6 +3136,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                                       className="w-full bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                                     />
                                     <button
+                                      aria-label="Envoyer"
                                       onClick={() => addComment(activity.id)}
                                       className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-600 transition-colors"
                                     >
@@ -3224,6 +3225,7 @@ const ActivitiesContent = ({ tabData = null }) => {
             {imagePreview.images.length > 1 && (
               <>
                 <button
+                  aria-label="Précédent"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigateImage("prev");
@@ -3233,6 +3235,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                   <FontAwesomeIcon icon={faChevronLeft} className="w-5 h-5" />
                 </button>
                 <button
+                  aria-label="Suivant"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigateImage("next");
@@ -3244,6 +3247,7 @@ const ActivitiesContent = ({ tabData = null }) => {
               </>
             )}
             <button
+              aria-label="Fermer"
               onClick={closeImagePreview}
               className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all z-10"
             >
@@ -3397,6 +3401,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                   Modifier l'événement
                 </h2>
                 <button
+                  aria-label="Fermer"
                   onClick={() => setEditingActivity(null)}
                   className="p-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-2xl transition-all"
                 >
@@ -3609,6 +3614,7 @@ const ActivitiesContent = ({ tabData = null }) => {
                               <ExistingMediaThumb mediaId={media.id} />
                             )}
                             <button
+                              aria-label="Supprimer"
                               onClick={() =>
                                 setEditFormData((p) => ({
                                   ...p,

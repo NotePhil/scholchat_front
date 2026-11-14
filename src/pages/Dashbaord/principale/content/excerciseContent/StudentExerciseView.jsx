@@ -143,9 +143,12 @@ const StudentExerciseView = ({
       for (const question of questions) {
         const rawValue = currentAnswers[question.id];
 
-        // For QCM the stored value is the choice ID; resolve the text for storage
+        // For QCM / VRAI_FAUX the stored value is the choice ID; resolve the text for storage
         let reponseUtilisateur = rawValue;
-        if (question.typeQuestion === "QCM") {
+        if (
+          question.typeQuestion === "QCM" ||
+          question.typeQuestion === "VRAI_FAUX"
+        ) {
           const choice = (question.choixReponses || []).find(
             (c) => c.id === rawValue,
           );
@@ -201,10 +204,11 @@ const StudentExerciseView = ({
       <div
         className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-xl"
         style={{
-          background: "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)",
+          background: "var(--gradient-hero)",
         }}
       >
         <button
+          aria-label="Retour"
           onClick={onBack}
           className="flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-colors"
           style={{
@@ -281,6 +285,7 @@ const StudentExerciseView = ({
       {/* Mobile question nav */}
       <div className="flex items-center justify-between mb-4 sm:hidden">
         <button
+          aria-label="Précédent"
           onClick={() => setCurrentQuestionIndex((i) => Math.max(0, i - 1))}
           disabled={currentQuestionIndex === 0}
           className="p-2 rounded-lg bg-gray-100 disabled:opacity-40"
@@ -291,6 +296,7 @@ const StudentExerciseView = ({
           Question {currentQuestionIndex + 1} / {questions.length}
         </span>
         <button
+          aria-label="Suivant"
           onClick={() =>
             setCurrentQuestionIndex((i) =>
               Math.min(questions.length - 1, i + 1),
@@ -467,6 +473,7 @@ const StudentExerciseView = ({
       {/* Submit — mobile */}
       <div className="sm:hidden mt-4 flex items-center justify-between gap-2">
         <button
+          aria-label="Précédent"
           onClick={() => setCurrentQuestionIndex((i) => Math.max(0, i - 1))}
           disabled={currentQuestionIndex === 0}
           className="p-2 rounded-lg bg-gray-100 disabled:opacity-40"
@@ -483,6 +490,7 @@ const StudentExerciseView = ({
           </button>
         )}
         <button
+          aria-label="Suivant"
           onClick={() =>
             setCurrentQuestionIndex((i) =>
               Math.min(questions.length - 1, i + 1),

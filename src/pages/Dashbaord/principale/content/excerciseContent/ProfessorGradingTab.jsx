@@ -4,6 +4,7 @@ import {
   repondreService,
   participationExerciseService,
 } from "../../../../../services/exerciseService";
+import { answerDisplayText, expectedAnswerText } from "../../../../../utils/answerDisplay";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faAward,
@@ -448,7 +449,7 @@ const ProfessorGradingTab = ({ exerciseId, exerciseProgrammerId }) => {
                                   Reponse :
                                 </span>{" "}
                                 <span className="text-gray-900">
-                                  {answer.reponseUtilisateur}
+                                  {answerDisplayText(question, answer.reponseUtilisateur)}
                                 </span>
                               </p>
                               {correctChoice && (
@@ -459,12 +460,12 @@ const ProfessorGradingTab = ({ exerciseId, exerciseProgrammerId }) => {
                                   {correctChoice.texte}
                                 </p>
                               )}
-                              {!correctChoice && question.reponse && (
+                              {!correctChoice && expectedAnswerText(question) && (
                                 <p className="text-sm text-green-700">
                                   <span className="font-medium">
                                     Reponse attendue :
                                   </span>{" "}
-                                  {question.reponse}
+                                  {expectedAnswerText(question)}
                                 </p>
                               )}
 

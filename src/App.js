@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Provider, useSelector } from "react-redux";
+import { ConfigProvider, theme as antdTheme } from "antd";
 import { store } from "./store/store";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { Layout } from "./components/common/Layout";
@@ -42,6 +43,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "./components/common/PageTransition";
 import "./CSS/themes.css";
+import "./CSS/dark-compat.css";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -441,6 +443,35 @@ const ThemeClassSync = () => {
   return null;
 };
 
+// antd had no ConfigProvider at all, so its components (Modal, Table, Select,
+// DatePicker, Card, Tabs...) stayed white inside the dark dashboard. In dark
+// mode they now use antd's dark algorithm, tinted to the slate surfaces of
+// themes.css / the mobile app. Light mode passes no theme, i.e. antd defaults
+// exactly as before. Same dashboard-only scope as ThemeClassSync below.
+const ANTD_DARK_THEME = {
+  algorithm: antdTheme.darkAlgorithm,
+  token: {
+    colorBgLayout: "#0f172a",
+    colorBgContainer: "#1e293b",
+    colorBgElevated: "#1e293b",
+    colorBorder: "#475569",
+    colorBorderSecondary: "#334155",
+  },
+};
+
+const DashboardAntdTheme = ({ children }) => {
+  const isDark = useSelector((state) => state.ui.isDark);
+  const location = useLocation();
+  const dark =
+    location.pathname.startsWith("/schoolchat/Principal") && !!isDark;
+
+  return (
+    <ConfigProvider theme={dark ? ANTD_DARK_THEME : undefined}>
+      {children}
+    </ConfigProvider>
+  );
+};
+
 function App() {
   const [theme, setTheme] = useState("default");
 
@@ -450,7 +481,9 @@ function App() {
         <AuthProvider>
           <ThemeClassSync />
           <ScrollToTop />
-          <AnimatedRoutes theme={theme} setTheme={setTheme} />
+          <DashboardAntdTheme>
+            <AnimatedRoutes theme={theme} setTheme={setTheme} />
+          </DashboardAntdTheme>
           <PWAInstallPrompt />
         </AuthProvider>
       </BrowserRouter>

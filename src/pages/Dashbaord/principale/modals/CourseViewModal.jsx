@@ -278,7 +278,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                 />
               </div>
               <div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                <h2 className="text-2xl font-bold text-slate-900">
                   Détails du Cours
                 </h2>
                 <p className="text-slate-600 mt-1">{course?.titre}</p>
@@ -288,6 +288,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
             <div className="flex items-center space-x-4">
               {getStatusBadge(course?.etat)}
               <button
+                aria-label="Fermer"
                 onClick={onClose}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
               >
@@ -850,6 +851,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                     {/* View Mode Toggle */}
                     <div className="flex bg-slate-100 rounded-lg p-1">
                       <button
+                        aria-label="Affichage en grille"
                         onClick={() => setDocumentViewMode("grid")}
                         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${documentViewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
                       >
@@ -859,6 +861,7 @@ const CourseViewModal = ({ classe, onClose, onSuccess, onEdit, theme }) => {
                         />
                       </button>
                       <button
+                        aria-label="Affichage en liste"
                         onClick={() => setDocumentViewMode("list")}
                         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${documentViewMode === "list" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
                       >

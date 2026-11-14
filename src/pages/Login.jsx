@@ -281,7 +281,7 @@ export const Login = ({ theme }) => {
               Créer un compte
             </Link>
           </p>
-          <p className="mt-2 text-center text-xs text-slate-400">
+          <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
             Première connexion ? Utilisez le mot de passe temporaire reçu par e-mail : il vous sera demandé de le changer.
           </p>
           {/* Activation by e-mailed code (lien d'activation expiré / introuvable) */}
@@ -293,7 +293,7 @@ export const Login = ({ theme }) => {
             >
               <FontAwesomeIcon icon={faShieldHalved} /> Vérifier mon compte ?
             </Button>
-            <p className="mt-2 text-xs text-slate-400">Compte pas encore activé ? Recevez un code de vérification par e-mail.</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Compte pas encore activé ? Recevez un code de vérification par e-mail.</p>
           </div>
         </motion.div>
       </AuthShell>

@@ -185,7 +185,7 @@ const ManageEstablishmentList = ({
               />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent leading-tight">
+              <h1 className="text-xl sm:text-3xl font-bold text-slate-900 leading-tight">
                 Gestion des Établissements
               </h1>
               <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
@@ -215,6 +215,7 @@ const ManageEstablishmentList = ({
                 </div>
               </div>
               <button
+                aria-label="Masquer le message"
                 onClick={() => setSuccessMessage("")}
                 className="text-green-400 hover:text-green-600"
               >
@@ -244,6 +245,7 @@ const ManageEstablishmentList = ({
                 </div>
               </div>
               <button
+                aria-label="Masquer le message"
                 onClick={() => setError("")}
                 className="text-red-400 hover:text-red-600"
               >
@@ -607,6 +609,7 @@ const ManageEstablishmentList = ({
 
                     {/* Edit Button */}
                     <button
+                      aria-label="Modifier"
                       onClick={() =>
                         onEditEstablishment &&
                         onEditEstablishment(establishment)
@@ -659,6 +662,7 @@ const ManageEstablishmentList = ({
 
                   <div className="flex items-center gap-1 sm:gap-2 order-1 sm:order-2">
                     <button
+                      aria-label="Précédent"
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
                       className="p-1 sm:p-2 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -704,6 +708,7 @@ const ManageEstablishmentList = ({
                     })}
 
                     <button
+                      aria-label="Suivant"
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
                       className="p-1 sm:p-2 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

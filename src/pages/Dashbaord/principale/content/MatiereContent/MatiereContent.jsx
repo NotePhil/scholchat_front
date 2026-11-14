@@ -307,6 +307,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
             )}
             <span className="flex-1">{message.text}</span>
             <button
+              aria-label="Masquer le message"
               onClick={() =>
                 setMessage({
                   text: "",
@@ -567,6 +568,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
               </span>
               <div className="flex items-center gap-1">
                 <button
+                  aria-label="Précédent"
                   onClick={handlePrevious}
                   disabled={currentPage === 1}
                   className={`p-1.5 rounded-lg border ${borderClass} ${textClass} hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
@@ -609,6 +611,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                     ),
                   )}
                 <button
+                  aria-label="Suivant"
                   onClick={handleNext}
                   disabled={currentPage === totalPages}
                   className={`p-1.5 rounded-lg border ${borderClass} ${textClass} hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
@@ -633,6 +636,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   {t("subjects.modals.create")}
                 </h2>
                 <button
+                  aria-label="Fermer"
                   onClick={closeModals}
                   className={`p-2 rounded-lg ${textSecondaryClass} hover:${isDark ? "bg-gray-700" : "bg-gray-100"} transition-colors`}
                 >
@@ -723,6 +727,7 @@ const MatiereContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                   Modifier la Matière
                 </h2>
                 <button
+                  aria-label="Fermer"
                   onClick={closeModals}
                   className={`p-2 rounded-lg ${textSecondaryClass} hover:${isDark ? "bg-gray-700" : "bg-gray-100"} transition-colors`}
                 >

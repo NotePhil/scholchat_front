@@ -161,10 +161,11 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
         <div
           className="flex items-center gap-3 mb-6 px-6 py-5 rounded-2xl"
           style={{
-            background: "linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)",
+            background: "var(--gradient-hero)",
           }}
         >
           <button
+            aria-label="Retour"
             type="button"
             onClick={onCancel}
             style={{
@@ -491,8 +492,7 @@ const CreateExerciseForm = ({ onSubmit, onCancel, onError, onSuccess }) => {
             </div>
             <ul className="text-xs text-blue-800 space-y-0.5 list-none pl-0 m-0">
               <li>
-                ① Choisissez le <strong>niveau</strong> correspondant à l'enum
-                backend (Collège, Lycée…).
+                ① Choisissez le <strong>niveau</strong> de l'exercice (Collège, Lycée…).
               </li>
               <li>
                 ② Dans le constructeur : sélectionnez le <strong>type</strong>,

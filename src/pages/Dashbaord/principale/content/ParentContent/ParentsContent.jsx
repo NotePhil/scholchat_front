@@ -70,6 +70,19 @@ const ParentsContent = () => {
       const safeParents = Array.isArray(rawParents) ? rawParents : [];
       const enriched = await Promise.all(
         safeParents.map(async (p) => {
+          // GET /parents/professeur/{id} returns `enfants` = one item per child
+          // and class of the professor ({id, nom, prenom, classeId, classeNom,
+          // suiviId}); kept apart because `enfants` is overwritten below.
+          if (Array.isArray(p.enfants)) {
+            p.enfantsProfesseur = p.enfants;
+            // A professor may not read another user's classes / children (403): the scoped list
+            // already says which of his classes the parent is attached to.
+            const seen = new Set();
+            p.classes = p.enfants
+              .filter((e) => e.classeId && !seen.has(e.classeId) && seen.add(e.classeId))
+              .map((e) => ({ id: e.classeId, nom: e.classeNom || "Classe" }));
+            return p;
+          }
           try {
             p.classes = await accederService.obtenirClassesAccessibles(p.id);
           } catch {
@@ -205,7 +218,7 @@ const ParentsContent = () => {
               />
             </div>
             <div>
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              <h1 className="text-xl sm:text-3xl font-bold text-slate-900">
                 {t("parents.title")}
               </h1>
               <p className="text-slate-600 mt-1 text-xs sm:text-sm">
@@ -237,6 +250,7 @@ const ParentsContent = () => {
                   </p>
                 </div>
                 <button
+                  aria-label="Masquer le message"
                   onClick={() => setError("")}
                   className="flex-shrink-0 ml-4 text-red-400 hover:text-red-600 transition-colors"
                 >
@@ -519,7 +533,7 @@ const ParentsContent = () => {
                         </span>
                       </div>
                     </div>
-                    <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                    <button aria-label="Voir le parent" title="Voir le parent" onClick={() => handleViewUser(parent)} className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                       <FontAwesomeIcon
                         icon={faEllipsisVertical}
                         className="sm:w-4 sm:h-4"
@@ -963,6 +977,7 @@ const ParentsContent = () => {
           user={currentUser}
           onClose={() => setIsViewModalOpen(false)}
           onSuccess={handleSuccess}
+          onFollowRemoved={loadData}
           userType="parent"
         />
       )}

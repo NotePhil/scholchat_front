@@ -470,6 +470,7 @@ const MobileBottomNav = ({
                   </p>
                 </div>
                 <button
+                  aria-label="Fermer"
                   onClick={() => setShowQuickActions(false)}
                   className="p-3 bg-gray-100 dark:bg-slate-800 rounded-2xl transition-transform hover:rotate-90"
                 >

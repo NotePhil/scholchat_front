@@ -523,7 +523,7 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
       <div
         className="mb-4 rounded-xl overflow-hidden"
         style={{
-          background: "linear-gradient(135deg, #1d3557 0%, #457b9d 100%)",
+          background: "var(--gradient-hero)",
         }}
       >
         <div className="px-4 py-4 text-white">
@@ -583,6 +583,7 @@ const StudentClassList = ({ isParentView = false, tabData = null }) => {
               </button>
               )}
               <button
+                aria-label="Actualiser"
                 onClick={handleRefresh}
                 disabled={refreshing}
                 className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors border border-white/30"

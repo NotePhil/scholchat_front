@@ -118,18 +118,21 @@ const UserTable = ({ users, loading, onEdit, onDelete, onView }) => {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
+                  aria-label="Voir"
                   onClick={() => onView(user)}
                   className="text-blue-600 hover:text-blue-900 mr-3"
                 >
                   <FontAwesomeIcon icon={faEye} className="w-5 h-5" />
                 </button>
                 <button
+                  aria-label="Modifier"
                   onClick={() => onEdit(user)}
                   className="text-yellow-600 hover:text-yellow-900 mr-3"
                 >
                   <FontAwesomeIcon icon={faPenToSquare} className="w-5 h-5" />
                 </button>
                 <button
+                  aria-label="Supprimer"
                   onClick={() => onDelete(user)}
                   className="text-red-600 hover:text-red-900"
                 >
