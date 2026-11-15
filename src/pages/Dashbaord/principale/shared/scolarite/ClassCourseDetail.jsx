@@ -19,6 +19,7 @@ import ChangeCourseModal from "./ChangeCourseModal";
 import scolariteService from "../../../../../services/scolariteService";
 import { exerciseProgrammerService } from "../../../../../services/exerciseProgrammerService";
 import { useOpenTab } from "../../../../../hooks/useOpenTab";
+import { parseServerDate } from "../../../../../utils/dateUtils";
 import {
   STATUS_META,
   TYPE_META,
@@ -188,6 +189,7 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
         exerciseName={prog.titre}
         exerciseDescription={prog.description}
         existingParticipation={prog.myParticipation}
+        deadline={prog.dateFin}
         onBack={back}
         onComplete={back}
       />
@@ -215,11 +217,15 @@ const ClassCourseDetail = ({ classe, course, mode = "learner", eleves = [], onBa
     if (!viewer.canAnswer) {
       return <span className="text-xs italic text-gray-500">À faire par {viewer.childName || "l'élève"}</span>;
     }
+    // Deadline passed: the server refuses to start or hand in the exercise
+    const end = parseServerDate(e.dateFin);
+    if (e.statut === "EN_RETARD" || (end && end.getTime() < Date.now())) {
+      return <span className="text-xs italic text-gray-500">Date limite dépassée</span>;
+    }
     return (
       <Button
         size="small"
         type="primary"
-        danger={e.statut === "EN_RETARD"}
         icon={<FontAwesomeIcon icon={faCirclePlay} />}
         onClick={() => openDoing(e, "do")}
       >

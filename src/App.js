@@ -2,6 +2,10 @@ import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Provider, useSelector } from "react-redux";
 import { ConfigProvider, theme as antdTheme } from "antd";
+import frFR from "antd/locale/fr_FR";
+import enUS from "antd/locale/en_US";
+import dayjs from "dayjs";
+import "dayjs/locale/fr";
 import { store } from "./store/store";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { Layout } from "./components/common/Layout";
@@ -459,14 +463,28 @@ const ANTD_DARK_THEME = {
   },
 };
 
+//
+// The locale, unlike the theme, applies everywhere and in both modes: antd's
+// built-in texts (calendar days and months, "Maintenant", "OK", empty states,
+// pagination...) follow the app language instead of staying in English.
 const DashboardAntdTheme = ({ children }) => {
   const isDark = useSelector((state) => state.ui.isDark);
+  const language = useSelector((state) => state.ui?.currentLanguage || "fr");
   const location = useLocation();
   const dark =
     location.pathname.startsWith("/schoolchat/Principal") && !!isDark;
+  const french = language !== "en";
+
+  // antd's pickers run on dayjs: month / day names and the first day of the week.
+  useEffect(() => {
+    dayjs.locale(french ? "fr" : "en");
+  }, [french]);
 
   return (
-    <ConfigProvider theme={dark ? ANTD_DARK_THEME : undefined}>
+    <ConfigProvider
+      locale={french ? frFR : enUS}
+      theme={dark ? ANTD_DARK_THEME : undefined}
+    >
       {children}
     </ConfigProvider>
   );

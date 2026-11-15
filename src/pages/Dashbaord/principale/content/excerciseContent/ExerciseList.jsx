@@ -17,6 +17,7 @@ import {
 } from "antd";
 import { participationExerciseService } from "../../../../../services/exerciseService";
 import { NIVEAUX } from "../../../../../constants/niveaux";
+import { parseServerDate } from "../../../../../utils/dateUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
@@ -612,6 +613,9 @@ const ExerciseList = ({
               }) => {
                 const questionCount = exercise.nombreQuestions ?? 0;
                 const isActive = exercise.etat === "ACTIF";
+                const deadline = parseServerDate(exercise.dateFinExoEffectif);
+                const deadlinePassed =
+                  !!deadline && deadline.getTime() < Date.now();
                 // Use exerciseProgrammerId as the card key (unique per programmer record)
                 const cardKey =
                   exercise.exerciseProgrammerId || exercise.exerciseId;
@@ -809,8 +813,14 @@ const ExerciseList = ({
                             ? `${questionCount} question${questionCount > 1 ? "s" : ""}`
                             : "Questions"}
                         </span>
+                        {/* Deadline passed: it can no longer be started or handed in */}
+                        {!isSubmitted && deadlinePassed && (
+                          <span className="text-xs text-gray-500 italic">
+                            Date limite dépassée
+                          </span>
+                        )}
                         {/* Only show action button for non-submitted exercises */}
-                        {!isSubmitted && (
+                        {!isSubmitted && !deadlinePassed && (
                           <Button
                             type="primary"
                             size="small"

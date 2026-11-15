@@ -916,6 +916,8 @@ const ExerciseProgrammerContent = () => {
                         width: "100%",
                       }}
                       showTime
+                      inputReadOnly
+                      classNames={{ popup: { root: "sc-datetime-popup" } }}
                       format="DD/MM/YYYY HH:mm"
                       size="large"
                     />
@@ -939,6 +941,8 @@ const ExerciseProgrammerContent = () => {
                         width: "100%",
                       }}
                       showTime
+                      inputReadOnly
+                      classNames={{ popup: { root: "sc-datetime-popup" } }}
                       format="DD/MM/YYYY HH:mm"
                       size="large"
                     />
@@ -972,6 +976,8 @@ const ExerciseProgrammerContent = () => {
                         width: "100%",
                       }}
                       showTime
+                      inputReadOnly
+                      classNames={{ popup: { root: "sc-datetime-popup" } }}
                       format="DD/MM/YYYY HH:mm"
                       size="large"
                     />

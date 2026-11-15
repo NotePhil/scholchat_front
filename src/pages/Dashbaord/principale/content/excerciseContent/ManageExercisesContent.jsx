@@ -856,6 +856,7 @@ const ManageExercisesContent = ({ onBack, setActiveTab, tabData }) => {
               existingParticipation={
                 selectedExerciseData.myParticipation || null
               }
+              deadline={selectedExerciseData.dateFinExoEffectif}
               onBack={handleBackToList}
               onComplete={() => {
                 fetchExercises();

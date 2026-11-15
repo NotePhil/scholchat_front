@@ -11,6 +11,11 @@ import {
   selectParentChildForClasses,
   useMountedRef,
 } from "../../../../../utils/notificationNavigation";
+import {
+  formatLocalDate,
+  formatLocalTime,
+  parseServerDate,
+} from "../../../../../utils/dateUtils";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -58,16 +63,21 @@ const getViewer = () => {
 const getAuthHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("accessToken") || localStorage.getItem("authToken")}`,
 });
-const fmtDate = (d) =>
-  d
-    ? new Date(d).toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : "—";
-const isOverdue = (dateFinStr) =>
-  dateFinStr && new Date(dateFinStr) < new Date();
+/** "02 nov. 2026 à 15:00" (local time). */
+const fmtDate = (d) => {
+  const day = formatLocalDate(d, "fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  if (!day) return "—";
+  return `${day} à ${formatLocalTime(d)}`;
+};
+/** True once the deadline has passed: the server then refuses the copy. */
+const isOverdue = (dateFinStr) => {
+  const end = parseServerDate(dateFinStr);
+  return !!end && end.getTime() < Date.now();
+};
 
 // ── status config ──────────────────────────────────────────────────────────────
 
@@ -334,6 +344,14 @@ const StudentDevoirsContent = ({ tabData = null }) => {
         setResultDevoir(null);
         return;
       }
+      if (isOverdue(prog.dateFinExoEffectif)) {
+        openingInfo(
+          "La date limite de ce devoir est dépassée : il ne peut plus être rendu.",
+        );
+        setSelectedDevoir(null);
+        setResultDevoir(null);
+        return;
+      }
       if (tabData.view === "result") {
         openingInfo("Ce devoir n'a pas encore été rendu.");
       } else {
@@ -345,6 +363,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
         exerciseProgrammerId: prog.id,
         nom: prog.nom,
         description: prog.description,
+        dateFinExoEffectif: prog.dateFinExoEffectif,
         myParticipation,
       });
     })();
@@ -375,6 +394,7 @@ const StudentDevoirsContent = ({ tabData = null }) => {
         exerciseName={selectedDevoir.nom}
         exerciseDescription={selectedDevoir.description}
         existingParticipation={selectedDevoir.myParticipation}
+        deadline={selectedDevoir.dateFinExoEffectif}
         onBack={() => {
           setSelectedDevoir(null);
           load();
@@ -637,8 +657,15 @@ const StudentDevoirsContent = ({ tabData = null }) => {
                         </span>
                       )}
 
-                      {/* Only show button if not yet submitted */}
-                      {!isSubmitted && viewer.canAnswer && (
+                      {/* Deadline passed: it can no longer be started or handed in */}
+                      {!isSubmitted && viewer.canAnswer && overdue && (
+                        <span className="text-xs text-gray-500 italic">
+                          Date limite dépassée
+                        </span>
+                      )}
+
+                      {/* Only show button if not yet submitted and still open */}
+                      {!isSubmitted && viewer.canAnswer && !overdue && (
                         <button
                           onClick={() =>
                             setSelectedDevoir({
@@ -646,10 +673,11 @@ const StudentDevoirsContent = ({ tabData = null }) => {
                               exerciseProgrammerId: ep.id,
                               nom: ep.nom,
                               description: ep.description,
+                              dateFinExoEffectif: ep.dateFinExoEffectif,
                               myParticipation: ep.myParticipation,
                             })
                           }
-                          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${overdue ? "bg-red-600 hover:bg-red-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+                          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white"
                         >
                           <FontAwesomeIcon icon={faCirclePlay} />
                           {viewer.isParentView

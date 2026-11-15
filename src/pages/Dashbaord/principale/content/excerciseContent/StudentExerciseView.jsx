@@ -4,8 +4,11 @@ import { applyAuthInterceptors } from "../../../../../utils/axiosConfig";
 import QuestionMediaList from "../../../../../components/common/QuestionMediaList";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { parseServerDate } from "../../../../../utils/dateUtils";
 import {
+  faArrowDown,
   faArrowLeft,
+  faArrowUp,
   faChevronLeft,
   faChevronRight,
   faCircleExclamation,
@@ -44,6 +47,64 @@ const startParticipation = (payload) =>
 const updateParticipation = (payload) =>
   api.put("/participations-exercises", payload).then((r) => r.data);
 
+// ─── Ordering (CLASSEMENT) / matching (ASSOCIATION) helpers ──────────────────
+
+/** Separator of an ordering answer — same format as the mobile app and the corrections. */
+const ORDER_SEPARATOR = " \u2192 ";
+const PAIR_SPLIT_RE = /\s*(?:\u2192|\u21d2|->|=>)\s*/;
+const DEADLINE_CODE = "DATE_LIMITE_DEPASSEE";
+const DEADLINE_MESSAGE =
+  "La date limite de cet exercice est dépassée : il ne peut plus être rendu.";
+
+/** Non-empty choices of a question, in the order set by the professor. */
+const orderedChoices = (question) =>
+  [...(question?.choixReponses || [])]
+    .sort((a, b) => (a.ordreAffichage || 0) - (b.ordreAffichage || 0))
+    .filter((c) => c.texte && String(c.texte).trim());
+
+/** Shuffled copy; with 2+ items the result never keeps the original order. */
+const shuffleDifferent = (items) => {
+  const out = [...items];
+  if (out.length < 2) return out;
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  if (out.every((item, i) => item === items[i])) out.push(out.shift());
+  return out;
+};
+
+const orderingAnswer = (items) =>
+  items.map((c) => String(c.texte).trim()).join(ORDER_SEPARATOR);
+
+/**
+ * Pairs of a matching question ("France → Paris" per choice), or null when a
+ * choice is not written as a pair (the student then answers in free text).
+ */
+const parsePairs = (question) => {
+  const choices = orderedChoices(question);
+  if (choices.length === 0) return null;
+  const pairs = [];
+  for (const c of choices) {
+    const parts = String(c.texte).split(PAIR_SPLIT_RE);
+    if (parts.length !== 2 || !parts[0].trim() || !parts[1].trim()) return null;
+    pairs.push({ left: parts[0].trim(), right: parts[1].trim() });
+  }
+  return pairs;
+};
+
+const associationAnswer = (lefts, picks) =>
+  lefts.every((_, i) => picks[i])
+    ? lefts.map((left, i) => `${left}${ORDER_SEPARATOR}${picks[i]}`).join(", ")
+    : undefined;
+
+/** Server message when the deadline has passed, else null. */
+const deadlineErrorMessage = (err) => {
+  const data = err?.response?.data;
+  if (data?.code !== DEADLINE_CODE) return null;
+  return data.message || DEADLINE_MESSAGE;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const StudentExerciseView = ({
@@ -58,6 +119,8 @@ const StudentExerciseView = ({
   learnerId,
   // whose copy — defaults to the signed-in user; a parent passes their minor child
   learnerName,
+  deadline,
+  // dateFinExoEffectif of the programmed exercise, when the caller knows it
   onBack,
   onComplete,
 }) => {
@@ -68,6 +131,10 @@ const StudentExerciseView = ({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // CLASSEMENT: { [questionId]: choices in the student's current order }
+  const [orderings, setOrderings] = useState({});
+  // ASSOCIATION: { [questionId]: { lefts, rights (shuffled), picks: { index: right } } }
+  const [associations, setAssociations] = useState({});
 
   // Guard: load only once per exerciseId
   const loadedRef = useRef(null);
@@ -78,8 +145,32 @@ const StudentExerciseView = ({
       setLoading(true);
       setError("");
       try {
-        const qs = await fetchQuestions(exerciseId);
-        setQuestions(qs || []);
+        const qs = (await fetchQuestions(exerciseId)) || [];
+        // Ordering questions: shuffled once, and that first order already is an answer.
+        const initialOrders = {};
+        const initialAssociations = {};
+        const initialAnswers = {};
+        qs.forEach((q) => {
+          if (q.typeQuestion === "CLASSEMENT") {
+            const items = orderedChoices(q);
+            if (items.length === 0) return;
+            const shuffled = shuffleDifferent(items);
+            initialOrders[q.id] = shuffled;
+            initialAnswers[q.id] = orderingAnswer(shuffled);
+          } else if (q.typeQuestion === "ASSOCIATION") {
+            const pairs = parsePairs(q);
+            if (!pairs) return;
+            initialAssociations[q.id] = {
+              lefts: pairs.map((p) => p.left),
+              rights: shuffleDifferent(pairs.map((p) => p.right)),
+              picks: {},
+            };
+          }
+        });
+        setOrderings(initialOrders);
+        setAssociations(initialAssociations);
+        setCurrentAnswers(initialAnswers);
+        setQuestions(qs);
       } catch (err) {
         setError(
           "Impossible de charger les questions. Vérifiez votre connexion.",
@@ -102,15 +193,20 @@ const StudentExerciseView = ({
       exerciseProgrammerId,
       etatSoumission: "EN_COURS",
     };
+    // The server refuses to start an exercise whose deadline has passed: say so.
+    const onStartError = (err) => {
+      const message = deadlineErrorMessage(err);
+      if (message) setError(message);
+    };
     if (existingParticipation) {
       // Participation already exists — use PUT to keep it as EN_COURS
-      updateParticipation(payload).catch(() => {});
+      updateParticipation(payload).catch(onStartError);
     } else {
       // First time opening — create with POST
       startParticipation({
         ...payload,
         dateDebut: new Date().toISOString(),
-      }).catch(() => {});
+      }).catch(onStartError);
     }
   }, [exerciseProgrammerId, loading, questions.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -119,6 +215,25 @@ const StudentExerciseView = ({
       ...prev,
       [questionId]: value,
     }));
+  };
+  const moveOrderingItem = (questionId, index, dir) => {
+    const items = orderings[questionId] || [];
+    const target = index + dir;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    setOrderings((prev) => ({ ...prev, [questionId]: next }));
+    handleAnswerChange(questionId, orderingAnswer(next));
+  };
+  const pickAssociation = (questionId, index, right) => {
+    const current = associations[questionId];
+    if (!current) return;
+    const picks = { ...current.picks, [index]: right };
+    setAssociations((prev) => ({
+      ...prev,
+      [questionId]: { ...current, picks },
+    }));
+    handleAnswerChange(questionId, associationAnswer(current.lefts, picks));
   };
   const answeredCount = questions.filter(
     (q) => currentAnswers[q.id] !== undefined,
@@ -133,6 +248,12 @@ const StudentExerciseView = ({
       setError(
         `Veuillez répondre à toutes les questions (${unanswered.length} sans réponse).`,
       );
+      return;
+    }
+    // Past the deadline: nothing is sent (the server would refuse the copy anyway).
+    const deadlineDate = parseServerDate(deadline);
+    if (deadlineDate && deadlineDate.getTime() < Date.now()) {
+      setError(DEADLINE_MESSAGE);
       return;
     }
     setSubmitting(true);
@@ -178,7 +299,10 @@ const StudentExerciseView = ({
       else if (onBack) onBack();
     } catch (err) {
       console.error("[StudentExerciseView] submit error:", err);
-      setError("Erreur lors de la soumission. Veuillez réessayer.");
+      setError(
+        deadlineErrorMessage(err) ||
+          "Erreur lors de la soumission. Veuillez réessayer.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -450,6 +574,107 @@ const StudentExerciseView = ({
                   />
                 </div>
               )}
+
+              {/* ── CLASSEMENT ── */}
+              {question.typeQuestion === "CLASSEMENT" &&
+                orderings[question.id] && (
+                <div className="ml-9">
+                  <p className="text-xs text-gray-500 mb-2">
+                    Remettez les éléments dans le bon ordre à l'aide des
+                    flèches.
+                  </p>
+                  <ol className="space-y-1.5 list-none p-0 m-0">
+                    {(orderings[question.id] || []).map((item, pos, list) => (
+                      <li
+                        key={item.id ?? `${pos}-${item.texte}`}
+                        className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 bg-white"
+                      >
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">
+                          {pos + 1}
+                        </span>
+                        <span className="flex-1 min-w-0 text-sm text-gray-700 break-words">
+                          {item.texte}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="Monter"
+                          title="Monter"
+                          onClick={() =>
+                            moveOrderingItem(question.id, pos, -1)
+                          }
+                          disabled={pos === 0}
+                          className="flex-shrink-0 w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Descendre"
+                          title="Descendre"
+                          onClick={() => moveOrderingItem(question.id, pos, 1)}
+                          disabled={pos === list.length - 1}
+                          className="flex-shrink-0 w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <FontAwesomeIcon
+                            icon={faArrowDown}
+                            className="w-4 h-4"
+                          />
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* ── ASSOCIATION ── */}
+              {/* (free text when the items cannot be laid out) */}
+              {(question.typeQuestion === "ASSOCIATION" ||
+                (question.typeQuestion === "CLASSEMENT" &&
+                  !orderings[question.id])) &&
+                (associations[question.id] ? (
+                  <div className="ml-9 space-y-2">
+                    <p className="text-xs text-gray-500">
+                      Associez chaque élément à sa correspondance.
+                    </p>
+                    {associations[question.id].lefts.map((left, i) => (
+                      <div
+                        key={`${i}-${left}`}
+                        className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2"
+                      >
+                        <span className="sm:w-2/5 text-sm font-medium text-gray-700 break-words">
+                          {left}
+                        </span>
+                        <select
+                          aria-label={`Correspondance de ${left}`}
+                          value={associations[question.id].picks[i] || ""}
+                          onChange={(e) =>
+                            pickAssociation(question.id, i, e.target.value)
+                          }
+                          className="flex-1 min-w-0 px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                          <option value="">Choisir…</option>
+                          {associations[question.id].rights.map((right, j) => (
+                            <option key={`${j}-${right}`} value={right}>
+                              {right}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="ml-9">
+                    <textarea
+                      value={currentAnswers[question.id] || ""}
+                      onChange={(e) =>
+                        handleAnswerChange(question.id, e.target.value)
+                      }
+                      placeholder="Votre réponse…"
+                      rows={4}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
+                    />
+                  </div>
+                ))}
 
               {/* ── TROU ── */}
               {question.typeQuestion === "TROU" && (

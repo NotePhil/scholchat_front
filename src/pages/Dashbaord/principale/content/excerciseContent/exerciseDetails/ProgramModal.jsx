@@ -117,6 +117,8 @@ const ProgramModal = ({
                 width: "100%",
               }}
               showTime
+              inputReadOnly
+              classNames={{ popup: { root: "sc-datetime-popup" } }}
               format="DD/MM/YYYY HH:mm"
               placeholder="Date prévue"
             />
@@ -136,6 +138,8 @@ const ProgramModal = ({
                 width: "100%",
               }}
               showTime
+              inputReadOnly
+              classNames={{ popup: { root: "sc-datetime-popup" } }}
               format="DD/MM/YYYY HH:mm"
               placeholder="Début"
             />
@@ -163,6 +167,8 @@ const ProgramModal = ({
                 width: "100%",
               }}
               showTime
+              inputReadOnly
+              classNames={{ popup: { root: "sc-datetime-popup" } }}
               format="DD/MM/YYYY HH:mm"
               placeholder="Fin"
             />
