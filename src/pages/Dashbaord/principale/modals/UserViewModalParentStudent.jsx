@@ -19,6 +19,7 @@ import {
   faCalendarDays,
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../utils/faIconAdapter";
+import { classEtatLabel } from "../../../../services/ClassService";
 const Calendar = asIconComponent(faCalendarDays);
 const Mail = asIconComponent(faEnvelope);
 const MapPin = asIconComponent(faLocationDot);
@@ -560,7 +561,7 @@ const UserViewModalParentStudent = ({ user, onClose, onFollowRemoved }) => {
                             <span
                               className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${cls.etat === "ACTIF" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
                             >
-                              {cls.etat}
+                              {classEtatLabel(cls.etat)}
                             </span>
                           )}
                         </div>

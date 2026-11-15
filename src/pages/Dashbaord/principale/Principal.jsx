@@ -1336,8 +1336,10 @@ const Principal = () => {
               overflow: "visible",
             }}
           >
-            {/* Install PWA button — always visible, no popup */}
-            <InstallButton />
+            {/* Install PWA button — in the header on wide screens, in the profile menu on phones */}
+            <span className="header-secondary">
+              <InstallButton />
+            </span>
 
             {/* Refresh button - hidden on very small screens */}
             <button
@@ -1359,15 +1361,17 @@ const Principal = () => {
             </button>
 
             {/* Contextual help for the current page (texts: src/help/helpContent.js) */}
-            <HelpButton
-              role={helpRoleFromSession(normalizedUserRole)}
-              page={helpPageFromTab(
-                isTabAllowedForRole(activeTab, normalizedUserRole)
-                  ? activeTab
-                  : "dashboard",
-              )}
-              isDark={isDark}
-            />
+            <span className="header-secondary">
+              <HelpButton
+                role={helpRoleFromSession(normalizedUserRole)}
+                page={helpPageFromTab(
+                  isTabAllowedForRole(activeTab, normalizedUserRole)
+                    ? activeTab
+                    : "dashboard",
+                )}
+                isDark={isDark}
+              />
+            </span>
 
             <NotificationIcon />
 
@@ -1597,7 +1601,7 @@ const Principal = () => {
             )}
 
             <div
-              className="language-dropdown"
+              className="language-dropdown header-secondary"
               style={{
                 position: "relative",
               }}
@@ -1852,6 +1856,53 @@ const Principal = () => {
                         <span>{STUDENT_SWITCH_HINT}</span>
                       </div>
                     )}
+                    {/* Phones: the header only keeps the menu, the notifications and this profile button;
+                        language, help and install live here so the bar is not overcrowded. */}
+                    <div className="header-menu-only">
+                      <div className="header-menu-row">
+                        <span className="header-menu-label">
+                          {currentLanguage === "en" ? "Language" : "Langue"}
+                        </span>
+                        <div className="header-menu-langs">
+                          {Object.entries(languages).map(([key, lang]) => (
+                            <button
+                              key={key}
+                              type="button"
+                              className={`header-menu-lang ${key === currentLanguage ? "active" : ""}`}
+                              aria-pressed={key === currentLanguage}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleLanguageChange(key);
+                              }}
+                            >
+                              <span className="flag">{lang.flag}</span>
+                              <span>{lang.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="header-menu-row">
+                        <span className="header-menu-label">
+                          {currentLanguage === "en" ? "Help on this page" : "Aide sur cette page"}
+                        </span>
+                        <HelpButton
+                          role={helpRoleFromSession(normalizedUserRole)}
+                          page={helpPageFromTab(
+                            isTabAllowedForRole(activeTab, normalizedUserRole)
+                              ? activeTab
+                              : "dashboard",
+                          )}
+                          isDark={isDark}
+                        />
+                      </div>
+                      <div className="header-menu-row header-menu-install">
+                        <span className="header-menu-label">
+                          {currentLanguage === "en" ? "Install the app" : "Installer l'application"}
+                        </span>
+                        <InstallButton />
+                      </div>
+                    </div>
                     <div className="user-profile-actions">
                       <button
                         className="profile-action-btn"
@@ -1873,7 +1924,7 @@ const Principal = () => {
                             fontSize: 16,
                           }}
                         />
-                        <span>Settings</span>
+                        <span>{currentLanguage === "en" ? "Settings" : "Paramètres"}</span>
                       </button>
                       <button
                         className="profile-action-btn logout"
@@ -1894,7 +1945,7 @@ const Principal = () => {
                             fontSize: 16,
                           }}
                         />
-                        <span>Logout</span>
+                        <span>{currentLanguage === "en" ? "Log out" : "Déconnexion"}</span>
                       </button>
                     </div>
                   </div>

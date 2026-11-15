@@ -23,6 +23,7 @@ import {
   faUsers,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { classEtatLabel } from "../../../../services/ClassService";
 // Image Modal Component for zooming
 const ImageModal = ({ isOpen, onClose, images, currentIndex, onNavigate }) => {
   const [zoom, setZoom] = useState(1);
@@ -697,7 +698,7 @@ const UserViewEleve = ({ user, onClose, userType = "eleve" }) => {
                                     <span
                                       className={`text-xs px-2 py-1 rounded-full ${cls.etat === "ACTIF" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}
                                     >
-                                      {cls.etat}
+                                      {classEtatLabel(cls.etat)}
                                     </span>
                                   </div>
                                 </div>

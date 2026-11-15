@@ -59,6 +59,7 @@ import {
   faUserGroup,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { classEtatLabel } from "../../../../services/ClassService";
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 const { confirm } = Modal;
@@ -516,7 +517,7 @@ const ManageEstablishmentDetailsView = ({
       case "INACTIF":
         return <Tag color="red">Inactif</Tag>;
       default:
-        return <Tag color="default">{status}</Tag>;
+        return <Tag color="default">{classEtatLabel(status)}</Tag>;
     }
   };
   const getProfessorStatusTag = (status) => {

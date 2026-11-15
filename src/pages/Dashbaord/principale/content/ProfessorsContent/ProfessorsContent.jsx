@@ -48,6 +48,7 @@ import {
   faUsers,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { classEtatLabel } from "../../../../../services/ClassService";
 
 // Professeur dont les pièces attendent l'examen de l'administrateur : soit un
 // compte jamais activé (etat AWAITING_VALIDATION), soit un compte déjà actif
@@ -1095,7 +1096,7 @@ const ProfessorsContent = ({
                                   <span
                                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls.etat === "ACTIF" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
                                   >
-                                    {cls.etat}
+                                    {classEtatLabel(cls.etat)}
                                   </span>
                                 </div>
                                 {cls.etablissement && (

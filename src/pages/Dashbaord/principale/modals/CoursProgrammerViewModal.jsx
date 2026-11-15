@@ -25,6 +25,7 @@ import {
   faUsers,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { classEtatLabel } from "../../../../services/ClassService";
 const SCHEDULED_COURSE_STATES = {
   PLANIFIE: "PLANIFIE",
   EN_COURS: "EN_COURS",
@@ -665,7 +666,7 @@ const CoursProgrammerViewModal = ({
                           <span
                             className={`text-xs px-2 py-1 rounded-full ${classDetails.etat === "ACTIF" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}
                           >
-                            {classDetails.etat}
+                            {classEtatLabel(classDetails.etat)}
                           </span>
                         </div>
                       ) : (

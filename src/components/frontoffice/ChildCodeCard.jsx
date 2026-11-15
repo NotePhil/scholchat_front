@@ -16,7 +16,8 @@ import { normalizeClassCode } from "../../services/classePreview";
 
 /**
  * One child of a parent: prénom, nom and the class code, checked with « Vérifier le code »
- * (GET /public/classes/apercu?type=parent) → class card. Used by the parent sign-up and by
+ * (GET /public/classes/apercu?type=parent) → class card; each code of an adult child gets the same check and
+ * card (type=eleve, optional — see AdultClassCode). Used by the parent sign-up and by
  * « Mes enfants » (add a child / join another class with showNames=false).
  *
  * value: { prenom, nom, codeClasse }; onChange(field, value); onPreviewChange(preview | null) is called
@@ -32,6 +33,89 @@ import { normalizeClassCode } from "../../services/classePreview";
  * e.g. when coming back from the summary step). resetKey: changing it clears the verified class (e.g. the
  * backend refused the code) — the parent clears its verifiedPreview too.
  */
+// Refusals of the "eleve" preview that concern a NEW enrolment, not following a class the student is already in.
+const NOT_APPLICABLE_TO_FOLLOW = ["CLASSE_COMPLETE", "CLASSE_RESERVEE_MINEURS"];
+
+/**
+ * One class code of an adult child: the field, « Vérifier le code » (also run when leaving the field) and the
+ * class card or the error under it. The lookup uses type "eleve": the class is one the student belongs to, and
+ * may be an adults' class that the "parent" type refuses. Verifying is optional (the server validates on submit).
+ */
+const AdultClassCode = ({ id, index, code, onChange, onRemove, disabled }) => {
+  const preview = useClassPreview(code, "eleve");
+  const clean = normalizeClassCode(code);
+  const found = preview.isValid ? preview.preview : null;
+  const pending = useRef(null);
+  const check = () => {
+    if (!clean || found || pending.current === clean) return;
+    pending.current = clean;
+    Promise.resolve(preview.verify()).finally(() => {
+      if (pending.current === clean) pending.current = null;
+    });
+  };
+  const notApplicable = preview.status === "error" && NOT_APPLICABLE_TO_FOLLOW.includes(preview.errorCode);
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <TextField
+            id={id}
+            className="flex-1 min-w-0"
+            icon={faKey}
+            value={code}
+            onChange={(e) => onChange(e.target.value)}
+            onBlur={check}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                check();
+              }
+            }}
+            placeholder="Ex. 123456"
+            disabled={disabled}
+            autoComplete="off"
+            aria-label={`Code de classe ${index + 1}`}
+            error={preview.status === "error" && !notApplicable ? true : undefined}
+            inputClassName={`tracking-wider font-semibold ${found ? "!border-[#10B981]" : ""}`}
+          />
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              disabled={disabled}
+              className="p-2 text-slate-400 hover:text-[#EF4444]"
+              aria-label={`Retirer le code ${index + 1}`}
+            >
+              <FontAwesomeIcon icon={faTrashCan} />
+            </button>
+          )}
+        </div>
+        {!found && (
+          <Button
+            type="button"
+            variant="secondary"
+            className="!py-2.5"
+            onClick={check}
+            disabled={disabled || !clean}
+            loading={preview.status === "loading"}
+            loadingLabel="Vérification…"
+          >
+            <FontAwesomeIcon icon={faMagnifyingGlass} /> Vérifier le code
+          </Button>
+        )}
+      </div>
+      {notApplicable ? (
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400" role="status">
+          Les détails de cette classe ne peuvent pas être affichés ici ; le code sera vérifié à l'envoi.
+        </p>
+      ) : (
+        <ClassPreviewStatus status={preview.status} error={preview.error} />
+      )}
+      {found && <ClassPreviewCard preview={found} className="mt-2" compact />}
+    </div>
+  );
+};
+
 const ChildCodeCard = ({
   index = 0,
   title,
@@ -176,33 +260,19 @@ const ChildCodeCard = ({
             <p className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Code{codes.length > 1 ? "s" : ""} de la classe à suivre <span className="text-[#EF4444]">*</span>
             </p>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {codes.map((code, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <TextField
-                    id={id(`code-majeur-${i}`)}
-                    className="flex-1"
-                    icon={faKey}
-                    value={code}
-                    onChange={(e) => setCode(i, e.target.value)}
-                    placeholder="Ex. 123456"
-                    disabled={disabled}
-                    autoComplete="off"
-                    aria-label={`Code de classe ${i + 1}`}
-                    inputClassName="tracking-wider font-semibold"
-                  />
-                  {codes.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => onChange("codesClasse", codes.filter((_, k) => k !== i))}
-                      disabled={disabled}
-                      className="p-2 text-slate-400 hover:text-[#EF4444]"
-                      aria-label={`Retirer le code ${i + 1}`}
-                    >
-                      <FontAwesomeIcon icon={faTrashCan} />
-                    </button>
-                  )}
-                </div>
+                <AdultClassCode
+                  key={i}
+                  id={id(`code-majeur-${i}`)}
+                  index={i}
+                  code={code}
+                  onChange={(v) => setCode(i, v)}
+                  onRemove={
+                    codes.length > 1 ? () => onChange("codesClasse", codes.filter((_, k) => k !== i)) : undefined
+                  }
+                  disabled={disabled}
+                />
               ))}
             </div>
             {typeof errors.codesClasse === "string" && (

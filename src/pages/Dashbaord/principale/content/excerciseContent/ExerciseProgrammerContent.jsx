@@ -994,6 +994,7 @@ const ExerciseProgrammerContent = () => {
                     style={{
                       borderRadius: 10,
                       flex: 1,
+                      minWidth: 0,
                     }}
                   >
                     Annuler
@@ -1017,6 +1018,11 @@ const ExerciseProgrammerContent = () => {
                       borderRadius: 10,
                       fontWeight: 600,
                       flex: 2,
+                      // The label must shrink / wrap instead of pushing the button out of the card on phones.
+                      minWidth: 0,
+                      whiteSpace: "normal",
+                      height: "auto",
+                      minHeight: 40,
                     }}
                   >
                     Programmer et diffuser

@@ -7,6 +7,22 @@ export const EtatClasse = {
   INACTIF: "INACTIF",
 };
 
+/**
+ * Short French label of a class state, for badges and lists (never the raw code):
+ * ACTIF → "Actif", INACTIF → "Inactif", EN_ATTENTE_APPROBATION → "En attente".
+ */
+const ETAT_CLASSE_LABELS = {
+  ACTIF: "Actif",
+  ACTIVE: "Actif",
+  INACTIF: "Inactif",
+  INACTIVE: "Inactif",
+  EN_ATTENTE_APPROBATION: "En attente",
+  EN_ATTENTE: "En attente",
+  ARCHIVEE: "Archivée",
+};
+export const classEtatLabel = (etat, fallback = "Inconnu") =>
+  ETAT_CLASSE_LABELS[String(etat || "").toUpperCase()] || fallback;
+
 export const DroitPublication = {
   PROFESSEUR_UNIQUE: "PROFESSEUR_UNIQUE",
   TOUS_LES_PROFESSEURS: "TOUS_LES_PROFESSEURS",

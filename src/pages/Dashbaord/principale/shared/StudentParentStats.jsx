@@ -31,6 +31,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { asIconComponent } from "../../../../utils/faIconAdapter";
 import CourseProgressPanel from "./CourseProgressPanel";
+import { classEtatLabel } from "../../../../services/ClassService";
 const Bell = asIconComponent(faBell);
 const BookOpen = asIconComponent(faBookOpen);
 const Calendar = asIconComponent(faCalendarDays);
@@ -616,7 +617,7 @@ const StudentParentStats = ({
                     ? "Actif"
                     : classe.etat === "EN_ATTENTE"
                       ? "En attente"
-                      : classe.etat || "Inscrit"}
+                      : classEtatLabel(classe.etat, "Inscrit")}
                 </div>
               </div>
             );

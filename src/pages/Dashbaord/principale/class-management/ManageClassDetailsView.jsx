@@ -253,7 +253,7 @@ const ManageClassDetailsView = ({
     const sameClass = tabClassIdRef.current === classId;
     tabClassIdRef.current = classId;
     if (!initialTab) return;
-    if (initialTab === "access-requests" && sameClass) {
+    if ((initialTab === "access-requests" || initialTab === "parent-follow") && sameClass) {
       if (!canManageRef.current) return;
       loadAccessRequests();
       loadParentFollow();
@@ -535,7 +535,7 @@ const ManageClassDetailsView = ({
       setCanPublishInClass(perms.canPublish);
       if (!perms.canManage) {
         // Not a manager: no access-requests tab (the server answers 403 anyway)
-        setActiveTab((tab) => (tab === "access-requests" ? "overview" : tab));
+        setActiveTab((tab) => (tab === "access-requests" || tab === "parent-follow" ? "overview" : tab));
       }
 
       // Load all user data in sequence to avoid race conditions
@@ -1640,8 +1640,9 @@ const ManageClassDetailsView = ({
     }
   };
   const handleTabChange = (key) => {
-    if (key === "access-requests" && !canManageClass) return;
+    if ((key === "access-requests" || key === "parent-follow") && !canManageClass) return;
     setActiveTab(key);
+    if (key === "parent-follow") loadParentFollow();
     // Reload access requests fresh each time the tab is opened
     if (key === "access-requests") {
       loadAccessRequests();
@@ -2456,8 +2457,14 @@ const ManageClassDetailsView = ({
               ? [
                   {
                     key: "access-requests",
-                    label: `Demandes (${users.accessRequests.length + followRequests.length})`,
+                    label: `Demandes (${users.accessRequests.length})`,
                     icon: <FontAwesomeIcon icon={faClock} />,
+                  },
+                  // Parents asking to follow an adult student: their own tab, apart from the access requests.
+                  {
+                    key: "parent-follow",
+                    label: `Suivi parental (${followRequests.length})`,
+                    icon: <FontAwesomeIcon icon={faUserGroup} />,
                   },
                 ]
               : []),
@@ -2845,9 +2852,19 @@ const ManageClassDetailsView = ({
           )}
 
           {/* Demandes d'accès */}
+          {/* Demandes de suivi parental (élèves majeurs) */}
+          {activeTab === "parent-follow" && canManageClass && (
+            followRequests.length > 0 ? (
+              <ClassFollowRequests items={followRequests} onChanged={loadParentFollow} onNotify={notifyFollow} />
+            ) : (
+              <div className="text-center py-12 text-sm text-slate-500">
+                Aucune demande de suivi parental en attente pour cette classe.
+              </div>
+            )
+          )}
+
           {activeTab === "access-requests" && canManageClass && (
             <>
-            <ClassFollowRequests items={followRequests} onChanged={loadParentFollow} onNotify={notifyFollow} />
             <UserTables
               users={users.accessRequests}
               loading={loading}

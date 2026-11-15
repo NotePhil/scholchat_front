@@ -10,6 +10,33 @@ import {
   faTrashCan,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+const EMPTY_FORM = {
+  nom: "",
+  prenom: "",
+  email: "",
+  telephone: "",
+  adresse: "",
+  password: "",
+};
+// E-mail lookup before creation: status idle | checking | done | failed
+const NO_LOOKUP = { status: "idle", email: "", account: null };
+const ROLE_LABELS = {
+  ADMIN: "Administrateur",
+  PROFESSOR: "Professeur",
+  PARENT: "Parent",
+  STUDENT: "Élève",
+  TUTOR: "Répétiteur",
+  GESTIONNAIRE: "Gestionnaire",
+};
+const roleLabel = (role) => {
+  const key = String(role || "")
+    .toUpperCase()
+    .replace(/^ROLE_/, "");
+  return ROLE_LABELS[key] || role;
+};
+const sameEmail = (a, b) =>
+  String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+
 const GestionnairesManagement = () => {
   const [gestionnaires, setGestionnaires] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +53,19 @@ const GestionnairesManagement = () => {
     password: "",
   });
   const [creating, setCreating] = useState(false);
+  const [emailLookup, setEmailLookup] = useState(NO_LOOKUP);
+  // An account already uses the e-mail typed in the form (lookup still valid for it)
+  const existingAccount =
+    emailLookup.status === "done" &&
+    emailLookup.account &&
+    sameEmail(emailLookup.email, createForm.email)
+      ? emailLookup.account
+      : null;
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setCreateForm(EMPTY_FORM);
+    setEmailLookup(NO_LOOKUP);
+  };
   useEffect(() => {
     loadGestionnaires();
   }, []);
@@ -56,20 +96,114 @@ const GestionnairesManagement = () => {
       setLoading(false);
     }
   };
+  /**
+   * GET /utilisateurs/par-email: is there already an account with this e-mail?
+   * Returns the account ({existe:true, ...}), null when there is none, and
+   * undefined when the lookup itself failed (the form then behaves as before).
+   */
+  const lookupEmail = async (rawEmail) => {
+    const email = String(rawEmail || "").trim();
+    if (!email) return undefined;
+    setEmailLookup({ status: "checking", email, account: null });
+    try {
+      const token = localStorage.getItem("accessToken");
+      const resp = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/utilisateurs/par-email?email=${encodeURIComponent(email)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      const account = data && data.existe ? data : null;
+      setEmailLookup({ status: "done", email, account });
+      return account;
+    } catch (err) {
+      console.warn("Could not check the e-mail:", err);
+      setEmailLookup({ status: "failed", email, account: null });
+      return undefined;
+    }
+  };
+  const handleEmailCheck = () => {
+    const email = createForm.email.trim();
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) return;
+    // Already checked (or being checked) for this very e-mail
+    if (emailLookup.status !== "idle" && sameEmail(emailLookup.email, email))
+      return;
+    lookupEmail(email);
+  };
+  /** Existing account confirmed by the admin: only the gestionnaire role is added. */
+  const handleConfirmExisting = async () => {
+    const account = existingAccount;
+    if (!account || account.dejaGestionnaire) return;
+    setCreating(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("accessToken");
+      const resp = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/utilisateurs`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            type: "gestionnaire",
+            nom: account.nom || "",
+            prenom: account.prenom || "",
+            email: account.email || createForm.email.trim(),
+            telephone: null,
+            adresse: null,
+            etat: "ACTIVE",
+          }),
+        },
+      );
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(
+          err.message || "Erreur lors de l'attribution du rôle gestionnaire",
+        );
+      }
+      // No /auth/registerPassword here: this person keeps their own password.
+      setSuccess(
+        `Rôle gestionnaire attribué à ${[account.prenom, account.nom].filter(Boolean).join(" ") || account.email}`,
+      );
+      closeCreateModal();
+      loadGestionnaires();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (
-      !createForm.nom ||
-      !createForm.prenom ||
-      !createForm.email ||
-      !createForm.password
-    ) {
-      setError("Nom, prenom, email et mot de passe sont obligatoires");
+    // An existing account is never touched from here: it goes through the confirmation block.
+    if (existingAccount) return;
+    if (!createForm.email.trim()) {
+      setError("L'e-mail est obligatoire");
       return;
     }
     setCreating(true);
     setError("");
     try {
+      // E-mail not checked yet (form sent before leaving the field): check it first.
+      if (
+        emailLookup.status === "idle" ||
+        emailLookup.status === "checking" ||
+        !sameEmail(emailLookup.email, createForm.email)
+      ) {
+        const account = await lookupEmail(createForm.email);
+        // Account found: the confirmation block is now shown instead of creating.
+        if (account) return;
+      }
+      if (!createForm.nom || !createForm.prenom || !createForm.password) {
+        setError("Nom, prénom, e-mail et mot de passe sont obligatoires");
+        return;
+      }
       const token = localStorage.getItem("accessToken");
       // Create user as gestionnaire type
       const resp = await fetch(
@@ -118,17 +252,9 @@ const GestionnairesManagement = () => {
         console.warn("Could not set password:", pwErr);
       }
       setSuccess(
-        `Gestionnaire ${createForm.prenom} ${createForm.nom} cree avec succes`,
+        `Gestionnaire ${createForm.prenom} ${createForm.nom} créé avec succès`,
       );
-      setCreateForm({
-        nom: "",
-        prenom: "",
-        email: "",
-        telephone: "",
-        adresse: "",
-        password: "",
-      });
-      setShowCreateModal(false);
+      closeCreateModal();
       loadGestionnaires();
     } catch (err) {
       setError(err.message);
@@ -311,157 +437,275 @@ const GestionnairesManagement = () => {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">
-                Creer un Gestionnaire
+                Créer un Gestionnaire
               </h2>
               <button
                 aria-label="Fermer"
-                onClick={() => setShowCreateModal(false)}
+                onClick={closeCreateModal}
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
                 <FontAwesomeIcon icon={faXmark} className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleCreate} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prenom *
-                  </label>
-                  <input
-                    type="text"
-                    value={createForm.prenom}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        prenom: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                    placeholder="Prenom"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom *
-                  </label>
-                  <input
-                    type="text"
-                    value={createForm.nom}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        nom: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                    placeholder="Nom"
-                    required
-                  />
-                </div>
-              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="gestionnaire-email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Email *
                 </label>
-                <input
-                  type="email"
-                  value={createForm.email}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      email: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                  placeholder="email@exemple.com"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mot de passe *
-                </label>
-                <input
-                  type="password"
-                  value={createForm.password}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      password: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                  placeholder="Mot de passe"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Telephone
-                </label>
-                <div className="flex">
-                  <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                    +237
-                  </span>
+                <div className="flex gap-2">
                   <input
-                    type="tel"
-                    value={createForm.telephone}
-                    onChange={(e) =>
+                    id="gestionnaire-email"
+                    type="email"
+                    value={createForm.email}
+                    onChange={(e) => {
                       setCreateForm({
                         ...createForm,
-                        telephone: e.target.value
-                          .replace(/\D/g, "")
-                          .slice(0, 9),
-                      })
-                    }
-                    className="w-full px-3 py-2.5 border rounded-r-lg text-sm"
-                    placeholder="6XXXXXXXX"
-                    maxLength={9}
+                        email: e.target.value,
+                      });
+                      // The previous check no longer matches what is typed
+                      if (!sameEmail(emailLookup.email, e.target.value))
+                        setEmailLookup(NO_LOOKUP);
+                    }}
+                    onBlur={handleEmailCheck}
+                    className="flex-1 min-w-0 px-3 py-2.5 border rounded-lg text-sm"
+                    placeholder="email@exemple.com"
+                    autoComplete="off"
+                    required
                   />
+                  <button
+                    type="button"
+                    onClick={handleEmailCheck}
+                    disabled={
+                      emailLookup.status === "checking" ||
+                      !createForm.email.trim()
+                    }
+                    className="flex-shrink-0 px-3 py-2.5 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium disabled:opacity-50"
+                  >
+                    {emailLookup.status === "checking" ? (
+                      <FontAwesomeIcon
+                        icon={faSpinner}
+                        className="w-4 h-4 animate-spin"
+                      />
+                    ) : (
+                      "Vérifier"
+                    )}
+                  </button>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={createForm.adresse}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      adresse: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                  placeholder="Adresse"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 py-2.5 border rounded-lg text-sm font-medium"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {creating ? (
-                    <FontAwesomeIcon
-                      icon={faSpinner}
-                      className="w-4 h-4 animate-spin"
-                    />
-                  ) : (
-                    <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+                {emailLookup.status === "done" &&
+                  !existingAccount &&
+                  sameEmail(emailLookup.email, createForm.email) && (
+                    <p className="mt-1 text-xs text-green-700">
+                      Aucun compte n'utilise cet e-mail : un nouveau compte
+                      sera créé.
+                    </p>
                   )}
-                  {creating ? "Creation..." : "Creer"}
-                </button>
               </div>
+              {existingAccount ? (
+                <div
+                  role="group"
+                  aria-label="Compte existant"
+                  className="space-y-3 p-3 rounded-lg border border-amber-300 bg-amber-50"
+                >
+                  <p className="text-sm font-semibold text-amber-900">
+                    Un compte existe déjà avec cet e-mail
+                  </p>
+                  <p className="text-xs text-amber-800">
+                    {existingAccount.dejaGestionnaire
+                      ? "Cette personne est déjà gestionnaire : il n'y a rien à attribuer."
+                      : "Vérifiez qu'il s'agit bien de la bonne personne. Son compte et son mot de passe ne sont pas modifiés : seul le rôle gestionnaire lui est ajouté."}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      ["Prénom", existingAccount.prenom],
+                      ["Nom", existingAccount.nom],
+                      ["Téléphone", existingAccount.telephone],
+                      ["Adresse", existingAccount.adresse],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          {label}
+                          <input
+                            type="text"
+                            value={value || "—"}
+                            readOnly
+                            className="mt-1 w-full px-3 py-2 border rounded-lg text-sm bg-gray-100 cursor-not-allowed"
+                          />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-700 mb-1">
+                      Rôles actuels
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {(existingAccount.roles || []).length === 0 ? (
+                        <span className="text-xs text-gray-500">Aucun</span>
+                      ) : (
+                        existingAccount.roles.map((r) => (
+                          <span
+                            key={r}
+                            className="inline-block text-xs px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-full"
+                          >
+                            {roleLabel(r)}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col-reverse sm:flex-row gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={closeCreateModal}
+                      className="flex-1 py-2.5 border rounded-lg text-sm font-medium bg-white"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmExisting}
+                      disabled={creating || !!existingAccount.dejaGestionnaire}
+                      className="flex-1 py-2.5 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {creating && (
+                        <FontAwesomeIcon
+                          icon={faSpinner}
+                          className="w-4 h-4 animate-spin"
+                        />
+                      )}
+                      Confirmer et attribuer le rôle gestionnaire
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Prénom *
+                      </label>
+                      <input
+                        type="text"
+                        value={createForm.prenom}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            prenom: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                        placeholder="Prénom"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nom *
+                      </label>
+                      <input
+                        type="text"
+                        value={createForm.nom}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            nom: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                        placeholder="Nom"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mot de passe *
+                    </label>
+                    <input
+                      type="password"
+                      value={createForm.password}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          password: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                      placeholder="Mot de passe"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Téléphone
+                    </label>
+                    <div className="flex">
+                      <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                        +237
+                      </span>
+                      <input
+                        type="tel"
+                        value={createForm.telephone}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            telephone: e.target.value
+                              .replace(/\D/g, "")
+                              .slice(0, 9),
+                          })
+                        }
+                        className="w-full px-3 py-2.5 border rounded-r-lg text-sm"
+                        placeholder="6XXXXXXXX"
+                        maxLength={9}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Adresse
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.adresse}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          adresse: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                      placeholder="Adresse"
+                    />
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={closeCreateModal}
+                      className="flex-1 py-2.5 border rounded-lg text-sm font-medium"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={creating}
+                      className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {creating ? (
+                        <FontAwesomeIcon
+                          icon={faSpinner}
+                          className="w-4 h-4 animate-spin"
+                        />
+                      ) : (
+                        <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+                      )}
+                      {creating ? "Création..." : "Créer"}
+                    </button>
+                  </div>
+                </>
+              )}
             </form>
           </div>
         </div>

@@ -33,6 +33,7 @@ import {
   faUserXmark,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { classEtatLabel } from "../../../../services/ClassService";
 const { TabPane } = Tabs;
 const { Option } = Select;
 const { TextArea } = Input;
@@ -296,7 +297,7 @@ const ManageClassDetails = ({
               </Descriptions.Item>
               <Descriptions.Item label="État">
                 <Tag color={getStatusColor(classData.etat)}>
-                  {classData.etat}
+                  {classEtatLabel(classData.etat)}
                 </Tag>
               </Descriptions.Item>
             </Descriptions>

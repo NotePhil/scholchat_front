@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import CountrySelect from "../../../../../components/common/CountrySelectSearchable";
@@ -21,8 +21,17 @@ import {
   faGear,
   faGlobe,
   faLocationDot,
+  faMagnifyingGlass,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
+
+/** Lower-case, accent-free form of a text, for the gestionnaire search. */
+const normalizeSearch = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 const CreateEstablishmentContent = ({
   onNavigateToManage,
   setActiveTab,
@@ -43,6 +52,48 @@ const CreateEstablishmentContent = ({
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  // Gestionnaire picker: search text + option highlighted with the keyboard
+  const [userSearch, setUserSearch] = useState("");
+  const [activeUserIndex, setActiveUserIndex] = useState(0);
+  const userPickerRef = useRef(null);
+  const filteredUsers = (() => {
+    const terms = normalizeSearch(userSearch).split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return users;
+    return users.filter((u) => {
+      const haystack = normalizeSearch(
+        `${u.nom || ""} ${u.prenom || ""} ${u.nom || ""} ${u.email || ""}`,
+      );
+      return terms.every((term) => haystack.includes(term));
+    });
+  })();
+  const closeUserDropdown = () => {
+    setShowUserDropdown(false);
+    setUserSearch("");
+    setActiveUserIndex(0);
+  };
+  // Close the picker on a click / tap outside of it
+  useEffect(() => {
+    if (!showUserDropdown) return undefined;
+    const onPointerDown = (event) => {
+      if (userPickerRef.current && !userPickerRef.current.contains(event.target)) {
+        closeUserDropdown();
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [showUserDropdown]);
+  // Keep the highlighted option visible while moving with the arrows
+  useEffect(() => {
+    if (!showUserDropdown || !userPickerRef.current) return;
+    const el = userPickerRef.current.querySelector('[data-active="true"]');
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeUserIndex, showUserDropdown]);
   const [selectedCountry, setSelectedCountry] = useState("CM");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -235,12 +286,29 @@ const CreateEstablishmentContent = ({
       }));
     }
   };
+  const handleUserSearchKeyDown = (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveUserIndex((i) => Math.min(filteredUsers.length - 1, i + 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveUserIndex((i) => Math.max(0, i - 1));
+    } else if (event.key === "Enter") {
+      // Never submit the establishment form from the search field
+      event.preventDefault();
+      const user = filteredUsers[activeUserIndex];
+      if (user) handleUserSelect(user);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      closeUserDropdown();
+    }
+  };
   const handleUserSelect = (user) => {
     setFormData((prev) => ({
       ...prev,
       gestionnaire: user,
     }));
-    setShowUserDropdown(false);
+    closeUserDropdown();
     if (errors.gestionnaire) {
       setErrors((prev) => ({
         ...prev,
@@ -588,14 +656,20 @@ const CreateEstablishmentContent = ({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Gestionnaire *
                   </label>
-                  <div className="relative">
+                  <div className="relative" ref={userPickerRef}>
                     <FontAwesomeIcon
                       icon={faUser}
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                      className="absolute left-3 top-6 transform -translate-y-1/2 w-5 h-5 text-gray-400"
                     />
                     <button
                       type="button"
-                      onClick={() => setShowUserDropdown(!showUserDropdown)}
+                      aria-haspopup="listbox"
+                      aria-expanded={showUserDropdown}
+                      onClick={() =>
+                        showUserDropdown
+                          ? closeUserDropdown()
+                          : setShowUserDropdown(true)
+                      }
                       className={`w-full pl-12 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-left ${errors.gestionnaire ? "border-red-500" : "border-gray-300"}`}
                     >
                       {formData.gestionnaire
@@ -604,11 +678,48 @@ const CreateEstablishmentContent = ({
                     </button>
                     <FontAwesomeIcon
                       icon={faChevronDown}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                      className="absolute right-3 top-6 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
                     />
 
                     {showUserDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden">
+                        {!loadingUsers && users.length > 0 && (
+                          <div className="relative p-2 border-b border-gray-100">
+                            <FontAwesomeIcon
+                              icon={faMagnifyingGlass}
+                              className="absolute left-5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
+                            />
+                            <input
+                              type="text"
+                              role="combobox"
+                              aria-label="Rechercher un gestionnaire"
+                              aria-expanded="true"
+                              aria-controls="gestionnaire-options"
+                              aria-autocomplete="list"
+                              aria-activedescendant={
+                                filteredUsers[activeUserIndex]
+                                  ? `gestionnaire-option-${filteredUsers[activeUserIndex].id}`
+                                  : undefined
+                              }
+                              autoFocus
+                              autoComplete="off"
+                              value={userSearch}
+                              onChange={(e) => {
+                                setUserSearch(e.target.value);
+                                setActiveUserIndex(0);
+                              }}
+                              onKeyDown={handleUserSearchKeyDown}
+                              placeholder="Rechercher par nom ou e-mail…"
+                              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                        <div
+                          id="gestionnaire-options"
+                          role="listbox"
+                          aria-label="Gestionnaires"
+                          className="max-h-60 overflow-y-auto"
+                        >
                         {loadingUsers ? (
                           <div className="p-4 text-center text-gray-500">
                             Chargement des utilisateurs...
@@ -617,18 +728,30 @@ const CreateEstablishmentContent = ({
                           <div className="p-4 text-center text-gray-500">
                             Aucun utilisateur disponible
                           </div>
+                        ) : filteredUsers.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">
+                            Aucun gestionnaire trouvé
+                          </div>
                         ) : (
-                          users.map((user) => (
+                          filteredUsers.map((user, index) => (
                             <button
                               key={user.id}
+                              id={`gestionnaire-option-${user.id}`}
                               type="button"
+                              role="option"
+                              aria-selected={
+                                formData.gestionnaire?.id === user.id
+                              }
+                              data-active={index === activeUserIndex}
+                              tabIndex={-1}
+                              onMouseEnter={() => setActiveUserIndex(index)}
                               onClick={() => handleUserSelect(user)}
-                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                              className={`w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 ${index === activeUserIndex ? "bg-gray-100" : ""}`}
                             >
-                              <div className="font-medium text-gray-900">
+                              <div className="font-medium text-gray-900 break-words">
                                 {user.nom} {user.prenom}
                               </div>
-                              <div className="text-sm text-gray-500">
+                              <div className="text-sm text-gray-500 break-all">
                                 {user.email}
                               </div>
                               <div className="text-xs text-blue-600 font-medium">
@@ -637,6 +760,7 @@ const CreateEstablishmentContent = ({
                             </button>
                           ))
                         )}
+                        </div>
                       </div>
                     )}
                   </div>

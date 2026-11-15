@@ -31,6 +31,7 @@ import {
   faUsers,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { classEtatLabel } from "../../../../../services/ClassService";
 const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
   const isMobile = useSelector((state) => state.ui.isMobile);
   const [students, setStudents] = useState([]);
@@ -481,7 +482,7 @@ const StudentsContent = ({ isDark, currentTheme, themes, colorSchemes }) => {
                                 <span
                                   className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls.etat === "ACTIF" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
                                 >
-                                  {cls.etat}
+                                  {classEtatLabel(cls.etat)}
                                 </span>
                               </div>
                               {cls.etablissement && (

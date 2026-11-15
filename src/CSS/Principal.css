@@ -1677,3 +1677,42 @@
     gap: 8px !important;
   }
 }
+
+
+/* ── Phone header: only menu, notifications and profile stay in the bar ─────────────────────────
+   Language, help and "install" move into the profile menu (.header-menu-only). */
+.header-secondary { display: contents; }
+.header-menu-only { display: none; }
+@media (max-width: 640px) {
+  .header-secondary { display: none !important; }
+  .header-menu-only {
+    display: block;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-subtle, #e2e8f0);
+  }
+  .header-menu-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+  }
+  /* The install row disappears when the browser offers nothing to install (the button renders nothing). */
+  .header-menu-install:not(:has(button)) { display: none; }
+  .header-menu-label { font-size: 13px; font-weight: 500; color: var(--text-secondary, #475569); }
+  .header-menu-langs { display: flex; gap: 6px; }
+  .header-menu-lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle, #e2e8f0);
+    background: transparent;
+    font-size: 13px;
+    color: inherit;
+  }
+  .header-menu-lang.active { border-color: #4f46e5; color: #4f46e5; font-weight: 600; }
+  html.dark .header-menu-lang.active { border-color: #a5b4fc; color: #a5b4fc; }
+}
